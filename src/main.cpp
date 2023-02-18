@@ -68,11 +68,26 @@ int main(int argc, char const* argv[]) {
             };
         };
 
+    Keymap config_keymap;
+ 
+    auto run_startup_apps = [&](std::string const& apps)
+    {
+      for (auto i = begin(apps); i != end(apps); )
+      {
+          auto const j = find(i, end(apps), ':');
+          external_client_launcher.launch(std::vector<std::string>{std::string{i, j}});
+          if ((i = j) != end(apps)) ++i;
+      }
+    };
+
 
     return runner.run_with(
         {
             set_window_management_policy<MinimalWindowManager>(),
+            WaylandExtensions{},
+            X11Support{},
             AppendEventFilter{quit_on_ctrl_alt_bksp},
+            config_keymap
         });
     return EXIT_SUCCESS;
 }
