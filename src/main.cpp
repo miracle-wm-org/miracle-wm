@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include <miral/minimal_window_manager.h>
 #include <miral/set_window_management_policy.h>
 #include <miral/display_configuration_option.h>
 #include <miral/external_client.h>
@@ -16,6 +15,7 @@
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
+#include <miral/minimal_window_manager.h>
 
 using namespace miral;
 using namespace miral::toolkit;
@@ -25,12 +25,17 @@ int main(int argc, char const* argv[]) {
 
     std::function<void()> shutdown_hook{[]{}};
     runner.add_stop_callback([&] { shutdown_hook(); });
+
+    WindowManagerOptions windowManagers
+        {
+            add_window_manager_policy<MinimalWindowManager>("floating"),
+        };
  
     ExternalClientLauncher external_client_launcher;
  
     std::string terminal_cmd{"miral-terminal"};
 
-    auto const quit_on_ctrl_alt_bksp = [&](MirEvent const* event)
+    auto const onEvent = [&](MirEvent const* event)
         {
             if (mir_event_get_type(event) != mir_event_type_input)
                 return false;
@@ -83,10 +88,10 @@ int main(int argc, char const* argv[]) {
 
     return runner.run_with(
         {
-            set_window_management_policy<MinimalWindowManager>(),
+            windowManagers,
             WaylandExtensions{},
             X11Support{},
-            AppendEventFilter{quit_on_ctrl_alt_bksp},
+            AppendEventFilter{onEvent},
             config_keymap
         });
     return EXIT_SUCCESS;
