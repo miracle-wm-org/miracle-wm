@@ -16,5 +16,5 @@ find_package(OpenGL REQUIRED)
 
 add_executable(compositor src/main.cpp)
 
-target_include_directories(hello_world PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     hello_world               ${MIRAL_LDFLAGS})
+target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(     compositor               ${MIRAL_LDFLAGS})
