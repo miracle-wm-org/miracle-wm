@@ -1,24 +1,24 @@
 # Notes
 The following file will serve the purpose of documenting my thought processes and progress as I complete the assignment. I am starting this project on February 18, 2023.
 
-## Step 1: Virtual box
-- I installed the mir-builder.ova file, imported it into `virtualbox`, and ran it successfully with the provided login
-- I successfully built the mir project that was found in the home directory. I followed the documentation here (https://github.com/MirServer/mir/blob/main/doc/getting_involved_in_mir.md) to run the `miral-shell`.
-
-## Step 2: Setting up the miral app
-- First I had to install xorg:
+## Step 1: Setting up the miral app
+At first, I went the virtual box route, but then I saw how easy it would be to do this locally, so I opted for that instead. On Arch, I did:
 ```sh
-sudo apt update
-sudo apt install xinit
+git clone https://aur.archlinux.org/mir.git
+cd mir
+makepkg -si
 ```
-- I then ran `startx` and, voila, my X server is running.
-- Now I just need xwayland:
-```sh
-sudo apt install xwayland
-```
-- Finally, I run the `miral-app` in the bin directory and see that we are running.
 
-## Step 3: Hacking
+and voila. It lives!
+
+## Step 2: Hacking
+
+### Research
+I will begin my searching for documentation on how I made write a Mir-based compositor:
+1. https://mir-server.io/docs/developing-a-wayland-compositor-using-mir This seems like a good match!
+
+###
 My task is to build a compositor, so I will first define what is that I need in my compositor. As an MVP, I would like to support:
 - Window transparency
 - Drop shadows
+
