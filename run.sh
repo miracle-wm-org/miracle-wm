@@ -9,4 +9,4 @@ then
     unset WAYLAND_DISPLAY
 fi
 # miral-shell can launch it's own terminal with Ctrl-Alt-T
-MIR_SERVER_ENABLE_X11=1 MIR_SERVER_SHELL_TERMINAL_EMULATOR=${terminal} exec ${bindir} ${miral_server} $*
+MIR_SERVER_ENABLE_X11=1 MIR_SERVER_SHELL_TERMINAL_EMULATOR=${terminal} exec ${bindir}${miral_server} $*
