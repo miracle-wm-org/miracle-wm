@@ -15,3 +15,6 @@ pkg_check_modules(MIRAL miral REQUIRED)
 find_package(OpenGL REQUIRED)
 
 add_executable(compositor src/main.cpp)
+
+target_include_directories(hello_world PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(     hello_world               ${MIRAL_LDFLAGS})
