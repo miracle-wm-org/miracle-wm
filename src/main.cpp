@@ -94,5 +94,4 @@ int main(int argc, char const* argv[]) {
             AppendEventFilter{onEvent},
             config_keymap
         });
-    return EXIT_SUCCESS;
 }
