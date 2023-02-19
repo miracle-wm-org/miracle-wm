@@ -523,8 +523,20 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
-    else {
-        printf("Unsupported\n");
+    else if (mActivePlacementStrategy == PlacementStrategy::Vertical) {
+        auto zoneFractionSize = Size{ activeZone.extents().size.width, activeZone.extents().size.height / targetNumberOfWindows };
+        const int x = activeZone.extents().top_left.x.as_value();
+        for (unsigned short i = 0; auto window : mActiveWindowGroup->getWindowsInZone()) {
+            window->resize(zoneFractionSize);
+
+            const int y = zoneFractionSize.height.as_int() * i + activeZone.extents().top_left.y.as_value();
+            window->move_to(Point{ x, y });
+            i++;
+        }
+
+        const int y = zoneFractionSize.height.as_int() * mActiveWindowGroup->getNumWindowsInGroup() + activeZone.extents().top_left.y.as_value();
+        parameters.top_left() = Point{ x, y };
+        parameters.size() = zoneFractionSize;
     }
 
     parameters.userdata() = std::make_shared<PolicyData>();
