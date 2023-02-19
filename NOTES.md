@@ -13,6 +13,8 @@ I will begin my searching for documentation on how I made write a Mir-based comp
 
 ### Programming
 1. To get started at a reasonabel pace, I copy and pasted the example `FloatingWindowManager` class. I plan to rework it for a `TilingWindowManager` with controls that mimic those if `i3.`
+2. Zones seem like a good candidate for the purposes of grouping windows together here.
+3. I have successfully created the `WindowGroup` which allows me to continually create new windows horizontally. Now I will hook up keybinds to support vertical.
 
 My task is to build a compositor, so I will first define what is that I need in my compositor. As an MVP, I would like to support:
 - Window transparency
