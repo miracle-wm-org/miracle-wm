@@ -2,22 +2,18 @@
 The following file will serve the purpose of documenting my thought processes and progress as I complete the assignment. I am starting this project on February 18, 2023.
 
 ## Step 1: Setting up the miral app
-At first, I went the virtual box route, but then I saw how easy it would be to do this locally, so I opted for that instead. On Arch, I did:
-```sh
-git clone https://aur.archlinux.org/mir.git
-cd mir
-makepkg -si
-```
-
-and voila. It lives!
+.. TODO
 
 ## Step 2: Hacking
 
 ### Research
 I will begin my searching for documentation on how I made write a Mir-based compositor:
-1. https://mir-server.io/docs/developing-a-wayland-compositor-using-mir This seems like a good match!
+1. https://mir-server.io/docs/developing-a-wayland-compositor-using-mir This seems like a good match.
+2. I will also look extensively at the `miral-app` demo to see how it is starting the miral server. The `miral-shell` looks like the easiest barebone candidate for me to follow.
 
-###
+### Programming
+1. I started off by implementing the simple miral-terminal example, however I am runnning into an issue where the `ExternalClientLauncher` is claiming that the server has not yet been set.
+2. 
 My task is to build a compositor, so I will first define what is that I need in my compositor. As an MVP, I would like to support:
 - Window transparency
 - Drop shadows
