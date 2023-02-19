@@ -1,35 +1,28 @@
-/*
- * Copyright © Canonical Ltd.
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 or 3 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-#ifndef MIRAL_SHELL_FLOATING_WINDOW_MANAGER_H
-#define MIRAL_SHELL_FLOATING_WINDOW_MANAGER_H
+#ifndef TILING_WINDOW_MANAGER_HPP
+#define TILING_WINDOW_MANAGER_HPP
 
 #include <miral/minimal_window_manager.h>
-
 #include <mir_toolkit/events/enums.h>
-
 #include <chrono>
 #include <map>
+#include <vector>
+
+/** Defines how new windows will be placed in the workspace. */
+enum class PlacementStrategy {
+    /** If horizontal, we will place the new window to the right of the selectd window. */
+    Horizontal,
+    /** If vertical, we will place the new window below the selected window. */
+    Vertical
+};
 
 namespace miral { class InternalClientLauncher; }
 
 using namespace mir::geometry;
 
-class FloatingWindowManagerPolicy : public miral::MinimalWindowManager
-{
+/**
+* An implementation of a tiling window manager, much like i3.
+*/
+class FloatingWindowManagerPolicy : public miral::MinimalWindowManager {
 public:
     FloatingWindowManagerPolicy(
         miral::WindowManagerTools const& tools,
@@ -37,33 +30,21 @@ public:
         std::function<void()>& shutdown_hook);
     ~FloatingWindowManagerPolicy();
 
+    /**
+    * Positions the new window in reference to the currently selected window and the current mode.
+    */
     virtual miral::WindowSpecification place_new_window(
         miral::ApplicationInfo const& app_info, miral::WindowSpecification const& request_parameters) override;
 
-    /** @name example event handling:
-     *  o Switch apps: Alt+Tab, tap or click on the corresponding window
-     *  o Switch window: Alt+`, tap or click on the corresponding window
-     *  o Move window: Alt-leftmousebutton drag (three finger drag)
-     *  o Resize window: Alt-middle_button drag (three finger pinch)
-     *  o Maximize/restore current window (to display size): Alt-F11
-     *  o Maximize/restore current window (to display height): Shift-F11
-     *  o Maximize/restore current window (to display width): Ctrl-F11
-     *  o Switch workspace . . . . . . . . . . : Meta-Alt-[F1|F2|F3|F4]
-     *  o Switch workspace taking active window: Meta-Ctrl-[F1|F2|F3|F4]
-     *  @{ */
+
     bool handle_pointer_event(MirPointerEvent const* event) override;
     bool handle_touch_event(MirTouchEvent const* event) override;
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
-    /** @} */
-
-    /** @name track events that affect titlebar
-     *  @{ */
     void advise_new_window(miral::WindowInfo const& window_info) override;
     void handle_window_ready(miral::WindowInfo& window_info) override;
     void advise_focus_gained(miral::WindowInfo const& info) override;
 
     void handle_modify_window(miral::WindowInfo& window_info, miral::WindowSpecification const& modifications) override;
-    /** @} */
 
 protected:
     static const int modifier_mask =
@@ -74,6 +55,9 @@ protected:
         mir_input_event_modifier_meta;
 
 private:
+    PlacementStrategy mActivePlacementStrategy;
+    std::vector<std::shared_ptr<miral::Window>> mActiveWindows;
+
     void toggle(MirWindowState state);
 
     int old_touch_pinch_top = 0;
@@ -114,4 +98,4 @@ private:
     void apply_workspace_hidden_to(miral::Window const& window);
 };
 
-#endif //MIRAL_SHELL_FLOATING_WINDOW_MANAGER_H
+#endif //TILING_WINDOW_MANAGER_HPP
