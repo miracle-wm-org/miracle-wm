@@ -4,6 +4,7 @@
 #include "miral/zone.h"
 #include <bits/ranges_util.h>
 #include <cstddef>
+#include <memory>
 
 WindowGroup::WindowGroup():
     mZone(mir::geometry::Rectangle())
@@ -45,4 +46,15 @@ void WindowGroup::removeWindow(std::shared_ptr<miral::Window> window) {
 
 std::vector<std::shared_ptr<miral::Window>> WindowGroup::getWindowsInZone() {
     return mWindowsInZone;
+}
+
+std::shared_ptr<WindowGroup> WindowGroup::createSubGroup(const miral::Window& activeWindow) {
+    auto nextGroupPosition = activeWindow.top_left();
+    auto nextGroupSize = activeWindow.size();
+    auto zoneSize = mir::geometry::Rectangle(nextGroupPosition, nextGroupSize);
+
+    auto windowGroup = WindowGroup(zoneSize);
+    windowGroup.addWindow(std::make_shared<miral::Window>(activeWindow));
+    mSubGroups.push_back(windowGroup);
+    return std::make_shared<WindowGroup>(windowGroup);
 }
