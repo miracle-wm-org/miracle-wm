@@ -35,7 +35,7 @@ int main(int argc, char const* argv[]) {
             add_window_manager_policy<FloatingWindowManagerPolicy>("floating", launcher, shutdown_hook)
         };
  
-    std::string terminal_cmd{"gedit"};
+    std::string terminal_cmd{"xfce4-terminal"};
 
     auto const onEvent = [&](MirEvent const* event)
         {
@@ -60,14 +60,9 @@ int main(int argc, char const* argv[]) {
                 runner.stop();
                 return true;
  
-            case XKB_KEY_t:
-            case XKB_KEY_T:
-                external_client_launcher.launch({terminal_cmd});
-                return false;
- 
             case XKB_KEY_x:
             case XKB_KEY_X:
-                external_client_launcher.launch_using_x11({"xterm"});
+                external_client_launcher.launch({terminal_cmd});
                 return false;
  
             default:

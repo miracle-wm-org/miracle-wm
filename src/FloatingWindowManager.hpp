@@ -1,6 +1,8 @@
 #ifndef TILING_WINDOW_MANAGER_HPP
 #define TILING_WINDOW_MANAGER_HPP
 
+#include "WindowGroup.hpp"
+#include <memory>
 #include <miral/minimal_window_manager.h>
 #include <mir_toolkit/events/enums.h>
 #include <chrono>
@@ -40,6 +42,8 @@ public:
     bool handle_pointer_event(MirPointerEvent const* event) override;
     bool handle_touch_event(MirTouchEvent const* event) override;
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+
+    /** Add the window to the active zone. */
     void advise_new_window(miral::WindowInfo const& window_info) override;
     void handle_window_ready(miral::WindowInfo& window_info) override;
     void advise_focus_gained(miral::WindowInfo const& info) override;
@@ -56,7 +60,9 @@ protected:
 
 private:
     PlacementStrategy mActivePlacementStrategy;
-    std::vector<std::shared_ptr<miral::Window>> mActiveWindows;
+    std::map<int, miral::Window> mZoneIdToWindowMap;
+    WindowGroup mRootWindowGroup;
+    std::shared_ptr<WindowGroup> mActiveWindowGroup;
 
     void toggle(MirWindowState state);
 

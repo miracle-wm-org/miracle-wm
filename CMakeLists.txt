@@ -15,7 +15,7 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(compositor src/main.cpp src/FloatingWindowManager.cpp)
+add_executable(compositor src/main.cpp src/FloatingWindowManager.cpp src/WindowGroup.cpp)
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(     compositor               ${MIRAL_LDFLAGS})

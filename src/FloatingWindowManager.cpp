@@ -15,7 +15,10 @@
  */
 
 #include "FloatingWindowManager.hpp"
+#include "WindowGroup.hpp"
+#include "mir/geometry/forward.h"
 
+#include <memory>
 #include <miral/application_info.h>
 #include <miral/internal_client.h>
 #include <miral/toolkit_event.h>
@@ -50,7 +53,8 @@ FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
     WindowManagerTools const& tools,
     miral::InternalClientLauncher const& launcher,
     std::function<void()>& shutdown_hook) :
-    MinimalWindowManager(tools)
+    MinimalWindowManager(tools),
+    mRootWindowGroup()
 {
     mActivePlacementStrategy = PlacementStrategy::Horizontal;
     shutdown_hook = [this] {  };
@@ -234,6 +238,8 @@ void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_inf
         if (policy_data_for(tools.info_for(parent)).in_hidden_workspace)
             apply_workspace_hidden_to(window_info.window());
     }
+
+    mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
 }
 
 void FloatingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info)
@@ -453,15 +459,39 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
     bool const needs_titlebar = WindowInfo::needs_titlebar(parameters.type().value());
 
-    auto activeWindow = tools.active_window();
-    auto activeZone = tools.active_application_zone();
-    if (!activeWindow) {
-        parameters.top_left() = Point{0, 0};
-        parameters.size() = Size{ activeZone.extents().size };
-
+    // If it is our first time adding an item to the view, we initialize the root window group.
+    if (!mActiveWindowGroup.get()) {
+        mRootWindowGroup = WindowGroup(tools.active_application_zone().extents());
+        mActiveWindowGroup = std::make_shared<WindowGroup>(mRootWindowGroup);
     }
 
-    parameters.top_left() = Point{0, 0};
+    auto targetNumberOfWindows = mActiveWindowGroup->getNumWindowsInGroup() + 1;
+    auto activeZone = mActiveWindowGroup->getZone();
+
+    if (targetNumberOfWindows == 1) {
+        // There are no windows in the current zone so we can place it to take up the whole zone.
+        parameters.top_left() = activeZone.extents().top_left;
+        parameters.size() = Size{ activeZone.extents().size };
+    }
+    else if (mActivePlacementStrategy == PlacementStrategy::Horizontal) {
+        // Adjust current windows
+        auto zoneFractionSize = Size{ activeZone.extents().size.width / targetNumberOfWindows, activeZone.extents().size.height };
+        const int y = activeZone.extents().top_left.y.as_value();
+        for (unsigned short i = 0; auto window : mActiveWindowGroup->getWindowsInZone()) {
+            window->resize(zoneFractionSize);
+
+            const int x = zoneFractionSize.width.as_int() * i + activeZone.extents().top_left.x.as_value();
+            window->move_to(Point{ x, y });
+            i++;
+        }
+
+        const int x = zoneFractionSize.width.as_int() * mActiveWindowGroup->getNumWindowsInGroup() + activeZone.extents().top_left.x.as_value();
+        parameters.top_left() = Point{ x, y };
+        parameters.size() = zoneFractionSize;
+    }
+    else {
+
+    }
 
     parameters.userdata() = std::make_shared<PolicyData>();
     return parameters;
