@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 
+#include "FloatingWindowManager.hpp"
 #include <miral/set_window_management_policy.h>
 #include <miral/display_configuration_option.h>
 #include <miral/external_client.h>
@@ -26,14 +27,15 @@ int main(int argc, char const* argv[]) {
     std::function<void()> shutdown_hook{[]{}};
     runner.add_stop_callback([&] { shutdown_hook(); });
 
-    WindowManagerOptions windowManagers
-        {
-            add_window_manager_policy<MinimalWindowManager>("floating"),
-        };
+    InternalClientLauncher launcher;
  
     ExternalClientLauncher external_client_launcher;
+    WindowManagerOptions window_managers
+        {
+            add_window_manager_policy<FloatingWindowManagerPolicy>("floating", launcher, shutdown_hook)
+        };
  
-    std::string terminal_cmd{"miral-terminal"};
+    std::string terminal_cmd{"gedit"};
 
     auto const onEvent = [&](MirEvent const* event)
         {
@@ -74,24 +76,21 @@ int main(int argc, char const* argv[]) {
         };
 
     Keymap config_keymap;
- 
-    auto run_startup_apps = [&](std::string const& apps)
-    {
-      for (auto i = begin(apps); i != end(apps); )
-      {
-          auto const j = find(i, end(apps), ':');
-          external_client_launcher.launch(std::vector<std::string>{std::string{i, j}});
-          if ((i = j) != end(apps)) ++i;
-      }
-    };
 
 
-    return runner.run_with(
+    auto runResult = runner.run_with(
         {
-            windowManagers,
+            window_managers,
             WaylandExtensions{},
             X11Support{},
             AppendEventFilter{onEvent},
-            config_keymap
+            config_keymap,
+            external_client_launcher
         });
+
+    if (runResult == EXIT_FAILURE) {
+        return runResult;
+    }
+
+    return EXIT_SUCCESS;
 }
