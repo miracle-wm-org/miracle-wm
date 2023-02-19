@@ -52,6 +52,7 @@ FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
     std::function<void()>& shutdown_hook) :
     MinimalWindowManager(tools)
 {
+    mActivePlacementStrategy = PlacementStrategy::Horizontal;
     shutdown_hook = [this] {  };
 
     for (auto key : {KEY_F1, KEY_F2, KEY_F3, KEY_F4})
@@ -450,11 +451,17 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
 {
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
-
     bool const needs_titlebar = WindowInfo::needs_titlebar(parameters.type().value());
 
-    if (parameters.state().value() != mir_window_state_fullscreen && needs_titlebar)
-        parameters.top_left() = Point{parameters.top_left().value().x, parameters.top_left().value().y + title_bar_height};
+    auto activeWindow = tools.active_window();
+    auto activeZone = tools.active_application_zone();
+    if (!activeWindow) {
+        parameters.top_left() = Point{0, 0};
+        parameters.size() = Size{ activeZone.extents().size };
+
+    }
+
+    parameters.top_left() = Point{0, 0};
 
     parameters.userdata() = std::make_shared<PolicyData>();
     return parameters;

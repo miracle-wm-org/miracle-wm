@@ -12,8 +12,8 @@ I will begin my searching for documentation on how I made write a Mir-based comp
 2. I will also look extensively at the `miral-app` demo to see how it is starting the miral server. The `miral-shell` looks like the easiest barebone candidate for me to follow.
 
 ### Programming
-1. I started off by implementing the simple miral-terminal example, however I am runnning into an issue where the `ExternalClientLauncher` is claiming that the server has not yet been set.
-2. 
+1. To get started at a reasonabel pace, I copy and pasted the example `FloatingWindowManager` class. I plan to rework it for a `TilingWindowManager` with controls that mimic those if `i3.`
+
 My task is to build a compositor, so I will first define what is that I need in my compositor. As an MVP, I would like to support:
 - Window transparency
 - Drop shadows
