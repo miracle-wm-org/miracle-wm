@@ -17,7 +17,9 @@
 #include "FloatingWindowManager.hpp"
 #include "WindowGroup.hpp"
 #include "mir/geometry/forward.h"
+#include "mir_toolkit/events/enums.h"
 
+#include <linux/input-event-codes.h>
 #include <memory>
 #include <miral/application_info.h>
 #include <miral/internal_client.h>
@@ -257,9 +259,26 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     if (MinimalWindowManager::handle_keyboard_event(event))
         return true;
 
+
     auto const action = mir_keyboard_event_action(event);
     auto const scan_code = mir_keyboard_event_scan_code(event);
     auto const modifiers = mir_keyboard_event_modifiers(event) & modifier_mask;
+
+    if ((modifiers && mir_input_event_modifier_meta)) {
+        switch (scan_code) {
+            case KEY_V: {
+                changeStrategy(PlacementStrategy::Vertical);
+                return true;
+            }
+            case KEY_H: {
+                changeStrategy(PlacementStrategy::Horizontal);
+                return true;
+            }
+            default: {
+                break;
+            }
+        }
+    }
 
     // Switch workspaces
     if (action == mir_keyboard_action_down &&
@@ -379,6 +398,21 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     return false;
 }
 
+void FloatingWindowManagerPolicy::changeStrategy(PlacementStrategy strategy) {
+    auto activeWindow = tools.active_window();
+
+    if (!activeWindow) {
+        // Nothing is selected which means nothing is added to the screen.
+        // A window must always be selected, so we can update the placement
+        // strategy and move along.
+        mActivePlacementStrategy = strategy;
+        return;
+    }
+
+    mActiveWindowGroup = mActiveWindowGroup->createSubGroup(activeWindow);
+    mActivePlacementStrategy = strategy;
+}
+
 void FloatingWindowManagerPolicy::toggle(MirWindowState state)
 {
     if (auto const window = tools.active_window())
@@ -490,7 +524,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
         parameters.size() = zoneFractionSize;
     }
     else {
-
+        printf("Unsupported\n");
     }
 
     parameters.userdata() = std::make_shared<PolicyData>();

@@ -64,6 +64,8 @@ private:
     WindowGroup mRootWindowGroup;
     std::shared_ptr<WindowGroup> mActiveWindowGroup;
 
+    void changeStrategy(PlacementStrategy strategy);
+
     void toggle(MirWindowState state);
 
     int old_touch_pinch_top = 0;

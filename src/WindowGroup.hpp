@@ -21,10 +21,11 @@ public:
     void removeWindow(std::shared_ptr<miral::Window>);
     std::vector<std::shared_ptr<miral::Window>> getWindowsInZone();
     size_t getNumWindowsInGroup();
+    std::shared_ptr<WindowGroup> createSubGroup(const miral::Window& window);
 
 private:
     miral::Zone mZone;
-    std::vector<std::shared_ptr<WindowGroup>> mSubGroups;
+    std::vector<WindowGroup> mSubGroups;
     std::vector<std::shared_ptr<miral::Window>> mWindowsInZone;
 };
 
