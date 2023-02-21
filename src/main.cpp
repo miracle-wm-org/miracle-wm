@@ -72,7 +72,7 @@ int main(int argc, char const* argv[]) {
     Keymap config_keymap;
 
 
-    auto runResult = runner.run_with(
+    return runner.run_with(
         {
             window_managers,
             WaylandExtensions{},
@@ -81,10 +81,4 @@ int main(int argc, char const* argv[]) {
             config_keymap,
             external_client_launcher
         });
-
-    if (runResult == EXIT_FAILURE) {
-        return runResult;
-    }
-
-    return EXIT_SUCCESS;
 }
