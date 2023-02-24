@@ -3,6 +3,7 @@
 
 #include "mir/geometry/forward.h"
 #include "miral/window_info.h"
+#include "miral/window_specification.h"
 #include "miral/zone.h"
 #include <cstddef>
 #include <memory>
@@ -13,10 +14,16 @@ enum class PlacementStrategy {
     /** If horizontal, we will place the new window to the right of the selectd window. */
     Horizontal,
     /** If vertical, we will place the new window below the selected window. */
-    Vertical
+    Vertical,
+    /** If none was defined for this tile, we will get the nearest defined parent's. */
+    Parent
 };
 
-/** Represents a group of windows in the tiler. */
+/**
+    Each WindowGroup represents a Tilelable object on the desktop.
+    The smallest window group is comprised of a single window.
+    A large WindowGroup is made up of many WindowGroups.
+*/
 class WindowGroup {
 public:
     WindowGroup();
@@ -25,21 +32,28 @@ public:
 
     miral::Zone getZone();
     int getZoneId();
-    void addWindow(std::shared_ptr<miral::Window>);
+    std::shared_ptr<WindowGroup> addWindow(std::shared_ptr<miral::Window>);
     void removeWindow(std::shared_ptr<miral::Window>);
     std::vector<std::shared_ptr<miral::Window>> getWindowsInZone();
-    size_t getNumWindowsInGroup();
-
-    /** Creates a group out of the */
-    std::shared_ptr<WindowGroup> createSubGroup(const miral::Window& window, PlacementStrategy strategy);
+    size_t getNumTilesInGroup();
 
     PlacementStrategy getPlacementStrategy();
 
+    /** Returns the window group who is in charge of organizing this window. */
+    WindowGroup* getControllingWindowGroup();
+
+    /** Returns true if the window group is the parent AND nothing has been added to it. */
+    bool isEmpty();
+
 private:
     miral::Zone mZone;
-    std::vector<WindowGroup> mSubGroups;
-    std::vector<std::shared_ptr<miral::Window>> mWindowsInZone;
+
+    std::shared_ptr<miral::Window> mWindow;
+    std::shared_ptr<WindowGroup> mParent;
+    std::vector<std::shared_ptr<WindowGroup>> mWindowGroups;
     PlacementStrategy mPlacementStrategy;
+
+    std::shared_ptr<WindowGroup> makeWindowGroup(std::shared_ptr<miral::Window>, PlacementStrategy strategy);
 };
 
 #endif

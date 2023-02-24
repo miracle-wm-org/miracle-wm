@@ -57,7 +57,7 @@ bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 }
 
 void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
-    mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
+    mActiveWindowGroup = mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
     WindowSpecification modifications;
     tools.place_and_size_for_state(modifications, window_info);
     tools.modify_window(window_info.window(), modifications);
@@ -107,13 +107,11 @@ void FloatingWindowManagerPolicy::requestNewGroup(PlacementStrategy strategy) {
 
     if (!activeWindow) {
         // Nothing is selected which means nothing is added to the screen.
-        // A window must always be selected, so we can update the placement
-        // strategy and move along.
         mDefaultStrategy = strategy;
         return;
     }
 
-    mActiveWindowGroup = mActiveWindowGroup->createSubGroup(activeWindow, strategy);
+    // TODO:
 }
 
 WindowSpecification FloatingWindowManagerPolicy::place_new_window(
@@ -123,12 +121,12 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     bool const needs_titlebar = WindowInfo::needs_titlebar(parameters.type().value());
 
     // If it is our first time adding an item to the view, we initialize the root window group.
-    if (!mActiveWindowGroup.get()) {
+    if (mRootWindowGroup.isEmpty()) {
         mRootWindowGroup = WindowGroup(tools.active_application_zone().extents(), mDefaultStrategy);
         mActiveWindowGroup = std::make_shared<WindowGroup>(mRootWindowGroup);
     }
 
-    auto targetNumberOfWindows = mActiveWindowGroup->getNumWindowsInGroup() + 1;
+    auto targetNumberOfWindows = mActiveWindowGroup->getNumTilesInGroup() + 1;
     auto activeZone = mActiveWindowGroup->getZone();
     auto placementStrategy = mActiveWindowGroup->getPlacementStrategy();
 
@@ -148,7 +146,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int x = zoneFractionSize.width.as_int() * mActiveWindowGroup->getNumWindowsInGroup() + activeZone.extents().top_left.x.as_value();
+        const int x = zoneFractionSize.width.as_int() * mActiveWindowGroup->getNumTilesInGroup() + activeZone.extents().top_left.x.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
@@ -163,7 +161,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int y = zoneFractionSize.height.as_int() * mActiveWindowGroup->getNumWindowsInGroup() + activeZone.extents().top_left.y.as_value();
+        const int y = zoneFractionSize.height.as_int() * mActiveWindowGroup->getNumTilesInGroup() + activeZone.extents().top_left.y.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }

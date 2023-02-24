@@ -52,7 +52,7 @@ protected:
         mir_input_event_modifier_meta;
 
 private:
-    std::map<int, miral::Window> mZoneIdToWindowMap;
+    std::map<int, std::shared_ptr<miral::Window>> mWindowGroupIdToWindowMap;
     WindowGroup mRootWindowGroup;
     std::shared_ptr<WindowGroup> mActiveWindowGroup;
     PlacementStrategy mDefaultStrategy;
