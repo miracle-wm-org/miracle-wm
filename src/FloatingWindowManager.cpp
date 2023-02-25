@@ -17,6 +17,7 @@
 #include "FloatingWindowManager.hpp"
 #include "WindowGroup.hpp"
 #include "mir/geometry/forward.h"
+#include "mir/logging/logger.h"
 #include "mir_toolkit/events/enums.h"
 #include "miral/minimal_window_manager.h"
 
@@ -28,6 +29,7 @@
 #include <miral/window_info.h>
 #include <miral/window_manager_tools.h>
 #include <miral/zone.h>
+#include <iostream>
 
 #include <linux/input.h>
 #include <csignal>
@@ -44,37 +46,12 @@ FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
 {
     mDefaultStrategy = PlacementStrategy::Horizontal;
     shutdown_hook = [this] {  };
+    mActiveWindowGroup = nullptr;
 }
 
 FloatingWindowManagerPolicy::~FloatingWindowManagerPolicy() = default;
 
-bool FloatingWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event) {
-    return MinimalWindowManager::handle_pointer_event(event);;
-}
-
-bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event) {
-    return MinimalWindowManager::handle_touch_event(event);
-}
-
-void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
-    mActiveWindowGroup = mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
-    WindowSpecification modifications;
-    tools.place_and_size_for_state(modifications, window_info);
-    tools.modify_window(window_info.window(), modifications);
-}
-
-void FloatingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
-    MinimalWindowManager::handle_window_ready(window_info);
-    return;
-}
-
-void FloatingWindowManagerPolicy::advise_focus_gained(WindowInfo const& info) {
-    MinimalWindowManager::advise_focus_gained(info);
-    return;
-}
-
-bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
-{
+bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* event) {
     if (MinimalWindowManager::handle_keyboard_event(event)) {
         return true;
     }
@@ -118,19 +95,21 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
 {
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
-    bool const needs_titlebar = WindowInfo::needs_titlebar(parameters.type().value());
 
     // If it is our first time adding an item to the view, we initialize the root window group.
     if (mRootWindowGroup.isEmpty()) {
         mRootWindowGroup = WindowGroup(tools.active_application_zone().extents(), mDefaultStrategy);
-        mActiveWindowGroup = std::make_shared<WindowGroup>(mRootWindowGroup);
+        mActiveWindowGroup = &mRootWindowGroup;
     }
 
-    auto targetNumberOfWindows = mActiveWindowGroup->getNumTilesInGroup() + 1;
-    auto activeZone = mActiveWindowGroup->getZone();
-    auto placementStrategy = mActiveWindowGroup->getPlacementStrategy();
+    auto groupInCharge = mActiveWindowGroup->getControllingWindowGroup();
+    auto targetNumberOfWindows = groupInCharge->getNumTilesInGroup() + 1;
+    auto activeZone = groupInCharge->getZone();
+    auto placementStrategy = groupInCharge->getPlacementStrategy();
 
+    std::cout << "Placing new window into group. Group ID: " << activeZone.id() << ". Target Number of Windows: " << targetNumberOfWindows << std::endl;
     if (targetNumberOfWindows == 1) {
+        
         // There are no windows in the current zone so we can place it to take up the whole zone.
         parameters.top_left() = activeZone.extents().top_left;
         parameters.size() = Size{ activeZone.extents().size };
@@ -138,7 +117,9 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     else if (placementStrategy == PlacementStrategy::Horizontal) {
         auto zoneFractionSize = Size{ activeZone.extents().size.width / targetNumberOfWindows, activeZone.extents().size.height };
         const int y = activeZone.extents().top_left.y.as_value();
-        for (unsigned short i = 0; auto window : mActiveWindowGroup->getWindowsInZone()) {
+
+        std::cout << "Resizing " << groupInCharge->getWindowsInZone().size() << " window horizontally." << std::endl;
+        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInZone()) {
             window->resize(zoneFractionSize);
 
             const int x = zoneFractionSize.width.as_int() * i + activeZone.extents().top_left.x.as_value();
@@ -146,14 +127,14 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int x = zoneFractionSize.width.as_int() * mActiveWindowGroup->getNumTilesInGroup() + activeZone.extents().top_left.x.as_value();
+        const int x = zoneFractionSize.width.as_int() * groupInCharge->getNumTilesInGroup() + activeZone.extents().top_left.x.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
     else if (placementStrategy == PlacementStrategy::Vertical) {
         auto zoneFractionSize = Size{ activeZone.extents().size.width, activeZone.extents().size.height / targetNumberOfWindows };
         const int x = activeZone.extents().top_left.x.as_value();
-        for (unsigned short i = 0; auto window : mActiveWindowGroup->getWindowsInZone()) {
+        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInZone()) {
             window->resize(zoneFractionSize);
 
             const int y = zoneFractionSize.height.as_int() * i + activeZone.extents().top_left.y.as_value();
@@ -161,12 +142,41 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int y = zoneFractionSize.height.as_int() * mActiveWindowGroup->getNumTilesInGroup() + activeZone.extents().top_left.y.as_value();
+        const int y = zoneFractionSize.height.as_int() * groupInCharge->getNumTilesInGroup() + activeZone.extents().top_left.y.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
 
+    std::cout << "Placement of window complete." << std::endl;
+
     return parameters;
+}
+
+bool FloatingWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event) {
+    return MinimalWindowManager::handle_pointer_event(event);;
+}
+
+bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event) {
+    return MinimalWindowManager::handle_touch_event(event);
+}
+
+void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
+    std::cout << "Adding window into the WindowGroup" << std::endl;
+    mActiveWindowGroup = mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
+    WindowSpecification modifications;
+    tools.place_and_size_for_state(modifications, window_info);
+    tools.modify_window(window_info.window(), modifications);
+    std::cout << "Window added to group with Group ID: " << mActiveWindowGroup->getZoneId() << ". New zone is now active." << std::endl;
+}
+
+void FloatingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
+    MinimalWindowManager::handle_window_ready(window_info);
+    return;
+}
+
+void FloatingWindowManagerPolicy::advise_focus_gained(WindowInfo const& info) {
+    MinimalWindowManager::advise_focus_gained(info);
+    return;
 }
 
 void FloatingWindowManagerPolicy::handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) {

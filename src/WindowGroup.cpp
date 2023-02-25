@@ -7,6 +7,7 @@
 #include <bits/ranges_util.h>
 #include <cstddef>
 #include <exception>
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -34,30 +35,36 @@ int WindowGroup::getZoneId() {
     return mZone.id();
 }
 
-std::shared_ptr<WindowGroup> WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
-    // We have a root window group.
+WindowGroup* WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
+    // We don't have a root window
     if (!mWindow.get() && mWindowGroups.size() == 0) {
+        std::cout << "Adding window as root window in the group" << std::endl;
         mWindow = window;
-        return std::shared_ptr<WindowGroup>(this);
+        return this;
     }
 
     if (mWindowGroups.size() > 0 && mWindow.get()) {
         throw new std::exception();
     }
     
-    // If this WindowGroup is just a window, make it a WindowGroup 
-    if (mWindow.get()) {
-        auto firstNewWindowGroup = makeWindowGroup(mWindow, PlacementStrategy::Parent);
+    auto controllingWindowGroup = getControllingWindowGroup();
+
+    // If we are controlling ourselves AND we are just a single window, we need to go "amoeba-mode" and create
+    // a new tile from the parent tile.
+    if (controllingWindowGroup == this && mWindow.get()) {
+        std::cout << "Creating a new window group from the previous window." << std::endl;
+        auto firstNewWindowGroup = controllingWindowGroup->makeWindowGroup(mWindow, PlacementStrategy::Parent);
         firstNewWindowGroup->mParent = std::shared_ptr<WindowGroup>(this);
-        mWindowGroups.push_back(firstNewWindowGroup);
+        controllingWindowGroup->mWindowGroups.push_back(firstNewWindowGroup);
         mWindow.reset();
     }
 
     // Add the new window.
-    auto secondNewWindowGroup = makeWindowGroup(window, PlacementStrategy::Parent);
+    std::cout << "Creating a new window group from the new window." << std::endl;
+    auto secondNewWindowGroup = controllingWindowGroup->makeWindowGroup(window, PlacementStrategy::Parent);
     secondNewWindowGroup->mParent = std::shared_ptr<WindowGroup>(this);
-    mWindowGroups.push_back(secondNewWindowGroup);
-    return std::shared_ptr<WindowGroup>(secondNewWindowGroup);
+    controllingWindowGroup->mWindowGroups.push_back(secondNewWindowGroup);
+    return secondNewWindowGroup.get();
 }
 
 size_t WindowGroup::getNumTilesInGroup() {
@@ -68,11 +75,12 @@ size_t WindowGroup::getNumTilesInGroup() {
     return mWindowGroups.size();
 }
 
-void WindowGroup::removeWindow(std::shared_ptr<miral::Window> window) {
+bool WindowGroup::removeWindow(std::shared_ptr<miral::Window> window) {
     // auto toErase = std::ranges::find(mWindowsInZone, window);
     // if (toErase != mWindowsInZone.end()) {
     //     mWindowsInZone.erase(toErase);
     // }
+    return false;
 }
 
 std::shared_ptr<WindowGroup> WindowGroup::makeWindowGroup(std::shared_ptr<miral::Window> window, PlacementStrategy placementStrategy) {
@@ -80,7 +88,9 @@ std::shared_ptr<WindowGroup> WindowGroup::makeWindowGroup(std::shared_ptr<miral:
     auto nextGroupPosition = window->top_left();
     auto nextGroupSize = window->size();
     auto zoneSize = mir::geometry::Rectangle(nextGroupPosition, nextGroupSize);
-    return std::make_shared<WindowGroup>(zoneSize, placementStrategy);
+    auto windowGroup = std::make_shared<WindowGroup>(zoneSize, placementStrategy);
+    windowGroup->mWindow = window;
+    return windowGroup;
 }
 
 PlacementStrategy WindowGroup::getPlacementStrategy() {
@@ -107,7 +117,9 @@ std::vector<std::shared_ptr<miral::Window>> WindowGroup::getWindowsInZone() {
 
     for (auto windowGroup : mWindowGroups) {
         auto otherRetval = windowGroup->getWindowsInZone();
-        std::ranges::move(retval, std::back_inserter(otherRetval));
+        for (auto otherWindow : otherRetval) {
+            retval.push_back(otherWindow);
+        }
     }
 
     return retval;
