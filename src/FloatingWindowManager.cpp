@@ -15,7 +15,6 @@
  */
 
 #include "FloatingWindowManager.hpp"
-#include "WindowGroup.hpp"
 #include "mir/geometry/forward.h"
 #include "mir/logging/logger.h"
 #include "mir_toolkit/events/enums.h"
@@ -34,6 +33,7 @@
 
 #include <linux/input.h>
 #include <csignal>
+#include <ostream>
 #include <stdexcept>
 #include <utility>
 
@@ -45,11 +45,11 @@ FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
     miral::InternalClientLauncher const& launcher,
     std::function<void()>& shutdown_hook) :
     miral::MinimalWindowManager(inTools),
-    mRootWindowGroup()
+    mRootTileNode()
 {
     mDefaultStrategy = PlacementStrategy::Horizontal;
     shutdown_hook = [this] {  };
-    mActiveWindowGroup = nullptr;
+    mActiveTileNode = nullptr;
 }
 
 FloatingWindowManagerPolicy::~FloatingWindowManagerPolicy() = default;
@@ -70,6 +70,12 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
         else if (scan_code == KEY_H) {
             requestPlacementStrategyChange(PlacementStrategy::Horizontal);
         }
+        else if (scan_code == KEY_LEFT) {
+            requestChangeActiveWindow(-1, mActiveTileNode);
+        }
+        else if (scan_code == KEY_RIGHT) {
+            requestChangeActiveWindow(1, mActiveTileNode);
+        }
         else if ((modifiers && mir_input_event_modifier_shift) && scan_code == KEY_Q) {
             requestQuitSelectedApplication();
         }
@@ -87,7 +93,7 @@ void FloatingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrate
         return;
     }
 
-    mActiveWindowGroup->setPlacementStrategy(strategy);
+    mActiveTileNode->setPlacementStrategy(strategy);
 }
 
 void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
@@ -97,23 +103,54 @@ void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
     }
 
     auto application = mActiveWindow->application();
-    mRootWindowGroup->removeWindow(mActiveWindow);
+    mRootTileNode->removeWindow(mActiveWindow);
     miral::kill(application, SIGTERM);
 
-    mActiveWindowGroup = mActiveWindowGroup->getParent();
-    if (mActiveWindowGroup->getWindowsInZone().size()) {
-        // Try and select any first window that we find.
-        mActiveWindow = mActiveWindowGroup->getWindowsInZone().at(0);
+    // TODO: If I had more time, I would resize the grid when a quit occurs.
+
+    // Select the next available window.
+    mActiveTileNode = mActiveTileNode->getParent();
+    if (mActiveTileNode->getWindowsInZone().size()) {
+        mActiveWindow = mActiveTileNode->getWindowsInZone().at(0);
         tools.select_active_window(*mActiveWindow.get());
-        mActiveWindowGroup = mRootWindowGroup->getWindowGroupForWindow(mActiveWindow);
+        mActiveTileNode = mRootTileNode->getTileNodeForWindow(mActiveWindow);
     }
     else {
         mActiveWindow.reset();
     }
 
-    // TODO: Resize the grid
-
     std::cout << "Quit the current application." << std::endl;
+}
+
+void FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> groupToSearch) {
+    auto parent = groupToSearch->getParent();
+    auto parentsChildren = parent->getSubTileNodes();
+    auto it = std::find(parentsChildren.begin(), parentsChildren.end(), groupToSearch);
+    if (it == parentsChildren.end())  {
+        std::cerr << "Could not change the active window because the window group is not found." << std::endl;
+        return;
+    }
+
+    int index = it - parentsChildren.begin();
+    int newIndex = index + moveAmount;
+    if (newIndex < parentsChildren.size() && newIndex >= 0) {
+        // We can make a lateral move to another node in the tree
+        auto nextTileNode = parentsChildren.at(newIndex);
+        if (nextTileNode->getWindowsInZone().empty()) {
+            std::cerr << "Encountered error state: Found window group without any windows." << std::endl;
+        }
+
+        mActiveTileNode = nextTileNode;
+        mActiveWindow = mActiveTileNode->getWindowsInZone().at(0);
+        tools.select_active_window(*mActiveWindow.get());
+    }
+    else if (index >= 0) {
+        // We're going to try to go deeper into the tree
+    }
+    else if (parent.get()) {
+        // We're going to try and go higher into the tree
+        requestChangeActiveWindow(moveAmount, parent);
+    }
 }
 
 WindowSpecification FloatingWindowManagerPolicy::place_new_window(
@@ -122,12 +159,12 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
 
     // If it is our first time adding an item to the view, we initialize the root window group.
-    if (!mRootWindowGroup.get()) {
-        mRootWindowGroup = std::make_shared<WindowGroup>(tools.active_application_zone().extents(), mDefaultStrategy);
-        mActiveWindowGroup = mRootWindowGroup;
+    if (!mRootTileNode.get()) {
+        mRootTileNode = std::make_shared<TileNode>(tools.active_application_zone().extents(), mDefaultStrategy);
+        mActiveTileNode = mRootTileNode;
     }
 
-    auto groupInCharge = mActiveWindowGroup->getControllingWindowGroup();
+    auto groupInCharge = mActiveTileNode->getControllingTileNode();
     auto targetNumberOfWindows = groupInCharge->getNumTilesInGroup() + 1;
     auto activeZone = groupInCharge->getZone();
     auto placementStrategy = groupInCharge->getPlacementStrategy();
@@ -177,19 +214,19 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
 }
 
 bool FloatingWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event) {
-    return MinimalWindowManager::handle_pointer_event(event);;
+    return true;
 }
 
 bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event) {
-    return MinimalWindowManager::handle_touch_event(event);
+    return true;
 }
 
 void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
-    std::cout << "Adding window into the WindowGroup" << std::endl;
+    std::cout << "Adding window into the TileNode" << std::endl;
     
     // Add the window into the current tile. 
     auto window = std::make_shared<Window>(window_info.window());
-    mActiveWindowGroup = mActiveWindowGroup->addWindow(window);
+    mActiveTileNode = mActiveTileNode->addWindow(window);
     mActiveWindow = window;
 
     // Map the application to the window group so that we can remove it when we delete it.
@@ -199,7 +236,10 @@ void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_inf
     WindowSpecification modifications;
     tools.place_and_size_for_state(modifications, window_info);
     tools.modify_window(window_info.window(), modifications);
-    std::cout << "Window added to group with Group ID: " << mActiveWindowGroup->getZoneId() << ". New zone is now active." << std::endl;
+    std::cout << "New window group has ID: " << mActiveTileNode->getZoneId() << ". New zone is now active." << std::endl;
+    if (mActiveTileNode->getParent().get()) {
+        std::cout << "Parent window group has ID: " << mActiveTileNode->getParent()->getZoneId() << std::endl;
+    }
 }
 
 void FloatingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
