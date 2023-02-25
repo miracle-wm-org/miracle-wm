@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "FloatingWindowManager.hpp"
+#include "TilingWindowManager.hpp"
 #include "mir/geometry/forward.h"
 #include "mir/logging/logger.h"
 #include "mir_toolkit/events/enums.h"
@@ -40,7 +40,7 @@
 using namespace miral;
 using namespace miral::toolkit;
 
-FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
+TilingWindowManagerPolicy::TilingWindowManagerPolicy(
     WindowManagerTools const& inTools,
     miral::InternalClientLauncher const& launcher,
     std::function<void()>& shutdown_hook) :
@@ -52,9 +52,9 @@ FloatingWindowManagerPolicy::FloatingWindowManagerPolicy(
     mActiveTileNode = nullptr;
 }
 
-FloatingWindowManagerPolicy::~FloatingWindowManagerPolicy() = default;
+TilingWindowManagerPolicy::~TilingWindowManagerPolicy() = default;
 
-bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* event) {
+bool TilingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* event) {
     if (MinimalWindowManager::handle_keyboard_event(event)) {
         return true;
     }
@@ -89,7 +89,7 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     return false;
 }
 
-void FloatingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrategy strategy) {
+void TilingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrategy strategy) {
     auto activeWindow = tools.active_window();
 
     if (!activeWindow) {
@@ -101,7 +101,7 @@ void FloatingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrate
     mActiveTileNode->setPlacementStrategy(strategy);
 }
 
-void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
+void TilingWindowManagerPolicy::requestQuitSelectedApplication() {
     if (!mActiveWindow.get()) {
         std::cout << "There is no current application to quit." << std::endl;
         return;
@@ -127,7 +127,7 @@ void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
     std::cout << "Quit the current application." << std::endl;
 }
 
-bool FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> tileNodeToSearch) {
+bool TilingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> tileNodeToSearch) {
     auto parent = tileNodeToSearch->getParent();
     if (!parent.get()) {
         // We are a root node, all moves are illegal.
@@ -169,9 +169,11 @@ bool FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std:
         // We're going to try and go higher into the tree
         return requestChangeActiveWindow(moveAmount, parent);
     }
+    
+    return false;
 }
 
-WindowSpecification FloatingWindowManagerPolicy::place_new_window(
+WindowSpecification TilingWindowManagerPolicy::place_new_window(
     ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
 {
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
@@ -231,15 +233,15 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     return parameters;
 }
 
-bool FloatingWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event) {
+bool TilingWindowManagerPolicy::handle_pointer_event(MirPointerEvent const* event) {
     return true;
 }
 
-bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event) {
+bool TilingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event) {
     return true;
 }
 
-void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
+void TilingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
     std::cout << "Adding window into the TileNode" << std::endl;
     
     // Add the window into the current tile. 
@@ -260,17 +262,17 @@ void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_inf
     }
 }
 
-void FloatingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
+void TilingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
     MinimalWindowManager::handle_window_ready(window_info);
     return;
 }
 
-void FloatingWindowManagerPolicy::advise_focus_gained(WindowInfo const& info) {
+void TilingWindowManagerPolicy::advise_focus_gained(WindowInfo const& info) {
     MinimalWindowManager::advise_focus_gained(info);
     return;
 }
 
-void FloatingWindowManagerPolicy::handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) {
+void TilingWindowManagerPolicy::handle_modify_window(WindowInfo& window_info, WindowSpecification const& modifications) {
     MinimalWindowManager::handle_modify_window(window_info, modifications);
     return;
 }

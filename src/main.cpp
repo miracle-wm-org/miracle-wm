@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 
-#include "FloatingWindowManager.hpp"
+#include "TilingWindowManager.hpp"
 #include <linux/input-event-codes.h>
 #include <miral/set_window_management_policy.h>
 #include <miral/display_configuration_option.h>
@@ -33,7 +33,7 @@ int main(int argc, char const* argv[]) {
     ExternalClientLauncher external_client_launcher;
     WindowManagerOptions window_managers
         {
-            add_window_manager_policy<FloatingWindowManagerPolicy>("floating", launcher, shutdown_hook)
+            add_window_manager_policy<TilingWindowManagerPolicy>("tiling", launcher, shutdown_hook)
         };
  
     std::string terminal_cmd{"xfce4-terminal"};
