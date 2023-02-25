@@ -19,6 +19,7 @@
 #include "mir/geometry/forward.h"
 #include "mir/logging/logger.h"
 #include "mir_toolkit/events/enums.h"
+#include "miral/application.h"
 #include "miral/minimal_window_manager.h"
 
 #include <linux/input-event-codes.h>
@@ -33,6 +34,8 @@
 
 #include <linux/input.h>
 #include <csignal>
+#include <stdexcept>
+#include <utility>
 
 using namespace miral;
 using namespace miral::toolkit;
@@ -60,19 +63,15 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     auto const scan_code = mir_keyboard_event_scan_code(event);
     auto const modifiers = mir_keyboard_event_modifiers(event) & pModifierMask;
 
-    if ((modifiers && mir_input_event_modifier_meta)) {
-        switch (scan_code) {
-            case KEY_V: {
-                requestPlacementStrategyChange(PlacementStrategy::Vertical);
-                return true;
-            }
-            case KEY_H: {
-                requestPlacementStrategyChange(PlacementStrategy::Horizontal);
-                return true;
-            }
-            default: {
-                break;
-            }
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers && mir_input_event_modifier_meta)) {
+        if (scan_code == KEY_V) {
+            requestPlacementStrategyChange(PlacementStrategy::Vertical);
+        }
+        else if (scan_code == KEY_H) {
+            requestPlacementStrategyChange(PlacementStrategy::Horizontal);
+        }
+        else if ((modifiers && mir_input_event_modifier_shift) && scan_code == KEY_Q) {
+            requestQuitSelectedApplication();
         }
     }
 
@@ -91,15 +90,41 @@ void FloatingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrate
     mActiveWindowGroup->setPlacementStrategy(strategy);
 }
 
+void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
+    if (!mActiveWindow.get()) {
+        std::cout << "There is no current application to quit." << std::endl;
+        return;
+    }
+
+    auto application = mActiveWindow->application();
+    mRootWindowGroup->removeWindow(mActiveWindow);
+    miral::kill(application, SIGTERM);
+
+    mActiveWindowGroup = mActiveWindowGroup->getParent();
+    if (mActiveWindowGroup->getWindowsInZone().size()) {
+        // Try and select any first window that we find.
+        mActiveWindow = mActiveWindowGroup->getWindowsInZone().at(0);
+        tools.select_active_window(*mActiveWindow.get());
+        mActiveWindowGroup = mRootWindowGroup->getWindowGroupForWindow(mActiveWindow);
+    }
+    else {
+        mActiveWindow.reset();
+    }
+
+    // TODO: Resize the grid
+
+    std::cout << "Quit the current application." << std::endl;
+}
+
 WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     ApplicationInfo const& app_info, WindowSpecification const& request_parameters)
 {
     auto parameters = MinimalWindowManager::place_new_window(app_info, request_parameters);
 
     // If it is our first time adding an item to the view, we initialize the root window group.
-    if (mRootWindowGroup.isEmpty()) {
-        mRootWindowGroup = WindowGroup(tools.active_application_zone().extents(), mDefaultStrategy);
-        mActiveWindowGroup = &mRootWindowGroup;
+    if (!mRootWindowGroup.get()) {
+        mRootWindowGroup = std::make_shared<WindowGroup>(tools.active_application_zone().extents(), mDefaultStrategy);
+        mActiveWindowGroup = mRootWindowGroup;
     }
 
     auto groupInCharge = mActiveWindowGroup->getControllingWindowGroup();
@@ -161,7 +186,16 @@ bool FloatingWindowManagerPolicy::handle_touch_event(MirTouchEvent const* event)
 
 void FloatingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info) {
     std::cout << "Adding window into the WindowGroup" << std::endl;
-    mActiveWindowGroup = mActiveWindowGroup->addWindow(std::make_shared<Window>(window_info.window()));
+    
+    // Add the window into the current tile. 
+    auto window = std::make_shared<Window>(window_info.window());
+    mActiveWindowGroup = mActiveWindowGroup->addWindow(window);
+    mActiveWindow = window;
+
+    // Map the application to the window group so that we can remove it when we delete it.
+    pid_t applicationPid = miral::pid_of(window->application());
+
+    // Do the regular placing and sizing.
     WindowSpecification modifications;
     tools.place_and_size_for_state(modifications, window_info);
     tools.modify_window(window_info.window(), modifications);

@@ -2,6 +2,7 @@
 #define WINDOW_GROUP_HPP
 
 #include "mir/geometry/forward.h"
+#include "miral/window.h"
 #include "miral/window_info.h"
 #include "miral/window_specification.h"
 #include "miral/zone.h"
@@ -24,7 +25,7 @@ enum class PlacementStrategy {
     The smallest window group is comprised of a single window.
     A large WindowGroup is made up of many WindowGroups.
 */
-class WindowGroup {
+class WindowGroup : public std::enable_shared_from_this<WindowGroup> {
 public:
     WindowGroup();
     WindowGroup(mir::geometry::Rectangle, PlacementStrategy strategy);
@@ -38,7 +39,7 @@ public:
     
     @returns a pointer to the WindowGroup that the window now exists in.
     */
-    WindowGroup* addWindow(std::shared_ptr<miral::Window>);
+    std::shared_ptr<WindowGroup> addWindow(std::shared_ptr<miral::Window>);
 
     /**
     Removes a window from the window group.
@@ -53,10 +54,14 @@ public:
     void setPlacementStrategy(PlacementStrategy strategy);
 
     /** Returns the window group who is in charge of organizing this window. */
-    WindowGroup* getControllingWindowGroup();
+    std::shared_ptr<WindowGroup> getControllingWindowGroup();
 
     /** Returns true if the window group is the parent AND nothing has been added to it. */
     bool isEmpty();
+
+    std::shared_ptr<WindowGroup> getParent();
+
+    std::shared_ptr<WindowGroup> getWindowGroupForWindow(std::shared_ptr<miral::Window>);
 
 private:
     miral::Zone mZone;
