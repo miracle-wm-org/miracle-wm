@@ -22,50 +22,83 @@ enum class PlacementStrategy {
 
 /**
     Each TileNode represents a Tilelable object on the desktop.
-    The smallest window group is comprised of a single window.
+    The smallest node is comprised of a single window.
     A large TileNode is made up of many TileNodes.
 */
 class TileNode : public std::enable_shared_from_this<TileNode> {
 public:
-    TileNode();
     TileNode(mir::geometry::Rectangle, PlacementStrategy strategy);
     ~TileNode();
 
+    /**
+        Retrieve the zone defined by this TileNode.
+    */
     miral::Zone getZone();
+
+    /**
+        Retrieve the unique identifier for this zone.
+    */
     int getZoneId();
 
     /**
-    Retrieve a vector of window groups within this window group.
+        Retrieve the child nodes of this group.
     */
     std::vector<std::shared_ptr<TileNode>> getSubTileNodes();
 
     /**
-    Adds a window to the TileNode.
-    
-    @returns a pointer to the TileNode that the window now exists in.
+        Adds a window to the TileNode.
+        
+        @returns a pointer to the TileNode that the window now exists in.
     */
     std::shared_ptr<TileNode> addWindow(std::shared_ptr<miral::Window>);
 
     /**
-    Removes a window from the window group.
+        Removes a window from the ToleNode.
 
-    @returns True if the window was removed, otherwise false.
+        @returns True if the window was removed, otherwise false.
     */
     bool removeWindow(std::shared_ptr<miral::Window>);
-    std::vector<std::shared_ptr<miral::Window>> getWindowsInZone();
-    size_t getNumTilesInGroup();
 
+    /**
+        Collects all of the windows in the TileNode, including those in child nodes.
+    */
+    std::vector<std::shared_ptr<miral::Window>> getWindowsInTile();
+
+    /**
+        Gets the number of tiles under the control of this node EXCLUDING child nodes.
+    */
+    size_t getNumberOfTiles();
+
+    /**
+        Retrieves the placement strategy of this node.
+    */
     PlacementStrategy getPlacementStrategy();
+
+    /**
+        Sets the placement strategy of this node.
+    */
     void setPlacementStrategy(PlacementStrategy strategy);
 
-    /** Returns the window group who is in charge of organizing this window. */
+    /**
+        Returns the TileNode who is in charge of organizing this TileNode.
+        This COULD be itself.
+    */
     std::shared_ptr<TileNode> getControllingTileNode();
 
-    /** Returns true if the window group is the parent AND nothing has been added to it. */
+    /**
+        Returns true if the TileNode is the parent AND nothing has been added to it.
+    */
     bool isEmpty();
 
+    /**
+        Retrieves the parent of this child node. Expected to be nullptr for the root.
+    */
     std::shared_ptr<TileNode> getParent();
 
+    /**
+        Given a window, searches recursively for the TileNode that holds it. Returns nullptr
+        if none is found.
+    */
     std::shared_ptr<TileNode> getTileNodeForWindow(std::shared_ptr<miral::Window>);
 
 private:

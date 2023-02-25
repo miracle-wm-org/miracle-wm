@@ -12,13 +12,8 @@
 #include <vector>
 #include <algorithm>
 
-TileNode::TileNode():
-    mZone(mir::geometry::Rectangle())
-{
-    mPlacementStrategy = PlacementStrategy::Horizontal;
-}
-
 TileNode::TileNode(mir::geometry::Rectangle rectangle, PlacementStrategy strategy):
+    std::enable_shared_from_this<TileNode>(),
     mZone(rectangle)
 {
     mPlacementStrategy = strategy;
@@ -72,7 +67,7 @@ std::shared_ptr<TileNode> TileNode::addWindow(std::shared_ptr<miral::Window> win
     return secondNewTileNode;
 }
 
-size_t TileNode::getNumTilesInGroup() {
+size_t TileNode::getNumberOfTiles() {
     if (mWindow.get()) {
         return 1;
     }
@@ -137,14 +132,14 @@ bool TileNode::isEmpty() {
     return mParent.get() == nullptr && mWindow.get() == nullptr && mTileNodes.size() == 0;
 }
 
-std::vector<std::shared_ptr<miral::Window>> TileNode::getWindowsInZone() {
+std::vector<std::shared_ptr<miral::Window>> TileNode::getWindowsInTile() {
     std::vector<std::shared_ptr<miral::Window>> retval;
     if (mWindow.get()) {
         retval.push_back(mWindow);
     }
 
     for (auto tileNode : mTileNodes) {
-        auto otherRetval = tileNode->getWindowsInZone();
+        auto otherRetval = tileNode->getWindowsInTile();
         for (auto otherWindow : otherRetval) {
             retval.push_back(otherWindow);
         }

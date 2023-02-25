@@ -110,8 +110,8 @@ void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
 
     // Select the next available window.
     mActiveTileNode = mActiveTileNode->getParent();
-    if (mActiveTileNode->getWindowsInZone().size()) {
-        mActiveWindow = mActiveTileNode->getWindowsInZone().at(0);
+    if (mActiveTileNode->getWindowsInTile().size()) {
+        mActiveWindow = mActiveTileNode->getWindowsInTile().at(0);
         tools.select_active_window(*mActiveWindow.get());
         mActiveTileNode = mRootTileNode->getTileNodeForWindow(mActiveWindow);
     }
@@ -136,12 +136,12 @@ void FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std:
     if (newIndex < parentsChildren.size() && newIndex >= 0) {
         // We can make a lateral move to another node in the tree
         auto nextTileNode = parentsChildren.at(newIndex);
-        if (nextTileNode->getWindowsInZone().empty()) {
+        if (nextTileNode->getWindowsInTile().empty()) {
             std::cerr << "Encountered error state: Found window group without any windows." << std::endl;
         }
 
         mActiveTileNode = nextTileNode;
-        mActiveWindow = mActiveTileNode->getWindowsInZone().at(0);
+        mActiveWindow = mActiveTileNode->getWindowsInTile().at(0);
         tools.select_active_window(*mActiveWindow.get());
     }
     else if (index >= 0) {
@@ -165,7 +165,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
     }
 
     auto groupInCharge = mActiveTileNode->getControllingTileNode();
-    auto targetNumberOfWindows = groupInCharge->getNumTilesInGroup() + 1;
+    auto targetNumberOfWindows = groupInCharge->getNumberOfTiles() + 1;
     auto activeZone = groupInCharge->getZone();
     auto placementStrategy = groupInCharge->getPlacementStrategy();
 
@@ -180,7 +180,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
         auto zoneFractionSize = Size{ activeZone.extents().size.width / targetNumberOfWindows, activeZone.extents().size.height };
         const int y = activeZone.extents().top_left.y.as_value();
 
-        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInZone()) {
+        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInTile()) {
             window->resize(zoneFractionSize);
 
             const int x = zoneFractionSize.width.as_int() * i + activeZone.extents().top_left.x.as_value();
@@ -188,14 +188,14 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int x = zoneFractionSize.width.as_int() * groupInCharge->getNumTilesInGroup() + activeZone.extents().top_left.x.as_value();
+        const int x = zoneFractionSize.width.as_int() * groupInCharge->getNumberOfTiles() + activeZone.extents().top_left.x.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
     else if (placementStrategy == PlacementStrategy::Vertical) {
         auto zoneFractionSize = Size{ activeZone.extents().size.width, activeZone.extents().size.height / targetNumberOfWindows };
         const int x = activeZone.extents().top_left.x.as_value();
-        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInZone()) {
+        for (unsigned short i = 0; auto window : groupInCharge->getWindowsInTile()) {
             window->resize(zoneFractionSize);
 
             const int y = zoneFractionSize.height.as_int() * i + activeZone.extents().top_left.y.as_value();
@@ -203,7 +203,7 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
             i++;
         }
 
-        const int y = zoneFractionSize.height.as_int() * groupInCharge->getNumTilesInGroup() + activeZone.extents().top_left.y.as_value();
+        const int y = zoneFractionSize.height.as_int() * groupInCharge->getNumberOfTiles() + activeZone.extents().top_left.y.as_value();
         parameters.top_left() = Point{ x, y };
         parameters.size() = zoneFractionSize;
     }
