@@ -66,18 +66,23 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers && mir_input_event_modifier_meta)) {
         if (scan_code == KEY_V) {
             requestPlacementStrategyChange(PlacementStrategy::Vertical);
+            return true;
         }
         else if (scan_code == KEY_H) {
             requestPlacementStrategyChange(PlacementStrategy::Horizontal);
+            return true;
         }
         else if (scan_code == KEY_LEFT) {
             requestChangeActiveWindow(-1, mActiveTileNode);
+            return true;
         }
         else if (scan_code == KEY_RIGHT) {
             requestChangeActiveWindow(1, mActiveTileNode);
+            return true;
         }
         else if ((modifiers && mir_input_event_modifier_shift) && scan_code == KEY_Q) {
             requestQuitSelectedApplication();
+            return true;
         }
     }
 
@@ -122,13 +127,19 @@ void FloatingWindowManagerPolicy::requestQuitSelectedApplication() {
     std::cout << "Quit the current application." << std::endl;
 }
 
-void FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> groupToSearch) {
-    auto parent = groupToSearch->getParent();
+bool FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> tileNodeToSearch) {
+    auto parent = tileNodeToSearch->getParent();
+    if (!parent.get()) {
+        // We are a root node, all moves are illegal.
+        std::cout << "Cannot change active window because we are at the root" << std::endl;
+        return false;
+    }
+
     auto parentsChildren = parent->getSubTileNodes();
-    auto it = std::find(parentsChildren.begin(), parentsChildren.end(), groupToSearch);
+    auto it = std::find(parentsChildren.begin(), parentsChildren.end(), tileNodeToSearch);
     if (it == parentsChildren.end())  {
         std::cerr << "Could not change the active window because the window group is not found." << std::endl;
-        return;
+        return false;
     }
 
     int index = it - parentsChildren.begin();
@@ -144,12 +155,19 @@ void FloatingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std:
         mActiveWindow = mActiveTileNode->getWindowsInTile().at(0);
         tools.select_active_window(*mActiveWindow.get());
     }
-    else if (index >= 0) {
+    else if (index > 0) {
         // We're going to try to go deeper into the tree
+        for (auto child : tileNodeToSearch->getSubTileNodes()) {
+            if (requestChangeActiveWindow(moveAmount, child)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     else if (parent.get()) {
         // We're going to try and go higher into the tree
-        requestChangeActiveWindow(moveAmount, parent);
+        return requestChangeActiveWindow(moveAmount, parent);
     }
 }
 
