@@ -97,6 +97,10 @@ PlacementStrategy WindowGroup::getPlacementStrategy() {
     return mPlacementStrategy;
 }
 
+void WindowGroup::setPlacementStrategy(PlacementStrategy strategy) {
+    mPlacementStrategy = strategy;
+}
+
 WindowGroup* WindowGroup::getControllingWindowGroup() {
     if (mPlacementStrategy == PlacementStrategy::Parent) {
         return mParent->getControllingWindowGroup();

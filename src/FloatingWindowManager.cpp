@@ -63,11 +63,11 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     if ((modifiers && mir_input_event_modifier_meta)) {
         switch (scan_code) {
             case KEY_V: {
-                requestNewGroup(PlacementStrategy::Vertical);
+                requestPlacementStrategyChange(PlacementStrategy::Vertical);
                 return true;
             }
             case KEY_H: {
-                requestNewGroup(PlacementStrategy::Horizontal);
+                requestPlacementStrategyChange(PlacementStrategy::Horizontal);
                 return true;
             }
             default: {
@@ -79,7 +79,7 @@ bool FloatingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* 
     return false;
 }
 
-void FloatingWindowManagerPolicy::requestNewGroup(PlacementStrategy strategy) {
+void FloatingWindowManagerPolicy::requestPlacementStrategyChange(PlacementStrategy strategy) {
     auto activeWindow = tools.active_window();
 
     if (!activeWindow) {
@@ -88,7 +88,7 @@ void FloatingWindowManagerPolicy::requestNewGroup(PlacementStrategy strategy) {
         return;
     }
 
-    // TODO:
+    mActiveWindowGroup->setPlacementStrategy(strategy);
 }
 
 WindowSpecification FloatingWindowManagerPolicy::place_new_window(
@@ -118,7 +118,6 @@ WindowSpecification FloatingWindowManagerPolicy::place_new_window(
         auto zoneFractionSize = Size{ activeZone.extents().size.width / targetNumberOfWindows, activeZone.extents().size.height };
         const int y = activeZone.extents().top_left.y.as_value();
 
-        std::cout << "Resizing " << groupInCharge->getWindowsInZone().size() << " window horizontally." << std::endl;
         for (unsigned short i = 0; auto window : groupInCharge->getWindowsInZone()) {
             window->resize(zoneFractionSize);
 
