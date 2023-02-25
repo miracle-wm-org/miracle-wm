@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-/** Defines how new windows will be placed in the WindowGroup. */
+/** Defines how new windows will be placed in the TileNode. */
 enum class PlacementStrategy {
     /** If horizontal, we will place the new window to the right of the selectd window. */
     Horizontal,
@@ -21,25 +21,30 @@ enum class PlacementStrategy {
 };
 
 /**
-    Each WindowGroup represents a Tilelable object on the desktop.
+    Each TileNode represents a Tilelable object on the desktop.
     The smallest window group is comprised of a single window.
-    A large WindowGroup is made up of many WindowGroups.
+    A large TileNode is made up of many TileNodes.
 */
-class WindowGroup : public std::enable_shared_from_this<WindowGroup> {
+class TileNode : public std::enable_shared_from_this<TileNode> {
 public:
-    WindowGroup();
-    WindowGroup(mir::geometry::Rectangle, PlacementStrategy strategy);
-    ~WindowGroup();
+    TileNode();
+    TileNode(mir::geometry::Rectangle, PlacementStrategy strategy);
+    ~TileNode();
 
     miral::Zone getZone();
     int getZoneId();
 
     /**
-    Adds a window to the WindowGroup.
-    
-    @returns a pointer to the WindowGroup that the window now exists in.
+    Retrieve a vector of window groups within this window group.
     */
-    std::shared_ptr<WindowGroup> addWindow(std::shared_ptr<miral::Window>);
+    std::vector<std::shared_ptr<TileNode>> getSubTileNodes();
+
+    /**
+    Adds a window to the TileNode.
+    
+    @returns a pointer to the TileNode that the window now exists in.
+    */
+    std::shared_ptr<TileNode> addWindow(std::shared_ptr<miral::Window>);
 
     /**
     Removes a window from the window group.
@@ -54,24 +59,24 @@ public:
     void setPlacementStrategy(PlacementStrategy strategy);
 
     /** Returns the window group who is in charge of organizing this window. */
-    std::shared_ptr<WindowGroup> getControllingWindowGroup();
+    std::shared_ptr<TileNode> getControllingTileNode();
 
     /** Returns true if the window group is the parent AND nothing has been added to it. */
     bool isEmpty();
 
-    std::shared_ptr<WindowGroup> getParent();
+    std::shared_ptr<TileNode> getParent();
 
-    std::shared_ptr<WindowGroup> getWindowGroupForWindow(std::shared_ptr<miral::Window>);
+    std::shared_ptr<TileNode> getTileNodeForWindow(std::shared_ptr<miral::Window>);
 
 private:
     miral::Zone mZone;
 
     std::shared_ptr<miral::Window> mWindow;
-    std::shared_ptr<WindowGroup> mParent;
-    std::vector<std::shared_ptr<WindowGroup>> mWindowGroups;
+    std::shared_ptr<TileNode> mParent;
+    std::vector<std::shared_ptr<TileNode>> mTileNodes;
     PlacementStrategy mPlacementStrategy;
 
-    std::shared_ptr<WindowGroup> makeWindowGroup(std::shared_ptr<miral::Window>, PlacementStrategy strategy);
+    std::shared_ptr<TileNode> makeTileNode(std::shared_ptr<miral::Window>, PlacementStrategy strategy);
 };
 
 #endif

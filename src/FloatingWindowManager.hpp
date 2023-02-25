@@ -1,8 +1,9 @@
 #ifndef TILING_WINDOW_MANAGER_HPP
 #define TILING_WINDOW_MANAGER_HPP
 
-#include "WindowGroup.hpp"
+#include "TileNode.hpp"
 #include "miral/window_management_policy.h"
+#include "miral/window_specification.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <mir_toolkit/events/enums.h>
@@ -52,13 +53,14 @@ protected:
         mir_input_event_modifier_meta;
 
 private:
-    std::shared_ptr<WindowGroup> mRootWindowGroup;
-    std::shared_ptr<WindowGroup> mActiveWindowGroup;
+    std::shared_ptr<TileNode> mRootTileNode;
+    std::shared_ptr<TileNode> mActiveTileNode;
     PlacementStrategy mDefaultStrategy;
     std::shared_ptr<miral::Window> mActiveWindow;
 
     void requestPlacementStrategyChange(PlacementStrategy strategy);
     void requestQuitSelectedApplication();
+    void requestChangeActiveWindow(int, std::shared_ptr<TileNode>);
 };
 
 #endif //TILING_WINDOW_MANAGER_HPP
