@@ -57,7 +57,7 @@ private:
     WindowGroup* mActiveWindowGroup;
     PlacementStrategy mDefaultStrategy;
 
-    void requestNewGroup(PlacementStrategy strategy);
+    void requestPlacementStrategyChange(PlacementStrategy strategy);
 };
 
 #endif //TILING_WINDOW_MANAGER_HPP

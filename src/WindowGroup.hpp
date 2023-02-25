@@ -50,6 +50,7 @@ public:
     size_t getNumTilesInGroup();
 
     PlacementStrategy getPlacementStrategy();
+    void setPlacementStrategy(PlacementStrategy strategy);
 
     /** Returns the window group who is in charge of organizing this window. */
     WindowGroup* getControllingWindowGroup();
