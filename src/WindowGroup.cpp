@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 WindowGroup::WindowGroup():
     mZone(mir::geometry::Rectangle())
@@ -24,7 +25,7 @@ WindowGroup::WindowGroup(mir::geometry::Rectangle rectangle, PlacementStrategy s
 }
 
 WindowGroup::~WindowGroup() {
-
+    std::cout << "Decounstructing " << getZoneId() << std::endl;
 }
 
 miral::Zone WindowGroup::getZone() {
@@ -35,12 +36,12 @@ int WindowGroup::getZoneId() {
     return mZone.id();
 }
 
-WindowGroup* WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
+std::shared_ptr<WindowGroup> WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
     // We don't have a root window
     if (!mWindow.get() && mWindowGroups.size() == 0) {
         std::cout << "Adding window as root window in the group" << std::endl;
         mWindow = window;
-        return this;
+        return shared_from_this();
     }
 
     if (mWindowGroups.size() > 0 && mWindow.get()) {
@@ -51,10 +52,10 @@ WindowGroup* WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
 
     // If we are controlling ourselves AND we are just a single window, we need to go "amoeba-mode" and create
     // a new tile from the parent tile.
-    if (controllingWindowGroup == this && mWindow.get()) {
+    if (controllingWindowGroup == shared_from_this() && mWindow) {
         std::cout << "Creating a new window group from the previous window." << std::endl;
         auto firstNewWindowGroup = controllingWindowGroup->makeWindowGroup(mWindow, PlacementStrategy::Parent);
-        firstNewWindowGroup->mParent = std::shared_ptr<WindowGroup>(this);
+        firstNewWindowGroup->mParent = shared_from_this();
         controllingWindowGroup->mWindowGroups.push_back(firstNewWindowGroup);
         mWindow.reset();
     }
@@ -62,9 +63,9 @@ WindowGroup* WindowGroup::addWindow(std::shared_ptr<miral::Window> window) {
     // Add the new window.
     std::cout << "Creating a new window group from the new window." << std::endl;
     auto secondNewWindowGroup = controllingWindowGroup->makeWindowGroup(window, PlacementStrategy::Parent);
-    secondNewWindowGroup->mParent = std::shared_ptr<WindowGroup>(this);
+    secondNewWindowGroup->mParent = shared_from_this();
     controllingWindowGroup->mWindowGroups.push_back(secondNewWindowGroup);
-    return secondNewWindowGroup.get();
+    return secondNewWindowGroup;
 }
 
 size_t WindowGroup::getNumTilesInGroup() {
@@ -76,11 +77,30 @@ size_t WindowGroup::getNumTilesInGroup() {
 }
 
 bool WindowGroup::removeWindow(std::shared_ptr<miral::Window> window) {
-    // auto toErase = std::ranges::find(mWindowsInZone, window);
-    // if (toErase != mWindowsInZone.end()) {
-    //     mWindowsInZone.erase(toErase);
-    // }
-    return false;
+    if (mWindow == window) {
+        // If this group represents the window, remove it.
+        mWindow.reset();
+        return true;
+    }
+    else {
+        // Otherwise, search the other groups to remove it.
+        for (auto group: mWindowGroups) {
+            if (group->removeWindow(window)) {
+                // If our child was the removed window, remove the child and steal his children.
+                std::vector<std::shared_ptr<WindowGroup>>::iterator it = std::find(
+                    mWindowGroups.begin(), mWindowGroups.end(), group);
+                if(it != mWindowGroups.end()) {
+                    for (auto adoptedWindowGroups : it->get()->mWindowGroups) {
+                        mWindowGroups.push_back(adoptedWindowGroups);
+                    }
+                    std::cout << "Erasing window group from the parent. Size = " << mWindowGroups.size() << std::endl;
+                    mWindowGroups.erase(it);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 std::shared_ptr<WindowGroup> WindowGroup::makeWindowGroup(std::shared_ptr<miral::Window> window, PlacementStrategy placementStrategy) {
@@ -101,12 +121,12 @@ void WindowGroup::setPlacementStrategy(PlacementStrategy strategy) {
     mPlacementStrategy = strategy;
 }
 
-WindowGroup* WindowGroup::getControllingWindowGroup() {
+std::shared_ptr<WindowGroup> WindowGroup::getControllingWindowGroup() {
     if (mPlacementStrategy == PlacementStrategy::Parent) {
         return mParent->getControllingWindowGroup();
     }
 
-    return this;
+    return shared_from_this();
 }
 
 bool WindowGroup::isEmpty() {
@@ -127,4 +147,25 @@ std::vector<std::shared_ptr<miral::Window>> WindowGroup::getWindowsInZone() {
     }
 
     return retval;
+}
+
+std::shared_ptr<WindowGroup> WindowGroup::getParent() {
+    if (mParent.get()) return mParent;
+    else return shared_from_this();
+}
+
+std::shared_ptr<WindowGroup> WindowGroup::getWindowGroupForWindow(std::shared_ptr<miral::Window> window) {
+    if (mWindow == window) {
+        return shared_from_this();
+    }
+    else {
+        // Otherwise, search the other groups to remove it.
+        for (auto group: mWindowGroups) {
+            auto windowGroup = group->getWindowGroupForWindow(window);
+            if (windowGroup) {
+                return windowGroup;
+            }
+        }
+        return nullptr;
+    }
 }

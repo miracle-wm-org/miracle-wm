@@ -52,12 +52,13 @@ protected:
         mir_input_event_modifier_meta;
 
 private:
-    std::map<int, std::shared_ptr<miral::Window>> mZoneIdToWindowMap;
-    WindowGroup mRootWindowGroup;
-    WindowGroup* mActiveWindowGroup;
+    std::shared_ptr<WindowGroup> mRootWindowGroup;
+    std::shared_ptr<WindowGroup> mActiveWindowGroup;
     PlacementStrategy mDefaultStrategy;
+    std::shared_ptr<miral::Window> mActiveWindow;
 
     void requestPlacementStrategyChange(PlacementStrategy strategy);
+    void requestQuitSelectedApplication();
 };
 
 #endif //TILING_WINDOW_MANAGER_HPP
