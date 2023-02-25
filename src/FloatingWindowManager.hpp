@@ -60,7 +60,7 @@ private:
 
     void requestPlacementStrategyChange(PlacementStrategy strategy);
     void requestQuitSelectedApplication();
-    void requestChangeActiveWindow(int, std::shared_ptr<TileNode>);
+    bool requestChangeActiveWindow(int, std::shared_ptr<TileNode>);
 };
 
 #endif //TILING_WINDOW_MANAGER_HPP
