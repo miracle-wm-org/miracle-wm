@@ -18,13 +18,13 @@ using namespace mir::geometry;
 /**
 * An implementation of a tiling window manager, much like i3.
 */
-class FloatingWindowManagerPolicy : public miral::MinimalWindowManager {
+class TilingWindowManagerPolicy : public miral::MinimalWindowManager {
 public:
-    FloatingWindowManagerPolicy(
+    TilingWindowManagerPolicy(
         miral::WindowManagerTools const& tools,
         miral::InternalClientLauncher const& launcher,
         std::function<void()>& shutdown_hook);
-    ~FloatingWindowManagerPolicy();
+    ~TilingWindowManagerPolicy();
 
     /**
     * Positions the new window in reference to the currently selected window and the current mode.
