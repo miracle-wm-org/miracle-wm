@@ -32,8 +32,20 @@ public:
 
     miral::Zone getZone();
     int getZoneId();
-    std::shared_ptr<WindowGroup> addWindow(std::shared_ptr<miral::Window>);
-    void removeWindow(std::shared_ptr<miral::Window>);
+
+    /**
+    Adds a window to the WindowGroup.
+    
+    @returns a pointer to the WindowGroup that the window now exists in.
+    */
+    WindowGroup* addWindow(std::shared_ptr<miral::Window>);
+
+    /**
+    Removes a window from the window group.
+
+    @returns True if the window was removed, otherwise false.
+    */
+    bool removeWindow(std::shared_ptr<miral::Window>);
     std::vector<std::shared_ptr<miral::Window>> getWindowsInZone();
     size_t getNumTilesInGroup();
 
