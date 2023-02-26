@@ -31,19 +31,19 @@ int TileNode::getZoneId() {
     return mZone.id();
 }
 
-std::vector<std::shared_ptr<TileNode>> TileNode::getSubTileNodes() {
-    return mTileNodes;
+std::vector<std::shared_ptr<TileNode>> TileNode::getChildNodeList() {
+    return mChildNodes;
 }
 
 std::shared_ptr<TileNode> TileNode::addWindow(std::shared_ptr<miral::Window> window) {
     // We don't have a root window
-    if (!mWindow.get() && mTileNodes.size() == 0) {
+    if (!mWindow.get() && mChildNodes.size() == 0) {
         std::cout << "Adding window as root window in the group" << std::endl;
         mWindow = window;
         return shared_from_this();
     }
 
-    if (mTileNodes.size() > 0 && mWindow.get()) {
+    if (mChildNodes.size() > 0 && mWindow.get()) {
         throw new std::exception();
     }
     
@@ -55,7 +55,7 @@ std::shared_ptr<TileNode> TileNode::addWindow(std::shared_ptr<miral::Window> win
         std::cout << "Creating a new window group from the previous window." << std::endl;
         auto firstNewTileNode = controllingTileNode->makeTileNode(mWindow, PlacementStrategy::Parent);
         firstNewTileNode->mParent = shared_from_this();
-        controllingTileNode->mTileNodes.push_back(firstNewTileNode);
+        controllingTileNode->mChildNodes.push_back(firstNewTileNode);
         mWindow.reset();
     }
 
@@ -63,7 +63,7 @@ std::shared_ptr<TileNode> TileNode::addWindow(std::shared_ptr<miral::Window> win
     std::cout << "Creating a new window group from the new window." << std::endl;
     auto secondNewTileNode = controllingTileNode->makeTileNode(window, PlacementStrategy::Parent);
     secondNewTileNode->mParent = controllingTileNode;
-    controllingTileNode->mTileNodes.push_back(secondNewTileNode);
+    controllingTileNode->mChildNodes.push_back(secondNewTileNode);
     return secondNewTileNode;
 }
 
@@ -72,29 +72,32 @@ size_t TileNode::getNumberOfTiles() {
         return 1;
     }
 
-    return mTileNodes.size();
+    return mChildNodes.size();
 }
 
 bool TileNode::removeWindow(std::shared_ptr<miral::Window> window) {
     if (mWindow == window) {
         // If this group represents the window, remove it.
         mWindow.reset();
+
+        // Remove the child from the parent and take its children.
+        if (mParent.get()) {
+            std::vector<std::shared_ptr<TileNode>>::iterator it = std::find(
+                mParent->mChildNodes.begin(), mParent->mChildNodes.end(), shared_from_this());
+            if (it != mParent->mChildNodes.end()) {
+                for (auto adoptedTileNodes : mChildNodes) {
+                    mParent->mChildNodes.push_back(adoptedTileNodes);
+                }
+                std::cout << "Erasing window group from the parent. Size = " << mParent->mChildNodes.size() << std::endl;
+                mParent->mChildNodes.erase(it);
+            }
+        }
         return true;
     }
     else {
         // Otherwise, search the other groups to remove it.
-        for (auto group: mTileNodes) {
+        for (auto group: mChildNodes) {
             if (group->removeWindow(window)) {
-                // If our child was the removed window, remove the child and steal his children.
-                std::vector<std::shared_ptr<TileNode>>::iterator it = std::find(
-                    mTileNodes.begin(), mTileNodes.end(), group);
-                if(it != mTileNodes.end()) {
-                    for (auto adoptedTileNodes : it->get()->mTileNodes) {
-                        mTileNodes.push_back(adoptedTileNodes);
-                    }
-                    std::cout << "Erasing window group from the parent. Size = " << mTileNodes.size() << std::endl;
-                    mTileNodes.erase(it);
-                }
                 return true;
             }
         }
@@ -129,7 +132,7 @@ std::shared_ptr<TileNode> TileNode::getControllingTileNode() {
 }
 
 bool TileNode::isEmpty() {
-    return mParent.get() == nullptr && mWindow.get() == nullptr && mTileNodes.size() == 0;
+    return mParent.get() == nullptr && mWindow.get() == nullptr && mChildNodes.size() == 0;
 }
 
 std::vector<std::shared_ptr<miral::Window>> TileNode::getWindowsInTile() {
@@ -138,7 +141,7 @@ std::vector<std::shared_ptr<miral::Window>> TileNode::getWindowsInTile() {
         retval.push_back(mWindow);
     }
 
-    for (auto tileNode : mTileNodes) {
+    for (auto tileNode : mChildNodes) {
         auto otherRetval = tileNode->getWindowsInTile();
         for (auto otherWindow : otherRetval) {
             retval.push_back(otherWindow);
@@ -159,7 +162,7 @@ std::shared_ptr<TileNode> TileNode::getTileNodeForWindow(std::shared_ptr<miral::
     }
     else {
         // Otherwise, search the other groups to remove it.
-        for (auto group: mTileNodes) {
+        for (auto group: mChildNodes) {
             auto tileNode = group->getTileNodeForWindow(window);
             if (tileNode) {
                 return tileNode;
