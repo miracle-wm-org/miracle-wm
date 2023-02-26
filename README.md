@@ -1,13 +1,13 @@
 # Mir Compositor Technical Challenge by Matthew Kosarek
 
 ## Goal
-My goal is to make an i3-like tiling window manager within the Mir ecosystem. To that end, I successfully programmed the following features:
-- A simple tiling window manager with support for horizontal and vertical placement
-- A simple keyboard-based window selection mechanic
-- A simple application-qutting mechanic
+My goal was to make an i3-like tiling window manager within the Mir ecosystem. To that end, I programmed the following features:
+- A tiling window manager with support for horizontal and vertical placement
+- A keyboard-based window selection mechanic
+- A application-qutting mechanic
 
 ## Demo
-You can see a demo of the project at the root of the project in `demo.mkv`.
+You can watch `demo.mkv` to see it in action.
 
 
 ## Prerequisites
@@ -18,6 +18,7 @@ On that machine, I did the following:
 sudo apt update && sudo apt upgrade
 sudo apt install xinit
 sudo apt install xwayland
+sudo reboot now
 startx
 ```
 
@@ -38,8 +39,8 @@ make
 ## Running
 After building:
 ```sh
-cd build/bin
-./compositor.sh
+cd build
+./bin/compositor
 ```
 
 ## Controls
