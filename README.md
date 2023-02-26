@@ -6,8 +6,12 @@ My goal is to make an i3-like tiling window manager within the Mir ecosystem. To
 - A simple keyboard-based window selection mechanic
 - A simple application-qutting mechanic
 
+## Demo
+You can see a demo of the project at the root of the project in `demo.mkv`.
+
+
 ## Prerequisites
-I used the `mir-builder.ova` virtual machine with `VirtualBox` for all of my testing. Please copy this folder (or setup a shared folder) into the VirtualBox.
+I used the `mir-builder.ova` virtual machine with `VirtualBox` for all of my testing. Please copy this project folder (or setup a shared folder) into the VirtualBox.
 
 On that machine, I did the following:
 ```sh
@@ -46,7 +50,7 @@ In this section, "META" refers to the Windows key (or whatever else you might ha
 | META + ENTER | Open xfce-4 terminal |
 | META + v | Split the selected terminal vertically |
 | META + h | Split the selected terminal horizontally |
-| META + SHIFT + Q | Delete the selected application |
+| META + SHIFT + q | Delete the selected application |
 | META + LEFT | Move left in the Tile Grid |
 | META + RIGHT | Move right in the Tile Grid |
 | CTRL + SHIFT + BACKSPACE | Exit the compositor |
