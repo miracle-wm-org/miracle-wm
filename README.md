@@ -1,4 +1,4 @@
-# Mir Compositor
+# Mir Compositor Technical Challenge by Matthew Kosarek
 
 ## Goal
 My goal is to make an i3-like tiling window manager within the Mir ecosystem. To that end, I successfully programmed the following features:
