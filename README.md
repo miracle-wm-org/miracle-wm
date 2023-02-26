@@ -49,6 +49,7 @@ In this section, "META" refers to the Windows key (or whatever else you might ha
 | META + SHIFT + Q | Delete the selected application |
 | META + LEFT | Move left in the Tile Grid |
 | META + RIGHT | Move right in the Tile Grid |
+| CTRL + SHIFT + BACKSPACE | Exit the compositor |
 
 ## Future work
 If I had more time to complete the assignment, I would prioritize the following features in this order:
@@ -57,3 +58,9 @@ If I had more time to complete the assignment, I would prioritize the following 
 3. Moving `TileNode`s within the grid
 4. Improved performance, specifically with grid searches
 5. Unit testing all of these things, which I have left out of this assignment
+
+## References
+- https://mir-server.io/doc/index.html
+- https://mir-server.io/docs/developing-a-wayland-compositor-using-mir
+- https://mir-server.io/doc/introducing_the_miral_api.html
+- https://github.com/AlanGriffiths/egmde

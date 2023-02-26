@@ -11,9 +11,9 @@
 #include <map>
 #include <vector>
 
-namespace miral { class InternalClientLauncher; }
-
-using namespace mir::geometry;
+namespace miral {
+    class InternalClientLauncher;
+}
 
 /**
 * An implementation of a tiling window manager, much like i3.
@@ -21,28 +21,28 @@ using namespace mir::geometry;
 class TilingWindowManagerPolicy : public miral::MinimalWindowManager {
 public:
     TilingWindowManagerPolicy(
-        miral::WindowManagerTools const& tools,
-        miral::InternalClientLauncher const& launcher,
-        std::function<void()>& shutdown_hook);
+        miral::WindowManagerTools const&,
+        miral::InternalClientLauncher const&,
+        std::function<void()>&);
     ~TilingWindowManagerPolicy();
 
     /**
     * Positions the new window in reference to the currently selected window and the current mode.
     */
     virtual miral::WindowSpecification place_new_window(
-        miral::ApplicationInfo const& app_info, miral::WindowSpecification const& request_parameters) override;
+        miral::ApplicationInfo const&, miral::WindowSpecification const&) override;
 
 
-    bool handle_pointer_event(MirPointerEvent const* event) override;
-    bool handle_touch_event(MirTouchEvent const* event) override;
-    bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+    bool handle_pointer_event(MirPointerEvent const*) override;
+    bool handle_touch_event(MirTouchEvent const*) override;
+    bool handle_keyboard_event(MirKeyboardEvent const*) override;
 
     /** Add the window to the active zone. */
-    void advise_new_window(miral::WindowInfo const& window_info) override;
-    void handle_window_ready(miral::WindowInfo& window_info) override;
-    void advise_focus_gained(miral::WindowInfo const& info) override;
+    void advise_new_window(miral::WindowInfo const&) override;
+    void handle_window_ready(miral::WindowInfo&) override;
+    void advise_focus_gained(miral::WindowInfo const&) override;
 
-    void handle_modify_window(miral::WindowInfo& window_info, miral::WindowSpecification const& modifications) override;
+    void handle_modify_window(miral::WindowInfo&, miral::WindowSpecification const&) override;
 
 protected:
     static const int pModifierMask =
@@ -56,11 +56,12 @@ private:
     std::shared_ptr<TileNode> mRootTileNode;
     std::shared_ptr<TileNode> mActiveTileNode;
     PlacementStrategy mDefaultStrategy;
+    std::vector<std::shared_ptr<miral::Window>> mWindowsOnDesktop;
     std::shared_ptr<miral::Window> mActiveWindow;
 
-    void requestPlacementStrategyChange(PlacementStrategy strategy);
+    void requestPlacementStrategyChange(PlacementStrategy);
     void requestQuitSelectedApplication();
-    bool requestChangeActiveWindow(int, std::shared_ptr<TileNode>);
+    bool requestChangeActiveWindow(int);
 };
 
 #endif //TILING_WINDOW_MANAGER_HPP

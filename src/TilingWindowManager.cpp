@@ -73,11 +73,11 @@ bool TilingWindowManagerPolicy::handle_keyboard_event(MirKeyboardEvent const* ev
             return true;
         }
         else if (scan_code == KEY_LEFT) {
-            requestChangeActiveWindow(-1, mActiveTileNode);
+            requestChangeActiveWindow(-1);
             return true;
         }
         else if (scan_code == KEY_RIGHT) {
-            requestChangeActiveWindow(1, mActiveTileNode);
+            requestChangeActiveWindow(1);
             return true;
         }
         else if ((modifiers && mir_input_event_modifier_shift) && scan_code == KEY_Q) {
@@ -107,70 +107,56 @@ void TilingWindowManagerPolicy::requestQuitSelectedApplication() {
         return;
     }
 
+    // Kill the application and remove it from the grid.
     auto application = mActiveWindow->application();
     mRootTileNode->removeWindow(mActiveWindow);
     miral::kill(application, SIGTERM);
 
+    // Remove the window from our list of applications.
+    auto it = std::find(mWindowsOnDesktop.begin(), mWindowsOnDesktop.end(), mActiveWindow);
+    int index = it - mWindowsOnDesktop.begin();
+    if (it != mWindowsOnDesktop.end()) {
+        mWindowsOnDesktop.erase(it);
+    }
+
     // TODO: If I had more time, I would resize the grid when a quit occurs.
+    if (index >= mWindowsOnDesktop.size()) {
+        index = mWindowsOnDesktop.size() - 1;
+    }
 
     // Select the next available window.
-    mActiveTileNode = mActiveTileNode->getParent();
-    if (mActiveTileNode->getWindowsInTile().size()) {
-        mActiveWindow = mActiveTileNode->getWindowsInTile().at(0);
-        tools.select_active_window(*mActiveWindow.get());
+    if (index >= 0) {
+        mActiveWindow = mWindowsOnDesktop[index];
         mActiveTileNode = mRootTileNode->getTileNodeForWindow(mActiveWindow);
     }
     else {
+        mActiveTileNode = mRootTileNode;
         mActiveWindow.reset();
     }
 
     std::cout << "Quit the current application." << std::endl;
 }
 
-bool TilingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount, std::shared_ptr<TileNode> tileNodeToSearch) {
-    auto parent = tileNodeToSearch->getParent();
-    if (!parent.get()) {
-        // We are a root node, all moves are illegal.
-        std::cout << "Cannot change active window because we are at the root" << std::endl;
+bool TilingWindowManagerPolicy::requestChangeActiveWindow(int moveAmount) {
+    auto it = std::find(mWindowsOnDesktop.begin(), mWindowsOnDesktop.end(), mActiveWindow);
+    if (it == mWindowsOnDesktop.end()) {
+        std::cerr << "Unable to find current window on the desktop." << std::endl;
         return false;
     }
 
-    auto parentsChildren = parent->getSubTileNodes();
-    auto it = std::find(parentsChildren.begin(), parentsChildren.end(), tileNodeToSearch);
-    if (it == parentsChildren.end())  {
-        std::cerr << "Could not change the active window because the window group is not found." << std::endl;
-        return false;
-    }
-
-    int index = it - parentsChildren.begin();
+    int index = it - mWindowsOnDesktop.begin();
     int newIndex = index + moveAmount;
-    if (newIndex < parentsChildren.size() && newIndex >= 0) {
-        // We can make a lateral move to another node in the tree
-        auto nextTileNode = parentsChildren.at(newIndex);
-        if (nextTileNode->getWindowsInTile().empty()) {
-            std::cerr << "Encountered error state: Found window group without any windows." << std::endl;
-        }
+    while (newIndex < 0) {
+        newIndex += mWindowsOnDesktop.size();
+    }
+    while (newIndex >= mWindowsOnDesktop.size()) {
+        newIndex -= mWindowsOnDesktop.size();
+    }
 
-        mActiveTileNode = nextTileNode;
-        mActiveWindow = mActiveTileNode->getWindowsInTile().at(0);
-        tools.select_active_window(*mActiveWindow.get());
-    }
-    else if (index > 0) {
-        // We're going to try to go deeper into the tree
-        for (auto child : tileNodeToSearch->getSubTileNodes()) {
-            if (requestChangeActiveWindow(moveAmount, child)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-    else if (parent.get()) {
-        // We're going to try and go higher into the tree
-        return requestChangeActiveWindow(moveAmount, parent);
-    }
-    
-    return false;
+    mActiveWindow = mWindowsOnDesktop[newIndex];
+    mActiveTileNode = mRootTileNode->getTileNodeForWindow(mActiveWindow);
+    tools.select_active_window(*mActiveWindow.get());
+    return true;
 }
 
 WindowSpecification TilingWindowManagerPolicy::place_new_window(
@@ -249,9 +235,6 @@ void TilingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info)
     mActiveTileNode = mActiveTileNode->addWindow(window);
     mActiveWindow = window;
 
-    // Map the application to the window group so that we can remove it when we delete it.
-    pid_t applicationPid = miral::pid_of(window->application());
-
     // Do the regular placing and sizing.
     WindowSpecification modifications;
     tools.place_and_size_for_state(modifications, window_info);
@@ -260,6 +243,8 @@ void TilingWindowManagerPolicy::advise_new_window(WindowInfo const& window_info)
     if (mActiveTileNode->getParent().get()) {
         std::cout << "Parent window group has ID: " << mActiveTileNode->getParent()->getZoneId() << std::endl;
     }
+
+    mWindowsOnDesktop.push_back(window);
 }
 
 void TilingWindowManagerPolicy::handle_window_ready(WindowInfo& window_info) {
