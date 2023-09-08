@@ -15,7 +15,13 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(compositor src/main.cpp src/TilingWindowManager.cpp src/TileNode.cpp)
+add_executable(compositor
+        src/display_listener.cpp
+        src/main.cpp
+        src/mirie_window_management_policy.cpp
+        src/tiling_region.cpp
+        src/tiled_node.cpp
+    )
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(     compositor               ${MIRAL_LDFLAGS})
