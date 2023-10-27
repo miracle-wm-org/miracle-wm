@@ -8,13 +8,10 @@
 #include <miral/toolkit_event.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
-#include "mirie_window_management_policy.h"
+#include "miracle_window_management_policy.h"
 
-//using namespace miral;
-//using namespace miral::toolkit;
+using namespace miral;
 
-#include "tile_manager.h"
-#include "tile.h"
 #include <memory>
 
 int main(int argc, char const* argv[])
@@ -24,11 +21,11 @@ int main(int argc, char const* argv[])
     std::function<void()> shutdown_hook{[]{}};
     runner.add_stop_callback([&] { shutdown_hook(); });
 
-    InternalClientLauncher launcher;
+    InternalClientLauncher internal_client_launcher;
     ExternalClientLauncher external_client_launcher;
     WindowManagerOptions window_managers
     {
-        add_window_manager_policy<mirie::MirieWindowManagementPolicy>("tiling", external_client_launcher)
+        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>("tiling", external_client_launcher, internal_client_launcher)
     };
  
     Keymap config_keymap;
@@ -39,6 +36,7 @@ int main(int argc, char const* argv[])
             WaylandExtensions{},
             X11Support{},
             config_keymap,
-            external_client_launcher
+            external_client_launcher,
+            internal_client_launcher
         });
 }

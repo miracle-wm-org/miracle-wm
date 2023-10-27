@@ -11,7 +11,7 @@ namespace mir
 class Server;
 }
 
-namespace mirie
+namespace miracle
 {
 class DisplayListener
 {
