@@ -15,14 +15,16 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(compositor src/main.cpp src/tile.cpp src/tile_manager.cpp)
 add_executable(compositor
-        src/display_listener.cpp
-        src/main.cpp
-        src/mirie_window_management_policy.cpp
-        src/tiling_region.cpp
-        src/tiled_node.cpp
-    )
+    src/display_listener.cpp
+    src/main.cpp
+    src/miracle_window_management_policy.cpp
+    src/task_bar.cpp
+    src/wayland_app.cpp
+    src/wayland_surface.cpp
+    src/wayland_shm.cpp
+    src/protocols/xdg_shell.c
+)
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     compositor               ${MIRAL_LDFLAGS})
+target_link_libraries(     compositor               ${MIRAL_LDFLAGS} -lwayland-client)

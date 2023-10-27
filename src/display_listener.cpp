@@ -4,7 +4,7 @@
 
 #include "display_listener.h"
 
-using namespace  mirie;
+using namespace  miracle;
 
 void DisplayListener::operator()(mir::Server &server) const
 {
