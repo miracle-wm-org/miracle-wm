@@ -160,6 +160,7 @@ void WaylandApp::roundtrip() const
     wl_display_roundtrip(display());
 }
 
+#include <iostream>
 void WaylandApp::handle_new_global(
     void* data,
     struct wl_registry* registry,
@@ -168,6 +169,7 @@ void WaylandApp::handle_new_global(
     uint32_t version)
 {
     auto const self = static_cast<WaylandApp*>(data);
+    std::cout << interface << std::endl;
 
     if (strcmp(interface, "wl_compositor") == 0)
     {
@@ -209,6 +211,12 @@ void WaylandApp::handle_new_global(
             {
                 self->output_gone(output.get());
             };
+    }
+    else if (strcmp(interface, "zxdg_shell_v6") == 0)
+    {
+        self->zxdg_shell_v6_ = {
+            static_cast<zxdg_shell_v6*>(wl_registry_bind(registry, id, &zxdg_shell_v6_interface, 1 )),
+            zxdg_shell_v6_destroy };
     }
 }
 

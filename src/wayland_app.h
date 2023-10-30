@@ -23,6 +23,7 @@
 #include <functional>
 #include <cstdint>
 #include <mir/fd.h>
+#include "protocols/xdg_shell_unstable_v6.h"
 
 namespace miracle
 {
@@ -129,6 +130,7 @@ public:
     auto shm() const -> wl_shm* { return shm_; };
     auto seat() const -> wl_seat* { return seat_; };
     auto shell() const -> wl_shell* { return shell_; };
+    auto get_zxdg_shell_v6() const -> zxdg_shell_v6* { return zxdg_shell_v6_; };
     void run(wl_display *display);
     void trigger_draw();
     virtual void draw() = 0;
@@ -149,6 +151,7 @@ private:
     WaylandObject<wl_shm> shm_;
     WaylandObject<wl_seat> seat_;
     WaylandObject<wl_shell> shell_;
+    WaylandObject<zxdg_shell_v6> zxdg_shell_v6_;
 
     static void handle_new_global(
         void* data,

@@ -29,7 +29,7 @@
 # Executables
 *.exe
 *.out
-*.app
+*.app_
 
 # Custom
 mir-builder.*

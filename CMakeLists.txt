@@ -23,7 +23,8 @@ add_executable(compositor
     src/wayland_app.cpp
     src/wayland_surface.cpp
     src/wayland_shm.cpp
-    src/protocols/xdg_shell.c
+    src/protocols/xdg_shell_unstable_v6.c
+    src/xdg_surface.cpp
 )
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
