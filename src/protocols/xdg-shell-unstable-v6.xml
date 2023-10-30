@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<protocol name="xdg_shell">
+<protocol name="xdg_shell_unstable_v6">
 
     <copyright>
         Copyright © 2008-2013 Kristian Høgsberg
         Copyright © 2013      Rafael Antognolli
         Copyright © 2013      Jasper St. Pierre
         Copyright © 2010-2013 Intel Corporation
-        Copyright © 2015-2017 Samsung Electronics Co., Ltd
-        Copyright © 2015-2017 Red Hat Inc.
 
         Permission is hereby granted, free of charge, to any person obtaining a
         copy of this software and associated documentation files (the "Software"),
@@ -29,19 +27,18 @@
         DEALINGS IN THE SOFTWARE.
     </copyright>
 
-    <interface name="xdg_wm_base" version="6">
+    <interface name="zxdg_shell_v6" version="1">
         <description summary="create desktop-style surfaces">
-            The xdg_wm_base interface is exposed as a global object enabling clients
-            to turn their wl_surfaces into windows in a desktop environment. It
-            defines the basic functionality needed for clients and the compositor to
-            create windows that can be dragged, resized, maximized, etc, as well as
-            creating transient windows such as popup menus.
+            xdg_shell allows clients to turn a wl_surface into a "real window"
+            which can be dragged, resized, stacked, and moved around by the
+            user. Everything about this interface is suited towards traditional
+            desktop environments.
         </description>
 
         <enum name="error">
             <entry name="role" value="0" summary="given wl_surface has another role"/>
             <entry name="defunct_surfaces" value="1"
-                   summary="xdg_wm_base was destroyed before children"/>
+                   summary="xdg_shell was destroyed before children"/>
             <entry name="not_the_topmost_popup" value="2"
                    summary="the client tried to map or destroy a non-topmost popup"/>
             <entry name="invalid_popup_parent" value="3"
@@ -50,17 +47,15 @@
                    summary="the client provided an invalid surface state"/>
             <entry name="invalid_positioner" value="5"
                    summary="the client provided an invalid positioner"/>
-            <entry name="unresponsive" value="6"
-                   summary="the client didn’t respond to a ping event in time"/>
         </enum>
 
         <request name="destroy" type="destructor">
-            <description summary="destroy xdg_wm_base">
-                Destroy this xdg_wm_base object.
+            <description summary="destroy xdg_shell">
+                Destroy this xdg_shell object.
 
-                Destroying a bound xdg_wm_base object while there are surfaces
-                still alive created by this xdg_wm_base object instance is illegal
-                and will result in a defunct_surfaces error.
+                Destroying a bound xdg_shell object while there are surfaces
+                still alive created by this xdg_shell object instance is illegal
+                and will result in a protocol error.
             </description>
         </request>
 
@@ -70,16 +65,14 @@
                 surfaces relative to some parent surface. See the interface description
                 and xdg_surface.get_popup for details.
             </description>
-            <arg name="id" type="new_id" interface="xdg_positioner"/>
+            <arg name="id" type="new_id" interface="zxdg_positioner_v6"/>
         </request>
 
         <request name="get_xdg_surface">
             <description summary="create a shell surface from a surface">
                 This creates an xdg_surface for the given surface. While xdg_surface
                 itself is not a role, the corresponding surface may only be assigned
-                a role extending xdg_surface, such as xdg_toplevel or xdg_popup. It is
-                illegal to create an xdg_surface for a wl_surface which already has an
-                assigned role and this will result in a role error.
+                a role extending xdg_surface, such as xdg_toplevel or xdg_popup.
 
                 This creates an xdg_surface for the given surface. An xdg_surface is
                 used as basis to define a role to a given surface, such as xdg_toplevel
@@ -89,15 +82,14 @@
                 See the documentation of xdg_surface for more details about what an
                 xdg_surface is and how it is used.
             </description>
-            <arg name="id" type="new_id" interface="xdg_surface"/>
+            <arg name="id" type="new_id" interface="zxdg_surface_v6"/>
             <arg name="surface" type="object" interface="wl_surface"/>
         </request>
 
         <request name="pong">
             <description summary="respond to a ping event">
                 A client must respond to a ping event with a pong request or
-                the client may be deemed unresponsive. See xdg_wm_base.ping
-                and xdg_wm_base.error.unresponsive.
+                the client may be deemed unresponsive. See xdg_shell.ping.
             </description>
             <arg name="serial" type="uint" summary="serial of the ping event"/>
         </request>
@@ -106,23 +98,21 @@
             <description summary="check if the client is alive">
                 The ping event asks the client if it's still alive. Pass the
                 serial specified in the event back to the compositor by sending
-                a "pong" request back with the specified serial. See xdg_wm_base.pong.
+                a "pong" request back with the specified serial. See xdg_shell.ping.
 
                 Compositors can use this to determine if the client is still
                 alive. It's unspecified what will happen if the client doesn't
                 respond to the ping request, or in what timeframe. Clients should
-                try to respond in a reasonable amount of time. The “unresponsive”
-                error is provided for compositors that wish to disconnect unresponsive
-                clients.
+                try to respond in a reasonable amount of time.
 
                 A compositor is free to ping in any way it wants, but a client must
-                always respond to any xdg_wm_base object it created.
+                always respond to any xdg_shell object it created.
             </description>
             <arg name="serial" type="uint" summary="pass this to the pong request"/>
         </event>
     </interface>
 
-    <interface name="xdg_positioner" version="6">
+    <interface name="zxdg_positioner_v6" version="1">
         <description summary="child surface positioner">
             The xdg_positioner provides a collection of rules for the placement of a
             child surface relative to a parent surface. Rules can be defined to ensure
@@ -140,9 +130,9 @@
             object will have no effect on previous usages.
 
             For an xdg_positioner object to be considered complete, it must have a
-            non-zero size set by set_size, and a non-zero anchor rectangle set by
+            non-zero size_ set by set_size, and a non-zero anchor rectangle set by
             set_anchor_rect. Passing an incomplete xdg_positioner object when
-            positioning a surface raises an invalid_positioner error.
+            positioning a surface raises an error.
         </description>
 
         <enum name="error">
@@ -156,12 +146,12 @@
         </request>
 
         <request name="set_size">
-            <description summary="set the size of the to-be positioned rectangle">
-                Set the size of the surface that is to be positioned with the positioner
-                object. The size is in surface-local coordinates and corresponds to the
+            <description summary="set the size_ of the to-be positioned rectangle">
+                Set the size_ of the surface that is to be positioned with the positioner
+                object. The size_ is in surface-local coordinates and corresponds to the
                 window geometry. See xdg_surface.set_window_geometry.
 
-                If a zero or negative size is set the invalid_input error is raised.
+                If a zero or negative size_ is set the invalid_input error is raised.
             </description>
             <arg name="width" type="int" summary="width of positioned rectangle"/>
             <arg name="height" type="int" summary="height of positioned rectangle"/>
@@ -172,13 +162,13 @@
                 Specify the anchor rectangle within the parent surface that the child
                 surface will be placed relative to. The rectangle is relative to the
                 window geometry as defined by xdg_surface.set_window_geometry of the
-                parent surface.
+                parent surface. The rectangle must be at least 1x1 large.
 
                 When the xdg_positioner object is used to position a child surface, the
                 anchor rectangle may not extend outside the window geometry of the
                 positioned child's parent surface.
 
-                If a negative size is set the invalid_input error is raised.
+                If a zero or negative size_ is set the invalid_input error is raised.
             </description>
             <arg name="x" type="int" summary="x position of anchor rectangle"/>
             <arg name="y" type="int" summary="y position of anchor rectangle"/>
@@ -186,55 +176,63 @@
             <arg name="height" type="int" summary="height of anchor rectangle"/>
         </request>
 
-        <enum name="anchor">
-            <entry name="none" value="0"/>
-            <entry name="top" value="1"/>
-            <entry name="bottom" value="2"/>
-            <entry name="left" value="3"/>
-            <entry name="right" value="4"/>
-            <entry name="top_left" value="5"/>
-            <entry name="bottom_left" value="6"/>
-            <entry name="top_right" value="7"/>
-            <entry name="bottom_right" value="8"/>
+        <enum name="anchor" bitfield="true">
+            <entry name="none" value="0"
+                   summary="the center of the anchor rectangle"/>
+            <entry name="top" value="1"
+                   summary="the top edge of the anchor rectangle"/>
+            <entry name="bottom" value="2"
+                   summary="the bottom edge of the anchor rectangle"/>
+            <entry name="left" value="4"
+                   summary="the left edge of the anchor rectangle"/>
+            <entry name="right" value="8"
+                   summary="the right edge of the anchor rectangle"/>
         </enum>
 
         <request name="set_anchor">
-            <description summary="set anchor rectangle anchor">
-                Defines the anchor point for the anchor rectangle. The specified anchor
-                is used derive an anchor point that the child surface will be
-                positioned relative to. If a corner anchor is set (e.g. 'top_left' or
-                'bottom_right'), the anchor point will be at the specified corner;
-                otherwise, the derived anchor point will be centered on the specified
-                edge, or in the center of the anchor rectangle if no edge is specified.
+            <description summary="set anchor rectangle anchor edges">
+                Defines a set of edges for the anchor rectangle. These are used to
+                derive an anchor point that the child surface will be positioned
+                relative to. If two orthogonal edges are specified (e.g. 'top' and
+                'left'), then the anchor point will be the intersection of the edges
+                (e.g. the top left position of the rectangle); otherwise, the derived
+                anchor point will be centered on the specified edge, or in the center of
+                the anchor rectangle if no edge is specified.
+
+                If two parallel anchor edges are specified (e.g. 'left' and 'right'),
+                the invalid_input error is raised.
             </description>
             <arg name="anchor" type="uint" enum="anchor"
-                 summary="anchor"/>
+                 summary="bit mask of anchor edges"/>
         </request>
 
-        <enum name="gravity">
-            <entry name="none" value="0"/>
-            <entry name="top" value="1"/>
-            <entry name="bottom" value="2"/>
-            <entry name="left" value="3"/>
-            <entry name="right" value="4"/>
-            <entry name="top_left" value="5"/>
-            <entry name="bottom_left" value="6"/>
-            <entry name="top_right" value="7"/>
-            <entry name="bottom_right" value="8"/>
+        <enum name="gravity" bitfield="true">
+            <entry name="none" value="0"
+                   summary="center over the anchor edge"/>
+            <entry name="top" value="1"
+                   summary="position above the anchor edge"/>
+            <entry name="bottom" value="2"
+                   summary="position below the anchor edge"/>
+            <entry name="left" value="4"
+                   summary="position to the left of the anchor edge"/>
+            <entry name="right" value="8"
+                   summary="position to the right of the anchor edge"/>
         </enum>
 
         <request name="set_gravity">
             <description summary="set child surface gravity">
                 Defines in what direction a surface should be positioned, relative to
-                the anchor point of the parent surface. If a corner gravity is
-                specified (e.g. 'bottom_right' or 'top_left'), then the child surface
-                will be placed towards the specified gravity; otherwise, the child
-                surface will be centered over the anchor point on any axis that had no
-                gravity specified. If the gravity is not in the ‘gravity’ enum, an
+                the anchor point of the parent surface. If two orthogonal gravities are
+                specified (e.g. 'bottom' and 'right'), then the child surface will be
+                placed in the specified direction; otherwise, the child surface will be
+                centered over the anchor point on any axis that had no gravity
+                specified.
+
+                If two parallel gravities are specified (e.g. 'left' and 'right'), the
                 invalid_input error is raised.
             </description>
             <arg name="gravity" type="uint" enum="gravity"
-                 summary="gravity direction"/>
+                 summary="bit mask of gravity directions"/>
         </request>
 
         <enum name="constraint_adjustment" bitfield="true">
@@ -254,7 +252,7 @@
             <entry name="none" value="0">
                 <description summary="don't move the child surface when constrained">
                     Don't alter the surface position even if it is constrained on some
-                    axis, for example partially outside the edge of an output.
+                    axis, for example partially outside the edge of a monitor.
                 </description>
             </entry>
             <entry name="slide_x" value="1">
@@ -305,10 +303,6 @@
                     constrained on the y axis. For example, if the bottom edge of the
                     surface is constrained, the gravity is 'bottom' and the anchor is
                     'bottom', change the gravity to 'top' and the anchor to 'top'.
-
-                    The adjusted position is calculated given the original anchor
-                    rectangle and offset, but with the new flipped anchor and gravity
-                    values.
 
                     If the adjusted position also ends up being constrained, the resulting
                     position of the flip_y adjustment will be the one before the
@@ -365,49 +359,9 @@
             <arg name="x" type="int" summary="surface position x offset"/>
             <arg name="y" type="int" summary="surface position y offset"/>
         </request>
-
-        <!-- Version 3 additions -->
-
-        <request name="set_reactive" since="3">
-            <description summary="continuously reconstrain the surface">
-                When set reactive, the surface is reconstrained if the conditions used
-                for constraining changed, e.g. the parent window moved.
-
-                If the conditions changed and the popup was reconstrained, an
-                xdg_popup.configure event is sent with updated geometry, followed by an
-                xdg_surface.configure event.
-            </description>
-        </request>
-
-        <request name="set_parent_size" since="3">
-            <description summary="">
-                Set the parent window geometry the compositor should use when
-                positioning the popup. The compositor may use this information to
-                determine the future state the popup should be constrained using. If
-                this doesn't match the dimension of the parent the popup is eventually
-                positioned against, the behavior is undefined.
-
-                The arguments are given in the surface-local coordinate space.
-            </description>
-            <arg name="parent_width" type="int"
-                 summary="future window geometry width of parent"/>
-            <arg name="parent_height" type="int"
-                 summary="future window geometry height of parent"/>
-        </request>
-
-        <request name="set_parent_configure" since="3">
-            <description summary="set parent configure this is a response to">
-                Set the serial of an xdg_surface.configure event this positioner will be
-                used in response to. The compositor may use this information together
-                with set_parent_size to determine what future state the popup should be
-                constrained using.
-            </description>
-            <arg name="serial" type="uint"
-                 summary="serial of parent configure event"/>
-        </request>
     </interface>
 
-    <interface name="xdg_surface" version="6">
+    <interface name="zxdg_surface_v6" version="1">
         <description summary="desktop user interface surface base interface">
             An interface that may be implemented by a wl_surface, for
             implementations that provide a desktop-style user interface.
@@ -434,78 +388,52 @@
             manipulate a buffer prior to the first xdg_surface.configure call must
             also be treated as errors.
 
-            After creating a role-specific object and setting it up, the client must
-            perform an initial commit without any buffer attached. The compositor
-            will reply with initial wl_surface state such as
-            wl_surface.preferred_buffer_scale followed by an xdg_surface.configure
-            event. The client must acknowledge it and is then allowed to attach a
-            buffer to map the surface.
-
-            Mapping an xdg_surface-based role surface is defined as making it
-            possible for the surface to be shown by the compositor. Note that
-            a mapped surface is not guaranteed to be visible once it is mapped.
-
-            For an xdg_surface to be mapped by the compositor, the following
-            conditions must be met:
-            (1) the client has assigned an xdg_surface-based role to the surface
-            (2) the client has set and committed the xdg_surface state and the
-            role-dependent state to the surface
-            (3) the client has committed a buffer to the surface
-
-            A newly-unmapped surface is considered to have met condition (1) out
-            of the 3 required conditions for mapping a surface if its role surface
-            has not been destroyed, i.e. the client must perform the initial commit
-            again before attaching a buffer.
+            For a surface to be mapped by the compositor, the following conditions
+            must be met: (1) the client has assigned an xdg_surface based role to the
+            surface, (2) the client has set and committed the xdg_surface state and
+            the role dependent state to the surface and (3) the client has committed a
+            buffer to the surface.
         </description>
 
         <enum name="error">
-            <entry name="not_constructed" value="1"
-                   summary="Surface was not fully constructed"/>
-            <entry name="already_constructed" value="2"
-                   summary="Surface was already constructed"/>
-            <entry name="unconfigured_buffer" value="3"
-                   summary="Attaching a buffer to an unconfigured surface"/>
-            <entry name="invalid_serial" value="4"
-                   summary="Invalid serial number when acking a configure event"/>
-            <entry name="invalid_size" value="5"
-                   summary="Width or height was zero or negative"/>
-            <entry name="defunct_role_object" value="6"
-                   summary="Surface was destroyed before its role object"/>
+            <entry name="not_constructed" value="1"/>
+            <entry name="already_constructed" value="2"/>
+            <entry name="unconfigured_buffer" value="3"/>
         </enum>
 
         <request name="destroy" type="destructor">
             <description summary="destroy the xdg_surface">
                 Destroy the xdg_surface object. An xdg_surface must only be destroyed
-                after its role object has been destroyed, otherwise
-                a defunct_role_object error is raised.
+                after its role object has been destroyed. If the role object still
+                exists when this request is issued, the zxdg_shell_v6.defunct_surfaces
+                is raised.
             </description>
         </request>
 
         <request name="get_toplevel">
             <description summary="assign the xdg_toplevel surface role">
                 This creates an xdg_toplevel object for the given xdg_surface and gives
-                the associated wl_surface the xdg_toplevel role.
+                the associated wl_surface the xdg_toplevel role. If the surface already
+                had a role, the zxdg_shell_v6.role error is raised.
 
                 See the documentation of xdg_toplevel for more details about what an
                 xdg_toplevel is and how it is used.
             </description>
-            <arg name="id" type="new_id" interface="xdg_toplevel"/>
+            <arg name="id" type="new_id" interface="zxdg_toplevel_v6"/>
         </request>
 
         <request name="get_popup">
             <description summary="assign the xdg_popup surface role">
-                This creates an xdg_popup object for the given xdg_surface and gives
-                the associated wl_surface the xdg_popup role.
-
-                If null is passed as a parent, a parent surface must be specified using
-                some other protocol, before committing the initial state.
+                This creates an xdg_popup object for the given xdg_surface and gives the
+                associated wl_surface the xdg_popup role. If the surface already
+                had a role, the zxdg_shell_v6.role error is raised.
 
                 See the documentation of xdg_popup for more details about what an
                 xdg_popup is and how it is used.
             </description>
-            <arg name="id" type="new_id" interface="xdg_popup"/>
-            <arg name="parent" type="object" interface="xdg_surface" allow-null="true"/>
-            <arg name="positioner" type="object" interface="xdg_positioner"/>
+            <arg name="id" type="new_id" interface="zxdg_popup_v6"/>
+            <arg name="parent" type="object" interface="zxdg_surface_v6"/>
+            <arg name="positioner" type="object" interface="zxdg_positioner_v6"/>
         </request>
 
         <request name="set_window_geometry">
@@ -518,11 +446,6 @@
                 The window geometry is double buffered, and will be applied at the
                 time wl_surface.commit of the corresponding wl_surface is called.
 
-                When maintaining a position, the compositor should treat the (x, y)
-                coordinate of the window geometry as the top left corner of the window.
-                A client changing the (x, y) window geometry coordinate should in
-                general not alter the position of the window.
-
                 Once the window geometry of the surface is set, it is not possible to
                 unset it, and it will remain the same until set_window_geometry is
                 called again, even if a new subsurface or buffer is attached.
@@ -532,22 +455,13 @@
                 commit. This unset is meant for extremely simple clients.
 
                 The arguments are given in the surface-local coordinate space of
-                the wl_surface associated with this xdg_surface, and may extend outside
-                of the wl_surface itself to mark parts of the subsurface tree as part of
-                the window geometry.
+                the wl_surface associated with this xdg_surface.
 
-                When applied, the effective window geometry will be the set window
-                geometry clamped to the bounding rectangle of the combined
-                geometry of the surface of the xdg_surface and the associated
+                The width and height must be greater than zero. Setting an invalid size_
+                will raise an error. When applied, the effective window geometry will be
+                the set window geometry clamped to the bounding rectangle of the
+                combined geometry of the surface of the xdg_surface and the associated
                 subsurfaces.
-
-                The effective geometry will not be recalculated unless a new call to
-                set_window_geometry is done and the new pending surface state is
-                subsequently applied.
-
-                The width and height of the effective window geometry must be
-                greater than zero. Setting an invalid size will raise an
-                invalid_size error.
             </description>
             <arg name="x" type="int"/>
             <arg name="y" type="int"/>
@@ -568,8 +482,6 @@
 
                 If the client receives multiple configure events before it
                 can respond to one, it only has to ack the last configure event.
-                Acking a configure event that was never sent raises an invalid_serial
-                error.
 
                 A client is not required to commit immediately after sending
                 an ack_configure request - it may even ack_configure several times
@@ -579,16 +491,8 @@
                 only the last request sent before a commit indicates which configure
                 event the client really is responding to.
 
-                Sending an ack_configure request consumes the serial number sent with
-                the request, as well as serial numbers sent by all configure events
-                sent on this xdg_surface prior to the configure event referenced by
-                the committed serial.
-
-                It is an error to issue multiple ack_configure requests referencing a
-                serial from the same configure event, or to issue an ack_configure
-                request referencing a serial from a configure event issued before the
-                event identified by the last ack_configure request for the same
-                xdg_surface. Doing so will raise an invalid_serial error.
+                If an invalid serial is used, the zxdg_shell_v6.invalid_surface_state
+                error is raised.
             </description>
             <arg name="serial" type="uint" summary="the serial from the configure event"/>
         </request>
@@ -614,70 +518,36 @@
             </description>
             <arg name="serial" type="uint" summary="serial of the configure event"/>
         </event>
-
     </interface>
 
-    <interface name="xdg_toplevel" version="6">
+    <interface name="zxdg_toplevel_v6" version="1">
         <description summary="toplevel surface">
             This interface defines an xdg_surface role which allows a surface to,
             among other things, set window-like properties such as maximize,
             fullscreen, and minimize, set application-specific metadata like title and
             id, and well as trigger user interactive operations such as interactive
             resize and move.
-
-            Unmapping an xdg_toplevel means that the surface cannot be shown
-            by the compositor until it is explicitly mapped again.
-            All active operations (e.g., move, resize) are canceled and all
-            attributes (e.g. title, state, stacking, ...) are discarded for
-            an xdg_toplevel surface when it is unmapped. The xdg_toplevel returns to
-            the state it had right after xdg_surface.get_toplevel. The client
-            can re-map the toplevel by perfoming a commit without any buffer
-            attached, waiting for a configure event and handling it as usual (see
-            xdg_surface description).
-
-            Attaching a null buffer to a toplevel unmaps the surface.
         </description>
 
         <request name="destroy" type="destructor">
             <description summary="destroy the xdg_toplevel">
-                This request destroys the role surface and unmaps the surface;
-                see "Unmapping" behavior in interface section for details.
+                Unmap and destroy the window. The window will be effectively
+                hidden from the user's point of view, and all state like
+                maximization, fullscreen, and so on, will be lost.
             </description>
         </request>
 
-        <enum name="error">
-            <entry name="invalid_resize_edge" value="0" summary="provided value is
-        not a valid variant of the resize_edge enum"/>
-            <entry name="invalid_parent" value="1"
-                   summary="invalid parent toplevel"/>
-            <entry name="invalid_size" value="2"
-                   summary="client provided an invalid min or max size"/>
-        </enum>
-
         <request name="set_parent">
             <description summary="set the parent of this surface">
-                Set the "parent" of this surface. This surface should be stacked
-                above the parent surface and all other ancestor surfaces.
+                Set the "parent" of this surface. This window should be stacked
+                above a parent. The parent surface must be mapped as long as this
+                surface is mapped.
 
-                Parent surfaces should be set on dialogs, toolboxes, or other
+                Parent windows should be set on dialogs, toolboxes, or other
                 "auxiliary" surfaces, so that the parent is raised when the dialog
                 is raised.
-
-                Setting a null parent for a child surface unsets its parent. Setting
-                a null parent for a surface which currently has no parent is a no-op.
-
-                Only mapped surfaces can have child surfaces. Setting a parent which
-                is not mapped is equivalent to setting a null parent. If a surface
-                becomes unmapped, its children's parent is set to the parent of
-                the now-unmapped surface. If the now-unmapped surface has no parent,
-                its children's parent is unset. If the now-unmapped surface becomes
-                mapped again, its parent-child relationship is not restored.
-
-                The parent toplevel must not be one of the child toplevel's
-                descendants, and the parent must be different from the child toplevel,
-                otherwise the invalid_parent protocol error is raised.
             </description>
-            <arg name="parent" type="object" interface="xdg_toplevel" allow-null="true"/>
+            <arg name="parent" type="object" interface="zxdg_toplevel_v6" allow-null="true"/>
         </request>
 
         <request name="set_title">
@@ -710,14 +580,11 @@
                 For example, "org.freedesktop.FooViewer" where the .desktop file is
                 "org.freedesktop.FooViewer.desktop".
 
-                Like other properties, a set_app_id request can be sent after the
-                xdg_toplevel has been mapped to update the property.
-
                 See the desktop-entry specification [0] for more details on
                 application identifiers and how they relate to well-known D-Bus
                 names and .desktop files.
 
-                [0] https://standards.freedesktop.org/desktop-entry-spec/
+                [0] http://standards.freedesktop.org/desktop-entry-spec/
             </description>
             <arg name="app_id" type="string"/>
         </request>
@@ -731,8 +598,7 @@
                 This request asks the compositor to pop up such a window menu at
                 the given position, relative to the local surface coordinates of
                 the parent surface. There are no guarantees as to what menu items
-                the window menu contains, or even if a window menu will be drawn
-                at all.
+                the window menu contains.
 
                 This request must be used in response to some sort of user action
                 like a button press, key press, or touch down event.
@@ -808,17 +674,16 @@
                 guarantee that the device focus will return when the resize is
                 completed.
 
-                The edges parameter specifies how the surface should be resized, and
-                is one of the values of the resize_edge enum. Values not matching
-                a variant of the enum will cause the invalid_resize_edge protocol error.
-                The compositor may use this information to update the surface position
-                for example when dragging the top left corner. The compositor may also
-                use this information to adapt its behavior, e.g. choose an appropriate
-                cursor image.
+                The edges parameter specifies how the surface should be resized,
+                and is one of the values of the resize_edge enum. The compositor
+                may use this information to update the surface position for
+                example when dragging the top left corner. The compositor may also
+                use this information to adapt its behavior, e.g. choose an
+                appropriate cursor image.
             </description>
             <arg name="seat" type="object" interface="wl_seat" summary="the wl_seat of the user event"/>
             <arg name="serial" type="uint" summary="the serial of the user event"/>
-            <arg name="edges" type="uint" enum="resize_edge" summary="which edge or corner is being dragged"/>
+            <arg name="edges" type="uint" summary="which edge or corner is being dragged"/>
         </request>
 
         <enum name="state">
@@ -834,28 +699,23 @@
             <entry name="maximized" value="1" summary="the surface is maximized">
                 <description summary="the surface is maximized">
                     The surface is maximized. The window geometry specified in the configure
-                    event must be obeyed by the client, or the xdg_wm_base.invalid_surface_state
-                    error is raised.
-
-                    The client should draw without shadow or other
-                    decoration outside of the window geometry.
+                    event must be obeyed by the client. If the window geometry is not obyed,
+                    the zxdg_shell_v6.invalid_surface_state error is raised.
                 </description>
             </entry>
             <entry name="fullscreen" value="2" summary="the surface is fullscreen">
                 <description summary="the surface is fullscreen">
-                    The surface is fullscreen. The window geometry specified in the
-                    configure event is a maximum; the client cannot resize beyond it. For
-                    a surface to cover the whole fullscreened area, the geometry
-                    dimensions must be obeyed by the client. For more details, see
-                    xdg_toplevel.set_fullscreen.
+                    The surface is fullscreen. See set_fullscreen for more information.
                 </description>
             </entry>
             <entry name="resizing" value="3" summary="the surface is being resized">
                 <description summary="the surface is being resized">
                     The surface is being resized. The window geometry specified in the
-                    configure event is a maximum; the client cannot resize beyond it.
+                    configure event is a maximum; the client cannot resize beyond it. If the
+                    client attempts to resize above it, the zxdg_shell_v6.invalid_surface_state
+                    error is raised.
                     Clients that have aspect ratio or cell sizing configuration can use
-                    a smaller size, however.
+                    a smaller size_, however.
                 </description>
             </entry>
             <entry name="activated" value="4" summary="the surface is now activated">
@@ -865,45 +725,14 @@
                     keyboard or pointer focus.
                 </description>
             </entry>
-            <entry name="tiled_left" value="5" since="2">
-                <description summary="the surface’s left edge is tiled">
-                    The window is currently in a tiled layout and the left edge is
-                    considered to be adjacent to another part of the tiling grid.
-                </description>
-            </entry>
-            <entry name="tiled_right" value="6" since="2">
-                <description summary="the surface’s right edge is tiled">
-                    The window is currently in a tiled layout and the right edge is
-                    considered to be adjacent to another part of the tiling grid.
-                </description>
-            </entry>
-            <entry name="tiled_top" value="7" since="2">
-                <description summary="the surface’s top edge is tiled">
-                    The window is currently in a tiled layout and the top edge is
-                    considered to be adjacent to another part of the tiling grid.
-                </description>
-            </entry>
-            <entry name="tiled_bottom" value="8" since="2">
-                <description summary="the surface’s bottom edge is tiled">
-                    The window is currently in a tiled layout and the bottom edge is
-                    considered to be adjacent to another part of the tiling grid.
-                </description>
-            </entry>
-            <entry name="suspended" value="9" since="6">
-                <description summary="surface repaint is suspended">
-                    The surface is currently not ordinarily being repainted; for
-                    example because its content is occluded by another window, or its
-                    outputs are switched off due to screen locking.
-                </description>
-            </entry>
         </enum>
 
         <request name="set_max_size">
-            <description summary="set the maximum size">
-                Set a maximum size for the window.
+            <description summary="set the maximum size_">
+                Set a maximum size_ for the window.
 
-                The client can specify a maximum size so that the compositor does
-                not try to configure the window beyond this size.
+                The client can specify a maximum size_ so that the compositor does
+                not try to configure the window beyond this size_.
 
                 The width and height arguments are in window geometry coordinates.
                 See xdg_surface.set_window_geometry.
@@ -919,32 +748,32 @@
                 place and resize client windows in a more effective way.
 
                 The client should not rely on the compositor to obey the maximum
-                size. The compositor may decide to ignore the values set by the
-                client and request a larger size.
+                size_. The compositor may decide to ignore the values set by the
+                client and request a larger size_.
 
                 If never set, or a value of zero in the request, means that the
-                client has no expected maximum size in the given dimension.
-                As a result, a client wishing to reset the maximum size
+                client has no expected maximum size_ in the given dimension.
+                As a result, a client wishing to reset the maximum size_
                 to an unspecified state can use zero for width and height in the
                 request.
 
-                Requesting a maximum size to be smaller than the minimum size of
-                a surface is illegal and will result in an invalid_size error.
+                Requesting a maximum size_ to be smaller than the minimum size_ of
+                a surface is illegal and will result in a protocol error.
 
                 The width and height must be greater than or equal to zero. Using
-                strictly negative values for width or height will result in a
-                invalid_size error.
+                strictly negative values for width and height will result in the
+                zxdg_shell_v6.invalid_surface_state error being raised.
             </description>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
         </request>
 
         <request name="set_min_size">
-            <description summary="set the minimum size">
-                Set a minimum size for the window.
+            <description summary="set the minimum size_">
+                Set a minimum size_ for the window.
 
-                The client can specify a minimum size so that the compositor does
-                not try to configure the window below this size.
+                The client can specify a minimum size_ so that the compositor does
+                not try to configure the window below this size_.
 
                 The width and height arguments are in window geometry coordinates.
                 See xdg_surface.set_window_geometry.
@@ -960,21 +789,21 @@
                 place and resize client windows in a more effective way.
 
                 The client should not rely on the compositor to obey the minimum
-                size. The compositor may decide to ignore the values set by the
-                client and request a smaller size.
+                size_. The compositor may decide to ignore the values set by the
+                client and request a smaller size_.
 
                 If never set, or a value of zero in the request, means that the
-                client has no expected minimum size in the given dimension.
-                As a result, a client wishing to reset the minimum size
+                client has no expected minimum size_ in the given dimension.
+                As a result, a client wishing to reset the minimum size_
                 to an unspecified state can use zero for width and height in the
                 request.
 
-                Requesting a minimum size to be larger than the maximum size of
-                a surface is illegal and will result in an invalid_size error.
+                Requesting a minimum size_ to be larger than the maximum size_ of
+                a surface is illegal and will result in a protocol error.
 
                 The width and height must be greater than or equal to zero. Using
-                strictly negative values for width and height will result in a
-                invalid_size error.
+                strictly negative values for width and height will result in the
+                zxdg_shell_v6.invalid_surface_state error being raised.
             </description>
             <arg name="width" type="int"/>
             <arg name="height" type="int"/>
@@ -985,11 +814,12 @@
                 Maximize the surface.
 
                 After requesting that the surface should be maximized, the compositor
-                will respond by emitting a configure event. Whether this configure
-                actually sets the window maximized is subject to compositor policies.
-                The client must then update its content, drawing in the configured
-                state. The client must also acknowledge the configure when committing
-                the new content (see ack_configure).
+                will respond by emitting a configure event with the "maximized" state
+                and the required window geometry. The client should then update its
+                content, drawing it in a maximized state, i.e. without shadow or other
+                decoration outside of the window geometry. The client must also
+                acknowledge the configure when committing the new content (see
+                ack_configure).
 
                 It is up to the compositor to decide how and where to maximize the
                 surface, for example which output and what region of the screen should
@@ -998,9 +828,10 @@
                 If the surface was already maximized, the compositor will still emit
                 a configure event with the "maximized" state.
 
-                If the surface is in a fullscreen state, this request has no direct
-                effect. It may alter the state the surface is returned to when
-                unmaximized unless overridden by the compositor.
+                Note that unrelated compositor side state changes may cause
+                configure events to be emitted at any time, meaning trying to
+                match this request to a specific future configure event is
+                futile.
             </description>
         </request>
 
@@ -1009,13 +840,13 @@
                 Unmaximize the surface.
 
                 After requesting that the surface should be unmaximized, the compositor
-                will respond by emitting a configure event. Whether this actually
-                un-maximizes the window is subject to compositor policies.
-                If available and applicable, the compositor will include the window
-                geometry dimensions the window had prior to being maximized in the
-                configure event. The client must then update its content, drawing it in
-                the configured state. The client must also acknowledge the configure
-                when committing the new content (see ack_configure).
+                will respond by emitting a configure event without the "maximized"
+                state. If available, the compositor will include the window geometry
+                dimensions the window had prior to being maximized in the configure
+                request. The client must then update its content, drawing it in a
+                regular state, i.e. potentially with shadow, etc. The client must also
+                acknowledge the configure when committing the new content (see
+                ack_configure).
 
                 It is up to the compositor to position the surface after it was
                 unmaximized; usually the position the surface had before maximizing, if
@@ -1024,62 +855,28 @@
                 If the surface was already not maximized, the compositor will still
                 emit a configure event without the "maximized" state.
 
-                If the surface is in a fullscreen state, this request has no direct
-                effect. It may alter the state the surface is returned to when
-                unmaximized unless overridden by the compositor.
+                Note that unrelated changes in the state of compositor may cause
+                configure events to be emitted by the compositor between processing
+                this request and emitting corresponding configure event, so trying
+                to match the request with the event is futile.
             </description>
         </request>
 
         <request name="set_fullscreen">
-            <description summary="set the window as fullscreen on an output">
+            <description summary="set the window as fullscreen on a monitor">
                 Make the surface fullscreen.
 
-                After requesting that the surface should be fullscreened, the
-                compositor will respond by emitting a configure event. Whether the
-                client is actually put into a fullscreen state is subject to compositor
-                policies. The client must also acknowledge the configure when
-                committing the new content (see ack_configure).
-
-                The output passed by the request indicates the client's preference as
-                to which display it should be set fullscreen on. If this value is NULL,
-                it's up to the compositor to choose which display will be used to map
-                this surface.
+                You can specify an output that you would prefer to be fullscreen.
+                If this value is NULL, it's up to the compositor to choose which
+                display will be used to map this surface.
 
                 If the surface doesn't cover the whole output, the compositor will
                 position the surface in the center of the output and compensate with
-                with border fill covering the rest of the output. The content of the
-                border fill is undefined, but should be assumed to be in some way that
-                attempts to blend into the surrounding area (e.g. solid black).
-
-                If the fullscreened surface is not opaque, the compositor must make
-                sure that other screen content not part of the same surface tree (made
-                up of subsurfaces, popups or similarly coupled surfaces) are not
-                visible below the fullscreened surface.
+                black borders filling the rest of the output.
             </description>
             <arg name="output" type="object" interface="wl_output" allow-null="true"/>
         </request>
-
-        <request name="unset_fullscreen">
-            <description summary="unset the window as fullscreen">
-                Make the surface no longer fullscreen.
-
-                After requesting that the surface should be unfullscreened, the
-                compositor will respond by emitting a configure event.
-                Whether this actually removes the fullscreen state of the client is
-                subject to compositor policies.
-
-                Making a surface unfullscreen sets states for the surface based on the following:
-                * the state(s) it may have had before becoming fullscreen
-                * any state(s) decided by the compositor
-                * any state(s) requested by the client while the surface was fullscreen
-
-                The compositor may include the previous window geometry dimensions in
-                the configure event, if applicable.
-
-                The client must also acknowledge the configure when committing the new
-                content (see ack_configure).
-            </description>
-        </request>
+        <request name="unset_fullscreen" />
 
         <request name="set_minimized">
             <description summary="set the window as minimized">
@@ -1133,68 +930,9 @@
                 a dialog to ask the user to save their data, etc.
             </description>
         </event>
-
-        <!-- Version 4 additions -->
-
-        <event name="configure_bounds" since="4">
-            <description summary="recommended window geometry bounds">
-                The configure_bounds event may be sent prior to a xdg_toplevel.configure
-                event to communicate the bounds a window geometry size is recommended
-                to constrain to.
-
-                The passed width and height are in surface coordinate space. If width
-                and height are 0, it means bounds is unknown and equivalent to as if no
-                configure_bounds event was ever sent for this surface.
-
-                The bounds can for example correspond to the size of a monitor excluding
-                any panels or other shell components, so that a surface isn't created in
-                a way that it cannot fit.
-
-                The bounds may change at any point, and in such a case, a new
-                xdg_toplevel.configure_bounds will be sent, followed by
-                xdg_toplevel.configure and xdg_surface.configure.
-            </description>
-            <arg name="width" type="int"/>
-            <arg name="height" type="int"/>
-        </event>
-
-        <!-- Version 5 additions -->
-
-        <enum name="wm_capabilities" since="5">
-            <entry name="window_menu" value="1" summary="show_window_menu is available"/>
-            <entry name="maximize" value="2" summary="set_maximized and unset_maximized are available"/>
-            <entry name="fullscreen" value="3" summary="set_fullscreen and unset_fullscreen are available"/>
-            <entry name="minimize" value="4" summary="set_minimized is available"/>
-        </enum>
-
-        <event name="wm_capabilities" since="5">
-            <description summary="compositor capabilities">
-                This event advertises the capabilities supported by the compositor. If
-                a capability isn't supported, clients should hide or disable the UI
-                elements that expose this functionality. For instance, if the
-                compositor doesn't advertise support for minimized toplevels, a button
-                triggering the set_minimized request should not be displayed.
-
-                The compositor will ignore requests it doesn't support. For instance,
-                a compositor which doesn't advertise support for minimized will ignore
-                set_minimized requests.
-
-                Compositors must send this event once before the first
-                xdg_surface.configure event. When the capabilities change, compositors
-                must send this event again and then send an xdg_surface.configure
-                event.
-
-                The configured state should not be applied immediately. See
-                xdg_surface.configure for details.
-
-                The capabilities are sent as an array of 32-bit unsigned integers in
-                native endianness.
-            </description>
-            <arg name="capabilities" type="array" summary="array of 32-bit capabilities"/>
-        </event>
     </interface>
 
-    <interface name="xdg_popup" version="6">
+    <interface name="zxdg_popup_v6" version="1">
         <description summary="short-lived, popup surfaces for menus">
             A popup surface is a short-lived, temporary surface. It can be used to
             implement for example menus, popovers, tooltips and other similar user
@@ -1212,11 +950,20 @@
             surface of their own is clicked should dismiss the popup using the destroy
             request.
 
+            The parent surface must have either the xdg_toplevel or xdg_popup surface
+            role.
+
             A newly created xdg_popup will be stacked on top of all previously created
             xdg_popup surfaces associated with the same xdg_toplevel.
 
             The parent of an xdg_popup must be mapped (see the xdg_surface
             description) before the xdg_popup itself.
+
+            The x and y arguments passed when creating the popup object specify
+            where the top left of the popup should be placed, relative to the
+            local surface coordinates of the parent surface. See
+            xdg_surface.get_popup. An xdg_popup must intersect with or be at least
+            partially adjacent to its parent surface.
 
             The client must call wl_surface.commit on the corresponding wl_surface
             for the xdg_popup state to take effect.
@@ -1232,8 +979,8 @@
                 This destroys the popup. Explicitly destroying the xdg_popup
                 object will also dismiss the popup, and unmap the surface.
 
-                If this xdg_popup is not the "topmost" popup, the
-                xdg_wm_base.not_the_topmost_popup protocol error will be sent.
+                If this xdg_popup is not the "topmost" popup, a protocol error
+                will be sent.
             </description>
         </request>
 
@@ -1265,6 +1012,10 @@
                 nested grabbing popup as well. When a compositor dismisses popups, it
                 will follow the same dismissing order as required from the client.
 
+                The parent of a grabbing popup must either be another xdg_popup with an
+                active explicit grab, or an xdg_popup or xdg_toplevel, if there are no
+                explicit grabs already taken.
+
                 If the topmost grabbing popup is destroyed, the grab will be returned to
                 the parent of the popup, if that parent previously had an explicit grab.
 
@@ -1291,11 +1042,6 @@
                 The x and y arguments represent the position the popup was placed at
                 given the xdg_positioner rule, relative to the upper left corner of the
                 window geometry of the parent surface.
-
-                For version 2 or older, the configure event for an xdg_popup is only
-                ever sent once for the initial configuration. Starting with version 3,
-                it may be sent again if the popup is setup with an xdg_positioner with
-                set_reactive requested, or in response to xdg_popup.reposition requests.
             </description>
             <arg name="x" type="int"
                  summary="x position relative to parent surface window geometry"/>
@@ -1311,59 +1057,6 @@
                 compositor. The client should destroy the xdg_popup object at this
                 point.
             </description>
-        </event>
-
-        <!-- Version 3 additions -->
-
-        <request name="reposition" since="3">
-            <description summary="recalculate the popup's location">
-                Reposition an already-mapped popup. The popup will be placed given the
-                details in the passed xdg_positioner object, and a
-                xdg_popup.repositioned followed by xdg_popup.configure and
-                xdg_surface.configure will be emitted in response. Any parameters set
-                by the previous positioner will be discarded.
-
-                The passed token will be sent in the corresponding
-                xdg_popup.repositioned event. The new popup position will not take
-                effect until the corresponding configure event is acknowledged by the
-                client. See xdg_popup.repositioned for details. The token itself is
-                opaque, and has no other special meaning.
-
-                If multiple reposition requests are sent, the compositor may skip all
-                but the last one.
-
-                If the popup is repositioned in response to a configure event for its
-                parent, the client should send an xdg_positioner.set_parent_configure
-                and possibly an xdg_positioner.set_parent_size request to allow the
-                compositor to properly constrain the popup.
-
-                If the popup is repositioned together with a parent that is being
-                resized, but not in response to a configure event, the client should
-                send an xdg_positioner.set_parent_size request.
-            </description>
-            <arg name="positioner" type="object" interface="xdg_positioner"/>
-            <arg name="token" type="uint" summary="reposition request token"/>
-        </request>
-
-        <event name="repositioned" since="3">
-            <description summary="signal the completion of a repositioned request">
-                The repositioned event is sent as part of a popup configuration
-                sequence, together with xdg_popup.configure and lastly
-                xdg_surface.configure to notify the completion of a reposition request.
-
-                The repositioned event is to notify about the completion of a
-                xdg_popup.reposition request. The token argument is the token passed
-                in the xdg_popup.reposition request.
-
-                Immediately after this event is emitted, xdg_popup.configure and
-                xdg_surface.configure will be sent with the updated size and position,
-                as well as a new configure serial.
-
-                The client should optionally update the content of the popup, but must
-                acknowledge the new popup configuration for the new position to take
-                effect. See xdg_surface.ack_configure for details.
-            </description>
-            <arg name="token" type="uint" summary="reposition request token"/>
         </event>
 
     </interface>

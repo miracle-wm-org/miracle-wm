@@ -19,7 +19,6 @@
 
 #include "wayland_app.h"
 #include "mir/geometry/size.h"
-#include "protocols/xdg_shell.h"
 #include <functional>
 
 namespace miracle
@@ -32,35 +31,15 @@ public:
 
     void attach_buffer(wl_buffer* buffer, int scale);
     void commit() const;
-    /// output can be null, user needs to commit after
-    void set_fullscreen(wl_output* output);
     void add_frame_callback(std::function<void()>&& func);
 
     auto app() const -> WaylandApp const* { return app_; }
     auto surface() const -> wl_surface* { return surface_; }
-    auto configured_size() const -> mir::geometry::Size { return configured_size_; };
-
-protected:
-    /// Called when the compositor configures this shell surface
-    virtual void configured() {};
 
 private:
-    static void handle_ping(void* data, struct wl_shell_surface* shell_surface, uint32_t serial);
-    static void handle_configure(
-        void* data,
-        wl_shell_surface* shell_surface,
-        uint32_t edges,
-        int32_t width,
-        int32_t height);
-
-    static wl_shell_surface_listener const shell_surface_listener;
-    static mir::geometry::Size const default_size;
 
     WaylandApp const* const app_;
     WaylandObject<wl_surface> const surface_;
-    WaylandObject<wl_shell_surface> const shell_surface_;
-    mir::geometry::Size configured_size_;
-    int buffer_scale{1};
 };
 }
 

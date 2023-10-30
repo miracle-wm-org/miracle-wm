@@ -14,7 +14,7 @@
 
 #include "task_bar.h"
 #include "wayland_app.h"
-#include "wayland_surface.h"
+#include "xdg_surface.h"
 #include "wayland_shm.h"
 #include <cstring>
 #include <poll.h>
@@ -23,27 +23,30 @@
 namespace miracle
 {
 
-class TaskBarSurface : public WaylandSurface
+class TaskBarSurface
 {
 public:
     TaskBarSurface(
-        WaylandApp const* app,
+        WaylandApp* app,
         WaylandOutput const* output)
-        : WaylandSurface{app},
-            output{output},
-            shm{app->shm()}
+        : surface(app, {
+            .on_configured=[&]() { app->trigger_draw(); }
+        }),
+          output{output},
+          shm{app->shm()}
     {
-        set_fullscreen(output->wl());
-        commit();
         app->roundtrip();
     }
 
     ~TaskBarSurface()
     {
-        app()->roundtrip();
+        surface.app()->roundtrip();
     }
 
-    auto buffer_size() const -> mir::geometry::Size { return configured_size() * output->scale(); }
+    auto buffer_size() -> mir::geometry::Size
+    {
+        return surface.size() * output->scale();
+    }
 
     void draw()
     {
@@ -78,13 +81,15 @@ public:
             row += stride;
         }
 
-        attach_buffer(buffer->use(), output->scale());
-        commit();
+        surface.surface().attach_buffer(buffer->use(), output->scale());
+        surface.surface().commit();
     }
 
 private:
     WaylandOutput const* const output;
     WaylandShm shm;
+    XdgSurface surface;
+
 };
 
 
