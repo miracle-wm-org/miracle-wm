@@ -5,6 +5,7 @@
 #ifndef MIRCOMPOSITOR_MIRIE_WINDOW_MANAGEMENT_POLICY_H
 #define MIRCOMPOSITOR_MIRIE_WINDOW_MANAGEMENT_POLICY_H
 
+#include "window_tree.h"
 #include <miral/window_manager_tools.h>
 #include <miral/minimal_window_manager.h>
 #include <miral/external_client.h>
@@ -26,12 +27,17 @@ public:
     ~MiracleWindowManagementPolicy() = default;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+    auto place_new_window(
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
+    auto confirm_placement_on_display(
+        miral::WindowInfo const& window_info, MirWindowState new_state, miral::Rectangle const& new_placement) -> miral::Rectangle override;
 
 private:
+    WindowTree tree; // TODO: Keep a list per output
     miral::WindowManagerTools const window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
-    std::shared_ptr<TaskBar> task_bar;
 };
 }
 
