@@ -30,8 +30,8 @@ public:
     auto place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
-    auto confirm_placement_on_display(
-        miral::WindowInfo const& window_info, MirWindowState new_state, miral::Rectangle const& new_placement) -> miral::Rectangle override;
+    void handle_window_ready(
+        miral::WindowInfo& window_info) override;
 
 private:
     WindowTree tree; // TODO: Keep a list per output
