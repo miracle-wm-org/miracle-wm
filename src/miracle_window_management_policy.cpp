@@ -8,6 +8,7 @@
 
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
+#include <miral/application_info.h>
 #include <mir/log.h>
 #include <linux/input.h>
 
@@ -31,12 +32,11 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher)
     : miral::MinimalWindowManager(tools),
+      tree{geom::Size{1280, 800}}, // TODO: Don't hardcode! Ask the compositor
       window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
-      internal_client_launcher{internal_client_launcher},
-      task_bar{std::make_shared<TaskBar>()}
+      internal_client_launcher{internal_client_launcher}
 {
-    internal_client_launcher.launch(*task_bar);
 }
 
 bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
@@ -57,4 +57,23 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     }
 
     return false;
+}
+
+auto MiracleWindowManagementPolicy::place_new_window(
+    const miral::ApplicationInfo &app_info,
+    const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
+{
+    // In this step, we'll ask the WindowTree where we should place the window on the display
+    // We will also resize the adjacent windows accordingly in this step.
+    return tree.allocate_position(requested_specification);
+}
+
+auto MiracleWindowManagementPolicy::confirm_placement_on_display(
+    const miral::WindowInfo &window_info,
+    MirWindowState new_state,
+    const miral::Rectangle &new_placement) -> miral::Rectangle
+{
+    // The new placement has been confirmed. We can now add the window into the pending position
+    // in the tree. This comes _after_ place_new_window has been called.
+    return tree.confirm(window_info.window());
 }
