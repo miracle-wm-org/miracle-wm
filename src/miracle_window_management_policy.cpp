@@ -32,7 +32,7 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher)
     : miral::MinimalWindowManager(tools),
-      tree{geom::Size{1280, 800}}, // TODO: Don't hardcode! Ask the compositor
+      tree{geom::Size{1280, 1016}}, // TODO: Don't hardcode! Ask the compositor
       window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher}
@@ -68,12 +68,9 @@ auto MiracleWindowManagementPolicy::place_new_window(
     return tree.allocate_position(requested_specification);
 }
 
-auto MiracleWindowManagementPolicy::confirm_placement_on_display(
-    const miral::WindowInfo &window_info,
-    MirWindowState new_state,
-    const miral::Rectangle &new_placement) -> miral::Rectangle
+void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
     // The new placement has been confirmed. We can now add the window into the pending position
     // in the tree. This comes _after_ place_new_window has been called.
-    return tree.confirm(window_info.window());
+    tree.confirm(window_info.window());
 }
