@@ -75,6 +75,9 @@ public:
     // Request a change to vertical window placement
     void request_vertical();
 
+    // Request a change to horizontal window placement
+    void request_horizontal();
+
     void advise_focus_gained(miral::Window&);
     void advise_focus_lost(miral::Window&);
 
