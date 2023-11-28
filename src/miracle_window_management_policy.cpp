@@ -60,6 +60,10 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         {
             tree.request_vertical();
         }
+        else if (scan_code == KEY_H)
+        {
+            tree.request_horizontal();
+        }
     }
 
     return false;

@@ -28,8 +28,9 @@ namespace miracle
 class NodeContent
 {
 public:
-    explicit NodeContent(miral::Window& window)
-        : window{window}
+    explicit NodeContent(std::shared_ptr<Node> parent, miral::Window& window)
+        : parent{parent},
+          window{window}
     {
     }
 
@@ -108,12 +109,18 @@ public:
         if (node != nullptr)
             return node;
 
+        // If we want to make a new node, but our parent only has one window and its us...
+        // theen we can just return the parent
+        if (parent != nullptr && parent->node_content_list.size() == 1)
+            return parent;
+
         node = std::make_shared<Node>();
-        node->node_content_list.push_back(std::make_shared<NodeContent>(window));
+        node->node_content_list.push_back(std::make_shared<NodeContent>(node, window));
         return node;
     }
 
 private:
+    std::shared_ptr<Node> parent;
     miral::Window window;
     std::shared_ptr<Node> node = nullptr;
 };
@@ -198,7 +205,7 @@ miral::Rectangle WindowTree::confirm(miral::Window &window)
         return miral::Rectangle{};
     }
 
-    auto item = std::make_shared<NodeContent>(window);
+    auto item = std::make_shared<NodeContent>(pending_lane, window);
     pending_lane->node_content_list.push_back(item);
     pending_lane = nullptr;
     advise_focus_gained(window);
@@ -220,9 +227,12 @@ void WindowTree::request_vertical()
 {
     active_lane = active_lane->window_to_node(active_window);
     active_lane->direction = Node::vertical;
+}
 
-    // This is when we add a new lane, which means that we need to know who is currently
-    // selected.
+void WindowTree::request_horizontal()
+{
+    active_lane = active_lane->window_to_node(active_window);
+    active_lane->direction = Node::horizontal;
 }
 
 void WindowTree::advise_focus_gained(miral::Window& window)
