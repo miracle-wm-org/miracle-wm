@@ -31,11 +31,12 @@ namespace miracle
 
 class NodeContent;
 
-/// This describes an horizontal or vertical lane
-/// along which windows and other lanes may be laid out.
+/// Describes a node in the list tree
 struct Node : public std::enable_shared_from_this<Node>
 {
-    std::vector<std::shared_ptr<NodeContent>> items;
+    /// Content of the node. These can either be individual windows
+    /// or nodes themselves.
+    std::vector<std::shared_ptr<NodeContent>> node_content_list;
 
     enum {
         horizontal,
@@ -43,17 +44,16 @@ struct Node : public std::enable_shared_from_this<Node>
         length
     } direction  = horizontal;
 
-    /// The rectangle defined by the lane can be retrieved dynamically
-    /// by calculating the dimensions of all the windows involved in
-    /// this lane and its sub-lanes;
+    /// The rectangle defined by the node can be retrieved dynamically
+    /// by calculating the dimensions of the content in this node
     geom::Rectangle get_rectangle();
 
     /// Walk the tree to find the lane that contains this window.
-    std::shared_ptr<Node> find_lane(miral::Window& window);
+    std::shared_ptr<Node> find_node_for_window(miral::Window& window);
 
-    /// Transform the window found in the list to a lane. Returns the
-    /// new window tree lane item if found, otherwise null.
-    std::shared_ptr<Node> to_lane(miral::Window& window);
+    /// Transform the window  in the list to a Node. Returns the
+    /// new Node if the Window was found, otherwise null.
+    std::shared_ptr<Node> window_to_node(miral::Window& window);
 };
 
 /// Represents a tiling tree for an output.
