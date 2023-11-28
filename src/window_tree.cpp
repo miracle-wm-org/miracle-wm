@@ -278,7 +278,9 @@ std::shared_ptr<Node> Node::find_node_for_window(miral::Window &window)
         }
         else
         {
-            return item->get_node()->find_node_for_window(window);
+            auto retval = item->get_node()->find_node_for_window(window);
+            if (retval != nullptr)
+                return retval;
         }
     }
 
@@ -297,7 +299,9 @@ std::shared_ptr<miracle::Node> Node::window_to_node(miral::Window &window)
         }
         else
         {
-            return item->get_node()->window_to_node(window);
+            auto node = item->get_node()->window_to_node(window);
+            if (node != nullptr)
+                return node;
         }
     }
 
