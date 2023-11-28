@@ -29,27 +29,31 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
-class WindowTreeLaneItem;
+class NodeContent;
 
-/// Terrible name. This describes an horizontal or vertical lane
+/// This describes an horizontal or vertical lane
 /// along which windows and other lanes may be laid out.
-struct WindowTreeLane
+struct Node : public std::enable_shared_from_this<Node>
 {
-    std::vector<std::shared_ptr<WindowTreeLaneItem>> items;
+    std::vector<std::shared_ptr<NodeContent>> items;
 
     enum {
         horizontal,
         vertical,
         length
-    } direction;
+    } direction  = horizontal;
 
     /// The rectangle defined by the lane can be retrieved dynamically
     /// by calculating the dimensions of all the windows involved in
     /// this lane and its sub-lanes;
     geom::Rectangle get_rectangle();
 
-    void add(miral::Window& window);
-    void remove(miral::Window& window);
+    /// Walk the tree to find the lane that contains this window.
+    std::shared_ptr<Node> find_lane(miral::Window& window);
+
+    /// Transform the window found in the list to a lane. Returns the
+    /// new window tree lane item if found, otherwise null.
+    std::shared_ptr<Node> to_lane(miral::Window& window);
 };
 
 /// Represents a tiling tree for an output.
@@ -68,10 +72,17 @@ public:
     void remove(miral::Window&);
     void resize(geom::Size new_size);
 
+    // Request a change to vertical window placement
+    void request_vertical();
+
+    void advise_focus_gained(miral::Window&);
+    void advise_focus_lost(miral::Window&);
+
 private:
-    std::shared_ptr<WindowTreeLane> root;
-    std::shared_ptr<WindowTreeLane> active;
-    std::shared_ptr<WindowTreeLane> pending_lane;
+    std::shared_ptr<Node> root_lane;
+    std::shared_ptr<Node> active_lane;
+    std::shared_ptr<Node> pending_lane;
+    miral::Window active_window;
     geom::Size size;
 };
 
