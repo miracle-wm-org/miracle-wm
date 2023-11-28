@@ -15,35 +15,114 @@
  */
 
 #include "window_tree.h"
+#include <memory>
 
 using namespace miracle;
 
 namespace miracle
 {
 
-/// A window tree lane item _always_ begins its life as a single window.
-/// When another window is added to it, it becomes a WindowTreeLane.
-class WindowTreeLaneItem
+/// Node Content _always_ begins its life as a single window.
+/// When requested by the user, it turns itself into a new
+/// node in the tree.
+class NodeContent
 {
 public:
-    explicit WindowTreeLaneItem(miral::Window& window)
+    explicit NodeContent(miral::Window& window)
         : window{window}
     {
     }
 
     geom::Rectangle get_rectangle()
     {
-        return geom::Rectangle{window.top_left(), window.size()};
+        if (is_window())
+        {
+            return geom::Rectangle{window.top_left(), window.size()};
+        }
+        else
+        {
+            geom::Rectangle rectangle;
+            for (auto item : node->items)
+            {
+                auto item_rectangle = item->get_rectangle();
+                rectangle.top_left.x = std::min(rectangle.top_left.x, item_rectangle.top_left.x);
+                rectangle.top_left.y = std::min(rectangle.top_left.y, item_rectangle.top_left.y);
+
+                if (node->direction == Node::horizontal)
+                {
+                    rectangle.size.width = geom::Width{rectangle.size.width.as_int() + item_rectangle.size.width.as_int()};
+                    rectangle.size.height = std::max(
+                        rectangle.size.height,
+                        geom::Height{item_rectangle.top_left.y.as_int() + item_rectangle.size.height.as_int()});
+                }
+                else if (node->direction == Node::vertical)
+                {
+                    rectangle.size.width = std::max(
+                        rectangle.size.width,
+                        geom::Width{item_rectangle.top_left.x.as_int() + item_rectangle.size.width.as_int()});
+                    rectangle.size.height = geom::Height{rectangle.size.height.as_int() + item_rectangle.size.height.as_int()};
+                }
+            }
+            return rectangle;
+        }
     }
 
+    void set_rectangle(geom::Rectangle rect)
+    {
+        if (is_window())
+        {
+            window.move_to(rect.top_left);
+            window.resize(rect.size);
+        }
+        else
+        {
+            // TODO: This needs to divide the space equally among windows
+            for (auto item : node->items)
+            {
+                item->set_rectangle(rect);
+            }
+        }
+    }
+
+    bool is_window()
+    {
+        return node == nullptr;
+    }
+
+    bool is_node()
+    {
+        return node != nullptr;
+    }
+
+    miral::Window& get_window() {
+        return window;
+    }
+
+    std::shared_ptr<Node> get_node() {
+        return node;
+    }
+
+    /// Transforms this lane item into a node.
+    std::shared_ptr<Node> to_node()
+    {
+        if (node != nullptr)
+            return node;
+
+        node = std::make_shared<Node>();
+        node->items.push_back(std::make_shared<NodeContent>(window));
+        return node;
+    }
+
+private:
     miral::Window window;
+    std::shared_ptr<Node> node = nullptr;
 };
 
 }
 
 WindowTree::WindowTree(geom::Size default_size)
-    : root{std::make_shared<WindowTreeLane>()},
-      active{root},
+    : root_lane{std::make_shared<Node>()},
+      active_lane{root_lane},
       size{default_size}
 {
 }
@@ -51,8 +130,8 @@ WindowTree::WindowTree(geom::Size default_size)
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    pending_lane = active;
-    if (root == active && root->items.empty())
+    pending_lane = active_lane;
+    if (root_lane == active_lane && root_lane->items.empty())
     {
         // Special case: take up the full size of the root node.
         new_spec.top_left() = geom::Point{0, 0};
@@ -74,8 +153,7 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
             rectangle.top_left.x.as_int() + width_per_item * index,
             rectangle.top_left.y
         };
-        item->window.move_to(new_position);
-        item->window.resize(new_size);
+        item->set_rectangle(geom::Rectangle{new_position, new_size});
     }
 
     auto new_position = geom::Point{
@@ -95,9 +173,10 @@ miral::Rectangle WindowTree::confirm(miral::Window &window)
         return miral::Rectangle{};
     }
 
-    auto item = std::make_shared<WindowTreeLaneItem>(window);
+    auto item = std::make_shared<NodeContent>(window);
     pending_lane->items.push_back(item);
     pending_lane = nullptr;
+    advise_focus_gained(window);
     return item->get_rectangle();
 }
 
@@ -112,17 +191,26 @@ void WindowTree::resize(geom::Size new_size)
     // TODO: Resize all windows
 }
 
-void WindowTreeLane::add(miral::Window &window)
+void WindowTree::request_vertical()
 {
+    active_lane = active_lane->to_lane(active_window);
+    active_lane->direction = Node::horizontal;
 
+    // This is when we add a new lane, which means that we need to know who is currently
+    // selected.
 }
 
-void WindowTreeLane::remove(miral::Window &window)
+void WindowTree::advise_focus_gained(miral::Window& window)
 {
-
+    active_lane = root_lane->find_lane(window);
+    active_window = window;
 }
 
-geom::Rectangle WindowTreeLane::get_rectangle()
+void WindowTree::advise_focus_lost(miral::Window& window)
+{
+}
+
+geom::Rectangle Node::get_rectangle()
 {
     geom::Rectangle rectangle{geom::Point{INT_MAX, INT_MAX}, geom::Size{0, 0}};
     for (auto item : items)
@@ -132,10 +220,48 @@ geom::Rectangle WindowTreeLane::get_rectangle()
         rectangle.top_left.y = std::min(rectangle.top_left.y, item_rectangle.top_left.y);
         rectangle.size.width = std::max(
             rectangle.size.width,
-            geom::Width{item_rectangle.top_left.x.as_int() + item_rectangle.size.width.as_int()});
+            geom::Width{item_rectangle.size.width.as_int()});
         rectangle.size.height = std::max(
             rectangle.size.height,
-            geom::Height{item_rectangle.top_left.y.as_int() + item_rectangle.size.height.as_int()});
+            geom::Height{item_rectangle.size.height.as_int()});
     }
     return rectangle;
+}
+
+std::shared_ptr<Node> Node::find_lane(miral::Window &window)
+{
+    for (auto item : items)
+    {
+        if (item->is_window())
+        {
+            if (item->get_window() == window)
+                return shared_from_this();
+        }
+        else
+        {
+            return item->get_node()->find_lane(window);
+        }
+    }
+
+    // TODO: Error
+    return nullptr;
+}
+
+std::shared_ptr<miracle::Node> Node::to_lane(miral::Window &window)
+{
+    for (auto item : items)
+    {
+        if (item->is_window())
+        {
+            if (item->get_window() == window)
+                return item->to_node();
+        }
+        else
+        {
+            return item->get_node()->to_lane(window);
+        }
+    }
+
+    // TODO: Error
+    return nullptr;
 }

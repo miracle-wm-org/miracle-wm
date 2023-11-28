@@ -49,10 +49,16 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers && mir_input_event_modifier_alt)) {
-        if (scan_code == KEY_ENTER) {
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers && mir_input_event_modifier_alt))
+    {
+        if (scan_code == KEY_ENTER)
+        {
             external_client_launcher.launch({TERMINAL});
             return true;
+        }
+        else if (scan_code == KEY_V)
+        {
+            tree.request_vertical();
         }
     }
 
@@ -73,4 +79,14 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
     // The new placement has been confirmed. We can now add the window into the pending position
     // in the tree. This comes _after_ place_new_window has been called.
     tree.confirm(window_info.window());
+}
+
+void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
+{
+    tree.advise_focus_gained(window_info.window());
+}
+
+void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
+{
+    tree.advise_focus_lost(window_info.window());
 }

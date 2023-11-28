@@ -32,6 +32,8 @@ public:
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
     void handle_window_ready(
         miral::WindowInfo& window_info) override;
+    void advise_focus_gained(miral::WindowInfo const& window_info) override;
+    void advise_focus_lost(miral::WindowInfo const& window_info) override;
 
 private:
     WindowTree tree; // TODO: Keep a list per output
