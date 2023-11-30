@@ -200,6 +200,18 @@ void WindowTree::advise_delete_window(miral::Window& window)
         );
     }
 
+    // Edge case: If the newly active node only owns one other lane, it can absorb the node
+    if (active_lane->get_sub_nodes().size() == 1 && active_lane->get_sub_nodes()[0]->is_lane())
+    {
+        auto dying_lane = active_lane->get_sub_nodes()[0];
+        active_lane->get_sub_nodes().clear();
+        for (auto sub_node : dying_lane->get_sub_nodes())
+        {
+            active_lane->get_sub_nodes().push_back(sub_node);
+        }
+        active_lane->set_direction(dying_lane->get_direction());
+    }
+
     // Resize the active lane to account for its new size.
     // TODO: Account for window with unequal size
     // TODO: This is very similar to allocate_position
