@@ -76,9 +76,44 @@ void Node::set_rectangle(geom::Rectangle rect)
     else
     {
         // TODO: This needs to divide the space equally among windows
-        for (auto item : sub_nodes)
+        geom::Size divied_size;
+        geom::Point top_left_jump;
+
+        if (direction == NodeDirection::horizontal)
         {
-            item->set_rectangle(rect);
+            divied_size = geom::Size{
+                geom::Width{rect.size.width.as_value() / static_cast<float>(sub_nodes.size())},
+                geom::Height{rect.size.height.as_value()}
+            };
+            top_left_jump = geom::Point{
+                geom::X{rect.size.width.as_value()},
+                geom::Y{0}
+            };
+        }
+        else if (direction == NodeDirection::vertical)
+        {
+            divied_size = geom::Size{
+                geom::Width{rect.size.width.as_value()},
+                geom::Height{rect.size.height.as_value() / static_cast<float>(sub_nodes.size())}
+            };
+            top_left_jump = geom::Point{
+                geom::X{0},
+                geom::Y{rect.size.width.as_value()},
+            };
+        }
+
+        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        {
+            auto item = sub_nodes[idx];
+            auto position = geom::Point{
+                geom::X{top_left_jump.x.as_int() * idx + rect.top_left.x.as_int()},
+                geom::Y{top_left_jump.y.as_int() * idx + rect.top_left.y.as_int()}
+            };
+            geom::Rectangle item_rect = {
+                position,
+                divied_size
+            };
+            item->set_rectangle(item_rect);
         }
     }
 }
