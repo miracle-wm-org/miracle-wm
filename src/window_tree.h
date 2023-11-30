@@ -17,6 +17,7 @@
 #ifndef MIRCOMPOSITOR_WINDOW_TREE_H
 #define MIRCOMPOSITOR_WINDOW_TREE_H
 
+#include "node.h"
 #include <memory>
 #include <vector>
 #include <miral/window.h>
@@ -28,33 +29,6 @@ namespace geom = mir::geometry;
 
 namespace miracle
 {
-
-class NodeContent;
-
-/// Describes a node in the list tree
-struct Node : public std::enable_shared_from_this<Node>
-{
-    /// Content of the node. These can either be individual windows
-    /// or nodes themselves.
-    std::vector<std::shared_ptr<NodeContent>> node_content_list;
-
-    enum {
-        horizontal,
-        vertical,
-        length
-    } direction  = horizontal;
-
-    /// The rectangle defined by the node can be retrieved dynamically
-    /// by calculating the dimensions of the content in this node
-    geom::Rectangle get_rectangle();
-
-    /// Walk the tree to find the lane that contains this window.
-    std::shared_ptr<Node> find_node_for_window(miral::Window& window);
-
-    /// Transform the window  in the list to a Node. Returns the
-    /// new Node if the Window was found, otherwise null.
-    std::shared_ptr<Node> window_to_node(miral::Window& window);
-};
 
 /// Represents a tiling tree for an output.
 class WindowTree
@@ -80,6 +54,7 @@ public:
 
     void advise_focus_gained(miral::Window&);
     void advise_focus_lost(miral::Window&);
+    void advise_delete_window(miral::Window&);
 
 private:
     std::shared_ptr<Node> root_lane;
@@ -87,6 +62,8 @@ private:
     std::shared_ptr<Node> pending_lane;
     miral::Window active_window;
     geom::Size size;
+
+    void resize_node_to(std::shared_ptr<Node> node);
 };
 
 }
