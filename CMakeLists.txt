@@ -26,6 +26,7 @@ add_executable(compositor
     src/protocols/xdg_shell_unstable_v6.c
     src/xdg_surface.cpp
     src/window_tree.cpp
+    src/node.cpp
 )
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

@@ -94,3 +94,8 @@ void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &w
 {
     tree.advise_focus_lost(window_info.window());
 }
+
+void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
+{
+    tree.advise_delete_window(window_info.window());
+}

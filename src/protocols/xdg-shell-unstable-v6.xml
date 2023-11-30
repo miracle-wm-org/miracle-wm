@@ -597,7 +597,7 @@
 
                 This request asks the compositor to pop up such a window menu at
                 the given position, relative to the local surface coordinates of
-                the parent surface. There are no guarantees as to what menu node_content_list
+                the parent surface. There are no guarantees as to what menu sub_nodes
                 the window menu contains.
 
                 This request must be used in response to some sort of user action
