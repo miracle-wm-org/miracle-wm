@@ -106,16 +106,35 @@ void WindowTree::resize(geom::Size new_size)
 
 void WindowTree::request_vertical()
 {
-    active_lane = active_lane->find_node_for_window(active_window);
-    active_lane->to_lane();
-    active_lane->set_direction(NodeDirection::vertical);
+    handle_direction_request(NodeDirection::vertical);
 }
 
 void WindowTree::request_horizontal()
 {
-    active_lane = active_lane->find_node_for_window(active_window);
-    active_lane->to_lane();
-    active_lane->set_direction(NodeDirection::horizontal);
+    handle_direction_request(NodeDirection::horizontal);
+}
+
+void WindowTree::handle_direction_request(NodeDirection direction)
+{
+    auto window_lane = active_lane->find_node_for_window(active_window);
+    if (!window_lane->is_window())
+    {
+        std::cerr << "WindowTree::handle_direction_request: must change direction of a window" << std::endl;
+        return;
+    }
+
+    // Edge case: if we're an only child, we can just change the direction of the parent to achieve the same effect
+    if (window_lane->parent->get_sub_nodes().size() == 1)
+    {
+        active_lane = window_lane->parent;
+    }
+    else
+    {
+        active_lane = window_lane;
+        active_lane->to_lane();
+    }
+
+    active_lane->set_direction(direction);
 }
 
 void WindowTree::advise_focus_gained(miral::Window& window)
