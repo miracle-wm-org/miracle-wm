@@ -57,6 +57,7 @@ public:
     void advise_delete_window(miral::Window&);
 
 private:
+    void handle_direction_request(NodeDirection direction);
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_lane;
     miral::Window active_window;
