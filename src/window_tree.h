@@ -41,7 +41,7 @@ public:
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
     /// Confirms the position of this window in the previously allocated position.
-    miral::Rectangle confirm(miral::Window&);
+    void confirm(miral::Window&);
 
     void remove(miral::Window&);
     void resize(geom::Size new_size);
@@ -59,7 +59,6 @@ public:
 private:
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_lane;
-    std::shared_ptr<Node> pending_lane;
     miral::Window active_window;
     geom::Size size;
 
