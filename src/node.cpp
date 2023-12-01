@@ -75,7 +75,7 @@ void Node::set_rectangle(geom::Rectangle rect)
     }
     else
     {
-        // TODO: This needs to divide the space equally among windows
+        // TODO: This needs to respect current window sizes and give everyone a fraction
         geom::Size divied_size;
         geom::Point top_left_jump;
 
@@ -86,7 +86,7 @@ void Node::set_rectangle(geom::Rectangle rect)
                 geom::Height{rect.size.height.as_value()}
             };
             top_left_jump = geom::Point{
-                geom::X{rect.size.width.as_value()},
+                geom::X{divied_size.width.as_value()},
                 geom::Y{0}
             };
         }
@@ -98,7 +98,7 @@ void Node::set_rectangle(geom::Rectangle rect)
             };
             top_left_jump = geom::Point{
                 geom::X{0},
-                geom::Y{rect.size.width.as_value()},
+                geom::Y{divied_size.height.as_value()},
             };
         }
 

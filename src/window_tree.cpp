@@ -36,7 +36,6 @@ void WindowTree::resize_node_to(std::shared_ptr<Node> node)
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    pending_lane = active_lane;
     if (active_lane->is_root() && active_lane->get_sub_nodes().size() == 0)
     {
         // Special case: take up the full size of the root node.
@@ -48,21 +47,11 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     // Everyone get out the damn way. Slide the other items to the left for now.
     // TODO: Handle inserting in the middle of the group
     // TODO: Handle non-equal sizing
-    auto rectangle = pending_lane->get_rectangle();
+    auto rectangle = active_lane->get_rectangle();
     if (active_lane->get_direction() == NodeDirection::horizontal)
     {
-        auto width_per_item = rectangle.size.width.as_int() / static_cast<float>(pending_lane->get_sub_nodes().size() + 1);
+        auto width_per_item = rectangle.size.width.as_int() / static_cast<float>(active_lane->get_sub_nodes().size() + 1);
         auto new_size = geom::Size{geom::Width{width_per_item}, rectangle.size.height};
-        for (auto index = 0; index < pending_lane->get_sub_nodes().size(); index++)
-        {
-            auto item = pending_lane->get_sub_nodes()[index];
-            auto new_position = geom::Point{
-                rectangle.top_left.x.as_int() + width_per_item * index,
-                rectangle.top_left.y
-            };
-            item->set_rectangle(geom::Rectangle{new_position, new_size});
-        }
-
         auto new_position = geom::Point{
             rectangle.top_left.x.as_int() + rectangle.size.width.as_int() - width_per_item,
             rectangle.top_left.y
@@ -72,18 +61,8 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     }
     else if (active_lane->get_direction() == NodeDirection::vertical)
     {
-        auto height_per_item = rectangle.size.height.as_int() / static_cast<float>(pending_lane->get_sub_nodes().size() + 1);
+        auto height_per_item = rectangle.size.height.as_int() / static_cast<float>(active_lane->get_sub_nodes().size() + 1);
         auto new_size = geom::Size{rectangle.size.width, height_per_item};
-        for (auto index = 0; index < pending_lane->get_sub_nodes().size(); index++)
-        {
-            auto item = pending_lane->get_sub_nodes()[index];
-            auto new_position = geom::Point{
-                rectangle.top_left.x,
-                rectangle.top_left.y.as_int() + height_per_item * index
-            };
-            item->set_rectangle(geom::Rectangle{new_position, new_size});
-        }
-
         auto new_position = geom::Point{
             rectangle.top_left.x,
             rectangle.top_left.y.as_int() + rectangle.size.height.as_int() - height_per_item
@@ -95,18 +74,23 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     return new_spec;
 }
 
-miral::Rectangle WindowTree::confirm(miral::Window &window)
+void WindowTree::confirm(miral::Window &window)
 {
-    if (!pending_lane)
+    geom::Rectangle rectangle;
+    if (active_lane->is_root() && active_lane->get_sub_nodes().size() == 0)
     {
-        // TODO: Error
-        return miral::Rectangle{};
+        // Special case: take up the full size of the root node.
+        rectangle.top_left = geom::Point{0, 0};
+        rectangle.size = size;
+    }
+    else
+    {
+        rectangle  = active_lane->get_rectangle();
     }
 
-    pending_lane->get_sub_nodes().push_back(std::make_shared<Node>(pending_lane, window));
-    pending_lane = nullptr;
+    active_lane->get_sub_nodes().push_back(std::make_shared<Node>(active_lane, window));
+    active_lane->set_rectangle(rectangle);
     advise_focus_gained(window);
-    return active_lane->get_rectangle();
 }
 
 void WindowTree::remove(miral::Window &)
@@ -141,8 +125,7 @@ void WindowTree::advise_focus_gained(miral::Window& window)
     active_lane = found_node->parent;
     if (!active_lane->is_lane())
     {
-        // TODO: proper error
-        printf("Active lane is NOT a lane");
+        std::cerr << "Active lane is NOT a lane" << std::endl;
     }
     active_window = window;
 }
@@ -212,35 +195,5 @@ void WindowTree::advise_delete_window(miral::Window& window)
         active_lane->set_direction(dying_lane->get_direction());
     }
 
-    // Resize the active lane to account for its new size.
-    // TODO: Account for window with unequal size
-    // TODO: This is very similar to allocate_position
-    if (active_lane->get_direction() == NodeDirection::horizontal)
-    {
-        auto width_per_item = rectangle.size.width.as_int() / static_cast<float>(active_lane->get_sub_nodes().size());
-        auto new_size = geom::Size{geom::Width{width_per_item}, rectangle.size.height};
-        for (auto index = 0; index < active_lane->get_sub_nodes().size(); index++)
-        {
-            auto item = active_lane->get_sub_nodes()[index];
-            auto new_position = geom::Point{
-                rectangle.top_left.x.as_int() + width_per_item * index,
-                rectangle.top_left.y
-            };
-            item->set_rectangle(geom::Rectangle{new_position, new_size});
-        }
-    }
-    else if (active_lane->get_direction() == NodeDirection::vertical)
-    {
-        auto height_per_item = rectangle.size.height.as_int() / static_cast<float>(active_lane->get_sub_nodes().size());
-        auto new_size = geom::Size{rectangle.size.width, height_per_item};
-        for (auto index = 0; index < active_lane->get_sub_nodes().size(); index++)
-        {
-            auto item = active_lane->get_sub_nodes()[index];
-            auto new_position = geom::Point{
-                rectangle.top_left.x,
-                rectangle.top_left.y.as_int() + height_per_item * index
-            };
-            item->set_rectangle(geom::Rectangle{new_position, new_size});
-        }
-    }
+    active_lane->set_rectangle(rectangle);
 }
