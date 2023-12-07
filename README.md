@@ -1,33 +1,43 @@
-# Miracle - a Wayland Compositor based on Mir
+# Miracle - a Tiling WM based on Mir
+**Miracle** is a pleasant tiling window manager based on *Mir*. The emphasis is on usability for normal people,
+rather than maximum extensibility for hackers. My goal is for everyone to enjoy the beauty of tiling window managers
+without needing to be a nerd.
 
 ## Building
 ```
+git clone https://github.com/mattkae/miracle.git
+cd miracle
+
 mkdir build
 cd build
 cmake ..
+./bin/compositor
 ```
 
-### Protocols
-```
-wayland-scanner client-header < ./src/protocols/xdg-shell.xml > ./src/protocols/xdg_shell.h
-wayland-scanner private-code < ./src/protocols/xdg-shell.xml > ./src/protocols/xdg_shell.c
-```
+## TODOs V1
+**ETA**: January 1st
+- [x] Layout new window
+- [x] Delete window
+- [ ] Resizing windows
+- [ ] Changing selected window with keyboard
+- [ ] Moving window with keyboard
+- [ ] Gaps in windows
+- [ ] Account for minimum sizes on windows (e.g. gedit)
+- [ ] Disabling many of the Floating Window Manager features
 
-## Design
-- Floating window management with tiling zones
-- Integrated widgets for sound, networking, trays, etc.
-- Task bar at the bottom
-- CSS-driven design palette (GTK might have support here)
-- Application opening and closing transitions
+## TODOs V2
+**ETA**: February 1st
+- [ ] Workspaces
+  - [ ] Moving windows between workspaces
+- [ ] Multi-output support
+  - [ ] Connecting new monitors
+  - [ ] Disconnecting monitors
+  - [ ] Moving windows between monitors
 
-## Roadmap
-- 0.1: Task bar
-  - Show black bar on bottom of the screen
-  - Show icons of open programs in the task bar
-  - Highlight selected program
-  - Be able to move programs around
-  - Click to minimize program + click again to maximize program
-  - Show black square for menu
-  - List applications within the black square
-- 0.2: CSS integration with task bar
-- 0.3: Top bar 101 with clock widget
+## TODOs V3
+**ETA**: March 1st
+- [ ] Configuration file
+- [ ] Settings application (built in flutter ideally)
+- [ ] Visual Sugar
+  - [ ] A workspace visualizer in the top panel (in-memory app)
+  - [ ] A tile visualizer in the top panel (in-memory app)
