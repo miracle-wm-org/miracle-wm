@@ -59,10 +59,37 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         else if (scan_code == KEY_V)
         {
             tree.request_vertical();
+            return true;
         }
         else if (scan_code == KEY_H)
         {
             tree.request_horizontal();
+            return true;
+        }
+        else if (scan_code == KEY_R)
+        {
+            tree.toggle_resize_mode();
+            return true;
+        }
+        else if (scan_code == KEY_UP)
+        {
+            if (tree.try_resize_active_window(WindowResizeDirection::up))
+                return true;
+        }
+        else if (scan_code == KEY_DOWN)
+        {
+            if (tree.try_resize_active_window(WindowResizeDirection::down))
+                return true;
+        }
+        else if (scan_code == KEY_LEFT)
+        {
+            if (tree.try_resize_active_window(WindowResizeDirection::left))
+                return true;
+        }
+        else if (scan_code == KEY_RIGHT)
+        {
+            if (tree.try_resize_active_window(WindowResizeDirection::right))
+                return true;
         }
     }
 

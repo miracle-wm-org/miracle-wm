@@ -93,9 +93,29 @@ void WindowTree::confirm(miral::Window &window)
     advise_focus_gained(window);
 }
 
-void WindowTree::remove(miral::Window &)
+void WindowTree::toggle_resize_mode()
 {
+    if (is_resizing)
+    {
+        is_resizing = false;
+        return;
+    }
 
+    auto window_lane = root_lane->find_node_for_window(active_window);
+    if (!window_lane)
+        return;
+
+    is_resizing = true;
+}
+
+bool WindowTree::try_resize_active_window(miracle::WindowResizeDirection direction)
+{
+    if (!is_resizing)
+        return false;
+
+    auto window_lane = root_lane->find_node_for_window(active_window);
+
+    return true;
 }
 
 void WindowTree::resize(geom::Size new_size)
@@ -116,6 +136,9 @@ void WindowTree::request_horizontal()
 
 void WindowTree::handle_direction_request(NodeDirection direction)
 {
+    if (is_resizing)
+        return;
+
     auto window_lane = active_lane->find_node_for_window(active_window);
     if (!window_lane->is_window())
     {
