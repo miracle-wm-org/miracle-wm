@@ -22,7 +22,7 @@
 using namespace miracle;
 
 WindowTree::WindowTree(geom::Size default_size)
-    : root_lane{std::make_shared<Node>()},
+    : root_lane{std::make_shared<Node>(geom::Rectangle{geom::Point{}, default_size})},
       active_lane{root_lane},
       size{default_size}
 {
@@ -36,13 +36,6 @@ void WindowTree::resize_node_to(std::shared_ptr<Node> node)
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    if (active_lane->is_root() && active_lane->get_sub_nodes().size() == 0)
-    {
-        // Special case: take up the full size of the root node.
-        new_spec.top_left() = geom::Point{0, 0};
-        new_spec.size() = size;
-        return new_spec;
-    }
 
     // Everyone get out the damn way. Slide the other items to the left for now.
     // TODO: Handle inserting in the middle of the group
@@ -76,19 +69,11 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::confirm(miral::Window &window)
 {
-    geom::Rectangle rectangle;
-    if (active_lane->is_root() && active_lane->get_sub_nodes().size() == 0)
-    {
-        // Special case: take up the full size of the root node.
-        rectangle.top_left = geom::Point{0, 0};
-        rectangle.size = size;
-    }
-    else
-    {
-        rectangle  = active_lane->get_rectangle();
-    }
-
-    active_lane->get_sub_nodes().push_back(std::make_shared<Node>(active_lane, window));
+    geom::Rectangle rectangle = active_lane->get_rectangle();
+    active_lane->get_sub_nodes().push_back(std::make_shared<Node>(
+        geom::Rectangle{window.top_left(), window.size()},
+        active_lane,
+        window));
     active_lane->set_rectangle(rectangle);
     advise_focus_gained(window);
 }
