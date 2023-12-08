@@ -30,6 +30,14 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
+enum class WindowResizeDirection
+{
+    up,
+    left,
+    down,
+    right
+};
+
 /// Represents a tiling tree for an output.
 class WindowTree
 {
@@ -43,8 +51,10 @@ public:
     /// Confirms the position of this window in the previously allocated position.
     void confirm(miral::Window&);
 
-    void remove(miral::Window&);
+    void toggle_resize_mode();
+    bool try_resize_active_window(WindowResizeDirection direction);
     void resize(geom::Size new_size);
+
 
     // Request a change to vertical window placement
     void request_vertical();
@@ -62,6 +72,7 @@ private:
     std::shared_ptr<Node> active_lane;
     miral::Window active_window;
     geom::Size size;
+    bool is_resizing = false;
 
     void resize_node_to(std::shared_ptr<Node> node);
 };
