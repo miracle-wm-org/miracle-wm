@@ -18,56 +18,27 @@
 
 using namespace miracle;
 
-Node::Node() : state{NodeState::lane}
+Node::Node(geom::Rectangle area)
+    : state{NodeState::lane},
+      area{area}
 {}
 
-Node::Node(std::shared_ptr<Node> parent, miral::Window &window)
+Node::Node(geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window)
     : parent{parent},
       window{window},
-      state{NodeState::window}
+      state{NodeState::window},
+      area{area}
 {
 }
 
 geom::Rectangle Node::get_rectangle()
 {
-    if (is_window())
-    {
-        return geom::Rectangle{window.top_left(), window.size()};
-    }
-    else
-    {
-        geom::Point top_left{INT_MAX, INT_MAX};
-        geom::Point bottom_right{0, 0};
-
-        for (auto item : sub_nodes)
-        {
-            auto item_rectangle = item->get_rectangle();
-            top_left.x = std::min(top_left.x, item_rectangle.top_left.x);
-            top_left.y = std::min(top_left.y, item_rectangle.top_left.y);
-            bottom_right.x = geom::X{
-                std::max(
-                    bottom_right.x.as_int(),
-                    item_rectangle.top_left.x.as_int() + item_rectangle.size.width.as_int())
-            };
-            bottom_right.y = geom::Y{
-                std::max(
-                    bottom_right.y.as_int(),
-                    item_rectangle.top_left.y.as_int() + item_rectangle.size.height.as_int())
-            };
-        }
-
-
-        return geom::Rectangle(
-            top_left,
-            geom::Size {
-                geom::Width{bottom_right.x.as_int() - top_left.x.as_value()},
-                geom::Height{bottom_right.y.as_int() - top_left.y.as_value()}
-            });
-    }
+    return area;
 }
 
 void Node::set_rectangle(geom::Rectangle rect)
 {
+    area = rect;
     if (is_window())
     {
         window.move_to(rect.top_left);
@@ -129,7 +100,8 @@ void Node::to_lane()
     if (parent != nullptr && parent->sub_nodes.size() == 1)
         return;
 
-    sub_nodes.push_back(std::make_shared<Node>(shared_from_this(), window));
+    sub_nodes.push_back(std::make_shared<Node>(
+        geom::Rectangle{window.top_left(), window.size()}, shared_from_this(), window));
 }
 
 std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)

@@ -43,8 +43,8 @@ enum class NodeDirection
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
-    Node();
-    Node(std::shared_ptr<Node> parent, miral::Window& window);
+    Node(geom::Rectangle);
+    Node(geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window);
 
     /// The rectangle defined by the node can be retrieved dynamically
     /// by calculating the dimensions of the content in this node
@@ -76,6 +76,7 @@ private:
     std::vector<std::shared_ptr<Node>> sub_nodes;
     NodeState state;
     NodeDirection direction = NodeDirection::horizontal;
+    geom::Rectangle area;
 };
 }
 
