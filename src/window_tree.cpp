@@ -102,7 +102,7 @@ bool WindowTree::try_resize_active_window(miracle::WindowResizeDirection directi
     }
 
     // TODO: We have a hardcoded resize amount
-    resize_node_internal(window_lane, direction, 20);
+    resize_node_internal(window_lane, direction, 50);
     return true;
 }
 
@@ -112,13 +112,15 @@ void WindowTree::resize_node_internal(
     int amount)
 {
     // Behavior:
-    // When resizing in a direction, we expand the node in that direction,
+    // Case #1: When resizing in a direction, we expand the node in that direction,
     // thus shrinking every other node in the list to accommodate the new
     // size of our node. The offset size is spread equally throughout the
     // other nodes, such that they all lose size the same.
-    // Edge case: when a node is the first or last in the list, and we resize
+    // Case #2: when a node is the first or last in the list, and we resize
     // in a direction that would make it hit the wall, then we decrease the size
     // of the node, and add size to the other nodes.
+    // Case #3: If we resize in the opposite direction of one we were resizing in
+    // then, we shrink the node.
 
     // Algorithm: If we're resizing along the main axis of the window,
     // (e.g. we are going up/down and the direction of the axis is
@@ -130,103 +132,64 @@ void WindowTree::resize_node_internal(
     // resize the parent horizontally, and resize the other nodes around it.
     // This is obviously recursive.
     auto parent = node->parent;
-    bool isMainAxisMovement = false;
+    if (parent == nullptr)
+    {
+        // Can't resize, most likely the root
+        return;
+    }
 
     // Discover the node's position
-    size_t i = 0;
-    for (; i < parent->get_sub_nodes().size(); i++)
-        if (node == parent->get_sub_nodes()[i])
-            break;
-
-    switch (direction)
+    bool is_vertical = direction == WindowResizeDirection::up || direction == WindowResizeDirection::down;
+    bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeDirection::vertical)
+        || (!is_vertical && parent->get_direction() == NodeDirection::horizontal);
+    if (!is_main_axis_movement)
     {
-        case WindowResizeDirection::up:
-            // TODO: Is this algorithm general?
-            isMainAxisMovement = parent->get_direction() == NodeDirection::vertical;
-            if (isMainAxisMovement)
+        resize_node_internal(parent, direction, amount);
+        return;
+    }
+
+    bool is_negative = direction == WindowResizeDirection::left || direction == WindowResizeDirection::up;
+    auto resize_amount = is_negative ? -amount : amount;
+    auto nodes = parent->get_sub_nodes();
+    if (is_vertical)
+    {
+        int height_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            auto other_node = nodes[i];
+            auto other_rect = other_node->get_rectangle();
+            if (node == other_node)
+                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + resize_amount};
+            else
+                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
+
+            if (i != 0)
             {
-                if (i == 0)
-                {
-                    // Edge case: shrink first node
-                    auto new_rectangle = node->get_rectangle();
-                    new_rectangle.size.height = geom::Height{new_rectangle.size.height.as_int() - amount};
-                    node->set_rectangle(new_rectangle);
-                    int height_for_others = floor(amount / static_cast<float>(parent->get_sub_nodes().size() - 1));
-                    for (size_t j = 1; j < parent->get_sub_nodes().size(); j++)
-                    {
-                        auto other_node = parent->get_sub_nodes()[j];
-                        auto other_rect = other_node->get_rectangle();
-                        other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
-                        other_rect.top_left.y = geom::Y{other_rect.top_left.y.as_int() - height_for_others};
-                        other_node->set_rectangle(other_rect);
-                    }
-                }
-                else
-                {
-                    // Otherwise, grow upwards, steal height from predecessors
-                    auto new_rectangle = node->get_rectangle();
-                    new_rectangle.size.height = geom::Height{new_rectangle.size.height.as_int() + amount};
-                    new_rectangle.top_left.y = geom::Y{new_rectangle.top_left.y.as_int() - amount};
-                    node->set_rectangle(new_rectangle);
-                    int height_for_others = floor(-amount / static_cast<float>(i));
-                    for (size_t j = 0; j < i; j++)
-                    {
-                        auto other_node = parent->get_sub_nodes()[j];
-                        auto other_rect = other_node->get_rectangle();
-                        other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
-                        if (j != 0)
-                            other_rect.top_left.y = geom::Y{other_rect.top_left.y.as_int() - amount - height_for_others};
-                        other_node->set_rectangle(other_rect);
-                    }
-                }
+                auto prev_rect = nodes[i - 1]->get_rectangle();
+                other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
             }
-            break;
-        case WindowResizeDirection::down:
-            isMainAxisMovement = parent->get_direction() == NodeDirection::vertical;
-            if (isMainAxisMovement)
+            other_node->set_rectangle(other_rect);
+        }
+    }
+    else
+    {
+        int width_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            auto other_node = nodes[i];
+            auto other_rect = other_node->get_rectangle();
+            if (node == other_node)
+                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + resize_amount};
+            else
+                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + width_for_others};
+
+            if (i != 0)
             {
-                if (i == parent->get_sub_nodes().size() - 1)
-                {
-                    // Edge case: shrink last node
-                    auto new_rectangle = node->get_rectangle();
-                    new_rectangle.size.height = geom::Height{new_rectangle.size.height.as_int() - amount};
-                    new_rectangle.top_left.y = geom::Y{new_rectangle.top_left.y.as_int() + amount};
-                    node->set_rectangle(new_rectangle);
-                    int height_for_others = floor(amount / static_cast<float>(parent->get_sub_nodes().size() - 1));
-                    for (size_t j = 0; j < parent->get_sub_nodes().size() - 1; j++)
-                    {
-                        auto other_node = parent->get_sub_nodes()[j];
-                        auto other_rect = other_node->get_rectangle();
-                        other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
-                        if (j != 0)
-                            other_rect.top_left.y = geom::Y{other_rect.top_left.y.as_int() + height_for_others};
-                        other_node->set_rectangle(other_rect);
-                    }
-                }
-                else
-                {
-                    // Otherwise, grow downwards, steal height from following nodes
-                    auto new_rectangle = node->get_rectangle();
-                    new_rectangle.size.height = geom::Height{new_rectangle.size.height.as_int() + amount};
-                    node->set_rectangle(new_rectangle);
-                    int height_for_others = floor(-amount / static_cast<float>(parent->get_sub_nodes().size() - i + 1));
-                    for (size_t j = i + 1; j < parent->get_sub_nodes().size(); j++)
-                    {
-                        auto other_node = parent->get_sub_nodes()[j];
-                        auto other_rect = other_node->get_rectangle();
-                        other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
-                        other_rect.top_left.y = geom::Y{other_rect.top_left.y.as_int() + amount};
-                        other_node->set_rectangle(other_rect);
-                    }
-                }
+                auto prev_rect = nodes[i - 1]->get_rectangle();
+                other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
             }
-            break;
-        case WindowResizeDirection::left:
-            isMainAxisMovement = parent->get_direction() == NodeDirection::horizontal;
-            break;
-        case WindowResizeDirection::right:
-            isMainAxisMovement = parent->get_direction() == NodeDirection::horizontal;
-            break;
+            other_node->set_rectangle(other_rect);
+        }
     }
 }
 
