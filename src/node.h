@@ -50,7 +50,7 @@ public:
     /// by calculating the dimensions of the content in this node
     geom::Rectangle get_rectangle();
 
-    void set_rectangle(geom::Rectangle rectangle);
+    void set_rectangle(geom::Rectangle target_rect);
 
     /// Walk the tree to find the lane that contains this window.
     std::shared_ptr<Node> find_node_for_window(miral::Window& window);

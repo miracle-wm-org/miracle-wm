@@ -66,10 +66,51 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 void WindowTree::confirm(miral::Window &window)
 {
     geom::Rectangle rectangle = active_lane->get_rectangle();
+    auto nodes = active_lane->get_sub_nodes();
+    if (active_lane->get_direction() == NodeDirection::horizontal)
+    {
+        float divvied = window.size().width.as_int() / static_cast<float>(nodes.size());
+        std::shared_ptr<Node> prev_node;
+        for (auto node : nodes)
+        {
+            auto node_rect = node->get_rectangle();
+            node_rect.size.width = geom::Width{node_rect.size.width.as_int() - divvied};
+
+            if (prev_node)
+            {
+                node_rect.top_left.x = geom::X{
+                    prev_node->get_rectangle().top_left.x.as_int() + prev_node->get_rectangle().size.width.as_int()};
+            }
+
+            node->set_rectangle(node_rect);
+            prev_node = node;
+        }
+    }
+    else
+    {
+        float divvied = window.size().height.as_int() / static_cast<float>(nodes.size());
+        std::shared_ptr<Node> prev_node;
+        for (auto node : nodes)
+        {
+            auto node_rect = node->get_rectangle();
+            node_rect.size.height = geom::Height {node_rect.size.height.as_int() - divvied};
+
+            if (prev_node)
+            {
+                node_rect.top_left.y = geom::Y{
+                    prev_node->get_rectangle().top_left.y.as_int() + prev_node->get_rectangle().size.height.as_int()};
+            }
+
+            node->set_rectangle(node_rect);
+            prev_node = node;
+        }
+    }
+
     active_lane->get_sub_nodes().push_back(std::make_shared<Node>(
         geom::Rectangle{window.top_left(), window.size()},
         active_lane,
         window));
+
     active_lane->set_rectangle(rectangle);
     advise_focus_gained(window);
 }
