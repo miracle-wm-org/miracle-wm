@@ -74,7 +74,7 @@ private:
     geom::Size size;
     bool is_resizing = false;
 
-    void resize_node_to(std::shared_ptr<Node> node);
+    void resize_node_internal(std::shared_ptr<Node> node, WindowResizeDirection direction, int amount);
 };
 
 }
