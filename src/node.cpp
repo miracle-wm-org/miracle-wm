@@ -15,6 +15,7 @@
  */
 
 #include "node.h"
+#include <cmath>
 
 using namespace miracle;
 
@@ -36,57 +37,90 @@ geom::Rectangle Node::get_rectangle()
     return area;
 }
 
-void Node::set_rectangle(geom::Rectangle rect)
+void Node::set_rectangle(geom::Rectangle target_rect)
 {
-    area = rect;
     if (is_window())
     {
-        window.move_to(rect.top_left);
-        window.resize(rect.size);
+        window.move_to(target_rect.top_left);
+        window.resize(target_rect.size);
     }
     else
     {
-        // TODO: This needs to respect current window sizes and give everyone a fraction
-        geom::Size divied_size;
-        geom::Point top_left_jump;
-
+        // We are setting the size of the lane, but each window might have an idea of how
+        // its own height relates to the lane (e.g. I take up 300px of 900px lane while my
+        // neighbor takes up the remaining 600px, horizontally).
+        // We need to look at the target dimension and scale everyone relative to that.
+        // However, the "non-main-axis" dimension will be consistent across each node.
         if (direction == NodeDirection::horizontal)
         {
-            divied_size = geom::Size{
-                geom::Width{rect.size.width.as_value() / static_cast<float>(sub_nodes.size())},
-                geom::Height{rect.size.height.as_value()}
-            };
-            top_left_jump = geom::Point{
-                geom::X{divied_size.width.as_value()},
-                geom::Y{0}
-            };
-        }
-        else if (direction == NodeDirection::vertical)
-        {
-            divied_size = geom::Size{
-                geom::Width{rect.size.width.as_value()},
-                geom::Height{rect.size.height.as_value() / static_cast<float>(sub_nodes.size())}
-            };
-            top_left_jump = geom::Point{
-                geom::X{0},
-                geom::Y{divied_size.height.as_value()},
-            };
-        }
+            for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+            {
+                auto item = sub_nodes[idx];
+                auto item_rect = item->get_rectangle();
+                float percent_width_taken = static_cast<float>(item_rect.size.width.as_int()) / area.size.width.as_int();
+                int new_width = floor(target_rect.size.width.as_int() * percent_width_taken);
 
-        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+                geom::Rectangle new_item_rect;
+                new_item_rect.size = geom::Size{
+                    geom::Width{new_width},
+                    target_rect.size.height
+                };
+                if (idx == 0)
+                {
+                    new_item_rect.top_left = geom::Point{
+                        target_rect.top_left.x,
+                        target_rect.top_left.y
+                    };
+                }
+                else
+                {
+                    auto prev_rect = sub_nodes[idx - 1]->get_rectangle();
+                    new_item_rect.top_left = geom::Point{
+                        geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()},
+                        target_rect.top_left.y
+                    };
+                }
+
+                item->set_rectangle(new_item_rect);
+            }
+        }
+        else
         {
-            auto item = sub_nodes[idx];
-            auto position = geom::Point{
-                geom::X{top_left_jump.x.as_int() * idx + rect.top_left.x.as_int()},
-                geom::Y{top_left_jump.y.as_int() * idx + rect.top_left.y.as_int()}
-            };
-            geom::Rectangle item_rect = {
-                position,
-                divied_size
-            };
-            item->set_rectangle(item_rect);
+            for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+            {
+                auto item = sub_nodes[idx];
+                auto item_rect = item->get_rectangle();
+                float percent_height_taken = static_cast<float>(item_rect.size.height.as_int()) / area.size.height.as_int();
+                int new_height = floor(target_rect.size.height.as_int() * percent_height_taken);
+
+                geom::Rectangle new_item_rect;
+                new_item_rect.size = geom::Size{
+                    target_rect.size.width,
+                    geom::Height{new_height},
+                };
+                if (idx == 0)
+                {
+                    new_item_rect.top_left = geom::Point{
+                        target_rect.top_left.x,
+                        target_rect.top_left.y
+                    };
+                }
+                else
+                {
+                    auto prev_rect = sub_nodes[idx - 1]->get_rectangle();
+                    new_item_rect.top_left = geom::Point{
+                        target_rect.top_left.x,
+                        geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()},
+                    };
+                }
+
+                item->set_rectangle(new_item_rect);
+            }
         }
     }
+
+    // Important that we update the area _after_ changes have taken place!
+    area = target_rect;
 }
 
 void Node::to_lane()
