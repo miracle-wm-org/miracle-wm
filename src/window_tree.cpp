@@ -32,86 +32,19 @@ WindowTree::WindowTree(geom::Size default_size)
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-
-    // Everyone get out the damn way. Slide the other items to the left for now.
-    // TODO: Handle inserting in the middle of the group
-    // TODO: Handle non-equal sizing
-    auto rectangle = active_lane->get_rectangle();
-    if (active_lane->get_direction() == NodeDirection::horizontal)
-    {
-        auto width_per_item = rectangle.size.width.as_int() / static_cast<float>(active_lane->get_sub_nodes().size() + 1);
-        auto new_size = geom::Size{geom::Width{width_per_item}, rectangle.size.height};
-        auto new_position = geom::Point{
-            rectangle.top_left.x.as_int() + rectangle.size.width.as_int() - width_per_item,
-            rectangle.top_left.y
-        };
-        new_spec.top_left() = new_position;
-        new_spec.size() = new_size;
-    }
-    else if (active_lane->get_direction() == NodeDirection::vertical)
-    {
-        auto height_per_item = rectangle.size.height.as_int() / static_cast<float>(active_lane->get_sub_nodes().size() + 1);
-        auto new_size = geom::Size{rectangle.size.width, height_per_item};
-        auto new_position = geom::Point{
-            rectangle.top_left.x,
-            rectangle.top_left.y.as_int() + rectangle.size.height.as_int() - height_per_item
-        };
-        new_spec.top_left() = new_position;
-        new_spec.size() = new_size;
-    }
-
+    auto rect = active_lane->new_node_position();
+    new_spec.size() = rect.size;
+    new_spec.top_left() = rect.top_left;
     return new_spec;
 }
 
 void WindowTree::confirm(miral::Window &window)
 {
-    geom::Rectangle rectangle = active_lane->get_rectangle();
-    auto nodes = active_lane->get_sub_nodes();
-    if (active_lane->get_direction() == NodeDirection::horizontal)
-    {
-        float divvied = window.size().width.as_int() / static_cast<float>(nodes.size());
-        std::shared_ptr<Node> prev_node;
-        for (auto node : nodes)
-        {
-            auto node_rect = node->get_rectangle();
-            node_rect.size.width = geom::Width{node_rect.size.width.as_int() - divvied};
-
-            if (prev_node)
-            {
-                node_rect.top_left.x = geom::X{
-                    prev_node->get_rectangle().top_left.x.as_int() + prev_node->get_rectangle().size.width.as_int()};
-            }
-
-            node->set_rectangle(node_rect);
-            prev_node = node;
-        }
-    }
-    else
-    {
-        float divvied = window.size().height.as_int() / static_cast<float>(nodes.size());
-        std::shared_ptr<Node> prev_node;
-        for (auto node : nodes)
-        {
-            auto node_rect = node->get_rectangle();
-            node_rect.size.height = geom::Height {node_rect.size.height.as_int() - divvied};
-
-            if (prev_node)
-            {
-                node_rect.top_left.y = geom::Y{
-                    prev_node->get_rectangle().top_left.y.as_int() + prev_node->get_rectangle().size.height.as_int()};
-            }
-
-            node->set_rectangle(node_rect);
-            prev_node = node;
-        }
-    }
-
-    active_lane->get_sub_nodes().push_back(std::make_shared<Node>(
+    active_lane->add_node(std::make_shared<Node>(
         geom::Rectangle{window.top_left(), window.size()},
         active_lane,
         window));
 
-    active_lane->set_rectangle(rectangle);
     advise_focus_gained(window);
 }
 
@@ -152,26 +85,6 @@ void WindowTree::resize_node_internal(
     WindowResizeDirection direction,
     int amount)
 {
-    // Behavior:
-    // Case #1: When resizing in a direction, we expand the node in that direction,
-    // thus shrinking every other node in the list to accommodate the new
-    // size of our node. The offset size is spread equally throughout the
-    // other nodes, such that they all lose size the same.
-    // Case #2: when a node is the first or last in the list, and we resize
-    // in a direction that would make it hit the wall, then we decrease the size
-    // of the node, and add size to the other nodes.
-    // Case #3: If we resize in the opposite direction of one we were resizing in
-    // then, we shrink the node.
-
-    // Algorithm: If we're resizing along the main axis of the window,
-    // (e.g. we are going up/down and the direction of the axis is
-    // vertical), then we will not resize the parent node itself. Rather,
-    // we will resize the other nodes in the lane in relation to this
-    // resized window.
-    // However, if we're resizing along the cross axis of the window
-    // (e.g. the horizontal axis in the previous example), then we
-    // resize the parent horizontally, and resize the other nodes around it.
-    // This is obviously recursive.
     auto parent = node->parent;
     if (parent == nullptr)
     {
@@ -179,7 +92,6 @@ void WindowTree::resize_node_internal(
         return;
     }
 
-    // Discover the node's position
     bool is_vertical = direction == WindowResizeDirection::up || direction == WindowResizeDirection::down;
     bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeDirection::vertical)
         || (!is_vertical && parent->get_direction() == NodeDirection::horizontal);
@@ -348,10 +260,10 @@ void WindowTree::advise_delete_window(miral::Window& window)
         active_lane->get_sub_nodes().clear();
         for (auto sub_node : dying_lane->get_sub_nodes())
         {
-            active_lane->get_sub_nodes().push_back(sub_node);
+            active_lane->add_node(sub_node);
         }
         active_lane->set_direction(dying_lane->get_direction());
     }
 
-    active_lane->set_rectangle(rectangle);
+    active_lane->redistribute_size();
 }

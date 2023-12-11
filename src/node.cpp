@@ -37,6 +37,119 @@ geom::Rectangle Node::get_rectangle()
     return area;
 }
 
+geom::Rectangle Node::new_node_position()
+{
+    if (is_window())
+    {
+        // TODO: Error
+        return {};
+    }
+
+    if (direction == NodeDirection::horizontal)
+    {
+        auto width_per_item = area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
+        auto new_size = geom::Size{geom::Width{width_per_item}, area.size.height};
+        auto new_position = geom::Point{
+            area.top_left.x.as_int() + area.size.width.as_int() - width_per_item,
+            area.top_left.y
+        };
+        geom::Rectangle new_node_rect = {new_position, new_size};
+
+        int divvied = ceil(new_node_rect.size.width.as_int() / static_cast<float>(sub_nodes.size()));
+        std::shared_ptr<Node> prev_node;
+        for (auto node : sub_nodes)
+        {
+            auto node_rect = node->get_rectangle();
+            node_rect.size.width = geom::Width{node_rect.size.width.as_int() - divvied};
+
+            if (prev_node)
+            {
+                node_rect.top_left.x = geom::X{
+                    prev_node->get_rectangle().top_left.x.as_int() + prev_node->get_rectangle().size.width.as_int()};
+            }
+
+            node->set_rectangle(node_rect);
+            prev_node = node;
+        }
+
+        return new_node_rect;
+    }
+    else
+    {
+        auto height_per_item = area.size.height.as_int() / static_cast<float>(sub_nodes.size() + 1);
+        auto new_size = geom::Size{area.size.width, height_per_item};
+        auto new_position = geom::Point{
+            area.top_left.x,
+            area.top_left.y.as_int() + area.size.height.as_int() - height_per_item
+        };
+
+        geom::Rectangle new_node_rect = {new_position, new_size};
+        int divvied = ceil(new_node_rect.size.height.as_int() / static_cast<float>(sub_nodes.size()));
+        std::shared_ptr<Node> prev_node;
+        for (auto node : sub_nodes)
+        {
+            auto node_rect = node->get_rectangle();
+            node_rect.size.height = geom::Height {node_rect.size.height.as_int() - divvied};
+
+            if (prev_node)
+            {
+                node_rect.top_left.y = geom::Y{
+                    prev_node->get_rectangle().top_left.y.as_int() + prev_node->get_rectangle().size.height.as_int()};
+            }
+
+            node->set_rectangle(node_rect);
+            prev_node = node;
+        }
+
+        return new_node_rect;
+    }
+}
+
+void Node::add_node(std::shared_ptr<Node> node)
+{
+    sub_nodes.push_back(node);
+}
+
+void Node::redistribute_size()
+{
+    if (direction == NodeDirection::horizontal)
+    {
+        int total_width = 0;
+        for (auto node : sub_nodes)
+        {
+            total_width += node->get_rectangle().size.width.as_int();
+        }
+
+        float diff_width = area.size.width.as_value() - total_width;
+        int diff_per_node = diff_width / sub_nodes.size();
+        for (auto node : sub_nodes)
+        {
+            auto rectangle = node->get_rectangle();
+            rectangle.size.width = geom::Width{rectangle.size.width.as_int() + diff_per_node};
+            node->set_rectangle(rectangle);
+        }
+    }
+    else
+    {
+        int total_height = 0;
+        for (auto node : sub_nodes)
+        {
+            total_height += node->get_rectangle().size.height.as_int();
+        }
+
+        float diff_width = area.size.height.as_value() - total_height;
+        int diff_per_node = diff_width / sub_nodes.size();
+        for (auto node : sub_nodes)
+        {
+            auto rectangle = node->get_rectangle();
+            rectangle.size.height = geom::Height {rectangle.size.height.as_int() + diff_per_node};
+            node->set_rectangle(rectangle);
+        }
+    }
+
+    set_rectangle(area);
+}
+
 void Node::set_rectangle(geom::Rectangle target_rect)
 {
     if (is_window())
@@ -58,7 +171,7 @@ void Node::set_rectangle(geom::Rectangle target_rect)
                 auto item = sub_nodes[idx];
                 auto item_rect = item->get_rectangle();
                 float percent_width_taken = static_cast<float>(item_rect.size.width.as_int()) / area.size.width.as_int();
-                int new_width = floor(target_rect.size.width.as_int() * percent_width_taken);
+                int new_width = ceil(target_rect.size.width.as_int() * percent_width_taken);
 
                 geom::Rectangle new_item_rect;
                 new_item_rect.size = geom::Size{
