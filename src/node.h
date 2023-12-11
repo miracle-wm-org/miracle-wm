@@ -50,6 +50,15 @@ public:
     /// by calculating the dimensions of the content in this node
     geom::Rectangle get_rectangle();
 
+    /// Makes room for a new node on the lane.
+    geom::Rectangle new_node_position();
+
+    /// Append the node to the lane
+    void add_node(std::shared_ptr<Node>);
+
+    /// Recalculates the size of the nodes in the lane.
+    void redistribute_size();
+
     void set_rectangle(geom::Rectangle target_rect);
 
     /// Walk the tree to find the lane that contains this window.
