@@ -51,7 +51,7 @@ public:
     geom::Rectangle get_rectangle();
 
     /// Makes room for a new node on the lane.
-    geom::Rectangle new_node_position();
+    geom::Rectangle new_node_position(int index = -1);
 
     /// Append the node to the lane
     void add_node(std::shared_ptr<Node>);
