@@ -49,7 +49,7 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers && mir_input_event_modifier_alt))
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_alt))
     {
         if (scan_code == KEY_ENTER)
         {
@@ -73,22 +73,42 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         }
         else if (scan_code == KEY_UP)
         {
-            if (tree.try_resize_active_window(WindowResizeDirection::up))
+            if (modifiers & mir_input_event_modifier_shift)
+            {
+                if (tree.try_move_active_window(WindowMoveDirection::up))
+                    return true;
+            }
+            else if (tree.try_resize_active_window(WindowResizeDirection::up))
                 return true;
         }
         else if (scan_code == KEY_DOWN)
         {
-            if (tree.try_resize_active_window(WindowResizeDirection::down))
+            if (modifiers & mir_input_event_modifier_shift)
+            {
+                if (tree.try_move_active_window(WindowMoveDirection::down))
+                    return true;
+            }
+            else if (tree.try_resize_active_window(WindowResizeDirection::down))
                 return true;
         }
         else if (scan_code == KEY_LEFT)
         {
-            if (tree.try_resize_active_window(WindowResizeDirection::left))
+            if (modifiers & mir_input_event_modifier_shift)
+            {
+                if (tree.try_move_active_window(WindowMoveDirection::left))
+                    return true;
+            }
+            else if (tree.try_resize_active_window(WindowResizeDirection::left))
                 return true;
         }
         else if (scan_code == KEY_RIGHT)
         {
-            if (tree.try_resize_active_window(WindowResizeDirection::right))
+            if (modifiers & mir_input_event_modifier_shift)
+            {
+                if (tree.try_move_active_window(WindowMoveDirection::right))
+                    return true;
+            }
+            else if (tree.try_resize_active_window(WindowResizeDirection::right))
                 return true;
         }
     }
