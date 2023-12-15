@@ -320,6 +320,7 @@ bool Node::move_node(int from, int to) {
 void Node::insert_node(std::shared_ptr<Node> node, int index)
 {
     auto position = new_node_position(index);
+    node->parent = shared_from_this();
     node->set_rectangle(position);
     sub_nodes.insert(sub_nodes.begin() + index, node);
 }
