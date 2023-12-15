@@ -126,6 +126,7 @@ void Node::redistribute_size()
         {
             auto rectangle = node->get_rectangle();
             rectangle.size.width = geom::Width{rectangle.size.width.as_int() + diff_per_node};
+            rectangle.size.height = geom::Height{area.size.height};
             node->set_rectangle(rectangle);
         }
     }
@@ -142,6 +143,7 @@ void Node::redistribute_size()
         for (auto node : sub_nodes)
         {
             auto rectangle = node->get_rectangle();
+            rectangle.size.width = geom::Width {area.size.width};
             rectangle.size.height = geom::Height {rectangle.size.height.as_int() + diff_per_node};
             node->set_rectangle(rectangle);
         }
@@ -300,4 +302,10 @@ bool Node::move_node(int from, int to) {
 
     redistribute_size();
     return true;
+}
+
+void Node::insert_node(std::shared_ptr<Node> node, int index)
+{
+    sub_nodes.insert(sub_nodes.begin() + index, node);
+    redistribute_size();
 }
