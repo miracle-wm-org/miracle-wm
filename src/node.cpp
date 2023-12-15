@@ -37,7 +37,7 @@ geom::Rectangle Node::get_rectangle()
     return area;
 }
 
-geom::Rectangle Node::new_node_position()
+geom::Rectangle Node::new_node_position(int index)
 {
     if (is_window())
     {
@@ -45,20 +45,24 @@ geom::Rectangle Node::new_node_position()
         return {};
     }
 
+    if (index < 0)
+        index = sub_nodes.size();
+
     if (direction == NodeDirection::horizontal)
     {
         auto width_per_item = area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
         auto new_size = geom::Size{geom::Width{width_per_item}, area.size.height};
         auto new_position = geom::Point{
-            area.top_left.x.as_int() + area.size.width.as_int() - width_per_item,
+            area.top_left.x.as_int() + (index  * width_per_item),
             area.top_left.y
         };
         geom::Rectangle new_node_rect = {new_position, new_size};
 
         int divvied = ceil(new_node_rect.size.width.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node;
-        for (auto node : sub_nodes)
+        for (int i = 0; i < sub_nodes.size(); i++)
         {
+            auto node = sub_nodes[i];
             auto node_rect = node->get_rectangle();
             node_rect.size.width = geom::Width{node_rect.size.width.as_int() - divvied};
 
@@ -66,6 +70,11 @@ geom::Rectangle Node::new_node_position()
             {
                 node_rect.top_left.x = geom::X{
                     prev_node->get_rectangle().top_left.x.as_int() + prev_node->get_rectangle().size.width.as_int()};
+            }
+
+            if (i == index)
+            {
+                node_rect.top_left.x = geom::X{node_rect.top_left.x.as_int() + width_per_item};
             }
 
             node->set_rectangle(node_rect);
@@ -80,14 +89,15 @@ geom::Rectangle Node::new_node_position()
         auto new_size = geom::Size{area.size.width, height_per_item};
         auto new_position = geom::Point{
             area.top_left.x,
-            area.top_left.y.as_int() + area.size.height.as_int() - height_per_item
+            area.top_left.y.as_int() + (index * height_per_item)
         };
 
         geom::Rectangle new_node_rect = {new_position, new_size};
         int divvied = ceil(new_node_rect.size.height.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node;
-        for (auto node : sub_nodes)
+        for (int i = 0; i < sub_nodes.size(); i++)
         {
+            auto node = sub_nodes[i];
             auto node_rect = node->get_rectangle();
             node_rect.size.height = geom::Height {node_rect.size.height.as_int() - divvied};
 
@@ -96,6 +106,9 @@ geom::Rectangle Node::new_node_position()
                 node_rect.top_left.y = geom::Y{
                     prev_node->get_rectangle().top_left.y.as_int() + prev_node->get_rectangle().size.height.as_int()};
             }
+
+            if (i == index)
+                node_rect.top_left.y = geom::Y{node_rect.top_left.y.as_int() + height_per_item};
 
             node->set_rectangle(node_rect);
             prev_node = node;
@@ -306,6 +319,7 @@ bool Node::move_node(int from, int to) {
 
 void Node::insert_node(std::shared_ptr<Node> node, int index)
 {
+    auto position = new_node_position(index);
+    node->set_rectangle(position);
     sub_nodes.insert(sub_nodes.begin() + index, node);
-    redistribute_size();
 }
