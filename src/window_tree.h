@@ -38,6 +38,14 @@ enum class WindowResizeDirection
     right
 };
 
+enum class WindowMoveDirection
+{
+    up,
+    left,
+    down,
+    right
+};
+
 /// Represents a tiling tree for an output.
 class WindowTree
 {
@@ -55,6 +63,7 @@ public:
     bool try_resize_active_window(WindowResizeDirection direction);
     void resize(geom::Size new_size);
 
+    bool try_move_active_window(WindowMoveDirection direction);
 
     // Request a change to vertical window placement
     void request_vertical();

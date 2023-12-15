@@ -152,6 +152,41 @@ void WindowTree::resize(geom::Size new_size)
     // TODO: Resize all windows
 }
 
+bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
+{
+    if (is_resizing)
+        return false;
+
+    bool is_vertical = direction == WindowMoveDirection::up || direction == WindowMoveDirection::down;
+    bool is_main_axis_movement = (is_vertical  && active_lane->get_direction() == NodeDirection::vertical)
+        || (!is_vertical && active_lane->get_direction() == NodeDirection::horizontal);
+    bool is_negative = direction == WindowMoveDirection::up || direction == WindowMoveDirection::left;
+
+    int node_index = 0;
+    for (; node_index < active_lane->get_sub_nodes().size(); node_index++)
+        if (active_lane->get_sub_nodes()[node_index]->get_window() == active_window)
+            break;
+
+    if (node_index == 0 && is_negative)
+    {
+        // Move "up" the tree to the parent node
+    }
+    else if (node_index == active_lane->get_sub_nodes().size() - 1 && !is_negative)
+    {
+        // Move "down" the tree into the parent node
+    }
+    else if (is_negative)
+    {
+        active_lane->move_node(node_index, node_index - 1);
+    }
+    else
+    {
+        active_lane->move_node(node_index, node_index + 1);
+    }
+
+    return true;
+}
+
 void WindowTree::request_vertical()
 {
     handle_direction_request(NodeDirection::vertical);
@@ -190,6 +225,9 @@ void WindowTree::handle_direction_request(NodeDirection direction)
 
 void WindowTree::advise_focus_gained(miral::Window& window)
 {
+    if (is_resizing)
+        is_resizing = false;
+
     // The node that we find will be the window, so its parent must be the lane
     auto found_node = root_lane->find_node_for_window(window);
     active_lane = found_node->parent;
@@ -200,15 +238,14 @@ void WindowTree::advise_focus_gained(miral::Window& window)
     active_window = window;
 }
 
-void WindowTree::advise_focus_lost(miral::Window& window)
+void WindowTree::advise_focus_lost(miral::Window&)
 {
+    if (is_resizing)
+        is_resizing = false;
 }
 
 void WindowTree::advise_delete_window(miral::Window& window)
 {
-    // Capture the previous size before anything starts
-    auto rectangle = active_lane->get_rectangle();
-
     // Resize the other nodes in the lane accordingly
     auto lane = root_lane->find_node_for_window(window);
     if (!lane)
@@ -232,7 +269,6 @@ void WindowTree::advise_delete_window(miral::Window& window)
         {
             auto prev_active = active_lane;
             active_lane = active_lane->parent;
-            rectangle = active_lane->get_rectangle(); // Note: The rectangle needs to point to the new active to be correct.
 
             active_lane->get_sub_nodes().erase(
                 std::remove_if(active_lane->get_sub_nodes().begin(), active_lane->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {

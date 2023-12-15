@@ -271,3 +271,33 @@ std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
     // TODO: Error
     return nullptr;
 }
+
+bool Node::move_node(int from, int to) {
+    if (to < 0)
+        return false;
+
+    if (to >= sub_nodes.size())
+        return false;
+
+    if (from < to)
+    {
+        auto moved_node = sub_nodes[from];
+        for (size_t i = from; i < to; i++)
+        {
+            sub_nodes[i] = sub_nodes[i + 1]; // Move the node back 1 place
+        }
+        sub_nodes[to] = moved_node;
+    }
+    else
+    {
+        auto moved_node = sub_nodes[from];
+        for (size_t i = from; i > to; i--)
+        {
+            sub_nodes[i] = sub_nodes[i - 1]; // Move the node back 1 place
+        }
+        sub_nodes[to] = moved_node;
+    }
+
+    redistribute_size();
+    return true;
+}

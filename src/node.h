@@ -68,6 +68,8 @@ public:
     /// new Node if the Window was found, otherwise null.
     std::shared_ptr<Node> window_to_node(miral::Window& window);
 
+    bool move_node(int from, int to);
+
     std::shared_ptr<Node> parent;
 
     bool is_root() { return parent == nullptr; }
