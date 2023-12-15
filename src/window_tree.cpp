@@ -179,13 +179,13 @@ bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
         // get inserted into the parent node at the index before
         // the currently active lane.
         auto node_to_move = active_lane->get_sub_nodes()[node_index];
-        advise_delete_window(node_to_move->get_window());
 
         int active_lane_index = 0;
         for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
             if (parent->get_sub_nodes()[active_lane_index] == active_lane)
                 break;
 
+        advise_delete_window(node_to_move->get_window());
         parent->insert_node(node_to_move, active_lane_index);
         active_lane = parent;
     }
@@ -203,13 +203,13 @@ bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
         // get inserted into the parent node at the index before
         // the currently active lane.
         auto node_to_move = active_lane->get_sub_nodes()[node_index];
-        advise_delete_window(node_to_move->get_window());
 
         int active_lane_index = 0;
         for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
             if (parent->get_sub_nodes()[active_lane_index] == active_lane)
                 break;
 
+        advise_delete_window(node_to_move->get_window());
         parent->insert_node(node_to_move, active_lane_index + 1);
         active_lane = parent;
     }
