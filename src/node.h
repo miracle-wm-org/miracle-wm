@@ -70,13 +70,15 @@ public:
 
     bool move_node(int from, int to);
 
+    void insert_node(std::shared_ptr<Node> node, int index);
+
     std::shared_ptr<Node> parent;
 
     bool is_root() { return parent == nullptr; }
     bool is_window() { return state == NodeState::window; }
     bool is_lane() { return state == NodeState::lane; }
     NodeDirection get_direction() { return direction; }
-    miral::Window const& get_window() { return window; }
+    miral::Window& get_window() { return window; }
     std::vector<std::shared_ptr<Node>>& get_sub_nodes() { return sub_nodes; }
     void set_direction(NodeDirection in_direction) { direction = in_direction; }
 

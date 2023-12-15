@@ -44,8 +44,6 @@ void WindowTree::confirm(miral::Window &window)
         geom::Rectangle{window.top_left(), window.size()},
         active_lane,
         window));
-
-    advise_focus_gained(window);
 }
 
 void WindowTree::toggle_resize_mode()
@@ -158,8 +156,6 @@ bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
         return false;
 
     bool is_vertical = direction == WindowMoveDirection::up || direction == WindowMoveDirection::down;
-    bool is_main_axis_movement = (is_vertical  && active_lane->get_direction() == NodeDirection::vertical)
-        || (!is_vertical && active_lane->get_direction() == NodeDirection::horizontal);
     bool is_negative = direction == WindowMoveDirection::up || direction == WindowMoveDirection::left;
 
     int node_index = 0;
@@ -167,13 +163,55 @@ bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
         if (active_lane->get_sub_nodes()[node_index]->get_window() == active_window)
             break;
 
+    // In both of the first two cases, we first delete the node from the parent
+    // and then move it to a new parent, if one exists. If none exists, we do nothing.
+    // TODO: Also update the active_lane!
     if (node_index == 0 && is_negative)
     {
-        // Move "up" the tree to the parent node
+        auto parent = active_lane->parent;
+        if (!parent)
+        {
+            // TODO: Error  message?
+            return false;
+        }
+
+        // Move "up" the tree to the parent node. The node should
+        // get inserted into the parent node at the index before
+        // the currently active lane.
+        auto node_to_move = active_lane->get_sub_nodes()[node_index];
+        advise_delete_window(node_to_move->get_window());
+
+        int active_lane_index = 0;
+        for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
+            if (parent->get_sub_nodes()[active_lane_index] == active_lane)
+                break;
+
+        parent->insert_node(node_to_move, active_lane_index);
+        active_lane = parent;
     }
     else if (node_index == active_lane->get_sub_nodes().size() - 1 && !is_negative)
     {
         // Move "down" the tree into the parent node
+        auto parent = active_lane->parent;
+        if (!parent)
+        {
+            // TODO: Error  message?
+            return false;
+        }
+
+        // Move "up" the tree to the parent node. The node should
+        // get inserted into the parent node at the index before
+        // the currently active lane.
+        auto node_to_move = active_lane->get_sub_nodes()[node_index];
+        advise_delete_window(node_to_move->get_window());
+
+        int active_lane_index = 0;
+        for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
+            if (parent->get_sub_nodes()[active_lane_index] == active_lane)
+                break;
+
+        parent->insert_node(node_to_move, active_lane_index + 1);
+        active_lane = parent;
     }
     else if (is_negative)
     {
