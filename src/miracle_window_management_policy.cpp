@@ -159,7 +159,7 @@ void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& ou
 
 void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
-    for (auto pair : tree_list)
+    for (auto& pair : tree_list)
     {
         if (pair.output.is_same_output(original))
         {

@@ -85,9 +85,12 @@ bool WindowTree::try_select_next(miracle::Direction direction)
 
 void WindowTree::resize_display(geom::Size new_size)
 {
-    size = new_size;
-    root_lane->redistribute_size();
-    // TODO: Resize all windows
+    double x_scale = static_cast<double>(new_size.width.as_int()) / static_cast<double>(size.width.as_int());
+    double y_scale = static_cast<double>(new_size.height.as_int()) / static_cast<double>(size.height.as_int());
+    root_lane->scale_area(x_scale, y_scale);
+    size = geom::Size{
+        geom::Width{ceil(size.width.as_int() * x_scale)},
+        geom::Height {ceil(size.height.as_int() * y_scale)}};
 }
 
 bool WindowTree::try_move_active_window(miracle::Direction direction)

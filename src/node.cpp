@@ -361,3 +361,16 @@ std::shared_ptr<Node> Node::find_nth_window_child(int i)
     // The lane is correct, so let's get the first window in that lane.
     return sub_nodes[i]->find_nth_window_child(0);
 }
+
+void Node::scale_area(double x_scale, double y_scale)
+{
+    area.size.width = geom::Width{ceil(x_scale * area.size.width.as_int())};
+    area.size.height = geom::Height {ceil(y_scale * area.size.height.as_int())};
+
+    for (auto node : sub_nodes)
+    {
+        node->scale_area(x_scale, y_scale);
+    }
+
+    redistribute_size();
+}
