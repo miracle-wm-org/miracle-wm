@@ -87,7 +87,7 @@ public:
     std::shared_ptr<Node> node_at(int i);
 
     void to_lane();
-    std::shared_ptr<Node> find_first_window_child();
+    std::shared_ptr<Node> find_nth_window_child(int i);
 
 private:
     miral::Window window;

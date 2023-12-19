@@ -181,9 +181,11 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
     if (!parent)
         return false;
 
-    auto index_of_second = parent->get_index_of_node(second_window);
+    auto insertion_index = parent->get_index_of_node(second_window);
     advise_delete_window(active_window);
-    parent->insert_node(first_window, index_of_second);
+    parent->insert_node(first_window, insertion_index);
+    active_lane = parent;
+    active_window = first_window->get_window();
     return true;
 }
 
@@ -326,20 +328,14 @@ std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction
         if (is_negative)
         {
             if (index == 0)
-            {
-                // TODO: lazy lazy for readability
-                goto grandparent_route;
-            }
+                goto grandparent_route;  // TODO: lazy lazy for readability
             else
                 return parent->node_at(index - 1);
         }
         else
         {
             if (index == parent->num_nodes() - 1)
-            {
-                // TODO: lazy lazy for readability
-                goto grandparent_route;
-            }
+                goto grandparent_route;  // TODO: lazy lazy for readability
             else
                 return parent->node_at(index + 1);
         }
@@ -358,12 +354,19 @@ grandparent_route:
         }
 
         do {
+            auto index_of_parent = grandparent->get_index_of_node(parent);
+            if (is_negative)
+                index_of_parent--;
+            else
+                index_of_parent++;
+
             if (grandparent->get_direction() == NodeLayoutDirection::horizontal && !is_vertical
                 || grandparent->get_direction() == NodeLayoutDirection::vertical && is_vertical)
             {
-                return grandparent->find_first_window_child();
+                return grandparent->find_nth_window_child(index_of_parent);
             }
 
+            parent = grandparent;
             grandparent = grandparent->parent;
         } while (grandparent != nullptr);
     }
