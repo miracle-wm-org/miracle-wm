@@ -27,6 +27,7 @@ add_executable(compositor
     src/xdg_surface.cpp
     src/window_tree.cpp
     src/node.cpp
+    src/node_allocator.cpp
 )
 
 target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

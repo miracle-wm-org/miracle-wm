@@ -252,19 +252,21 @@ void Node::set_rectangle(geom::Rectangle target_rect)
     area = target_rect;
 }
 
-void Node::to_lane()
+std::shared_ptr<Node> Node::to_lane()
 {
     if (is_lane())
-        return;
+        return nullptr;
 
     state = NodeState::lane;
     // If we want to make a new node, but our parent only has one window and its us...
     // then we can just return the parent
     if (parent != nullptr && parent->sub_nodes.size() == 1)
-        return;
+        return parent->sub_nodes[0];
 
-    sub_nodes.push_back(std::make_shared<Node>(
-        geom::Rectangle{window.top_left(), window.size()}, shared_from_this(), window));
+    auto seed_node = std::make_shared<Node>(
+        geom::Rectangle{window.top_left(), window.size()}, shared_from_this(), window);
+    sub_nodes.push_back(seed_node);
+    return seed_node;
 }
 
 std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
