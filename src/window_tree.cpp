@@ -25,7 +25,6 @@ using namespace miracle;
 WindowTree::WindowTree(geom::Size default_size, const miral::WindowManagerTools & tools)
     : root_lane{std::make_shared<Node>(geom::Rectangle{geom::Point{}, default_size})},
       tools{tools},
-      active_lane{root_lane},
       size{default_size}
 {
 }
@@ -33,7 +32,7 @@ WindowTree::WindowTree(geom::Size default_size, const miral::WindowManagerTools 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    auto rect = active_lane->new_node_position();
+    auto rect = active_lane()->new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
     return new_spec;
@@ -41,9 +40,9 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::confirm(miral::Window &window)
 {
-    active_lane->add_node(std::make_shared<Node>(
+    active_lane()->add_node(std::make_shared<Node>(
         geom::Rectangle{window.top_left(), window.size()},
-        active_lane,
+        active_lane(),
         window));
     tools.select_active_window(window);
 }
@@ -56,10 +55,6 @@ void WindowTree::toggle_resize_mode()
         return;
     }
 
-    auto window_lane = root_lane->find_node_for_window(active_window);
-    if (!window_lane)
-        return;
-
     is_resizing = true;
 }
 
@@ -68,15 +63,11 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
     if (!is_resizing)
         return false;
 
-    auto window_lane = root_lane->find_node_for_window(active_window);
-    if (!window_lane->is_window())
-    {
-        std::cerr << "WindowTree::try_resize_active_window: unable to resize a non-window" << std::endl;
+    if (!active_window)
         return false;
-    }
 
     // TODO: We have a hardcoded resize amount
-    resize_node_internal(window_lane, direction, 50);
+    resize_node_internal(active_window, direction, 50);
     return true;
 }
 
@@ -148,10 +139,10 @@ void WindowTree::resize_node_internal(
 
 bool WindowTree::try_select_next(miracle::Direction direction)
 {
-    auto window_lane = active_lane->find_node_for_window(active_window);
-    if (!window_lane)
+    if (!active_window)
         return false;
-    auto node = traverse(window_lane, direction);
+
+    auto node = traverse(active_window, direction);
     if (!node)
         return false;
     tools.select_active_window(node->get_window());
@@ -169,11 +160,10 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
     if (is_resizing)
         return false;
 
-    auto first_window = active_lane->find_node_for_window(active_window);
-    if (!first_window)
+    if (!active_window)
         return false;
 
-    auto second_window = traverse(first_window, direction);
+    auto second_window = traverse(active_window, direction);
     if (!second_window)
         return false;
 
@@ -182,10 +172,8 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
 
     auto insertion_index = parent->get_index_of_node(second_window);
-    advise_delete_window(active_window);
-    parent->insert_node(first_window, insertion_index);
-    active_lane = parent;
-    active_window = first_window->get_window();
+    advise_delete_window(active_window->get_window());
+    parent->insert_node(active_window, insertion_index);
     return true;
 }
 
@@ -204,25 +192,13 @@ void WindowTree::handle_direction_request(NodeLayoutDirection direction)
     if (is_resizing)
         return;
 
-    auto window_lane = active_lane->find_node_for_window(active_window);
-    if (!window_lane->is_window())
-    {
-        std::cerr << "WindowTree::handle_direction_request: must change direction of a window" << std::endl;
+    if (!active_window)
         return;
-    }
 
-    // Edge case: if we're an only child, we can just change the direction of the parent to achieve the same effect
-    if (window_lane->parent->get_sub_nodes().size() == 1)
-    {
-        active_lane = window_lane->parent;
-    }
-    else
-    {
-        active_lane = window_lane;
-        active_lane->to_lane();
-    }
+    if (active_window->parent->get_sub_nodes().size() != 1)
+        active_window = active_window->to_lane();
 
-    active_lane->set_direction(direction);
+    active_lane()->set_direction(direction);
 }
 
 void WindowTree::advise_focus_gained(miral::Window& window)
@@ -232,12 +208,7 @@ void WindowTree::advise_focus_gained(miral::Window& window)
 
     // The node that we find will be the window, so its parent must be the lane
     auto found_node = root_lane->find_node_for_window(window);
-    active_lane = found_node->parent;
-    if (!active_lane->is_lane())
-    {
-        std::cerr << "Active lane is NOT a lane" << std::endl;
-    }
-    active_window = window;
+    active_window = found_node;
 }
 
 void WindowTree::advise_focus_lost(miral::Window&)
@@ -249,61 +220,48 @@ void WindowTree::advise_focus_lost(miral::Window&)
 void WindowTree::advise_delete_window(miral::Window& window)
 {
     // Resize the other nodes in the lane accordingly
-    auto lane = root_lane->find_node_for_window(window);
-    if (!lane)
-    {
-        std::cerr << "Unable to find lane for window" << std::endl;
-        return;
-    }
+    auto parent = active_lane();
 
-    if (!lane->is_window())
-    {
-        std::cerr << "Lane should have been a window" << std::endl;
-        return;
-    }
-
-    active_lane = lane->parent;
-
-    if (active_lane->get_sub_nodes().size() == 1)
+    if (parent->get_sub_nodes().size() == 1)
     {
         // Remove the entire lane if this lane is now empty
-        if (active_lane->parent)
+        if (parent->parent)
         {
-            auto prev_active = active_lane;
-            active_lane = active_lane->parent;
+            auto prev_active = parent;
+            parent = parent->parent;
 
-            active_lane->get_sub_nodes().erase(
-                std::remove_if(active_lane->get_sub_nodes().begin(), active_lane->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
+            parent->get_sub_nodes().erase(
+                std::remove_if(parent->get_sub_nodes().begin(), parent->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
                     return content->is_lane() && content == prev_active;
                 }),
-                active_lane->get_sub_nodes().end()
+                parent->get_sub_nodes().end()
             );
         }
     }
     else
     {
         // Remove the window from the active lane
-        active_lane->get_sub_nodes().erase(
-            std::remove_if(active_lane->get_sub_nodes().begin(), active_lane->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
+        parent->get_sub_nodes().erase(
+            std::remove_if(parent->get_sub_nodes().begin(), parent->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
                 return content->is_window() && content->get_window() == window;
             }),
-            active_lane->get_sub_nodes().end()
+            parent->get_sub_nodes().end()
         );
     }
 
     // Edge case: If the newly active node only owns one other lane, it can absorb the node
-    if (active_lane->get_sub_nodes().size() == 1 && active_lane->get_sub_nodes()[0]->is_lane())
+    if (parent->get_sub_nodes().size() == 1 && parent->get_sub_nodes()[0]->is_lane())
     {
-        auto dying_lane = active_lane->get_sub_nodes()[0];
-        active_lane->get_sub_nodes().clear();
+        auto dying_lane = parent->get_sub_nodes()[0];
+        parent->get_sub_nodes().clear();
         for (auto sub_node : dying_lane->get_sub_nodes())
         {
-            active_lane->add_node(sub_node);
+            parent->add_node(sub_node);
         }
-        active_lane->set_direction(dying_lane->get_direction());
+        parent->set_direction(dying_lane->get_direction());
     }
 
-    active_lane->redistribute_size();
+    parent->redistribute_size();
 }
 
 std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction direction)
@@ -373,4 +331,12 @@ grandparent_route:
 
 
     return nullptr;
+}
+
+std::shared_ptr<Node> WindowTree::active_lane()
+{
+    if (!active_window)
+        return root_lane;
+
+    return active_window->parent;
 }

@@ -86,7 +86,8 @@ public:
     int num_nodes();
     std::shared_ptr<Node> node_at(int i);
 
-    void to_lane();
+    /// Returns the window node from which this as created
+    std::shared_ptr<Node> to_lane();
     std::shared_ptr<Node> find_nth_window_child(int i);
 
 private:
