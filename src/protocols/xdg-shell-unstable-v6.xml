@@ -721,7 +721,7 @@
             <entry name="activated" value="4" summary="the surface is now activated">
                 <description summary="the surface is now activated">
                     Client window decorations should be painted as if the window is
-                    active_lane. Do not assume this means that the window actually has
+                    get_active_lane. Do not assume this means that the window actually has
                     keyboard or pointer focus.
                 </description>
             </entry>
@@ -1013,7 +1013,7 @@
                 will follow the same dismissing order as required from the client.
 
                 The parent of a grabbing popup must either be another xdg_popup with an
-                active_lane explicit grab, or an xdg_popup or xdg_toplevel, if there are no
+                get_active_lane explicit grab, or an xdg_popup or xdg_toplevel, if there are no
                 explicit grabs already taken.
 
                 If the topmost grabbing popup is destroyed, the grab will be returned to

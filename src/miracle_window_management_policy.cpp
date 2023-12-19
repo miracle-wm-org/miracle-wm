@@ -135,9 +135,7 @@ auto MiracleWindowManagementPolicy::place_new_window(
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
-    // The new placement has been confirmed. We can now add the window into the pending position
-    // in the tree. This comes _after_ place_new_window has been called.
-    tree.confirm(window_info.window());
+    tree.confirm_new_window(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
