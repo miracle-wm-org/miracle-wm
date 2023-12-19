@@ -24,13 +24,14 @@
 #include <miral/window_specification.h>
 #include <mir/geometry/size.h>
 #include <mir/geometry/rectangle.h>
+#include <miral/window_manager_tools.h>
 
 namespace geom = mir::geometry;
 
 namespace miracle
 {
 
-enum class WindowResizeDirection
+enum class Direction
 {
     up,
     left,
@@ -38,19 +39,12 @@ enum class WindowResizeDirection
     right
 };
 
-enum class WindowMoveDirection
-{
-    up,
-    left,
-    down,
-    right
-};
 
 /// Represents a tiling tree for an output.
 class WindowTree
 {
 public:
-    WindowTree(geom::Size default_size);
+    WindowTree(geom::Size default_size, const miral::WindowManagerTools & tools);
     ~WindowTree() = default;
 
     /// Makes space for the new window and returns its specified spot in the world.
@@ -60,10 +54,11 @@ public:
     void confirm(miral::Window&);
 
     void toggle_resize_mode();
-    bool try_resize_active_window(WindowResizeDirection direction);
+    bool try_resize_active_window(Direction direction);
     void resize(geom::Size new_size);
 
-    bool try_move_active_window(WindowMoveDirection direction);
+    bool try_move_active_window(Direction direction);
+    bool try_select_next(Direction direction);
 
     // Request a change to vertical window placement
     void request_vertical();
@@ -76,14 +71,18 @@ public:
     void advise_delete_window(miral::Window&);
 
 private:
-    void handle_direction_request(NodeDirection direction);
+    miral::WindowManagerTools tools;
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_lane;
     miral::Window active_window;
     geom::Size size;
     bool is_resizing = false;
 
-    void resize_node_internal(std::shared_ptr<Node> node, WindowResizeDirection direction, int amount);
+    void handle_direction_request(NodeLayoutDirection direction);
+    void resize_node_internal(std::shared_ptr<Node> node, Direction direction, int amount);
+    /// From the provided node, find the next node in the provided direction.
+    /// This method is guaranteed to return a Window node, not a Lane.
+    std::shared_ptr<Node> traverse(std::shared_ptr<Node> from, Direction direction);
 };
 
 }

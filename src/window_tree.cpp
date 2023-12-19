@@ -22,8 +22,9 @@
 
 using namespace miracle;
 
-WindowTree::WindowTree(geom::Size default_size)
+WindowTree::WindowTree(geom::Size default_size, const miral::WindowManagerTools & tools)
     : root_lane{std::make_shared<Node>(geom::Rectangle{geom::Point{}, default_size})},
+      tools{tools},
       active_lane{root_lane},
       size{default_size}
 {
@@ -44,6 +45,7 @@ void WindowTree::confirm(miral::Window &window)
         geom::Rectangle{window.top_left(), window.size()},
         active_lane,
         window));
+    tools.select_active_window(window);
 }
 
 void WindowTree::toggle_resize_mode()
@@ -61,7 +63,7 @@ void WindowTree::toggle_resize_mode()
     is_resizing = true;
 }
 
-bool WindowTree::try_resize_active_window(miracle::WindowResizeDirection direction)
+bool WindowTree::try_resize_active_window(miracle::Direction direction)
 {
     if (!is_resizing)
         return false;
@@ -80,7 +82,7 @@ bool WindowTree::try_resize_active_window(miracle::WindowResizeDirection directi
 
 void WindowTree::resize_node_internal(
     std::shared_ptr<Node> node,
-    WindowResizeDirection direction,
+    Direction direction,
     int amount)
 {
     auto parent = node->parent;
@@ -90,16 +92,16 @@ void WindowTree::resize_node_internal(
         return;
     }
 
-    bool is_vertical = direction == WindowResizeDirection::up || direction == WindowResizeDirection::down;
-    bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeDirection::vertical)
-        || (!is_vertical && parent->get_direction() == NodeDirection::horizontal);
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeLayoutDirection::vertical)
+        || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
     if (!is_main_axis_movement)
     {
         resize_node_internal(parent, direction, amount);
         return;
     }
 
-    bool is_negative = direction == WindowResizeDirection::left || direction == WindowResizeDirection::up;
+    bool is_negative = direction == Direction::left || direction == Direction::up;
     auto resize_amount = is_negative ? -amount : amount;
     auto nodes = parent->get_sub_nodes();
     if (is_vertical)
@@ -144,19 +146,31 @@ void WindowTree::resize_node_internal(
     }
 }
 
+bool WindowTree::try_select_next(miracle::Direction direction)
+{
+    auto window_lane = active_lane->find_node_for_window(active_window);
+    if (!window_lane)
+        return false;
+    auto node = traverse(window_lane, direction);
+    if (!node)
+        return false;
+    tools.select_active_window(node->get_window());
+    return true;
+}
+
 void WindowTree::resize(geom::Size new_size)
 {
     size = new_size;
     // TODO: Resize all windows
 }
 
-bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
+bool WindowTree::try_move_active_window(miracle::Direction direction)
 {
     if (is_resizing)
         return false;
 
-    bool is_vertical = direction == WindowMoveDirection::up || direction == WindowMoveDirection::down;
-    bool is_negative = direction == WindowMoveDirection::up || direction == WindowMoveDirection::left;
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_negative = direction == Direction::up || direction == Direction::left;
 
     int node_index = 0;
     for (; node_index < active_lane->get_sub_nodes().size(); node_index++)
@@ -227,15 +241,15 @@ bool WindowTree::try_move_active_window(miracle::WindowMoveDirection direction)
 
 void WindowTree::request_vertical()
 {
-    handle_direction_request(NodeDirection::vertical);
+    handle_direction_request(NodeLayoutDirection::vertical);
 }
 
 void WindowTree::request_horizontal()
 {
-    handle_direction_request(NodeDirection::horizontal);
+    handle_direction_request(NodeLayoutDirection::horizontal);
 }
 
-void WindowTree::handle_direction_request(NodeDirection direction)
+void WindowTree::handle_direction_request(NodeLayoutDirection direction)
 {
     if (is_resizing)
         return;
@@ -340,4 +354,72 @@ void WindowTree::advise_delete_window(miral::Window& window)
     }
 
     active_lane->redistribute_size();
+}
+
+std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction direction)
+{
+    if (!from->parent)
+    {
+        std::cerr << "Cannot traverse the root node\n";
+        return nullptr;
+    }
+
+    auto parent = from->parent;
+    int index = parent->get_index_of_node(from);
+    auto parent_direction = parent->get_direction();
+
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_negative = direction == Direction::up || direction == Direction::left;
+
+    if (is_vertical && parent_direction == NodeLayoutDirection::vertical
+        || !is_vertical && parent_direction == NodeLayoutDirection::horizontal)
+    {
+        // Simplest case: we're within a lane
+        if (is_negative)
+        {
+            if (index == 0)
+            {
+                // TODO: lazy lazy for readability
+                goto grandparent_route;
+            }
+            else
+                return parent->node_at(index - 1);
+        }
+        else
+        {
+            if (index == parent->num_nodes() - 1)
+            {
+                // TODO: lazy lazy for readability
+                goto grandparent_route;
+            }
+            else
+                return parent->node_at(index + 1);
+        }
+    }
+    else
+    {
+grandparent_route:
+        // Harder case: we need to jump to another lane. The best thing to do here is to
+        // find the first ancestor that matches the direction that we want to travel in.
+        // If  that ancestor cannot be found, then we throw up our hands.
+        auto grandparent = parent->parent;
+        if (!grandparent)
+        {
+            std::cerr << "Parent lane lacks a grandparent. It should AT LEAST be root\n";
+            return nullptr;
+        }
+
+        do {
+            if (grandparent->get_direction() == NodeLayoutDirection::horizontal && !is_vertical
+                || grandparent->get_direction() == NodeLayoutDirection::vertical && is_vertical)
+            {
+                return grandparent->find_first_window_child();
+            }
+
+            grandparent = grandparent->parent;
+        } while (grandparent != nullptr);
+    }
+
+
+    return nullptr;
 }

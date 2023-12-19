@@ -33,7 +33,7 @@ enum class NodeState
     lane
 };
 
-enum class NodeDirection
+enum class NodeLayoutDirection
 {
     horizontal,
     vertical
@@ -77,18 +77,23 @@ public:
     bool is_root() { return parent == nullptr; }
     bool is_window() { return state == NodeState::window; }
     bool is_lane() { return state == NodeState::lane; }
-    NodeDirection get_direction() { return direction; }
+    NodeLayoutDirection get_direction() { return direction; }
     miral::Window& get_window() { return window; }
     std::vector<std::shared_ptr<Node>>& get_sub_nodes() { return sub_nodes; }
-    void set_direction(NodeDirection in_direction) { direction = in_direction; }
+    void set_direction(NodeLayoutDirection in_direction) { direction = in_direction; }
+
+    int get_index_of_node(std::shared_ptr<Node>);
+    int num_nodes();
+    std::shared_ptr<Node> node_at(int i);
 
     void to_lane();
+    std::shared_ptr<Node> find_first_window_child();
 
 private:
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     NodeState state;
-    NodeDirection direction = NodeDirection::horizontal;
+    NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     geom::Rectangle area;
 };
 }

@@ -16,6 +16,7 @@
 
 #include "node.h"
 #include <cmath>
+#include <iostream>
 
 using namespace miracle;
 
@@ -48,7 +49,7 @@ geom::Rectangle Node::new_node_position(int index)
     if (index < 0)
         index = sub_nodes.size();
 
-    if (direction == NodeDirection::horizontal)
+    if (direction == NodeLayoutDirection::horizontal)
     {
         auto width_per_item = area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
         auto new_size = geom::Size{geom::Width{width_per_item}, area.size.height};
@@ -125,7 +126,7 @@ void Node::add_node(std::shared_ptr<Node> node)
 
 void Node::redistribute_size()
 {
-    if (direction == NodeDirection::horizontal)
+    if (direction == NodeLayoutDirection::horizontal)
     {
         int total_width = 0;
         for (auto node : sub_nodes)
@@ -179,7 +180,7 @@ void Node::set_rectangle(geom::Rectangle target_rect)
         // neighbor takes up the remaining 600px, horizontally).
         // We need to look at the target dimension and scale everyone relative to that.
         // However, the "non-main-axis" dimension will be consistent across each node.
-        if (direction == NodeDirection::horizontal)
+        if (direction == NodeLayoutDirection::horizontal)
         {
             for (size_t idx = 0; idx < sub_nodes.size(); idx++)
             {
@@ -323,4 +324,48 @@ void Node::insert_node(std::shared_ptr<Node> node, int index)
     node->parent = shared_from_this();
     node->set_rectangle(position);
     sub_nodes.insert(sub_nodes.begin() + index, node);
+}
+
+int Node::get_index_of_node(std::shared_ptr<Node> node)
+{
+    for (int i = 0; i < sub_nodes.size(); i++)
+        if (sub_nodes[i] == node)
+            return i;
+
+    return -1;
+}
+
+int Node::num_nodes()
+{
+    return sub_nodes.size();
+}
+
+std::shared_ptr<Node> Node::node_at(int i)
+{
+    if (i < 0 || i >= num_nodes())
+        return nullptr;
+
+    return sub_nodes[i];
+}
+
+std::shared_ptr<Node> Node::find_first_window_child()
+{
+    if (is_window())
+        return shared_from_this();
+    
+    for (auto node : sub_nodes)
+    {
+        if (node->is_window())
+            return node;
+    }
+
+    for (auto node : sub_nodes)
+    {
+        auto first_child = node->find_first_window_child();
+        if (first_child)
+            return nullptr;
+    }
+
+    std::cerr << "Cannot discover a first child for this lane\n";
+    return nullptr;
 }
