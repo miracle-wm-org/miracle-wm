@@ -374,3 +374,14 @@ void Node::scale_area(double x_scale, double y_scale)
 
     redistribute_size();
 }
+
+void Node::translate_by(int x, int y)
+{
+    area.top_left.x = geom::X{area.top_left.x.as_int() + x};
+    area.top_left.y = geom::Y{area.top_left.y.as_int() + y};
+    for (auto node : sub_nodes)
+    {
+        node->translate_by(x, y);
+    }
+    redistribute_size();
+}

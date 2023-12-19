@@ -91,6 +91,7 @@ public:
     std::shared_ptr<Node> find_nth_window_child(int i);
 
     void scale_area(double x_scale, double y_scale);
+    void translate_by(int x, int y);
 
 private:
     miral::Window window;

@@ -83,14 +83,19 @@ bool WindowTree::try_select_next(miracle::Direction direction)
     return true;
 }
 
-void WindowTree::resize_display(geom::Size new_size)
+void WindowTree::set_output_area(geom::Rectangle new_area)
 {
-    double x_scale = static_cast<double>(new_size.width.as_int()) / static_cast<double>(area.size.width.as_int());
-    double y_scale = static_cast<double>(new_size.height.as_int()) / static_cast<double>(area.size.height.as_int());
+    double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
+    double y_scale = static_cast<double>(new_area.size.height.as_int()) / static_cast<double>(area.size.height.as_int());
     root_lane->scale_area(x_scale, y_scale);
     area.size = geom::Size{
         geom::Width{ceil(area.size.width.as_int() * x_scale)},
         geom::Height {ceil(area.size.height.as_int() * y_scale)}};
+
+    int position_diff_x = new_area.top_left.x.as_int() - area.top_left.x.as_int();
+    int position_diff_y = new_area.top_left.y.as_int() - area.top_left.y.as_int();
+    root_lane->translate_by(position_diff_x, position_diff_y);
+    area.top_left = new_area.top_left;
 }
 
 bool WindowTree::point_is_in_output(int x, int y)

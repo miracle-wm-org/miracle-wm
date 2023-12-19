@@ -188,7 +188,7 @@ void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& up
     {
         if (pair->output.is_same_output(original))
         {
-            pair->tree.resize_display(updated.extents().size);
+            pair->tree.set_output_area(updated.extents());
             break;
         }
     }
