@@ -81,7 +81,7 @@ public:
     void advise_delete_window(miral::Window&);
 
     /// Called when the physical display is resized.
-    void resize_display(geom::Size new_size);
+    void set_output_area(geom::Rectangle new_area);
 
     bool point_is_in_output(int x, int y);
 
