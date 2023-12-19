@@ -348,24 +348,14 @@ std::shared_ptr<Node> Node::node_at(int i)
     return sub_nodes[i];
 }
 
-std::shared_ptr<Node> Node::find_first_window_child()
+std::shared_ptr<Node> Node::find_nth_window_child(int i)
 {
-    if (is_window())
-        return shared_from_this();
-    
-    for (auto node : sub_nodes)
-    {
-        if (node->is_window())
-            return node;
-    }
+    if (i < 0 || i >= sub_nodes.size())
+        return nullptr;
 
-    for (auto node : sub_nodes)
-    {
-        auto first_child = node->find_first_window_child();
-        if (first_child)
-            return nullptr;
-    }
+    if (sub_nodes[i]->is_window())
+        return sub_nodes[i];
 
-    std::cerr << "Cannot discover a first child for this lane\n";
-    return nullptr;
+    // The lane is correct, so let's get the first window in that lane.
+    return sub_nodes[i]->find_nth_window_child(0);
 }
