@@ -32,7 +32,6 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher)
     : miral::MinimalWindowManager(tools),
-      tree{geom::Size{1280, 1016}, tools}, // TODO: Don't hardcode! Ask the compositor
       window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher}
@@ -58,65 +57,65 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         }
         else if (scan_code == KEY_V)
         {
-            tree.request_vertical();
+            tree_list[0].tree.request_vertical();
             return true;
         }
         else if (scan_code == KEY_H)
         {
-            tree.request_horizontal();
+            tree_list[0].tree.request_horizontal();
             return true;
         }
         else if (scan_code == KEY_R)
         {
-            tree.toggle_resize_mode();
+            tree_list[0].tree.toggle_resize_mode();
             return true;
         }
         else if (scan_code == KEY_UP)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(Direction::up))
+                if (tree_list[0].tree.try_move_active_window(Direction::up))
                     return true;
             }
-            else if (tree.try_resize_active_window(Direction::up))
+            else if (tree_list[0].tree.try_resize_active_window(Direction::up))
                 return true;
-            else if (tree.try_select_next(Direction::up))
+            else if (tree_list[0].tree.try_select_next(Direction::up))
                 return true;
         }
         else if (scan_code == KEY_DOWN)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(Direction::down))
+                if (tree_list[0].tree.try_move_active_window(Direction::down))
                     return true;
             }
-            else if (tree.try_resize_active_window(Direction::down))
+            else if (tree_list[0].tree.try_resize_active_window(Direction::down))
                 return true;
-            else if (tree.try_select_next(Direction::down))
+            else if (tree_list[0].tree.try_select_next(Direction::down))
                 return true;
         }
         else if (scan_code == KEY_LEFT)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(Direction::left))
+                if (tree_list[0].tree.try_move_active_window(Direction::left))
                     return true;
             }
-            else if (tree.try_resize_active_window(Direction::left))
+            else if (tree_list[0].tree.try_resize_active_window(Direction::left))
                 return true;
-            else if (tree.try_select_next(Direction::left))
+            else if (tree_list[0].tree.try_select_next(Direction::left))
                 return true;
         }
         else if (scan_code == KEY_RIGHT)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(Direction::right))
+                if (tree_list[0].tree.try_move_active_window(Direction::right))
                     return true;
             }
-            else if (tree.try_resize_active_window(Direction::right))
+            else if (tree_list[0].tree.try_resize_active_window(Direction::right))
                 return true;
-            else if (tree.try_select_next(Direction::right))
+            else if (tree_list[0].tree.try_select_next(Direction::right))
                 return true;
         }
     }
@@ -130,25 +129,46 @@ auto MiracleWindowManagementPolicy::place_new_window(
 {
     // In this step, we'll ask the WindowTree where we should place the window on the display
     // We will also resize the adjacent windows accordingly in this step.
-    return tree.allocate_position(requested_specification);
+    return tree_list[0].tree.allocate_position(requested_specification);
 }
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
-    tree.confirm_new_window(window_info.window());
+    tree_list[0].tree.confirm_new_window(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
-    tree.advise_focus_gained(window_info.window());
+    tree_list[0].tree.advise_focus_gained(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
-    tree.advise_focus_lost(window_info.window());
+    tree_list[0].tree.advise_focus_lost(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
-    tree.advise_delete_window(window_info.window());
+    tree_list[0].tree.advise_delete_window(window_info.window());
+}
+
+void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
+{
+    tree_list.push_back({output, WindowTree(output.extents().size, tools)});
+}
+
+void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& updated, miral::Output const& original)
+{
+    for (auto pair : tree_list)
+    {
+        if (pair.output.is_same_output(original))
+        {
+            pair.tree.resize_display(updated.extents().size);
+            break;
+        }
+    }
+}
+
+void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& output)
+{
 }

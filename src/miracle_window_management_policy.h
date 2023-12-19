@@ -10,12 +10,20 @@
 #include <miral/minimal_window_manager.h>
 #include <miral/external_client.h>
 #include <miral/internal_client.h>
+#include <miral/output.h>
 #include <memory>
+#include <vector>
 
 namespace miracle
 {
 class DisplayListener;
 class TaskBar;
+
+struct OutputTreePair
+{
+    miral::Output output;
+    WindowTree tree;
+};
 
 class MiracleWindowManagementPolicy : public miral::MinimalWindowManager
 {
@@ -35,9 +43,12 @@ public:
     void advise_focus_gained(miral::WindowInfo const& window_info) override;
     void advise_focus_lost(miral::WindowInfo const& window_info) override;
     void advise_delete_window(miral::WindowInfo const& window_info) override;
+    void advise_output_create(miral::Output const& output);
+    void advise_output_update(miral::Output const& updated, miral::Output const& original);
+    void advise_output_delete(miral::Output const& output);
 
 private:
-    WindowTree tree; // TODO: Keep a list per output
+    std::vector<OutputTreePair> tree_list;
     miral::WindowManagerTools const window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
