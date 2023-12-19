@@ -169,73 +169,21 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
     if (is_resizing)
         return false;
 
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_negative = direction == Direction::up || direction == Direction::left;
+    auto first_window = active_lane->find_node_for_window(active_window);
+    if (!first_window)
+        return false;
 
-    int node_index = 0;
-    for (; node_index < active_lane->get_sub_nodes().size(); node_index++)
-        if (active_lane->get_sub_nodes()[node_index]->get_window() == active_window)
-            break;
+    auto second_window = traverse(first_window, direction);
+    if (!second_window)
+        return false;
 
-    // In both of the first two cases, we first delete the node from the parent
-    // and then move it to a new parent, if one exists. If none exists, we do nothing.
-    // TODO: Also update the active_lane!
-    if (node_index == 0 && is_negative)
-    {
-        auto parent = active_lane->parent;
-        if (!parent)
-        {
-            // TODO: Error  message?
-            return false;
-        }
+    auto parent = second_window->parent;
+    if (!parent)
+        return false;
 
-        // Move "up" the tree to the parent node. The node should
-        // get inserted into the parent node at the index before
-        // the currently active lane.
-        auto node_to_move = active_lane->get_sub_nodes()[node_index];
-
-        int active_lane_index = 0;
-        for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
-            if (parent->get_sub_nodes()[active_lane_index] == active_lane)
-                break;
-
-        advise_delete_window(node_to_move->get_window());
-        parent->insert_node(node_to_move, active_lane_index);
-        active_lane = parent;
-    }
-    else if (node_index == active_lane->get_sub_nodes().size() - 1 && !is_negative)
-    {
-        // Move "down" the tree into the parent node
-        auto parent = active_lane->parent;
-        if (!parent)
-        {
-            // TODO: Error  message?
-            return false;
-        }
-
-        // Move "up" the tree to the parent node. The node should
-        // get inserted into the parent node at the index before
-        // the currently active lane.
-        auto node_to_move = active_lane->get_sub_nodes()[node_index];
-
-        int active_lane_index = 0;
-        for (; active_lane_index < parent->get_sub_nodes().size(); active_lane_index++)
-            if (parent->get_sub_nodes()[active_lane_index] == active_lane)
-                break;
-
-        advise_delete_window(node_to_move->get_window());
-        parent->insert_node(node_to_move, active_lane_index + 1);
-        active_lane = parent;
-    }
-    else if (is_negative)
-    {
-        active_lane->move_node(node_index, node_index - 1);
-    }
-    else
-    {
-        active_lane->move_node(node_index, node_index + 1);
-    }
-
+    auto index_of_second = parent->get_index_of_node(second_window);
+    advise_delete_window(active_window);
+    parent->insert_node(first_window, index_of_second);
     return true;
 }
 
