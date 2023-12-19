@@ -22,7 +22,7 @@
 #include <vector>
 #include <miral/window.h>
 #include <miral/window_specification.h>
-#include <mir/geometry/size.h>
+#include <mir/geometry/rectangle.h>
 #include <mir/geometry/rectangle.h>
 #include <miral/window_manager_tools.h>
 
@@ -44,7 +44,7 @@ enum class Direction
 class WindowTree
 {
 public:
-    WindowTree(geom::Size default_size, const miral::WindowManagerTools & tools);
+    WindowTree(geom::Rectangle area, const miral::WindowManagerTools & tools);
     ~WindowTree() = default;
 
     /// Makes space for the new window and returns its specified spot in the world.
@@ -83,11 +83,13 @@ public:
     /// Called when the physical display is resized.
     void resize_display(geom::Size new_size);
 
+    bool point_is_in_output(int x, int y);
+
 private:
     miral::WindowManagerTools tools;
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_window;
-    geom::Size size;
+    geom::Rectangle area;
     bool is_resizing = false;
 
     std::shared_ptr<Node> get_active_lane();

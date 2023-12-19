@@ -35,6 +35,7 @@ public:
     ~MiracleWindowManagementPolicy() = default;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
+    bool handle_pointer_event(MirPointerEvent const* event) override;
     auto place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
@@ -48,7 +49,8 @@ public:
     void advise_output_delete(miral::Output const& output);
 
 private:
-    std::vector<OutputTreePair> tree_list;
+    std::shared_ptr<OutputTreePair> active_tree;
+    std::vector<std::shared_ptr<OutputTreePair>> tree_list;
     miral::WindowManagerTools const window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
