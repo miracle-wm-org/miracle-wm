@@ -51,16 +51,18 @@ public:
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
     /// Confirms the position of this window in the previously allocated position.
-    void confirm(miral::Window&);
+    void confirm_new_window(miral::Window&);
 
     /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
     void toggle_resize_mode();
 
     /// Try to resize the current active window in the provided direction
     bool try_resize_active_window(Direction direction);
-    void resize(geom::Size new_size);
 
+    /// Move the active window in the provided direction
     bool try_move_active_window(Direction direction);
+
+    /// Select the next window in the provided direction
     bool try_select_next(Direction direction);
 
     // Request a change to vertical window placement
@@ -69,9 +71,17 @@ public:
     // Request a change to horizontal window placement
     void request_horizontal();
 
+    /// Advises us to focus the provided window.
     void advise_focus_gained(miral::Window&);
+
+    /// Advises us to lose focus on the provided window.
     void advise_focus_lost(miral::Window&);
+
+    /// Called when the window was deleted.
     void advise_delete_window(miral::Window&);
+
+    /// Called when the physical display is resized.
+    void resize_display(geom::Size new_size);
 
 private:
     miral::WindowManagerTools tools;
@@ -80,9 +90,9 @@ private:
     geom::Size size;
     bool is_resizing = false;
 
-    std::shared_ptr<Node> active_lane();
+    std::shared_ptr<Node> get_active_lane();
     void handle_direction_request(NodeLayoutDirection direction);
-    void resize_node_internal(std::shared_ptr<Node> node, Direction direction, int amount);
+    void resize_node_in_direction(std::shared_ptr<Node> node, Direction direction, int amount);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
     std::shared_ptr<Node> traverse(std::shared_ptr<Node> from, Direction direction);

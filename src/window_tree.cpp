@@ -32,17 +32,17 @@ WindowTree::WindowTree(geom::Size default_size, const miral::WindowManagerTools 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    auto rect = active_lane()->new_node_position();
+    auto rect = get_active_lane()->new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
     return new_spec;
 }
 
-void WindowTree::confirm(miral::Window &window)
+void WindowTree::confirm_new_window(miral::Window &window)
 {
-    active_lane()->add_node(std::make_shared<Node>(
+    get_active_lane()->add_node(std::make_shared<Node>(
         geom::Rectangle{window.top_left(), window.size()},
-        active_lane(),
+        get_active_lane(),
         window));
     tools.select_active_window(window);
 }
@@ -67,74 +67,8 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
         return false;
 
     // TODO: We have a hardcoded resize amount
-    resize_node_internal(active_window, direction, 50);
+    resize_node_in_direction(active_window, direction, 50);
     return true;
-}
-
-void WindowTree::resize_node_internal(
-    std::shared_ptr<Node> node,
-    Direction direction,
-    int amount)
-{
-    auto parent = node->parent;
-    if (parent == nullptr)
-    {
-        // Can't resize, most likely the root
-        return;
-    }
-
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeLayoutDirection::vertical)
-        || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
-    if (!is_main_axis_movement)
-    {
-        resize_node_internal(parent, direction, amount);
-        return;
-    }
-
-    bool is_negative = direction == Direction::left || direction == Direction::up;
-    auto resize_amount = is_negative ? -amount : amount;
-    auto nodes = parent->get_sub_nodes();
-    if (is_vertical)
-    {
-        int height_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
-        for (size_t i = 0; i < nodes.size(); i++)
-        {
-            auto other_node = nodes[i];
-            auto other_rect = other_node->get_rectangle();
-            if (node == other_node)
-                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + resize_amount};
-            else
-                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
-
-            if (i != 0)
-            {
-                auto prev_rect = nodes[i - 1]->get_rectangle();
-                other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
-            }
-            other_node->set_rectangle(other_rect);
-        }
-    }
-    else
-    {
-        int width_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
-        for (size_t i = 0; i < nodes.size(); i++)
-        {
-            auto other_node = nodes[i];
-            auto other_rect = other_node->get_rectangle();
-            if (node == other_node)
-                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + resize_amount};
-            else
-                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + width_for_others};
-
-            if (i != 0)
-            {
-                auto prev_rect = nodes[i - 1]->get_rectangle();
-                other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
-            }
-            other_node->set_rectangle(other_rect);
-        }
-    }
 }
 
 bool WindowTree::try_select_next(miracle::Direction direction)
@@ -149,9 +83,10 @@ bool WindowTree::try_select_next(miracle::Direction direction)
     return true;
 }
 
-void WindowTree::resize(geom::Size new_size)
+void WindowTree::resize_display(geom::Size new_size)
 {
     size = new_size;
+    root_lane->redistribute_size();
     // TODO: Resize all windows
 }
 
@@ -198,7 +133,7 @@ void WindowTree::handle_direction_request(NodeLayoutDirection direction)
     if (active_window->parent->get_sub_nodes().size() != 1)
         active_window = active_window->to_lane();
 
-    active_lane()->set_direction(direction);
+    get_active_lane()->set_direction(direction);
 }
 
 void WindowTree::advise_focus_gained(miral::Window& window)
@@ -220,7 +155,7 @@ void WindowTree::advise_focus_lost(miral::Window&)
 void WindowTree::advise_delete_window(miral::Window& window)
 {
     // Resize the other nodes in the lane accordingly
-    auto parent = active_lane();
+    auto parent = get_active_lane();
 
     if (parent->get_sub_nodes().size() == 1)
     {
@@ -333,10 +268,76 @@ grandparent_route:
     return nullptr;
 }
 
-std::shared_ptr<Node> WindowTree::active_lane()
+std::shared_ptr<Node> WindowTree::get_active_lane()
 {
     if (!active_window)
         return root_lane;
 
     return active_window->parent;
+}
+
+void WindowTree::resize_node_in_direction(
+    std::shared_ptr<Node> node,
+    Direction direction,
+    int amount)
+{
+    auto parent = node->parent;
+    if (parent == nullptr)
+    {
+        // Can't resize, most likely the root
+        return;
+    }
+
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeLayoutDirection::vertical)
+                                 || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
+    if (!is_main_axis_movement)
+    {
+        resize_node_in_direction(parent, direction, amount);
+        return;
+    }
+
+    bool is_negative = direction == Direction::left || direction == Direction::up;
+    auto resize_amount = is_negative ? -amount : amount;
+    auto nodes = parent->get_sub_nodes();
+    if (is_vertical)
+    {
+        int height_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            auto other_node = nodes[i];
+            auto other_rect = other_node->get_rectangle();
+            if (node == other_node)
+                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + resize_amount};
+            else
+                other_rect.size.height = geom::Height{other_rect.size.height.as_int() + height_for_others};
+
+            if (i != 0)
+            {
+                auto prev_rect = nodes[i - 1]->get_rectangle();
+                other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
+            }
+            other_node->set_rectangle(other_rect);
+        }
+    }
+    else
+    {
+        int width_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            auto other_node = nodes[i];
+            auto other_rect = other_node->get_rectangle();
+            if (node == other_node)
+                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + resize_amount};
+            else
+                other_rect.size.width = geom::Width {other_rect.size.width.as_int() + width_for_others};
+
+            if (i != 0)
+            {
+                auto prev_rect = nodes[i - 1]->get_rectangle();
+                other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
+            }
+            other_node->set_rectangle(other_rect);
+        }
+    }
 }
