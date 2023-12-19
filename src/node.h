@@ -90,6 +90,8 @@ public:
     std::shared_ptr<Node> to_lane();
     std::shared_ptr<Node> find_nth_window_child(int i);
 
+    void scale_area(double x_scale, double y_scale);
+
 private:
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
