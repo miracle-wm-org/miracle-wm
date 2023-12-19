@@ -32,7 +32,7 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher)
     : miral::MinimalWindowManager(tools),
-      tree{geom::Size{1280, 1016}}, // TODO: Don't hardcode! Ask the compositor
+      tree{geom::Size{1280, 1016}, tools}, // TODO: Don't hardcode! Ask the compositor
       window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher}
@@ -75,40 +75,48 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(WindowMoveDirection::up))
+                if (tree.try_move_active_window(Direction::up))
                     return true;
             }
-            else if (tree.try_resize_active_window(WindowResizeDirection::up))
+            else if (tree.try_resize_active_window(Direction::up))
+                return true;
+            else if (tree.try_select_next(Direction::up))
                 return true;
         }
         else if (scan_code == KEY_DOWN)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(WindowMoveDirection::down))
+                if (tree.try_move_active_window(Direction::down))
                     return true;
             }
-            else if (tree.try_resize_active_window(WindowResizeDirection::down))
+            else if (tree.try_resize_active_window(Direction::down))
+                return true;
+            else if (tree.try_select_next(Direction::down))
                 return true;
         }
         else if (scan_code == KEY_LEFT)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(WindowMoveDirection::left))
+                if (tree.try_move_active_window(Direction::left))
                     return true;
             }
-            else if (tree.try_resize_active_window(WindowResizeDirection::left))
+            else if (tree.try_resize_active_window(Direction::left))
+                return true;
+            else if (tree.try_select_next(Direction::left))
                 return true;
         }
         else if (scan_code == KEY_RIGHT)
         {
             if (modifiers & mir_input_event_modifier_shift)
             {
-                if (tree.try_move_active_window(WindowMoveDirection::right))
+                if (tree.try_move_active_window(Direction::right))
                     return true;
             }
-            else if (tree.try_resize_active_window(WindowResizeDirection::right))
+            else if (tree.try_resize_active_window(Direction::right))
+                return true;
+            else if (tree.try_select_next(Direction::right))
                 return true;
         }
     }
@@ -130,7 +138,6 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
     // The new placement has been confirmed. We can now add the window into the pending position
     // in the tree. This comes _after_ place_new_window has been called.
     tree.confirm(window_info.window());
-    tools.select_active_window(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
