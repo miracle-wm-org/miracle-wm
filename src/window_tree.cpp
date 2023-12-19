@@ -22,10 +22,10 @@
 
 using namespace miracle;
 
-WindowTree::WindowTree(geom::Size default_size, const miral::WindowManagerTools & tools)
-    : root_lane{std::make_shared<Node>(geom::Rectangle{geom::Point{}, default_size})},
+WindowTree::WindowTree(geom::Rectangle default_area, const miral::WindowManagerTools & tools)
+    : root_lane{std::make_shared<Node>(geom::Rectangle{default_area.top_left, default_area.size})},
       tools{tools},
-      size{default_size}
+      area{default_area}
 {
 }
 
@@ -85,12 +85,18 @@ bool WindowTree::try_select_next(miracle::Direction direction)
 
 void WindowTree::resize_display(geom::Size new_size)
 {
-    double x_scale = static_cast<double>(new_size.width.as_int()) / static_cast<double>(size.width.as_int());
-    double y_scale = static_cast<double>(new_size.height.as_int()) / static_cast<double>(size.height.as_int());
+    double x_scale = static_cast<double>(new_size.width.as_int()) / static_cast<double>(area.size.width.as_int());
+    double y_scale = static_cast<double>(new_size.height.as_int()) / static_cast<double>(area.size.height.as_int());
     root_lane->scale_area(x_scale, y_scale);
-    size = geom::Size{
-        geom::Width{ceil(size.width.as_int() * x_scale)},
-        geom::Height {ceil(size.height.as_int() * y_scale)}};
+    area.size = geom::Size{
+        geom::Width{ceil(area.size.width.as_int() * x_scale)},
+        geom::Height {ceil(area.size.height.as_int() * y_scale)}};
+}
+
+bool WindowTree::point_is_in_output(int x, int y)
+{
+    return x >= area.top_left.x.as_int() && x < area.top_left.x.as_int() + area.size.width.as_int()
+        && y >= area.top_left.y.as_int() && y < area.top_left.y.as_int() + area.size.height.as_int();
 }
 
 bool WindowTree::try_move_active_window(miracle::Direction direction)

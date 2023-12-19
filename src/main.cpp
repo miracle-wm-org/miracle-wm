@@ -8,11 +8,10 @@
 #include <miral/toolkit_event.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
+#include <miral/display_configuration_option.h>
 #include "miracle_window_management_policy.h"
 
 using namespace miral;
-
-#include <memory>
 
 int main(int argc, char const* argv[])
 {
@@ -37,6 +36,7 @@ int main(int argc, char const* argv[])
             X11Support{},
             config_keymap,
             external_client_launcher,
-            internal_client_launcher
+            internal_client_launcher,
+            display_configuration_options
         });
 }
