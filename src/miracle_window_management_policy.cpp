@@ -128,18 +128,6 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
 
 bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* event)
 {
-    auto const new_cursor = pointer_position(event);
-    auto const action = miral::toolkit::mir_pointer_event_action(event);
-
-    if (action == mir_pointer_action_button_down)
-    {
-        if (auto const window = window_manager_tools.window_at(new_cursor))
-        {
-            window_manager_tools.select_active_window(window);
-            std::cout << "MEOW" << std::endl;
-        }
-    }
-
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
 
@@ -167,12 +155,13 @@ auto MiracleWindowManagementPolicy::place_new_window(
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
-    active_tree->tree.confirm_new_window(window_info.window());
+    active_tree->tree.confirm_new_window(window_info);
 }
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
     active_tree->tree.advise_focus_gained(window_info.window());
+    window_manager_tools.raise_tree(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
@@ -232,10 +221,12 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
+    window_manager_tools.modify_window(window_info, modifications);
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
 {
+    window_manager_tools.select_active_window(window_info.window());
 }
 
 mir::geometry::Rectangle
@@ -269,5 +260,5 @@ mir::geometry::Rectangle MiracleWindowManagementPolicy::confirm_inherited_move(
     const miral::WindowInfo &window_info,
     mir::geometry::Displacement movement)
 {
-    return mir::geometry::Rectangle();
+    return {window_info.window().top_left()+movement, window_info.window().size()};
 }

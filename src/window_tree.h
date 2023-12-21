@@ -56,7 +56,7 @@ public:
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
     /// Confirms the position of this window in the previously allocated position.
-    void confirm_new_window(miral::Window&);
+    void confirm_new_window(miral::WindowInfo&);
 
     /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
     void toggle_resize_mode();
