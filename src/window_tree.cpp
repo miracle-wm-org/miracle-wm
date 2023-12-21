@@ -199,6 +199,10 @@ void WindowTree::advise_delete_window(miral::Window& window)
                 parent->get_sub_nodes().end()
             );
         }
+        else
+        {
+            parent->get_sub_nodes().clear();
+        }
     }
     else
     {
