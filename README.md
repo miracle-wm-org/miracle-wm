@@ -1,12 +1,17 @@
-# miracle
-**miracle** is a _Mir_-based wayland desktop environment inspired by modern IDEs like CLion. The window manager intends
-to provide a typical tiling window management experience (akin to i3 or sway). The shell itself focuses on extendability
-for power users while at the same time having an accessible user interface. While window managers like i3 and sway
-are simple and easy-to-use, I find that there's a niche missing for programmers who want an out-of-the-box solution
-to an ergonomic but heavy-hitter desktop environment.
-
 **WARNING**: This project is very much a work in progress. I have provided a rough roadmap in the timeline section.
 Use at your own risk.
+
+# miracle
+**miracle** is a _Mir_-based, Wayland desktop environment inspired by modern IDEs. The window manager intends
+to provide a typical tiling window management experience (akin to i3 or sway). The shell focuses on usability for
+programmers by being extendable and providing a JetBrains-inspried interface. While window managers like i3 and sway
+are simple but barebones, miracle will provide a heavier out-of-the-box-solution that is geared towards making
+the life of the average programmer happy and productive. If you like the lightweight nature of other IDEs, then this
+one might not be for you. But if you want your desktop environment to provide a host of useful facilities at your
+fingertips, then look no futher!
+
+While **miracle** intends to be a full desktop environment, the tiling window management facilities will always
+be provided as a standalone option so that you might use your own shell if you like.
 
 # Building
 ```
@@ -52,12 +57,14 @@ Features:
   - [ ] Battery indicator
   - [ ] Wifi Indicator
   - [ ] Lock Screen
+  - [ ] Weather
 
-## Tiling More Advanced + 
+## Tiling More Advanced + Futher UI
 Version: 0.3
 
 Features:
 - [ ] UI Cleanup
+- [ ] UI Plugin Interface
 - [ ] Configuration file
 - [ ] Settings application
 - [ ] Visual Sugar

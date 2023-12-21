@@ -43,18 +43,18 @@ enum class NodeLayoutDirection
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
-    Node(geom::Rectangle);
-    Node(geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window);
+    Node(geom::Rectangle, int gap_x, int gap_y);
+    Node(geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window, int gap_x, int gap_y);
 
     /// The rectangle defined by the node can be retrieved dynamically
     /// by calculating the dimensions of the content in this node
-    geom::Rectangle get_rectangle();
+    geom::Rectangle get_logical_area();
 
     /// Makes room for a new node on the lane.
     geom::Rectangle new_node_position(int index = -1);
 
     /// Append the node to the lane
-    void add_node(std::shared_ptr<Node>);
+    void add_window(miral::Window&);
 
     /// Recalculates the size of the nodes in the lane.
     void redistribute_size();
@@ -93,12 +93,20 @@ public:
     void scale_area(double x_scale, double y_scale);
     void translate_by(int x, int y);
 
+    static geom::Rectangle get_visible_area(geom::Rectangle const& logical_area, int gap_x, int gap_y);
+
 private:
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     NodeState state;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
-    geom::Rectangle area;
+
+    /// The logical area includes the empty space filled by the gaps
+    geom::Rectangle logical_area;
+    int gap_x;
+    int gap_y;
+
+    int pending_index = -1;
 };
 }
 

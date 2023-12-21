@@ -39,12 +39,17 @@ enum class Direction
     right
 };
 
+struct WindowTreeOptions
+{
+    int gap_x;
+    int gap_y;
+};
 
 /// Represents a tiling tree for an output.
 class WindowTree
 {
 public:
-    WindowTree(geom::Rectangle area, const miral::WindowManagerTools & tools);
+    WindowTree(geom::Rectangle area, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
     ~WindowTree() = default;
 
     /// Makes space for the new window and returns its specified spot in the world.
@@ -87,6 +92,7 @@ public:
 
 private:
     miral::WindowManagerTools tools;
+    WindowTreeOptions options;
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_window;
     geom::Rectangle area;

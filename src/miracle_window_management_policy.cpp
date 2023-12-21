@@ -176,7 +176,10 @@ void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo
 
 void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
 {
-    auto new_tree = std::make_shared<OutputTreePair>(output, WindowTree(output.extents(), tools));
+    WindowTreeOptions options =  { 10, 10 };
+    auto new_tree = std::make_shared<OutputTreePair>(
+        output,
+        WindowTree(output.extents(), tools, options));
     tree_list.push_back(new_tree);
     if (active_tree == nullptr)
         active_tree = new_tree;
