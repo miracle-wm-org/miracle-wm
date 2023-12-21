@@ -7,7 +7,7 @@
 
 #include "window_tree.h"
 #include <miral/window_manager_tools.h>
-#include <miral/minimal_window_manager.h>
+#include <miral/window_management_policy.h>
 #include <miral/external_client.h>
 #include <miral/internal_client.h>
 #include <miral/output.h>
@@ -25,7 +25,7 @@ struct OutputTreePair
     WindowTree tree;
 };
 
-class MiracleWindowManagementPolicy : public miral::MinimalWindowManager
+class MiracleWindowManagementPolicy : public miral::WindowManagementPolicy
 {
 public:
     MiracleWindowManagementPolicy(
@@ -47,6 +47,28 @@ public:
     void advise_output_create(miral::Output const& output);
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);
+
+    void handle_modify_window(miral::WindowInfo &window_info, const miral::WindowSpecification &modifications) override;
+
+    void handle_raise_window(miral::WindowInfo &window_info) override;
+
+    auto confirm_placement_on_display(
+        const miral::WindowInfo &window_info,
+        MirWindowState new_state,
+        const mir::geometry::Rectangle &new_placement) -> mir::geometry::Rectangle override;
+
+    bool handle_touch_event(const MirTouchEvent *event) override;
+
+    void handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event) override;
+
+    void handle_request_resize(
+        miral::WindowInfo &window_info,
+        const MirInputEvent *input_event,
+        MirResizeEdge edge) override;
+
+    auto confirm_inherited_move(
+        const miral::WindowInfo &window_info,
+        mir::geometry::Displacement movement) -> mir::geometry::Rectangle override;
 
 private:
     std::shared_ptr<OutputTreePair> active_tree;
