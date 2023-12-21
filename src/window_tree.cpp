@@ -170,7 +170,19 @@ void WindowTree::advise_focus_lost(miral::Window&)
 void WindowTree::advise_delete_window(miral::Window& window)
 {
     // Resize the other nodes in the lane accordingly
-    auto parent = get_active_lane();
+    auto window_node = root_lane->find_node_for_window(window);
+    if (!window_node)
+    {
+        std::cerr << "Unable to delete window: cannot find node\n";
+        return;
+    }
+
+    auto parent = window_node->parent;
+    if (!parent)
+    {
+        std::cerr << "Unable to delete window: node does not have a parent\n";
+        return;
+    }
 
     if (parent->get_sub_nodes().size() == 1)
     {

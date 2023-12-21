@@ -69,7 +69,10 @@ geom::Rectangle Node::new_node_position(int index)
                 new_item_width,
                 logical_area.size.height.as_int()
             }};
-        auto new_node_visible_rect = get_visible_area(new_node_logical_rect, gap_x, gap_y);
+        auto new_node_visible_rect = get_visible_area(
+            new_node_logical_rect,
+            gap_x,
+            gap_y);
 
         int width_to_lose = ceil(new_node_logical_rect.size.width.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node = nullptr;
@@ -140,10 +143,7 @@ geom::Rectangle Node::new_node_position(int index)
 void Node::add_window(miral::Window& new_window)
 {
     if (pending_index < 0)
-    {
-        std::cerr << "Cannot add node when a pending index isn't set\n";
-        return;
-    }
+        pending_index = sub_nodes.size();
 
     geom::Rectangle new_logical_area = {
         geom::Point{
