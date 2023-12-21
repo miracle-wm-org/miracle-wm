@@ -32,8 +32,7 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     const miral::WindowManagerTools & tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher)
-    : miral::MinimalWindowManager(tools),
-      window_manager_tools{tools},
+    : window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher}
 {
@@ -41,10 +40,6 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
 
 bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
-    if (MinimalWindowManager::handle_keyboard_event(event)) {
-        return true;
-    }
-
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
@@ -126,10 +121,6 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
 
 bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* event)
 {
-    if (MinimalWindowManager::handle_pointer_event(event)) {
-        return true;
-    }
-
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
 
@@ -179,7 +170,7 @@ void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& ou
     WindowTreeOptions options =  { 10, 10 };
     auto new_tree = std::make_shared<OutputTreePair>(
         output,
-        WindowTree(output.extents(), tools, options));
+        WindowTree(output.extents(), window_manager_tools, options));
     tree_list.push_back(new_tree);
     if (active_tree == nullptr)
         active_tree = new_tree;
@@ -215,4 +206,49 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
             break;
        }
     }
+}
+
+void MiracleWindowManagementPolicy::handle_modify_window(miral::WindowInfo &window_info,
+                                                         const miral::WindowSpecification &modifications)
+{
+
+}
+
+void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
+{
+
+}
+
+mir::geometry::Rectangle
+MiracleWindowManagementPolicy::confirm_placement_on_display(
+    const miral::WindowInfo &window_info,
+    MirWindowState new_state,
+    const mir::geometry::Rectangle &new_placement)
+{
+    return new_placement;
+}
+
+bool MiracleWindowManagementPolicy::handle_touch_event(const MirTouchEvent *event)
+{
+    return false;
+}
+
+void MiracleWindowManagementPolicy::handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event)
+{
+
+}
+
+void MiracleWindowManagementPolicy::handle_request_resize(
+    miral::WindowInfo &window_info,
+    const MirInputEvent *input_event,
+    MirResizeEdge edge)
+{
+
+}
+
+mir::geometry::Rectangle MiracleWindowManagementPolicy::confirm_inherited_move(
+    const miral::WindowInfo &window_info,
+    mir::geometry::Displacement movement)
+{
+    return mir::geometry::Rectangle();
 }
