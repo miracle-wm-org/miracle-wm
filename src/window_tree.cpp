@@ -22,10 +22,14 @@
 
 using namespace miracle;
 
-WindowTree::WindowTree(geom::Rectangle default_area, const miral::WindowManagerTools & tools)
-    : root_lane{std::make_shared<Node>(geom::Rectangle{default_area.top_left, default_area.size})},
+WindowTree::WindowTree(
+    geom::Rectangle default_area,
+    miral::WindowManagerTools const& tools,
+    WindowTreeOptions const& options)
+    : root_lane{std::make_shared<Node>(geom::Rectangle{default_area.top_left, default_area.size}, options.gap_x, options.gap_y)},
       tools{tools},
-      area{default_area}
+      area{default_area},
+      options{options}
 {
 }
 
@@ -40,10 +44,7 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::confirm_new_window(miral::Window &window)
 {
-    get_active_lane()->add_node(std::make_shared<Node>(
-        geom::Rectangle{window.top_left(), window.size()},
-        get_active_lane(),
-        window));
+    get_active_lane()->add_window(window);
     tools.select_active_window(window);
 }
 
@@ -205,7 +206,7 @@ void WindowTree::advise_delete_window(miral::Window& window)
         parent->get_sub_nodes().clear();
         for (auto sub_node : dying_lane->get_sub_nodes())
         {
-            parent->add_node(sub_node);
+            parent->add_window(sub_node->get_window());
         }
         parent->set_direction(dying_lane->get_direction());
     }
@@ -320,7 +321,7 @@ void WindowTree::resize_node_in_direction(
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
-            auto other_rect = other_node->get_rectangle();
+            auto other_rect = other_node->get_logical_area();
             if (node == other_node)
                 other_rect.size.height = geom::Height{other_rect.size.height.as_int() + resize_amount};
             else
@@ -328,7 +329,7 @@ void WindowTree::resize_node_in_direction(
 
             if (i != 0)
             {
-                auto prev_rect = nodes[i - 1]->get_rectangle();
+                auto prev_rect = nodes[i - 1]->get_logical_area();
                 other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
             }
             other_node->set_rectangle(other_rect);
@@ -340,7 +341,7 @@ void WindowTree::resize_node_in_direction(
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
-            auto other_rect = other_node->get_rectangle();
+            auto other_rect = other_node->get_logical_area();
             if (node == other_node)
                 other_rect.size.width = geom::Width {other_rect.size.width.as_int() + resize_amount};
             else
@@ -348,7 +349,7 @@ void WindowTree::resize_node_in_direction(
 
             if (i != 0)
             {
-                auto prev_rect = nodes[i - 1]->get_rectangle();
+                auto prev_rect = nodes[i - 1]->get_logical_area();
                 other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
             }
             other_node->set_rectangle(other_rect);

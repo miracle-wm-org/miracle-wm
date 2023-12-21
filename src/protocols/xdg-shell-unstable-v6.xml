@@ -116,7 +116,7 @@
         <description summary="child surface positioner">
             The xdg_positioner provides a collection of rules for the placement of a
             child surface relative to a parent surface. Rules can be defined to ensure
-            the child surface remains within the visible area's borders, and to
+            the child surface remains within the visible logical_area's borders, and to
             specify how the child surface changes its position, such as sliding along
             an axis, or flipping around a rectangle. These positioner-created rules are
             constrained by the requirement that a child surface must intersect with or
@@ -243,8 +243,8 @@
 
                 Whether a surface is considered 'constrained' is left to the compositor
                 to determine. For example, the surface may be partly outside the
-                compositor's defined 'work area', thus necessitating the child surface's
-                position be adjusted until it is entirely inside the work area.
+                compositor's defined 'work logical_area', thus necessitating the child surface's
+                position be adjusted until it is entirely inside the work logical_area.
 
                 The adjustments can be combined, according to a defined precedence: 1)
                 Flip, 2) Slide, 3) Resize.
