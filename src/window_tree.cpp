@@ -51,10 +51,12 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     return new_spec;
 }
 
-void WindowTree::confirm_new_window(miral::Window &window)
+void WindowTree::confirm_new_window(miral::WindowInfo &window_info)
 {
-    get_active_lane()->add_window(window);
-    tools.select_active_window(window);
+    get_active_lane()->add_window(window_info.window());
+
+    if (window_info.can_be_active())
+        tools.select_active_window(window_info.window());
 }
 
 void WindowTree::toggle_resize_mode()
@@ -122,7 +124,8 @@ bool WindowTree::select_window_from_point(int x, int y)
     if (!node)
         return false;
 
-    tools.select_active_window(node->get_window());
+    if (active_window != node)
+        tools.select_active_window(node->get_window());
     return true;
 }
 
