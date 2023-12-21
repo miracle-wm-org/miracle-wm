@@ -90,6 +90,8 @@ public:
 
     bool point_is_in_output(int x, int y);
 
+    bool select_window_from_point(int x, int y);
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;

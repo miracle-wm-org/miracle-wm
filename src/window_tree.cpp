@@ -22,6 +22,15 @@
 
 using namespace miracle;
 
+namespace
+{
+bool point_in_rect(geom::Rectangle const& area, int x, int y)
+{
+    return x >= area.top_left.x.as_int() && x < area.top_left.x.as_int() + area.size.width.as_int()
+           && y >= area.top_left.y.as_int() && y < area.top_left.y.as_int() + area.size.height.as_int();
+}
+}
+
 WindowTree::WindowTree(
     geom::Rectangle default_area,
     miral::WindowManagerTools const& tools,
@@ -101,8 +110,20 @@ void WindowTree::set_output_area(geom::Rectangle new_area)
 
 bool WindowTree::point_is_in_output(int x, int y)
 {
-    return x >= area.top_left.x.as_int() && x < area.top_left.x.as_int() + area.size.width.as_int()
-        && y >= area.top_left.y.as_int() && y < area.top_left.y.as_int() + area.size.height.as_int();
+    return point_in_rect(area, x, y);
+}
+
+bool WindowTree::select_window_from_point(int x, int y)
+{
+    auto node = root_lane->find_where([&](std::shared_ptr<Node> node)
+    {
+        return node->is_window() && point_in_rect(node->get_logical_area(), x, y);
+    });
+    if (!node)
+        return false;
+
+    tools.select_active_window(node->get_window());
+    return true;
 }
 
 bool WindowTree::try_move_active_window(miracle::Direction direction)
