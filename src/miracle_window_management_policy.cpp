@@ -26,6 +26,13 @@ const int MODIFIER_MASK =
     mir_input_event_modifier_meta;
 
 const std::string TERMINAL = "konsole";
+
+auto pointer_position(MirPointerEvent const* event) -> mir::geometry::Point
+{
+    return {
+        miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_x),
+        miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_y)};
+}
 }
 
 MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
@@ -121,6 +128,18 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
 
 bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* event)
 {
+    auto const new_cursor = pointer_position(event);
+    auto const action = miral::toolkit::mir_pointer_event_action(event);
+
+    if (action == mir_pointer_action_button_down)
+    {
+        if (auto const window = window_manager_tools.window_at(new_cursor))
+        {
+            window_manager_tools.select_active_window(window);
+            std::cout << "MEOW" << std::endl;
+        }
+    }
+
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
 
@@ -129,6 +148,7 @@ bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* 
         if (pair->tree.point_is_in_output(x, y))
         {
             active_tree = pair;
+            active_tree->tree.select_window_from_point(x, y);
             break;
         }
     }
@@ -208,15 +228,14 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
     }
 }
 
-void MiracleWindowManagementPolicy::handle_modify_window(miral::WindowInfo &window_info,
-                                                         const miral::WindowSpecification &modifications)
+void MiracleWindowManagementPolicy::handle_modify_window(
+    miral::WindowInfo &window_info,
+    const miral::WindowSpecification &modifications)
 {
-
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
 {
-
 }
 
 mir::geometry::Rectangle

@@ -21,6 +21,7 @@
 #include <vector>
 #include <memory>
 #include <miral/window.h>
+#include <functional>
 
 namespace geom = mir::geometry;
 
@@ -94,6 +95,7 @@ public:
     void translate_by(int x, int y);
 
     static geom::Rectangle get_visible_area(geom::Rectangle const& logical_area, int gap_x, int gap_y);
+    std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node>)> func);
 
 private:
     miral::Window window;

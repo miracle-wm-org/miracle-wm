@@ -73,7 +73,7 @@ public:
 private:
     std::shared_ptr<OutputTreePair> active_tree;
     std::vector<std::shared_ptr<OutputTreePair>> tree_list;
-    miral::WindowManagerTools const window_manager_tools;
+    miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
 };

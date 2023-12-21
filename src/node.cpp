@@ -447,3 +447,16 @@ geom::Rectangle Node::get_visible_area(geom::Rectangle const& logical_area, int 
         }
     };
 }
+
+std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node>)> func)
+{
+    for (auto node : sub_nodes)
+        if (func(node))
+            return node;
+
+    for (auto node : sub_nodes)
+        if (auto retval = node->find_where(func))
+            return retval;
+
+    return nullptr;
+}
