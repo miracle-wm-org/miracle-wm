@@ -378,9 +378,11 @@ void WindowTree::resize_node_in_direction(
         return;
     }
 
+    constexpr int MIN_SIZE = 50;
     bool is_negative = direction == Direction::left || direction == Direction::up;
     auto resize_amount = is_negative ? -amount : amount;
     auto nodes = parent->get_sub_nodes();
+    std::vector<geom::Rectangle> pending_node_resizes;
     if (is_vertical)
     {
         int height_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
@@ -395,10 +397,17 @@ void WindowTree::resize_node_in_direction(
 
             if (i != 0)
             {
-                auto prev_rect = nodes[i - 1]->get_logical_area();
+                auto prev_rect = pending_node_resizes[i - 1];
                 other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
             }
-            other_node->set_rectangle(other_rect);
+
+            if (other_rect.size.height.as_int() <= MIN_SIZE)
+            {
+                std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
+                return;
+            }
+
+            pending_node_resizes.push_back(other_rect);
         }
     }
     else
@@ -415,11 +424,23 @@ void WindowTree::resize_node_in_direction(
 
             if (i != 0)
             {
-                auto prev_rect = nodes[i - 1]->get_logical_area();
+                auto prev_rect = pending_node_resizes[i - 1];
                 other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
             }
-            other_node->set_rectangle(other_rect);
+
+            if (other_rect.size.width.as_int() <= MIN_SIZE)
+            {
+                std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
+                return;
+            }
+
+            pending_node_resizes.push_back(other_rect);
         }
+    }
+
+    for (size_t i = 0; i < nodes.size(); i++)
+    {
+        nodes[i]->set_rectangle(pending_node_resizes[i]);
     }
 }
 

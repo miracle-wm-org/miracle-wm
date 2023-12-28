@@ -160,7 +160,12 @@ auto MiracleWindowManagementPolicy::place_new_window(
 
 void MiracleWindowManagementPolicy::advise_new_window(const miral::WindowInfo &window_info)
 {
-
+    if (is_tileable(window_info))
+    {
+        miral::WindowSpecification mods;
+        constrain_window(mods, window_info);
+        window_manager_tools.modify_window(window_info.window(), mods);
+    }
 }
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
@@ -317,7 +322,7 @@ void set_if_needed(mir::optional_value<ValueType>& pending, ValueType const& cur
 }
 
 
-void MiracleWindowManagementPolicy::constrain_window(miral::WindowSpecification& mods, miral::WindowInfo& window_info)
+void MiracleWindowManagementPolicy::constrain_window(miral::WindowSpecification& mods, miral::WindowInfo const& window_info)
 {
     set_if_needed(mods.min_width(), window_info.min_width(), geom::Width{0});
     set_if_needed(mods.min_height(), window_info.min_height(), geom::Height{0});
