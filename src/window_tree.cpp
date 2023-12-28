@@ -186,6 +186,9 @@ void WindowTree::advise_focus_gained(miral::Window& window)
 
     // The node that we find will be the window, so its parent must be the lane
     auto found_node = root_lane->find_node_for_window(window);
+    if (!found_node)
+        return;
+
     active_window = found_node;
 }
 
@@ -256,6 +259,32 @@ void WindowTree::advise_delete_window(miral::Window& window)
     }
 
     parent->redistribute_size();
+}
+
+void WindowTree::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
+{
+    auto found_node = root_lane->find_node_for_window(window_info.window());
+    if (!found_node)
+        return;
+
+    // TODO: When we fail to match the node size, then we need to resize the node
+//    auto rectangle = found_node->get_visible_area(
+//        found_node->get_logical_area(),
+//        found_node->get_gap_x(),
+//        found_node->get_gap_y()
+//    );
+//
+//    int width_diff = (new_size.width - rectangle.size.width).as_int();
+//    if (width_diff > 0)
+//        resize_node_in_direction(found_node, Direction::right, width_diff);
+//    else if (width_diff < 0)
+//        resize_node_in_direction(found_node, Direction::left, -width_diff);
+//
+//    int height_diff = (new_size.height - rectangle.size.height).as_int();
+//    if (height_diff < 0)
+//        resize_node_in_direction(found_node, Direction::down, height_diff);
+//    else if (height_diff > 0)
+//        resize_node_in_direction(found_node, Direction::up, height_diff);
 }
 
 std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction direction)
@@ -350,6 +379,13 @@ void WindowTree::resize_node_in_direction(
     bool is_vertical = direction == Direction::up || direction == Direction::down;
     bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeLayoutDirection::vertical)
                                  || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
+
+    if (is_main_axis_movement && parent->get_sub_nodes().size() == 1)
+    {
+        // Can't resize if we only have ourselves!
+        return;
+    }
+
     if (!is_main_axis_movement)
     {
         resize_node_in_direction(parent, direction, amount);

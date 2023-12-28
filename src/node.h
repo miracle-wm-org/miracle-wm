@@ -97,6 +97,9 @@ public:
     static geom::Rectangle get_visible_area(geom::Rectangle const& logical_area, int gap_x, int gap_y);
     std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node>)> func);
 
+    int get_gap_x() { return gap_x; }
+    int get_gap_y() { return gap_y; }
+
 private:
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
