@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rm /usr/share/wayland-sessions/mir-flutter-shell.desktop

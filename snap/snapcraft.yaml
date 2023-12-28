@@ -73,6 +73,10 @@ parts:
       - -usr/share/man
       - -usr/share/pkgconfig
 
+  session:
+    plugin: dump
+    source: session
+
   mesa-patchelf:
     build-attributes:
       - enable-patchelf
