@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.5)
+cmake_policy(SET CMP0015 NEW)
+cmake_policy(SET CMP0022 NEW)
 
-project(MiracleWM)
+project(miracle-wm)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,7 +16,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
-find_package(OpenGL REQUIRED)
 
 add_executable(miracle-wm
     src/display_listener.cpp
@@ -25,4 +27,8 @@ add_executable(miracle-wm
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} -lwayland-client)
+target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS})
+
+install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
