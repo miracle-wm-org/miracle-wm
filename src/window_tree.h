@@ -9,6 +9,7 @@
 #include <mir/geometry/rectangle.h>
 #include <mir/geometry/rectangle.h>
 #include <miral/window_manager_tools.h>
+#include <miral/zone.h>
 
 namespace geom = mir::geometry;
 
@@ -78,6 +79,10 @@ public:
 
     bool select_window_from_point(int x, int y);
 
+    void advise_application_zone_create(miral::Zone const& application_zone);
+    void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
+    void advise_application_zone_delete(miral::Zone const& application_zone);
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
@@ -85,6 +90,7 @@ private:
     std::shared_ptr<Node> active_window;
     geom::Rectangle area;
     bool is_resizing = false;
+    std::vector<miral::Zone> application_zone_list;
 
     std::shared_ptr<Node> get_active_lane();
     void handle_direction_request(NodeLayoutDirection direction);
@@ -92,6 +98,7 @@ private:
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
     std::shared_ptr<Node> traverse(std::shared_ptr<Node> from, Direction direction);
+    void recalculate_root_node_area();
 };
 
 }

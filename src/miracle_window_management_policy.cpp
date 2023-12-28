@@ -5,6 +5,7 @@
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
 #include <miral/application_info.h>
+#include <miral/zone.h>
 #include <mir/log.h>
 #include <linux/input.h>
 #include <iostream>
@@ -24,11 +25,13 @@ const int MODIFIER_MASK =
 
 const std::string TERMINAL = "konsole";
 
-auto pointer_position(MirPointerEvent const* event) -> mir::geometry::Point
+template <typename T>
+bool is_tileable(T& requested_specification)
 {
-    return {
-        miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_x),
-        miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_y)};
+    return (requested_specification.type() == mir_window_type_normal || requested_specification.type() == mir_window_type_freestyle)
+        && !requested_specification.parent()
+        && (requested_specification.state() == mir_window_state_restored || requested_specification.state() == mir_window_state_maximized)
+        && !requested_specification.exclusive_rect().is_set();
 }
 }
 
@@ -145,13 +148,28 @@ auto MiracleWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
-    // In this step, we'll ask the WindowTree where we should place the window on the display
-    // We will also resize the adjacent windows accordingly in this step.
-    return active_tree->tree.allocate_position(requested_specification);
+    if (is_tileable(requested_specification))
+    {
+        // In this step, we'll ask the WindowTree where we should place the window on the display
+        // We will also resize the adjacent windows accordingly in this step.
+        return active_tree->tree.allocate_position(requested_specification);
+    }
+
+    return requested_specification;
+}
+
+void MiracleWindowManagementPolicy::advise_new_window(const miral::WindowInfo &window_info)
+{
+
 }
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
+    if (!is_tileable(window_info))
+    {
+        return;
+    }
+
     miral::WindowSpecification mods;
     constrain_window(mods, window_info);
     window_manager_tools.modify_window(window_info.window(), mods);
@@ -305,4 +323,22 @@ void MiracleWindowManagementPolicy::constrain_window(miral::WindowSpecification&
     set_if_needed(mods.min_height(), window_info.min_height(), geom::Height{0});
     set_if_needed(mods.max_width(), window_info.max_width(), geom::Width{std::numeric_limits<int>::max()});
     set_if_needed(mods.max_height(), window_info.max_height(), geom::Height{std::numeric_limits<int>::max()});
+}
+
+void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone const& application_zone)
+{
+    for (auto tree : tree_list)
+        tree->tree.advise_application_zone_create(application_zone);
+}
+
+void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
+{
+    for (auto tree : tree_list)
+        tree->tree.advise_application_zone_update(updated, original);
+}
+
+void MiracleWindowManagementPolicy::advise_application_zone_delete(miral::Zone const& application_zone)
+{
+    for (auto tree : tree_list)
+        tree->tree.advise_application_zone_delete(application_zone);
 }
