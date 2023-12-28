@@ -35,6 +35,7 @@ public:
     auto place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
+    void advise_new_window(miral::WindowInfo const& window_info) override;
     void handle_window_ready(
         miral::WindowInfo& window_info) override;
     void advise_focus_gained(miral::WindowInfo const& window_info) override;
@@ -66,6 +67,10 @@ public:
     auto confirm_inherited_move(
         const miral::WindowInfo &window_info,
         mir::geometry::Displacement movement) -> mir::geometry::Rectangle override;
+
+    void advise_application_zone_create(miral::Zone const& application_zone) override;
+    void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
+    void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
 private:
     std::shared_ptr<OutputTreePair> active_tree;
