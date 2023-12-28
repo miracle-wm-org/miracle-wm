@@ -155,6 +155,9 @@ auto MiracleWindowManagementPolicy::place_new_window(
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
+    miral::WindowSpecification mods;
+    constrain_window(mods, window_info);
+    window_manager_tools.modify_window(window_info.window(), mods);
     active_tree->tree.confirm_new_window(window_info);
 }
 
@@ -221,7 +224,9 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
-    window_manager_tools.modify_window(window_info, modifications);
+    auto mods = modifications;
+    constrain_window(mods, window_info);
+    window_manager_tools.modify_window(window_info.window(), mods);
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
@@ -261,4 +266,37 @@ mir::geometry::Rectangle MiracleWindowManagementPolicy::confirm_inherited_move(
     mir::geometry::Displacement movement)
 {
     return {window_info.window().top_left()+movement, window_info.window().size()};
+}
+
+namespace
+{
+// Taken from miral
+template<typename ValueType>
+void reset(mir::optional_value<ValueType>& option)
+{
+    if (option.is_set()) option.consume();
+}
+
+// Taken from miral
+template<typename ValueType>
+void set_if_needed(mir::optional_value<ValueType>& pending, ValueType const& current, ValueType const& correct)
+{
+    if (current == correct)
+    {
+        reset(pending);
+    }
+    else
+    {
+        pending = correct;
+    }
+}
+}
+
+
+void MiracleWindowManagementPolicy::constrain_window(miral::WindowSpecification& mods, miral::WindowInfo& window_info)
+{
+    set_if_needed(mods.min_width(), window_info.min_width(), geom::Width{0});
+    set_if_needed(mods.min_height(), window_info.min_height(), geom::Height{0});
+    set_if_needed(mods.max_width(), window_info.max_width(), geom::Width{std::numeric_limits<int>::max()});
+    set_if_needed(mods.max_height(), window_info.max_height(), geom::Height{std::numeric_limits<int>::max()});
 }

@@ -76,6 +76,8 @@ private:
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
+
+    void constrain_window(miral::WindowSpecification&, miral::WindowInfo&);
 };
 }
 

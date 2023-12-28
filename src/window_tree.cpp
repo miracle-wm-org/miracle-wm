@@ -48,6 +48,10 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     auto rect = get_active_lane()->new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
+    new_spec.min_width() = geom::Width{0};
+    new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
+    new_spec.min_height() = geom::Height{0};
+    new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
     return new_spec;
 }
 
