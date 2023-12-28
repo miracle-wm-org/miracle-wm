@@ -36,10 +36,9 @@ Features:
 - [x] Moving window with keyboard
 - [ ] Gaps in windows
 - [ ] Account for minimum sizes on windows (e.g. gedit)
-- [ ] Disabling many of the Floating Window Manager features
+- [x] Disabling many of the Floating Window Manager features
 - [ ] Handle exclusion zones
 - [ ] Handle output creation, updating, and deletion
-- [ ] 
 
 ## Tiling Advanced + Initial Shell (Due: February 1st)
 Version: 0.2

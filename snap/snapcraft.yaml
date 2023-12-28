@@ -1,0 +1,101 @@
+name: miracle-wm
+adopt-info: miracle-wm
+summary: "miracle-wm: a tiling window manager built on Mir"
+description: |
+  miracle-wm is a tiling window manager based off the Mir library.
+  
+  It is intended to provide an i3/sway-like experience.
+confinement: classic
+base: core22
+
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+  - build-on: armhf
+
+package-repositories:
+  - type: apt
+    ppa: mir-team/release
+
+apps:
+  miracle-wm:
+    command: &_command usr/local/bin/miracle-wm
+    environment: &_environment
+      # Prep for Mir
+      MIR_SERVER_PLATFORM_PATH: ${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/mir/server-platform
+      __EGL_VENDOR_LIBRARY_DIRS: $SNAP/etc/glvnd/egl_vendor.d:$SNAP/usr/share/glvnd/egl_vendor.d
+      LIBGL_DRIVERS_PATH: $SNAP/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+      LIBINPUT_QUIRKS_DIR: ${SNAP}/usr/share/libinput
+      PATH: ${SNAP}/usr/local/bin/:${PATH}
+      # For "reasons" this is being set despite this being a classic snap. This overwrites the nonsense
+      LD_LIBRARY_PATH: ""
+
+parts:
+  miracle-wm:
+    build-attributes:
+      - enable-patchelf
+    override-pull: |
+      craftctl default
+      # work around https://github.com/diddlesnaps/snapcraft-multiarch-action/issues/22
+      git config --global --add safe.directory ${CRAFT_PART_SRC}
+      server_version=`git rev-list --count HEAD`
+      mir_version=`LANG=C apt-cache policy mir-graphics-drivers-desktop | sed -rne 's/^\s+Candidate:\s+([^-]*)-.+$/\1/p'`
+      craftctl set version=$server_version-mir$mir_version
+      if echo $mir_version | grep -e '+dev' -e '~rc' -q; then craftctl set grade=devel; else craftctl set grade=stable; fi
+    plugin: cmake
+    source: .
+    build-packages:
+      - pkg-config
+      - libmiral-dev
+      - libboost-filesystem-dev
+      - libfreetype6-dev
+      - libwayland-dev
+      - libxkbcommon-dev
+      - g++
+      - make
+    stage-packages:
+      - libmiral6
+      - mir-graphics-drivers-desktop
+      - libfreetype6
+    prime:
+      - -lib/udev
+      - -usr/doc
+      - -usr/doc-base
+      - -usr/share/applications
+      - -usr/share/apport
+      - -usr/share/bug
+      - -usr/share/doc
+      - -usr/share/doc-base
+      - -usr/share/icons
+      - -usr/share/libdrm
+      - -usr/share/libwacom
+      - -usr/share/lintian
+      - -usr/share/man
+      - -usr/share/pkgconfig
+
+  mesa-patchelf:
+    build-attributes:
+      - enable-patchelf
+    plugin: nil
+    stage-packages:
+      - libgl1-mesa-dri
+      - libtinfo5
+      # included in this part because it tries to pull in mesa bits
+      - gvncviewer
+      - swaybg
+      - synapse
+      - xvfb
+      - xwayland
+    stage:
+      # The libraries in .../dri need no-patchelf, so they come from the mesa-unpatched part
+      - -usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+
+  mesa-no-patchelf:
+    plugin: nil
+    stage-packages:
+      - libgl1-mesa-dri
+    build-attributes:
+      - no-patchelf # Otherwise snapcraft may strip the build ID and cause the driver to crash
+    stage:
+      # Only the libraries in .../dri need to not be patched, the rest come from the mesa part
+      - usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
