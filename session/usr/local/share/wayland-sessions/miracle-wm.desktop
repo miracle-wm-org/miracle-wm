@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Miracle WM
+Comment=Tiling Wayland Window Manager
+Exec=sh -l -c /snap/miracle-wm/current/usr/local/bin/miracle-wm
+Type=Application

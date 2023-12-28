@@ -27,6 +27,20 @@ snapcraft
 sudo snap install --dangerous --classic miracle-wm_*.snap
 ```
 
+# Running
+
+## On Login
+Once installed, you may select the "Miracle WM" option from your display manager before you login (e.g. GDM or LightDM).
+In most environments, this presents itself as a little "settings" button after you select your name.
+
+## Hosted on your desktop
+To run the window manager as a window in your current desktop session, simply run:
+```sh
+WAYLAND_DISPLAY=wayland-98 miracle-wm
+```
+
+Note that this is only useful if you want to test-drive the window manager or do some development on it for yourself.
+
 # Timeline
 ## Tiling Window Manager Basics (Due: January 1st)
 Version: 0.1
