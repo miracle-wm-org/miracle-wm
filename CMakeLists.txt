@@ -18,12 +18,10 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 
 add_executable(miracle-wm
-    src/display_listener.cpp
     src/main.cpp
     src/miracle_window_management_policy.cpp
     src/window_tree.cpp
     src/node.cpp
-    src/node_allocator.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

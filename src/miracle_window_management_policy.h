@@ -1,9 +1,5 @@
-//
-// Created by mattkae on 9/8/23.
-//
-
-#ifndef MIRCOMPOSITOR_MIRIE_WINDOW_MANAGEMENT_POLICY_H
-#define MIRCOMPOSITOR_MIRIE_WINDOW_MANAGEMENT_POLICY_H
+#ifndef MIRIE_WINDOW_MANAGEMENT_POLICY_H
+#define MIRIE_WINDOW_MANAGEMENT_POLICY_H
 
 #include "window_tree.h"
 #include <miral/window_manager_tools.h>
