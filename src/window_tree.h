@@ -85,6 +85,8 @@ public:
     /// Called when the window was deleted.
     void advise_delete_window(miral::Window&);
 
+    void advise_resize(miral::WindowInfo const&, geom::Size const&);
+
     /// Called when the physical display is resized.
     void set_output_area(geom::Rectangle new_area);
 

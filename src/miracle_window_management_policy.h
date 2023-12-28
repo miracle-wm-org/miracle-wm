@@ -44,6 +44,7 @@ public:
     void advise_focus_gained(miral::WindowInfo const& window_info) override;
     void advise_focus_lost(miral::WindowInfo const& window_info) override;
     void advise_delete_window(miral::WindowInfo const& window_info) override;
+    void advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size) override;
     void advise_output_create(miral::Output const& output);
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);

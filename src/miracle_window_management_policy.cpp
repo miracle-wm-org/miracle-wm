@@ -163,18 +163,27 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
-    active_tree->tree.advise_focus_gained(window_info.window());
+    for (auto tree : tree_list)
+        tree->tree.advise_focus_gained(window_info.window());
     window_manager_tools.raise_tree(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
-    active_tree->tree.advise_focus_lost(window_info.window());
+    for (auto tree : tree_list)
+        tree->tree.advise_focus_lost(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
-    active_tree->tree.advise_delete_window(window_info.window());
+    for (auto tree : tree_list)
+        tree->tree.advise_delete_window(window_info.window());
+}
+
+void MiracleWindowManagementPolicy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
+{
+    for (auto tree : tree_list)
+        tree->tree.advise_resize(window_info, new_size);
 }
 
 void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
