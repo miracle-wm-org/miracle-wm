@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(MirCompositor)
+project(MiracleWM)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,20 +15,14 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(compositor
+add_executable(miracle-wm
     src/display_listener.cpp
     src/main.cpp
     src/miracle_window_management_policy.cpp
-    src/task_bar.cpp
-    src/wayland_app.cpp
-    src/wayland_surface.cpp
-    src/wayland_shm.cpp
-    src/protocols/xdg_shell_unstable_v6.c
-    src/xdg_surface.cpp
     src/window_tree.cpp
     src/node.cpp
     src/node_allocator.cpp
 )
 
-target_include_directories(compositor PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     compositor               ${MIRAL_LDFLAGS} -lwayland-client)
+target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} -lwayland-client)

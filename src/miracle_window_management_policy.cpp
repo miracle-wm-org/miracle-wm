@@ -4,7 +4,6 @@
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "miracle_window_management_policy.h"
-#include "task_bar.h"
 
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
@@ -13,6 +12,7 @@
 #include <linux/input.h>
 #include <iostream>
 #include <mir/geometry/rectangle.h>
+#include <limits>
 
 using namespace miracle;
 
