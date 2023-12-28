@@ -1,6 +1,3 @@
-//
-// Created by mattkae on 9/8/23.
-//
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "miracle_window_management_policy.h"
