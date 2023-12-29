@@ -203,6 +203,12 @@ void Node::set_rectangle(geom::Rectangle target_rect)
         auto visible_rect = get_visible_area(target_rect, gap_x, gap_y);
         window.move_to(visible_rect.top_left);
         window.resize(visible_rect.size);
+        auto& window_info = tools.info_for(window);
+        for (auto child : window_info.children())
+        {
+            child.move_to(visible_rect.top_left);
+            child.resize(visible_rect.size);
+        }
     }
     else
     {
