@@ -33,7 +33,7 @@ int main(int argc, char const* argv[])
         {
             window_managers,
             WaylandExtensions{},
-            X11Support{},
+            X11Support{}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
             internal_client_launcher,

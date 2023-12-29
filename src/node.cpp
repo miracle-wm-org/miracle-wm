@@ -4,15 +4,17 @@
 
 using namespace miracle;
 
-Node::Node(geom::Rectangle area, int gap_x, int gap_y)
-    : state{NodeState::lane},
+Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, int gap_x, int gap_y)
+    : tools{tools},
+      state{NodeState::lane},
       logical_area{area},
       gap_x{gap_x},
       gap_y{gap_y}
 {}
 
-Node::Node(geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, int gap_x, int gap_y)
-    : parent{parent},
+Node::Node(miral::WindowManagerTools const& tools,geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, int gap_x, int gap_y)
+    : tools{tools},
+      parent{parent},
       window{window},
       state{NodeState::window},
       logical_area{area},
@@ -141,6 +143,7 @@ void Node::add_window(miral::Window& new_window)
     };
 
     auto node = std::make_shared<Node>(
+        tools,
         new_logical_area,
         shared_from_this(),
         new_window,
@@ -292,6 +295,7 @@ std::shared_ptr<Node> Node::to_lane()
         return parent->sub_nodes[0];
 
     auto seed_node = std::make_shared<Node>(
+        tools,
         logical_area,
         shared_from_this(),
         window,
@@ -443,4 +447,38 @@ std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node>)
             return retval;
 
     return nullptr;
+}
+
+int Node::get_min_width()
+{
+    if (is_window())
+    {
+        miral::WindowInfo& info = tools.info_for(window);
+        return info.min_width().as_int();
+    }
+
+    int min_width = 50;
+    for (auto node : sub_nodes)
+    {
+        min_width = std::max(node->get_min_width(), min_width);
+    }
+
+    return min_width;
+}
+
+int Node::get_min_height()
+{
+    if (is_window())
+    {
+        miral::WindowInfo& info = tools.info_for(window);
+        return info.min_height().as_int();
+    }
+
+    int min_height = 50;
+    for (auto node : sub_nodes)
+    {
+        min_height = std::max(node->get_min_height(), min_height);
+    }
+
+    return min_height;
 }
