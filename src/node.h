@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <miral/window.h>
+#include <miral/window_manager_tools.h>
 #include <functional>
 
 namespace geom = mir::geometry;
@@ -28,8 +29,8 @@ enum class NodeLayoutDirection
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
-    Node(geom::Rectangle, int gap_x, int gap_y);
-    Node(geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window, int gap_x, int gap_y);
+    Node(miral::WindowManagerTools const& tools, geom::Rectangle, int gap_x, int gap_y);
+    Node(miral::WindowManagerTools const& tools,geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window, int gap_x, int gap_y);
 
     /// The rectangle defined by the node can be retrieved dynamically
     /// by calculating the dimensions of the content in this node
@@ -84,7 +85,11 @@ public:
     int get_gap_x() { return gap_x; }
     int get_gap_y() { return gap_y; }
 
+    int get_min_width();
+    int get_min_height();
+
 private:
+    miral::WindowManagerTools tools;
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     NodeState state;

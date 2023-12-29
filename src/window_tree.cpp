@@ -19,7 +19,10 @@ WindowTree::WindowTree(
     geom::Rectangle default_area,
     miral::WindowManagerTools const& tools,
     WindowTreeOptions const& options)
-    : root_lane{std::make_shared<Node>(geom::Rectangle{default_area.top_left, default_area.size}, options.gap_x, options.gap_y)},
+    : root_lane{std::make_shared<Node>(
+        tools,
+        geom::Rectangle{default_area.top_left, default_area.size},
+        options.gap_x, options.gap_y)},
       tools{tools},
       area{default_area},
       options{options}
@@ -39,23 +42,14 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     return new_spec;
 }
 
-void WindowTree::confirm_new_window(miral::WindowInfo &window_info)
+void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
     get_active_lane()->add_window(window_info.window());
-
-    if (window_info.can_be_active())
-        tools.select_active_window(window_info.window());
 }
 
 void WindowTree::toggle_resize_mode()
 {
-    if (is_resizing)
-    {
-        is_resizing = false;
-        return;
-    }
-
-    is_resizing = true;
+    is_resizing = !is_resizing;
 }
 
 bool WindowTree::try_resize_active_window(miracle::Direction direction)
@@ -73,6 +67,9 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
 
 bool WindowTree::try_select_next(miracle::Direction direction)
 {
+    if (is_resizing)
+        return false;
+
     if (!active_window)
         return false;
 
@@ -166,21 +163,25 @@ void WindowTree::handle_direction_request(NodeLayoutDirection direction)
 
 void WindowTree::advise_focus_gained(miral::Window& window)
 {
-    if (is_resizing)
-        is_resizing = false;
+    is_resizing = false;
 
     // The node that we find will be the window, so its parent must be the lane
     auto found_node = root_lane->find_node_for_window(window);
     if (!found_node)
+    {
+        active_window = nullptr;
         return;
+    }
 
     active_window = found_node;
 }
 
-void WindowTree::advise_focus_lost(miral::Window&)
+void WindowTree::advise_focus_lost(miral::Window& window)
 {
-    if (is_resizing)
-        is_resizing = false;
+    is_resizing = false;
+
+    if (active_window != nullptr && active_window->get_window() == window)
+        active_window = nullptr;
 }
 
 void WindowTree::advise_delete_window(miral::Window& window)
@@ -378,7 +379,6 @@ void WindowTree::resize_node_in_direction(
         return;
     }
 
-    constexpr int MIN_SIZE = 50;
     bool is_negative = direction == Direction::left || direction == Direction::up;
     auto resize_amount = is_negative ? -amount : amount;
     auto nodes = parent->get_sub_nodes();
@@ -401,7 +401,7 @@ void WindowTree::resize_node_in_direction(
                 other_rect.top_left.y = geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()};
             }
 
-            if (other_rect.size.height.as_int() <= MIN_SIZE)
+            if (other_rect.size.height.as_int() <= other_node->get_min_height())
             {
                 std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
                 return;
@@ -428,7 +428,7 @@ void WindowTree::resize_node_in_direction(
                 other_rect.top_left.x = geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()};
             }
 
-            if (other_rect.size.width.as_int() <= MIN_SIZE)
+            if (other_rect.size.width.as_int() <= other_node->get_min_width())
             {
                 std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
                 return;
