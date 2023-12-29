@@ -364,9 +364,9 @@ bool Node::move_node(int from, int to) {
 
 void Node::insert_node(std::shared_ptr<Node> node, int index)
 {
-    auto position = new_node_position(index);
+    auto area_with_gaps = new_node_position(index);
     node->parent = shared_from_this();
-    node->set_rectangle(position);
+    node->set_rectangle(get_logic_area_from_visible(area_with_gaps, gap_x, gap_y));
     sub_nodes.insert(sub_nodes.begin() + index, node);
 }
 
@@ -438,6 +438,20 @@ geom::Rectangle Node::get_visible_area(geom::Rectangle const& logical_area, int 
         geom::Size{
             logical_area.size.width.as_int() - 2 * gap_x,
             logical_area.size.height.as_int() - 2 * gap_y
+        }
+    };
+}
+
+geom::Rectangle Node::get_logic_area_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y)
+{
+    return {
+        geom::Point{
+            visible_area.top_left.x.as_int() - gap_x,
+            visible_area.top_left.y.as_int() - gap_y
+        },
+        geom::Size{
+            visible_area.size.width.as_int() + 2 * gap_x,
+            visible_area.size.height.as_int() + 2 * gap_y
         }
     };
 }
