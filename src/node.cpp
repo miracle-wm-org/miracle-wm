@@ -370,6 +370,36 @@ void Node::insert_node(std::shared_ptr<Node> node, int index)
     sub_nodes.insert(sub_nodes.begin() + index, node);
 }
 
+void Node::remove_node(std::shared_ptr<Node> const& node)
+{
+    if (is_window())
+    {
+        std::cerr << "Cannot remove a node from a window\n";
+        return;
+    }
+
+    sub_nodes.erase(
+        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> content) {
+            return content == node;
+        }),
+        sub_nodes.end()
+    );
+
+    // If we have one child AND it is a lane, THEN we can absorb all of it's children
+    if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
+    {
+        auto dying_lane = sub_nodes[0];
+        sub_nodes.clear();
+        for (auto sub_node : dying_lane->get_sub_nodes())
+        {
+            add_window(sub_node->get_window());
+        }
+        set_direction(dying_lane->get_direction());
+    }
+
+    redistribute_size();
+}
+
 int Node::get_index_of_node(std::shared_ptr<Node> node)
 {
     for (int i = 0; i < sub_nodes.size(); i++)

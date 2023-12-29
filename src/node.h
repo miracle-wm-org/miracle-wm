@@ -65,8 +65,11 @@ public:
     bool is_lane() { return state == NodeState::lane; }
     NodeLayoutDirection get_direction() { return direction; }
     miral::Window& get_window() { return window; }
-    std::vector<std::shared_ptr<Node>>& get_sub_nodes() { return sub_nodes; }
+    std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
     void set_direction(NodeLayoutDirection in_direction) { direction = in_direction; }
+
+    /// Removes the node from the lane but does NOT recalcualte the size
+    void remove_node(std::shared_ptr<Node> const& node);
 
     int get_index_of_node(std::shared_ptr<Node>);
     int num_nodes();

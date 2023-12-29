@@ -1,3 +1,5 @@
+#define MIR_LOG_COMPONENT "window_tree"
+
 #include "window_tree.h"
 #include <memory>
 #include <mir/log.h>
@@ -55,10 +57,16 @@ void WindowTree::toggle_resize_mode()
 bool WindowTree::try_resize_active_window(miracle::Direction direction)
 {
     if (!is_resizing)
+    {
+        mir::log_warning("Unable to resize the active window: not resizing");
         return false;
+    }
 
     if (!active_window)
+    {
+        mir::log_warning("Unable to resize the active window: active window is not set");
         return false;
+    }
 
     // TODO: We have a hardcoded resize amount
     resize_node_in_direction(active_window, direction, 50);
@@ -68,14 +76,24 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
 bool WindowTree::try_select_next(miracle::Direction direction)
 {
     if (is_resizing)
+    {
+        mir::log_warning("Unable to select the next window: resizing");
         return false;
+    }
 
     if (!active_window)
+    {
+        mir::log_warning("Unable to select the next window: active window not set");
         return false;
+    }
 
     auto node = traverse(active_window, direction);
     if (!node)
+    {
+        mir::log_warning("Unable to select the next window: traverse failed");
         return false;
+    }
+
     tools.select_active_window(node->get_window());
     return true;
 }
@@ -118,18 +136,30 @@ bool WindowTree::select_window_from_point(int x, int y)
 bool WindowTree::try_move_active_window(miracle::Direction direction)
 {
     if (is_resizing)
+    {
+        mir::log_warning("Unable to move active window: resizing");
         return false;
+    }
 
     if (!active_window)
+    {
+        mir::log_warning("Unable to move active window: active window not set");
         return false;
+    }
 
     auto second_window = traverse(active_window, direction);
     if (!second_window)
+    {
+        mir::log_warning("Unable to move active window: second_window not found");
         return false;
+    }
 
     auto parent = second_window->parent;
     if (!parent)
+    {
+        mir::log_warning("Unable to move active window: second_window has no parent");
         return false;
+    }
 
     auto insertion_index = parent->get_index_of_node(second_window);
     advise_delete_window(active_window->get_window());
@@ -150,10 +180,16 @@ void WindowTree::request_horizontal()
 void WindowTree::handle_direction_request(NodeLayoutDirection direction)
 {
     if (is_resizing)
+    {
+        mir::log_warning("Unable to handle direction request: resizing");
         return;
+    }
 
     if (!active_window)
+    {
+        mir::log_warning("Unable to handle direction request: active window not set");
         return;
+    }
 
     if (active_window->parent->get_sub_nodes().size() != 1)
         active_window = active_window->to_lane();
@@ -165,7 +201,6 @@ void WindowTree::advise_focus_gained(miral::Window& window)
 {
     is_resizing = false;
 
-    // The node that we find will be the window, so its parent must be the lane
     auto found_node = root_lane->find_node_for_window(window);
     if (!found_node)
     {
@@ -186,66 +221,32 @@ void WindowTree::advise_focus_lost(miral::Window& window)
 
 void WindowTree::advise_delete_window(miral::Window& window)
 {
-    // TODO: This is an algorithm that is prone to breaking
-    // Resize the other nodes in the lane accordingly
     auto window_node = root_lane->find_node_for_window(window);
     if (!window_node)
     {
-        std::cerr << "Unable to delete window: cannot find node\n";
+        mir::log_warning("Unable to delete window: cannot find node");
         return;
     }
 
     auto parent = window_node->parent;
     if (!parent)
     {
-        std::cerr << "Unable to delete window: node does not have a parent\n";
+        mir::log_warning("Unable to delete window: node does not have a parent");
         return;
     }
 
-    if (parent->get_sub_nodes().size() == 1)
+    if (parent->get_sub_nodes().size() == 1 && parent->parent)
     {
         // Remove the entire lane if this lane is now empty
-        if (parent->parent)
-        {
-            auto prev_active = parent;
-            parent = parent->parent;
-
-            parent->get_sub_nodes().erase(
-                std::remove_if(parent->get_sub_nodes().begin(), parent->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
-                    return content->is_lane() && content == prev_active;
-                }),
-                parent->get_sub_nodes().end()
-            );
-        }
-        else
-        {
-            parent->get_sub_nodes().clear();
-        }
+        auto prev_active = parent;
+        parent = parent->parent;
+        parent->remove_node(prev_active);
     }
     else
     {
         // Remove the window from the active lane
-        parent->get_sub_nodes().erase(
-            std::remove_if(parent->get_sub_nodes().begin(), parent->get_sub_nodes().end(), [&](std::shared_ptr<Node> content) {
-                return content->is_window() && content->get_window() == window;
-            }),
-            parent->get_sub_nodes().end()
-        );
+        parent->remove_node(window_node);
     }
-
-    // Edge case: If the newly active node only owns one other lane, it can absorb the node
-    if (parent->get_sub_nodes().size() == 1 && parent->get_sub_nodes()[0]->is_lane())
-    {
-        auto dying_lane = parent->get_sub_nodes()[0];
-        parent->get_sub_nodes().clear();
-        for (auto sub_node : dying_lane->get_sub_nodes())
-        {
-            parent->add_window(sub_node->get_window());
-        }
-        parent->set_direction(dying_lane->get_direction());
-    }
-
-    parent->redistribute_size();
 }
 
 void WindowTree::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
@@ -278,7 +279,7 @@ std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction
 {
     if (!from->parent)
     {
-        std::cerr << "Cannot traverse the root node\n";
+        mir::log_warning("Cannot traverse the root node");
         return nullptr;
     }
 
@@ -317,7 +318,7 @@ grandparent_route:
         auto grandparent = parent->parent;
         if (!grandparent)
         {
-            std::cerr << "Parent lane lacks a grandparent. It should AT LEAST be root\n";
+            mir::log_warning("Parent lane lacks a grandparent. It should AT LEAST be root");
             return nullptr;
         }
 
@@ -403,7 +404,7 @@ void WindowTree::resize_node_in_direction(
 
             if (other_rect.size.height.as_int() <= other_node->get_min_height())
             {
-                std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
+                mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
                 return;
             }
 
@@ -430,7 +431,7 @@ void WindowTree::resize_node_in_direction(
 
             if (other_rect.size.width.as_int() <= other_node->get_min_width())
             {
-                std::cerr << "Unable to resize a rectangle that would cause another to be negative\n";
+                mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
                 return;
             }
 
