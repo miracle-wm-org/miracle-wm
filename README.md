@@ -1,8 +1,8 @@
 **WARNING**: This project is very much a work in progress. I have provided a rough roadmap in the timeline section.
 Use at your own risk.
 
-# miracle-wm
-**miracle-wm** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
+# miracle
+**miracle** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
 will be very sway/i3-like for the first iteration, but will diverge in some important ways later on. See the [timeline](#timeline)
 section below for the current status and direction.
 
@@ -11,8 +11,8 @@ concern for a different repository with a different timeline.
 
 # Building locally
 ```sh
-git clone https://github.com/mattkae/miracle-wm.git
-cd miracle-wm
+git clone https://github.com/mattkae/miracle.git
+cd miracle
 
 mkdir build
 cd build
