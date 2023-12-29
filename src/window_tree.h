@@ -37,7 +37,8 @@ public:
     WindowTree(geom::Rectangle area, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
     ~WindowTree() = default;
 
-    /// Makes space for the new window and returns its specified spot in the world.
+    /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
+    /// position is the position WITH GAPS.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
     void advise_new_window(miral::WindowInfo const&);
