@@ -29,11 +29,9 @@ template <typename T>
 bool is_tileable(T& requested_specification)
 {
     auto t = requested_specification.type();
-    auto parent = requested_specification.parent();
     auto state = requested_specification.state();
     auto has_exclusive_rect = requested_specification.exclusive_rect().is_set();
     return (t == mir_window_type_normal || t == mir_window_type_freestyle)
-        && !parent
         && (state == mir_window_state_restored || state == mir_window_state_maximized)
         && !has_exclusive_rect;
 }
