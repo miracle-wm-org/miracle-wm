@@ -10,7 +10,8 @@ section below for the current status and direction.
 The ultimate goal of this work is to build an entire desktop environment on top of this window manager, but that will remain a
 concern for a different repository with a different timeline.
 
-![miracle in action](./resources/screenshot.png "miracle in action")
+![miracle in action](./resources/screenshot1.png "miracle in action")
+![miracle in action](./resources/screenshot2.png "miracle in action")
 
 # Building
 **From Source**:
