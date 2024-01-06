@@ -84,7 +84,7 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_meta))
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_alt))
     {
         if (scan_code == KEY_ENTER)
         {
