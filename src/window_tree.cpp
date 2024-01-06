@@ -185,9 +185,11 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
+    auto node_to_move = active_window;
     auto insertion_index = parent->get_index_of_node(second_window);
-    advise_delete_window(active_window->get_window());
-    parent->insert_node(active_window, insertion_index);
+    advise_delete_window(node_to_move->get_window());
+    parent->insert_node(node_to_move, insertion_index);
+    tools.select_active_window(node_to_move->get_window());
     return true;
 }
 
