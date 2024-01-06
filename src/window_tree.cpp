@@ -62,6 +62,12 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
         return false;
     }
 
+    if (is_active_window_fullscreen)
+    {
+        mir::log_warning("Unable to resize the next window: fullscreened");
+        return false;
+    }
+
     if (!active_window)
     {
         mir::log_warning("Unable to resize the active window: active window is not set");
@@ -75,6 +81,12 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
 
 bool WindowTree::try_select_next(miracle::Direction direction)
 {
+    if (is_active_window_fullscreen)
+    {
+        mir::log_warning("Unable to select the next window: fullscreened");
+        return false;
+    }
+
     if (is_resizing)
     {
         mir::log_warning("Unable to select the next window: resizing");
@@ -121,6 +133,12 @@ bool WindowTree::point_is_in_output(int x, int y)
 
 bool WindowTree::select_window_from_point(int x, int y)
 {
+    if (is_active_window_fullscreen)
+    {
+        tools.select_active_window(active_window->get_window());
+        return true;
+    }
+
     auto node = root_lane->find_where([&](std::shared_ptr<Node> node)
     {
         return node->is_window() && point_in_rect(node->get_logical_area(), x, y);
@@ -135,6 +153,12 @@ bool WindowTree::select_window_from_point(int x, int y)
 
 bool WindowTree::try_move_active_window(miracle::Direction direction)
 {
+    if (is_active_window_fullscreen)
+    {
+        mir::log_warning("Unable to move active window: fullscreen");
+        return false;
+    }
+
     if (is_resizing)
     {
         mir::log_warning("Unable to move active window: resizing");
@@ -179,6 +203,12 @@ void WindowTree::request_horizontal()
 
 void WindowTree::handle_direction_request(NodeLayoutDirection direction)
 {
+    if (is_active_window_fullscreen)
+    {
+        mir::log_warning("Unable to handle direction request: fullscreen");
+        return;
+    }
+
     if (is_resizing)
     {
         mir::log_warning("Unable to handle direction request: resizing");
@@ -226,6 +256,13 @@ void WindowTree::advise_delete_window(miral::Window& window)
     {
         mir::log_warning("Unable to delete window: cannot find node");
         return;
+    }
+
+    if (window_node == active_window)
+    {
+        active_window = nullptr;
+        if (is_active_window_fullscreen)
+            is_active_window_fullscreen = false;
     }
 
     auto parent = window_node->parent;
@@ -476,6 +513,62 @@ void WindowTree::recalculate_root_node_area()
         root_lane->set_rectangle(zone.extents());
         break;
     }
+}
 
+bool WindowTree::advise_fullscreen_window(miral::WindowInfo const& window_info)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
 
+    tools.select_active_window(node->get_window());
+    is_active_window_fullscreen = true;
+    is_resizing = false;
+    return true;
+}
+
+bool WindowTree::advise_restored_window(miral::WindowInfo const& window_info)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
+
+    if (node == active_window && is_active_window_fullscreen)
+        is_active_window_fullscreen = false;
+
+    return true;
+}
+
+bool WindowTree::handle_window_ready(miral::WindowInfo &window_info)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
+
+    if (is_active_window_fullscreen)
+        return true;
+
+    if (window_info.can_be_active())
+        tools.select_active_window(window_info.window());
+    return true;
+}
+
+bool WindowTree::confirm_placement_on_display(
+    const miral::WindowInfo &window_info,
+    MirWindowState new_state,
+    mir::geometry::Rectangle &new_placement)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
+
+    auto node_rectangle = node->get_visible_area_for_node();
+    switch (new_state)
+    {
+    case mir_window_state_restored:
+        new_placement = node_rectangle;
+        break;
+    }
+
+    return true;
 }

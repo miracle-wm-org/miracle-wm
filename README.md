@@ -42,7 +42,7 @@ WAYLAND_DISPLAY=wayland-98 miracle-wm
 Note that this is only useful if you want to test-drive the window manager or do some development on it for yourself.
 
 # Timeline
-## Tiling Window Manager Basics (Due: January 1st)
+## Proof of Concept (Due: January 15th)
 Version: 0.1
 
 Features:
@@ -51,15 +51,21 @@ Features:
 - [x] Resizing windows
 - [x] Changing selected window with keyboard
 - [x] Moving window with keyboard
-- [ ] Gaps in windows
+- [x] Gaps in windows
 - [ ] Account for minimum sizes on windows (e.g. gedit)
 - [x] Disabling many of the Floating Window Manager features
-- [ ] Handle exclusion zones
-- [ ] Handle output creation, updating, and deletion
+- [x] Handle exclusion zones
+- [x] Handle output creation
+- [x] Handle output updating
+- [ ] Handle output deletion
+- [x] Handle fullscreen
 
-## Tiling Advanced(Due: February 1st)
+## Quality of Life + Bugfixes (Due: February 15th)
 Version: 0.2
 
 Features:
+- [ ] Fix major bugs
+- [ ] Configuration File
+  - [ ] Gap size
 - [ ] Workspaces
   - [ ] Moving windows between workspaces

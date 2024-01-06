@@ -28,6 +28,11 @@ geom::Rectangle Node::get_logical_area()
     return logical_area;
 }
 
+geom::Rectangle Node::get_visible_area_for_node()
+{
+    return get_visible_area(logical_area, gap_x, gap_y);
+}
+
 geom::Rectangle Node::new_node_position(int index)
 {
     if (is_window())
@@ -200,14 +205,10 @@ void Node::set_rectangle(geom::Rectangle target_rect)
 {
     if (is_window())
     {
-        auto visible_rect = get_visible_area(target_rect, gap_x, gap_y);
-        window.move_to(visible_rect.top_left);
-        window.resize(visible_rect.size);
-        auto& window_info = tools.info_for(window);
-        for (auto child : window_info.children())
+        auto& info = tools.info_for(window);
+        if (info.state() != mir_window_state_fullscreen && info.state() != mir_window_state_maximized)
         {
-            child.move_to(visible_rect.top_left);
-            child.resize(visible_rect.size);
+            set_window_rectangle(target_rect);
         }
     }
     else
@@ -531,4 +532,25 @@ int Node::get_min_height()
     }
 
     return min_height;
+}
+
+void Node::restore_rectangle_if_window()
+{
+    if (is_lane())
+        return;
+
+    set_window_rectangle(logical_area);
+}
+
+void Node::set_window_rectangle(geom::Rectangle area)
+{
+    auto visible_rect = get_visible_area(area, gap_x, gap_y);
+    window.move_to(visible_rect.top_left);
+    window.resize(visible_rect.size);
+    auto& window_info = tools.info_for(window);
+    for (auto child : window_info.children())
+    {
+        child.move_to(visible_rect.top_left);
+        child.resize(visible_rect.size);
+    }
 }
