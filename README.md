@@ -79,3 +79,5 @@ Features:
   - [ ] Keybindings
 - [ ] Workspaces
   - [ ] Moving windows between workspaces
+- [ ] Stacking windows
+- [ ] Highlight border around selected window
