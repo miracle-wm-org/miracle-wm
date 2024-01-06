@@ -329,6 +329,21 @@ std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
         }
     }
 
+    for (auto hidden : hidden_nodes)
+    {
+        if (hidden->is_window())
+        {
+            if (hidden->get_window() == window)
+                return hidden;
+        }
+        else
+        {
+            auto node = hidden->find_node_for_window(window);
+            if (node != nullptr)
+                return node;
+        }
+    }
+
     // TODO: Error
     return nullptr;
 }
@@ -468,6 +483,36 @@ std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node>)
             return retval;
 
     return nullptr;
+}
+
+bool Node::restore(std::shared_ptr<Node> &node)
+{
+    for (auto hidden = hidden_nodes.begin(); hidden != hidden_nodes.end(); hidden++)
+    {
+        if (*hidden == node)
+        {
+            insert_node(node, sub_nodes.size());
+            hidden_nodes.erase(hidden);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Node::minimize(std::shared_ptr<Node>& node)
+{
+    for (auto other_node: sub_nodes)
+    {
+        if (node == other_node)
+        {
+            hidden_nodes.push_back(node);
+            remove_node(node);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 int Node::get_min_width()
