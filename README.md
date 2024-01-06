@@ -1,6 +1,6 @@
 > **Warning**: This project is a work in progress. Only use if you are willing to encounter
 > some paper cuts along the way. If you are willing to lend your time to find/fix bugs
-> or submit proposals for new feature, it is greatly appreciated.
+> or submit proposals for new features, it is greatly appreciated.
 
 # About
 **miracle** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
