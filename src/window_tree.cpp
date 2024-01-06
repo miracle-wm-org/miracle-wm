@@ -178,7 +178,7 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto parent = second_window->parent;
+    auto parent = second_window->get_parent();
     if (!parent)
     {
         mir::log_warning("Unable to move active window: second_window has no parent");
@@ -221,7 +221,7 @@ void WindowTree::handle_direction_request(NodeLayoutDirection direction)
         return;
     }
 
-    if (active_window->parent->get_sub_nodes().size() != 1)
+    if (active_window->get_parent()->num_nodes() != 1)
         active_window = active_window->to_lane();
 
     get_active_lane()->set_direction(direction);
@@ -265,18 +265,18 @@ void WindowTree::advise_delete_window(miral::Window& window)
             is_active_window_fullscreen = false;
     }
 
-    auto parent = window_node->parent;
+    auto parent = window_node->get_parent();
     if (!parent)
     {
         mir::log_warning("Unable to delete window: node does not have a parent");
         return;
     }
 
-    if (parent->get_sub_nodes().size() == 1 && parent->parent)
+    if (parent->num_nodes() == 1 && parent->get_parent())
     {
         // Remove the entire lane if this lane is now empty
         auto prev_active = parent;
-        parent = parent->parent;
+        parent = parent->get_parent();
         parent->remove_node(prev_active);
     }
     else
@@ -293,7 +293,7 @@ void WindowTree::advise_resize(miral::WindowInfo const& window_info, geom::Size 
         return;
 
     // TODO: When we fail to match the node size, then we need to resize the node
-//    auto rectangle = found_node->get_visible_area(
+//    auto rectangle = found_node->_get_visible_from_logical(
 //        found_node->get_logical_area(),
 //        found_node->get_gap_x(),
 //        found_node->get_gap_y()
@@ -314,13 +314,13 @@ void WindowTree::advise_resize(miral::WindowInfo const& window_info, geom::Size 
 
 std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction direction)
 {
-    if (!from->parent)
+    if (!from->get_parent())
     {
         mir::log_warning("Cannot traverse the root node");
         return nullptr;
     }
 
-    auto parent = from->parent;
+    auto parent = from->get_parent();
     int index = parent->get_index_of_node(from);
     auto parent_direction = parent->get_direction();
 
@@ -352,7 +352,7 @@ grandparent_route:
         // Harder case: we need to jump to another lane. The best thing to do here is to
         // find the first ancestor that matches the direction that we want to travel in.
         // If  that ancestor cannot be found, then we throw up our hands.
-        auto grandparent = parent->parent;
+        auto grandparent = parent->get_parent();
         if (!grandparent)
         {
             mir::log_warning("Parent lane lacks a grandparent. It should AT LEAST be root");
@@ -373,7 +373,7 @@ grandparent_route:
             }
 
             parent = grandparent;
-            grandparent = grandparent->parent;
+            grandparent = grandparent->get_parent();
         } while (grandparent != nullptr);
     }
 
@@ -386,7 +386,7 @@ std::shared_ptr<Node> WindowTree::get_active_lane()
     if (!active_window)
         return root_lane;
 
-    return active_window->parent;
+    return active_window->get_parent();
 }
 
 void WindowTree::resize_node_in_direction(
@@ -394,7 +394,7 @@ void WindowTree::resize_node_in_direction(
     Direction direction,
     int amount)
 {
-    auto parent = node->parent;
+    auto parent = node->get_parent();
     if (parent == nullptr)
     {
         // Can't resize, most likely the root
@@ -405,7 +405,7 @@ void WindowTree::resize_node_in_direction(
     bool is_main_axis_movement = (is_vertical  && parent->get_direction() == NodeLayoutDirection::vertical)
                                  || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
 
-    if (is_main_axis_movement && parent->get_sub_nodes().size() == 1)
+    if (is_main_axis_movement && parent->num_nodes() == 1)
     {
         // Can't resize if we only have ourselves!
         return;
@@ -562,7 +562,7 @@ bool WindowTree::confirm_placement_on_display(
     if (!node)
         return false;
 
-    auto node_rectangle = node->get_visible_area_for_node();
+    auto node_rectangle = node->get_visible_area();
     switch (new_state)
     {
     case mir_window_state_restored:

@@ -32,11 +32,11 @@ public:
     Node(miral::WindowManagerTools const& tools, geom::Rectangle, int gap_x, int gap_y);
     Node(miral::WindowManagerTools const& tools,geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window, int gap_x, int gap_y);
 
-    /// The rectangle defined by the node can be retrieved dynamically
-    /// by calculating the dimensions of the content in this node
+    /// Area taken up by the node including gaps.
     geom::Rectangle get_logical_area();
 
-    geom::Rectangle get_visible_area_for_node();
+    /// Area taken up by the node minus the gaps
+    geom::Rectangle get_visible_area();
 
     /// Makes room for a new node on the lane.
     geom::Rectangle new_node_position(int index = -1);
@@ -47,6 +47,7 @@ public:
     /// Recalculates the size of the nodes in the lane.
     void redistribute_size();
 
+    /// Updates the node's logical area (including gaps)
     void set_rectangle(geom::Rectangle target_rect);
 
     /// Walk the tree to find the lane that contains this window.
@@ -56,18 +57,9 @@ public:
     /// new Node if the Window was found, otherwise null.
     std::shared_ptr<Node> window_to_node(miral::Window& window);
 
-    bool move_node(int from, int to);
-
+    /// Insert a node at a particular index
     void insert_node(std::shared_ptr<Node> node, int index);
 
-    std::shared_ptr<Node> parent;
-
-    bool is_root() { return parent == nullptr; }
-    bool is_window() { return state == NodeState::window; }
-    bool is_lane() { return state == NodeState::lane; }
-    NodeLayoutDirection get_direction() { return direction; }
-    miral::Window& get_window() { return window; }
-    std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
     void set_direction(NodeLayoutDirection in_direction) { direction = in_direction; }
 
     /// Removes the node from the lane but does NOT recalcualte the size
@@ -77,41 +69,40 @@ public:
     int num_nodes();
     std::shared_ptr<Node> node_at(int i);
 
-    /// Returns the window node from which this as created
     std::shared_ptr<Node> to_lane();
     std::shared_ptr<Node> find_nth_window_child(int i);
 
     void scale_area(double x_scale, double y_scale);
     void translate_by(int x, int y);
 
-    static geom::Rectangle get_visible_area(geom::Rectangle const& logical_area, int gap_x, int gap_y);
-    static geom::Rectangle get_logic_area_from_visible(geom::Rectangle const& visible_area, int gap_x, int gap_y);
     std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node>)> func);
-
-    int get_gap_x() { return gap_x; }
-    int get_gap_y() { return gap_y; }
 
     int get_min_width();
     int get_min_height();
-
-    /// Useful when you want to force a window node to reset its dimensions
-    void restore_rectangle_if_window();
+    bool is_window() { return state == NodeState::window; }
+    bool is_lane() { return state == NodeState::lane; }
+    NodeLayoutDirection get_direction() { return direction; }
+    miral::Window& get_window() { return window; }
+    std::shared_ptr<Node> get_parent() { return parent; }
+    int get_gap_x() { return gap_x; }
+    int get_gap_y() { return gap_y; }
+    std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
 
 private:
+    std::shared_ptr<Node> parent;
     miral::WindowManagerTools tools;
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     NodeState state;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
-
-    /// The logical area includes the empty space filled by the gaps
     geom::Rectangle logical_area;
     int gap_x;
     int gap_y;
-
     int pending_index = -1;
 
-    void set_window_rectangle(geom::Rectangle area);
+    void _set_window_rectangle(geom::Rectangle area);
+    static geom::Rectangle _get_visible_from_logical(geom::Rectangle const& logical_area, int gap_x, int gap_y);
+    static geom::Rectangle _get_logical_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y);
 };
 }
 
