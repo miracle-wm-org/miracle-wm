@@ -1,0 +1,39 @@
+name: Snap
+
+on:
+  push:
+    branches:
+      - master
+  merge_group:
+    types: [checks_requested]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number && format('pr{0}', github.event.number) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Snap:
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for version determination
+
+      - id: build-snap
+        name: Build the snap
+        uses: canonical/actions/build-snap@release
+        with:
+          snapcraft-channel: candidate
+          review-opts: "--allow-classic"
+
+      - name: Store the snap as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build-snap.outputs.snap-name }}
+          path: ${{ steps.build-snap.outputs.snap-path }}
