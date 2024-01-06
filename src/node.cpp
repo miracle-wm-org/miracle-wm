@@ -28,9 +28,9 @@ geom::Rectangle Node::get_logical_area()
     return logical_area;
 }
 
-geom::Rectangle Node::get_visible_area_for_node()
+geom::Rectangle Node::get_visible_area()
 {
-    return get_visible_area(logical_area, gap_x, gap_y);
+    return _get_visible_from_logical(logical_area, gap_x, gap_y);
 }
 
 geom::Rectangle Node::new_node_position(int index)
@@ -60,7 +60,7 @@ geom::Rectangle Node::new_node_position(int index)
                 new_item_width,
                 logical_area.size.height.as_int()
             }};
-        auto new_node_visible_rect = get_visible_area(
+        auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
             gap_x,
             gap_y);
@@ -103,7 +103,7 @@ geom::Rectangle Node::new_node_position(int index)
                 new_item_height
             }};
 
-        auto new_node_visible_rect = get_visible_area(new_node_logical_rect, gap_x, gap_y);
+        auto new_node_visible_rect = _get_visible_from_logical(new_node_logical_rect, gap_x, gap_y);
         int height_to_lose = ceil(new_node_logical_rect.size.height.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node = nullptr;
         for (int i = 0; i < sub_nodes.size(); i++)
@@ -208,7 +208,7 @@ void Node::set_rectangle(geom::Rectangle target_rect)
         auto& info = tools.info_for(window);
         if (info.state() != mir_window_state_fullscreen && info.state() != mir_window_state_maximized)
         {
-            set_window_rectangle(target_rect);
+            _set_window_rectangle(target_rect);
         }
     }
     else
@@ -333,41 +333,11 @@ std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
     return nullptr;
 }
 
-bool Node::move_node(int from, int to) {
-    if (to < 0)
-        return false;
-
-    if (to >= sub_nodes.size())
-        return false;
-
-    if (from < to)
-    {
-        auto moved_node = sub_nodes[from];
-        for (size_t i = from; i < to; i++)
-        {
-            sub_nodes[i] = sub_nodes[i + 1]; // Move the node back 1 place
-        }
-        sub_nodes[to] = moved_node;
-    }
-    else
-    {
-        auto moved_node = sub_nodes[from];
-        for (size_t i = from; i > to; i--)
-        {
-            sub_nodes[i] = sub_nodes[i - 1]; // Move the node back 1 place
-        }
-        sub_nodes[to] = moved_node;
-    }
-
-    redistribute_size();
-    return true;
-}
-
 void Node::insert_node(std::shared_ptr<Node> node, int index)
 {
     auto area_with_gaps = new_node_position(index);
     node->parent = shared_from_this();
-    node->set_rectangle(get_logic_area_from_visible(area_with_gaps, gap_x, gap_y));
+    node->set_rectangle(_get_logical_from_visible(area_with_gaps, gap_x, gap_y));
     sub_nodes.insert(sub_nodes.begin() + index, node);
 }
 
@@ -459,7 +429,7 @@ void Node::translate_by(int x, int y)
     redistribute_size();
 }
 
-geom::Rectangle Node::get_visible_area(geom::Rectangle const& logical_area, int gap_x, int gap_y)
+geom::Rectangle Node::_get_visible_from_logical(geom::Rectangle const& logical_area, int gap_x, int gap_y)
 {
     return {
         geom::Point{
@@ -473,7 +443,7 @@ geom::Rectangle Node::get_visible_area(geom::Rectangle const& logical_area, int 
     };
 }
 
-geom::Rectangle Node::get_logic_area_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y)
+geom::Rectangle Node::_get_logical_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y)
 {
     return {
         geom::Point{
@@ -534,17 +504,9 @@ int Node::get_min_height()
     return min_height;
 }
 
-void Node::restore_rectangle_if_window()
+void Node::_set_window_rectangle(geom::Rectangle area)
 {
-    if (is_lane())
-        return;
-
-    set_window_rectangle(logical_area);
-}
-
-void Node::set_window_rectangle(geom::Rectangle area)
-{
-    auto visible_rect = get_visible_area(area, gap_x, gap_y);
+    auto visible_rect = _get_visible_from_logical(area, gap_x, gap_y);
     window.move_to(visible_rect.top_left);
     window.resize(visible_rect.size);
     auto& window_info = tools.info_for(window);
