@@ -45,6 +45,7 @@ public:
     void advise_output_create(miral::Output const& output);
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);
+    void advise_state_change(miral::WindowInfo const& window_info, MirWindowState state) override;
 
     void handle_modify_window(miral::WindowInfo &window_info, const miral::WindowSpecification &modifications) override;
 

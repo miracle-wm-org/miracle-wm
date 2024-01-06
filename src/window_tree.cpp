@@ -553,6 +553,32 @@ bool WindowTree::handle_window_ready(miral::WindowInfo &window_info)
     return true;
 }
 
+bool WindowTree::advise_state_change(const miral::WindowInfo &window_info, MirWindowState state)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
+
+    switch (state)
+    {
+        case mir_window_state_restored:
+            if (auto parent = node->get_parent())
+            {
+                parent->restore(node);
+            }
+            break;
+        case mir_window_state_hidden:
+        case mir_window_state_minimized:
+            if (auto parent = node->get_parent())
+            {
+                parent->minimize(node);
+            }
+            break;
+    }
+
+    return true;
+}
+
 bool WindowTree::confirm_placement_on_display(
     const miral::WindowInfo &window_info,
     MirWindowState new_state,

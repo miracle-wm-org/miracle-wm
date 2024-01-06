@@ -76,6 +76,8 @@ public:
     void translate_by(int x, int y);
 
     std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node>)> func);
+    bool restore(std::shared_ptr<Node>& node);
+    bool minimize(std::shared_ptr<Node>& node);
 
     int get_min_width();
     int get_min_height();
@@ -93,6 +95,7 @@ private:
     miral::WindowManagerTools tools;
     miral::Window window;
     std::vector<std::shared_ptr<Node>> sub_nodes;
+    std::vector<std::shared_ptr<Node>> hidden_nodes;
     NodeState state;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     geom::Rectangle logical_area;

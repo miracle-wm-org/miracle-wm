@@ -254,6 +254,17 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
     }
 }
 
+void MiracleWindowManagementPolicy::advise_state_change(miral::WindowInfo const& window_info, MirWindowState state)
+{
+    for (auto tree : tree_list)
+    {
+        if (tree->tree.advise_state_change(window_info, state))
+        {
+            break;
+        }
+    }
+}
+
 void MiracleWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
