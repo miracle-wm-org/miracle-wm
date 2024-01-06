@@ -36,6 +36,8 @@ public:
     /// by calculating the dimensions of the content in this node
     geom::Rectangle get_logical_area();
 
+    geom::Rectangle get_visible_area_for_node();
+
     /// Makes room for a new node on the lane.
     geom::Rectangle new_node_position(int index = -1);
 
@@ -92,6 +94,9 @@ public:
     int get_min_width();
     int get_min_height();
 
+    /// Useful when you want to force a window node to reset its dimensions
+    void restore_rectangle_if_window();
+
 private:
     miral::WindowManagerTools tools;
     miral::Window window;
@@ -105,6 +110,8 @@ private:
     int gap_y;
 
     int pending_index = -1;
+
+    void set_window_rectangle(geom::Rectangle area);
 };
 }
 

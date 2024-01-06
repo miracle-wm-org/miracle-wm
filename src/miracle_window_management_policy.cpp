@@ -174,8 +174,11 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
         return;
     }
 
-    if (window_info.can_be_active())
-        window_manager_tools.select_active_window(window_info.window());
+    for (auto tree : tree_list)
+    {
+        if (tree->tree.handle_window_ready(window_info))
+            break;
+    }
 }
 
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
@@ -255,6 +258,24 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
+    if (modifications.state().is_set())
+    {
+        if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
+        {
+            for (auto tree : tree_list)
+                if (tree->tree.advise_fullscreen_window(window_info))
+                    break;
+        }
+        else if (modifications.state().value() == mir_window_state_restored)
+        {
+            for (auto tree : tree_list)
+            {
+                if (tree->tree.advise_restored_window(window_info))
+                    break;
+            }
+        }
+    }
+
     window_manager_tools.modify_window(window_info.window(), modifications);
 }
 
@@ -269,7 +290,15 @@ MiracleWindowManagementPolicy::confirm_placement_on_display(
     MirWindowState new_state,
     const mir::geometry::Rectangle &new_placement)
 {
-    return new_placement;
+    mir::geometry::Rectangle modified_placement = new_placement;
+    for (auto tree : tree_list) {
+
+        if (tree->tree.confirm_placement_on_display(window_info, new_state, modified_placement));
+        {
+            break;
+        }
+    }
+    return modified_placement;
 }
 
 bool MiracleWindowManagementPolicy::handle_touch_event(const MirTouchEvent *event)

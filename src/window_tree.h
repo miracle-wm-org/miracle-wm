@@ -83,6 +83,15 @@ public:
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
 
+    bool advise_fullscreen_window(miral::WindowInfo const&);
+    bool advise_restored_window(miral::WindowInfo const &window_info);
+    bool handle_window_ready(miral::WindowInfo& window_info);
+
+    bool confirm_placement_on_display(
+        const miral::WindowInfo &window_info,
+        MirWindowState new_state,
+        mir::geometry::Rectangle &new_placement);
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
@@ -91,6 +100,7 @@ private:
     geom::Rectangle area;
     bool is_resizing = false;
     std::vector<miral::Zone> application_zone_list;
+    bool is_active_window_fullscreen = false;
 
     std::shared_ptr<Node> get_active_lane();
     void handle_direction_request(NodeLayoutDirection direction);
