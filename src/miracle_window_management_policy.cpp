@@ -23,7 +23,38 @@ const int MODIFIER_MASK =
     mir_input_event_modifier_ctrl |
     mir_input_event_modifier_meta;
 
-const std::string TERMINAL = "konsole";
+// Note: This list was taken from i3: https://github.com/i3/i3/blob/next/i3-sensible-terminal
+// We will want this to be configurable in the future.
+const std::string POSSIBLE_TERMINALS[] = {
+    "x-terminal-emulator",
+    "mate-terminal",
+    "gnome-terminal",
+    "terminator",
+    "xfce4-terminal",
+    "urxvt", "rxvt",
+    "termit",
+    "Eterm",
+    "aterm",
+    "uxterm",
+    "xterm",
+    "roxterm",
+    "termite",
+    "lxterminal",
+    "terminology",
+    "st",
+    "qterminal",
+    "lilyterm",
+    "tilix",
+    "terminix",
+    "konsole",
+    "kitty",
+    "guake",
+    "tilda",
+    "alacritty",
+    "hyper",
+    "wezterm",
+    "rio"
+};
 
 template <typename T>
 bool is_tileable(T& requested_specification)
@@ -53,11 +84,15 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_alt))
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_meta))
     {
         if (scan_code == KEY_ENTER)
         {
-            external_client_launcher.launch({TERMINAL});
+            for (auto terminal : POSSIBLE_TERMINALS)
+            {
+                if (external_client_launcher.launch({terminal}) > 0)
+                    break;
+            }
             return true;
         }
         else if (scan_code == KEY_V)
