@@ -4,11 +4,8 @@
 
 # About
 **miracle** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
-will be very sway/i3-like for the first iteration, but will diverge in some important. See the [timeline](#timeline)
+are very sway/i3-like, but will diverge in some important ways in the future. See the [timeline](#timeline)
 section below for the current status and direction.
-
-The ultimate goal of this work is to build an entire desktop environment on top of this window manager, but that will remain a
-concern for a different repository with a different timeline.
 
 ![miracle in action](./resources/screenshot1.png "miracle in action")
 ![miracle in action](./resources/screenshot2.png "miracle in action")
