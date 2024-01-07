@@ -1,6 +1,7 @@
 #define MIR_LOG_COMPONENT "window_tree"
 
 #include "window_tree.h"
+#include "window_helpers.h"
 #include <memory>
 #include <mir/log.h>
 #include <iostream>
@@ -33,6 +34,11 @@ WindowTree::WindowTree(
 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
+    if (requested_specification.state().is_set() && window_helpers::is_window_fullscreen(requested_specification.state().value()))
+    {
+        return requested_specification;
+    }
+
     miral::WindowSpecification new_spec = requested_specification;
     auto rect = get_active_lane()->new_node_position();
     new_spec.size() = rect.size;
@@ -47,6 +53,11 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
     get_active_lane()->add_window(window_info.window());
+    if (window_helpers::is_window_fullscreen(window_info.state()))
+    {
+        tools.select_active_window(window_info.window());
+        advise_fullscreen_window(window_info);
+    }
 }
 
 void WindowTree::toggle_resize_mode()

@@ -1,4 +1,5 @@
 #include "node.h"
+#include "window_helpers.h"
 #include <cmath>
 #include <iostream>
 
@@ -136,6 +137,7 @@ void Node::add_window(miral::Window& new_window)
     if (pending_index < 0)
         pending_index = sub_nodes.size();
 
+    auto state = tools.info_for(new_window).state();
     geom::Rectangle new_logical_area = {
         geom::Point{
             new_window.top_left().x.as_int() - gap_x,
@@ -206,7 +208,7 @@ void Node::set_rectangle(geom::Rectangle target_rect)
     if (is_window())
     {
         auto& info = tools.info_for(window);
-        if (info.state() != mir_window_state_fullscreen && info.state() != mir_window_state_maximized)
+        if (!window_helpers::is_window_fullscreen(info.state()))
         {
             _set_window_rectangle(target_rect);
         }
