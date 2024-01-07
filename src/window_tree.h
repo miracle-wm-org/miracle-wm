@@ -93,6 +93,9 @@ public:
         MirWindowState new_state,
         mir::geometry::Rectangle &new_placement);
 
+    /// Constrains the window to its tile if it is in this tree.
+    bool constrain(miral::WindowInfo& window_info);
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;

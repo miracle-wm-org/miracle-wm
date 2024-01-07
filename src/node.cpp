@@ -519,36 +519,12 @@ bool Node::minimize(std::shared_ptr<Node>& node)
 
 int Node::get_min_width()
 {
-    if (is_window())
-    {
-        miral::WindowInfo& info = tools.info_for(window);
-        return info.min_width().as_int();
-    }
-
-    int min_width = 50;
-    for (auto node : sub_nodes)
-    {
-        min_width = std::max(node->get_min_width(), min_width);
-    }
-
-    return min_width;
+    return 50;
 }
 
 int Node::get_min_height()
 {
-    if (is_window())
-    {
-        miral::WindowInfo& info = tools.info_for(window);
-        return info.min_height().as_int();
-    }
-
-    int min_height = 50;
-    for (auto node : sub_nodes)
-    {
-        min_height = std::max(node->get_min_height(), min_height);
-    }
-
-    return min_height;
+    return 50;
 }
 
 void Node::_set_window_rectangle(geom::Rectangle area)
@@ -561,5 +537,23 @@ void Node::_set_window_rectangle(geom::Rectangle area)
     {
         child.move_to(visible_rect.top_left);
         child.resize(visible_rect.size);
+    }
+}
+
+void Node::constrain()
+{
+    if (is_window())
+    {
+        auto& info = tools.info_for(window);
+        if (window_helpers::is_window_fullscreen(info.state()))
+            info.clip_area(mir::optional_value<geom::Rectangle>());
+        else
+            info.clip_area(get_visible_area());
+        return;
+    }
+
+    for (auto node : sub_nodes)
+    {
+        node->constrain();
     }
 }
