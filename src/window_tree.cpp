@@ -34,19 +34,19 @@ WindowTree::WindowTree(
 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
-    if (requested_specification.state().is_set() && window_helpers::is_window_fullscreen(requested_specification.state().value()))
-    {
-        return requested_specification;
-    }
-
     miral::WindowSpecification new_spec = requested_specification;
-    auto rect = get_active_lane()->new_node_position();
-    new_spec.size() = rect.size;
-    new_spec.top_left() = rect.top_left;
     new_spec.min_width() = geom::Width{0};
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
     new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
+    if (requested_specification.state().is_set() && window_helpers::is_window_fullscreen(requested_specification.state().value()))
+    {
+        return new_spec;
+    }
+
+    auto rect = get_active_lane()->new_node_position();
+    new_spec.size() = rect.size;
+    new_spec.top_left() = rect.top_left;
     return new_spec;
 }
 
@@ -609,5 +609,21 @@ bool WindowTree::confirm_placement_on_display(
         break;
     }
 
+    return true;
+}
+
+bool WindowTree::constrain(miral::WindowInfo &window_info)
+{
+    auto node = root_lane->find_node_for_window(window_info.window());
+    if (!node)
+        return false;
+
+    if (!node->get_parent())
+    {
+        std::cerr << "Unable to constrain node without parent\n";
+        return true;
+    }
+
+    node->get_parent()->constrain();
     return true;
 }

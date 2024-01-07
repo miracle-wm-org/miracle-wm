@@ -1,6 +1,7 @@
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "miracle_window_management_policy.h"
+#include "window_helpers.h"
 
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
@@ -84,7 +85,7 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_alt))
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_meta))
     {
         if (scan_code == KEY_ENTER)
         {
@@ -212,7 +213,10 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
     for (auto tree : tree_list)
     {
         if (tree->tree.handle_window_ready(window_info))
+        {
+            tree->tree.constrain(window_info);
             break;
+        }
     }
 }
 
@@ -304,6 +308,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
+    auto new_mods = modifications;
     if (modifications.state().is_set())
     {
         if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
@@ -322,7 +327,13 @@ void MiracleWindowManagementPolicy::handle_modify_window(
         }
     }
 
-    window_manager_tools.modify_window(window_info.window(), modifications);
+    window_manager_tools.modify_window(window_info.window(), new_mods);
+
+    for (auto tree :tree_list)
+    {
+        if (tree->tree.constrain(window_info))
+            break;
+    }
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)

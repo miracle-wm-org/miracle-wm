@@ -89,6 +89,7 @@ public:
     int get_gap_x() { return gap_x; }
     int get_gap_y() { return gap_y; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
+    void constrain();
 
 private:
     std::shared_ptr<Node> parent;
