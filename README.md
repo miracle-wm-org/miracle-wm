@@ -49,6 +49,8 @@ Note that this is only useful if you want to test-drive the window manager or do
 See the [user guide](USERGUIDE.md) for information on how to use the miracle window manager.
 
 # Timeline
+The goal is to have a tiling manager that I am comfortable daily-driving by summer of 2024.
+
 **Proof of Concept (Due: January 15th)** Version: 0.1
 
 Features:
@@ -58,7 +60,7 @@ Features:
 - [x] Changing selected window with keyboard
 - [x] Moving window with keyboard
 - [x] Gaps in windows
-- [ ] Account for minimum sizes on windows (e.g. gedit)
+- [x] Account for minimum sizes on windows (e.g. gedit)
 - [x] Disabling many of the Floating Window Manager features
 - [x] Handle exclusion zones
 - [x] Handle output creation
@@ -66,7 +68,7 @@ Features:
 - [ ] Handle output deletion
 - [x] Handle fullscreen
 
-**Quality of Life + Bugfixes (Due: February 15th)** Version: 0.2
+**Stabilization + Usability (Due: March 1st)** Version: 0.2
 
 Features:
 - [ ] Fix major bugs
