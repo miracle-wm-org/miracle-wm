@@ -65,12 +65,18 @@ geom::Rectangle Node::new_node_position(int index)
             gap_x,
             gap_y);
 
-        int width_to_lose = ceil(new_node_logical_rect.size.width.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node = nullptr;
         for (int i = 0; i < sub_nodes.size(); i++)
         {
             auto node = sub_nodes[i];
             auto node_logical_area = node->get_logical_area();
+
+            // Each node will lose a percentage of its width that corresponds to what it can give
+            // (meaning that larger nodes give more width, and lesser nodes give less width)
+            auto width_to_lose = ceil(
+                (node_logical_area.size.width.as_int() / (float)logical_area.size.width.as_int())
+                * new_item_width);
+
             node_logical_area.size.width = geom::Width{node_logical_area.size.width.as_int() - width_to_lose};
 
             if (prev_node)
@@ -104,12 +110,18 @@ geom::Rectangle Node::new_node_position(int index)
             }};
 
         auto new_node_visible_rect = _get_visible_from_logical(new_node_logical_rect, gap_x, gap_y);
-        int height_to_lose = ceil(new_node_logical_rect.size.height.as_int() / static_cast<float>(sub_nodes.size()));
         std::shared_ptr<Node> prev_node = nullptr;
         for (int i = 0; i < sub_nodes.size(); i++)
         {
             auto node = sub_nodes[i];
             auto node_logical_area = node->get_logical_area();
+
+            // Each node will lose a percentage of its width that corresponds to what it can give
+            // (meaning that larger nodes give more width, and lesser nodes give less width)
+            auto height_to_lose = ceil(
+                (node_logical_area.size.height.as_int()  / (float)logical_area.size.height.as_int())
+                * new_item_height);
+
             node_logical_area.size.height = geom::Height {node_logical_area.size.height.as_int() - height_to_lose};
 
             if (prev_node)
