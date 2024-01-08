@@ -8,17 +8,17 @@ using namespace miracle;
 Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, int gap_x, int gap_y)
     : tools{tools},
       state{NodeState::lane},
-      logical_area{area},
+      logical_area{std::move(area)},
       gap_x{gap_x},
       gap_y{gap_y}
 {}
 
-Node::Node(miral::WindowManagerTools const& tools,geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, int gap_x, int gap_y)
+Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, int gap_x, int gap_y)
     : tools{tools},
-      parent{parent},
+      parent{std::move(parent)},
       window{window},
       state{NodeState::window},
-      logical_area{area},
+      logical_area{std::move(area)},
       gap_x{gap_x},
       gap_y{gap_y}
 {
@@ -43,17 +43,17 @@ geom::Rectangle Node::new_node_position(int index)
     }
 
     if (index < 0)
-        index = sub_nodes.size();
+        index = (int)sub_nodes.size();
 
     pending_index = index;
 
     // TODO: Can we do something better here? The copy-paste is unfortunate
     if (direction == NodeLayoutDirection::horizontal)
     {
-        auto new_item_width = logical_area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
+        float new_item_width = (float)logical_area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
-                logical_area.top_left.x.as_int() + (index * new_item_width),
+                (float)logical_area.top_left.x.as_int() + ((float)index * new_item_width),
                 logical_area.top_left.y.as_int()
             },
             geom::Size{
@@ -73,8 +73,8 @@ geom::Rectangle Node::new_node_position(int index)
 
             // Each node will lose a percentage of its width that corresponds to what it can give
             // (meaning that larger nodes give more width, and lesser nodes give less width)
-            auto width_to_lose = ceil(
-                (node_logical_area.size.width.as_int() / (float)logical_area.size.width.as_int())
+            int width_to_lose = (int)ceilf(
+                ((float)node_logical_area.size.width.as_int() / (float)logical_area.size.width.as_int())
                 * new_item_width);
 
             node_logical_area.size.width = geom::Width{node_logical_area.size.width.as_int() - width_to_lose};
@@ -118,8 +118,8 @@ geom::Rectangle Node::new_node_position(int index)
 
             // Each node will lose a percentage of its width that corresponds to what it can give
             // (meaning that larger nodes give more width, and lesser nodes give less width)
-            auto height_to_lose = ceil(
-                (node_logical_area.size.height.as_int()  / (float)logical_area.size.height.as_int())
+            auto height_to_lose = ceilf(
+                ((float)node_logical_area.size.height.as_int()  / (float)logical_area.size.height.as_int())
                 * new_item_height);
 
             node_logical_area.size.height = geom::Height {node_logical_area.size.height.as_int() - height_to_lose};
@@ -146,9 +146,8 @@ geom::Rectangle Node::new_node_position(int index)
 void Node::add_window(miral::Window& new_window)
 {
     if (pending_index < 0)
-        pending_index = sub_nodes.size();
+        pending_index = (int)sub_nodes.size();
 
-    auto state = tools.info_for(new_window).state();
     geom::Rectangle new_logical_area = {
         geom::Point{
             new_window.top_left().x.as_int() - gap_x,
@@ -162,7 +161,7 @@ void Node::add_window(miral::Window& new_window)
 
     auto node = std::make_shared<Node>(
         tools,
-        new_logical_area,
+        std::move(new_logical_area),
         shared_from_this(),
         new_window,
         gap_x,
@@ -177,14 +176,14 @@ void Node::redistribute_size()
     if (direction == NodeLayoutDirection::horizontal)
     {
         int total_width = 0;
-        for (auto node : sub_nodes)
+        for (auto const& node : sub_nodes)
         {
             total_width += node->get_logical_area().size.width.as_int();
         }
 
         float diff_width = logical_area.size.width.as_value() - total_width;
         int diff_per_node = diff_width / sub_nodes.size();
-        for (auto node : sub_nodes)
+        for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width{rectangle.size.width.as_int() + diff_per_node};
@@ -195,14 +194,14 @@ void Node::redistribute_size()
     else
     {
         int total_height = 0;
-        for (auto node : sub_nodes)
+        for (auto const& node : sub_nodes)
         {
             total_height += node->get_logical_area().size.height.as_int();
         }
 
         float diff_width = logical_area.size.height.as_value() - total_height;
         int diff_per_node = diff_width / sub_nodes.size();
-        for (auto node : sub_nodes)
+        for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width {logical_area.size.width};
@@ -214,7 +213,7 @@ void Node::redistribute_size()
     set_rectangle(logical_area);
 }
 
-void Node::set_rectangle(geom::Rectangle target_rect)
+void Node::set_rectangle(geom::Rectangle const& target_rect)
 {
     if (is_window())
     {
@@ -237,8 +236,8 @@ void Node::set_rectangle(geom::Rectangle target_rect)
             {
                 auto item = sub_nodes[idx];
                 auto item_rect = item->get_logical_area();
-                float percent_width_taken = static_cast<float>(item_rect.size.width.as_int()) / logical_area.size.width.as_int();
-                int new_width = ceil(target_rect.size.width.as_int() * percent_width_taken);
+                float percent_width_taken = (float)item_rect.size.width.as_int() / (float)logical_area.size.width.as_int();
+                int new_width = (int)ceilf((float)target_rect.size.width.as_int() * percent_width_taken);
 
                 geom::Rectangle new_item_rect;
                 new_item_rect.size = geom::Size{
@@ -271,7 +270,7 @@ void Node::set_rectangle(geom::Rectangle target_rect)
                 auto item = sub_nodes[idx];
                 auto item_rect = item->get_logical_area();
                 float percent_height_taken = static_cast<float>(item_rect.size.height.as_int()) / logical_area.size.height.as_int();
-                int new_height = floor(target_rect.size.height.as_int() * percent_height_taken);
+                int new_height = (int)floorf((float)target_rect.size.height.as_int() * percent_height_taken);
 
                 geom::Rectangle new_item_rect;
                 new_item_rect.size = geom::Size{
@@ -316,7 +315,7 @@ std::shared_ptr<Node> Node::to_lane()
 
     auto seed_node = std::make_shared<Node>(
         tools,
-        logical_area,
+        std::move(logical_area),
         shared_from_this(),
         window,
         gap_x,
@@ -361,7 +360,7 @@ std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
     return nullptr;
 }
 
-void Node::insert_node(std::shared_ptr<Node> node, int index)
+void Node::insert_node(std::shared_ptr<Node> const& node, int index)
 {
     auto area_with_gaps = new_node_position(index);
     node->parent = shared_from_this();
@@ -371,7 +370,7 @@ void Node::insert_node(std::shared_ptr<Node> node, int index)
     constrain();
 }
 
-void Node::swap_nodes(std::shared_ptr<Node> first, std::shared_ptr<Node> second)
+void Node::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> const& second)
 {
     auto first_index = get_index_of_node(first);
     auto second_index = get_index_of_node(second);
@@ -412,7 +411,7 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
     constrain();
 }
 
-int Node::get_index_of_node(std::shared_ptr<Node> node)
+int Node::get_index_of_node(std::shared_ptr<Node> const& node)
 {
     for (int i = 0; i < sub_nodes.size(); i++)
         if (sub_nodes[i] == node)
@@ -451,7 +450,7 @@ void Node::scale_area(double x_scale, double y_scale)
     logical_area.size.width = geom::Width{ceil(x_scale * logical_area.size.width.as_int())};
     logical_area.size.height = geom::Height {ceil(y_scale * logical_area.size.height.as_int())};
 
-    for (auto node : sub_nodes)
+    for (auto const& node : sub_nodes)
     {
         node->scale_area(x_scale, y_scale);
     }
@@ -464,7 +463,7 @@ void Node::translate_by(int x, int y)
 {
     logical_area.top_left.x = geom::X{logical_area.top_left.x.as_int() + x};
     logical_area.top_left.y = geom::Y{logical_area.top_left.y.as_int() + y};
-    for (auto node : sub_nodes)
+    for (auto const& node : sub_nodes)
     {
         node->translate_by(x, y);
     }
@@ -501,13 +500,13 @@ geom::Rectangle Node::_get_logical_from_visible(const geom::Rectangle &visible_a
     };
 }
 
-std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node>)> func)
+std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node> const&)> func)
 {
     for (auto node : sub_nodes)
         if (func(node))
             return node;
 
-    for (auto node : sub_nodes)
+    for (auto const& node : sub_nodes)
         if (auto retval = node->find_where(func))
             return retval;
 
@@ -531,7 +530,7 @@ bool Node::restore(std::shared_ptr<Node> &node)
 
 bool Node::minimize(std::shared_ptr<Node>& node)
 {
-    for (auto other_node: sub_nodes)
+    for (auto const& other_node: sub_nodes)
     {
         if (node == other_node)
         {
@@ -579,7 +578,7 @@ void Node::constrain()
         return;
     }
 
-    for (auto node : sub_nodes)
+    for (auto const& node : sub_nodes)
     {
         node->constrain();
     }

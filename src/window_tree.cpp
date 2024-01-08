@@ -19,12 +19,12 @@ bool point_in_rect(geom::Rectangle const& area, int x, int y)
 }
 
 WindowTree::WindowTree(
-    geom::Rectangle default_area,
+    geom::Rectangle const& default_area,
     miral::WindowManagerTools const& tools,
     WindowTreeOptions const& options)
     : root_lane{std::make_shared<Node>(
         tools,
-        geom::Rectangle{default_area.top_left, default_area.size},
+        std::move(geom::Rectangle{default_area.top_left, default_area.size}),
         options.gap_x, options.gap_y)},
       tools{tools},
       area{default_area},
@@ -121,7 +121,7 @@ bool WindowTree::try_select_next(miracle::Direction direction)
     return true;
 }
 
-void WindowTree::set_output_area(geom::Rectangle new_area)
+void WindowTree::set_output_area(geom::Rectangle const& new_area)
 {
     double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
     double y_scale = static_cast<double>(new_area.size.height.as_int()) / static_cast<double>(area.size.height.as_int());
@@ -150,7 +150,7 @@ bool WindowTree::select_window_from_point(int x, int y)
         return true;
     }
 
-    auto node = root_lane->find_where([&](std::shared_ptr<Node> node)
+    auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
     {
         return node->is_window() && point_in_rect(node->get_logical_area(), x, y);
     });
@@ -306,33 +306,7 @@ void WindowTree::advise_delete_window(miral::Window& window)
     }
 }
 
-void WindowTree::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
-{
-    auto found_node = root_lane->find_node_for_window(window_info.window());
-    if (!found_node)
-        return;
-
-    // TODO: When we fail to match the node size, then we need to resize the node
-//    auto rectangle = found_node->_get_visible_from_logical(
-//        found_node->get_logical_area(),
-//        found_node->get_gap_x(),
-//        found_node->get_gap_y()
-//    );
-//
-//    int width_diff = (new_size.width - rectangle.size.width).as_int();
-//    if (width_diff > 0)
-//        resize_node_in_direction(found_node, Direction::right, width_diff);
-//    else if (width_diff < 0)
-//        resize_node_in_direction(found_node, Direction::left, -width_diff);
-//
-//    int height_diff = (new_size.height - rectangle.size.height).as_int();
-//    if (height_diff < 0)
-//        resize_node_in_direction(found_node, Direction::down, height_diff);
-//    else if (height_diff > 0)
-//        resize_node_in_direction(found_node, Direction::up, height_diff);
-}
-
-std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node> from, Direction direction)
+std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node>const& from, Direction direction)
 {
     if (!from->get_parent())
     {
@@ -410,7 +384,7 @@ std::shared_ptr<Node> WindowTree::get_active_lane()
 }
 
 void WindowTree::resize_node_in_direction(
-    std::shared_ptr<Node> node,
+    std::shared_ptr<Node> const& node,
     Direction direction,
     int amount)
 {
@@ -443,7 +417,7 @@ void WindowTree::resize_node_in_direction(
     std::vector<geom::Rectangle> pending_node_resizes;
     if (is_vertical)
     {
-        int height_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        int height_for_others = (int)floorf32(-(float)resize_amount / static_cast<float>(nodes.size() - 1));
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
@@ -470,7 +444,7 @@ void WindowTree::resize_node_in_direction(
     }
     else
     {
-        int width_for_others = floor(-resize_amount / static_cast<float>(nodes.size() - 1));
+        int width_for_others = (int)floorf((float)-resize_amount / static_cast<float>(nodes.size() - 1));
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
@@ -521,8 +495,10 @@ void WindowTree::advise_application_zone_update(miral::Zone const& updated, mira
 
 void WindowTree::advise_application_zone_delete(miral::Zone const& application_zone)
 {
-    std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone);
-    recalculate_root_node_area();
+    if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
+    {
+        recalculate_root_node_area();
+    }
 }
 
 void WindowTree::recalculate_root_node_area()
@@ -596,6 +572,8 @@ bool WindowTree::advise_state_change(const miral::WindowInfo &window_info, MirWi
                 parent->minimize(node);
             }
             break;
+        default:
+            break;
     }
 
     return true;
@@ -615,6 +593,8 @@ bool WindowTree::confirm_placement_on_display(
     {
     case mir_window_state_restored:
         new_placement = node_rectangle;
+        break;
+    default:
         break;
     }
 

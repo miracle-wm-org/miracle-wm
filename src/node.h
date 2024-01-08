@@ -48,7 +48,7 @@ public:
     void redistribute_size();
 
     /// Updates the node's logical area (including gaps)
-    void set_rectangle(geom::Rectangle target_rect);
+    void set_rectangle(geom::Rectangle const& target_rect);
 
     /// Walk the tree to find the lane that contains this window.
     std::shared_ptr<Node> find_node_for_window(miral::Window& window);
@@ -58,17 +58,17 @@ public:
     std::shared_ptr<Node> window_to_node(miral::Window& window);
 
     /// Insert a node at a particular index
-    void insert_node(std::shared_ptr<Node> node, int index);
+    void insert_node(std::shared_ptr<Node> const& node, int index);
 
     /// Swap the position of two nodes in the lane
-    void swap_nodes(std::shared_ptr<Node> first, std::shared_ptr<Node> second);
+    void swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> const& second);
 
     void set_direction(NodeLayoutDirection in_direction) { direction = in_direction; }
 
     /// Removes the node from the lane but does NOT recalcualte the size
     void remove_node(std::shared_ptr<Node> const& node);
 
-    int get_index_of_node(std::shared_ptr<Node>);
+    int get_index_of_node(std::shared_ptr<Node> const&);
     int num_nodes();
     std::shared_ptr<Node> node_at(int i);
 
@@ -78,7 +78,7 @@ public:
     void scale_area(double x_scale, double y_scale);
     void translate_by(int x, int y);
 
-    std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node>)> func);
+    std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node> const&)> func);
     bool restore(std::shared_ptr<Node>& node);
     bool minimize(std::shared_ptr<Node>& node);
 
@@ -89,8 +89,6 @@ public:
     NodeLayoutDirection get_direction() { return direction; }
     miral::Window& get_window() { return window; }
     std::shared_ptr<Node> get_parent() { return parent; }
-    int get_gap_x() { return gap_x; }
-    int get_gap_y() { return gap_y; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
     void constrain();
 
