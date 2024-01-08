@@ -85,7 +85,7 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_meta))
+    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_alt))
     {
         if (scan_code == KEY_ENTER)
         {
@@ -213,10 +213,7 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
     for (auto tree : tree_list)
     {
         if (tree->tree.handle_window_ready(window_info))
-        {
-            tree->tree.constrain(window_info);
             break;
-        }
     }
 }
 
@@ -327,13 +324,13 @@ void MiracleWindowManagementPolicy::handle_modify_window(
         }
     }
 
-    window_manager_tools.modify_window(window_info.window(), new_mods);
-
     for (auto tree :tree_list)
     {
         if (tree->tree.constrain(window_info))
             break;
     }
+
+    window_manager_tools.modify_window(window_info.window(), new_mods);
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)

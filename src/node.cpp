@@ -38,7 +38,6 @@ geom::Rectangle Node::new_node_position(int index)
 {
     if (is_window())
     {
-        // TODO: Error
         std::cerr << "Cannot create a new node position on a window node\n";
         return {};
     }
@@ -356,6 +355,18 @@ void Node::insert_node(std::shared_ptr<Node> node, int index)
     node->parent = shared_from_this();
     node->set_rectangle(_get_logical_from_visible(area_with_gaps, gap_x, gap_y));
     sub_nodes.insert(sub_nodes.begin() + index, node);
+    redistribute_size();
+    constrain();
+}
+
+void Node::swap_nodes(std::shared_ptr<Node> first, std::shared_ptr<Node> second)
+{
+    auto first_index = get_index_of_node(first);
+    auto second_index = get_index_of_node(second);
+    sub_nodes[second_index] = first;
+    sub_nodes[first_index] = second;
+    set_rectangle(get_logical_area());
+    constrain();
 }
 
 void Node::remove_node(std::shared_ptr<Node> const& node)
@@ -386,6 +397,7 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
     }
 
     redistribute_size();
+    constrain();
 }
 
 int Node::get_index_of_node(std::shared_ptr<Node> node)
@@ -433,6 +445,7 @@ void Node::scale_area(double x_scale, double y_scale)
     }
 
     redistribute_size();
+    constrain();
 }
 
 void Node::translate_by(int x, int y)
@@ -443,7 +456,9 @@ void Node::translate_by(int x, int y)
     {
         node->translate_by(x, y);
     }
+
     redistribute_size();
+    constrain();
 }
 
 geom::Rectangle Node::_get_visible_from_logical(geom::Rectangle const& logical_area, int gap_x, int gap_y)
