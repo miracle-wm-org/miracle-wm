@@ -34,7 +34,7 @@ struct WindowTreeOptions
 class WindowTree
 {
 public:
-    WindowTree(geom::Rectangle area, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
+    WindowTree(geom::Rectangle const& area, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
     ~WindowTree() = default;
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
@@ -70,10 +70,8 @@ public:
     /// Called when the window was deleted.
     void advise_delete_window(miral::Window&);
 
-    void advise_resize(miral::WindowInfo const&, geom::Size const&);
-
     /// Called when the physical display is resized.
-    void set_output_area(geom::Rectangle new_area);
+    void set_output_area(geom::Rectangle const& new_area);
 
     bool point_is_in_output(int x, int y);
 
@@ -108,10 +106,10 @@ private:
 
     std::shared_ptr<Node> get_active_lane();
     void handle_direction_request(NodeLayoutDirection direction);
-    void resize_node_in_direction(std::shared_ptr<Node> node, Direction direction, int amount);
+    void resize_node_in_direction(std::shared_ptr<Node> const& node, Direction direction, int amount);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    std::shared_ptr<Node> traverse(std::shared_ptr<Node> from, Direction direction);
+    static std::shared_ptr<Node> traverse(std::shared_ptr<Node> const& from, Direction direction);
     void recalculate_root_node_area();
 };
 
