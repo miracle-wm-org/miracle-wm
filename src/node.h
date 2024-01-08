@@ -60,6 +60,9 @@ public:
     /// Insert a node at a particular index
     void insert_node(std::shared_ptr<Node> node, int index);
 
+    /// Swap the position of two nodes in the lane
+    void swap_nodes(std::shared_ptr<Node> first, std::shared_ptr<Node> second);
+
     void set_direction(NodeLayoutDirection in_direction) { direction = in_direction; }
 
     /// Removes the node from the lane but does NOT recalcualte the size

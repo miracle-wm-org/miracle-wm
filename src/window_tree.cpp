@@ -189,18 +189,25 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto parent = second_window->get_parent();
-    if (!parent)
+    auto second_parent = second_window->get_parent();
+    if (!second_parent)
     {
-        mir::log_warning("Unable to move active window: second_window has no parent");
+        mir::log_warning("Unable to move active window: second_window has no second_parent");
         return false;
     }
 
-    auto node_to_move = active_window;
-    auto insertion_index = parent->get_index_of_node(second_window);
-    advise_delete_window(node_to_move->get_window());
-    parent->insert_node(node_to_move, insertion_index);
-    tools.select_active_window(node_to_move->get_window());
+    auto first_parent = active_window->get_parent();
+    if (first_parent == second_parent)
+    {
+        first_parent->swap_nodes(active_window, second_window);
+    }
+    else
+    {
+        auto index = second_parent->get_index_of_node(second_window);
+        auto moving_node = active_window;
+        first_parent->remove_node(moving_node);
+        second_parent->insert_node(moving_node, index + 1);
+    }
     return true;
 }
 
@@ -563,6 +570,8 @@ bool WindowTree::handle_window_ready(miral::WindowInfo &window_info)
 
     if (window_info.can_be_active())
         tools.select_active_window(window_info.window());
+
+    constrain(window_info);
     return true;
 }
 
