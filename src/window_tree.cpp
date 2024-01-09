@@ -39,14 +39,15 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
     new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
-    if (requested_specification.state().is_set() && window_helpers::is_window_fullscreen(requested_specification.state().value()))
-    {
-        return new_spec;
-    }
-
     auto rect = get_active_lane()->create_new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
+
+    if (new_spec.state().is_set() && window_helpers::is_window_fullscreen(new_spec.state().value()))
+    {
+        // Don't start anyone in fullscreen mode
+        new_spec.state() = mir::optional_value<MirWindowState>();
+    }
     return new_spec;
 }
 
