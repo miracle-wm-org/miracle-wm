@@ -39,23 +39,23 @@ public:
     geom::Rectangle get_visible_area();
 
     /// Makes room for a new node on the lane.
-    geom::Rectangle new_node_position(int index = -1);
+    geom::Rectangle create_new_node_position(int index = -1);
 
     /// Append the node to the lane
     void add_window(miral::Window&);
 
-    /// Recalculates the size of the nodes in the lane.
-    void redistribute_size();
-
     /// Updates the node's logical area (including gaps)
-    void set_rectangle(geom::Rectangle const& target_rect);
+    void set_logical_area(geom::Rectangle const& target_rect);
+
+    // Scales the logical area by the provided amount
+    void scale_area(double x_scale, double y_scale);
+
+    // Translates the logical area by the provided amount
+    void translate_by(int x, int y);
 
     /// Walk the tree to find the lane that contains this window.
+    /// @returns The node if it is found, otherwise false
     std::shared_ptr<Node> find_node_for_window(miral::Window& window);
-
-    /// Transform the window  in the list to a Node. Returns the
-    /// new Node if the Window was found, otherwise null.
-    std::shared_ptr<Node> window_to_node(miral::Window& window);
 
     /// Insert a node at a particular index
     void insert_node(std::shared_ptr<Node> const& node, int index);
@@ -68,29 +68,30 @@ public:
     /// Removes the node from the lane but does NOT recalcualte the size
     void remove_node(std::shared_ptr<Node> const& node);
 
-    int get_index_of_node(std::shared_ptr<Node> const&);
-    int num_nodes();
-    std::shared_ptr<Node> node_at(int i);
-
+    /// Transform the window to a lane if it isn't already
     std::shared_ptr<Node> to_lane();
-    std::shared_ptr<Node> find_nth_window_child(int i);
 
-    void scale_area(double x_scale, double y_scale);
-    void translate_by(int x, int y);
-
-    std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node> const&)> func);
     bool restore(std::shared_ptr<Node>& node);
     bool minimize(std::shared_ptr<Node>& node);
 
-    int get_min_width();
-    int get_min_height();
-    bool is_window() { return state == NodeState::window; }
-    bool is_lane() { return state == NodeState::lane; }
-    NodeLayoutDirection get_direction() { return direction; }
-    miral::Window& get_window() { return window; }
-    std::shared_ptr<Node> get_parent() { return parent; }
-    std::vector<std::shared_ptr<Node>> const& get_sub_nodes() { return sub_nodes; }
+    /// Constrains all nodes in this subtree to the size of their logical area
     void constrain();
+
+    /* Getters below here */
+
+    std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node> const&)> func) const;
+    int get_index_of_node(std::shared_ptr<Node> const&) const;
+    int num_nodes() const;
+    std::shared_ptr<Node> node_at(int i) const;
+    std::shared_ptr<Node> find_nth_window_child(int i) const;
+    int get_min_width() const;
+    int get_min_height() const;
+    bool is_window() const { return state == NodeState::window; }
+    bool is_lane() const { return state == NodeState::lane; }
+    NodeLayoutDirection get_direction() const { return direction; }
+    miral::Window const& get_window() const { return window; }
+    std::shared_ptr<Node> get_parent() const { return parent; }
+    std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
 
 private:
     std::shared_ptr<Node> parent;
@@ -108,6 +109,8 @@ private:
     void _set_window_rectangle(geom::Rectangle area);
     static geom::Rectangle _get_visible_from_logical(geom::Rectangle const& logical_area, int gap_x, int gap_y);
     static geom::Rectangle _get_logical_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y);
+    /// Recalculates the size of the nodes in the lane.
+    void _refit_node_to_area();
 };
 }
 

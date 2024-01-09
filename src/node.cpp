@@ -34,7 +34,7 @@ geom::Rectangle Node::get_visible_area()
     return _get_visible_from_logical(logical_area, gap_x, gap_y);
 }
 
-geom::Rectangle Node::new_node_position(int index)
+geom::Rectangle Node::create_new_node_position(int index)
 {
     if (is_window())
     {
@@ -90,7 +90,7 @@ geom::Rectangle Node::new_node_position(int index)
                 node_logical_area.top_left.x = geom::X{node_logical_area.top_left.x.as_int() + new_item_width};
             }
 
-            node->set_rectangle(node_logical_area);
+            node->set_logical_area(node_logical_area);
             prev_node = node;
         }
 
@@ -135,7 +135,7 @@ geom::Rectangle Node::new_node_position(int index)
                 node_logical_area.top_left.y = geom::Y{node_logical_area.top_left.y.as_int() + new_item_height};
             }
 
-            node->set_rectangle(node_logical_area);
+            node->set_logical_area(node_logical_area);
             prev_node = node;
         }
 
@@ -171,7 +171,7 @@ void Node::add_window(miral::Window& new_window)
     pending_index = -1;
 }
 
-void Node::redistribute_size()
+void Node::_refit_node_to_area()
 {
     if (direction == NodeLayoutDirection::horizontal)
     {
@@ -188,7 +188,7 @@ void Node::redistribute_size()
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width{rectangle.size.width.as_int() + diff_per_node};
             rectangle.size.height = geom::Height{logical_area.size.height};
-            node->set_rectangle(rectangle);
+            node->set_logical_area(rectangle);
         }
     }
     else
@@ -206,14 +206,14 @@ void Node::redistribute_size()
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width {logical_area.size.width};
             rectangle.size.height = geom::Height {rectangle.size.height.as_int() + diff_per_node};
-            node->set_rectangle(rectangle);
+            node->set_logical_area(rectangle);
         }
     }
 
-    set_rectangle(logical_area);
+    set_logical_area(logical_area);
 }
 
-void Node::set_rectangle(geom::Rectangle const& target_rect)
+void Node::set_logical_area(geom::Rectangle const& target_rect)
 {
     if (is_window())
     {
@@ -260,7 +260,7 @@ void Node::set_rectangle(geom::Rectangle const& target_rect)
                     };
                 }
 
-                item->set_rectangle(new_item_rect);
+                item->set_logical_area(new_item_rect);
             }
         }
         else
@@ -293,7 +293,7 @@ void Node::set_rectangle(geom::Rectangle const& target_rect)
                     };
                 }
 
-                item->set_rectangle(new_item_rect);
+                item->set_logical_area(new_item_rect);
             }
         }
     }
@@ -362,11 +362,11 @@ std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
 
 void Node::insert_node(std::shared_ptr<Node> const& node, int index)
 {
-    auto area_with_gaps = new_node_position(index);
+    auto area_with_gaps = create_new_node_position(index);
     node->parent = shared_from_this();
-    node->set_rectangle(_get_logical_from_visible(area_with_gaps, gap_x, gap_y));
+    node->set_logical_area(_get_logical_from_visible(area_with_gaps, gap_x, gap_y));
     sub_nodes.insert(sub_nodes.begin() + index, node);
-    redistribute_size();
+    _refit_node_to_area();
     constrain();
 }
 
@@ -376,7 +376,7 @@ void Node::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> 
     auto second_index = get_index_of_node(second);
     sub_nodes[second_index] = first;
     sub_nodes[first_index] = second;
-    set_rectangle(get_logical_area());
+    set_logical_area(get_logical_area());
     constrain();
 }
 
@@ -402,16 +402,16 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
         sub_nodes.clear();
         for (auto sub_node : dying_lane->get_sub_nodes())
         {
-            add_window(sub_node->get_window());
+            add_window(sub_node->window);
         }
         set_direction(dying_lane->get_direction());
     }
 
-    redistribute_size();
+    _refit_node_to_area();
     constrain();
 }
 
-int Node::get_index_of_node(std::shared_ptr<Node> const& node)
+int Node::get_index_of_node(std::shared_ptr<Node> const& node) const
 {
     for (int i = 0; i < sub_nodes.size(); i++)
         if (sub_nodes[i] == node)
@@ -420,12 +420,12 @@ int Node::get_index_of_node(std::shared_ptr<Node> const& node)
     return -1;
 }
 
-int Node::num_nodes()
+int Node::num_nodes() const
 {
     return sub_nodes.size();
 }
 
-std::shared_ptr<Node> Node::node_at(int i)
+std::shared_ptr<Node> Node::node_at(int i) const
 {
     if (i < 0 || i >= num_nodes())
         return nullptr;
@@ -433,7 +433,7 @@ std::shared_ptr<Node> Node::node_at(int i)
     return sub_nodes[i];
 }
 
-std::shared_ptr<Node> Node::find_nth_window_child(int i)
+std::shared_ptr<Node> Node::find_nth_window_child(int i) const
 {
     if (i < 0 || i >= sub_nodes.size())
         return nullptr;
@@ -455,7 +455,7 @@ void Node::scale_area(double x_scale, double y_scale)
         node->scale_area(x_scale, y_scale);
     }
 
-    redistribute_size();
+    _refit_node_to_area();
     constrain();
 }
 
@@ -468,7 +468,7 @@ void Node::translate_by(int x, int y)
         node->translate_by(x, y);
     }
 
-    redistribute_size();
+    _refit_node_to_area();
     constrain();
 }
 
@@ -500,7 +500,7 @@ geom::Rectangle Node::_get_logical_from_visible(const geom::Rectangle &visible_a
     };
 }
 
-std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node> const&)> func)
+std::shared_ptr<Node> Node::find_where(std::function<bool(std::shared_ptr<Node> const&)> func) const
 {
     for (auto node : sub_nodes)
         if (func(node))
@@ -543,12 +543,12 @@ bool Node::minimize(std::shared_ptr<Node>& node)
     return false;
 }
 
-int Node::get_min_width()
+int Node::get_min_width() const
 {
     return 50;
 }
 
-int Node::get_min_height()
+int Node::get_min_height() const
 {
     return 50;
 }

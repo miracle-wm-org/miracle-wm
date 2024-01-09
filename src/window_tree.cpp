@@ -44,7 +44,7 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
         return new_spec;
     }
 
-    auto rect = get_active_lane()->new_node_position();
+    auto rect = get_active_lane()->create_new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
     return new_spec;
@@ -472,7 +472,7 @@ void WindowTree::resize_node_in_direction(
 
     for (size_t i = 0; i < nodes.size(); i++)
     {
-        nodes[i]->set_rectangle(pending_node_resizes[i]);
+        nodes[i]->set_logical_area(pending_node_resizes[i]);
     }
 }
 
@@ -506,7 +506,7 @@ void WindowTree::recalculate_root_node_area()
     // TODO: We don't take care of multiple application zones, so maybe that has to do with multiple outputs?
     for (auto const& zone : application_zone_list)
     {
-        root_lane->set_rectangle(zone.extents());
+        root_lane->set_logical_area(zone.extents());
         break;
     }
 }
