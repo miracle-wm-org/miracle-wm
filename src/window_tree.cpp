@@ -39,20 +39,21 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
     new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
-    if (requested_specification.state().is_set() && window_helpers::is_window_fullscreen(requested_specification.state().value()))
-    {
-        return new_spec;
-    }
-
-    auto rect = get_active_lane()->new_node_position();
+    auto rect = _get_active_lane()->create_new_node_position();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
+
+    if (new_spec.state().is_set() && window_helpers::is_window_fullscreen(new_spec.state().value()))
+    {
+        // Don't start anyone in fullscreen mode
+        new_spec.state() = mir::optional_value<MirWindowState>();
+    }
     return new_spec;
 }
 
 void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    get_active_lane()->add_window(window_info.window());
+    _get_active_lane()->add_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
         tools.select_active_window(window_info.window());
@@ -86,7 +87,7 @@ bool WindowTree::try_resize_active_window(miracle::Direction direction)
     }
 
     // TODO: We have a hardcoded resize amount
-    resize_node_in_direction(active_window, direction, 50);
+    _handle_resize_request(active_window, direction, 50);
     return true;
 }
 
@@ -110,10 +111,10 @@ bool WindowTree::try_select_next(miracle::Direction direction)
         return false;
     }
 
-    auto node = traverse(active_window, direction);
+    auto node = _traverse(active_window, direction);
     if (!node)
     {
-        mir::log_warning("Unable to select the next window: traverse failed");
+        mir::log_warning("Unable to select the next window: _traverse failed");
         return false;
     }
 
@@ -182,7 +183,7 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto second_window = traverse(active_window, direction);
+    auto second_window = _traverse(active_window, direction);
     if (!second_window)
     {
         mir::log_warning("Unable to move active window: second_window not found");
@@ -213,15 +214,15 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
 
 void WindowTree::request_vertical()
 {
-    handle_direction_request(NodeLayoutDirection::vertical);
+    _handle_direction_request(NodeLayoutDirection::vertical);
 }
 
 void WindowTree::request_horizontal()
 {
-    handle_direction_request(NodeLayoutDirection::horizontal);
+    _handle_direction_request(NodeLayoutDirection::horizontal);
 }
 
-void WindowTree::handle_direction_request(NodeLayoutDirection direction)
+void WindowTree::_handle_direction_request(NodeLayoutDirection direction)
 {
     if (is_active_window_fullscreen)
     {
@@ -244,7 +245,7 @@ void WindowTree::handle_direction_request(NodeLayoutDirection direction)
     if (active_window->get_parent()->num_nodes() != 1)
         active_window = active_window->to_lane();
 
-    get_active_lane()->set_direction(direction);
+    _get_active_lane()->set_direction(direction);
 }
 
 void WindowTree::advise_focus_gained(miral::Window& window)
@@ -306,11 +307,11 @@ void WindowTree::advise_delete_window(miral::Window& window)
     }
 }
 
-std::shared_ptr<Node> WindowTree::traverse(std::shared_ptr<Node>const& from, Direction direction)
+std::shared_ptr<Node> WindowTree::_traverse(std::shared_ptr<Node>const& from, Direction direction)
 {
     if (!from->get_parent())
     {
-        mir::log_warning("Cannot traverse the root node");
+        mir::log_warning("Cannot _traverse the root node");
         return nullptr;
     }
 
@@ -375,7 +376,7 @@ grandparent_route:
     return nullptr;
 }
 
-std::shared_ptr<Node> WindowTree::get_active_lane()
+std::shared_ptr<Node> WindowTree::_get_active_lane()
 {
     if (!active_window)
         return root_lane;
@@ -383,7 +384,7 @@ std::shared_ptr<Node> WindowTree::get_active_lane()
     return active_window->get_parent();
 }
 
-void WindowTree::resize_node_in_direction(
+void WindowTree::_handle_resize_request(
     std::shared_ptr<Node> const& node,
     Direction direction,
     int amount)
@@ -407,7 +408,7 @@ void WindowTree::resize_node_in_direction(
 
     if (!is_main_axis_movement)
     {
-        resize_node_in_direction(parent, direction, amount);
+        _handle_resize_request(parent, direction, amount);
         return;
     }
 
@@ -472,14 +473,14 @@ void WindowTree::resize_node_in_direction(
 
     for (size_t i = 0; i < nodes.size(); i++)
     {
-        nodes[i]->set_rectangle(pending_node_resizes[i]);
+        nodes[i]->set_logical_area(pending_node_resizes[i]);
     }
 }
 
 void WindowTree::advise_application_zone_create(miral::Zone const& application_zone)
 {
     application_zone_list.push_back(application_zone);
-    recalculate_root_node_area();
+    _recalculate_root_node_area();
 }
 
 void WindowTree::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
@@ -488,7 +489,7 @@ void WindowTree::advise_application_zone_update(miral::Zone const& updated, mira
         if (zone == original)
         {
             zone = updated;
-            recalculate_root_node_area();
+            _recalculate_root_node_area();
             break;
         }
 }
@@ -497,16 +498,16 @@ void WindowTree::advise_application_zone_delete(miral::Zone const& application_z
 {
     if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
     {
-        recalculate_root_node_area();
+        _recalculate_root_node_area();
     }
 }
 
-void WindowTree::recalculate_root_node_area()
+void WindowTree::_recalculate_root_node_area()
 {
     // TODO: We don't take care of multiple application zones, so maybe that has to do with multiple outputs?
     for (auto const& zone : application_zone_list)
     {
-        root_lane->set_rectangle(zone.extents());
+        root_lane->set_logical_area(zone.extents());
         break;
     }
 }
