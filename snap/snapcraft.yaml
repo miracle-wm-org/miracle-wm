@@ -5,7 +5,7 @@ description: |
   miracle-wm is a tiling window manager based off the Mir library.
   
   It is intended to provide an i3/sway-like experience.
-confinement: classic
+confinement: strict
 base: core22
 
 architectures:
@@ -53,6 +53,7 @@ parts:
       - libxkbcommon-dev
       - g++
       - make
+      - libgtest-dev
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop

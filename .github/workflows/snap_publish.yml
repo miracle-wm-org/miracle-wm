@@ -1,10 +1,9 @@
-name: Snap
+name: Snap Publish
 
 on:
-  merge_group:
-    types: [checks_requested]
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number && format('pr{0}', github.event.number) || github.ref }}
@@ -34,3 +33,12 @@ jobs:
         with:
           name: ${{ steps.build-snap.outputs.snap-name }}
           path: ${{ steps.build-snap.outputs.snap-path }}
+
+      - name: Publish the snap
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
+        with:
+          snap: ${{ steps.build-snap.outputs.snap }}
+          release: edge
+
