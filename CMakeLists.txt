@@ -33,3 +33,4 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+add_subdirectory(tests/)
