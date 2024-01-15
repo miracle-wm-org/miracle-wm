@@ -104,13 +104,13 @@ private:
     std::vector<miral::Zone> application_zone_list;
     bool is_active_window_fullscreen = false;
 
-    std::shared_ptr<Node> get_active_lane();
-    void handle_direction_request(NodeLayoutDirection direction);
-    void resize_node_in_direction(std::shared_ptr<Node> const& node, Direction direction, int amount);
+    std::shared_ptr<Node> _get_active_lane();
+    void _handle_direction_request(NodeLayoutDirection direction);
+    void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    static std::shared_ptr<Node> traverse(std::shared_ptr<Node> const& from, Direction direction);
-    void recalculate_root_node_area();
+    static std::shared_ptr<Node> _traverse(std::shared_ptr<Node> const& from, Direction direction);
+    void _recalculate_root_node_area();
 };
 
 }
