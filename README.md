@@ -12,7 +12,7 @@ section below for the current status and direction.
 
 # Install
 ```
-sudo snap install miracle-wm --edge --classic
+sudo snap install miracle-wm --edge
 ```
 
 # Building
@@ -31,7 +31,7 @@ cmake ..
 ```sh
 cd miracle-wm
 snapcraft
-sudo snap install --dangerous --classic miracle-wm_*.snap
+sudo snap install --dangerous miracle-wm_*.snap
 ```
 
 # Running
