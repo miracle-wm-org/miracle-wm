@@ -10,6 +10,11 @@ section below for the current status and direction.
 ![miracle in action](./resources/screenshot1.png "miracle in action")
 ![miracle in action](./resources/screenshot2.png "miracle in action")
 
+# Install
+```
+sudo snap install miracle-wm --edge --classic
+```
+
 # Building
 **From Source**:
 ```sh
