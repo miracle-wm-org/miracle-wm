@@ -33,4 +33,7 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
+install(FILES session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop
+    DESTINATION /usr/share/wayland-sessions)
+
 add_subdirectory(tests/)
