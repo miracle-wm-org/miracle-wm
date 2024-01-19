@@ -479,8 +479,11 @@ void WindowTree::_handle_resize_request(
 
 void WindowTree::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    application_zone_list.push_back(application_zone);
-    _recalculate_root_node_area();
+    if (application_zone.extents().contains(area))
+    {
+        application_zone_list.push_back(application_zone);
+        _recalculate_root_node_area();
+    }
 }
 
 void WindowTree::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
