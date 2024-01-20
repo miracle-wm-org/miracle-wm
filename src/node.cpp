@@ -34,6 +34,65 @@ geom::Rectangle Node::get_visible_area()
     return _get_visible_from_logical(logical_area, gap_x, gap_y);
 }
 
+namespace
+{
+struct InsertNodeInternalResult
+{
+    int size;
+    int position;
+};
+
+InsertNodeInternalResult insert_node_internal(
+    int lane_size,
+    int lane_pos,
+    int index,
+    int node_count,
+    std::function<int(int)> get_node_size,
+    std::function<int(int)> get_node_position,
+    std::function<void(int, int, int)> set_node_size_position)
+{
+    int new_item_size = floorf64((double)lane_size / (double)(node_count + 1));
+    int new_item_position = lane_pos + index * new_item_size;
+
+    int size_lost = 0;
+    int prev_pos = lane_pos;
+    int prev_size = 0;
+    for (int i = 0; i < node_count; i++)
+    {
+        int node_size = get_node_size(i);
+        int node_pos = get_node_position(i);
+
+        // Each node will lose a percentage of its width that corresponds to what it can give
+        // (meaning that larger nodes give more width, and lesser nodes give less width)
+        double percent_size_lost =
+            ((double)node_size / (double)lane_size);
+        int width_to_lose = (int)floorf64(percent_size_lost * new_item_size);
+        size_lost += width_to_lose;
+
+        if (i == index)
+        {
+            prev_size = new_item_size;
+            prev_pos = new_item_position;
+        }
+
+        int changed_node_size = node_size - width_to_lose;
+        int changed_node_pos = prev_pos + prev_size;
+        set_node_size_position(i, changed_node_size, changed_node_pos);
+
+        prev_pos = changed_node_pos;
+        prev_size = changed_node_size;
+    }
+
+    if (node_count)
+    {
+        new_item_size += size_lost - new_item_size;
+        new_item_position -= size_lost - new_item_size;
+    }
+
+    return {new_item_size, new_item_position};
+}
+}
+
 geom::Rectangle Node::create_new_node_position(int index)
 {
     if (is_window())
@@ -47,98 +106,76 @@ geom::Rectangle Node::create_new_node_position(int index)
 
     pending_index = index;
 
-    // TODO: Can we do something better here? The copy-paste is unfortunate
     if (direction == NodeLayoutDirection::horizontal)
     {
-        float new_item_width = (float)logical_area.size.width.as_int() / static_cast<float>(sub_nodes.size() + 1);
+        auto result = insert_node_internal(
+            logical_area.size.width.as_int(),
+            logical_area.top_left.x.as_int(),
+            index,
+            sub_nodes.size(),
+            [&](int index) { return sub_nodes[index]->get_logical_area().size.width.as_int();},
+            [&](int index) { return sub_nodes[index]->get_logical_area().top_left.x.as_int();},
+            [&](int index, int size, int pos) {
+                geom::Rectangle node_logical_area = {
+                    geom::Point{
+                        pos,
+                        logical_area.top_left.y.as_int()
+                    },
+                    geom::Size{
+                        size,
+                        logical_area.size.height.as_int()
+                    }};
+                sub_nodes[index]->set_logical_area(node_logical_area);
+            });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
-                (float)logical_area.top_left.x.as_int() + ((float)index * new_item_width),
+                result.position,
                 logical_area.top_left.y.as_int()
             },
             geom::Size{
-                new_item_width,
+                result.size,
                 logical_area.size.height.as_int()
             }};
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
             gap_x,
             gap_y);
-
-        std::shared_ptr<Node> prev_node = nullptr;
-        for (int i = 0; i < sub_nodes.size(); i++)
-        {
-            auto node = sub_nodes[i];
-            auto node_logical_area = node->get_logical_area();
-
-            // Each node will lose a percentage of its width that corresponds to what it can give
-            // (meaning that larger nodes give more width, and lesser nodes give less width)
-            int width_to_lose = (int)ceilf(
-                ((float)node_logical_area.size.width.as_int() / (float)logical_area.size.width.as_int())
-                * new_item_width);
-
-            node_logical_area.size.width = geom::Width{node_logical_area.size.width.as_int() - width_to_lose};
-
-            if (prev_node)
-            {
-                node_logical_area.top_left.x = geom::X{
-                    prev_node->get_logical_area().top_left.x.as_int() + prev_node->get_logical_area().size.width.as_int()};
-            }
-
-            if (i == index)
-            {
-                node_logical_area.top_left.x = geom::X{node_logical_area.top_left.x.as_int() + new_item_width};
-            }
-
-            node->set_logical_area(node_logical_area);
-            prev_node = node;
-        }
-
         return new_node_visible_rect;
     }
     else
     {
-        auto new_item_height = logical_area.size.height.as_int() / static_cast<float>(sub_nodes.size() + 1);
+        auto result = insert_node_internal(
+            logical_area.size.height.as_int(),
+            logical_area.top_left.y.as_int(),
+            index,
+            sub_nodes.size(),
+            [&](int index) { return sub_nodes[index]->get_logical_area().size.height.as_int();},
+            [&](int index) { return sub_nodes[index]->get_logical_area().top_left.y.as_int();},
+            [&](int index, int size, int pos) {
+                geom::Rectangle node_logical_area = {
+                    geom::Point{
+                        logical_area.top_left.x.as_int(),
+                        pos
+                    },
+                    geom::Size{
+                        logical_area.size.width.as_int(),
+                        size
+                    }};
+                sub_nodes[index]->set_logical_area(node_logical_area);
+            });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
                 logical_area.top_left.x.as_int(),
-                logical_area.top_left.y.as_int() + (index * new_item_height)
+                result.position
             },
             geom::Size{
                 logical_area.size.width.as_int(),
-                new_item_height
+                result.size
             }};
-
-        auto new_node_visible_rect = _get_visible_from_logical(new_node_logical_rect, gap_x, gap_y);
-        std::shared_ptr<Node> prev_node = nullptr;
-        for (int i = 0; i < sub_nodes.size(); i++)
-        {
-            auto node = sub_nodes[i];
-            auto node_logical_area = node->get_logical_area();
-
-            // Each node will lose a percentage of its width that corresponds to what it can give
-            // (meaning that larger nodes give more width, and lesser nodes give less width)
-            auto height_to_lose = ceilf(
-                ((float)node_logical_area.size.height.as_int()  / (float)logical_area.size.height.as_int())
-                * new_item_height);
-
-            node_logical_area.size.height = geom::Height {node_logical_area.size.height.as_int() - height_to_lose};
-
-            if (prev_node)
-            {
-                node_logical_area.top_left.y = geom::Y{
-                    prev_node->get_logical_area().top_left.y.as_int() + prev_node->get_logical_area().size.height.as_int()};
-            }
-
-            if (i == index)
-            {
-                node_logical_area.top_left.y = geom::Y{node_logical_area.top_left.y.as_int() + new_item_height};
-            }
-
-            node->set_logical_area(node_logical_area);
-            prev_node = node;
-        }
-
+        auto new_node_visible_rect = _get_visible_from_logical(
+            new_node_logical_rect,
+            gap_x,
+            gap_y);
         return new_node_visible_rect;
     }
 }
