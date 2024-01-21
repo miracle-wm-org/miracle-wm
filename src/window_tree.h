@@ -94,6 +94,10 @@ public:
     /// Constrains the window to its tile if it is in this tree.
     bool constrain(miral::WindowInfo& window_info);
 
+    void add_tree(WindowTree&);
+
+    void foreach_node(std::function<void(std::shared_ptr<Node>)>);
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
