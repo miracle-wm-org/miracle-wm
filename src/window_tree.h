@@ -94,6 +94,8 @@ public:
     /// Constrains the window to its tile if it is in this tree.
     bool constrain(miral::WindowInfo& window_info);
 
+    void close_active_window();
+
 private:
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
