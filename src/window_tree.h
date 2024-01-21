@@ -97,6 +97,7 @@ public:
     void add_tree(WindowTree&);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)>);
+    void close_active_window();
 
 private:
     miral::WindowManagerTools tools;
