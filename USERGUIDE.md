@@ -14,10 +14,11 @@
 - `Meta + Left`: Select the window to the left of the currently selected window
 - `Meta + Right`: Select the window to the right of the currently selected window
 - `Meta + r`: Toggle resize mode on the active node
-  - `Left`: Resize to the left
-  - `Right`: Resize to the right
-  - `Up`: Resize upward
-  - `Down`: Resize downward
+  - `Meta + Left`: Resize to the left
+  - `Meta + Right`: Resize to the right
+  - `Meta + Up`: Resize upward
+  - `Meta + Down`: Resize downward
+- `Meta + Shift + q`: Quit the selected application
 
 # Pointer
 - Hovering over a window will select the window

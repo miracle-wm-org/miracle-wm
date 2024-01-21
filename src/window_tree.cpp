@@ -620,3 +620,11 @@ bool WindowTree::constrain(miral::WindowInfo &window_info)
     node->get_parent()->constrain();
     return true;
 }
+
+void WindowTree::close_active_window()
+{
+    if (active_window && active_window->is_window())
+    {
+        tools.ask_client_to_close(active_window->get_window());
+    }
+}

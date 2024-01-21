@@ -155,6 +155,11 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
                 || active_tree->tree.try_select_next(Direction::right))
                 return true;
         }
+        else if(scan_code == KEY_Q && modifiers & mir_input_event_modifier_shift)
+        {
+            active_tree->tree.close_active_window();
+            return true;
+        }
     }
 
     return false;
