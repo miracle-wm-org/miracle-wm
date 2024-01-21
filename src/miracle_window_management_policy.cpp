@@ -273,7 +273,10 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
                 if (tree_list.empty())
                     active_tree = nullptr;
                 else
+                {
                     active_tree = tree_list[0];
+                    active_tree->tree.add_tree(it->tree);
+                }
             }
             break;
        }

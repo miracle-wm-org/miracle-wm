@@ -89,7 +89,7 @@ public:
     bool is_window() const { return state == NodeState::window; }
     bool is_lane() const { return state == NodeState::lane; }
     NodeLayoutDirection get_direction() const { return direction; }
-    miral::Window const& get_window() const { return window; }
+    miral::Window& get_window() { return window; }
     std::shared_ptr<Node> get_parent() const { return parent; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
 

@@ -620,3 +620,34 @@ bool WindowTree::constrain(miral::WindowInfo &window_info)
     node->get_parent()->constrain();
     return true;
 }
+
+void WindowTree::add_tree(WindowTree& other_tree)
+{
+    other_tree.foreach_node([&](auto node)
+    {
+        if (node->is_window())
+        {
+            auto new_node_position = root_lane->create_new_node_position();
+            node->set_logical_area(new_node_position);
+            root_lane->add_window(node->get_window());
+        }
+    });
+}
+
+namespace
+{
+void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> f, std::shared_ptr<Node> parent)
+{
+    f(parent);
+    if (parent->is_window())
+        return;
+
+    for (auto node : parent->get_sub_nodes())
+        foreach_node_internal(f, node);
+}
+}
+
+void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> f)
+{
+    foreach_node_internal(f, root_lane);
+}
