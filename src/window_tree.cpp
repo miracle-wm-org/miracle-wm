@@ -651,3 +651,11 @@ void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> f)
 {
     foreach_node_internal(f, root_lane);
 }
+
+void WindowTree::close_active_window()
+{
+    if (active_window && active_window->is_window())
+    {
+        tools.ask_client_to_close(active_window->get_window());
+    }
+}
