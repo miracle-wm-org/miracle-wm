@@ -12,7 +12,7 @@ section below for the current status and direction.
 
 # Install
 ```
-sudo snap install miracle-wm --edge
+sudo snap install miracle-wm --edge --classic
 ```
 
 # Building
