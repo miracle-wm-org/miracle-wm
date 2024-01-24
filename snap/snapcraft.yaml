@@ -18,12 +18,6 @@ package-repositories:
   - type: apt
     ppa: mir-team/release
 
-plugs:
-  wayland-sessions-dir:
-    interface: system-files
-    write:
-      - /usr/share/wayland-sessions
-
 apps:
   miracle-wm:
     command: &_command usr/local/bin/miracle-wm
