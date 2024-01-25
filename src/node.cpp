@@ -605,12 +605,6 @@ void Node::_set_window_rectangle(geom::Rectangle area)
 
 void Node::constrain()
 {
-    // TODO: Constraining is broken at the moment, at least on my machine.
-    // For now, we will disable this feature, but we should fix it ASAP.
-    bool is_disabled = true;
-    if (is_disabled)
-        return;
-
     if (is_window())
     {
         auto& info = tools.info_for(window);

@@ -56,7 +56,7 @@ See the [user guide](USERGUIDE.md) for information on how to use the miracle win
 # Timeline
 The goal is to have a tiling manager that I am comfortable daily-driving by summer of 2024.
 
-**Proof of Concept (Due: January 15th)** Version: 0.1
+**Proof of Concept (Due: January 15th)** Version: 0.1.0
 
 Features:
 - [x] Layout new window
@@ -70,10 +70,11 @@ Features:
 - [x] Handle exclusion zones
 - [x] Handle output creation
 - [x] Handle output updating
-- [ ] Handle output deletion
+- [x] Handle output deletion
 - [x] Handle fullscreen
+- [x] Application Quit Behavior
 
-**Stabilization + Usability (Due: March 1st)** Version: 0.2
+**Stabilization + Usability (Due: March 1st)** Version: 0.2.0
 
 Features:
 - [ ] Fix major bugs

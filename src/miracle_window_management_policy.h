@@ -10,6 +10,11 @@
 #include <memory>
 #include <vector>
 
+namespace miral
+{
+class MirRunner;
+}
+
 namespace miracle
 {
 class DisplayListener;
@@ -27,7 +32,8 @@ public:
     MiracleWindowManagementPolicy(
         miral::WindowManagerTools const&,
         miral::ExternalClientLauncher const&,
-        miral::InternalClientLauncher const&);
+        miral::InternalClientLauncher const&,
+        miral::MirRunner&);
     ~MiracleWindowManagementPolicy() = default;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -78,6 +84,7 @@ private:
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
+    miral::MirRunner& runner;
 };
 }
 

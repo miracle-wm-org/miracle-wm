@@ -19,6 +19,7 @@
   - `Meta + Up`: Resize upward
   - `Meta + Down`: Resize downward
 - `Meta + Shift + q`: Quit the selected application
+- `Meta + Shift + e`: Close the compositor
 
 # Pointer
 - Hovering over a window will select the window

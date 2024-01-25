@@ -7,6 +7,7 @@
 #include <miral/toolkit_event.h>
 #include <miral/application_info.h>
 #include <miral/zone.h>
+#include <miral/runner.h>
 #include <mir/log.h>
 #include <linux/input.h>
 #include <iostream>
@@ -72,10 +73,12 @@ bool is_tileable(T& requested_specification)
 MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     const miral::WindowManagerTools & tools,
     miral::ExternalClientLauncher const& external_client_launcher,
-    miral::InternalClientLauncher const& internal_client_launcher)
+    miral::InternalClientLauncher const& internal_client_launcher,
+    miral::MirRunner& runner)
     : window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
-      internal_client_launcher{internal_client_launcher}
+      internal_client_launcher{internal_client_launcher},
+      runner{runner}
 {
 }
 
@@ -158,6 +161,11 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         else if(scan_code == KEY_Q && modifiers & mir_input_event_modifier_shift)
         {
             active_tree->tree.close_active_window();
+            return true;
+        }
+        else if (scan_code == KEY_E && modifiers & mir_input_event_modifier_shift)
+        {
+            runner.stop();
             return true;
         }
     }

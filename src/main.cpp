@@ -24,7 +24,7 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     WindowManagerOptions window_managers
     {
-        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>("tiling", external_client_launcher, internal_client_launcher)
+        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>("tiling", external_client_launcher, internal_client_launcher, runner)
     };
  
     Keymap config_keymap;
