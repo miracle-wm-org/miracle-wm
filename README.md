@@ -4,7 +4,7 @@
 
 # About
 **miracle** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
-are very sway/i3-like, but will diverge in some important ways in the future. See the [timeline](#timeline)
+are very sway/i3-like, but will diverge in some important ways in the future. See the [roadmap](./ROADMAP.md)
 section below for the current status and direction.
 
 ![miracle in action](./resources/screenshot1.png "miracle in action")
@@ -52,37 +52,3 @@ Note that this is only useful if you want to test-drive the window manager or do
 
 # Usage
 See the [user guide](USERGUIDE.md) for information on how to use the miracle window manager.
-
-# Timeline
-The goal is to have a tiling manager that I am comfortable daily-driving by summer of 2024.
-
-**Proof of Concept (Due: January 15th)** Version: 0.1.0
-
-Features:
-- [x] Layout new window
-- [x] Delete window
-- [x] Resizing windows
-- [x] Changing selected window with keyboard
-- [x] Moving window with keyboard
-- [x] Gaps in windows
-- [x] Account for minimum sizes on windows (e.g. gedit)
-- [x] Disabling many of the Floating Window Manager features
-- [x] Handle exclusion zones
-- [x] Handle output creation
-- [x] Handle output updating
-- [x] Handle output deletion
-- [x] Handle fullscreen
-- [x] Application Quit Behavior
-
-**Stabilization + Usability (Due: March 1st)** Version: 0.2.0
-
-Features:
-- [ ] Fix major bugs
-- [ ] Configuration File
-  - [ ] Gap size
-  - [ ] Action key
-  - [ ] Keybindings
-- [ ] Workspaces
-  - [ ] Moving windows between workspaces
-- [ ] Stacking windows
-- [ ] Highlight border around selected window
