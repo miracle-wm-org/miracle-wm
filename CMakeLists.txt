@@ -24,6 +24,8 @@ add_executable(miracle-wm
     src/node.cpp
     src/window_helpers.h
     src/window_helpers.cpp
+    src/miracle_config.cpp
+    src/miracle_config.h
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
