@@ -10,7 +10,6 @@
 #include <miral/zone.h>
 #include <miral/runner.h>
 #include <mir/log.h>
-#include <linux/input.h>
 #include <iostream>
 #include <mir/geometry/rectangle.h>
 #include <limits>

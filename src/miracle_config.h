@@ -47,7 +47,7 @@ public:
 
 private:
     static const int  miracle_input_event_modifier_default = 1 << 18;
-    MirInputEventModifier modifier = mir_input_event_modifier_meta;
+    MirInputEventModifier primary_modifier = mir_input_event_modifier_meta;
     KeyCommandList key_commands[DefaultKeyCommand::MAX] = {
         {
             {
