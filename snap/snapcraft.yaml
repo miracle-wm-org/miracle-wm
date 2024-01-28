@@ -55,6 +55,7 @@ parts:
       - g++
       - make
       - libgtest-dev
+      - libyaml-cpp-dev
       - libyaml-cpp0.7
       - libglib2.0-dev
       - libglib2.0-0
