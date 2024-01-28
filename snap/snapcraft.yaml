@@ -55,6 +55,9 @@ parts:
       - g++
       - make
       - libgtest-dev
+      - libyaml-cpp0.7
+      - libglib2.0-dev
+      - libglib2.0-0
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
