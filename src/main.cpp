@@ -5,7 +5,6 @@
 #include <miral/window_management_options.h>
 #include <miral/internal_client.h>
 #include <miral/keymap.h>
-#include <miral/toolkit_event.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
 #include <miral/display_configuration_option.h>

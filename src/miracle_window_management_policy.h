@@ -2,6 +2,8 @@
 #define MIRIE_WINDOW_MANAGEMENT_POLICY_H
 
 #include "window_tree.h"
+#include "miracle_config.h"
+
 #include <miral/window_manager_tools.h>
 #include <miral/window_management_policy.h>
 #include <miral/external_client.h>
@@ -17,8 +19,6 @@ class MirRunner;
 
 namespace miracle
 {
-class DisplayListener;
-class TaskBar;
 
 struct OutputTreePair
 {
@@ -79,6 +79,7 @@ public:
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
 private:
+    MiracleConfig config;
     std::shared_ptr<OutputTreePair> active_tree;
     std::vector<std::shared_ptr<OutputTreePair>> tree_list;
     miral::WindowManagerTools window_manager_tools;

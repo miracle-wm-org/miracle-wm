@@ -2,6 +2,7 @@
 
 #include "miracle_window_management_policy.h"
 #include "window_helpers.h"
+#include "miracle_config.h"
 
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
@@ -75,7 +76,8 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher,
     miral::MirRunner& runner)
-    : window_manager_tools{tools},
+    : config{MiracleConfig()},
+      window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher},
       runner{runner}
@@ -88,88 +90,74 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    if (action == MirKeyboardAction::mir_keyboard_action_down && (modifiers & mir_input_event_modifier_meta))
+    auto key_command = config.matches_key_command(action, scan_code, modifiers);
+    if (key_command == DefaultKeyCommand::MAX)
+        return false;
+
+    switch (key_command)
     {
-        if (scan_code == KEY_ENTER)
-        {
+        case Terminal:
             for (auto const& terminal : POSSIBLE_TERMINALS)
             {
                 if (external_client_launcher.launch({terminal}) > 0)
                     break;
             }
             return true;
-        }
-        else if (scan_code == KEY_V)
-        {
+        case RequestVertical:
             active_tree->tree.request_vertical();
             return true;
-        }
-        else if (scan_code == KEY_H)
-        {
+        case RequestHorizontal:
             active_tree->tree.request_horizontal();
             return true;
-        }
-        else if (scan_code == KEY_R)
-        {
+        case ToggleResize:
             active_tree->tree.toggle_resize_mode();
             return true;
-        }
-        else if (scan_code == KEY_UP)
-        {
-            if (modifiers & mir_input_event_modifier_shift)
-            {
-                if (active_tree->tree.try_move_active_window(Direction::up))
-                    return true;
-            }
-            else if (active_tree->tree.try_resize_active_window(Direction::up)
+        case MoveUp:
+            if (active_tree->tree.try_move_active_window(Direction::up))
+                return true;
+            return false;
+        case MoveDown:
+            if (active_tree->tree.try_move_active_window(Direction::down))
+                return true;
+            return false;
+        case MoveLeft:
+            if (active_tree->tree.try_move_active_window(Direction::left))
+                return true;
+            return false;
+        case MoveRight:
+            if (active_tree->tree.try_move_active_window(Direction::right))
+                return true;
+            return false;
+        case SelectUp:
+            if (active_tree->tree.try_resize_active_window(Direction::up)
                 || active_tree->tree.try_select_next(Direction::up))
                 return true;
-        }
-        else if (scan_code == KEY_DOWN)
-        {
-            if (modifiers & mir_input_event_modifier_shift)
-            {
-                if (active_tree->tree.try_move_active_window(Direction::down))
-                    return true;
-            }
-            else if (active_tree->tree.try_resize_active_window(Direction::down)
+            return false;
+        case SelectDown:
+            if (active_tree->tree.try_resize_active_window(Direction::down)
                 || active_tree->tree.try_select_next(Direction::down))
                 return true;
-        }
-        else if (scan_code == KEY_LEFT)
-        {
-            if (modifiers & mir_input_event_modifier_shift)
-            {
-                if (active_tree->tree.try_move_active_window(Direction::left))
-                    return true;
-            }
-            else if (active_tree->tree.try_resize_active_window(Direction::left)
+            return false;
+        case SelectLeft:
+            if (active_tree->tree.try_resize_active_window(Direction::left)
                 || active_tree->tree.try_select_next(Direction::left))
                 return true;
-        }
-        else if (scan_code == KEY_RIGHT)
-        {
-            if (modifiers & mir_input_event_modifier_shift)
-            {
-                if (active_tree->tree.try_move_active_window(Direction::right))
-                    return true;
-            }
-            else if (active_tree->tree.try_resize_active_window(Direction::right)
+            return false;
+        case SelectRight:
+            if (active_tree->tree.try_resize_active_window(Direction::right)
                 || active_tree->tree.try_select_next(Direction::right))
                 return true;
-        }
-        else if(scan_code == KEY_Q && modifiers & mir_input_event_modifier_shift)
-        {
+            return false;
+        case QuitActiveWindow:
             active_tree->tree.close_active_window();
             return true;
-        }
-        else if (scan_code == KEY_E && modifiers & mir_input_event_modifier_shift)
-        {
+        case QuitCompositor:
             runner.stop();
             return true;
-        }
+        default:
+            std::cerr << "Unknown key_command: " << key_command << std::endl;
+            break;
     }
-
     return false;
 }
 
