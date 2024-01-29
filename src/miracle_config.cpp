@@ -19,11 +19,16 @@ MiracleConfig::MiracleConfig()
     {
     std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
     }
+
     YAML::Node config = YAML::LoadFile(config_path);
     if (config["action_key"])
     {
         auto const stringified_action_key = config["action_key"].as<std::string>();
-        primary_modifier = parse_modifier(stringified_action_key);
+        auto modifier = parse_modifier(stringified_action_key);
+        if (modifier == mir_input_event_modifier_none)
+            mir::log_error("action_key: invalid action key: %s", stringified_action_key.c_str());
+        else
+            primary_modifier = parse_modifier(stringified_action_key);
     }
 
     if (config["default_action_overrides"])
@@ -31,21 +36,39 @@ MiracleConfig::MiracleConfig()
         auto const default_action_overrides = config["default_action_overrides"];
         if (!default_action_overrides.IsSequence())
         {
-            // TODO: Error
+            mir::log_error("default_action_overrides: value must be an array");
             return;
         }
 
         for (auto i = 0; i < default_action_overrides.size(); i++)
         {
             auto sub_node = default_action_overrides[i];
-            if (!sub_node["name"] || !sub_node["action"] || !sub_node["modifiers"] || !sub_node["key"])
+            if (!sub_node["name"])
             {
-                // TODO: Error
+                mir::log_error("default_action_overrides: missing name");
+                continue;
+            }
+
+            if (!sub_node["action"])
+            {
+                mir::log_error("default_action_overrides: missing action");
+                continue;
+            }
+
+            if (!sub_node["modifiers"])
+            {
+                mir::log_error("default_action_overrides: missing modifiers");
+                continue;
+            }
+
+            if (!sub_node["key"])
+            {
+                mir::log_error("default_action_overrides: missing key");
                 continue;
             }
 
             std::string name = sub_node["name"].as<std::string>();
-            DefaultKeyCommand key_command = DefaultKeyCommand::MAX;
+            DefaultKeyCommand key_command;
             if (name == "terminal")
                 key_command = DefaultKeyCommand::Terminal;
             else if (name == "request_vertical")
@@ -75,10 +98,9 @@ MiracleConfig::MiracleConfig()
             else if (name == "quit_compositor")
                 key_command = DefaultKeyCommand::QuitCompositor;
             else {
-                // TODO: Error
+                mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
                 continue;
             }
-
 
             std::string action = sub_node["action"].as<std::string>();
             MirKeyboardAction keyboard_action;
@@ -91,17 +113,23 @@ MiracleConfig::MiracleConfig()
             else if (action == "modifiers")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
             else {
-                // TODO: Error
+                mir::log_error("default_action_overrides: Unknown keyboard action: %s", action.c_str());
                 continue;
             }
 
             std::string key = sub_node["key"].as<std::string>();
             auto code = libevdev_event_code_from_name(EV_KEY, key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
+            if (code < 0)
+            {
+                mir::log_error("default_action_overrides: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h", key.c_str());
+                continue;
+            }
+
             auto modifiers_node = sub_node["modifiers"];
 
             if (!modifiers_node.IsSequence())
             {
-                // TODO: Error
+                mir::log_error("default_action_overrides: Provided modifiers is not an array");
                 continue;
             }
 
