@@ -46,108 +46,11 @@ public:
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
 
 private:
-    static const int  miracle_input_event_modifier_default = 1 << 18;
-    MirInputEventModifier primary_modifier = mir_input_event_modifier_meta;
-    KeyCommandList key_commands[DefaultKeyCommand::MAX] = {
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                KEY_ENTER
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                KEY_V
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                KEY_H
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                KEY_R
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_UP
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_DOWN
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_LEFT
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_RIGHT
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                    KEY_UP
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                    KEY_DOWN
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                    KEY_LEFT
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default,
-                    KEY_RIGHT
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_Q
-            }
-        },
-        {
-            {
-                MirKeyboardAction::mir_keyboard_action_down,
-                miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-                KEY_E
-            }
-        },
-    };
+    static uint parse_modifier(std::string const& stringified_action_key);
+
+    static const uint miracle_input_event_modifier_default = 1 << 18;
+    uint primary_modifier = mir_input_event_modifier_meta;
+    KeyCommandList key_commands[DefaultKeyCommand::MAX];
 };
 }
 
