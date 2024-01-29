@@ -18,6 +18,7 @@ find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
+pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 
 add_executable(miracle-wm
     src/main.cpp
@@ -31,7 +32,7 @@ add_executable(miracle-wm
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB)
+target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV)
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
