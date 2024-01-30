@@ -44,6 +44,8 @@ public:
     MiracleConfig();
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
+    int get_gap_size_x() const;
+    int get_gap_size_y() const;
 
 private:
     static uint parse_modifier(std::string const& stringified_action_key);
@@ -51,6 +53,9 @@ private:
     static const uint miracle_input_event_modifier_default = 1 << 18;
     uint primary_modifier = mir_input_event_modifier_meta;
     KeyCommandList key_commands[DefaultKeyCommand::MAX];
+
+    int gap_size_x = 10;
+    int gap_size_y = 10;
 };
 }
 
