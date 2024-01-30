@@ -16,6 +16,8 @@ MiracleConfig::MiracleConfig()
     config_path_stream << "/miracle-wm.yaml";
     auto config_path = config_path_stream.str();
 
+    mir::log_info("Configuration file path is: %s", config_path.c_str());
+
     {
     std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
     }
