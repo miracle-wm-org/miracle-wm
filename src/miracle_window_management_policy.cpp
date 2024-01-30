@@ -239,7 +239,7 @@ void MiracleWindowManagementPolicy::advise_move_to(miral::WindowInfo const& wind
 
 void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
 {
-    WindowTreeOptions options =  { 10, 10 };
+    WindowTreeOptions options =  { config.get_gap_size_x(), config.get_gap_size_y() };
     auto new_tree = std::make_shared<OutputTreePair>(
         output,
         WindowTree(output.extents(), window_manager_tools, options));

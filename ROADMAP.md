@@ -26,9 +26,9 @@ Features:
 Features:
 - [ ] Fix major bugs
 - [ ] Configuration File
-    - [ ] Gap size
-    - [ ] Action key
-    - [ ] Keybindings
+    - [x] Gap size
+    - [x] Action key
+    - [x] Keybindings
 - [ ] Workspaces
     - [ ] Moving windows between workspaces
 - [ ] Stacking windows

@@ -69,7 +69,7 @@ MiracleConfig::MiracleConfig()
                 continue;
             }
 
-            std::string name = sub_node["name"].as<std::string>();
+            auto name = sub_node["name"].as<std::string>();
             DefaultKeyCommand key_command;
             if (name == "terminal")
                 key_command = DefaultKeyCommand::Terminal;
@@ -104,7 +104,7 @@ MiracleConfig::MiracleConfig()
                 continue;
             }
 
-            std::string action = sub_node["action"].as<std::string>();
+            auto action = sub_node["action"].as<std::string>();
             MirKeyboardAction keyboard_action;
             if (action == "up")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
@@ -119,7 +119,7 @@ MiracleConfig::MiracleConfig()
                 continue;
             }
 
-            std::string key = sub_node["key"].as<std::string>();
+            auto key = sub_node["key"].as<std::string>();
             auto code = libevdev_event_code_from_name(EV_KEY, key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
             if (code < 0)
             {
@@ -229,6 +229,16 @@ MiracleConfig::MiracleConfig()
         if (key_commands[i].empty())
             key_commands[i].push_back(default_key_commands[i]);
     }
+
+    // Gap sizes
+    if (config["gap_size_x"])
+    {
+        gap_size_x = config["gap_size_x"].as<int>();
+    }
+    if (config["gap_size_y"])
+    {
+        gap_size_y = config["gap_size_y"].as<int>();
+    }
 }
 
 uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
@@ -301,4 +311,14 @@ DefaultKeyCommand MiracleConfig::matches_key_command(MirKeyboardAction action, i
     }
 
     return DefaultKeyCommand::MAX;
+}
+
+int MiracleConfig::get_gap_size_x() const
+{
+    return gap_size_x;
+}
+
+int MiracleConfig::get_gap_size_y() const
+{
+    return gap_size_y;
 }
