@@ -15,6 +15,9 @@ section below for the current status and direction.
 sudo snap install miracle-wm --edge --classic
 ```
 
+# Usage
+See the [user guide](USERGUIDE.md) for information on how to use the miracle window manager.
+
 # Building
 **From Source**:
 ```sh
@@ -49,6 +52,3 @@ WAYLAND_DISPLAY=wayland-98 miracle-wm
 ```
 
 Note that this is only useful if you want to test-drive the window manager or do some development on it for yourself.
-
-# Usage
-See the [user guide](USERGUIDE.md) for information on how to use the miracle window manager.
