@@ -55,6 +55,9 @@ public:
     /// Select the next window in the provided direction
     bool try_select_next(Direction direction);
 
+    /// Toggle the active window between fullscreen and not fullscreen
+    bool try_toggle_active_fullscreen();
+
     // Request a change to vertical window placement
     void request_vertical();
 

@@ -99,6 +99,8 @@ MiracleConfig::MiracleConfig()
                 key_command = DefaultKeyCommand::QuitActiveWindow;
             else if (name == "quit_compositor")
                 key_command = DefaultKeyCommand::QuitCompositor;
+            else if (name == "fullscreen")
+                key_command = DefaultKeyCommand::Fullscreen;
             else {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
                 continue;
@@ -222,6 +224,11 @@ MiracleConfig::MiracleConfig()
             MirKeyboardAction::mir_keyboard_action_down,
             miracle_input_event_modifier_default | mir_input_event_modifier_shift,
             KEY_E
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_F
         }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)

@@ -20,6 +20,7 @@
   - `meta + down`: Resize downward
 - `meta + shift + q`: Quit the selected application
 - `meta + shift + e`: Close the compositor
+- `meta + f`: Toggle fullscreen on the window
 
 # Pointer Behavior
 - Hovering over a window will select the window
@@ -64,7 +65,7 @@ First, let's define some reoccurring data types in the configuration file:
   struct DefaultActionOverride
   {
       // Name of the action to override
-      name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down" | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" | "quit_active_window" | "quit_compositor";
+      name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down" | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" | "quit_active_window" | "quit_compositor" | "fullscreen";
   
       // Action will fire based on this key event
       action: "up" | "down" | "repeat" | "modifiers";
@@ -86,8 +87,8 @@ With those types defined, the following table defines the allowed key/value pair
 |--------------------------|---------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | action_key               | `meta`    | `Modifier`          | The default key that is used to initate any action.                                                                                                                                                                                                                    |
 | default_action_overrides | `[]`      | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
-| gap_size_x               | 10 | int | Size of the gaps in pixels horizontally between windows          |                                                                                                                                                                                                      |
-| gap_size_y               | 10 | int | Size of the gaps in pixels vertically between windows |                                                                                                                                                                                                                 |
+| gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows          |                                                                                                                                                                                                      |
+| gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows |                                                                                                                                                                                                                 |
 
 ## Example Configuration
 ```yaml

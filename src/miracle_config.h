@@ -25,6 +25,7 @@ enum DefaultKeyCommand
     SelectRight,
     QuitActiveWindow,
     QuitCompositor,
+    Fullscreen,
     MAX
 };
 

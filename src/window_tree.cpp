@@ -122,6 +122,36 @@ bool WindowTree::try_select_next(miracle::Direction direction)
     return true;
 }
 
+bool WindowTree::try_toggle_active_fullscreen()
+{
+    if (is_resizing)
+    {
+        mir::log_warning("Cannot toggle fullscreen while resizing");
+        return false;
+    }
+
+    if (!active_window)
+    {
+        mir::log_warning("Active window is null while trying to toggle fullscreen");
+        return false;
+    }
+
+    miral::WindowSpecification spec;
+    if (is_active_window_fullscreen)
+        spec.state() = mir_window_state_restored;
+    else
+        spec.state() = mir_window_state_maximized;
+
+    auto& window_info = tools.info_for(active_window->get_window());
+    tools.place_and_size_for_state(spec, window_info);
+    tools.modify_window(active_window->get_window(), spec);
+    if (is_active_window_fullscreen)
+        advise_restored_window(window_info);
+    else
+        advise_fullscreen_window(window_info);
+    return true;
+}
+
 void WindowTree::set_output_area(geom::Rectangle const& new_area)
 {
     double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
