@@ -33,8 +33,9 @@ public:
         miral::WindowManagerTools const&,
         miral::ExternalClientLauncher const&,
         miral::InternalClientLauncher const&,
-        miral::MirRunner&);
-    ~MiracleWindowManagementPolicy() = default;
+        miral::MirRunner&,
+        MiracleConfig const&);
+    ~MiracleWindowManagementPolicy() override = default;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
     bool handle_pointer_event(MirPointerEvent const* event) override;
@@ -79,13 +80,13 @@ public:
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
 private:
-    MiracleConfig config;
     std::shared_ptr<OutputTreePair> active_tree;
     std::vector<std::shared_ptr<OutputTreePair>> tree_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
+    MiracleConfig const& config;
 };
 }
 

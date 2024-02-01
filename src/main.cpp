@@ -1,4 +1,3 @@
-
 #include <miral/set_window_management_policy.h>
 #include <miral/external_client.h>
 #include <miral/runner.h>
@@ -7,8 +6,11 @@
 #include <miral/keymap.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
+#include <miral/command_line_option.h>
 #include <miral/display_configuration_option.h>
+#include <miral/add_init_callback.h>
 #include "miracle_window_management_policy.h"
+#include "miracle_config.h"
 
 using namespace miral;
 
@@ -21,12 +23,22 @@ int main(int argc, char const* argv[])
 
     InternalClientLauncher internal_client_launcher;
     ExternalClientLauncher external_client_launcher;
+    miracle::MiracleConfig config;
     WindowManagerOptions window_managers
     {
-        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>("tiling", external_client_launcher, internal_client_launcher, runner)
+        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>(
+            "tiling", external_client_launcher, internal_client_launcher, runner, config)
     };
  
     Keymap config_keymap;
+
+    auto const run_startup_apps = [&]()
+    {
+        for (auto const& app : config.get_startup_apps())
+        {
+            external_client_launcher.launch(app);
+        }
+    };
 
     return runner.run_with(
         {
@@ -36,6 +48,7 @@ int main(int argc, char const* argv[])
             config_keymap,
             external_client_launcher,
             internal_client_launcher,
-            display_configuration_options
+            display_configuration_options,
+            AddInitCallback(run_startup_apps)
         });
 }
