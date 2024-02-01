@@ -71,15 +71,16 @@ bool is_tileable(T& requested_specification)
 }
 
 MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
-    const miral::WindowManagerTools & tools,
+    miral::WindowManagerTools const& tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher,
-    miral::MirRunner& runner)
-    : config{MiracleConfig()},
-      window_manager_tools{tools},
+    miral::MirRunner& runner,
+    MiracleConfig const& config)
+    : window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher},
-      runner{runner}
+      runner{runner},
+      config{config}
 {
 }
 

@@ -89,6 +89,8 @@ With those types defined, the following table defines the allowed key/value pair
 | default_action_overrides | `[]`      | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
 | gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows          |                                                                                                                                                                                                      |
 | gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows |                                                                                                                                                                                                                 |
+| startup_apps | [] | `String[]` | List of applications to be started when the compositor starts |
+
 
 ## Example Configuration
 ```yaml
@@ -102,4 +104,7 @@ default_action_overrides:
     key: KEY_ENTER
 gap_size_x: 20
 gap_size_y: 20
+startup_apps:
+  - waybar
+  - swaybg -i /path/to/my/image
 ```

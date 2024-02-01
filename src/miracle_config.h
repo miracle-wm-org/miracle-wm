@@ -45,8 +45,9 @@ public:
     MiracleConfig();
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
-    int get_gap_size_x() const;
-    int get_gap_size_y() const;
+    [[nodiscard]] int get_gap_size_x() const;
+    [[nodiscard]] int get_gap_size_y() const;
+    [[nodiscard]] std::vector<std::string> const& get_startup_apps() const;
 
 private:
     static uint parse_modifier(std::string const& stringified_action_key);
@@ -57,6 +58,7 @@ private:
 
     int gap_size_x = 10;
     int gap_size_y = 10;
+    std::vector<std::string> startup_apps;
 };
 }
 

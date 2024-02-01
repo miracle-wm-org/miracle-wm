@@ -246,6 +246,15 @@ MiracleConfig::MiracleConfig()
     {
         gap_size_y = config["gap_size_y"].as<int>();
     }
+
+    // Startup Apps
+    if (config["startup_apps"])
+    {
+        for (auto const& node : config["startup_apps"])
+        {
+            startup_apps.push_back(node.as<std::string>());
+        }
+    }
 }
 
 uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
@@ -283,7 +292,7 @@ uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
     else if (stringified_action_key == "num_lock")
         return mir_input_event_modifier_num_lock;
     else if (stringified_action_key == "scroll_lock")
-        return mir_input_event_modifier_num_lock;
+        return mir_input_event_modifier_scroll_lock;
     else if (stringified_action_key == "primary")
         return miracle_input_event_modifier_default;
     else
@@ -328,4 +337,9 @@ int MiracleConfig::get_gap_size_x() const
 int MiracleConfig::get_gap_size_y() const
 {
     return gap_size_y;
+}
+
+const std::vector<std::string> &MiracleConfig::get_startup_apps() const
+{
+    return startup_apps;
 }
