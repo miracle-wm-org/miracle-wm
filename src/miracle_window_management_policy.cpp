@@ -153,6 +153,9 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         case QuitCompositor:
             runner.stop();
             return true;
+        case Fullscreen:
+            active_tree->tree.try_toggle_active_fullscreen();
+            return true;
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;

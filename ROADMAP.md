@@ -19,6 +19,7 @@ Features:
 - [x] Handle output deletion
 - [x] Handle fullscreen
 - [x] Application Quit Behavior
+- [x] Fullscreen application support
 
 # 0.2.0
 **Stabilization + Usability (Due: March 1st)**
@@ -29,6 +30,7 @@ Features:
     - [x] Gap size
     - [x] Action key
     - [x] Keybindings
+    - [ ] Hot reloading
 - [ ] Workspaces
     - [ ] Moving windows between workspaces
 - [ ] Stacking windows
