@@ -236,7 +236,17 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
     {
         auto index = second_parent->get_index_of_node(second_window);
         auto moving_node = active_window;
-        first_parent->remove_node(moving_node);
+        if (first_parent->num_nodes() == 1 && first_parent->get_parent())
+        {
+            // Remove the entire lane if this lane is now empty
+            auto prev_active = first_parent;
+            first_parent = first_parent->get_parent();
+            first_parent->remove_node(prev_active);
+        }
+        else
+        {
+            first_parent->remove_node(moving_node);
+        }
         second_parent->insert_node(moving_node, index + 1);
     }
     return true;

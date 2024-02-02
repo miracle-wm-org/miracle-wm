@@ -22,7 +22,7 @@ Features:
 - [x] Fullscreen application support
 
 # 0.2.0
-**Stabilization + Usability (Due: March 1st)**
+**Stabilization + Usability (Due: March 15th)**
 
 Features:
 - [ ] Fix major bugs
@@ -31,8 +31,9 @@ Features:
     - [x] Action key
     - [x] Keybindings
     - [ ] Hot reloading
+    - [x] Startup apps
+    - [ ] Display configuration
 - [ ] Workspaces
     - [ ] Moving windows between workspaces
 - [ ] Stacking windows
 - [ ] Highlight border around selected window
-- [ ] Fullscreen windows
