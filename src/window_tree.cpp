@@ -213,10 +213,10 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto traversal_result = _traverse(active_window, direction);
+    auto traversal_result = _move(active_window, direction);
     switch (traversal_result.traversal_type)
     {
-        case TraversalResult::traversal_type_swap:
+        case MoveResult::traversal_type_insert:
         {
             auto second_window = traversal_result.node;
             if (!second_window)
@@ -246,14 +246,14 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
             }
             break;
         }
-        case TraversalResult::traversal_type_append:
+        case MoveResult::traversal_type_append:
         {
             auto moving_node = active_window;
             _handle_node_remove(moving_node);
             traversal_result.node->insert_node(moving_node, traversal_result.node->num_nodes());
             break;
         }
-        case TraversalResult::traversal_type_prepend:
+        case MoveResult::traversal_type_prepend:
         {
             auto moving_node = active_window;
             _handle_node_remove(moving_node);
@@ -386,7 +386,9 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
 }
 }
 
-std::shared_ptr<Node> WindowTree::_select(const std::shared_ptr<Node> &from, miracle::Direction direction)
+std::shared_ptr<Node> WindowTree::_select(
+    const std::shared_ptr<Node> &from,
+    miracle::Direction direction)
 {
     // Algorithm:
     //  1. Retrieve the parent
@@ -430,110 +432,20 @@ std::shared_ptr<Node> WindowTree::_select(const std::shared_ptr<Node> &from, mir
     return nullptr;
 }
 
-WindowTree::TraversalResult WindowTree::_traverse(std::shared_ptr<Node>const& from, Direction direction)
+WindowTree::MoveResult WindowTree::_move(std::shared_ptr<Node>const& from, Direction direction)
 {
-    if (!from->get_parent())
+    // Algorithm:
+    //  1. Perform the _select algorithm. If that passes, then we want to be where the selected node
+    //     currently is
+    //  2. If NO node matches, then we still have to move. This means that we must create a new root node with the
+    //     requested direction ONLY IF the directions don't agree. If the directions agree, then we just have nowhere
+    //     to go.
+    if (auto insert_node = _select(from, direction))
     {
-        mir::log_warning("Cannot _traverse the root node");
-        return {};
-    }
-
-    auto parent = from->get_parent();
-    int index = parent->get_index_of_node(from);
-    auto parent_direction = parent->get_direction();
-
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_negative = direction == Direction::up || direction == Direction::left;
-
-    if (is_vertical && parent_direction == NodeLayoutDirection::vertical
-        || !is_vertical && parent_direction == NodeLayoutDirection::horizontal)
-    {
-        // Simplest case: we're within a lane
-        if (is_negative)
-        {
-            if (index == 0)
-                goto grandparent_route;  // TODO: lazy lazy for readability
-            else
-                return {
-                TraversalResult::traversal_type_swap,
-                parent->node_at(index - 1)
-                };
-        }
-        else
-        {
-            if (index == parent->num_nodes() - 1)
-                goto grandparent_route;  // TODO: lazy lazy for readability
-            else
-                return {
-                    TraversalResult::traversal_type_swap,
-                    parent->node_at(index + 1)
-                };
-        }
-    }
-    else
-    {
-grandparent_route:
-        // Harder case: we need to jump to another lane. The best thing to do here is to
-        // find the first ancestor that matches the direction that we want to travel in.
-        // If  that ancestor cannot be found, then we hint at the user that they can append
-        // to a particular instance if they want.
-        auto grandparent = parent->get_parent();
-        if (!grandparent)
-        {
-            mir::log_warning("Parent lane lacks a grandparent. It should AT LEAST be root");
-            return {};
-        }
-
-        do {
-            auto index_of_parent = grandparent->get_index_of_node(parent);
-            if (is_negative)
-                index_of_parent--;
-            else
-                index_of_parent++;
-
-            if (grandparent->get_direction() == NodeLayoutDirection::horizontal && !is_vertical
-                || grandparent->get_direction() == NodeLayoutDirection::vertical && is_vertical)
-            {
-                if (auto child = grandparent->find_nth_window_child(index_of_parent))
-                {
-                    // We've found a child. We either want to take its place, or we want
-                    // to become the child of the child if it is a lane
-                    if (child->is_lane())
-                    {
-                        return {
-                            TraversalResult::traversal_type_append,
-                            child
-                        };
-                    }
-                    else
-                    {
-                        return {
-                            TraversalResult::traversal_type_swap,
-                            child
-                        };
-                    }
-
-                }
-
-                if (is_negative)
-                {
-                    return {
-                        TraversalResult::traversal_type_prepend,
-                        grandparent
-                    };
-                }
-                else
-                {
-                    return {
-                        TraversalResult::traversal_type_append,
-                        grandparent
-                    };
-                }
-            }
-
-            parent = grandparent;
-            grandparent = grandparent->get_parent();
-        } while (grandparent != nullptr);
+        return {
+            MoveResult::traversal_type_insert,
+            insert_node
+        };
     }
 
     return {};

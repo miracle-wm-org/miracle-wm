@@ -103,11 +103,11 @@ public:
     void close_active_window();
 
 private:
-    struct TraversalResult
+    struct MoveResult
     {
         enum {
             traversal_type_invalid,
-            traversal_type_swap,
+            traversal_type_insert,
             traversal_type_prepend,
             traversal_type_append
         } traversal_type = traversal_type_invalid;
@@ -129,7 +129,7 @@ private:
     void _handle_node_remove(std::shared_ptr<Node> node);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    static TraversalResult _traverse(std::shared_ptr<Node> const& from, Direction direction);
+    MoveResult _move(std::shared_ptr<Node> const& from, Direction direction);
     static std::shared_ptr<Node> _select(std::shared_ptr<Node> const& from, Direction direction);
     void _recalculate_root_node_area();
 };
