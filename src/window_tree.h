@@ -103,6 +103,17 @@ public:
     void close_active_window();
 
 private:
+    struct TraversalResult
+    {
+        enum {
+            traversal_type_invalid,
+            traversal_type_swap,
+            traversal_type_prepend,
+            traversal_type_append
+        } traversal_type = traversal_type_invalid;
+        std::shared_ptr<Node> node = nullptr;
+    };
+
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
     std::shared_ptr<Node> root_lane;
@@ -115,9 +126,11 @@ private:
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);
     void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
+    void _handle_node_remove(std::shared_ptr<Node> node);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    static std::shared_ptr<Node> _traverse(std::shared_ptr<Node> const& from, Direction direction);
+    static TraversalResult _traverse(std::shared_ptr<Node> const& from, Direction direction);
+    static std::shared_ptr<Node> _select(std::shared_ptr<Node> const& from, Direction direction);
     void _recalculate_root_node_area();
 };
 

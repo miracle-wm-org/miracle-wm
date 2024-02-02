@@ -111,10 +111,10 @@ bool WindowTree::try_select_next(miracle::Direction direction)
         return false;
     }
 
-    auto node = _traverse(active_window, direction);
+    auto node = _select(active_window, direction);
     if (!node)
     {
-        mir::log_warning("Unable to select the next window: _traverse failed");
+        mir::log_warning("Unable to select the next window: _select failed");
         return false;
     }
 
@@ -213,42 +213,60 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto second_window = _traverse(active_window, direction);
-    if (!second_window)
+    auto traversal_result = _traverse(active_window, direction);
+    switch (traversal_result.traversal_type)
     {
-        mir::log_warning("Unable to move active window: second_window not found");
-        return false;
+        case TraversalResult::traversal_type_swap:
+        {
+            auto second_window = traversal_result.node;
+            if (!second_window)
+            {
+                mir::log_warning("Unable to move active window: second_window not found");
+                return false;
+            }
+
+            auto second_parent = second_window->get_parent();
+            if (!second_parent)
+            {
+                mir::log_warning("Unable to move active window: second_window has no second_parent");
+                return false;
+            }
+
+            auto first_parent = active_window->get_parent();
+            if (first_parent == second_parent)
+            {
+                first_parent->swap_nodes(active_window, second_window);
+            }
+            else
+            {
+                auto index = second_parent->get_index_of_node(second_window);
+                auto moving_node = active_window;
+                _handle_node_remove(moving_node);
+                second_parent->insert_node(moving_node, index + 1);
+            }
+            break;
+        }
+        case TraversalResult::traversal_type_append:
+        {
+            auto moving_node = active_window;
+            _handle_node_remove(moving_node);
+            traversal_result.node->insert_node(moving_node, traversal_result.node->num_nodes());
+            break;
+        }
+        case TraversalResult::traversal_type_prepend:
+        {
+            auto moving_node = active_window;
+            _handle_node_remove(moving_node);
+            traversal_result.node->insert_node(moving_node, 0);
+            break;
+        }
+        default:
+        {
+            mir::log_error("Unable to move window");
+            return false;
+        }
     }
 
-    auto second_parent = second_window->get_parent();
-    if (!second_parent)
-    {
-        mir::log_warning("Unable to move active window: second_window has no second_parent");
-        return false;
-    }
-
-    auto first_parent = active_window->get_parent();
-    if (first_parent == second_parent)
-    {
-        first_parent->swap_nodes(active_window, second_window);
-    }
-    else
-    {
-        auto index = second_parent->get_index_of_node(second_window);
-        auto moving_node = active_window;
-        if (first_parent->num_nodes() == 1 && first_parent->get_parent())
-        {
-            // Remove the entire lane if this lane is now empty
-            auto prev_active = first_parent;
-            first_parent = first_parent->get_parent();
-            first_parent->remove_node(prev_active);
-        }
-        else
-        {
-            first_parent->remove_node(moving_node);
-        }
-        second_parent->insert_node(moving_node, index + 1);
-    }
     return true;
 }
 
@@ -326,33 +344,98 @@ void WindowTree::advise_delete_window(miral::Window& window)
             is_active_window_fullscreen = false;
     }
 
-    auto parent = window_node->get_parent();
-    if (!parent)
-    {
-        mir::log_warning("Unable to delete window: node does not have a parent");
-        return;
-    }
-
-    if (parent->num_nodes() == 1 && parent->get_parent())
-    {
-        // Remove the entire lane if this lane is now empty
-        auto prev_active = parent;
-        parent = parent->get_parent();
-        parent->remove_node(prev_active);
-    }
-    else
-    {
-        // Remove the window from the active lane
-        parent->remove_node(window_node);
-    }
+    _handle_node_remove(window_node);
 }
 
-std::shared_ptr<Node> WindowTree::_traverse(std::shared_ptr<Node>const& from, Direction direction)
+namespace
+{
+std::shared_ptr<Node> get_closest_window_to_select_from_node(
+    std::shared_ptr<Node> node,
+    miracle::Direction direction)
+{
+    // This function attempts to get the first window within a node provided the direction that we are coming
+    // from as a hint. If the node that we want to move to has the same direction as that which we are coming
+    // from, a seamless experience would mean that - at times - we select the _LAST_ node in that list, instead
+    // of the first one. This makes it feel as though we are moving "across" the screen.
+    if (node->is_window())
+        return node;
+
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_negative = direction == Direction::up || direction == Direction::left;
+    if (is_vertical && node->get_direction() == NodeLayoutDirection::vertical
+        || !is_vertical && node->get_direction() == NodeLayoutDirection::horizontal)
+    {
+        if (is_negative)
+        {
+            auto sub_nodes = node->get_sub_nodes();
+            for (auto i = sub_nodes.size()  - 1; i >= 0; i--)
+            {
+                if (auto retval = get_closest_window_to_select_from_node(sub_nodes[i], direction))
+                    return retval;
+            }
+        }
+    }
+
+    for (auto sub_node : node->get_sub_nodes())
+    {
+        if (auto retval = get_closest_window_to_select_from_node(sub_node, direction))
+            return retval;
+    }
+
+    return nullptr;
+}
+}
+
+std::shared_ptr<Node> WindowTree::_select(const std::shared_ptr<Node> &from, miracle::Direction direction)
+{
+    // Algorithm:
+    //  1. Retrieve the parent
+    //  2. If the parent matches the target direction, then
+    //     we select the next node in the direction
+    //  3. If the current_node does NOT match the target direction,
+    //     then we climb the tree until we find a current_node who matches
+    //  4. If none match, we return nullptr
+    bool is_vertical = direction == Direction::up || direction == Direction::down;
+    bool is_negative = direction == Direction::up || direction == Direction::left;
+    auto current_node = from;
+    auto parent = current_node->get_parent();
+    if (!parent)
+    {
+        mir::log_warning("Cannot _select the root node");
+        return nullptr;
+    }
+
+    do {
+        auto grandparent_direction = parent->get_direction();
+        int index = parent->get_index_of_node(current_node);
+        if (is_vertical && grandparent_direction == NodeLayoutDirection::vertical
+            || !is_vertical && grandparent_direction == NodeLayoutDirection::horizontal)
+        {
+            if (is_negative)
+            {
+                if (index > 0)
+                    return get_closest_window_to_select_from_node(parent->node_at(index - 1), direction);
+            }
+            else
+            {
+                if (index < parent->num_nodes() - 1)
+                    return get_closest_window_to_select_from_node(parent->node_at(index + 1), direction);
+            }
+        }
+
+        current_node = parent;
+        parent = parent->get_parent();
+    } while (parent != nullptr);
+
+    return nullptr;
+}
+
+WindowTree::TraversalResult WindowTree::_traverse(std::shared_ptr<Node>const& from, Direction direction)
 {
     if (!from->get_parent())
     {
         mir::log_warning("Cannot _traverse the root node");
-        return nullptr;
+        return {};
     }
 
     auto parent = from->get_parent();
@@ -371,14 +454,20 @@ std::shared_ptr<Node> WindowTree::_traverse(std::shared_ptr<Node>const& from, Di
             if (index == 0)
                 goto grandparent_route;  // TODO: lazy lazy for readability
             else
-                return parent->node_at(index - 1);
+                return {
+                TraversalResult::traversal_type_swap,
+                parent->node_at(index - 1)
+                };
         }
         else
         {
             if (index == parent->num_nodes() - 1)
                 goto grandparent_route;  // TODO: lazy lazy for readability
             else
-                return parent->node_at(index + 1);
+                return {
+                    TraversalResult::traversal_type_swap,
+                    parent->node_at(index + 1)
+                };
         }
     }
     else
@@ -386,12 +475,13 @@ std::shared_ptr<Node> WindowTree::_traverse(std::shared_ptr<Node>const& from, Di
 grandparent_route:
         // Harder case: we need to jump to another lane. The best thing to do here is to
         // find the first ancestor that matches the direction that we want to travel in.
-        // If  that ancestor cannot be found, then we throw up our hands.
+        // If  that ancestor cannot be found, then we hint at the user that they can append
+        // to a particular instance if they want.
         auto grandparent = parent->get_parent();
         if (!grandparent)
         {
             mir::log_warning("Parent lane lacks a grandparent. It should AT LEAST be root");
-            return nullptr;
+            return {};
         }
 
         do {
@@ -404,7 +494,41 @@ grandparent_route:
             if (grandparent->get_direction() == NodeLayoutDirection::horizontal && !is_vertical
                 || grandparent->get_direction() == NodeLayoutDirection::vertical && is_vertical)
             {
-                return grandparent->find_nth_window_child(index_of_parent);
+                if (auto child = grandparent->find_nth_window_child(index_of_parent))
+                {
+                    // We've found a child. We either want to take its place, or we want
+                    // to become the child of the child if it is a lane
+                    if (child->is_lane())
+                    {
+                        return {
+                            TraversalResult::traversal_type_append,
+                            child
+                        };
+                    }
+                    else
+                    {
+                        return {
+                            TraversalResult::traversal_type_swap,
+                            child
+                        };
+                    }
+
+                }
+
+                if (is_negative)
+                {
+                    return {
+                        TraversalResult::traversal_type_prepend,
+                        grandparent
+                    };
+                }
+                else
+                {
+                    return {
+                        TraversalResult::traversal_type_append,
+                        grandparent
+                    };
+                }
             }
 
             parent = grandparent;
@@ -412,8 +536,7 @@ grandparent_route:
         } while (grandparent != nullptr);
     }
 
-
-    return nullptr;
+    return {};
 }
 
 std::shared_ptr<Node> WindowTree::_get_active_lane()
@@ -514,6 +637,25 @@ void WindowTree::_handle_resize_request(
     for (size_t i = 0; i < nodes.size(); i++)
     {
         nodes[i]->set_logical_area(pending_node_resizes[i]);
+    }
+}
+
+void WindowTree::_handle_node_remove(std::shared_ptr<Node> node)
+{
+    auto parent = node->get_parent();
+    if (parent == nullptr)
+        return;
+
+    if (parent->num_nodes() == 1 && parent->get_parent())
+    {
+        // Remove the entire lane if this lane is now empty
+        auto prev_active = parent;
+        parent = parent->get_parent();
+        parent->remove_node(prev_active);
+    }
+    else
+    {
+        parent->remove_node(node);
     }
 }
 
