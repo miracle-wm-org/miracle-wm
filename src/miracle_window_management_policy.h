@@ -1,8 +1,9 @@
 #ifndef MIRIE_WINDOW_MANAGEMENT_POLICY_H
 #define MIRIE_WINDOW_MANAGEMENT_POLICY_H
 
-#include "window_tree.h"
+#include "screen.h"
 #include "miracle_config.h"
+#include "workspace_manager.h"
 
 #include <miral/window_manager_tools.h>
 #include <miral/window_management_policy.h>
@@ -20,10 +21,10 @@ class MirRunner;
 namespace miracle
 {
 
-struct OutputTreePair
+struct OutputInfo
 {
     miral::Output output;
-    WindowTree tree;
+    Screen screen;
 };
 
 class MiracleWindowManagementPolicy : public miral::WindowManagementPolicy
@@ -80,13 +81,14 @@ public:
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
 private:
-    std::shared_ptr<OutputTreePair> active_tree;
-    std::vector<std::shared_ptr<OutputTreePair>> tree_list;
+    std::shared_ptr<OutputInfo> active_output;
+    std::vector<std::shared_ptr<OutputInfo>> output_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
     MiracleConfig const& config;
+    WorkspaceManager workspace_manager;
 };
 }
 
