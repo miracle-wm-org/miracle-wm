@@ -655,6 +655,9 @@ bool WindowTree::advise_state_change(const miral::WindowInfo &window_info, MirWi
     if (!node)
         return false;
 
+    if (is_hidden)
+        return true;
+
     switch (state)
     {
         case mir_window_state_restored:
@@ -705,6 +708,9 @@ bool WindowTree::constrain(miral::WindowInfo &window_info)
     if (!node)
         return false;
 
+    if (is_hidden)
+        return false;
+
     if (!node->get_parent())
     {
         std::cerr << "Unable to constrain node without parent\n";
@@ -752,4 +758,56 @@ void WindowTree::close_active_window()
     {
         tools.ask_client_to_close(active_window->get_window());
     }
+}
+
+void WindowTree::hide()
+{
+    if (is_hidden)
+    {
+        mir::log_warning("Tree is already hidden");
+        return;
+    }
+
+    is_hidden = true;
+    foreach_node([&](auto node)
+    {
+        if (node->is_window())
+        {
+            miral::WindowInfo& window_info = tools.info_for(node->get_window());
+            nodes_to_resurrect.push_back({
+                node,
+                window_info.state()
+            });
+        }
+    });
+
+    for (auto& node : nodes_to_resurrect)
+    {
+        miral::WindowInfo& window_info = tools.info_for(node.node->get_window());
+        miral::WindowSpecification modifications;
+        modifications.state() = mir_window_state_hidden;
+        modifications.focus_mode() = MirFocusMode::mir_focus_mode_disabled;
+        tools.place_and_size_for_state(modifications, window_info);
+        tools.modify_window(window_info.window(), modifications);
+    }
+}
+
+void WindowTree::show()
+{
+    if (!is_hidden)
+    {
+        mir::log_warning("Tree is already shown");
+        return;
+    }
+
+    is_hidden = false;
+    for (auto other_node : nodes_to_resurrect)
+    {
+        auto& window_info = tools.info_for(other_node.node->get_window());
+        miral::WindowSpecification modifications;
+        modifications.state() = other_node.state;
+        tools.place_and_size_for_state(modifications, window_info);
+        tools.modify_window(window_info.window(), modifications);
+    }
+    nodes_to_resurrect.clear();
 }

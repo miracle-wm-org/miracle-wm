@@ -106,59 +106,89 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
             }
             return true;
         case RequestVertical:
-            active_output->screen.get_active_tree().request_vertical();
+            active_output->screen->get_active_tree().request_vertical();
             return true;
         case RequestHorizontal:
-            active_output->screen.get_active_tree().request_horizontal();
+            active_output->screen->get_active_tree().request_horizontal();
             return true;
         case ToggleResize:
-            active_output->screen.get_active_tree().toggle_resize_mode();
+            active_output->screen->get_active_tree().toggle_resize_mode();
             return true;
         case MoveUp:
-            if (active_output->screen.get_active_tree().try_move_active_window(Direction::up))
+            if (active_output->screen->get_active_tree().try_move_active_window(Direction::up))
                 return true;
             return false;
         case MoveDown:
-            if (active_output->screen.get_active_tree().try_move_active_window(Direction::down))
+            if (active_output->screen->get_active_tree().try_move_active_window(Direction::down))
                 return true;
             return false;
         case MoveLeft:
-            if (active_output->screen.get_active_tree().try_move_active_window(Direction::left))
+            if (active_output->screen->get_active_tree().try_move_active_window(Direction::left))
                 return true;
             return false;
         case MoveRight:
-            if (active_output->screen.get_active_tree().try_move_active_window(Direction::right))
+            if (active_output->screen->get_active_tree().try_move_active_window(Direction::right))
                 return true;
             return false;
         case SelectUp:
-            if (active_output->screen.get_active_tree().try_resize_active_window(Direction::up)
-                || active_output->screen.get_active_tree().try_select_next(Direction::up))
+            if (active_output->screen->get_active_tree().try_resize_active_window(Direction::up)
+                || active_output->screen->get_active_tree().try_select_next(Direction::up))
                 return true;
             return false;
         case SelectDown:
-            if (active_output->screen.get_active_tree().try_resize_active_window(Direction::down)
-                || active_output->screen.get_active_tree().try_select_next(Direction::down))
+            if (active_output->screen->get_active_tree().try_resize_active_window(Direction::down)
+                || active_output->screen->get_active_tree().try_select_next(Direction::down))
                 return true;
             return false;
         case SelectLeft:
-            if (active_output->screen.get_active_tree().try_resize_active_window(Direction::left)
-                || active_output->screen.get_active_tree().try_select_next(Direction::left))
+            if (active_output->screen->get_active_tree().try_resize_active_window(Direction::left)
+                || active_output->screen->get_active_tree().try_select_next(Direction::left))
                 return true;
             return false;
         case SelectRight:
-            if (active_output->screen.get_active_tree().try_resize_active_window(Direction::right)
-                || active_output->screen.get_active_tree().try_select_next(Direction::right))
+            if (active_output->screen->get_active_tree().try_resize_active_window(Direction::right)
+                || active_output->screen->get_active_tree().try_select_next(Direction::right))
                 return true;
             return false;
         case QuitActiveWindow:
-            active_output->screen.get_active_tree().close_active_window();
+            active_output->screen->get_active_tree().close_active_window();
             return true;
         case QuitCompositor:
             runner.stop();
             return true;
         case Fullscreen:
-            active_output->screen.get_active_tree().try_toggle_active_fullscreen();
+            active_output->screen->get_active_tree().try_toggle_active_fullscreen();
             return true;
+        case SelectWorkspace1:
+            workspace_manager.request_workspace(active_output->screen, '1');
+            break;
+        case SelectWorkspace2:
+            workspace_manager.request_workspace(active_output->screen, '2');
+            break;
+        case SelectWorkspace3:
+            workspace_manager.request_workspace(active_output->screen, '3');
+            break;
+        case SelectWorkspace4:
+            workspace_manager.request_workspace(active_output->screen, '4');
+            break;
+        case SelectWorkspace5:
+            workspace_manager.request_workspace(active_output->screen, '5');
+            break;
+        case SelectWorkspace6:
+            workspace_manager.request_workspace(active_output->screen, '6');
+            break;
+        case SelectWorkspace7:
+            workspace_manager.request_workspace(active_output->screen, '7');
+            break;
+        case SelectWorkspace8:
+            workspace_manager.request_workspace(active_output->screen, '8');
+            break;
+        case SelectWorkspace9:
+            workspace_manager.request_workspace(active_output->screen, '9');
+            break;
+        case SelectWorkspace0:
+            workspace_manager.request_workspace(active_output->screen, '0');
+            break;
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
@@ -173,10 +203,10 @@ bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* 
 
     for (auto const& pair : output_list)
     {
-        if (active_output->screen.get_active_tree().point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
+        if (active_output->screen->get_active_tree().point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
             active_output = pair;
-            active_output->screen.get_active_tree().select_window_from_point(static_cast<int>(x), static_cast<int>(y));
+            active_output->screen->get_active_tree().select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             break;
         }
     }
@@ -192,7 +222,7 @@ auto MiracleWindowManagementPolicy::place_new_window(
     {
         // In this step, we'll ask the WindowTree where we should place the window on the display
         // We will also resize the adjacent windows accordingly in this step.
-        return active_output->screen.get_active_tree().allocate_position(requested_specification);
+        return active_output->screen->get_active_tree().allocate_position(requested_specification);
     }
 
     return requested_specification;
@@ -202,7 +232,7 @@ void MiracleWindowManagementPolicy::advise_new_window(miral::WindowInfo const& w
 {
     miral::WindowManagementPolicy::advise_new_window(window_info);
     if (is_tileable(window_info))
-        active_output->screen.get_active_tree().advise_new_window(window_info);
+        active_output->screen->get_active_tree().advise_new_window(window_info);
 }
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
@@ -214,7 +244,7 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
 
     for (auto const& output : output_list)
     {
-        if (output->screen.get_active_tree().handle_window_ready(window_info))
+        if (output->screen->get_active_tree().handle_window_ready(window_info))
             break;
     }
 }
@@ -222,20 +252,20 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
 void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
-        output->screen.get_active_tree().advise_focus_gained(window_info.window());
+        output->screen->get_active_tree().advise_focus_gained(window_info.window());
     window_manager_tools.raise_tree(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
-        output->screen.get_active_tree().advise_focus_lost(window_info.window());
+        output->screen->get_active_tree().advise_focus_lost(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
-        output->screen.get_active_tree().advise_delete_window(window_info.window());
+        output->screen->get_active_tree().advise_delete_window(window_info.window());
 }
 
 void MiracleWindowManagementPolicy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -248,8 +278,9 @@ void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& ou
     WindowTreeOptions options =  { config.get_gap_size_x(), config.get_gap_size_y() };
     auto new_tree = std::make_shared<OutputInfo>(
         output,
-        Screen(workspace_manager, output.extents(), window_manager_tools, options));
-    output_list.push_back(new_tree);
+        std::make_shared<Screen>(workspace_manager, output.extents(), window_manager_tools, options));
+    workspace_manager.request_first_available_workspace(new_tree->screen);
+        output_list.push_back(new_tree);
     if (active_output == nullptr)
         active_output = new_tree;
 }
@@ -260,7 +291,7 @@ void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& up
     {
         if (output->output.is_same_output(original))
         {
-            for (auto workspace : output->screen.get_workspaces())
+            for (auto workspace : output->screen->get_workspaces())
             {
                 workspace.tree.set_output_area(updated.extents());
             }
@@ -285,7 +316,7 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
                 {
                     // TODO: Add ALL Trees
                     active_output = output_list[0];
-                    active_output->screen.get_active_tree().add_tree(it->screen.get_active_tree());
+                    active_output->screen->get_active_tree().add_tree(it->screen->get_active_tree());
                 }
             }
             break;
@@ -297,7 +328,7 @@ void MiracleWindowManagementPolicy::advise_state_change(miral::WindowInfo const&
 {
     for (auto const& output : output_list)
     {
-        if (active_output->screen.get_active_tree().advise_state_change(window_info, state))
+        if (active_output->screen->get_active_tree().advise_state_change(window_info, state))
         {
             break;
         }
@@ -315,7 +346,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
             for (auto const& output : output_list)
             {
                 bool found = false;
-                for (auto workspace : output->screen.get_workspaces())
+                for (auto workspace : output->screen->get_workspaces())
                 {
                     if (workspace.tree.advise_fullscreen_window(window_info))
                     {
@@ -332,7 +363,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
             for (auto const& output : output_list)
             {
                 bool found = false;
-                for (auto workspace : output->screen.get_workspaces())
+                for (auto workspace : output->screen->get_workspaces())
                 {
                     if (workspace.tree.advise_restored_window(window_info))
                     {
@@ -349,19 +380,18 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     for (auto const& output :output_list)
     {
         bool found = false;
-        for (auto workspace : output->screen.get_workspaces())
+        for (auto workspace : output->screen->get_workspaces())
         {
             if (workspace.tree.constrain(window_info))
             {
                 found = true;
+                window_manager_tools.modify_window(window_info.window(), modifications);
                 break;
             }
         }
 
         if (found) break;
     }
-
-    window_manager_tools.modify_window(window_info.window(), modifications);
 }
 
 void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
@@ -379,7 +409,7 @@ MiracleWindowManagementPolicy::confirm_placement_on_display(
     for (auto const& output : output_list)\
     {
         bool found = false;
-        for (auto workspace : output->screen.get_workspaces())
+        for (auto workspace : output->screen->get_workspaces())
         {
             if (workspace.tree.confirm_placement_on_display(window_info, new_state, modified_placement))
             {
@@ -422,7 +452,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen.get_workspaces())
+        for (auto workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_create(application_zone);
     }
 }
@@ -431,7 +461,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen.get_workspaces())
+        for (auto workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_update(updated, original);
     }
 }
@@ -440,7 +470,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_delete(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen.get_workspaces())
+        for (auto workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_delete(application_zone);
     }
 }

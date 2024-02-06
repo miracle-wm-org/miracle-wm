@@ -15,13 +15,13 @@ WorkspaceManager::WorkspaceManager(WindowManagerTools const& tools) :
 {
 }
 
-bool WorkspaceManager::request_workspace(miracle::Screen *screen, char key)
+bool WorkspaceManager::request_workspace(std::shared_ptr<Screen> screen, char key)
 {
     for (auto workspace : workspaces)
     {
         if (workspace.key == key)
         {
-            // TODO: Select workspace
+            workspace.screen->make_workspace_active(key);
             return true;
         }
     }
@@ -34,7 +34,7 @@ bool WorkspaceManager::request_workspace(miracle::Screen *screen, char key)
     return true;
 }
 
-bool WorkspaceManager::request_first_available_workspace(miracle::Screen *screen)
+bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Screen> screen)
 {
     for (int i = 0; i < 10; i++)
     {

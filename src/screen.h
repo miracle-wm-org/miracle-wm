@@ -2,6 +2,7 @@
 #define MIRACLE_SCREEN_H
 
 #include "window_tree.h"
+#include <memory>
 
 namespace miracle
 {

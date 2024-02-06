@@ -24,7 +24,7 @@ namespace miracle
 struct OutputInfo
 {
     miral::Output output;
-    Screen screen;
+    std::shared_ptr<Screen> screen;
 };
 
 class MiracleWindowManagementPolicy : public miral::WindowManagementPolicy

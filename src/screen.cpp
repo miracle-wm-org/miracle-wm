@@ -14,7 +14,6 @@ Screen::Screen(
       tools{tools},
       options{options}
 {
-    workspace_manager.request_first_available_workspace(this);
 }
 
 WindowTree &Screen::get_active_tree()
@@ -30,16 +29,16 @@ WindowTree &Screen::get_active_tree()
 
 void Screen::advise_new_workspace(char workspace)
 {
-    active_workspace = workspace;
     workspaces.push_back({
         workspace,
         WindowTree(area, tools, options)
     });
+    make_workspace_active(workspace);
 }
 
 bool Screen::make_workspace_active(char key)
 {
-    for (auto workspace : workspaces)
+    for (auto& workspace : workspaces)
     {
         if (workspace.workspace == key)
         {
@@ -61,49 +60,16 @@ bool Screen::make_workspace_active(char key)
         }
     }
 
+    active_workspace = key;
     return false;
 }
 
 void Screen::hide(ScreenWorkspaceInfo& info)
 {
-    info.tree.foreach_node([&](auto node)
-    {
-        if (node->is_window())
-        {
-            miral::WindowInfo& window_info = tools.info_for(node->get_window());
-            WindowSpecification modifications;
-
-            info.nodes_to_resurrect.push_back({
-                node,
-                window_info.state()
-            });
-
-            modifications.state() = mir_window_state_hidden;
-            tools.place_and_size_for_state(modifications, window_info);
-            tools.modify_window(window_info.window(), modifications);
-        }
-    });
+    info.tree.hide();
 }
 
 void Screen::show(ScreenWorkspaceInfo& info)
 {
-    info.tree.foreach_node([&](auto node)
-    {
-         if (node->is_window())
-         {
-             auto& window_info = tools.info_for(node->get_window());
-             WindowSpecification modifications;
-
-             for (auto other_node : info.nodes_to_resurrect)
-             {
-                 if (other_node.node == node)
-                 {
-                     modifications.state() = other_node.state;
-                     tools.place_and_size_for_state(modifications, window_info);
-                     tools.modify_window(window_info.window(), modifications);
-                 }
-             }
-         }
-    });
-    info.nodes_to_resurrect.clear();
+     info.tree.show();
 }
