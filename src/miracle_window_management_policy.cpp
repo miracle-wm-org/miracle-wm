@@ -294,7 +294,7 @@ void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& up
     {
         if (output->output.is_same_output(original))
         {
-            for (auto workspace : output->screen->get_workspaces())
+            for (auto& workspace : output->screen->get_workspaces())
             {
                 workspace.tree.set_output_area(updated.extents());
             }
