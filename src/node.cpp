@@ -47,9 +47,9 @@ InsertNodeInternalResult insert_node_internal(
     int lane_pos,
     int index,
     int node_count,
-    std::function<int(int)> get_node_size,
-    std::function<int(int)> get_node_position,
-    std::function<void(int, int, int)> set_node_size_position)
+    std::function<int(int)> const& get_node_size,
+    std::function<int(int)> const& get_node_position,
+    std::function<void(int, int, int)> const& set_node_size_position)
 {
     int new_item_size = floorf64((double)lane_size / (double)(node_count + 1));
     int new_item_position = lane_pos + index * new_item_size;

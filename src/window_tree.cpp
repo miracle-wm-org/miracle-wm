@@ -786,7 +786,6 @@ void WindowTree::hide()
         miral::WindowInfo& window_info = tools.info_for(node.node->get_window());
         miral::WindowSpecification modifications;
         modifications.state() = mir_window_state_hidden;
-        modifications.focus_mode() = MirFocusMode::mir_focus_mode_disabled;
         tools.place_and_size_for_state(modifications, window_info);
         tools.modify_window(window_info.window(), modifications);
     }
