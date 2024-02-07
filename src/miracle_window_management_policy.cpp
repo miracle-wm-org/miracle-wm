@@ -203,9 +203,12 @@ bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* 
 
     for (auto const& pair : output_list)
     {
-        if (active_output->screen->get_active_tree().point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
+        if (pair->screen->get_active_tree().point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
-            active_output = pair;
+            if (active_output != pair)
+            {
+                active_output = pair;
+            }
             active_output->screen->get_active_tree().select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             break;
         }
