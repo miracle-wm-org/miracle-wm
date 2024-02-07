@@ -26,6 +26,16 @@ enum DefaultKeyCommand
     QuitActiveWindow,
     QuitCompositor,
     Fullscreen,
+    SelectWorkspace1,
+    SelectWorkspace2,
+    SelectWorkspace3,
+    SelectWorkspace4,
+    SelectWorkspace5,
+    SelectWorkspace6,
+    SelectWorkspace7,
+    SelectWorkspace8,
+    SelectWorkspace9,
+    SelectWorkspace0,
     MAX
 };
 

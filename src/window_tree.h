@@ -102,6 +102,12 @@ public:
     void foreach_node(std::function<void(std::shared_ptr<Node>)>);
     void close_active_window();
 
+    /// Hides the entire tree
+    void hide();
+
+    /// Shows the entire tree
+    void show();
+
 private:
     struct MoveResult
     {
@@ -114,6 +120,12 @@ private:
         std::shared_ptr<Node> node = nullptr;
     };
 
+    struct NodeResurrection
+    {
+        std::shared_ptr<Node> node;
+        MirWindowState state;
+    };
+
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
     std::shared_ptr<Node> root_lane;
@@ -122,6 +134,8 @@ private:
     bool is_resizing = false;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_window_fullscreen = false;
+    bool is_hidden = false;
+    std::vector<NodeResurrection> nodes_to_resurrect;
 
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);

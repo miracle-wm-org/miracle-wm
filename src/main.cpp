@@ -6,7 +6,6 @@
 #include <miral/keymap.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>
-#include <miral/command_line_option.h>
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
 #include "miracle_window_management_policy.h"

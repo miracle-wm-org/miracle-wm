@@ -101,6 +101,26 @@ MiracleConfig::MiracleConfig()
                 key_command = DefaultKeyCommand::QuitCompositor;
             else if (name == "fullscreen")
                 key_command = DefaultKeyCommand::Fullscreen;
+            else if (name == "select_workspace_1")
+                key_command = DefaultKeyCommand::SelectWorkspace1;
+            else if (name == "select_workspace_2")
+                key_command = DefaultKeyCommand::SelectWorkspace2;
+            else if (name == "select_workspace_3")
+                key_command = DefaultKeyCommand::SelectWorkspace3;
+            else if (name == "select_workspace_4")
+                key_command = DefaultKeyCommand::SelectWorkspace4;
+            else if (name == "select_workspace_5")
+                key_command = DefaultKeyCommand::SelectWorkspace5;
+            else if (name == "select_workspace_6")
+                key_command = DefaultKeyCommand::SelectWorkspace6;
+            else if (name == "select_workspace_7")
+                key_command = DefaultKeyCommand::SelectWorkspace7;
+            else if (name == "select_workspace_8")
+                key_command = DefaultKeyCommand::SelectWorkspace8;
+            else if (name == "select_workspace_9")
+                key_command = DefaultKeyCommand::SelectWorkspace9;
+            else if (name == "select_workspace_0")
+                key_command = DefaultKeyCommand::SelectWorkspace0;
             else {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
                 continue;
@@ -229,6 +249,56 @@ MiracleConfig::MiracleConfig()
             MirKeyboardAction ::mir_keyboard_action_down,
             miracle_input_event_modifier_default,
             KEY_F
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_1
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_2
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_3
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_4
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_5
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_6
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_7
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_8
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_9
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default,
+            KEY_0
         }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
