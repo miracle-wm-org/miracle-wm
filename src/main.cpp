@@ -1,3 +1,5 @@
+#define MIR_LOG_COMPONENT "miracle-main"
+
 #include <miral/set_window_management_policy.h>
 #include <miral/external_client.h>
 #include <miral/runner.h>
@@ -10,6 +12,7 @@
 #include <miral/add_init_callback.h>
 #include "miracle_window_management_policy.h"
 #include "miracle_config.h"
+#include <mir/log.h>
 
 using namespace miral;
 
@@ -35,14 +38,23 @@ int main(int argc, char const* argv[])
     {
         for (auto const& app : config.get_startup_apps())
         {
-            external_client_launcher.launch(app);
+            auto pid = external_client_launcher.launch(app);
+            mir::log_info("Started external client with pid=%d", pid);
         }
     };
 
     return runner.run_with(
         {
             window_managers,
-            WaylandExtensions{},
+            WaylandExtensions{}
+                .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
+                .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
+                .enable(miral::WaylandExtensions::zxdg_output_manager_v1)
+                .enable(miral::WaylandExtensions::zwp_virtual_keyboard_manager_v1)
+                .enable(miral::WaylandExtensions::zwlr_virtual_pointer_manager_v1)
+                .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
+                .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
+                .enable(miral::WaylandExtensions::ext_session_lock_manager_v1),
             X11Support{}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
