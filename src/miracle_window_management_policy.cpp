@@ -349,7 +349,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
             for (auto const& output : output_list)
             {
                 bool found = false;
-                for (auto workspace : output->screen->get_workspaces())
+                for (auto& workspace : output->screen->get_workspaces())
                 {
                     if (workspace.tree.advise_fullscreen_window(window_info))
                     {
@@ -366,7 +366,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
             for (auto const& output : output_list)
             {
                 bool found = false;
-                for (auto workspace : output->screen->get_workspaces())
+                for (auto& workspace : output->screen->get_workspaces())
                 {
                     if (workspace.tree.advise_restored_window(window_info))
                     {
@@ -383,7 +383,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     for (auto const& output :output_list)
     {
         bool found = false;
-        for (auto workspace : output->screen->get_workspaces())
+        for (auto& workspace : output->screen->get_workspaces())
         {
             if (workspace.tree.constrain(window_info))
             {
@@ -412,7 +412,7 @@ MiracleWindowManagementPolicy::confirm_placement_on_display(
     for (auto const& output : output_list)\
     {
         bool found = false;
-        for (auto workspace : output->screen->get_workspaces())
+        for (auto& workspace : output->screen->get_workspaces())
         {
             if (workspace.tree.confirm_placement_on_display(window_info, new_state, modified_placement))
             {
@@ -455,7 +455,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen->get_workspaces())
+        for (auto& workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_create(application_zone);
     }
 }
@@ -464,7 +464,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen->get_workspaces())
+        for (auto& workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_update(updated, original);
     }
 }
@@ -473,7 +473,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_delete(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto workspace : output->screen->get_workspaces())
+        for (auto& workspace : output->screen->get_workspaces())
             workspace.tree.advise_application_zone_delete(application_zone);
     }
 }
