@@ -31,7 +31,7 @@ void Screen::advise_new_workspace(char workspace)
 {
     workspaces.push_back({
         workspace,
-        WindowTree(area, tools, options)
+        WindowTree(this, tools, options)
     });
     make_workspace_active(workspace);
 }
@@ -72,4 +72,40 @@ void Screen::hide(ScreenWorkspaceInfo& info)
 void Screen::show(ScreenWorkspaceInfo& info)
 {
      info.tree.show();
+}
+
+void Screen::advise_application_zone_create(miral::Zone const& application_zone)
+{
+    if (application_zone.extents().contains(area))
+    {
+        application_zone_list.push_back(application_zone);
+        for (auto& workspace : workspaces)
+            workspace.tree._recalculate_root_node_area();
+    }
+}
+
+void Screen::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
+{
+    for (auto& zone : application_zone_list)
+        if (zone == original)
+        {
+            zone = updated;
+            for (auto& workspace : workspaces)
+                workspace.tree._recalculate_root_node_area();
+            break;
+        }
+}
+
+void Screen::advise_application_zone_delete(miral::Zone const& application_zone)
+{
+    if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
+    {
+        for (auto& workspace : workspaces)
+            workspace.tree._recalculate_root_node_area();
+    }
+}
+
+bool Screen::point_is_in_output(int x, int y)
+{
+    return area.contains(geom::Point(x, y));
 }

@@ -16,6 +16,8 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
+class Screen;
+
 enum class Direction
 {
     up,
@@ -34,7 +36,7 @@ struct WindowTreeOptions
 class WindowTree
 {
 public:
-    WindowTree(geom::Rectangle const& area, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
+    WindowTree(Screen* parent, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
     ~WindowTree() = default;
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
@@ -76,13 +78,7 @@ public:
     /// Called when the physical display is resized.
     void set_output_area(geom::Rectangle const& new_area);
 
-    bool point_is_in_output(int x, int y);
-
     bool select_window_from_point(int x, int y);
-
-    void advise_application_zone_create(miral::Zone const& application_zone);
-    void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
-    void advise_application_zone_delete(miral::Zone const& application_zone);
 
     bool advise_fullscreen_window(miral::WindowInfo const&);
     bool advise_restored_window(miral::WindowInfo const &window_info);
@@ -109,6 +105,7 @@ public:
     void show();
 
     std::shared_ptr<Node> get_root_node();
+    void _recalculate_root_node_area();
 
 private:
     struct MoveResult
@@ -128,13 +125,12 @@ private:
         MirWindowState state;
     };
 
+    Screen* screen;
     miral::WindowManagerTools tools;
     WindowTreeOptions options;
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_window;
-    geom::Rectangle area;
     bool is_resizing = false;
-    std::vector<miral::Zone> application_zone_list;
     bool is_active_window_fullscreen = false;
     bool is_hidden = false;
     std::vector<NodeResurrection> nodes_to_resurrect;
@@ -142,12 +138,11 @@ private:
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);
     void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
-    void _handle_node_remove(std::shared_ptr<Node> node);
+    void _handle_node_remove(std::shared_ptr<Node> const& node);
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
     MoveResult _move(std::shared_ptr<Node> const& from, Direction direction);
     static std::shared_ptr<Node> _select(std::shared_ptr<Node> const& from, Direction direction);
-    void _recalculate_root_node_area();
 };
 
 }

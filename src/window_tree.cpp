@@ -2,6 +2,7 @@
 
 #include "window_tree.h"
 #include "window_helpers.h"
+#include "screen.h"
 #include <memory>
 #include <mir/log.h>
 #include <iostream>
@@ -9,27 +10,19 @@
 
 using namespace miracle;
 
-namespace
-{
-bool point_in_rect(geom::Rectangle const& area, int x, int y)
-{
-    return x >= area.top_left.x.as_int() && x < area.top_left.x.as_int() + area.size.width.as_int()
-           && y >= area.top_left.y.as_int() && y < area.top_left.y.as_int() + area.size.height.as_int();
-}
-}
-
 WindowTree::WindowTree(
-    geom::Rectangle const& default_area,
+    Screen* screen,
     miral::WindowManagerTools const& tools,
     WindowTreeOptions const& options)
-    : root_lane{std::make_shared<Node>(
+    : screen{screen},
+      root_lane{std::make_shared<Node>(
         tools,
-        std::move(geom::Rectangle{default_area.top_left, default_area.size}),
+        std::move(geom::Rectangle{screen->get_area().top_left, screen->get_area().size}),
         options.gap_x, options.gap_y)},
       tools{tools},
-      area{default_area},
       options{options}
 {
+    _recalculate_root_node_area();
 }
 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
@@ -154,6 +147,7 @@ bool WindowTree::try_toggle_active_fullscreen()
 
 void WindowTree::set_output_area(geom::Rectangle const& new_area)
 {
+    auto area = screen->get_area();
     double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
     double y_scale = static_cast<double>(new_area.size.height.as_int()) / static_cast<double>(area.size.height.as_int());
 
@@ -168,11 +162,6 @@ void WindowTree::set_output_area(geom::Rectangle const& new_area)
     root_lane->translate_by(position_diff_x, position_diff_y);
 }
 
-bool WindowTree::point_is_in_output(int x, int y)
-{
-    return point_in_rect(area, x, y);
-}
-
 bool WindowTree::select_window_from_point(int x, int y)
 {
     if (is_active_window_fullscreen)
@@ -183,7 +172,7 @@ bool WindowTree::select_window_from_point(int x, int y)
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
     {
-        return node->is_window() && point_in_rect(node->get_logical_area(), x, y);
+        return node->is_window() && node->get_logical_area().contains(geom::Point(x, y));
     });
     if (!node)
         return false;
@@ -368,7 +357,7 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
         if (is_negative)
         {
             auto sub_nodes = node->get_sub_nodes();
-            for (auto i = sub_nodes.size()  - 1; i >= 0; i--)
+            for (auto i = sub_nodes.size()  - 1; i != 0; i--)
             {
                 if (auto retval = get_closest_window_to_select_from_node(sub_nodes[i], direction))
                     return retval;
@@ -376,7 +365,7 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
         }
     }
 
-    for (auto sub_node : node->get_sub_nodes())
+    for (auto const& sub_node : node->get_sub_nodes())
     {
         if (auto retval = get_closest_window_to_select_from_node(sub_node, direction))
             return retval;
@@ -552,7 +541,7 @@ void WindowTree::_handle_resize_request(
     }
 }
 
-void WindowTree::_handle_node_remove(std::shared_ptr<Node> node)
+void WindowTree::_handle_node_remove(std::shared_ptr<Node> const& node)
 {
     auto parent = node->get_parent();
     if (parent == nullptr)
@@ -571,38 +560,9 @@ void WindowTree::_handle_node_remove(std::shared_ptr<Node> node)
     }
 }
 
-void WindowTree::advise_application_zone_create(miral::Zone const& application_zone)
-{
-    if (application_zone.extents().contains(area))
-    {
-        application_zone_list.push_back(application_zone);
-        _recalculate_root_node_area();
-    }
-}
-
-void WindowTree::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
-{
-    for (auto& zone : application_zone_list)
-        if (zone == original)
-        {
-            zone = updated;
-            _recalculate_root_node_area();
-            break;
-        }
-}
-
-void WindowTree::advise_application_zone_delete(miral::Zone const& application_zone)
-{
-    if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
-    {
-        _recalculate_root_node_area();
-    }
-}
-
 void WindowTree::_recalculate_root_node_area()
 {
-    // TODO: We don't take care of multiple application zones, so maybe that has to do with multiple outputs?
-    for (auto const& zone : application_zone_list)
+    for (auto const& zone : screen->get_app_zones())
     {
         root_lane->set_logical_area(zone.extents());
         break;
