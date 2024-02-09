@@ -810,3 +810,9 @@ void WindowTree::show()
     }
     nodes_to_resurrect.clear();
 }
+
+
+std::shared_ptr<Node> WindowTree::get_root_node()
+{
+    return root_lane;
+}

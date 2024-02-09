@@ -36,6 +36,16 @@ enum DefaultKeyCommand
     SelectWorkspace8,
     SelectWorkspace9,
     SelectWorkspace0,
+    MoveToWorkspace1,
+    MoveToWorkspace2,
+    MoveToWorkspace3,
+    MoveToWorkspace4,
+    MoveToWorkspace5,
+    MoveToWorkspace6,
+    MoveToWorkspace7,
+    MoveToWorkspace8,
+    MoveToWorkspace9,
+    MoveToWorkspace0,
     MAX
 };
 

@@ -189,6 +189,36 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
         case SelectWorkspace0:
             workspace_manager.request_workspace(active_output->screen, '0');
             break;
+        case MoveToWorkspace1:
+            workspace_manager.move_active_to_workspace(active_output->screen, '1');
+            break;
+        case MoveToWorkspace2:
+            workspace_manager.move_active_to_workspace(active_output->screen, '2');
+            break;
+        case MoveToWorkspace3:
+            workspace_manager.move_active_to_workspace(active_output->screen, '3');
+            break;
+        case MoveToWorkspace4:
+            workspace_manager.move_active_to_workspace(active_output->screen, '4');
+            break;
+        case MoveToWorkspace5:
+            workspace_manager.move_active_to_workspace(active_output->screen, '5');
+            break;
+        case MoveToWorkspace6:
+            workspace_manager.move_active_to_workspace(active_output->screen, '6');
+            break;
+        case MoveToWorkspace7:
+            workspace_manager.move_active_to_workspace(active_output->screen, '7');
+            break;
+        case MoveToWorkspace8:
+            workspace_manager.move_active_to_workspace(active_output->screen, '8');
+            break;
+        case MoveToWorkspace9:
+            workspace_manager.move_active_to_workspace(active_output->screen, '9');
+            break;
+        case MoveToWorkspace0:
+            workspace_manager.move_active_to_workspace(active_output->screen, '0');
+            break;
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
