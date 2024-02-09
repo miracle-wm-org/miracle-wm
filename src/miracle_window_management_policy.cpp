@@ -58,17 +58,6 @@ const std::string POSSIBLE_TERMINALS[] = {
     "wezterm",
     "rio"
 };
-
-template <typename T>
-bool is_tileable(T& requested_specification)
-{
-    auto t = requested_specification.type();
-    auto state = requested_specification.state();
-    auto has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-    return (t == mir_window_type_normal || t == mir_window_type_freestyle)
-        && (state == mir_window_state_restored || state == mir_window_state_maximized)
-        && !has_exclusive_rect;
-}
 }
 
 MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
@@ -258,30 +247,17 @@ auto MiracleWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
-    if (is_tileable(requested_specification))
-    {
-        // In this step, we'll ask the WindowTree where we should place the window on the display
-        // We will also resize the adjacent windows accordingly in this step.
-        return active_output->screen->get_active_tree().allocate_position(requested_specification);
-    }
-
-    return requested_specification;
+    return active_output->screen->get_active_tree().allocate_position(requested_specification);
 }
 
 void MiracleWindowManagementPolicy::advise_new_window(miral::WindowInfo const& window_info)
 {
     miral::WindowManagementPolicy::advise_new_window(window_info);
-    if (is_tileable(window_info))
-        active_output->screen->get_active_tree().advise_new_window(window_info);
+    active_output->screen->get_active_tree().advise_new_window(window_info);
 }
 
 void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
-    if (!is_tileable(window_info))
-    {
-        return;
-    }
-
     for (auto const& output : output_list)
     {
         if (output->screen->get_active_tree().handle_window_ready(window_info))
