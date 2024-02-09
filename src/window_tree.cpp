@@ -3,6 +3,8 @@
 #include "window_tree.h"
 #include "window_helpers.h"
 #include "screen.h"
+#include "window_helpers.h"
+
 #include <memory>
 #include <mir/log.h>
 #include <iostream>
@@ -28,6 +30,9 @@ WindowTree::WindowTree(
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
+    if (!window_helpers::is_tileable(requested_specification))
+        return new_spec;
+
     new_spec.min_width() = geom::Width{0};
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
@@ -46,6 +51,13 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
+    if (!window_helpers::is_tileable(window_info) && window_info.state() == MirWindowState::mir_window_state_attached)
+    {
+        tools.select_active_window(window_info.window());
+        non_tiling_window_list.push_back(window_info.window());
+        return;
+    }
+
     _get_active_lane()->add_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
@@ -168,6 +180,18 @@ bool WindowTree::select_window_from_point(int x, int y)
     {
         tools.select_active_window(active_window->get_window());
         return true;
+    }
+
+    for (auto const& window : non_tiling_window_list)
+    {
+        auto rectangle = geom::Rectangle{window.top_left(), window.size()};
+        if (rectangle.contains(geom::Point(x, y)))
+        {
+            tools.select_active_window(window);
+            active_window = nullptr;
+            is_active_window_fullscreen = false;
+            return true;
+        }
     }
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
@@ -319,6 +343,13 @@ void WindowTree::advise_focus_lost(miral::Window& window)
 
 void WindowTree::advise_delete_window(miral::Window& window)
 {
+    auto non_tiling_it = std::find(non_tiling_window_list.begin(), non_tiling_window_list.end(), window);
+    if (non_tiling_it != non_tiling_window_list.end())
+    {
+        non_tiling_window_list.erase(non_tiling_it);
+        return;
+    }
+
     auto window_node = root_lane->find_node_for_window(window);
     if (!window_node)
     {

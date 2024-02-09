@@ -135,6 +135,7 @@ private:
     bool is_hidden = false;
     std::vector<NodeResurrection> nodes_to_resurrect;
 
+    std::vector<miral::Window> non_tiling_window_list;
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);
     void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
