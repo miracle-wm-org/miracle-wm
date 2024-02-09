@@ -233,7 +233,7 @@ bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* 
 
     for (auto const& pair : output_list)
     {
-        if (pair->screen->get_active_tree().point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
+        if (pair->screen->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
             if (active_output != pair)
             {
@@ -485,8 +485,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto& workspace : output->screen->get_workspaces())
-            workspace.tree.advise_application_zone_create(application_zone);
+        output->screen->advise_application_zone_create(application_zone);
     }
 }
 
@@ -494,8 +493,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto& workspace : output->screen->get_workspaces())
-            workspace.tree.advise_application_zone_update(updated, original);
+        output->screen->advise_application_zone_update(updated, original);
     }
 }
 
@@ -503,7 +501,6 @@ void MiracleWindowManagementPolicy::advise_application_zone_delete(miral::Zone c
 {
     for (auto const& output : output_list)
     {
-        for (auto& workspace : output->screen->get_workspaces())
-            workspace.tree.advise_application_zone_delete(application_zone);
+        output->screen->advise_application_zone_delete(application_zone);
     }
 }

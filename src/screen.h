@@ -33,12 +33,19 @@ public:
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
         WindowTreeOptions const& options);
-   ~Screen() = default;
+    ~Screen() = default;
 
-   WindowTree& get_active_tree();
-   void advise_new_workspace(char workspace);
-   bool make_workspace_active(char workspace);
-   std::vector<ScreenWorkspaceInfo>& get_workspaces() { return workspaces; }
+    WindowTree& get_active_tree();
+    void advise_new_workspace(char workspace);
+    bool make_workspace_active(char workspace);
+    std::vector<ScreenWorkspaceInfo>& get_workspaces() { return workspaces; }
+    void advise_application_zone_create(miral::Zone const& application_zone);
+    void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
+    void advise_application_zone_delete(miral::Zone const& application_zone);
+    bool point_is_in_output(int x, int y);
+
+    geom::Rectangle const& get_area() { return area; }
+    std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }
 
 private:
     WorkspaceManager& workspace_manager;
@@ -47,6 +54,7 @@ private:
     WindowTreeOptions options;
     char active_workspace;
     std::vector<ScreenWorkspaceInfo> workspaces;
+    std::vector<miral::Zone> application_zone_list;
 
     void hide(ScreenWorkspaceInfo&);
     void show(ScreenWorkspaceInfo&);
