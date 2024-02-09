@@ -92,6 +92,13 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
+    auto custom_key_command = config.matches_custom_key_command(action, scan_code, modifiers);
+    if (custom_key_command != nullptr)
+    {
+        external_client_launcher.launch(custom_key_command->command);
+        return true;
+    }
+
     auto key_command = config.matches_key_command(action, scan_code, modifiers);
     if (key_command == DefaultKeyCommand::MAX)
         return false;

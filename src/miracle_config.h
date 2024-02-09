@@ -57,6 +57,11 @@ struct KeyCommand
     int key;
 };
 
+struct CustomKeyCommand : KeyCommand
+{
+    std::string command;
+};
+
 typedef std::vector<KeyCommand> KeyCommandList;
 
 class MiracleConfig
@@ -64,6 +69,7 @@ class MiracleConfig
 public:
     MiracleConfig();
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
+    CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     [[nodiscard]] int get_gap_size_x() const;
     [[nodiscard]] int get_gap_size_y() const;
@@ -74,6 +80,8 @@ private:
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
     uint primary_modifier = mir_input_event_modifier_meta;
+
+    std::vector<CustomKeyCommand> custom_key_commands;
     KeyCommandList key_commands[DefaultKeyCommand::MAX];
 
     int gap_size_x = 10;

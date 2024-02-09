@@ -377,6 +377,95 @@ MiracleConfig::MiracleConfig()
             key_commands[i].push_back(default_key_commands[i]);
     }
 
+    // Custom actions
+    if (config["custom_actions"])
+    {
+        auto const custom_actions = config["custom_actions"];
+        if (!custom_actions.IsSequence())
+        {
+            mir::log_error("custom_actions: value must be an array");
+            return;
+        }
+
+        for (auto i = 0; i < custom_actions.size(); i++)
+        {
+            auto sub_node = custom_actions[i];
+            if (!sub_node["command"])
+            {
+                mir::log_error("custom_actions: missing command");
+                continue;
+            }
+
+            if (!sub_node["action"])
+            {
+                mir::log_error("custom_actions: missing action");
+                continue;
+            }
+
+            if (!sub_node["modifiers"])
+            {
+                mir::log_error("custom_actions: missing modifiers");
+                continue;
+            }
+
+            if (!sub_node["key"])
+            {
+                mir::log_error("custom_actions: missing key");
+                continue;
+            }
+
+            // TODO: Copy & paste here
+            auto command = sub_node["command"].as<std::string>();
+            auto action = sub_node["action"].as<std::string>();
+            MirKeyboardAction keyboard_action;
+            if (action == "up")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
+            else if (action == "down")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_down;
+            else if (action == "repeat")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_repeat;
+            else if (action == "modifiers")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
+            else {
+                mir::log_error("custom_actions: Unknown keyboard action: %s", action.c_str());
+                continue;
+            }
+
+            auto key = sub_node["key"].as<std::string>();
+            auto code = libevdev_event_code_from_name(EV_KEY,
+                                                      key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
+            if (code < 0)
+            {
+                mir::log_error(
+                    "custom_actions: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h",
+                    key.c_str());
+                continue;
+            }
+
+            auto modifiers_node = sub_node["modifiers"];
+
+            if (!modifiers_node.IsSequence())
+            {
+                mir::log_error("custom_actions: Provided modifiers is not an array");
+                continue;
+            }
+
+            uint modifiers = 0;
+            for (auto j = 0; j < modifiers_node.size(); j++)
+            {
+                auto modifier = modifiers_node[j].as<std::string>();
+                modifiers = modifiers | parse_modifier(modifier);
+            }
+
+            custom_key_commands.push_back({
+                keyboard_action,
+                modifiers,
+                code,
+                command
+            });
+        }
+    }
+
     // Gap sizes
     if (config["gap_size_x"])
     {
@@ -443,6 +532,29 @@ uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
 MirInputEventModifier MiracleConfig::get_input_event_modifier() const
 {
     return (MirInputEventModifier)primary_modifier;
+}
+
+CustomKeyCommand const*
+MiracleConfig::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
+{
+    // TODO: Copy & paste
+    for (auto const& command : custom_key_commands)
+    {
+        if (action != command.action)
+            continue;
+
+        auto command_modifiers = command.modifiers;
+        if (command_modifiers & miracle_input_event_modifier_default)
+            command_modifiers = command_modifiers & ~miracle_input_event_modifier_default | get_input_event_modifier();
+
+        if (command_modifiers != modifiers)
+            continue;
+
+        if (scan_code == command.key)
+            return &command;
+    }
+
+    return nullptr;
 }
 
 DefaultKeyCommand MiracleConfig::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
