@@ -108,6 +108,8 @@ public:
     /// Shows the entire tree
     void show();
 
+    std::shared_ptr<Node> get_root_node();
+
 private:
     struct MoveResult
     {

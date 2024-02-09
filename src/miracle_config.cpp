@@ -121,6 +121,26 @@ MiracleConfig::MiracleConfig()
                 key_command = DefaultKeyCommand::SelectWorkspace9;
             else if (name == "select_workspace_0")
                 key_command = DefaultKeyCommand::SelectWorkspace0;
+            else if (name == "move_to_workspace_1")
+                key_command = DefaultKeyCommand::MoveToWorkspace1;
+            else if (name == "move_to_workspace_2")
+                key_command = DefaultKeyCommand::MoveToWorkspace2;
+            else if (name == "move_to_workspace_3")
+                key_command = DefaultKeyCommand::MoveToWorkspace3;
+            else if (name == "move_to_workspace_4")
+                key_command = DefaultKeyCommand::MoveToWorkspace4;
+            else if (name == "move_to_workspace_5")
+                key_command = DefaultKeyCommand::MoveToWorkspace5;
+            else if (name == "move_to_workspace_6")
+                key_command = DefaultKeyCommand::MoveToWorkspace6;
+            else if (name == "move_to_workspace_7")
+                key_command = DefaultKeyCommand::MoveToWorkspace7;
+            else if (name == "move_to_workspace_8")
+                key_command = DefaultKeyCommand::MoveToWorkspace8;
+            else if (name == "move_to_workspace_9")
+                key_command = DefaultKeyCommand::MoveToWorkspace9;
+            else if (name == "move_to_workspace_0")
+                key_command = DefaultKeyCommand::MoveToWorkspace0;
             else {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
                 continue;
@@ -298,6 +318,56 @@ MiracleConfig::MiracleConfig()
         {
             MirKeyboardAction ::mir_keyboard_action_down,
             miracle_input_event_modifier_default,
+            KEY_0
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_1
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_2
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_3
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_4
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_5
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_6
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_7
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_8
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            KEY_9
+        },
+        {
+            MirKeyboardAction ::mir_keyboard_action_down,
+            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
             KEY_0
         }
     };

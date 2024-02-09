@@ -21,6 +21,8 @@
 - `meta + shift + q`: Quit the selected application
 - `meta + shift + e`: Close the compositor
 - `meta + f`: Toggle fullscreen on the window
+- `meta + [0-9]`: Move to workspace *n*
+- `meta + shift + [0-9]`: Move active window to workspace *n*
 
 # Pointer Behavior
 - Hovering over a window will select the window
@@ -65,7 +67,14 @@ First, let's define some reoccurring data types in the configuration file:
   struct DefaultActionOverride
   {
       // Name of the action to override
-      name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down" | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" | "quit_active_window" | "quit_compositor" | "fullscreen";
+      name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down"
+        | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" 
+        | "quit_active_window" | "quit_compositor" | "fullscreen" | "select_workspace_1" | "select_workspace_2"
+        | "select_workspace_3" | "select_workspace_4" | "select_workspace_5" | "select_workspace_6"
+        | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
+        | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
+        | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
+        | "move_to_workspace_9" | "move_to_workspace_0"
   
       // Action will fire based on this key event
       action: "up" | "down" | "repeat" | "modifiers";
