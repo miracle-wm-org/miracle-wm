@@ -1,7 +1,7 @@
 > This user manual will keep up to date with the current state of the project.
 > Please note that the information in here is likely to change with future release.
 
-# Default Key Commands
+# Built-in Key Commands
 - `meta + enter`: Open new terminal
 - `meta + h`: Switch current lane to horizontal layout mode
 - `meta + v`: Switch current lane to vertical layout mode
@@ -30,10 +30,12 @@
 - Window CANNOT be resized or moved with the pointer
 
 # Configuration File
+
+## Location
 The configuration file will be written blank the first time that you start the compositor. The file is named `miracle-wm.yaml`
 and it is written to your config directory, most likely at `~/.config/miracle-wm.yaml`.
 
-## Data Types
+## Types
 First, let's define some reoccurring data types in the configuration file:
 
 - `ModifierKey`: represents a modifier to be used in conjunction with another key press (e.g. Ctrl + Alt + Delete; Ctrl and Alt would be modifiers)
@@ -89,19 +91,40 @@ First, let's define some reoccurring data types in the configuration file:
   };
   ```
 
-## Configuration Definition
+- `CustomAction`: defines a custom action to execute when the provided keybind is inputted.
+  ```c++
+  struct CustomAction
+  {
+      // Action to execute
+      command: String
+  
+      // Action will fire based on this key event
+      action: "up" | "down" | "repeat" | "modifiers";
+      
+      // Modifiers required for the action to trigger
+      modifiers: Modifier[];
+      
+      // Name of the keycode that the action should respond to.
+      // See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+      // for the list of available keycodes (e.g. KEY_ENTER, KEY_Z, etc.)
+      key: KeyCodeName;
+  };
+  ```
+
+## Definition
 With those types defined, the following table defines the allowed key/value pairs:
 
 | Key                      | Default | Type              | Description                                                                                                                                                                                                                                                            |
 |--------------------------|---------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | action_key               | `meta`    | `Modifier`          | The default key that is used to initate any action.                                                                                                                                                                                                                    |
 | default_action_overrides | `[]`      | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
-| gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows          |                                                                                                                                                                                                      |
-| gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows |                                                                                                                                                                                                                 |
-| startup_apps | [] | `String[]` | List of applications to be started when the compositor starts |
+| custom_actions           | [] | `CustomAction[]` | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
+| gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows                                                                                                                                                                                                                |                                                                                                                                                                                                      |
+| gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows                                                                                                                                                                                                                  |                                                                                                                                                                                                                 |
+| startup_apps             | [] | `String[]` | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
 
 
-## Example Configuration
+## Example
 ```yaml
 action_key: alt           # Set the primary action key to alt
 default_action_overrides:
@@ -111,6 +134,14 @@ default_action_overrides:
       - ctrl
       - shift
     key: KEY_ENTER
+
+custom_actions:           # Set meta + D to open wofi
+  - command: wofi --show=drun
+    action: down
+    modifiers:
+      - primary
+    key: KEY_D
+
 gap_size_x: 20
 gap_size_y: 20
 startup_apps:
