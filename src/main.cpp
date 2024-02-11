@@ -1,5 +1,9 @@
 #define MIR_LOG_COMPONENT "miracle-main"
 
+#include "miracle_window_management_policy.h"
+#include "miracle_config.h"
+#include "ipc.h"
+
 #include <miral/set_window_management_policy.h>
 #include <miral/external_client.h>
 #include <miral/runner.h>
@@ -10,8 +14,6 @@
 #include <miral/wayland_extensions.h>
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
-#include "miracle_window_management_policy.h"
-#include "miracle_config.h"
 #include <mir/log.h>
 
 using namespace miral;
@@ -19,6 +21,7 @@ using namespace miral;
 int main(int argc, char const* argv[])
 {
     MirRunner runner{argc, argv};
+    miracle::Ipc ipc(runner);
 
     std::function<void()> shutdown_hook{[]{}};
     runner.add_stop_callback([&] { shutdown_hook(); });

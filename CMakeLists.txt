@@ -31,6 +31,7 @@ add_executable(miracle-wm
     src/miracle_config.h
     src/screen.cpp
     src/workspace_manager.cpp
+    src/ipc.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
