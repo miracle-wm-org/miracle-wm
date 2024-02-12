@@ -15,7 +15,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <mir/log.h>
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 using namespace miracle;
 
 static const char ipc_magic[] = {'i', '3', '-', 'i', 'p', 'c'};
@@ -243,9 +245,23 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
 
     switch (payload_type)
     {
+    case IPC_GET_WORKSPACES:
+    {
+        json j = json::array();
+        j.push_back({
+            {"name",  "1"},
+            {"focused", true}
+        });
+        auto json_string = to_string(j);
+    }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
         return;
 
     }
+}
+
+void Ipc::send_reply(miracle::Ipc::IpcClient &client, miracle::IpcCommandType command_type, const std::string &payload)
+{
+
 }

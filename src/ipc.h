@@ -74,6 +74,7 @@ private:
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);
     void handle_command(IpcClient& client, uint32_t payload_length, IpcCommandType payload_type);
+    void send_reply(IpcClient& client, IpcCommandType command_type, std::string const& payload);
 };
 }
 
