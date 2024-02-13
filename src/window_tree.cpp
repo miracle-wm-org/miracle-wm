@@ -51,9 +51,12 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    if (!window_helpers::is_tileable(window_info) && window_info.state() == MirWindowState::mir_window_state_attached)
+    if (!window_helpers::is_tileable(window_info))
     {
-        tools.select_active_window(window_info.window());
+        if (window_info.state() == MirWindowState::mir_window_state_attached)
+        {
+            tools.select_active_window(window_info.window());
+        }
         non_tiling_window_list.push_back(window_info.window());
         return;
     }
@@ -180,18 +183,6 @@ bool WindowTree::select_window_from_point(int x, int y)
     {
         tools.select_active_window(active_window->get_window());
         return true;
-    }
-
-    for (auto const& window : non_tiling_window_list)
-    {
-        auto rectangle = geom::Rectangle{window.top_left(), window.size()};
-        if (rectangle.contains(geom::Point(x, y)))
-        {
-            tools.select_active_window(window);
-            active_window = nullptr;
-            is_active_window_fullscreen = false;
-            return true;
-        }
     }
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)

@@ -247,6 +247,7 @@ auto MiracleWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
+    // TODO: This can happen before we have a single screen!
     return active_output->screen->get_active_tree().allocate_position(requested_specification);
 }
 
