@@ -148,7 +148,7 @@ bool WindowTree::try_toggle_active_fullscreen()
     if (is_active_window_fullscreen)
         spec.state() = mir_window_state_restored;
     else
-        spec.state() = mir_window_state_maximized;
+        spec.state() = mir_window_state_fullscreen;
 
     auto& window_info = tools.info_for(active_window->get_window());
     tools.place_and_size_for_state(spec, window_info);
