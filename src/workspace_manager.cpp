@@ -80,3 +80,18 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
     screen_to_move_to->get_active_tree().handle_window_ready(prev_info);
     return true;
 }
+
+bool WorkspaceManager::delete_workspace(char key)
+{
+    for (auto it = workspaces.begin(); it != workspaces.end(); it++)
+    {
+        if (it->key == key)
+        {
+            it->screen->advise_workspace_deleted(key);
+            workspaces.erase(it);
+            return true;
+        }
+    }
+
+    return false;
+}

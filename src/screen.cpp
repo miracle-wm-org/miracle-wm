@@ -36,31 +36,50 @@ void Screen::advise_new_workspace(char workspace)
     make_workspace_active(workspace);
 }
 
+void Screen::advise_workspace_deleted(char workspace)
+{
+    for (auto it = workspaces.begin(); it != workspaces.end(); it++)
+    {
+        if (it->workspace == workspace)
+        {
+            workspaces.erase(it);
+            return;
+        }
+    }
+}
+
 bool Screen::make_workspace_active(char key)
 {
     for (auto& workspace : workspaces)
     {
         if (workspace.workspace == key)
         {
-            // Deactivate current workspace
+            ScreenWorkspaceInfo* previous_workspace = nullptr;
             for (auto& other : workspaces)
             {
                 if (other.workspace == active_workspace)
                 {
+                    previous_workspace = &other;
                     hide(other);
                     break;
                 }
             }
 
-            // Active new workspace
+            active_workspace = key;
             show(workspace);
 
-            active_workspace = key;
+            // Important: Delete the workspace only after we have shown the new one because we may want
+            // to move a node to the new workspace.
+            if (previous_workspace != nullptr)
+            {
+                auto& active_tree = previous_workspace->tree;
+                if (active_tree.is_empty())
+                    workspace_manager.delete_workspace(previous_workspace->workspace);
+            }
             return true;
         }
     }
 
-    active_workspace = key;
     return false;
 }
 

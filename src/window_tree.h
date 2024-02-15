@@ -106,6 +106,7 @@ public:
 
     std::shared_ptr<Node> get_root_node();
     void _recalculate_root_node_area();
+    bool is_empty();
 
 private:
     struct MoveResult
@@ -135,6 +136,7 @@ private:
     bool is_hidden = false;
     std::vector<NodeResurrection> nodes_to_resurrect;
 
+    // TODO: Move non tiling window list to Screen
     std::vector<miral::Window> non_tiling_window_list;
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);
