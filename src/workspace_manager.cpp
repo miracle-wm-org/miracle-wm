@@ -68,10 +68,15 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
     original_tree.advise_delete_window(window);
 
     auto screen_to_move_to = request_workspace(screen, workspace);
+    auto& prev_info = tools_.info_for(window);
+
+    // TODO: These need to be set so that the window is correctly seen as tileable
     miral::WindowSpecification spec;
+    spec.type() = prev_info.type();
+    spec.state() = prev_info.state();
     spec = screen_to_move_to->get_active_tree().allocate_position(spec);
     tools_.modify_window(window, spec);
-    screen_to_move_to->get_active_tree().advise_new_window(tools_.info_for(window));
-    screen_to_move_to->get_active_tree().handle_window_ready(tools_.info_for(window));
+    screen_to_move_to->get_active_tree().advise_new_window(prev_info);
+    screen_to_move_to->get_active_tree().handle_window_ready(prev_info);
     return true;
 }
