@@ -42,12 +42,11 @@ Features:
 **Stabilization + Usability (Due: April 1st)**
 
 Features:
-- [ ] Major bugs
+- [ ] Major bugs + performance
 - [ ] Configuration File
     - [ ] Hot reloading
     - [ ] Display configuration
-    - [ ] 
-- [ ] Stacking windows
+- [ ] Floating windows overlayed
 - [ ] I3 IPC support for workspaces
 - [ ] Highlight border around selected window (Difficult!)
 - [ ] Improve multi monitor support
@@ -67,8 +66,13 @@ Features:
   - [ ] Move window to workspace
   - [ ] Opening
   - [ ] Closing
+  - [ ] Configuration support
+- [ ] Stacking windows
 
 # 1.0.0
 **Official Release (Due July 15th)**
 
+Features:
 - [ ] Major bugs and major usability
+- [ ] **IDEA**:Workspace/window overview view (similar to GNOME)
+- [ ] **IDEA**: Settings app

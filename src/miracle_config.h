@@ -64,6 +64,12 @@ struct CustomKeyCommand : KeyCommand
 
 typedef std::vector<KeyCommand> KeyCommandList;
 
+struct StartupApp
+{
+    std::string command;
+    bool restart_on_death = false;
+};
+
 class MiracleConfig
 {
 public:
@@ -73,7 +79,7 @@ public:
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     [[nodiscard]] int get_gap_size_x() const;
     [[nodiscard]] int get_gap_size_y() const;
-    [[nodiscard]] std::vector<std::string> const& get_startup_apps() const;
+    [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
 
 private:
     static uint parse_modifier(std::string const& stringified_action_key);
@@ -86,7 +92,7 @@ private:
 
     int gap_size_x = 10;
     int gap_size_y = 10;
-    std::vector<std::string> startup_apps;
+    std::vector<StartupApp> startup_apps;
 };
 }
 

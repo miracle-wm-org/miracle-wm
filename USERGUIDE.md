@@ -38,78 +38,54 @@ and it is written to your config directory, most likely at `~/.config/miracle-wm
 ## Types
 First, let's define some reoccurring data types in the configuration file:
 
-- `ModifierKey`: represents a modifier to be used in conjunction with another key press (e.g. Ctrl + Alt + Delete; Ctrl and Alt would be modifiers)
-
   ```c++
-  enum ModifierKey: String
-  {
-      alt,
-      alt_left,
-      alt_right,
-      shift,
-      shift_left,
-      shift_right,
-      sym,
-      function,
-      ctrl,
-      ctrl_left,
-      ctrl_right,
-      meta,
-      meta_left,
-      meta_right,
-      caps_lock,
-      num_lock,
-      scroll_lock,
-      primary // denotes that the action should take whatever is defined by the action_key
-  };
-  ```
+// Represents a modifier to be used in conjunction with another key press (e.g. Ctrl + Alt + Delete; Ctrl and Alt would be modifiers)
+typedef ModifierKey =
+    "alt" | "alt_left" | "alt_right" | "shift" | "shift_left" | "shift_right" | "sym" | "function" | "ctrl"
+    | "ctrl_left" | "ctrl_right" | "meta" | "meta_left" | "meta_right" | "caps_lock" | "num_lock" | "scroll_lock"
+    | "primary"; // "primary" means that the action should take whatever is defined by the action_key
 
-- `DefaultActionOverride`: defines a keybind override of an action that is built-in to the compositor.
-  ```c++
-  struct DefaultActionOverride
-  {
-      // Name of the action to override
-      name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down"
-        | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" 
-        | "quit_active_window" | "quit_compositor" | "fullscreen" | "select_workspace_1" | "select_workspace_2"
-        | "select_workspace_3" | "select_workspace_4" | "select_workspace_5" | "select_workspace_6"
-        | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
-        | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
-        | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
-        | "move_to_workspace_9" | "move_to_workspace_0"
-  
-      // Action will fire based on this key event
-      action: "up" | "down" | "repeat" | "modifiers";
+// Represents an internal action that the user can override
+struct DefaultActionOverride
+{
+    // Name of the action to override
+    name: "terminal" | "request_vertical" | "request_horizontal" | "toggle_resize" | "move_up" | "move_down"
+      | "move_left" | "move_right" | "select_up" | "select_down" | "select_left" | "select_right" 
+      | "quit_active_window" | "quit_compositor" | "fullscreen" | "select_workspace_1" | "select_workspace_2"
+      | "select_workspace_3" | "select_workspace_4" | "select_workspace_5" | "select_workspace_6"
+      | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
+      | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
+      | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
+      | "move_to_workspace_9" | "move_to_workspace_0"
       
-      // Modifiers required for the action to trigger
-      modifiers: Modifier[];
-      
-      // Name of the keycode that the action should respond to.
-      // See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
-      // for the list of available keycodes (e.g. KEY_ENTER, KEY_Z, etc.)
-      key: KeyCodeName;
-  };
-  ```
+    action: "up" | "down" | "repeat" | "modifiers"; // Action will fire based on this key event
+    modifiers: Modifier[]; // Modifiers required for the action to trigger
+    
+    // Name of the keycode that the action should respond to.
+    // See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+    // for the list of available keycodes (e.g. KEY_ENTER, KEY_Z, etc.)
+    key: KeyCodeName;
+};
 
-- `CustomAction`: defines a custom action to execute when the provided keybind is inputted.
-  ```c++
-  struct CustomAction
-  {
-      // Action to execute
-      command: String
-  
-      // Action will fire based on this key event
-      action: "up" | "down" | "repeat" | "modifiers";
-      
-      // Modifiers required for the action to trigger
-      modifiers: Modifier[];
-      
-      // Name of the keycode that the action should respond to.
-      // See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
-      // for the list of available keycodes (e.g. KEY_ENTER, KEY_Z, etc.)
-      key: KeyCodeName;
-  };
-  ```
+// Represents a custom action that a user can bind to a key combination
+struct CustomAction
+{
+    command: string // Action to execute
+    action: "up" | "down" | "repeat" | "modifiers"; // Action will fire based on this key event
+    modifiers: Modifier[]; // Modifiers required for the action to trigger
+    // Name of the keycode that the action should respond to.
+    // See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+    // for the list of available keycodes (e.g. KEY_ENTER, KEY_Z, etc.)
+    key: KeyCodeName;
+};
+
+// Represents an app that will be executed at startup
+struct StartupApp
+{
+    command: string;
+    restart_on_death: bool; // If true the application will restart whenever it dies
+};
+```
 
 ## Definition
 With those types defined, the following table defines the allowed key/value pairs:
@@ -121,7 +97,7 @@ With those types defined, the following table defines the allowed key/value pair
 | custom_actions           | [] | `CustomAction[]` | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
 | gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows                                                                                                                                                                                                                |                                                                                                                                                                                                      |
 | gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows                                                                                                                                                                                                                  |                                                                                                                                                                                                                 |
-| startup_apps             | [] | `String[]` | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
+| startup_apps             | [] | `StartupApp[]` | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
 
 
 ## Example
@@ -145,6 +121,8 @@ custom_actions:           # Set meta + D to open wofi
 gap_size_x: 20
 gap_size_y: 20
 startup_apps:
-  - waybar
-  - swaybg -i /path/to/my/image
+  - command: waybar
+    restart_on_death: true
+  - command: swaybg -i /path/to/my/image
+    restart_on_death: true
 ```
