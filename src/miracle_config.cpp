@@ -481,7 +481,20 @@ MiracleConfig::MiracleConfig()
     {
         for (auto const& node : config["startup_apps"])
         {
-            startup_apps.push_back(node.as<std::string>());
+            if (!node["command"])
+            {
+                mir::log_error("startup_apps: app lacks a command");
+                continue;
+            }
+
+            auto command = node["command"].as<std::string>();
+            bool restart_on_death = false;
+            if (node["restart_on_death"])
+            {
+                restart_on_death = node["restart_on_death"].as<bool>();
+            }
+
+            startup_apps.push_back({std::move(command), restart_on_death});
         }
     }
 }
@@ -591,7 +604,7 @@ int MiracleConfig::get_gap_size_y() const
     return gap_size_y;
 }
 
-const std::vector<std::string> &MiracleConfig::get_startup_apps() const
+const std::vector<StartupApp> &MiracleConfig::get_startup_apps() const
 {
     return startup_apps;
 }
