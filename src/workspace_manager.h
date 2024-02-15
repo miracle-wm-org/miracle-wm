@@ -49,6 +49,8 @@ public:
 
     bool move_active_to_workspace(std::shared_ptr<Screen> screen, char workspace);
 
+    bool delete_workspace(char workspace);
+
 private:
     WindowManagerTools tools_;
 

@@ -782,7 +782,7 @@ void WindowTree::show()
     }
 
     is_hidden = false;
-    for (auto other_node : nodes_to_resurrect)
+    for (auto& other_node : nodes_to_resurrect)
     {
         auto& window_info = tools.info_for(other_node.node->get_window());
         miral::WindowSpecification modifications;
@@ -797,4 +797,15 @@ void WindowTree::show()
 std::shared_ptr<Node> WindowTree::get_root_node()
 {
     return root_lane;
+}
+
+bool WindowTree::is_empty()
+{
+    bool empty = true;
+    foreach_node([&](auto node)
+    {
+        if (node->is_window())
+            empty = false;
+    });
+    return empty;
 }
