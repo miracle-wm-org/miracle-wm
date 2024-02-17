@@ -2,9 +2,8 @@ name: miracle-wm
 adopt-info: miracle-wm
 summary: "miracle-wm: a tiling window manager built on Mir"
 description: |
-  miracle-wm is a tiling window manager based off the Mir library.
-  
-  It is intended to provide an i3/sway-like experience.
+  miracle-wm is a Wayland compositor based off the Mir library
+  that provides a tiling-window manager.
 confinement: classic
 base: core22
 version: 0.0.1
