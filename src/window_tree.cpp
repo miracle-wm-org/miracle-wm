@@ -268,18 +268,6 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
                 goto do_insert;
             }
 
-            if (second_parent->num_nodes() == 1)
-            {
-                if (second_parent->get_parent() == first_parent)
-                {
-                    auto grandparent = second_parent->get_parent();
-                    grandparent->swap_nodes(active_window, second_parent);
-                    break;
-                }
-
-                goto do_insert;
-            }
-
         do_insert:
             auto index = second_parent->get_index_of_node(second_window);
             auto moving_node = active_window;
@@ -485,15 +473,30 @@ WindowTree::MoveResult WindowTree::_move(std::shared_ptr<Node>const& from, Direc
     // Algorithm:
     //  1. Perform the _select algorithm. If that passes, then we want to be where the selected node
     //     currently is
-    //  2. If NO node matches, then we still have to move. This means that we must create a new root node with the
-    //     requested direction ONLY IF the directions don't agree. If the directions agree, then we just have nowhere
-    //     to go.
+    //  2. If our parent layout direction does not equal the root layout direction, we can append
+    //     or prepend to the root
     if (auto insert_node = _select(from, direction))
     {
         return {
             MoveResult::traversal_type_insert,
             insert_node
         };
+    }
+
+    auto parent = from->get_parent();
+    if (root_lane->get_direction() != parent->get_direction())
+    {
+        bool is_negative = direction == Direction::left || direction == Direction::up;
+        if (is_negative)
+            return {
+                MoveResult::traversal_type_prepend,
+                root_lane
+            };
+        else
+            return {
+                MoveResult::traversal_type_append,
+                root_lane
+            };
     }
 
     return {};
