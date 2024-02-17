@@ -240,14 +240,51 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
             if (first_parent == second_parent)
             {
                 first_parent->swap_nodes(active_window, second_window);
+                break;
             }
-            else
+
+            // TODO: I don't like this very much, but at least it doesn't crash any more
+            if (first_parent->num_nodes() == 1 && second_parent->num_nodes() == 1)
             {
-                auto index = second_parent->get_index_of_node(second_window);
-                auto moving_node = active_window;
-                _handle_node_remove(moving_node);
-                second_parent->insert_node(moving_node, index + 1);
+                if (first_parent->get_parent() == second_parent->get_parent())
+                {
+                    auto grandparent = first_parent->get_parent();
+                    grandparent->swap_nodes(first_parent, second_parent);
+                    break;
+                }
+
+                goto do_insert;
             }
+
+            if (first_parent->num_nodes() == 1)
+            {
+                if (second_parent == first_parent->get_parent())
+                {
+                    auto grandparent = first_parent->get_parent();
+                    grandparent->swap_nodes(first_parent, second_window);
+                    break;
+                }
+
+                goto do_insert;
+            }
+
+            if (second_parent->num_nodes() == 1)
+            {
+                if (second_parent->get_parent() == first_parent)
+                {
+                    auto grandparent = second_parent->get_parent();
+                    grandparent->swap_nodes(active_window, second_parent);
+                    break;
+                }
+
+                goto do_insert;
+            }
+
+        do_insert:
+            auto index = second_parent->get_index_of_node(second_window);
+            auto moving_node = active_window;
+            _handle_node_remove(moving_node);
+            second_parent->insert_node(moving_node, index + 1);
             break;
         }
         case MoveResult::traversal_type_append:
@@ -718,18 +755,18 @@ void WindowTree::add_tree(WindowTree& other_tree)
 
 namespace
 {
-void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> f, std::shared_ptr<Node> parent)
+void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, std::shared_ptr<Node> const& parent)
 {
     f(parent);
     if (parent->is_window())
         return;
 
-    for (auto node : parent->get_sub_nodes())
+    for (auto& node : parent->get_sub_nodes())
         foreach_node_internal(f, node);
 }
 }
 
-void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> f)
+void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
 {
     foreach_node_internal(f, root_lane);
 }
