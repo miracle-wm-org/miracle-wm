@@ -95,7 +95,7 @@ public:
 
     void add_tree(WindowTree&);
 
-    void foreach_node(std::function<void(std::shared_ptr<Node>)>);
+    void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
     void close_active_window();
 
     /// Hides the entire tree
