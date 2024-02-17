@@ -1,19 +1,28 @@
-> **Warning**: This project is a work in progress. Only use if you are willing to encounter
-> some paper cuts along the way. If you are willing to lend your time to find/fix bugs
-> or submit proposals for new features, it is greatly appreciated.
+> [!WARNING]
+> This project is a work in progress. The first stable, feature-complete release
+> will be version 1.0.0. As such, it is advised that you use this as your daily driver only
+> if you are willing to encounter some paper cuts along the way. If you are willing to 
+> lend your time to find bugs, fix bugs, or submit proposals for new features, it would
+> be greatly appreciated.
 
 # About
-**miracle** is a wayland tiling window manager based on [Mir](https://github.com/MirServer/mir). The tiling features
-are very sway/i3-like, but will diverge in some important ways in the future. See the [roadmap](./ROADMAP.md)
-section below for the current status and direction.
+**miracle-wm** is a Wayland compositor based on [Mir](https://github.com/MirServer/mir). It featurs a tiling
+window manager at its core, very much in the style of [i3](https://i3wm.org/) and [sway](https://github.com/swaywm/sway).
+However, the intention is to build an ecosystem that is somewhat heaver than either of those compositors in the same vein
+as [swayfx](https://github.com/WillPower3309/swayfx).
+
+Please see the [roadmap](./ROADMAP.md) document for the current status and direction of the project.
 
 ![miracle in action](./resources/screenshot1.png "miracle in action")
-![miracle in action](./resources/screenshot2.png "miracle in action")
 
 # Install
 ```
 sudo snap install miracle-wm --edge --classic
 ```
+
+> [!NOTE]
+> While the project is only built as a snap at this moment, I am not allergic to other packaging formats, just perhaps
+> too lazy to implement them at this moment. I will happily accept contributions in this domain.
 
 # Usage
 See the [user guide](USERGUIDE.md) for information on how to use the miracle window manager.
@@ -21,20 +30,20 @@ See the [user guide](USERGUIDE.md) for information on how to use the miracle win
 # Building
 **From Source**:
 ```sh
-git clone https://github.com/mattkae/miracle.git
-cd miracle
+git clone https://github.com/mattkae/miracle-wm.git
+cd miracle-wm
 
 mkdir build
 cd build
 cmake ..
-./bin/miracle-wm
+WAYLAND_DISPLAY=wayland-98 ./bin/miracle-wm
 ```
 
 **Snap**:
 ```sh
 cd miracle-wm
 snapcraft
-sudo snap install --dangerous miracle-wm_*.snap
+sudo snap install --dangerous --classic miracle-wm_*.snap
 ```
 
 # Running
