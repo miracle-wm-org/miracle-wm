@@ -16,7 +16,12 @@ Please see the [roadmap](./ROADMAP.md) document for the current status and direc
 
 # Install
 ```
-sudo snap install miracle-wm --edge --classic
+sudo snap install miracle-wm --classic
+```
+
+Or for the nightly build:
+```
+sudo snap install miracle-wm --classic --edge
 ```
 
 > [!NOTE]
