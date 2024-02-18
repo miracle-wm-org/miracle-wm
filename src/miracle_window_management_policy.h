@@ -1,5 +1,5 @@
-#ifndef MIRIE_WINDOW_MANAGEMENT_POLICY_H
-#define MIRIE_WINDOW_MANAGEMENT_POLICY_H
+#ifndef MIRIACLE_WINDOW_MANAGEMENT_POLICY_H
+#define MIRIACLE_WINDOW_MANAGEMENT_POLICY_H
 
 #include "screen.h"
 #include "miracle_config.h"
@@ -83,13 +83,17 @@ public:
 private:
     std::shared_ptr<OutputInfo> active_output;
     std::vector<std::shared_ptr<OutputInfo>> output_list;
+    std::weak_ptr<OutputInfo> pending_output;
+    std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
     MiracleConfig const& config;
     WorkspaceManager workspace_manager;
+
+    void _add_to_output_immediately(Window&, std::shared_ptr<OutputInfo>&);
 };
 }
 
-#endif //MIRCOMPOSITOR_MIRIE_WINDOW_MANAGEMENT_POLICY_H
+#endif //MIRIACLE_WINDOW_MANAGEMENT_POLICY_H

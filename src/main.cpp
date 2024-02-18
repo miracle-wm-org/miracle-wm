@@ -3,6 +3,7 @@
 #include "miracle_window_management_policy.h"
 #include "miracle_config.h"
 #include "ipc.h"
+#include "auto_restarting_launcher.h"
 
 #include <miral/set_window_management_policy.h>
 #include <miral/external_client.h>
@@ -28,6 +29,7 @@ int main(int argc, char const* argv[])
 
     InternalClientLauncher internal_client_launcher;
     ExternalClientLauncher external_client_launcher;
+    miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
     miracle::MiracleConfig config;
     WindowManagerOptions window_managers
     {
@@ -41,8 +43,7 @@ int main(int argc, char const* argv[])
     {
         for (auto const& app : config.get_startup_apps())
         {
-            auto pid = external_client_launcher.launch(app);
-            mir::log_info("Started external client with pid=%d", pid);
+            auto_restarting_launcher.launch(app);
         }
     };
 

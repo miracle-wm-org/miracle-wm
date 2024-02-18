@@ -33,6 +33,7 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
     if (!window_helpers::is_tileable(requested_specification))
         return new_spec;
 
+    new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width{0};
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
@@ -51,9 +52,12 @@ miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpec
 
 void WindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    if (!window_helpers::is_tileable(window_info) && window_info.state() == MirWindowState::mir_window_state_attached)
+    if (!window_helpers::is_tileable(window_info))
     {
-        tools.select_active_window(window_info.window());
+        if (window_info.state() == MirWindowState::mir_window_state_attached)
+        {
+            tools.select_active_window(window_info.window());
+        }
         non_tiling_window_list.push_back(window_info.window());
         return;
     }
@@ -145,7 +149,7 @@ bool WindowTree::try_toggle_active_fullscreen()
     if (is_active_window_fullscreen)
         spec.state() = mir_window_state_restored;
     else
-        spec.state() = mir_window_state_maximized;
+        spec.state() = mir_window_state_fullscreen;
 
     auto& window_info = tools.info_for(active_window->get_window());
     tools.place_and_size_for_state(spec, window_info);
@@ -180,18 +184,6 @@ bool WindowTree::select_window_from_point(int x, int y)
     {
         tools.select_active_window(active_window->get_window());
         return true;
-    }
-
-    for (auto const& window : non_tiling_window_list)
-    {
-        auto rectangle = geom::Rectangle{window.top_left(), window.size()};
-        if (rectangle.contains(geom::Point(x, y)))
-        {
-            tools.select_active_window(window);
-            active_window = nullptr;
-            is_active_window_fullscreen = false;
-            return true;
-        }
     }
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
@@ -249,14 +241,39 @@ bool WindowTree::try_move_active_window(miracle::Direction direction)
             if (first_parent == second_parent)
             {
                 first_parent->swap_nodes(active_window, second_window);
+                break;
             }
-            else
+
+            // TODO: I don't like this very much, but at least it doesn't crash any more
+            if (first_parent->num_nodes() == 1 && second_parent->num_nodes() == 1)
             {
-                auto index = second_parent->get_index_of_node(second_window);
-                auto moving_node = active_window;
-                _handle_node_remove(moving_node);
-                second_parent->insert_node(moving_node, index + 1);
+                if (first_parent->get_parent() == second_parent->get_parent())
+                {
+                    auto grandparent = first_parent->get_parent();
+                    grandparent->swap_nodes(first_parent, second_parent);
+                    break;
+                }
+
+                goto do_insert;
             }
+
+            if (first_parent->num_nodes() == 1)
+            {
+                if (second_parent == first_parent->get_parent())
+                {
+                    auto grandparent = first_parent->get_parent();
+                    grandparent->swap_nodes(first_parent, second_window);
+                    break;
+                }
+
+                goto do_insert;
+            }
+
+        do_insert:
+            auto index = second_parent->get_index_of_node(second_window);
+            auto moving_node = active_window;
+            _handle_node_remove(moving_node);
+            second_parent->insert_node(moving_node, index + 1);
             break;
         }
         case MoveResult::traversal_type_append:
@@ -457,15 +474,30 @@ WindowTree::MoveResult WindowTree::_move(std::shared_ptr<Node>const& from, Direc
     // Algorithm:
     //  1. Perform the _select algorithm. If that passes, then we want to be where the selected node
     //     currently is
-    //  2. If NO node matches, then we still have to move. This means that we must create a new root node with the
-    //     requested direction ONLY IF the directions don't agree. If the directions agree, then we just have nowhere
-    //     to go.
+    //  2. If our parent layout direction does not equal the root layout direction, we can append
+    //     or prepend to the root
     if (auto insert_node = _select(from, direction))
     {
         return {
             MoveResult::traversal_type_insert,
             insert_node
         };
+    }
+
+    auto parent = from->get_parent();
+    if (root_lane->get_direction() != parent->get_direction())
+    {
+        bool is_negative = direction == Direction::left || direction == Direction::up;
+        if (is_negative)
+            return {
+                MoveResult::traversal_type_prepend,
+                root_lane
+            };
+        else
+            return {
+                MoveResult::traversal_type_append,
+                root_lane
+            };
     }
 
     return {};
@@ -727,18 +759,18 @@ void WindowTree::add_tree(WindowTree& other_tree)
 
 namespace
 {
-void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> f, std::shared_ptr<Node> parent)
+void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, std::shared_ptr<Node> const& parent)
 {
     f(parent);
     if (parent->is_window())
         return;
 
-    for (auto node : parent->get_sub_nodes())
+    for (auto& node : parent->get_sub_nodes())
         foreach_node_internal(f, node);
 }
 }
 
-void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> f)
+void WindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
 {
     foreach_node_internal(f, root_lane);
 }
@@ -791,7 +823,7 @@ void WindowTree::show()
     }
 
     is_hidden = false;
-    for (auto other_node : nodes_to_resurrect)
+    for (auto& other_node : nodes_to_resurrect)
     {
         auto& window_info = tools.info_for(other_node.node->get_window());
         miral::WindowSpecification modifications;
@@ -806,4 +838,15 @@ void WindowTree::show()
 std::shared_ptr<Node> WindowTree::get_root_node()
 {
     return root_lane;
+}
+
+bool WindowTree::is_empty()
+{
+    bool empty = true;
+    foreach_node([&](auto node)
+    {
+        if (node->is_window())
+            empty = false;
+    });
+    return empty;
 }

@@ -37,6 +37,7 @@ public:
 
     WindowTree& get_active_tree();
     void advise_new_workspace(char workspace);
+    void advise_workspace_deleted(char workspace);
     bool make_workspace_active(char workspace);
     std::vector<ScreenWorkspaceInfo>& get_workspaces() { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
@@ -52,7 +53,7 @@ private:
     miral::WindowManagerTools tools;
     geom::Rectangle area;
     WindowTreeOptions options;
-    char active_workspace;
+    char active_workspace = '\0';
     std::vector<ScreenWorkspaceInfo> workspaces;
     std::vector<miral::Zone> application_zone_list;
 

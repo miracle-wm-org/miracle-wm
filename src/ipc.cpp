@@ -1,5 +1,6 @@
 #define MIR_LOG_COMPONENT "miracle_ipc"
 
+#include <cstdint>
 #include "ipc.h"
 #include <linux/input-event-codes.h>
 #include <assert.h>
@@ -253,6 +254,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
             {"focused", true}
         });
         auto json_string = to_string(j);
+        send_reply(client, IPC_GET_WORKSPACES, json_string);
     }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
@@ -263,5 +265,35 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
 
 void Ipc::send_reply(miracle::Ipc::IpcClient &client, miracle::IpcCommandType command_type, const std::string &payload)
 {
+    const uint32_t payload_length = payload.size();
+	char data[IPC_HEADER_SIZE];
 
+	memcpy(data, ipc_magic, sizeof(ipc_magic));
+	memcpy(data + sizeof(ipc_magic), &payload_length, sizeof(payload_length));
+    memcpy(data + sizeof(ipc_magic) + sizeof(payload_length), &command_type, sizeof(command_type));
+
+    int start_pos;
+    while (client->write_buffer_len + IPC_HEADER_SIZE + payload_length >=
+				 client->write_buffer_size) {
+		client->write_buffer_size *= 2;
+	}
+
+	if (client.buffer.size() > 4e6) { // 4 MB
+        mir::log_error("Client write buffer too big (%zu), disconnecting client", client.buffer.size());
+		disconnect(client);
+		return;
+	}
+
+	memcpy(client.buffer.data() + client->write_buffer_len, data, IPC_HEADER_SIZE);
+	client->write_buffer_len += IPC_HEADER_SIZE;
+	memcpy(client->write_buffer + client->write_buffer_len, payload, payload_length);
+	client->write_buffer_len += payload_length;
+
+	if (!client->writable_event_source) {
+		client->writable_event_source = wl_event_loop_add_fd(
+				server.wl_event_loop, client->fd, WL_EVENT_WRITABLE,
+				ipc_client_handle_writable, client);
+	}
+
+	return true;
 }

@@ -3,6 +3,7 @@
 
 #include <miral/runner.h>
 #include <mir/fd.h>
+#include <vector>
 
 struct sockaddr_un;
 
@@ -64,6 +65,7 @@ private:
         std::unique_ptr<miral::FdHandle> handle;
         uint32_t pending_length = 0;
         IpcCommandType pending_type;
+        std::vector<char> buffer;
     };
 
     mir::Fd ipc_socket;
