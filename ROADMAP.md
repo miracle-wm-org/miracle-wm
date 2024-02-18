@@ -46,7 +46,10 @@ Features:
 - [ ] Configuration File
     - [ ] Hot reloading
     - [ ] Display configuration
+    - [ ] Resize jump
 - [ ] Floating windows overlayed
+  - [ ] "Pin to workspace" mode
+  - [ ] Support for "picture-in-picture" mode
 - [ ] I3 IPC support for workspaces
 - [ ] Highlight border around selected window (Difficult!)
 - [ ] Improve multi monitor support
