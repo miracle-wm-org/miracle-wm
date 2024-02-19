@@ -63,9 +63,11 @@ private:
     {
         mir::Fd client_fd;
         std::unique_ptr<miral::FdHandle> handle;
-        uint32_t pending_length = 0;
+        uint32_t pending_read_length = 0;
         IpcCommandType pending_type;
         std::vector<char> buffer;
+        int write_buffer_len = 0;
+        int subscribed_events = 0;
     };
 
     mir::Fd ipc_socket;
@@ -77,6 +79,7 @@ private:
     IpcClient& get_client(int fd);
     void handle_command(IpcClient& client, uint32_t payload_length, IpcCommandType payload_type);
     void send_reply(IpcClient& client, IpcCommandType command_type, std::string const& payload);
+    void handle_writeable(IpcClient& client);
 };
 }
 

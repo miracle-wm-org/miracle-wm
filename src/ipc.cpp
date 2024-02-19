@@ -24,6 +24,7 @@ using namespace miracle;
 static const char ipc_magic[] = {'i', '3', '-', 'i', 'p', 'c'};
 
 #define IPC_HEADER_SIZE (sizeof(ipc_magic) + 8)
+#define event_mask(ev) (1 << (ev & 0x7F))
 
 namespace
 {
@@ -144,12 +145,12 @@ Ipc::Ipc(miral::MirRunner& runner)
                     return;
                 }
 
-                if (client.pending_length > 0) {
-                    if ((uint32_t)read_available >= client.pending_length) {
+                if (client.pending_read_length > 0) {
+                    if ((uint32_t)read_available >= client.pending_read_length) {
                         // Reset pending values.
-                        uint32_t pending_length = client.pending_length;
+                        uint32_t pending_length = client.pending_read_length;
                         IpcCommandType pending_type = client.pending_type;
-                        client.pending_length = 0;
+                        client.pending_read_length = 0;
                         handle_command(client, pending_length, pending_type);
                     }
                     return;
@@ -175,15 +176,15 @@ Ipc::Ipc(miral::MirRunner& runner)
                     return;
                 }
 
-                memcpy(&client.pending_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
+                memcpy(&client.pending_read_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
                 memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
 
-                if (read_available - received >= (long)client.pending_length)
+                if (read_available - received >= (long)client.pending_read_length)
                 {
                     // Reset pending values.
-                    uint32_t pending_length = client.pending_length;
+                    uint32_t pending_length = client.pending_read_length;
                     IpcCommandType pending_type = client.pending_type;
-                    client.pending_length = 0;
+                    client.pending_read_length = 0;
                     handle_command(client, pending_length, pending_type);
                 }
             })
@@ -250,14 +251,42 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
     {
         json j = json::array();
         j.push_back({
+            {"num",  0},
             {"name",  "1"},
-            {"focused", true}
+            {"visible",  true},
+            {"focused", true},
+            {"urgent",  false},
+            {"output", "LVDS1"},
+            {"rect", {
+                {"x", 0},
+                {"y", 0},
+                 {"width", 1280},
+                 {"height", 720},
+            }}
         });
         auto json_string = to_string(j);
-        send_reply(client, IPC_GET_WORKSPACES, json_string);
+        send_reply(client, payload_type, json_string);
+        break;
+    }
+    case IPC_SUBSCRIBE:
+    {
+        json j = json::parse(buf);
+        for (auto const& i : j)
+        {
+            std::string event_type = i.template get<std::string>();
+            if (event_type == "workspace")
+            {
+                client.subscribed_events |= event_mask(IPC_EVENT_WORKSPACE);
+                const std::string msg = "{\"success\": true}";
+                send_reply(client, payload_type, msg);
+            }
+
+        }
+        break;
     }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
+        disconnect(client);
         return;
 
     }
@@ -272,28 +301,53 @@ void Ipc::send_reply(miracle::Ipc::IpcClient &client, miracle::IpcCommandType co
 	memcpy(data + sizeof(ipc_magic), &payload_length, sizeof(payload_length));
     memcpy(data + sizeof(ipc_magic) + sizeof(payload_length), &command_type, sizeof(command_type));
 
-    int start_pos;
-    while (client->write_buffer_len + IPC_HEADER_SIZE + payload_length >=
-				 client->write_buffer_size) {
-		client->write_buffer_size *= 2;
+    auto new_buffer_size = client.buffer.size();
+    while (client.write_buffer_len + IPC_HEADER_SIZE + payload_length >= new_buffer_size) {
+        if (new_buffer_size == 0) new_buffer_size = 1;
+        new_buffer_size *= 2;
 	}
 
-	if (client.buffer.size() > 4e6) { // 4 MB
+	if (new_buffer_size > 4e6) { // 4 MB
         mir::log_error("Client write buffer too big (%zu), disconnecting client", client.buffer.size());
 		disconnect(client);
 		return;
 	}
 
-	memcpy(client.buffer.data() + client->write_buffer_len, data, IPC_HEADER_SIZE);
-	client->write_buffer_len += IPC_HEADER_SIZE;
-	memcpy(client->write_buffer + client->write_buffer_len, payload, payload_length);
-	client->write_buffer_len += payload_length;
+    client.buffer.resize(new_buffer_size);
 
-	if (!client->writable_event_source) {
-		client->writable_event_source = wl_event_loop_add_fd(
-				server.wl_event_loop, client->fd, WL_EVENT_WRITABLE,
-				ipc_client_handle_writable, client);
-	}
+	memcpy(client.buffer.data() + client.write_buffer_len, data, IPC_HEADER_SIZE);
+	client.write_buffer_len += IPC_HEADER_SIZE;
+	memcpy(client.buffer.data() + client.write_buffer_len, payload.c_str(), payload_length);
+	client.write_buffer_len += payload_length;
+    handle_writeable(client);
 
-	return true;
+//	if (!client->writable_event_source) {
+//		client->writable_event_source = wl_event_loop_add_fd(
+//				server.wl_event_loop, client->fd, WL_EVENT_WRITABLE,
+//				ipc_client_handle_writable, client);
+//	}
+}
+
+
+void Ipc::handle_writeable(miracle::Ipc::IpcClient &client)
+{
+    if (client.write_buffer_len <= 0)
+        return;
+
+    ssize_t written = write(client.client_fd, client.buffer.data(), client.write_buffer_len);
+    if (written == -1 && errno == EAGAIN) {
+        return;
+    } else if (written == -1) {
+        mir::log_error("Unable to send data from queue to IPC client");
+        disconnect(client);
+        return;
+    }
+
+    memmove(client.buffer.data(), client.buffer.data() + written, client.write_buffer_len - written);
+    client.write_buffer_len -= written;
+
+//    if (client.write_buffer_len == 0 && client->writable_event_source) {
+//        wl_event_source_remove(client->writable_event_source);
+//        client->writable_event_source = NULL;
+//    }
 }
