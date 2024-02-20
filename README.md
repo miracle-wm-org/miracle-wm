@@ -37,10 +37,9 @@ See the [user guide](USERGUIDE.md) for info on how to use `miracle-wm`.
 git clone https://github.com/mattkae/miracle-wm.git
 cd miracle-wm
 
-mkdir build
-cd build
-cmake ..
-WAYLAND_DISPLAY=wayland-98 ./bin/miracle-wm
+cmake -Bbuild
+cmake --build build
+WAYLAND_DISPLAY=wayland-98 ./build/bin/miracle-wm
 ```
 
 **Snap**:
