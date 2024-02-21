@@ -19,6 +19,7 @@ pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
+find_package(nlohmann_json 3.2.0 REQUIRED)
 
 add_executable(miracle-wm
     src/main.cpp
@@ -31,11 +32,13 @@ add_executable(miracle-wm
     src/miracle_config.h
     src/screen.cpp
     src/workspace_manager.cpp
+    src/ipc.cpp
     src/auto_restarting_launcher.cpp
+    src/workspace_observer.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV)
+target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV nlohmann_json::nlohmann_json)
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin

@@ -1,11 +1,14 @@
 #ifndef WORKSPACE_MANAGER_H
 #define WORKSPACE_MANAGER_H
 
+#include "workspace_observer.h"
+
 #include <memory>
 #include <vector>
 #include <miral/window_manager_tools.h>
 #include <list>
 #include <map>
+#include <functional>
 
 namespace miracle
 {
@@ -18,45 +21,36 @@ using miral::Workspace;
 
 class Screen;
 
-// TODO:
-// As it stands, this isn't exactly what I want. What I do want
-// is a workspace manager that is output-aware. The data structure
-// should be a global WorkspaceManager who holds a mapping of Screens -> Workspaces.
-// Workspaces should have a name and be organized according to that name. This
-// goes to mean that we should ignore the idea of a vector of workspaces, and settle
-// for char-encoded workspaces instead.
-
-struct WorkspaceInfo
-{
-    char key;
-    std::shared_ptr<Screen> screen;
-};
-
-
 class WorkspaceManager
 {
 public:
-    explicit WorkspaceManager(WindowManagerTools const& tools);
+    explicit WorkspaceManager(
+        WindowManagerTools const& tools,
+        WorkspaceObserverRegistrar& registry,
+        std::function<std::shared_ptr<Screen> const()> const& get_active_screen);
     virtual ~WorkspaceManager() = default;
 
     /// Request the workspace. If it does not yet exist, then one
     /// is created on the current Screen. If it does exist, we navigate
     /// to the screen containing that workspace and show it if it
     /// isn't already shown.
-    std::shared_ptr<Screen> request_workspace(std::shared_ptr<Screen> screen, char workspace);
+    std::shared_ptr<Screen> request_workspace(std::shared_ptr<Screen> screen, int workspace);
 
     bool request_first_available_workspace(std::shared_ptr<Screen> screen);
 
-    bool move_active_to_workspace(std::shared_ptr<Screen> screen, char workspace);
+    bool move_active_to_workspace(std::shared_ptr<Screen> screen, int workspace);
 
-    bool delete_workspace(char workspace);
+    bool delete_workspace(int workspace);
 
+    void request_focus(int workspace);
+
+    static int constexpr NUM_WORKSPACES = 10;
+    std::array<std::shared_ptr<Screen>, NUM_WORKSPACES> const& get_workspaces() { return workspaces; }
 private:
     WindowManagerTools tools_;
-
-    std::vector<WorkspaceInfo> workspaces;
-
-    void erase_if_empty(std::vector<std::shared_ptr<Workspace>>::iterator const& old_workspace);
+    WorkspaceObserverRegistrar& registry;
+    std::function<std::shared_ptr<Screen> const()> get_active_screen;
+    std::array<std::shared_ptr<Screen>, NUM_WORKSPACES> workspaces;
 };
 }
 
