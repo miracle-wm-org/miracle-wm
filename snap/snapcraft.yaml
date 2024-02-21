@@ -60,6 +60,7 @@ parts:
       - libglib2.0-0
       - libevdev-dev
       - libevdev2
+      - nlohmann-json3-dev
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
