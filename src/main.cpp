@@ -4,7 +4,6 @@
 #include "miracle_config.h"
 #include "auto_restarting_launcher.h"
 
-#include <miral/set_window_management_policy.h>
 #include <miral/external_client.h>
 #include <miral/runner.h>
 #include <miral/window_management_options.h>
@@ -14,7 +13,6 @@
 #include <miral/wayland_extensions.h>
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
-#include <mir/log.h>
 
 using namespace miral;
 

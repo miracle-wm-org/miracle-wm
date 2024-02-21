@@ -3,6 +3,7 @@
 
 #include "window_tree.h"
 #include <memory>
+#include <miral/output.h>
 
 namespace miracle
 {
@@ -17,7 +18,7 @@ struct NodeResurrection
 
 struct ScreenWorkspaceInfo
 {
-    char workspace;
+    int workspace;
     WindowTree tree;
     std::vector<NodeResurrection> nodes_to_resurrect;
 };
@@ -29,6 +30,7 @@ class Screen
 {
 public:
     Screen(
+        miral::Output const& output,
         WorkspaceManager& workspace_manager,
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
@@ -36,10 +38,12 @@ public:
     ~Screen() = default;
 
     WindowTree& get_active_tree();
-    void advise_new_workspace(char workspace);
-    void advise_workspace_deleted(char workspace);
-    bool make_workspace_active(char workspace);
+    int get_active_workspace() const { return active_workspace; }
+    void advise_new_workspace(int workspace);
+    void advise_workspace_deleted(int workspace);
+    bool advise_workspace_active(int workspace);
     std::vector<ScreenWorkspaceInfo>& get_workspaces() { return workspaces; }
+    ScreenWorkspaceInfo const& get_workspace(int key);
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
@@ -47,15 +51,20 @@ public:
 
     geom::Rectangle const& get_area() { return area; }
     std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }
+    miral::Output const& get_output() { return output; }
+    bool is_active() const { return is_active_; }
+    void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
 
 private:
+    miral::Output output;
     WorkspaceManager& workspace_manager;
     miral::WindowManagerTools tools;
     geom::Rectangle area;
     WindowTreeOptions options;
-    char active_workspace = '\0';
+    int active_workspace = -1;
     std::vector<ScreenWorkspaceInfo> workspaces;
     std::vector<miral::Zone> application_zone_list;
+    bool is_active_ = false;
 
     void hide(ScreenWorkspaceInfo&);
     void show(ScreenWorkspaceInfo&);

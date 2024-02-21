@@ -5,11 +5,13 @@
 using namespace miracle;
 
 Screen::Screen(
+    miral::Output const& output,
     WorkspaceManager& workspace_manager,
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
     WindowTreeOptions const& options)
-    : workspace_manager{workspace_manager},
+    : output{output},
+      workspace_manager{workspace_manager},
       area{area},
       tools{tools},
       options{options}
@@ -27,16 +29,15 @@ WindowTree &Screen::get_active_tree()
     throw std::runtime_error("Unable to find the active tree. We shouldn't be here");
 }
 
-void Screen::advise_new_workspace(char workspace)
+void Screen::advise_new_workspace(int workspace)
 {
     workspaces.push_back({
         workspace,
         WindowTree(this, tools, options)
     });
-    make_workspace_active(workspace);
 }
 
-void Screen::advise_workspace_deleted(char workspace)
+void Screen::advise_workspace_deleted(int workspace)
 {
     for (auto it = workspaces.begin(); it != workspaces.end(); it++)
     {
@@ -48,7 +49,7 @@ void Screen::advise_workspace_deleted(char workspace)
     }
 }
 
-bool Screen::make_workspace_active(char key)
+bool Screen::advise_workspace_active(int key)
 {
     for (auto& workspace : workspaces)
     {
@@ -91,6 +92,17 @@ void Screen::hide(ScreenWorkspaceInfo& info)
 void Screen::show(ScreenWorkspaceInfo& info)
 {
      info.tree.show();
+}
+
+const ScreenWorkspaceInfo &Screen::get_workspace(int key)
+{
+    for (auto const& workspace : workspaces)
+    {
+        if (workspace.workspace == key)
+            return workspace;
+    }
+
+    mir::fatal_error("Cannot find workspace with key: %c", key);
 }
 
 void Screen::advise_application_zone_create(miral::Zone const& application_zone)
