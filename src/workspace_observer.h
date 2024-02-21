@@ -17,6 +17,13 @@ public:
     virtual void on_created(std::shared_ptr<Screen> const&, int) = 0;
     virtual void on_removed(std::shared_ptr<Screen> const&, int) = 0;
     virtual void on_focused(std::shared_ptr<Screen> const& previous, int, std::shared_ptr<Screen> const& current, int) = 0;
+
+    int get_id() const;
+protected:
+    WorkspaceObserver();
+
+private:
+    int id;
 };
 
 class WorkspaceObserverRegistrar

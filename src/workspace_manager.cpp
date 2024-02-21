@@ -114,8 +114,3 @@ void WorkspaceManager::request_focus(int key)
 
     workspaces[key]->advise_workspace_active(key);
 }
-
-std::shared_ptr<Screen> const& WorkspaceManager::get_workspace(int key)
-{
-    return workspaces[key];
-}

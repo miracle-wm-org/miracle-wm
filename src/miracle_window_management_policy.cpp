@@ -80,6 +80,11 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     workspace_observer_registrar.register_interest(ipc);
 }
 
+MiracleWindowManagementPolicy::~MiracleWindowManagementPolicy()
+{
+    workspace_observer_registrar.unregister_interest(*ipc);
+}
+
 bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);

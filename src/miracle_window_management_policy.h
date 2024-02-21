@@ -31,7 +31,7 @@ public:
         miral::InternalClientLauncher const&,
         miral::MirRunner&,
         MiracleConfig const&);
-    ~MiracleWindowManagementPolicy() override = default;
+    ~MiracleWindowManagementPolicy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
     bool handle_pointer_event(MirPointerEvent const* event) override;

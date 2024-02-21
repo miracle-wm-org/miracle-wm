@@ -218,23 +218,8 @@ void Ipc::on_created(std::shared_ptr<Screen> const& info, int key)
     }
 }
 
-void Ipc::on_removed(std::shared_ptr<Screen> const& info, int key)
+void Ipc::on_removed(std::shared_ptr<Screen> const&, int)
 {
-    json j = {
-        {"change", "empty"},
-        {"old", nullptr},
-        {"current", workspace_to_json(info, key)}
-    };
-
-    auto serialized_value = to_string(j);
-    for (auto& client : clients)
-    {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0) {
-            continue;
-        }
-
-        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
-    }
 }
 
 void Ipc::on_focused(
@@ -243,9 +228,6 @@ void Ipc::on_focused(
     std::shared_ptr<Screen> const& current,
     int current_key)
 {
-    if (true)
-        return;
-
     json j = {
         {"change", "focus"},
         {"current", workspace_to_json(current, current_key)}

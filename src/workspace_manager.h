@@ -51,8 +51,6 @@ private:
     WorkspaceObserverRegistrar& registry;
     std::function<std::shared_ptr<Screen> const()> get_active_screen;
     std::array<std::shared_ptr<Screen>, NUM_WORKSPACES> workspaces;
-
-    std::shared_ptr<Screen> const& get_workspace(int key);
 };
 }
 

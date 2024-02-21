@@ -56,7 +56,6 @@ class Ipc : public WorkspaceObserver
 {
 public:
     Ipc(miral::MirRunner& runner, WorkspaceManager&);
-    ~Ipc() override = default;
 
     void on_created(std::shared_ptr<Screen> const& info, int key) override;
     void on_removed(std::shared_ptr<Screen> const& info, int key) override;
