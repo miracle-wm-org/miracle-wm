@@ -54,7 +54,7 @@ json workspace_to_json(std::shared_ptr<Screen> const& screen, int key)
 
     return {
         {"num",  key},
-        {"id", screen->get_output().id()},
+        {"id", key},
         {"type", "workspace"},
         {"name",  std::to_string(key)},
         {"visible", screen->is_active() && is_focused},
@@ -218,8 +218,22 @@ void Ipc::on_created(std::shared_ptr<Screen> const& info, int key)
     }
 }
 
-void Ipc::on_removed(std::shared_ptr<Screen> const&, int)
+void Ipc::on_removed(std::shared_ptr<Screen> const& screen, int key)
 {
+    json j = {
+        {"change", "empty"},
+        {"current", workspace_to_json(screen, key)}
+    };
+
+    auto serialized_value = to_string(j);
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0) {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+    }
 }
 
 void Ipc::on_focused(
@@ -234,7 +248,7 @@ void Ipc::on_focused(
     };
 
     if (previous)
-        j["old"] =workspace_to_json(previous, previous_key);
+        j["old"] = workspace_to_json(previous, previous_key);
     else
         j["old"] = nullptr;
 

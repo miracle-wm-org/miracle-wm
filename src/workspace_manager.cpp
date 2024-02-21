@@ -35,9 +35,9 @@ std::shared_ptr<Screen> WorkspaceManager::request_workspace(std::shared_ptr<Scre
 
     workspaces[key] = screen;
     screen->advise_new_workspace(key);
-    registry.advise_created(workspaces[key], key);
 
     request_focus(key);
+    registry.advise_created(workspaces[key], key);
     return screen;
 }
 
@@ -104,6 +104,8 @@ void WorkspaceManager::request_focus(int key)
         return;
 
     auto active_screen = get_active_screen();
+    workspaces[key]->advise_workspace_active(key);
+
     if (active_screen != nullptr)
     {
         auto active_workspace = active_screen->get_active_workspace();
@@ -111,6 +113,4 @@ void WorkspaceManager::request_focus(int key)
     }
     else
         registry.advise_focused(nullptr, -1, workspaces[key], key);
-
-    workspaces[key]->advise_workspace_active(key);
 }
