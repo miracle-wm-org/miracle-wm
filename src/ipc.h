@@ -1,6 +1,8 @@
 #ifndef MIRACLEWM_IPC_H
 #define MIRACLEWM_IPC_H
 
+#include "workspace_manager.h"
+#include "workspace_observer.h"
 #include <miral/runner.h>
 #include <mir/fd.h>
 #include <vector>
@@ -47,17 +49,18 @@ enum IpcCommandType {
 };
 
 /// Inter process communication for compositor clients (e.g. waybar).
-/// This class will implement some of Sway's options, but will diverge
-/// in order to support the specifics of miracle.
-///
-/// As such, much of the logic of this class is taken from ipc-server.c
-/// in sway.
-class Ipc
+/// This class will implement I3's interface: https://i3wm.org/docs/ipc.html
+/// plus some of the sway-specific items.
+/// It may be extended in the future.
+class Ipc : public WorkspaceObserver
 {
 public:
-    Ipc(miral::MirRunner& runner);
-    ~Ipc() = default;
+    Ipc(miral::MirRunner& runner, WorkspaceManager&);
+    ~Ipc() override = default;
 
+    void on_created(std::shared_ptr<Screen> const& info, int key) override;
+    void on_removed(std::shared_ptr<Screen> const& info, int key) override;
+    void on_focused(std::shared_ptr<Screen> const& previous, int, std::shared_ptr<Screen> const& current, int) override;
 private:
     struct IpcClient
     {
@@ -70,6 +73,7 @@ private:
         int subscribed_events = 0;
     };
 
+    WorkspaceManager& workspace_manager;
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;

@@ -1,63 +1,67 @@
+#define MIR_LOG_COMPONENT "workspace_manager"
 #include "workspace_manager.h"
 #include "screen.h"
+#include <mir/log.h>
 
 using namespace mir::geometry;
 using namespace miral;
 using namespace miracle;
 
-namespace
+WorkspaceManager::WorkspaceManager(
+    WindowManagerTools const& tools,
+    WorkspaceObserverRegistrar& registry,
+    std::function<std::shared_ptr<Screen> const()> const& get_active_screen) :
+    tools_{tools},
+    registry{registry},
+    get_active_screen{get_active_screen}
 {
-char DEFAULT_WORKSPACES[] = {'1','2','3','4','5','6','7','8','9', '0'};
 }
 
-WorkspaceManager::WorkspaceManager(WindowManagerTools const& tools) :
-    tools_{tools}
+std::shared_ptr<Screen> WorkspaceManager::request_workspace(std::shared_ptr<Screen> screen, int key)
 {
-}
-
-std::shared_ptr<Screen> WorkspaceManager::request_workspace(std::shared_ptr<Screen> screen, char key)
-{
-    for (auto workspace : workspaces)
+    if (workspaces[key] != nullptr)
     {
-        if (workspace.key == key)
+        auto workspace = workspaces[key];
+        auto active_workspace = workspace->get_active_workspace();
+        if (active_workspace == key)
         {
-            workspace.screen->make_workspace_active(key);
-            return workspace.screen;
+            mir::log_warning("Same workspace selected twice in a row");
+            return workspace;
         }
+
+        request_focus(key);
+        return workspace;
     }
 
-    workspaces.push_back({
-        key,
-        screen
-    });
+    workspaces[key] = screen;
     screen->advise_new_workspace(key);
+    registry.advise_created(workspaces[key], key);
+
+    request_focus(key);
     return screen;
 }
 
 bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Screen> screen)
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 1; i < NUM_WORKSPACES; i++)
     {
-        bool can_use = true;
-        for (auto workspace : workspaces)
+        if (workspaces[i] == nullptr)
         {
-            if (workspace.key == DEFAULT_WORKSPACES[i])
-            {
-                can_use = false;
-            }
-        }
-
-        if (can_use)
-        {
-            request_workspace(screen, DEFAULT_WORKSPACES[i]);
+            request_workspace(screen, i);
             return true;
         }
+    }
+
+    if (workspaces[0] == nullptr)
+    {
+        request_workspace(screen, 0);
+        return true;
     }
 
     return false;
 }
 
-bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, char workspace)
+bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, int workspace)
 {
     auto window = tools_.active_window();
     if (!window)
@@ -81,17 +85,37 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
     return true;
 }
 
-bool WorkspaceManager::delete_workspace(char key)
+bool WorkspaceManager::delete_workspace(int key)
 {
-    for (auto it = workspaces.begin(); it != workspaces.end(); it++)
+    if (workspaces[key])
     {
-        if (it->key == key)
-        {
-            it->screen->advise_workspace_deleted(key);
-            workspaces.erase(it);
-            return true;
-        }
+        workspaces[key]->advise_workspace_deleted(key);
+        registry.advise_removed(workspaces[key], key);
+        workspaces[key] = nullptr;
+        return true;
     }
 
     return false;
+}
+
+void WorkspaceManager::request_focus(int key)
+{
+    if (!workspaces[key])
+        return;
+
+    auto active_screen = get_active_screen();
+    if (active_screen != nullptr)
+    {
+        auto active_workspace = active_screen->get_active_workspace();
+        registry.advise_focused(active_screen, active_workspace, workspaces[key], key);
+    }
+    else
+        registry.advise_focused(nullptr, -1, workspaces[key], key);
+
+    workspaces[key]->advise_workspace_active(key);
+}
+
+std::shared_ptr<Screen> const& WorkspaceManager::get_workspace(int key)
+{
+    return workspaces[key];
 }

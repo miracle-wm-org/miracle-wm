@@ -4,6 +4,7 @@
 #include "screen.h"
 #include "miracle_config.h"
 #include "workspace_manager.h"
+#include "ipc.h"
 
 #include <miral/window_manager_tools.h>
 #include <miral/window_management_policy.h>
@@ -20,12 +21,6 @@ class MirRunner;
 
 namespace miracle
 {
-
-struct OutputInfo
-{
-    miral::Output output;
-    std::shared_ptr<Screen> screen;
-};
 
 class MiracleWindowManagementPolicy : public miral::WindowManagementPolicy
 {
@@ -80,19 +75,23 @@ public:
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
+    std::shared_ptr<Screen> const& get_active_output() { return active_output; }
+
 private:
-    std::shared_ptr<OutputInfo> active_output;
-    std::vector<std::shared_ptr<OutputInfo>> output_list;
-    std::weak_ptr<OutputInfo> pending_output;
+    std::shared_ptr<Screen> active_output;
+    std::vector<std::shared_ptr<Screen>> output_list;
+    std::weak_ptr<Screen> pending_output;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
     MiracleConfig const& config;
+    WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
+    std::shared_ptr<Ipc> ipc;
 
-    void _add_to_output_immediately(Window&, std::shared_ptr<OutputInfo>&);
+    void _add_to_output_immediately(Window&, std::shared_ptr<Screen>&);
 };
 }
 

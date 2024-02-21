@@ -1,16 +1,9 @@
 #define MIR_LOG_COMPONENT "miracle_ipc"
 
-#include <cstdint>
 #include "ipc.h"
-#include <linux/input-event-codes.h>
-#include <assert.h>
-#include <errno.h>
+#include "screen.h"
+
 #include <fcntl.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/un.h>
@@ -28,7 +21,6 @@ static const char ipc_magic[] = {'i', '3', '-', 'i', 'p', 'c'};
 
 namespace
 {
-
 struct sockaddr_un *ipc_user_sockaddr() {
     auto ipc_sockaddr = (sockaddr_un*)malloc(sizeof(struct sockaddr_un));
     if (ipc_sockaddr == nullptr)
@@ -54,9 +46,34 @@ struct sockaddr_un *ipc_user_sockaddr() {
 
     return ipc_sockaddr;
 }
+
+json workspace_to_json(std::shared_ptr<Screen> const& screen, int key)
+{
+    bool is_focused = screen->get_active_workspace() == key;
+    auto area = screen->get_area();
+
+    return {
+        {"num",  key},
+        {"id", screen->get_output().id()},
+        {"type", "workspace"},
+        {"name",  std::to_string(key)},
+        {"visible", screen->is_active() && is_focused},
+        {"focused", screen->is_active() && is_focused},
+        {"urgent",  false},
+        {"output", screen->get_output().name()},
+        {"rect", {
+             {"x", area.top_left.x.as_int()},
+             {"y", area.top_left.y.as_int()},
+             {"width", area.size.width.as_int()},
+             {"height", area.size.height.as_int()},
+         }}
+    };
 }
 
-Ipc::Ipc(miral::MirRunner& runner)
+}
+
+Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager)
+    : workspace_manager{workspace_manager}
 {
     auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -126,17 +143,6 @@ Ipc::Ipc(miral::MirRunner& runner)
             runner.register_fd_handler(mir_fd, [this](int fd)
             {
                 auto& client = get_client(fd);
-                // TODO: Masking?
-//                if (mask & WL_EVENT_ERROR) {
-//                    sway_log(SWAY_ERROR, "IPC Client socket error, removing client");
-//                    ipc_client_disconnect(client);
-//                    return 0;
-//                }
-//
-//                if (mask & WL_EVENT_HANGUP) {
-//                    ipc_client_disconnect(client);
-//                    return 0;
-//                }
 
                 int read_available;
                 if (ioctl(client.client_fd, FIONREAD, &read_available) == -1) {
@@ -191,6 +197,74 @@ Ipc::Ipc(miral::MirRunner& runner)
         });
 
     });
+}
+
+void Ipc::on_created(std::shared_ptr<Screen> const& info, int key)
+{
+    json j = {
+        {"change", "init"},
+        {"old", nullptr},
+        {"current", workspace_to_json(info, key)}
+    };
+
+    auto serialized_value = to_string(j);
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0) {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+    }
+}
+
+void Ipc::on_removed(std::shared_ptr<Screen> const& info, int key)
+{
+    json j = {
+        {"change", "empty"},
+        {"old", nullptr},
+        {"current", workspace_to_json(info, key)}
+    };
+
+    auto serialized_value = to_string(j);
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0) {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+    }
+}
+
+void Ipc::on_focused(
+    std::shared_ptr<Screen> const& previous,
+    int previous_key,
+    std::shared_ptr<Screen> const& current,
+    int current_key)
+{
+    if (true)
+        return;
+
+    json j = {
+        {"change", "focus"},
+        {"current", workspace_to_json(current, current_key)}
+    };
+
+    if (previous)
+        j["old"] =workspace_to_json(previous, previous_key);
+    else
+        j["old"] = nullptr;
+
+    auto serialized_value = to_string(j);
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0) {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+    }
 }
 
 Ipc::IpcClient &Ipc::get_client(int fd)
@@ -250,20 +324,12 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
     case IPC_GET_WORKSPACES:
     {
         json j = json::array();
-        j.push_back({
-            {"num",  0},
-            {"name",  "1"},
-            {"visible",  true},
-            {"focused", true},
-            {"urgent",  false},
-            {"output", "LVDS1"},
-            {"rect", {
-                {"x", 0},
-                {"y", 0},
-                 {"width", 1280},
-                 {"height", 720},
-            }}
-        });
+        for (int i = 0; i < WorkspaceManager::NUM_WORKSPACES; i++)
+        {
+            auto workspace = workspace_manager.get_workspaces()[i];
+            if (workspace)
+                j.push_back(workspace_to_json(workspace, i));
+        }
         auto json_string = to_string(j);
         send_reply(client, payload_type, json_string);
         break;
@@ -320,34 +386,25 @@ void Ipc::send_reply(miracle::Ipc::IpcClient &client, miracle::IpcCommandType co
 	memcpy(client.buffer.data() + client.write_buffer_len, payload.c_str(), payload_length);
 	client.write_buffer_len += payload_length;
     handle_writeable(client);
-
-//	if (!client->writable_event_source) {
-//		client->writable_event_source = wl_event_loop_add_fd(
-//				server.wl_event_loop, client->fd, WL_EVENT_WRITABLE,
-//				ipc_client_handle_writable, client);
-//	}
 }
 
 
 void Ipc::handle_writeable(miracle::Ipc::IpcClient &client)
 {
-    if (client.write_buffer_len <= 0)
-        return;
+    while (client.write_buffer_len > 0)
+    {
+        ssize_t written = write(client.client_fd, client.buffer.data(), client.write_buffer_len);
+        if (written == -1 && errno == EAGAIN) {
+            return;
+        } else if (written == -1) {
+            mir::log_error("Unable to send data from queue to IPC client");
+            disconnect(client);
+            return;
+        }
 
-    ssize_t written = write(client.client_fd, client.buffer.data(), client.write_buffer_len);
-    if (written == -1 && errno == EAGAIN) {
-        return;
-    } else if (written == -1) {
-        mir::log_error("Unable to send data from queue to IPC client");
-        disconnect(client);
-        return;
+        memmove(client.buffer.data(), client.buffer.data() + written, client.write_buffer_len - written);
+        client.write_buffer_len -= written;
     }
 
-    memmove(client.buffer.data(), client.buffer.data() + written, client.write_buffer_len - written);
-    client.write_buffer_len -= written;
-
-//    if (client.write_buffer_len == 0 && client->writable_event_source) {
-//        wl_event_source_remove(client->writable_event_source);
-//        client->writable_event_source = NULL;
-//    }
+    client.write_buffer_len = 0;
 }
