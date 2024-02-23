@@ -29,6 +29,16 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
         pid_to_command_map[pid] = cmd;
 }
 
+void AutoRestartingLauncher::kill_all()
+{
+    std::lock_guard lock{mutex};
+    for (auto const& entry : pid_to_command_map)
+    {
+        if (entry.second.restart_on_death)
+            kill(entry.first, SIGTERM);
+    }
+}
+
 void AutoRestartingLauncher::reap()
 {
     int status;

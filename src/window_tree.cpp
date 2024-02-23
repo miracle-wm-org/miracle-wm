@@ -3,7 +3,7 @@
 #include "window_tree.h"
 #include "window_helpers.h"
 #include "screen.h"
-#include "window_helpers.h"
+#include "miracle_config.h"
 
 #include <memory>
 #include <mir/log.h>
@@ -15,16 +15,25 @@ using namespace miracle;
 WindowTree::WindowTree(
     Screen* screen,
     miral::WindowManagerTools const& tools,
-    WindowTreeOptions const& options)
+    std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},
       root_lane{std::make_shared<Node>(
         tools,
         std::move(geom::Rectangle{screen->get_area().top_left, screen->get_area().size}),
-        options.gap_x, options.gap_y)},
+        config)},
       tools{tools},
-      options{options}
+      config{config}
 {
     _recalculate_root_node_area();
+    config_handle = config->register_listener([&](auto&)
+    {
+        _recalculate_root_node_area();
+    });
+}
+
+WindowTree::~WindowTree()
+{
+    config->unregister_listener(config_handle);
 }
 
 miral::WindowSpecification WindowTree::allocate_position(const miral::WindowSpecification &requested_specification)

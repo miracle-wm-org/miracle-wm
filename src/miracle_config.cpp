@@ -2,26 +2,38 @@
 
 #include "miracle_config.h"
 #include "yaml-cpp/yaml.h"
+#include <miral/runner.h>
 #include <glib-2.0/glib.h>
 #include <fstream>
 #include <mir/log.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
+#include <fcntl.h>
+#include <sys/inotify.h>
 
 using namespace miracle;
 
-MiracleConfig::MiracleConfig()
+MiracleConfig::MiracleConfig(miral::MirRunner& runner)
+    : runner{runner}
 {
     std::stringstream config_path_stream;
     config_path_stream << g_get_user_config_dir();
     config_path_stream << "/miracle-wm.yaml";
-    auto config_path = config_path_stream.str();
+    config_path = config_path_stream.str();
 
     mir::log_info("Configuration file path is: %s", config_path.c_str());
 
     {
-    std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+        std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
     }
 
+    _load();
+    _watch(runner);
+}
+
+void MiracleConfig::_load()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    mir::log_info("Configuration is loading");
     YAML::Node config = YAML::LoadFile(config_path);
     if (config["action_key"])
     {
@@ -499,6 +511,36 @@ MiracleConfig::MiracleConfig()
     }
 }
 
+void MiracleConfig::_watch(miral::MirRunner& runner)
+{
+    inotify_fd = mir::Fd{inotify_init()};
+    file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
+    if (file_watch < 0)
+        mir::fatal_error("Unable to watch the config file");
+
+    watch_handle = runner.register_fd_handler(inotify_fd, [&](int file_fd)
+    {
+        union
+        {
+            inotify_event event;
+            char buffer[sizeof(inotify_event) + NAME_MAX + 1];
+        } inotify_buffer;
+
+        if (read(inotify_fd, &inotify_buffer, sizeof(inotify_buffer)) < static_cast<ssize_t>(sizeof(inotify_event)))
+            return;
+
+        if (inotify_buffer.event.mask & (IN_MODIFY))
+        {
+            _load();
+
+            for (auto const& on_change : on_change_listeners)
+            {
+                on_change.listener(*this);
+            }
+        }
+    });
+}
+
 uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
 {
     if (stringified_action_key == "alt")
@@ -604,7 +646,42 @@ int MiracleConfig::get_gap_size_y() const
     return gap_size_y;
 }
 
+int MiracleConfig::get_space_around_all_windows_x() const
+{
+    return space_around_all_windows_x;
+}
+
+int MiracleConfig::get_space_around_all_windows_y() const
+{
+    return space_around_all_windows_y;
+}
+
 const std::vector<StartupApp> &MiracleConfig::get_startup_apps() const
 {
     return startup_apps;
+}
+
+int MiracleConfig::register_listener(std::function<void(miracle::MiracleConfig&)> const& func, int priority)
+{
+    int handle = next_listener_handle++;
+
+    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
+    {
+        if (it->priority >= priority)
+        {
+            on_change_listeners.insert(it, {func, priority, handle});
+            return handle;
+        }
+    }
+
+    on_change_listeners.push_back({func, priority, handle});
+    return handle;
+}
+
+void MiracleConfig::unregister_listener(int handle)
+{
+    on_change_listeners.erase(std::remove_if(on_change_listeners.begin(), on_change_listeners.end(), [&handle](ChangeListener const& listener)
+    {
+        return listener.handle == handle;
+    }));
 }

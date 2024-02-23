@@ -30,7 +30,7 @@ public:
         miral::ExternalClientLauncher const&,
         miral::InternalClientLauncher const&,
         miral::MirRunner&,
-        MiracleConfig const&);
+        std::shared_ptr<MiracleConfig> const&);
     ~MiracleWindowManagementPolicy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -86,7 +86,7 @@ private:
     miral::ExternalClientLauncher const external_client_launcher;
     miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
-    MiracleConfig const& config;
+    std::shared_ptr<MiracleConfig> config;
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;

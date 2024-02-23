@@ -17,6 +17,7 @@ namespace miracle
 {
 
 class Screen;
+class MiracleConfig;
 
 enum class Direction
 {
@@ -26,18 +27,12 @@ enum class Direction
     right
 };
 
-struct WindowTreeOptions
-{
-    int gap_x;
-    int gap_y;
-};
-
 /// Represents a tiling tree for an output.
 class WindowTree
 {
 public:
-    WindowTree(Screen* parent, miral::WindowManagerTools const& tools, WindowTreeOptions const& options);
-    ~WindowTree() = default;
+    WindowTree(Screen* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
+    ~WindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.
@@ -128,13 +123,14 @@ private:
 
     Screen* screen;
     miral::WindowManagerTools tools;
-    WindowTreeOptions options;
+    std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<Node> root_lane;
     std::shared_ptr<Node> active_window;
     bool is_resizing = false;
     bool is_active_window_fullscreen = false;
     bool is_hidden = false;
     std::vector<NodeResurrection> nodes_to_resurrect;
+    int config_handle = 0;
 
     // TODO: Move non tiling window list to Screen
     std::vector<miral::Window> non_tiling_window_list;

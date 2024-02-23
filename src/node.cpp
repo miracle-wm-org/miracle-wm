@@ -1,26 +1,25 @@
 #include "node.h"
 #include "window_helpers.h"
+#include "miracle_config.h"
 #include <cmath>
 #include <iostream>
 
 using namespace miracle;
 
-Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, int gap_x, int gap_y)
+Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, std::shared_ptr<MiracleConfig> const& config)
     : tools{tools},
       state{NodeState::lane},
       logical_area{std::move(area)},
-      gap_x{gap_x},
-      gap_y{gap_y}
+      config{config}
 {}
 
-Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, int gap_x, int gap_y)
+Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle area, std::shared_ptr<Node> parent, miral::Window &window, std::shared_ptr<MiracleConfig> const& config)
     : tools{tools},
       parent{std::move(parent)},
       window{window},
       state{NodeState::window},
       logical_area{std::move(area)},
-      gap_x{gap_x},
-      gap_y{gap_y}
+      config{config}
 {
 }
 
@@ -31,7 +30,7 @@ geom::Rectangle Node::get_logical_area()
 
 geom::Rectangle Node::get_visible_area()
 {
-    return _get_visible_from_logical(logical_area, gap_x, gap_y);
+    return _get_visible_from_logical(logical_area, config->get_gap_size_x(), config->get_gap_size_y());
 }
 
 namespace
@@ -138,8 +137,8 @@ geom::Rectangle Node::create_new_node_position(int index)
             }};
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
-            gap_x,
-            gap_y);
+            config->get_gap_size_x(),
+            config->get_gap_size_y());
         return new_node_visible_rect;
     }
     else
@@ -174,8 +173,8 @@ geom::Rectangle Node::create_new_node_position(int index)
             }};
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
-            gap_x,
-            gap_y);
+            config->get_gap_size_x(),
+            config->get_gap_size_y());
         return new_node_visible_rect;
     }
 }
@@ -187,12 +186,12 @@ void Node::add_window(miral::Window& new_window)
 
     geom::Rectangle new_logical_area = {
         geom::Point{
-            new_window.top_left().x.as_int() - gap_x,
-            new_window.top_left().y.as_int() - gap_y
+            new_window.top_left().x.as_int() - config->get_gap_size_x(),
+            new_window.top_left().y.as_int() - config->get_gap_size_y()
         },
         geom::Size{
-            new_window.size().width.as_int() + 2 * gap_x,
-            new_window.size().height.as_int() + 2 * gap_y
+            new_window.size().width.as_int() + 2 * config->get_gap_size_x(),
+            new_window.size().height.as_int() + 2 * config->get_gap_size_y()
         }
     };
 
@@ -201,8 +200,7 @@ void Node::add_window(miral::Window& new_window)
         std::move(new_logical_area),
         shared_from_this(),
         new_window,
-        gap_x,
-        gap_y);
+        config);
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
     pending_index = -1;
@@ -355,8 +353,7 @@ std::shared_ptr<Node> Node::to_lane()
         std::move(logical_area),
         shared_from_this(),
         window,
-        gap_x,
-        gap_y);
+        config);
     sub_nodes.push_back(seed_node);
     return seed_node;
 }
@@ -401,7 +398,7 @@ void Node::insert_node(std::shared_ptr<Node> const& node, int index)
 {
     auto area_with_gaps = create_new_node_position(index);
     node->parent = shared_from_this();
-    node->set_logical_area(_get_logical_from_visible(area_with_gaps, gap_x, gap_y));
+    node->set_logical_area(_get_logical_from_visible(area_with_gaps, config->get_gap_size_x(), config->get_gap_size_y()));
     sub_nodes.insert(sub_nodes.begin() + index, node);
     _refit_node_to_area();
     constrain();
@@ -592,7 +589,7 @@ int Node::get_min_height() const
 
 void Node::_set_window_rectangle(geom::Rectangle area)
 {
-    auto visible_rect = _get_visible_from_logical(area, gap_x, gap_y);
+    auto visible_rect = _get_visible_from_logical(area, config->get_gap_size_x(), config->get_gap_size_y());
     window.move_to(visible_rect.top_left);
     window.resize(visible_rect.size);
     auto& window_info = tools.info_for(window);

@@ -9,12 +9,12 @@ Screen::Screen(
     WorkspaceManager& workspace_manager,
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
-    WindowTreeOptions const& options)
+    std::shared_ptr<MiracleConfig> const& config)
     : output{output},
       workspace_manager{workspace_manager},
       area{area},
       tools{tools},
-      options{options}
+      config{config}
 {
 }
 
@@ -33,7 +33,7 @@ void Screen::advise_new_workspace(int workspace)
 {
     workspaces.push_back({
         workspace,
-        WindowTree(this, tools, options)
+        WindowTree(this, tools, config)
     });
 }
 
