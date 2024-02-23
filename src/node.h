@@ -30,8 +30,8 @@ enum class NodeLayoutDirection
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
-    Node(miral::WindowManagerTools const& tools, geom::Rectangle, std::shared_ptr<MiracleConfig> const& config);
-    Node(miral::WindowManagerTools const& tools,geom::Rectangle, std::shared_ptr<Node> parent, miral::Window& window, std::shared_ptr<MiracleConfig> const& config);
+    Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<MiracleConfig> const& config);
+    Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<Node> parent, miral::Window& window, std::shared_ptr<MiracleConfig> const& config);
 
     /// Area taken up by the node including gaps.
     geom::Rectangle get_logical_area();
@@ -105,10 +105,13 @@ private:
     geom::Rectangle logical_area;
     std::shared_ptr<MiracleConfig> config;
     int pending_index = -1;
+    geom::Rectangle pending_logical_rect;
 
     void _set_window_rectangle(geom::Rectangle area);
-    static geom::Rectangle _get_visible_from_logical(geom::Rectangle const& logical_area, int gap_x, int gap_y);
-    static geom::Rectangle _get_logical_from_visible(const geom::Rectangle &visible_area, int gap_x, int gap_y);
+    geom::Rectangle get_logical_area_internal(geom::Rectangle const& rectangle);
+    static geom::Rectangle _get_visible_from_logical(
+        geom::Rectangle const& logical_area,
+        std::shared_ptr<MiracleConfig> const& config);
     /// Recalculates the size of the nodes in the lane.
     void _refit_node_to_area();
 };

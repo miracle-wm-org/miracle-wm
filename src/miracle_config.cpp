@@ -487,6 +487,14 @@ void MiracleConfig::_load()
     {
         gap_size_y = config["gap_size_y"].as<int>();
     }
+    if (config["space_around_all_windows_x"])
+    {
+        space_around_all_windows_x = config["space_around_all_windows_x"].as<int>();
+    }
+    if (config["space_around_all_windows_y"])
+    {
+        space_around_all_windows_y = config["space_around_all_windows_y"].as<int>();
+    }
 
     // Startup Apps
     if (config["startup_apps"])

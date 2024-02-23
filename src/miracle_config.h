@@ -125,8 +125,8 @@ private:
     KeyCommandList key_commands[DefaultKeyCommand::MAX];
     int gap_size_x = 10;
     int gap_size_y = 10;
-    int space_around_all_windows_x = 0;
-    int space_around_all_windows_y = 0;
+    int space_around_all_windows_x = 10;
+    int space_around_all_windows_y = 10;
     std::vector<StartupApp> startup_apps;
 
 };
