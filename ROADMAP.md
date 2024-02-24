@@ -44,13 +44,14 @@ Features:
 Features:
 - [ ] Major bugs + performance
 - [ ] Configuration File
-    - [ ] Hot reloading
+    - [x] Hot reloading
     - [ ] Display configuration
     - [ ] Resize jump
+    - [x] Outer gaps
 - [ ] Floating windows overlayed
   - [ ] "Pin to workspace" mode
   - [ ] Support for "picture-in-picture" mode
-- [ ] I3 IPC support for workspaces
+- [x] I3 IPC support for workspaces
 - [ ] Highlight border around selected window (Difficult!)
 - [ ] Improve multi monitor support
   - [ ] Zero monitors

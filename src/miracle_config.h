@@ -87,10 +87,10 @@ public:
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
     CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
-    [[nodiscard]] int get_gap_size_x() const;
-    [[nodiscard]] int get_gap_size_y() const;
-    [[nodiscard]] int get_space_around_all_windows_x() const;
-    [[nodiscard]] int get_space_around_all_windows_y() const;
+    [[nodiscard]] int get_inner_gaps_x() const;
+    [[nodiscard]] int get_inner_gaps_y() const;
+    [[nodiscard]] int get_outer_gaps_x() const;
+    [[nodiscard]] int get_outer_gaps_y() const;
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
@@ -123,10 +123,10 @@ private:
     uint primary_modifier = mir_input_event_modifier_meta;
     std::vector<CustomKeyCommand> custom_key_commands;
     KeyCommandList key_commands[DefaultKeyCommand::MAX];
-    int gap_size_x = 10;
-    int gap_size_y = 10;
-    int space_around_all_windows_x = 10;
-    int space_around_all_windows_y = 10;
+    int inner_gaps_x = 10;
+    int inner_gaps_y = 10;
+    int outer_gaps_x = 10;
+    int outer_gaps_y = 10;
     std::vector<StartupApp> startup_apps;
 
 };

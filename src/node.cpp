@@ -28,8 +28,8 @@ geom::Rectangle Node::get_logical_area_internal(geom::Rectangle const& rectangle
 {
     if (parent == nullptr)
     {
-        auto x = config->get_space_around_all_windows_x();
-        auto y = config->get_space_around_all_windows_y();
+        auto x = config->get_outer_gaps_x();
+        auto y = config->get_outer_gaps_y();
 
         auto modified_logical_area = geom::Rectangle(
             geom::Point(rectangle.top_left.x.as_int() + x, rectangle.top_left.y.as_int() + y),
@@ -522,8 +522,8 @@ geom::Rectangle Node::_get_visible_from_logical(
     geom::Rectangle const& logical_area,
     std::shared_ptr<MiracleConfig> const& config)
 {
-    int half_gap_x = (int)(ceilf((float)config->get_gap_size_x() / 2.f));
-    int half_gap_y = (int)(ceilf((float)config->get_gap_size_y() / 2.f));
+    int half_gap_x = (int)(ceilf((float) config->get_inner_gaps_x() / 2.f));
+    int half_gap_y = (int)(ceilf((float) config->get_inner_gaps_y() / 2.f));
     return {
         geom::Point{
             logical_area.top_left.x.as_int() + half_gap_x,

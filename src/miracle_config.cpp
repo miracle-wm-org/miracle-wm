@@ -479,21 +479,19 @@ void MiracleConfig::_load()
     }
 
     // Gap sizes
-    if (config["gap_size_x"])
+    if (config["inner_gaps"])
     {
-        gap_size_x = config["gap_size_x"].as<int>();
+        if (config["inner_gaps"]["x"])
+            inner_gaps_x = config["inner_gaps"]["x"].as<int>();
+        if (config["inner_gaps"]["y"])
+            inner_gaps_y = config["inner_gaps"]["y"].as<int>();
     }
-    if (config["gap_size_y"])
+    if (config["outer_gaps"])
     {
-        gap_size_y = config["gap_size_y"].as<int>();
-    }
-    if (config["space_around_all_windows_x"])
-    {
-        space_around_all_windows_x = config["space_around_all_windows_x"].as<int>();
-    }
-    if (config["space_around_all_windows_y"])
-    {
-        space_around_all_windows_y = config["space_around_all_windows_y"].as<int>();
+        if (config["outer_gaps"]["x"])
+            outer_gaps_x = config["outer_gaps"]["x"].as<int>();
+        if (config["outer_gaps"]["y"])
+            outer_gaps_y = config["outer_gaps"]["y"].as<int>();
     }
 
     // Startup Apps
@@ -644,24 +642,24 @@ DefaultKeyCommand MiracleConfig::matches_key_command(MirKeyboardAction action, i
     return DefaultKeyCommand::MAX;
 }
 
-int MiracleConfig::get_gap_size_x() const
+int MiracleConfig::get_inner_gaps_x() const
 {
-    return gap_size_x;
+    return inner_gaps_x;
 }
 
-int MiracleConfig::get_gap_size_y() const
+int MiracleConfig::get_inner_gaps_y() const
 {
-    return gap_size_y;
+    return inner_gaps_y;
 }
 
-int MiracleConfig::get_space_around_all_windows_x() const
+int MiracleConfig::get_outer_gaps_x() const
 {
-    return space_around_all_windows_x;
+    return outer_gaps_x;
 }
 
-int MiracleConfig::get_space_around_all_windows_y() const
+int MiracleConfig::get_outer_gaps_y() const
 {
-    return space_around_all_windows_y;
+    return outer_gaps_y;
 }
 
 const std::vector<StartupApp> &MiracleConfig::get_startup_apps() const
@@ -688,8 +686,12 @@ int MiracleConfig::register_listener(std::function<void(miracle::MiracleConfig&)
 
 void MiracleConfig::unregister_listener(int handle)
 {
-    on_change_listeners.erase(std::remove_if(on_change_listeners.begin(), on_change_listeners.end(), [&handle](ChangeListener const& listener)
+    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
     {
-        return listener.handle == handle;
-    }));
+        if (it->handle == handle)
+        {
+            on_change_listeners.erase(it);
+            return;
+        }
+    }
 }
