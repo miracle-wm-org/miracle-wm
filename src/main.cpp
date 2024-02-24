@@ -26,22 +26,27 @@ int main(int argc, char const* argv[])
     InternalClientLauncher internal_client_launcher;
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
-    miracle::MiracleConfig config;
+    auto config = std::make_shared<miracle::MiracleConfig>(runner);
     WindowManagerOptions window_managers
     {
         add_window_manager_policy<miracle::MiracleWindowManagementPolicy>(
             "tiling", external_client_launcher, internal_client_launcher, runner, config)
     };
- 
+
     Keymap config_keymap;
 
     auto const run_startup_apps = [&]()
     {
-        for (auto const& app : config.get_startup_apps())
+        for (auto const& app : config->get_startup_apps())
         {
             auto_restarting_launcher.launch(app);
         }
     };
+
+    config->register_listener([&auto_restarting_launcher](miracle::MiracleConfig& new_config)
+    {
+         auto_restarting_launcher.kill_all();
+    });
 
     return runner.run_with(
         {
