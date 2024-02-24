@@ -65,7 +65,7 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher,
     miral::MirRunner& runner,
-    MiracleConfig const& config)
+    std::shared_ptr<MiracleConfig> const& config)
     : window_manager_tools{tools},
       external_client_launcher{external_client_launcher},
       internal_client_launcher{internal_client_launcher},
@@ -78,6 +78,10 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
       ipc{std::make_shared<Ipc>(runner, workspace_manager)}
 {
     workspace_observer_registrar.register_interest(ipc);
+    config->register_listener([&](auto& new_config)
+    {
+        ipc->disconnect_all();
+    }, 1);
 }
 
 MiracleWindowManagementPolicy::~MiracleWindowManagementPolicy()
@@ -91,14 +95,14 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
 
-    auto custom_key_command = config.matches_custom_key_command(action, scan_code, modifiers);
+    auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
     if (custom_key_command != nullptr)
     {
         external_client_launcher.launch(custom_key_command->command);
         return true;
     }
 
-    auto key_command = config.matches_key_command(action, scan_code, modifiers);
+    auto key_command = config->matches_key_command(action, scan_code, modifiers);
     if (key_command == DefaultKeyCommand::MAX)
         return false;
 
@@ -350,9 +354,8 @@ void MiracleWindowManagementPolicy::advise_move_to(miral::WindowInfo const& wind
 
 void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
 {
-    WindowTreeOptions options =  { config.get_gap_size_x(), config.get_gap_size_y() };
     auto new_tree = std::make_shared<Screen>(
-        output, workspace_manager, output.extents(), window_manager_tools, options);
+        output, workspace_manager, output.extents(), window_manager_tools, config);
     workspace_manager.request_first_available_workspace(new_tree);
         output_list.push_back(new_tree);
     if (active_output == nullptr)

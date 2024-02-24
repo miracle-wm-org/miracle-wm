@@ -60,6 +60,7 @@ public:
     void on_created(std::shared_ptr<Screen> const& info, int key) override;
     void on_removed(std::shared_ptr<Screen> const& info, int key) override;
     void on_focused(std::shared_ptr<Screen> const& previous, int, std::shared_ptr<Screen> const& current, int) override;
+    void disconnect_all();
 private:
     struct IpcClient
     {

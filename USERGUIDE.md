@@ -84,20 +84,28 @@ struct StartupApp
 {
     command: string;
     restart_on_death: bool; // If true the application will restart whenever it dies
+                            // Note that applications with restart_on_death set to true
+                            // will restart when the configuration changes.
+};
+
+struct Vector2
+{
+    int x;
+    int y;
 };
 ```
 
 ## Definition
 With those types defined, the following table defines the allowed key/value pairs:
 
-| Key                      | Default | Type              | Description                                                                                                                                                                                                                                                            |
-|--------------------------|---------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| action_key               | `meta`    | `Modifier`          | The default key that is used to initate any action.                                                                                                                                                                                                                    |
-| default_action_overrides | `[]`      | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
-| custom_actions           | [] | `CustomAction[]` | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
-| gap_size_x               | 10 | `int` | Size of the gaps in pixels horizontally between windows                                                                                                                                                                                                                |                                                                                                                                                                                                      |
-| gap_size_y               | 10 | `int` | Size of the gaps in pixels vertically between windows                                                                                                                                                                                                                  |                                                                                                                                                                                                                 |
-| startup_apps             | [] | `StartupApp[]` | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
+| Key                      | Default       | Type                  | Description                                                                                                                                                                                                                                                            |
+|--------------------------|---------------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| action_key               | `meta`        | `Modifier`            | The default key that is used to initate any action.                                                                                                                                                                                                                    |
+| default_action_overrides | `[]`          | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
+| custom_actions           | []            | `CustomAction[]`      | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
+| inner_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gaps in pixels between windows                                                                                                                                                                                                                             |                                                                                                                                                                                                      |
+| outer_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gap between the window group and the edge of the screen in pixels                                                                                                                                                                                          |                                                                                                                                                                                                                 |
+| startup_apps             | []            | `StartupApp[]`        | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
 
 
 ## Example
@@ -118,8 +126,14 @@ custom_actions:           # Set meta + D to open wofi
       - primary
     key: KEY_D
 
-gap_size_x: 20
-gap_size_y: 20
+inner_gaps:
+  x: 20
+  y: 20
+
+outer_gaps:
+  x: 100
+  y: 100
+  
 startup_apps:
   - command: waybar
     restart_on_death: true

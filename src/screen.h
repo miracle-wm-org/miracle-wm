@@ -9,6 +9,7 @@ namespace miracle
 {
 
 struct WorkspaceManager;
+class MiracleConfig;
 
 struct NodeResurrection
 {
@@ -34,7 +35,7 @@ public:
         WorkspaceManager& workspace_manager,
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
-        WindowTreeOptions const& options);
+        std::shared_ptr<MiracleConfig> const& options);
     ~Screen() = default;
 
     WindowTree& get_active_tree();
@@ -60,7 +61,7 @@ private:
     WorkspaceManager& workspace_manager;
     miral::WindowManagerTools tools;
     geom::Rectangle area;
-    WindowTreeOptions options;
+    std::shared_ptr<MiracleConfig> config;
     int active_workspace = -1;
     std::vector<ScreenWorkspaceInfo> workspaces;
     std::vector<miral::Zone> application_zone_list;

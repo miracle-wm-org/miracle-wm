@@ -274,6 +274,12 @@ Ipc::IpcClient &Ipc::get_client(int fd)
     throw std::runtime_error("Could not find IPC client");
 }
 
+void Ipc::disconnect_all()
+{
+    for (auto& client : clients)
+        disconnect(client);
+}
+
 void Ipc::disconnect(Ipc::IpcClient& client)
 {
     auto it = std::find_if(clients.begin(), clients.end(), [&](IpcClient const& other)
