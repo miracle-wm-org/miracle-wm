@@ -27,12 +27,11 @@ enum class Direction
     right
 };
 
-/// Represents a tiling tree for an output.
-class WindowTree
+class Tree
 {
 public:
-    WindowTree(Screen* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
-    ~WindowTree();
+    Tree(Screen* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
+    ~Tree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.
@@ -88,7 +87,7 @@ public:
     /// Constrains the window to its tile if it is in this tree.
     bool constrain(miral::WindowInfo& window_info);
 
-    void add_tree(WindowTree&);
+    void add_tree(std::shared_ptr<Tree> const&);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
     void close_active_window();
@@ -100,7 +99,7 @@ public:
     void show();
 
     std::shared_ptr<Node> get_root_node();
-    void _recalculate_root_node_area();
+    void recalculate_root_node_area();
     bool is_empty();
 
 private:
@@ -132,8 +131,6 @@ private:
     std::vector<NodeResurrection> nodes_to_resurrect;
     int config_handle = 0;
 
-    // TODO: Move non tiling window list to Screen
-    std::vector<miral::Window> non_tiling_window_list;
     std::shared_ptr<Node> _get_active_lane();
     void _handle_direction_request(NodeLayoutDirection direction);
     void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);

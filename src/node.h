@@ -1,6 +1,7 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include "window_metadata.h"
 #include <mir/geometry/rectangle.h>
 #include <vector>
 #include <memory>
@@ -13,6 +14,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 class MiracleConfig;
+class Tree;
 
 enum class NodeState
 {
@@ -30,8 +32,17 @@ enum class NodeLayoutDirection
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
-    Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<MiracleConfig> const& config);
-    Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<Node> parent, miral::Window& window, std::shared_ptr<MiracleConfig> const& config);
+    Node(miral::WindowManagerTools const& tools,
+         geom::Rectangle const& area,
+         std::shared_ptr<MiracleConfig> const& config,
+         Tree const* tree);
+
+    Node(miral::WindowManagerTools const& tools,
+         geom::Rectangle const& area,
+         std::shared_ptr<Node> parent,
+         std::shared_ptr<WindowMetadata> const& metadata,
+         std::shared_ptr<MiracleConfig> const& config,
+         Tree const* tree);
 
     /// Area taken up by the node including gaps.
     geom::Rectangle get_logical_area();
@@ -53,10 +64,6 @@ public:
 
     // Translates the logical area by the provided amount
     void translate_by(int x, int y);
-
-    /// Walk the tree to find the lane that contains this window.
-    /// @returns The node if it is found, otherwise false
-    std::shared_ptr<Node> find_node_for_window(miral::Window& window);
 
     /// Insert a node at a particular index
     void insert_node(std::shared_ptr<Node> const& node, int index);
@@ -90,14 +97,16 @@ public:
     bool is_window() const { return state == NodeState::window; }
     bool is_lane() const { return state == NodeState::lane; }
     NodeLayoutDirection get_direction() const { return direction; }
-    miral::Window& get_window() { return window; }
+    miral::Window& get_window() { return metadata->get_window(); }
     std::shared_ptr<Node> get_parent() const { return parent; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
+    Tree const* get_tree() { return tree; }
 
 private:
     std::shared_ptr<Node> parent;
     miral::WindowManagerTools tools;
-    miral::Window window;
+    Tree const* tree;
+    std::shared_ptr<WindowMetadata> metadata;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     std::vector<std::shared_ptr<Node>> hidden_nodes;
     NodeState state;

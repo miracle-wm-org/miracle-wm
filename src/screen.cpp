@@ -18,12 +18,12 @@ Screen::Screen(
 {
 }
 
-WindowTree &Screen::get_active_tree()
+Tree &Screen::get_active_tree()
 {
     for (auto& info : workspaces)
     {
         if (info.workspace == active_workspace)
-            return info.tree;
+            return *info.tree;
     }
 
     throw std::runtime_error("Unable to find the active tree. We shouldn't be here");
@@ -31,10 +31,7 @@ WindowTree &Screen::get_active_tree()
 
 void Screen::advise_new_workspace(int workspace)
 {
-    workspaces.push_back({
-        workspace,
-        WindowTree(this, tools, config)
-    });
+    workspaces.push_back({workspace, std::make_shared<Tree>(this, tools, config)});
 }
 
 void Screen::advise_workspace_deleted(int workspace)
@@ -74,7 +71,7 @@ bool Screen::advise_workspace_active(int key)
             if (previous_workspace != nullptr)
             {
                 auto& active_tree = previous_workspace->tree;
-                if (active_tree.is_empty())
+                if (active_tree->is_empty())
                     workspace_manager.delete_workspace(previous_workspace->workspace);
             }
             return true;
@@ -86,12 +83,12 @@ bool Screen::advise_workspace_active(int key)
 
 void Screen::hide(ScreenWorkspaceInfo& info)
 {
-    info.tree.hide();
+    info.tree->hide();
 }
 
 void Screen::show(ScreenWorkspaceInfo& info)
 {
-     info.tree.show();
+     info.tree->show();
 }
 
 const ScreenWorkspaceInfo &Screen::get_workspace(int key)
@@ -111,7 +108,7 @@ void Screen::advise_application_zone_create(miral::Zone const& application_zone)
     {
         application_zone_list.push_back(application_zone);
         for (auto& workspace : workspaces)
-            workspace.tree._recalculate_root_node_area();
+            workspace.tree->recalculate_root_node_area();
     }
 }
 
@@ -122,7 +119,7 @@ void Screen::advise_application_zone_update(miral::Zone const& updated, miral::Z
         {
             zone = updated;
             for (auto& workspace : workspaces)
-                workspace.tree._recalculate_root_node_area();
+                workspace.tree->recalculate_root_node_area();
             break;
         }
 }
@@ -132,7 +129,7 @@ void Screen::advise_application_zone_delete(miral::Zone const& application_zone)
     if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
     {
         for (auto& workspace : workspaces)
-            workspace.tree._recalculate_root_node_area();
+            workspace.tree->recalculate_root_node_area();
     }
 }
 
