@@ -1,7 +1,7 @@
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
-#include "window_tree.h"
+#include "tree.h"
 #include <memory>
 #include <miral/output.h>
 
@@ -20,7 +20,7 @@ struct NodeResurrection
 struct ScreenWorkspaceInfo
 {
     int workspace;
-    WindowTree tree;
+    std::shared_ptr<Tree> tree;
     std::vector<NodeResurrection> nodes_to_resurrect;
 };
 
@@ -38,7 +38,7 @@ public:
         std::shared_ptr<MiracleConfig> const& options);
     ~Screen() = default;
 
-    WindowTree& get_active_tree();
+    Tree& get_active_tree();
     int get_active_workspace() const { return active_workspace; }
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);

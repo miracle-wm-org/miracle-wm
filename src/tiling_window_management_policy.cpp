@@ -1,6 +1,6 @@
 #define MIR_LOG_COMPONENT "miracle"
 
-#include "miracle_window_management_policy.h"
+#include "tiling_window_management_policy.h"
 #include "window_helpers.h"
 #include "miracle_config.h"
 #include "workspace_manager.h"
@@ -60,7 +60,7 @@ const std::string POSSIBLE_TERMINALS[] = {
 };
 }
 
-MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
+TilingWindowManagementPolicy::TilingWindowManagementPolicy(
     miral::WindowManagerTools const& tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::InternalClientLauncher const& internal_client_launcher,
@@ -84,12 +84,12 @@ MiracleWindowManagementPolicy::MiracleWindowManagementPolicy(
     }, 1);
 }
 
-MiracleWindowManagementPolicy::~MiracleWindowManagementPolicy()
+TilingWindowManagementPolicy::~TilingWindowManagementPolicy()
 {
     workspace_observer_registrar.unregister_interest(*ipc);
 }
 
-bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
+bool TilingWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
@@ -236,7 +236,7 @@ bool MiracleWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const
     return false;
 }
 
-bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* event)
+bool TilingWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
@@ -264,7 +264,7 @@ bool MiracleWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* 
     return false;
 }
 
-auto MiracleWindowManagementPolicy::place_new_window(
+auto TilingWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
@@ -278,7 +278,7 @@ auto MiracleWindowManagementPolicy::place_new_window(
     return active_output->get_active_tree().allocate_position(requested_specification);
 }
 
-void MiracleWindowManagementPolicy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<Screen>& output)
+void TilingWindowManagementPolicy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<Screen>& output)
 {
     miral::WindowSpecification spec;
     spec = output->get_active_tree().allocate_position(spec);
@@ -286,7 +286,7 @@ void MiracleWindowManagementPolicy::_add_to_output_immediately(miral::Window& wi
     output->get_active_tree().advise_new_window(window_manager_tools.info_for(window));
 }
 
-void MiracleWindowManagementPolicy::advise_new_window(miral::WindowInfo const& window_info)
+void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& window_info)
 {
     auto shared_output = pending_output.lock();
     if (!shared_output)
@@ -312,7 +312,7 @@ void MiracleWindowManagementPolicy::advise_new_window(miral::WindowInfo const& w
     pending_output.reset();
 }
 
-void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
+void TilingWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
     {
@@ -321,20 +321,20 @@ void MiracleWindowManagementPolicy::handle_window_ready(miral::WindowInfo &windo
     }
 }
 
-void MiracleWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
+void TilingWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
         output->get_active_tree().advise_focus_gained(window_info.window());
     window_manager_tools.raise_tree(window_info.window());
 }
 
-void MiracleWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
+void TilingWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
     for (auto const& output : output_list)
         output->get_active_tree().advise_focus_lost(window_info.window());
 }
 
-void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
+void TilingWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
 {
     for (auto it = orphaned_window_list.begin(); it != orphaned_window_list.end();)
     {
@@ -348,11 +348,11 @@ void MiracleWindowManagementPolicy::advise_delete_window(const miral::WindowInfo
         output->get_active_tree().advise_delete_window(window_info.window());
 }
 
-void MiracleWindowManagementPolicy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
+void TilingWindowManagementPolicy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
 }
 
-void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& output)
+void TilingWindowManagementPolicy::advise_output_create(miral::Output const& output)
 {
     auto new_tree = std::make_shared<Screen>(
         output, workspace_manager, output.extents(), window_manager_tools, config);
@@ -372,7 +372,7 @@ void MiracleWindowManagementPolicy::advise_output_create(miral::Output const& ou
     }
 }
 
-void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& updated, miral::Output const& original)
+void TilingWindowManagementPolicy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
     for (auto& output : output_list)
     {
@@ -380,14 +380,14 @@ void MiracleWindowManagementPolicy::advise_output_update(miral::Output const& up
         {
             for (auto& workspace : output->get_workspaces())
             {
-                workspace.tree.set_output_area(updated.extents());
+                workspace.tree->set_output_area(updated.extents());
             }
             break;
         }
     }
 }
 
-void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& output)
+void TilingWindowManagementPolicy::advise_output_delete(miral::Output const& output)
 {
     for (auto it = output_list.begin(); it != output_list.end();)
     {
@@ -402,7 +402,7 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
                     // All nodes should become orphaned
                     for (auto& workspace : other_output->get_workspaces())
                     {
-                        workspace.tree.foreach_node([&](auto node)
+                        workspace.tree->foreach_node([&](auto node)
                         {
                             if (node->is_window())
                             {
@@ -427,7 +427,7 @@ void MiracleWindowManagementPolicy::advise_output_delete(miral::Output const& ou
     }
 }
 
-void MiracleWindowManagementPolicy::advise_state_change(miral::WindowInfo const& window_info, MirWindowState state)
+void TilingWindowManagementPolicy::advise_state_change(miral::WindowInfo const& window_info, MirWindowState state)
 {
     for (auto const& output : output_list)
     {
@@ -438,7 +438,7 @@ void MiracleWindowManagementPolicy::advise_state_change(miral::WindowInfo const&
     }
 }
 
-void MiracleWindowManagementPolicy::handle_modify_window(
+void TilingWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
@@ -451,7 +451,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
                 bool found = false;
                 for (auto& workspace : output->get_workspaces())
                 {
-                    if (workspace.tree.advise_fullscreen_window(window_info))
+                    if (workspace.tree->advise_fullscreen_window(window_info))
                     {
                         found = true;
                         break;
@@ -468,7 +468,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
                 bool found = false;
                 for (auto& workspace : output->get_workspaces())
                 {
-                    if (workspace.tree.advise_restored_window(window_info))
+                    if (workspace.tree->advise_restored_window(window_info))
                     {
                         found = true;
                         break;
@@ -485,7 +485,7 @@ void MiracleWindowManagementPolicy::handle_modify_window(
         bool found = false;
         for (auto& workspace : output->get_workspaces())
         {
-            if (workspace.tree.constrain(window_info))
+            if (workspace.tree->constrain(window_info))
             {
                 found = true;
                 window_manager_tools.modify_window(window_info.window(), modifications);
@@ -497,46 +497,37 @@ void MiracleWindowManagementPolicy::handle_modify_window(
     }
 }
 
-void MiracleWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
+void TilingWindowManagementPolicy::handle_raise_window(miral::WindowInfo &window_info)
 {
     window_manager_tools.select_active_window(window_info.window());
 }
 
 mir::geometry::Rectangle
-MiracleWindowManagementPolicy::confirm_placement_on_display(
+TilingWindowManagementPolicy::confirm_placement_on_display(
     const miral::WindowInfo &window_info,
     MirWindowState new_state,
     const mir::geometry::Rectangle &new_placement)
 {
     mir::geometry::Rectangle modified_placement = new_placement;
-    for (auto const& output : output_list)\
+    for (auto const& output : output_list)
     {
-        bool found = false;
-        for (auto& workspace : output->get_workspaces())
-        {
-            if (workspace.tree.confirm_placement_on_display(window_info, new_state, modified_placement))
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (found) break;
+        if (output->get_active_tree().confirm_placement_on_display(window_info, new_state, modified_placement))
+            break;
     }
     return modified_placement;
 }
 
-bool MiracleWindowManagementPolicy::handle_touch_event(const MirTouchEvent *event)
+bool TilingWindowManagementPolicy::handle_touch_event(const MirTouchEvent *event)
 {
     return false;
 }
 
-void MiracleWindowManagementPolicy::handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event)
+void TilingWindowManagementPolicy::handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event)
 {
 
 }
 
-void MiracleWindowManagementPolicy::handle_request_resize(
+void TilingWindowManagementPolicy::handle_request_resize(
     miral::WindowInfo &window_info,
     const MirInputEvent *input_event,
     MirResizeEdge edge)
@@ -544,14 +535,14 @@ void MiracleWindowManagementPolicy::handle_request_resize(
 
 }
 
-mir::geometry::Rectangle MiracleWindowManagementPolicy::confirm_inherited_move(
+mir::geometry::Rectangle TilingWindowManagementPolicy::confirm_inherited_move(
     const miral::WindowInfo &window_info,
     mir::geometry::Displacement movement)
 {
     return {window_info.window().top_left()+movement, window_info.window().size()};
 }
 
-void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone const& application_zone)
+void TilingWindowManagementPolicy::advise_application_zone_create(miral::Zone const& application_zone)
 {
     for (auto const& output : output_list)
     {
@@ -559,7 +550,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_create(miral::Zone c
     }
 }
 
-void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
+void TilingWindowManagementPolicy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
 {
     for (auto const& output : output_list)
     {
@@ -567,7 +558,7 @@ void MiracleWindowManagementPolicy::advise_application_zone_update(miral::Zone c
     }
 }
 
-void MiracleWindowManagementPolicy::advise_application_zone_delete(miral::Zone const& application_zone)
+void TilingWindowManagementPolicy::advise_application_zone_delete(miral::Zone const& application_zone)
 {
     for (auto const& output : output_list)
     {

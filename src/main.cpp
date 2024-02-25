@@ -1,6 +1,6 @@
 #define MIR_LOG_COMPONENT "miracle-main"
 
-#include "miracle_window_management_policy.h"
+#include "tiling_window_management_policy.h"
 #include "miracle_config.h"
 #include "auto_restarting_launcher.h"
 
@@ -29,7 +29,7 @@ int main(int argc, char const* argv[])
     auto config = std::make_shared<miracle::MiracleConfig>(runner);
     WindowManagerOptions window_managers
     {
-        add_window_manager_policy<miracle::MiracleWindowManagementPolicy>(
+        add_window_manager_policy<miracle::TilingWindowManagementPolicy>(
             "tiling", external_client_launcher, internal_client_launcher, runner, config)
     };
 

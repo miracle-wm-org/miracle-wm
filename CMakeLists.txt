@@ -25,8 +25,8 @@ include(GNUInstallDirs)
 
 add_executable(miracle-wm
     src/main.cpp
-    src/miracle_window_management_policy.cpp
-    src/window_tree.cpp
+    src/tiling_window_management_policy.cpp
+    src/tree.cpp
     src/node.cpp
     src/window_helpers.h
     src/window_helpers.cpp
@@ -37,6 +37,7 @@ add_executable(miracle-wm
     src/ipc.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_observer.cpp
+    src/window_metadata.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
