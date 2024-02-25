@@ -37,6 +37,7 @@ add_executable(miracle-wm
     src/ipc.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_observer.cpp
+    src/window_metadata.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

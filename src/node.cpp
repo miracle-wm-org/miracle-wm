@@ -1,27 +1,38 @@
+#define MIR_LOG_COMPONENT "node"
+
 #include "node.h"
 #include "window_helpers.h"
 #include "miracle_config.h"
 #include <cmath>
 #include <iostream>
+#include <mir/log.h>
 
 using namespace miracle;
 
-Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle const& area, std::shared_ptr<MiracleConfig> const& config)
-    : tools{tools},
+Node::Node(miral::WindowManagerTools const& tools_, geom::Rectangle const& area, std::shared_ptr<MiracleConfig> const& config)
+    : tools{tools_},
       state{NodeState::lane},
       logical_area{area},
       config{config}
 {
 }
 
-Node::Node(miral::WindowManagerTools const& tools, geom::Rectangle const& area, std::shared_ptr<Node> parent, miral::Window &window, std::shared_ptr<MiracleConfig> const& config)
-    : tools{tools},
+Node::Node(
+    miral::WindowManagerTools const& tools_,
+    geom::Rectangle const& area,
+    std::shared_ptr<Node> parent,
+    std::shared_ptr<WindowMetadata> const& metadata,
+    std::shared_ptr<MiracleConfig> const& config)
+    : tools{tools_},
       parent{std::move(parent)},
-      window{window},
+      metadata{metadata},
       state{NodeState::window},
       logical_area{area},
       config{config}
 {
+    miral::WindowSpecification spec;
+    spec.userdata() = metadata;
+    tools.modify_window(metadata->get_window(), spec);
 }
 
 geom::Rectangle Node::get_logical_area_internal(geom::Rectangle const& rectangle)
@@ -204,12 +215,14 @@ void Node::add_window(miral::Window& new_window)
     if (pending_index < 0)
         pending_index = (int)sub_nodes.size();
 
+    auto node_metadata = std::make_shared<WindowMetadata>(WindowType::tiled, new_window);
     auto node = std::make_shared<Node>(
         tools,
         pending_logical_rect,
         shared_from_this(),
-        new_window,
+        node_metadata,
         config);
+    node_metadata->associate_to_node(node);
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
     pending_index = -1;
@@ -262,7 +275,7 @@ void Node::set_logical_area(geom::Rectangle const& target_rect)
 {
     if (is_window())
     {
-        auto& info = tools.info_for(window);
+        auto& info = tools.info_for(metadata->get_window());
         if (!window_helpers::is_window_fullscreen(info.state()))
         {
             _set_window_rectangle(target_rect);
@@ -355,54 +368,34 @@ std::shared_ptr<Node> Node::to_lane()
         return nullptr;
 
     state = NodeState::lane;
+
     // If we want to make a new node, but our parent only has one window, and it's us...
     // then we can just return the parent
     if (parent != nullptr && parent->sub_nodes.size() == 1)
         return parent->sub_nodes[0];
 
-    auto seed_node = std::make_shared<Node>(
+    auto window_node = std::make_shared<Node>(
         tools,
         logical_area,
         shared_from_this(),
-        window,
+        metadata,
         config);
-    sub_nodes.push_back(seed_node);
-    return seed_node;
+    metadata->associate_to_node(window_node);
+    sub_nodes.push_back(window_node);
+    metadata = nullptr;
+    return window_node;
 }
 
-std::shared_ptr<miracle::Node> Node::find_node_for_window(miral::Window &window)
+std::shared_ptr<Node> Node::find_node_for_window(miral::Window &window)
 {
-    for (auto item : sub_nodes)
+    auto& info = tools.info_for(window);
+    if (info.userdata())
     {
-        if (item->is_window())
-        {
-            if (item->get_window() == window)
-                return item;
-        }
-        else
-        {
-            auto node = item->find_node_for_window(window);
-            if (node != nullptr)
-                return node;
-        }
+        std::shared_ptr<WindowMetadata> data = static_pointer_cast<WindowMetadata>(info.userdata());
+        return data->get_tiling_node();
     }
 
-    for (auto hidden : hidden_nodes)
-    {
-        if (hidden->is_window())
-        {
-            if (hidden->get_window() == window)
-                return hidden;
-        }
-        else
-        {
-            auto node = hidden->find_node_for_window(window);
-            if (node != nullptr)
-                return node;
-        }
-    }
-
-    // TODO: Error
+    mir::log_error("Unable to find node for window");
     return nullptr;
 }
 
@@ -448,7 +441,7 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
         sub_nodes.clear();
         for (auto sub_node : dying_lane->get_sub_nodes())
         {
-            add_window(sub_node->window);
+            add_window(sub_node->get_window());
         }
         set_direction(dying_lane->get_direction());
     }
@@ -592,6 +585,7 @@ int Node::get_min_height() const
 void Node::_set_window_rectangle(geom::Rectangle area)
 {
     auto visible_rect = _get_visible_from_logical(area, config);
+    auto window = metadata->get_window();
     window.move_to(visible_rect.top_left);
     window.resize(visible_rect.size);
     auto& window_info = tools.info_for(window);
@@ -606,7 +600,7 @@ void Node::constrain()
 {
     if (is_window())
     {
-        auto& info = tools.info_for(window);
+        auto& info = tools.info_for(metadata->get_window());
         if (window_helpers::is_window_fullscreen(info.state()))
             info.clip_area(mir::optional_value<geom::Rectangle>());
         else

@@ -1,6 +1,7 @@
 #ifndef NODE_H
 #define NODE_H
 
+#include "window_metadata.h"
 #include <mir/geometry/rectangle.h>
 #include <vector>
 #include <memory>
@@ -31,7 +32,11 @@ class Node : public std::enable_shared_from_this<Node>
 {
 public:
     Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<MiracleConfig> const& config);
-    Node(miral::WindowManagerTools const& tools, geom::Rectangle const&, std::shared_ptr<Node> parent, miral::Window& window, std::shared_ptr<MiracleConfig> const& config);
+    Node(miral::WindowManagerTools const& tools,
+         geom::Rectangle const&,
+         std::shared_ptr<Node> parent,
+         std::shared_ptr<WindowMetadata> const& metadata,
+         std::shared_ptr<MiracleConfig> const& config);
 
     /// Area taken up by the node including gaps.
     geom::Rectangle get_logical_area();
@@ -90,14 +95,14 @@ public:
     bool is_window() const { return state == NodeState::window; }
     bool is_lane() const { return state == NodeState::lane; }
     NodeLayoutDirection get_direction() const { return direction; }
-    miral::Window& get_window() { return window; }
+    miral::Window& get_window() { return metadata->get_window(); }
     std::shared_ptr<Node> get_parent() const { return parent; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
 
 private:
     std::shared_ptr<Node> parent;
     miral::WindowManagerTools tools;
-    miral::Window window;
+    std::shared_ptr<WindowMetadata> metadata;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     std::vector<std::shared_ptr<Node>> hidden_nodes;
     NodeState state;
