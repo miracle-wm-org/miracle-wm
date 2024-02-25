@@ -26,7 +26,7 @@ include(GNUInstallDirs)
 add_executable(miracle-wm
     src/main.cpp
     src/tiling_window_management_policy.cpp
-    src/window_tree.cpp
+    src/tree.cpp
     src/node.cpp
     src/window_helpers.h
     src/window_helpers.cpp

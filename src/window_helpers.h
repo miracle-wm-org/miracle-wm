@@ -2,9 +2,13 @@
 #define MIRACLEWM_WINDOW_HELPERS_H
 
 #include <miral/window_info.h>
+#include <miral/window_manager_tools.h>
 
 namespace miracle
 {
+class Node;
+class Tree;
+
 namespace window_helpers
 {
 bool is_window_fullscreen(MirWindowState state);
@@ -19,6 +23,15 @@ bool is_tileable(T const& requested_specification)
            && (state == mir_window_state_restored || state == mir_window_state_maximized)
            && !has_exclusive_rect;
 }
+
+std::shared_ptr<Node> get_node_for_window(
+    miral::Window const& window,
+    miral::WindowManagerTools const& tools);
+
+std::shared_ptr<Node> get_node_for_window_by_tree(
+    miral::Window const& window,
+    miral::WindowManagerTools const& tools,
+    Tree const* tree);
 }
 }
 

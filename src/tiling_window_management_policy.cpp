@@ -380,7 +380,7 @@ void TilingWindowManagementPolicy::advise_output_update(miral::Output const& upd
         {
             for (auto& workspace : output->get_workspaces())
             {
-                workspace.tree.set_output_area(updated.extents());
+                workspace.tree->set_output_area(updated.extents());
             }
             break;
         }
@@ -402,7 +402,7 @@ void TilingWindowManagementPolicy::advise_output_delete(miral::Output const& out
                     // All nodes should become orphaned
                     for (auto& workspace : other_output->get_workspaces())
                     {
-                        workspace.tree.foreach_node([&](auto node)
+                        workspace.tree->foreach_node([&](auto node)
                         {
                             if (node->is_window())
                             {
@@ -451,7 +451,7 @@ void TilingWindowManagementPolicy::handle_modify_window(
                 bool found = false;
                 for (auto& workspace : output->get_workspaces())
                 {
-                    if (workspace.tree.advise_fullscreen_window(window_info))
+                    if (workspace.tree->advise_fullscreen_window(window_info))
                     {
                         found = true;
                         break;
@@ -468,7 +468,7 @@ void TilingWindowManagementPolicy::handle_modify_window(
                 bool found = false;
                 for (auto& workspace : output->get_workspaces())
                 {
-                    if (workspace.tree.advise_restored_window(window_info))
+                    if (workspace.tree->advise_restored_window(window_info))
                     {
                         found = true;
                         break;
@@ -485,7 +485,7 @@ void TilingWindowManagementPolicy::handle_modify_window(
         bool found = false;
         for (auto& workspace : output->get_workspaces())
         {
-            if (workspace.tree.constrain(window_info))
+            if (workspace.tree->constrain(window_info))
             {
                 found = true;
                 window_manager_tools.modify_window(window_info.window(), modifications);
@@ -509,19 +509,10 @@ TilingWindowManagementPolicy::confirm_placement_on_display(
     const mir::geometry::Rectangle &new_placement)
 {
     mir::geometry::Rectangle modified_placement = new_placement;
-    for (auto const& output : output_list)\
+    for (auto const& output : output_list)
     {
-        bool found = false;
-        for (auto& workspace : output->get_workspaces())
-        {
-            if (workspace.tree.confirm_placement_on_display(window_info, new_state, modified_placement))
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (found) break;
+        if (output->get_active_tree().confirm_placement_on_display(window_info, new_state, modified_placement))
+            break;
     }
     return modified_placement;
 }

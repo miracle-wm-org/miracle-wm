@@ -9,11 +9,16 @@
 
 using namespace miracle;
 
-Node::Node(miral::WindowManagerTools const& tools_, geom::Rectangle const& area, std::shared_ptr<MiracleConfig> const& config)
+Node::Node(
+    miral::WindowManagerTools const& tools_,
+    geom::Rectangle const& area,
+    std::shared_ptr<MiracleConfig> const& config,
+    Tree const* tree)
     : tools{tools_},
       state{NodeState::lane},
       logical_area{area},
-      config{config}
+      config{config},
+      tree{tree}
 {
 }
 
@@ -22,13 +27,15 @@ Node::Node(
     geom::Rectangle const& area,
     std::shared_ptr<Node> parent,
     std::shared_ptr<WindowMetadata> const& metadata,
-    std::shared_ptr<MiracleConfig> const& config)
+    std::shared_ptr<MiracleConfig> const& config,
+    Tree const* tree)
     : tools{tools_},
       parent{std::move(parent)},
       metadata{metadata},
       state{NodeState::window},
       logical_area{area},
-      config{config}
+      config{config},
+      tree{tree}
 {
     miral::WindowSpecification spec;
     spec.userdata() = metadata;
@@ -213,7 +220,10 @@ geom::Rectangle Node::create_new_node_position(int index)
 void Node::add_window(miral::Window& new_window)
 {
     if (pending_index < 0)
-        pending_index = (int)sub_nodes.size();
+    {
+        mir::fatal_error("Unable to add the window to the scene. Was create_new_node_position called?");
+        return;
+    }
 
     auto node_metadata = std::make_shared<WindowMetadata>(WindowType::tiled, new_window);
     auto node = std::make_shared<Node>(
@@ -221,7 +231,8 @@ void Node::add_window(miral::Window& new_window)
         pending_logical_rect,
         shared_from_this(),
         node_metadata,
-        config);
+        config,
+        tree);
     node_metadata->associate_to_node(node);
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
@@ -379,24 +390,12 @@ std::shared_ptr<Node> Node::to_lane()
         logical_area,
         shared_from_this(),
         metadata,
-        config);
+        config,
+        tree);
     metadata->associate_to_node(window_node);
     sub_nodes.push_back(window_node);
     metadata = nullptr;
     return window_node;
-}
-
-std::shared_ptr<Node> Node::find_node_for_window(miral::Window &window)
-{
-    auto& info = tools.info_for(window);
-    if (info.userdata())
-    {
-        std::shared_ptr<WindowMetadata> data = static_pointer_cast<WindowMetadata>(info.userdata());
-        return data->get_tiling_node();
-    }
-
-    mir::log_error("Unable to find node for window");
-    return nullptr;
 }
 
 void Node::insert_node(std::shared_ptr<Node> const& node, int index)

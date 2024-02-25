@@ -1,6 +1,7 @@
 #define MIR_LOG_COMPONENT "workspace_manager"
 #include "workspace_manager.h"
 #include "screen.h"
+#include "window_helpers.h"
 #include <mir/log.h>
 
 using namespace mir::geometry;
@@ -68,7 +69,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
         return false;
 
     auto& original_tree = screen->get_active_tree();
-    auto window_node = original_tree.get_root_node()->find_node_for_window(window);
+    auto window_node = window_helpers::get_node_for_window(window, tools_);
     original_tree.advise_delete_window(window);
 
     auto screen_to_move_to = request_workspace(screen, workspace);
