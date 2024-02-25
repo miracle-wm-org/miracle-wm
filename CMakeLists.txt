@@ -55,7 +55,7 @@ add_custom_target(miracle-wm-sensible-terminal ALL
 
 install(PROGRAMS
     src/miracle-wm-sensible-terminal
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 add_subdirectory(tests/)
