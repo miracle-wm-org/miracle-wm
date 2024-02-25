@@ -6,8 +6,26 @@
 #include <fstream>
 #include <mir/log.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
+#include <libnotify/notify.h>
 
 using namespace miracle;
+
+namespace
+{
+int programExists(const char *name)
+{
+    char buffer[512];
+
+    snprintf(
+        buffer,
+        sizeof buffer,
+        "command -v %s > /dev/null 2>&1",
+        name
+    );
+
+    return !system( buffer );
+}
+}
 
 MiracleConfig::MiracleConfig()
 {
@@ -497,6 +515,17 @@ MiracleConfig::MiracleConfig()
             startup_apps.push_back({std::move(command), restart_on_death});
         }
     }
+
+    if (config["terminal"])
+    {
+        terminal = config["terminal"].as<std::string>();
+    }
+
+    if (terminal && !programExists(terminal->c_str()))
+    {
+        desired_terminal = terminal.value();
+        terminal.reset();
+    }
 }
 
 uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
@@ -607,4 +636,20 @@ int MiracleConfig::get_gap_size_y() const
 const std::vector<StartupApp> &MiracleConfig::get_startup_apps() const
 {
     return startup_apps;
+}
+
+const std::optional<std::string> &MiracleConfig::get_terminal_command() const
+{
+    if (!terminal)
+    {
+        auto error_string = "Terminal program does not exist " + desired_terminal;
+        mir::log_error("%s", error_string.c_str());
+        NotifyNotification* n = notify_notification_new(
+            "Terminal program does not exist",
+             error_string.c_str(),
+            nullptr);
+        notify_notification_set_timeout(n, 5000);
+        notify_notification_show(n, nullptr);
+    }
+    return terminal;
 }
