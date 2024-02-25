@@ -20,6 +20,8 @@ pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 
+include(GNUInstallDirs)
+
 add_executable(miracle-wm
     src/main.cpp
     src/miracle_window_management_policy.cpp
@@ -38,10 +40,11 @@ target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV)
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-install(FILES session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop
-    DESTINATION /usr/share/wayland-sessions)
+configure_file(session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop.in miracle-wm-non-snap.desktop @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-non-snap.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 add_subdirectory(tests/)
