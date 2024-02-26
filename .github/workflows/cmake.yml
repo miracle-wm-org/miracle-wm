@@ -24,7 +24,7 @@ jobs:
       run: sudo apt-add-repository ppa:mir-team/release
 
     - name: Install dependencies
-      run: sudo apt-get install libmiral-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev
+      run: sudo apt-get install libmiral-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}

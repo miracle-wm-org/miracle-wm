@@ -13,6 +13,7 @@
 #include <miral/wayland_extensions.h>
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
+#include <libnotify/notify.h>
 
 using namespace miral;
 
@@ -48,6 +49,7 @@ int main(int argc, char const* argv[])
          auto_restarting_launcher.kill_all();
     });
 
+    notify_init("miracle-wm");
     return runner.run_with(
         {
             window_managers,

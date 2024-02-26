@@ -25,39 +25,6 @@ const int MODIFIER_MASK =
     mir_input_event_modifier_sym |
     mir_input_event_modifier_ctrl |
     mir_input_event_modifier_meta;
-
-// Note: This list was taken from i3: https://github.com/i3/i3/blob/next/i3-sensible-terminal
-// We will want this to be configurable in the future.
-const std::string POSSIBLE_TERMINALS[] = {
-    "x-terminal-emulator",
-    "mate-terminal",
-    "gnome-terminal",
-    "terminator",
-    "xfce4-terminal",
-    "urxvt", "rxvt",
-    "termit",
-    "Eterm",
-    "aterm",
-    "uxterm",
-    "xterm",
-    "roxterm",
-    "termite",
-    "lxterminal",
-    "terminology",
-    "st",
-    "qterminal",
-    "lilyterm",
-    "tilix",
-    "terminix",
-    "konsole",
-    "kitty",
-    "guake",
-    "tilda",
-    "alacritty",
-    "hyper",
-    "wezterm",
-    "rio"
-};
 }
 
 TilingWindowManagementPolicy::TilingWindowManagementPolicy(
@@ -109,12 +76,12 @@ bool TilingWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const*
     switch (key_command)
     {
         case Terminal:
-            for (auto const& terminal : POSSIBLE_TERMINALS)
-            {
-                if (external_client_launcher.launch({terminal}) > 0)
-                    break;
-            }
+        {
+            auto terminal_command = config->get_terminal_command();
+            if (terminal_command)
+                external_client_launcher.launch({terminal_command.value()});
             return true;
+        }
         case RequestVertical:
             if(active_output) active_output->get_active_tree().request_vertical();
             return true;
