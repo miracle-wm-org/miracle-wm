@@ -12,18 +12,11 @@ using namespace miracle;
 
 namespace
 {
-int programExists(const char *name)
+int program_exists(std::string const& name)
 {
-    char buffer[512];
-
-    snprintf(
-        buffer,
-        sizeof buffer,
-        "command -v %s > /dev/null 2>&1",
-        name
-    );
-
-    return !system( buffer );
+    std::stringstream out;
+    out << "command -v " << name << " > /dev/null 2>&1";
+    return !system(out.str().c_str());
 }
 }
 
@@ -521,7 +514,7 @@ MiracleConfig::MiracleConfig()
         terminal = config["terminal"].as<std::string>();
     }
 
-    if (terminal && !programExists(terminal->c_str()))
+    if (terminal && !program_exists(terminal.value()))
     {
         desired_terminal = terminal.value();
         terminal.reset();
