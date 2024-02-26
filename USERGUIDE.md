@@ -106,11 +106,13 @@ With those types defined, the following table defines the allowed key/value pair
 | inner_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gaps in pixels between windows                                                                                                                                                                                                                             |                                                                                                                                                                                                      |
 | outer_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gap between the window group and the edge of the screen in pixels                                                                                                                                                                                          |                                                                                                                                                                                                                 |
 | startup_apps             | []            | `StartupApp[]`        | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
+| terminal | `"miracle-mw-sensible-terminal"` | `String` | The command used when launching a terminal. Defaults to a script that attempts to find a suitable terminal, based on `i3-sensible-terminal`                                                                                                                             |
 
 
 ## Example
 ```yaml
 action_key: alt           # Set the primary action key to alt
+terminal: konsole
 default_action_overrides:
   - name: terminal        # Override the "terminal" keybind to execute with "Ctrl + Shift + Enter"
     action: down

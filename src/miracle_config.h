@@ -9,13 +9,13 @@
 #include <mir/fd.h>
 #include <mutex>
 #include <functional>
+#include <optional>
 
 namespace miral
 {
 class MirRunner;
 class FdHandle;
 }
-
 namespace miracle
 {
 
@@ -92,6 +92,7 @@ public:
     [[nodiscard]] int get_outer_gaps_x() const;
     [[nodiscard]] int get_outer_gaps_y() const;
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
+    [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -128,7 +129,8 @@ private:
     int outer_gaps_x = 10;
     int outer_gaps_y = 10;
     std::vector<StartupApp> startup_apps;
-
+    std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
+    std::string desired_terminal = "";
 };
 }
 
