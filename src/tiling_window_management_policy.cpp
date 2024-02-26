@@ -314,6 +314,10 @@ void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& wi
 
 void TilingWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window_info)
 {
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
     for (auto const& output : output_list)
     {
         if (output->get_active_tree().handle_window_ready(window_info))
