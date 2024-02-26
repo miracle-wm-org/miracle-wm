@@ -20,6 +20,7 @@ pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+pkg_check_modules(LIBNOTIFY REQUIRED IMPORTED_TARGET libnotify)
 
 include(GNUInstallDirs)
 
@@ -41,7 +42,8 @@ add_executable(miracle-wm
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS} PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV nlohmann_json::nlohmann_json)
+target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS}
+    PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json)
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -50,5 +52,14 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
 configure_file(session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop.in miracle-wm-non-snap.desktop @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-non-snap.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
+
+add_custom_target(miracle-wm-sensible-terminal ALL
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-sensible-terminal ${CMAKE_BINARY_DIR}/bin
+)
+
+install(PROGRAMS
+    src/miracle-wm-sensible-terminal
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
 add_subdirectory(tests/)
