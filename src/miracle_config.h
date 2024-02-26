@@ -5,6 +5,7 @@
 #include <miral/toolkit_event.h>
 #include <vector>
 #include <linux/input.h>
+#include <optional>
 
 namespace miracle
 {
@@ -80,6 +81,7 @@ public:
     [[nodiscard]] int get_gap_size_x() const;
     [[nodiscard]] int get_gap_size_y() const;
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
+    [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
 
 private:
     static uint parse_modifier(std::string const& stringified_action_key);
@@ -93,6 +95,8 @@ private:
     int gap_size_x = 10;
     int gap_size_y = 10;
     std::vector<StartupApp> startup_apps;
+    std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
+    std::string desired_terminal = "";
 };
 }
 
