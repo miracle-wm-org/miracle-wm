@@ -30,6 +30,9 @@ apps:
       # For "reasons" this is being set despite this being a classic snap. This overwrites the nonsense
       LD_LIBRARY_PATH: ""
 
+  miracle-wm-sensible-terminal:
+    command: usr/local/bin/miracle-wm-sensible-terminal
+
 parts:
   miracle-wm:
     build-attributes:
@@ -60,6 +63,7 @@ parts:
       - libglib2.0-0
       - libevdev-dev
       - libevdev2
+      - libnotify-dev
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
