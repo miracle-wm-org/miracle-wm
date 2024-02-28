@@ -81,6 +81,7 @@ private:
     std::shared_ptr<Screen> active_output;
     std::vector<std::shared_ptr<Screen>> output_list;
     std::weak_ptr<Screen> pending_output;
+    WindowType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;

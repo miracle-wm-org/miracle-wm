@@ -13,7 +13,7 @@ Node::Node(
     miral::WindowManagerTools const& tools_,
     geom::Rectangle const& area,
     std::shared_ptr<MiracleConfig> const& config,
-    Tree const* tree)
+    Tree* tree)
     : tools{tools_},
       state{NodeState::lane},
       logical_area{area},
@@ -28,7 +28,7 @@ Node::Node(
     std::shared_ptr<Node> parent,
     std::shared_ptr<WindowMetadata> const& metadata,
     std::shared_ptr<MiracleConfig> const& config,
-    Tree const* tree)
+    Tree* tree)
     : tools{tools_},
       parent{std::move(parent)},
       metadata{metadata},

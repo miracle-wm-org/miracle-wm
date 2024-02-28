@@ -235,14 +235,17 @@ auto TilingWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
+    // TODO: At this point, we will figure out the type and construct some metadta for the pending window
     if (!active_output)
     {
         mir::log_warning("place_new_window: no output available");
         return requested_specification;
     }
 
+    auto new_spec = requested_specification;
     pending_output = active_output;
-    return active_output->get_active_tree().allocate_position(requested_specification);
+    pending_type = active_output->allocate_position(new_spec);
+    return new_spec;
 }
 
 void TilingWindowManagementPolicy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<Screen>& output)
@@ -275,7 +278,19 @@ void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& wi
         return;
     }
 
-    shared_output->get_active_tree().advise_new_window(window_info);
+    switch (pending_type)
+    {
+        case WindowType::tiled:
+            shared_output->get_active_tree().advise_new_window(window_info);
+            break;
+        case WindowType::other:
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)pending_type);
+            break;
+    }
+
+    pending_type = WindowType::none;
     pending_output.reset();
 }
 
@@ -285,24 +300,56 @@ void TilingWindowManagementPolicy::handle_window_ready(miral::WindowInfo &window
     if (!metadata)
         return;
 
-    for (auto const& output : output_list)
+    switch (metadata->get_type())
     {
-        if (output->get_active_tree().handle_window_ready(window_info))
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->handle_window_ready(window_info);
             break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
     }
 }
 
 void TilingWindowManagementPolicy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
-    for (auto const& output : output_list)
-        output->get_active_tree().advise_focus_gained(window_info.window());
-    window_manager_tools.raise_tree(window_info.window());
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_focus_gained(window_info.window());
+            window_manager_tools.raise_tree(window_info.window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
 }
 
 void TilingWindowManagementPolicy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
-    for (auto const& output : output_list)
-        output->get_active_tree().advise_focus_lost(window_info.window());
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_focus_lost(window_info.window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
 }
 
 void TilingWindowManagementPolicy::advise_delete_window(const miral::WindowInfo &window_info)
@@ -310,13 +357,29 @@ void TilingWindowManagementPolicy::advise_delete_window(const miral::WindowInfo 
     for (auto it = orphaned_window_list.begin(); it != orphaned_window_list.end();)
     {
         if (*it == window_info.window())
-            it = orphaned_window_list.erase(it);
+        {
+            orphaned_window_list.erase(it);
+            return;
+        }
         else
             it++;
     }
 
-    for (auto const& output : output_list)
-        output->get_active_tree().advise_delete_window(window_info.window());
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_delete_window(window_info.window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
 }
 
 void TilingWindowManagementPolicy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -400,12 +463,23 @@ void TilingWindowManagementPolicy::advise_output_delete(miral::Output const& out
 
 void TilingWindowManagementPolicy::advise_state_change(miral::WindowInfo const& window_info, MirWindowState state)
 {
-    for (auto const& output : output_list)
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
+    switch (metadata->get_type())
     {
-        if (output->get_active_tree().advise_state_change(window_info, state))
+        case WindowType::tiled:
         {
+            if (&active_output->get_active_tree() != metadata->get_tiling_node()->get_tree())
+                break;
+
+            metadata->get_tiling_node()->get_tree()->advise_state_change(window_info, state);
             break;
         }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
     }
 }
 
@@ -413,58 +487,32 @@ void TilingWindowManagementPolicy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)
 {
-    if (modifications.state().is_set())
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return;
+
+    switch (metadata->get_type())
     {
-        if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
+        case WindowType::tiled:
         {
-            for (auto const& output : output_list)
-            {
-                bool found = false;
-                for (auto& workspace : output->get_workspaces())
-                {
-                    if (workspace.tree->advise_fullscreen_window(window_info))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found) break;
-            }
-        }
-        else if (modifications.state().value() == mir_window_state_restored)
-        {
-            for (auto const& output : output_list)
-            {
-                bool found = false;
-                for (auto& workspace : output->get_workspaces())
-                {
-                    if (workspace.tree->advise_restored_window(window_info))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found) break;
-            }
-        }
-    }
-
-    for (auto const& output :output_list)
-    {
-        bool found = false;
-        for (auto& workspace : output->get_workspaces())
-        {
-            if (workspace.tree->constrain(window_info))
-            {
-                found = true;
-                window_manager_tools.modify_window(window_info.window(), modifications);
+            if (&active_output->get_active_tree() != metadata->get_tiling_node()->get_tree())
                 break;
-            }
-        }
 
-        if (found) break;
+            if (modifications.state().is_set())
+            {
+                if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
+                    metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(window_info);
+                else if (modifications.state().value() == mir_window_state_restored)
+                    metadata->get_tiling_node()->get_tree()->advise_restored_window(window_info);
+            }
+
+            metadata->get_tiling_node()->get_tree()->constrain(window_info);
+            window_manager_tools.modify_window(window_info.window(), modifications);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
     }
 }
 
@@ -479,12 +527,23 @@ TilingWindowManagementPolicy::confirm_placement_on_display(
     MirWindowState new_state,
     const mir::geometry::Rectangle &new_placement)
 {
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+        return new_placement;
+
     mir::geometry::Rectangle modified_placement = new_placement;
-    for (auto const& output : output_list)
+    switch (metadata->get_type())
     {
-        if (output->get_active_tree().confirm_placement_on_display(window_info, new_state, modified_placement))
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->confirm_placement_on_display(window_info, new_state, modified_placement);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             break;
     }
+
     return modified_placement;
 }
 
@@ -510,7 +569,7 @@ mir::geometry::Rectangle TilingWindowManagementPolicy::confirm_inherited_move(
     const miral::WindowInfo &window_info,
     mir::geometry::Displacement movement)
 {
-    return {window_info.window().top_left()+movement, window_info.window().size()};
+    return { window_info.window().top_left() + movement, window_info.window().size() };
 }
 
 void TilingWindowManagementPolicy::advise_application_zone_create(miral::Zone const& application_zone)

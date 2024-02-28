@@ -12,8 +12,10 @@ class Node;
 
 enum class WindowType
 {
+    none,
     tiled,
-    floating
+    floating,
+    other
 };
 
 /// Applied to WindowInfo to enable
@@ -28,6 +30,7 @@ public:
             return tiling_node;
         return nullptr;
     }
+    WindowType get_type() { return type; }
 
 private:
 

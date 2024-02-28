@@ -40,6 +40,7 @@ public:
 
     Tree& get_active_tree();
     int get_active_workspace() const { return active_workspace; }
+    WindowType allocate_position(miral::WindowSpecification& requested_specification);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);

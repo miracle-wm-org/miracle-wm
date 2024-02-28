@@ -40,9 +40,6 @@ Tree::~Tree()
 miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    if (!window_helpers::is_tileable(requested_specification))
-        return new_spec;
-
     new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width{0};
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};

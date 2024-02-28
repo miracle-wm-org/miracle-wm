@@ -35,14 +35,14 @@ public:
     Node(miral::WindowManagerTools const& tools,
          geom::Rectangle const& area,
          std::shared_ptr<MiracleConfig> const& config,
-         Tree const* tree);
+         Tree* tree);
 
     Node(miral::WindowManagerTools const& tools,
          geom::Rectangle const& area,
          std::shared_ptr<Node> parent,
          std::shared_ptr<WindowMetadata> const& metadata,
          std::shared_ptr<MiracleConfig> const& config,
-         Tree const* tree);
+         Tree* tree);
 
     /// Area taken up by the node including gaps.
     geom::Rectangle get_logical_area();
@@ -100,12 +100,12 @@ public:
     miral::Window& get_window() { return metadata->get_window(); }
     std::shared_ptr<Node> get_parent() const { return parent; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
-    Tree const* get_tree() { return tree; }
+    Tree* get_tree() { return tree; }
 
 private:
     std::shared_ptr<Node> parent;
     miral::WindowManagerTools tools;
-    Tree const* tree;
+    Tree* tree;
     std::shared_ptr<WindowMetadata> metadata;
     std::vector<std::shared_ptr<Node>> sub_nodes;
     std::vector<std::shared_ptr<Node>> hidden_nodes;

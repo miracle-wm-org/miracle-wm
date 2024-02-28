@@ -1,4 +1,5 @@
 #include "screen.h"
+#include "window_helpers.h"
 #include "workspace_manager.h"
 #include <miral/window_info.h>
 
@@ -27,6 +28,15 @@ Tree &Screen::get_active_tree()
     }
 
     throw std::runtime_error("Unable to find the active tree. We shouldn't be here");
+}
+
+WindowType Screen::allocate_position(miral::WindowSpecification& requested_specification)
+{
+    if (!window_helpers::is_tileable(requested_specification))
+        return WindowType::other;
+
+    requested_specification = get_active_tree().allocate_position(requested_specification);
+    return WindowType::tiled;
 }
 
 void Screen::advise_new_workspace(int workspace)
