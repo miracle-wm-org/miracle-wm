@@ -1,3 +1,5 @@
+#include "miral/window_specification.h"
+#include "window_metadata.h"
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "tiling_window_management_policy.h"
@@ -278,18 +280,35 @@ void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& wi
         return;
     }
 
+    std::shared_ptr<WindowMetadata> metadata = nullptr;
     switch (pending_type)
     {
         case WindowType::tiled:
-            shared_output->get_active_tree().advise_new_window(window_info);
+            metadata = shared_output->get_active_tree().advise_new_window(window_info);
             break;
         case WindowType::other:
+            if (window_info.state() == MirWindowState::mir_window_state_attached)
+            {
+                window_manager_tools.select_active_window(window_info.window());
+            }
+            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)pending_type);
             break;
     }
 
+    if (metadata)
+    {
+        miral::WindowSpecification spec;
+        spec.userdata() = metadata;
+        window_manager_tools.modify_window(window_info.window(), spec);
+    }
+    else
+    {
+        mir::log_error("Window failed to set metadata");
+    }
+    
     pending_type = WindowType::none;
     pending_output.reset();
 }

@@ -2,6 +2,7 @@
 #define WINDOW_TREE_H
 
 #include "node.h"
+#include "window_metadata.h"
 #include <memory>
 #include <vector>
 #include <miral/window.h>
@@ -18,7 +19,7 @@ namespace miracle
 
 class Screen;
 class MiracleConfig;
-
+    
 enum class Direction
 {
     up,
@@ -37,7 +38,7 @@ public:
     /// position is the position WITH GAPS.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
-    void advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const&);
 
     /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
     void toggle_resize_mode();

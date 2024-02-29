@@ -54,7 +54,7 @@ public:
     geom::Rectangle create_new_node_position(int index = -1);
 
     /// Append the node to the lane
-    void add_window(miral::Window&);
+    std::shared_ptr<WindowMetadata> add_window(miral::Window&);
 
     /// Updates the node's logical area (including gaps)
     void set_logical_area(geom::Rectangle const& target_rect);

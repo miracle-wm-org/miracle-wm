@@ -1,3 +1,5 @@
+#include "window_metadata.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "node"
 
 #include "node.h"
@@ -37,9 +39,6 @@ Node::Node(
       config{config},
       tree{tree}
 {
-    miral::WindowSpecification spec;
-    spec.userdata() = metadata;
-    tools.modify_window(metadata->get_window(), spec);
 }
 
 geom::Rectangle Node::get_logical_area_internal(geom::Rectangle const& rectangle)
@@ -217,12 +216,12 @@ geom::Rectangle Node::create_new_node_position(int index)
     }
 }
 
-void Node::add_window(miral::Window& new_window)
+std::shared_ptr<WindowMetadata> Node::add_window(miral::Window& new_window)
 {
     if (pending_index < 0)
     {
         mir::fatal_error("Unable to add the window to the scene. Was create_new_node_position called?");
-        return;
+        return nullptr;
     }
 
     auto node_metadata = std::make_shared<WindowMetadata>(WindowType::tiled, new_window);
@@ -237,6 +236,7 @@ void Node::add_window(miral::Window& new_window)
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
     pending_index = -1;
+    return node_metadata;
 }
 
 void Node::_refit_node_to_area()

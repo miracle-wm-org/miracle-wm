@@ -1,3 +1,4 @@
+#include "window_metadata.h"
 #define MIR_LOG_COMPONENT "window_tree"
 
 #include "tree.h"
@@ -57,23 +58,16 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     return new_spec;
 }
 
-void Tree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<WindowMetadata> Tree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    if (!window_helpers::is_tileable(window_info))
-    {
-        if (window_info.state() == MirWindowState::mir_window_state_attached)
-        {
-            tools.select_active_window(window_info.window());
-        }
-        return;
-    }
-
-    _get_active_lane()->add_window(window_info.window());
+    auto metadata = _get_active_lane()->add_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
         tools.select_active_window(window_info.window());
         advise_fullscreen_window(window_info);
     }
+
+    return metadata;
 }
 
 void Tree::toggle_resize_mode()
