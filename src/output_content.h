@@ -22,9 +22,11 @@ public:
         std::shared_ptr<MiracleConfig> const& options);
     ~OutputContent() = default;
 
-    std::shared_ptr<Tree> get_active_tree();
-    [[nodiscard]] int get_active_workspace() const { return active_workspace; }
+    [[nodiscard]] std::shared_ptr<Tree> get_active_tree() const;
+    [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
+    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
+    void advise_new_window(miral::WindowInfo const& window_info, WindowType type);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);

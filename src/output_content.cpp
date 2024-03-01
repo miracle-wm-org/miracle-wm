@@ -1,7 +1,10 @@
+#define MIR_LOG_COMPONENT "output_content"
+
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
 #include <miral/window_info.h>
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -19,15 +22,20 @@ OutputContent::OutputContent(
 {
 }
 
-std::shared_ptr<Tree> OutputContent::get_active_tree()
+std::shared_ptr<Tree> OutputContent::get_active_tree() const
+{
+    return get_active_workspace()->get_tree();
+}
+
+const std::shared_ptr<WorkspaceContent> &OutputContent::get_active_workspace() const
 {
     for (auto& info : workspaces)
     {
         if (info->get_workspace() == active_workspace)
-            return info->get_tree();
+            return info;
     }
 
-    throw std::runtime_error("Unable to find the active tree. We shouldn't be here");
+    throw std::runtime_error("get_active_workspace: unable to find the active workspace. We shouldn't be here!");
     return nullptr;
 }
 
@@ -38,6 +46,42 @@ WindowType OutputContent::allocate_position(miral::WindowSpecification& requeste
 
     requested_specification = get_active_tree()->allocate_position(requested_specification);
     return WindowType::tiled;
+}
+
+void OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
+{
+    std::shared_ptr<WindowMetadata> metadata = nullptr;
+    switch (type)
+    {
+        case WindowType::tiled:
+        {
+            auto node = get_active_tree()->advise_new_window(window_info);
+            metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
+            metadata->associate_to_node(node);
+            break;
+        }
+        case WindowType::other:
+            if (window_info.state() == MirWindowState::mir_window_state_attached)
+            {
+                tools.select_active_window(window_info.window());
+            }
+            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), this);
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)type);
+            break;
+    }
+
+    if (metadata)
+    {
+        miral::WindowSpecification spec;
+        spec.userdata() = metadata;
+        tools.modify_window(window_info.window(), spec);
+    }
+    else
+    {
+        mir::log_error("Window failed to set metadata");
+    }
 }
 
 void OutputContent::advise_new_workspace(int workspace)

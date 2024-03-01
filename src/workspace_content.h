@@ -18,8 +18,8 @@ public:
         int workspace,
         std::shared_ptr<MiracleConfig> const& config);
 
-    int get_workspace() const;
-    std::shared_ptr<Tree> get_tree() const;
+    [[nodiscard]] int get_workspace() const;
+    [[nodiscard]] std::shared_ptr<Tree> get_tree() const;
     void show();
     void hide();
 

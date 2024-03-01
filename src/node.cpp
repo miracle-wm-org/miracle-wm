@@ -28,12 +28,12 @@ Node::Node(
     miral::WindowManagerTools const& tools_,
     geom::Rectangle const& area,
     std::shared_ptr<Node> parent,
-    std::shared_ptr<WindowMetadata> const& metadata,
+    miral::Window const& window,
     std::shared_ptr<MiracleConfig> const& config,
     Tree* tree)
     : tools{tools_},
       parent{std::move(parent)},
-      metadata{metadata},
+      window{window},
       state{NodeState::window},
       logical_area{area},
       config{config},
@@ -216,7 +216,7 @@ geom::Rectangle Node::create_new_node_position(int index)
     }
 }
 
-std::shared_ptr<WindowMetadata> Node::add_window(miral::Window& new_window)
+std::shared_ptr<Node> Node::add_window(miral::Window& new_window)
 {
     if (pending_index < 0)
     {
@@ -224,19 +224,17 @@ std::shared_ptr<WindowMetadata> Node::add_window(miral::Window& new_window)
         return nullptr;
     }
 
-    auto node_metadata = std::make_shared<WindowMetadata>(WindowType::tiled, new_window);
     auto node = std::make_shared<Node>(
         tools,
         pending_logical_rect,
         shared_from_this(),
-        node_metadata,
+        new_window,
         config,
         tree);
-    node_metadata->associate_to_node(node);
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
     pending_index = -1;
-    return node_metadata;
+    return node;
 }
 
 void Node::_refit_node_to_area()
@@ -286,7 +284,7 @@ void Node::set_logical_area(geom::Rectangle const& target_rect)
 {
     if (is_window())
     {
-        auto& info = tools.info_for(metadata->get_window());
+        auto& info = tools.info_for(get_window());
         if (!window_helpers::is_window_fullscreen(info.state()))
         {
             _set_window_rectangle(target_rect);
@@ -389,12 +387,13 @@ std::shared_ptr<Node> Node::to_lane()
         tools,
         logical_area,
         shared_from_this(),
-        metadata,
+        get_window(),
         config,
         tree);
-    metadata->associate_to_node(window_node);
     sub_nodes.push_back(window_node);
-    metadata = nullptr;
+    auto metadata = window_helpers::get_metadata(window, tools);
+    metadata->associate_to_node(window_node);
+    window = miral::Window();
     return window_node;
 }
 
@@ -584,7 +583,6 @@ int Node::get_min_height() const
 void Node::_set_window_rectangle(geom::Rectangle area)
 {
     auto visible_rect = _get_visible_from_logical(area, config);
-    auto window = metadata->get_window();
     window.move_to(visible_rect.top_left);
     window.resize(visible_rect.size);
     auto& window_info = tools.info_for(window);
@@ -599,7 +597,7 @@ void Node::constrain()
 {
     if (is_window())
     {
-        auto& info = tools.info_for(metadata->get_window());
+        auto& info = tools.info_for(window);
         if (window_helpers::is_window_fullscreen(info.state()))
             info.clip_area(mir::optional_value<geom::Rectangle>());
         else

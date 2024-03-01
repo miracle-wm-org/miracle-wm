@@ -7,7 +7,7 @@
 
 namespace miracle
 {
-
+class OutputContent;
 class Node;
 
 enum class WindowType
@@ -22,7 +22,7 @@ enum class WindowType
 class WindowMetadata
 {
 public:
-    WindowMetadata(WindowType type, miral::Window const& window);
+    WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output);
     void associate_to_node(std::shared_ptr<Node> const&);
     miral::Window& get_window() { return window; }
     std::shared_ptr<Node> get_tiling_node() {
@@ -31,11 +31,13 @@ public:
         return nullptr;
     }
     WindowType get_type() { return type; }
+    OutputContent* get_output() { return output; }
 
 private:
 
     WindowType type;
     miral::Window window;
+    OutputContent* output;
     std::shared_ptr<Node> tiling_node;
 };
 

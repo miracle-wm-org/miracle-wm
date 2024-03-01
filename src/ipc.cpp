@@ -49,7 +49,7 @@ struct sockaddr_un *ipc_user_sockaddr() {
 
 json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
 {
-    bool is_focused = screen->get_active_workspace() == key;
+    bool is_focused = screen->get_active_workspace_num() == key;
     auto area = screen->get_area();
 
     return {

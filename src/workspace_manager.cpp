@@ -23,7 +23,7 @@ std::shared_ptr<OutputContent> WorkspaceManager::request_workspace(std::shared_p
     if (workspaces[key] != nullptr)
     {
         auto workspace = workspaces[key];
-        auto active_workspace = workspace->get_active_workspace();
+        auto active_workspace = workspace->get_active_workspace_num();
         if (active_workspace == key)
         {
             mir::log_warning("Same workspace selected twice in a row");
@@ -83,8 +83,10 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
     spec = screen_to_move_to->get_active_tree()->allocate_position(spec);
     tools_.modify_window(window, spec);
 
+    auto new_node = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
+    metadata->associate_to_node(new_node);
     miral::WindowSpecification next_spec;
-    next_spec.userdata() = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
+    next_spec.userdata() = metadata;
     tools_.modify_window(window, next_spec);
 
     screen_to_move_to->get_active_tree()->handle_window_ready(prev_info);
@@ -114,7 +116,7 @@ void WorkspaceManager::request_focus(int key)
 
     if (active_screen != nullptr)
     {
-        auto active_workspace = active_screen->get_active_workspace();
+        auto active_workspace = active_screen->get_active_workspace_num();
         registry.advise_focused(active_screen, active_workspace, workspaces[key], key);
     }
     else

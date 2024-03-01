@@ -217,10 +217,10 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 if (active_output) active_output->set_is_active(false);
                 active_output = output;
                 active_output->set_is_active(true);
-                workspace_manager.request_focus(output->get_active_workspace());
+                workspace_manager.request_focus(output->get_active_workspace_num());
             }
 
-            if (output->get_active_workspace() >= 0)
+            if (output->get_active_workspace_num() >= 0)
             {
                 active_output->get_active_tree()->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             }
@@ -277,35 +277,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    std::shared_ptr<WindowMetadata> metadata = nullptr;
-    switch (pending_type)
-    {
-        case WindowType::tiled:
-            metadata = shared_output->get_active_tree()->advise_new_window(window_info);
-            break;
-        case WindowType::other:
-            if (window_info.state() == MirWindowState::mir_window_state_attached)
-            {
-                window_manager_tools.select_active_window(window_info.window());
-            }
-            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
-            break;
-        default:
-            mir::log_error("Unsupported window type: %d", (int)pending_type);
-            break;
-    }
-
-    if (metadata)
-    {
-        miral::WindowSpecification spec;
-        spec.userdata() = metadata;
-        window_manager_tools.modify_window(window_info.window(), spec);
-    }
-    else
-    {
-        mir::log_error("Window failed to set metadata");
-    }
-    
+    shared_output->advise_new_window(window_info, pending_type);
     pending_type = WindowType::none;
     pending_output.reset();
 }

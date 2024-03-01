@@ -58,16 +58,16 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     return new_spec;
 }
 
-std::shared_ptr<WindowMetadata> Tree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<Node> Tree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    auto metadata = _get_active_lane()->add_window(window_info.window());
+    auto node = _get_active_lane()->add_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
         tools.select_active_window(window_info.window());
         advise_fullscreen_window(window_info);
     }
 
-    return metadata;
+    return node;
 }
 
 void Tree::toggle_resize_mode()
