@@ -1,5 +1,5 @@
-#ifndef MIRACLE_TILING_WINDOW_MANAGEMENT_POLICY_H
-#define MIRACLE_TILING_WINDOW_MANAGEMENT_POLICY_H
+#ifndef MIRACLE_POLICY_H
+#define MIRACLE_POLICY_H
 
 #include "output_content.h"
 #include "miracle_config.h"
@@ -22,16 +22,15 @@ class MirRunner;
 namespace miracle
 {
 
-class TilingWindowManagementPolicy : public miral::WindowManagementPolicy
+class Policy : public miral::WindowManagementPolicy
 {
 public:
-    TilingWindowManagementPolicy(
+    Policy(
         miral::WindowManagerTools const&,
         miral::ExternalClientLauncher const&,
-        miral::InternalClientLauncher const&,
         miral::MirRunner&,
         std::shared_ptr<MiracleConfig> const&);
-    ~TilingWindowManagementPolicy() override;
+    ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
     bool handle_pointer_event(MirPointerEvent const* event) override;
@@ -85,7 +84,6 @@ private:
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::ExternalClientLauncher const external_client_launcher;
-    miral::InternalClientLauncher const internal_client_launcher;
     miral::MirRunner& runner;
     std::shared_ptr<MiracleConfig> config;
     WorkspaceObserverRegistrar workspace_observer_registrar;
@@ -96,4 +94,4 @@ private:
 };
 }
 
-#endif //MIRACLE_TILING_WINDOW_MANAGEMENT_POLICY_H
+#endif //MIRACLE_POLICY_H

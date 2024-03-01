@@ -8,13 +8,9 @@
 
 namespace miracle
 {
-
-struct WorkspaceManager;
+class WorkspaceManager;
 class MiracleConfig;
 
-/// A screen is comprised of a map of workspaces, each having their own tree.
-// Workspaces are shared across screens such that screens a workspace with a
-// particular index can ONLY ever live on one screen at a time.
 class OutputContent
 {
 public:
@@ -27,7 +23,7 @@ public:
     ~OutputContent() = default;
 
     std::shared_ptr<Tree> get_active_tree();
-    int get_active_workspace() const { return active_workspace; }
+    [[nodiscard]] int get_active_workspace() const { return active_workspace; }
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
@@ -41,7 +37,7 @@ public:
     geom::Rectangle const& get_area() { return area; }
     std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }
     miral::Output const& get_output() { return output; }
-    bool is_active() const { return is_active_; }
+    [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
 
 private:

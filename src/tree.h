@@ -1,5 +1,5 @@
-#ifndef WINDOW_TREE_H
-#define WINDOW_TREE_H
+#ifndef MIRACLE_TREE_H
+#define MIRACLE_TREE_H
 
 #include "node.h"
 #include "window_metadata.h"
@@ -145,4 +145,4 @@ private:
 }
 
 
-#endif //MIRCOMPOSITOR_WINDOW_TREE_H
+#endif //MIRACLE_TREE_H
