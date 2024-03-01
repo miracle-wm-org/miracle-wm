@@ -69,6 +69,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
         return false;
 
     auto& original_tree = screen->get_active_tree();
+    auto metadata = window_helpers::get_metadata(window, tools_);
     auto window_node = window_helpers::get_node_for_window(window, tools_);
     original_tree.advise_delete_window(window);
 
@@ -81,7 +82,11 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
     spec.state() = prev_info.state();
     spec = screen_to_move_to->get_active_tree().allocate_position(spec);
     tools_.modify_window(window, spec);
-    screen_to_move_to->get_active_tree().advise_new_window(prev_info);
+
+    miral::WindowSpecification next_spec;
+    next_spec.userdata() = screen_to_move_to->get_active_tree().advise_new_window(prev_info);
+    tools_.modify_window(window, next_spec);
+
     screen_to_move_to->get_active_tree().handle_window_ready(prev_info);
     return true;
 }

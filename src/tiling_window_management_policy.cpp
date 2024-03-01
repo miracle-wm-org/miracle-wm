@@ -237,7 +237,6 @@ auto TilingWindowManagementPolicy::place_new_window(
     const miral::ApplicationInfo &app_info,
     const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
 {
-    // TODO: At this point, we will figure out the type and construct some metadta for the pending window
     if (!active_output)
     {
         mir::log_warning("place_new_window: no output available");
@@ -386,7 +385,10 @@ void TilingWindowManagementPolicy::advise_delete_window(const miral::WindowInfo 
 
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
+    {
+        mir::fatal_error("advise_delete_window: metadata is not provided");
         return;
+    }
 
     switch (metadata->get_type())
     {
@@ -484,7 +486,10 @@ void TilingWindowManagementPolicy::advise_state_change(miral::WindowInfo const& 
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
+    {
+        mir::fatal_error("advise_state_changed: metadata is not provided");
         return;
+    }
 
     switch (metadata->get_type())
     {
@@ -508,7 +513,10 @@ void TilingWindowManagementPolicy::handle_modify_window(
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
+    {
+        mir::fatal_error("handle_modify_window: metadata is not provided");
         return;
+    }
 
     switch (metadata->get_type())
     {
@@ -548,7 +556,10 @@ TilingWindowManagementPolicy::confirm_placement_on_display(
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
+    {
+        mir::log_error("confirm_placement_on_display: window lacks metadata");
         return new_placement;
+    }
 
     mir::geometry::Rectangle modified_placement = new_placement;
     switch (metadata->get_type())

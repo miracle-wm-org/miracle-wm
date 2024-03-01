@@ -62,7 +62,7 @@ bool Screen::advise_workspace_active(int key)
     {
         if (workspace.workspace == key)
         {
-            ScreenWorkspaceInfo* previous_workspace = nullptr;
+            WorkspaceContent* previous_workspace = nullptr;
             for (auto& other : workspaces)
             {
                 if (other.workspace == active_workspace)
@@ -91,17 +91,17 @@ bool Screen::advise_workspace_active(int key)
     return false;
 }
 
-void Screen::hide(ScreenWorkspaceInfo& info)
+void Screen::hide(WorkspaceContent& info)
 {
     info.tree->hide();
 }
 
-void Screen::show(ScreenWorkspaceInfo& info)
+void Screen::show(WorkspaceContent& info)
 {
      info.tree->show();
 }
 
-const ScreenWorkspaceInfo &Screen::get_workspace(int key)
+const WorkspaceContent &Screen::get_workspace(int key)
 {
     for (auto const& workspace : workspaces)
     {

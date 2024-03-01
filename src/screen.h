@@ -17,7 +17,7 @@ struct NodeResurrection
     MirWindowState state;
 };
 
-struct ScreenWorkspaceInfo
+struct WorkspaceContent
 {
     int workspace;
     std::shared_ptr<Tree> tree;
@@ -44,8 +44,8 @@ public:
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<ScreenWorkspaceInfo>& get_workspaces() { return workspaces; }
-    ScreenWorkspaceInfo const& get_workspace(int key);
+    std::vector<WorkspaceContent>& get_workspaces() { return workspaces; }
+    WorkspaceContent const& get_workspace(int key);
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
@@ -64,12 +64,12 @@ private:
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
     int active_workspace = -1;
-    std::vector<ScreenWorkspaceInfo> workspaces;
+    std::vector<WorkspaceContent> workspaces;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
 
-    void hide(ScreenWorkspaceInfo&);
-    void show(ScreenWorkspaceInfo&);
+    void hide(WorkspaceContent&);
+    void show(WorkspaceContent&);
 };
     
 }
