@@ -17,7 +17,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
-class Screen;
+class OutputContent;
 class MiracleConfig;
     
 enum class Direction
@@ -31,7 +31,7 @@ enum class Direction
 class Tree
 {
 public:
-    Tree(Screen* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
+    Tree(OutputContent* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
     ~Tree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
@@ -121,7 +121,7 @@ private:
         MirWindowState state;
     };
 
-    Screen* screen;
+    OutputContent* screen;
     miral::WindowManagerTools tools;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<Node> root_lane;

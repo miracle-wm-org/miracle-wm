@@ -3,7 +3,7 @@
 
 #include "tree.h"
 #include "window_helpers.h"
-#include "screen.h"
+#include "output_content.h"
 #include "miracle_config.h"
 
 #include <memory>
@@ -14,7 +14,7 @@
 using namespace miracle;
 
 Tree::Tree(
-    Screen* screen,
+    OutputContent* screen,
     miral::WindowManagerTools const& tools,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},

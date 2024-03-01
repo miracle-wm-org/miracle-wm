@@ -1,6 +1,6 @@
 #define MIR_LOG_COMPONENT "workspace_manager"
 #include "workspace_manager.h"
-#include "screen.h"
+#include "output_content.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 
@@ -11,14 +11,14 @@ using namespace miracle;
 WorkspaceManager::WorkspaceManager(
     WindowManagerTools const& tools,
     WorkspaceObserverRegistrar& registry,
-    std::function<std::shared_ptr<Screen> const()> const& get_active_screen) :
+    std::function<std::shared_ptr<OutputContent> const()> const& get_active_screen) :
     tools_{tools},
     registry{registry},
     get_active_screen{get_active_screen}
 {
 }
 
-std::shared_ptr<Screen> WorkspaceManager::request_workspace(std::shared_ptr<Screen> screen, int key)
+std::shared_ptr<OutputContent> WorkspaceManager::request_workspace(std::shared_ptr<OutputContent> screen, int key)
 {
     if (workspaces[key] != nullptr)
     {
@@ -42,7 +42,7 @@ std::shared_ptr<Screen> WorkspaceManager::request_workspace(std::shared_ptr<Scre
     return screen;
 }
 
-bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Screen> screen)
+bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<OutputContent> screen)
 {
     for (int i = 1; i < NUM_WORKSPACES; i++)
     {
@@ -62,16 +62,16 @@ bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Screen>
     return false;
 }
 
-bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, int workspace)
+bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> screen, int workspace)
 {
     auto window = tools_.active_window();
     if (!window)
         return false;
 
-    auto& original_tree = screen->get_active_tree();
+    auto original_tree = screen->get_active_tree();
     auto metadata = window_helpers::get_metadata(window, tools_);
     auto window_node = window_helpers::get_node_for_window(window, tools_);
-    original_tree.advise_delete_window(window);
+    original_tree->advise_delete_window(window);
 
     auto screen_to_move_to = request_workspace(screen, workspace);
     auto& prev_info = tools_.info_for(window);
@@ -80,14 +80,14 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<Screen> screen, 
     miral::WindowSpecification spec;
     spec.type() = prev_info.type();
     spec.state() = prev_info.state();
-    spec = screen_to_move_to->get_active_tree().allocate_position(spec);
+    spec = screen_to_move_to->get_active_tree()->allocate_position(spec);
     tools_.modify_window(window, spec);
 
     miral::WindowSpecification next_spec;
-    next_spec.userdata() = screen_to_move_to->get_active_tree().advise_new_window(prev_info);
+    next_spec.userdata() = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
     tools_.modify_window(window, next_spec);
 
-    screen_to_move_to->get_active_tree().handle_window_ready(prev_info);
+    screen_to_move_to->get_active_tree()->handle_window_ready(prev_info);
     return true;
 }
 

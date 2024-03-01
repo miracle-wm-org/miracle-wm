@@ -1,11 +1,11 @@
-#include "screen.h"
+#include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
 #include <miral/window_info.h>
 
 using namespace miracle;
 
-Screen::Screen(
+OutputContent::OutputContent(
     miral::Output const& output,
     WorkspaceManager& workspace_manager,
     geom::Rectangle const& area,
@@ -19,36 +19,38 @@ Screen::Screen(
 {
 }
 
-Tree &Screen::get_active_tree()
+std::shared_ptr<Tree> OutputContent::get_active_tree()
 {
     for (auto& info : workspaces)
     {
-        if (info.workspace == active_workspace)
-            return *info.tree;
+        if (info->get_workspace() == active_workspace)
+            return info->get_tree();
     }
 
     throw std::runtime_error("Unable to find the active tree. We shouldn't be here");
+    return nullptr;
 }
 
-WindowType Screen::allocate_position(miral::WindowSpecification& requested_specification)
+WindowType OutputContent::allocate_position(miral::WindowSpecification& requested_specification)
 {
     if (!window_helpers::is_tileable(requested_specification))
         return WindowType::other;
 
-    requested_specification = get_active_tree().allocate_position(requested_specification);
+    requested_specification = get_active_tree()->allocate_position(requested_specification);
     return WindowType::tiled;
 }
 
-void Screen::advise_new_workspace(int workspace)
+void OutputContent::advise_new_workspace(int workspace)
 {
-    workspaces.push_back({workspace, std::make_shared<Tree>(this, tools, config)});
+    workspaces.push_back(
+        std::make_shared<WorkspaceContent>(this, tools, workspace, config));
 }
 
-void Screen::advise_workspace_deleted(int workspace)
+void OutputContent::advise_workspace_deleted(int workspace)
 {
     for (auto it = workspaces.begin(); it != workspaces.end(); it++)
     {
-        if (it->workspace == workspace)
+        if (it->get()->get_workspace() == workspace)
         {
             workspaces.erase(it);
             return;
@@ -56,33 +58,33 @@ void Screen::advise_workspace_deleted(int workspace)
     }
 }
 
-bool Screen::advise_workspace_active(int key)
+bool OutputContent::advise_workspace_active(int key)
 {
     for (auto& workspace : workspaces)
     {
-        if (workspace.workspace == key)
+        if (workspace->get_workspace() == key)
         {
-            WorkspaceContent* previous_workspace = nullptr;
+            std::shared_ptr<WorkspaceContent> previous_workspace = nullptr;
             for (auto& other : workspaces)
             {
-                if (other.workspace == active_workspace)
+                if (other->get_workspace() == active_workspace)
                 {
-                    previous_workspace = &other;
-                    hide(other);
+                    previous_workspace = other;
+                    other->hide();
                     break;
                 }
             }
 
             active_workspace = key;
-            show(workspace);
+            workspace->show();
 
             // Important: Delete the workspace only after we have shown the new one because we may want
             // to move a node to the new workspace.
             if (previous_workspace != nullptr)
             {
-                auto& active_tree = previous_workspace->tree;
+                auto active_tree = previous_workspace->get_tree();
                 if (active_tree->is_empty())
-                    workspace_manager.delete_workspace(previous_workspace->workspace);
+                    workspace_manager.delete_workspace(previous_workspace->get_workspace());
             }
             return true;
         }
@@ -91,59 +93,38 @@ bool Screen::advise_workspace_active(int key)
     return false;
 }
 
-void Screen::hide(WorkspaceContent& info)
-{
-    info.tree->hide();
-}
-
-void Screen::show(WorkspaceContent& info)
-{
-     info.tree->show();
-}
-
-const WorkspaceContent &Screen::get_workspace(int key)
-{
-    for (auto const& workspace : workspaces)
-    {
-        if (workspace.workspace == key)
-            return workspace;
-    }
-
-    mir::fatal_error("Cannot find workspace with key: %c", key);
-}
-
-void Screen::advise_application_zone_create(miral::Zone const& application_zone)
+void OutputContent::advise_application_zone_create(miral::Zone const& application_zone)
 {
     if (application_zone.extents().contains(area))
     {
         application_zone_list.push_back(application_zone);
         for (auto& workspace : workspaces)
-            workspace.tree->recalculate_root_node_area();
+            workspace->get_tree()->recalculate_root_node_area();
     }
 }
 
-void Screen::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
+void OutputContent::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
 {
     for (auto& zone : application_zone_list)
         if (zone == original)
         {
             zone = updated;
             for (auto& workspace : workspaces)
-                workspace.tree->recalculate_root_node_area();
+                workspace->get_tree()->recalculate_root_node_area();
             break;
         }
 }
 
-void Screen::advise_application_zone_delete(miral::Zone const& application_zone)
+void OutputContent::advise_application_zone_delete(miral::Zone const& application_zone)
 {
     if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
     {
         for (auto& workspace : workspaces)
-            workspace.tree->recalculate_root_node_area();
+            workspace->get_tree()->recalculate_root_node_area();
     }
 }
 
-bool Screen::point_is_in_output(int x, int y)
+bool OutputContent::point_is_in_output(int x, int y)
 {
     return area.contains(geom::Point(x, y));
 }

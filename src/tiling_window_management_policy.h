@@ -1,7 +1,7 @@
 #ifndef MIRACLE_TILING_WINDOW_MANAGEMENT_POLICY_H
 #define MIRACLE_TILING_WINDOW_MANAGEMENT_POLICY_H
 
-#include "screen.h"
+#include "output_content.h"
 #include "miracle_config.h"
 #include "workspace_manager.h"
 #include "ipc.h"
@@ -75,12 +75,12 @@ public:
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
-    std::shared_ptr<Screen> const& get_active_output() { return active_output; }
+    std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
 
 private:
-    std::shared_ptr<Screen> active_output;
-    std::vector<std::shared_ptr<Screen>> output_list;
-    std::weak_ptr<Screen> pending_output;
+    std::shared_ptr<OutputContent> active_output;
+    std::vector<std::shared_ptr<OutputContent>> output_list;
+    std::weak_ptr<OutputContent> pending_output;
     WindowType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
@@ -92,7 +92,7 @@ private:
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
 
-    void _add_to_output_immediately(Window&, std::shared_ptr<Screen>&);
+    void _add_to_output_immediately(Window&, std::shared_ptr<OutputContent>&);
 };
 }
 

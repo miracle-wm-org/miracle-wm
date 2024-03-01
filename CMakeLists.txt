@@ -33,12 +33,13 @@ add_executable(miracle-wm
     src/window_helpers.cpp
     src/miracle_config.cpp
     src/miracle_config.h
-    src/screen.cpp
+    src/output_content.cpp
     src/workspace_manager.cpp
     src/ipc.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_observer.cpp
     src/window_metadata.cpp
+    src/workspace_content.cpp
 )
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})

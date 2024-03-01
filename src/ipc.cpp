@@ -1,7 +1,7 @@
 #define MIR_LOG_COMPONENT "miracle_ipc"
 
 #include "ipc.h"
-#include "screen.h"
+#include "output_content.h"
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -47,7 +47,7 @@ struct sockaddr_un *ipc_user_sockaddr() {
     return ipc_sockaddr;
 }
 
-json workspace_to_json(std::shared_ptr<Screen> const& screen, int key)
+json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
 {
     bool is_focused = screen->get_active_workspace() == key;
     auto area = screen->get_area();
@@ -199,7 +199,7 @@ Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager)
     });
 }
 
-void Ipc::on_created(std::shared_ptr<Screen> const& info, int key)
+void Ipc::on_created(std::shared_ptr<OutputContent> const& info, int key)
 {
     json j = {
         {"change", "init"},
@@ -218,7 +218,7 @@ void Ipc::on_created(std::shared_ptr<Screen> const& info, int key)
     }
 }
 
-void Ipc::on_removed(std::shared_ptr<Screen> const& screen, int key)
+void Ipc::on_removed(std::shared_ptr<OutputContent> const& screen, int key)
 {
     json j = {
         {"change", "empty"},
@@ -237,9 +237,9 @@ void Ipc::on_removed(std::shared_ptr<Screen> const& screen, int key)
 }
 
 void Ipc::on_focused(
-    std::shared_ptr<Screen> const& previous,
+    std::shared_ptr<OutputContent> const& previous,
     int previous_key,
-    std::shared_ptr<Screen> const& current,
+    std::shared_ptr<OutputContent> const& current,
     int current_key)
 {
     json j = {

@@ -85,58 +85,58 @@ bool TilingWindowManagementPolicy::handle_keyboard_event(MirKeyboardEvent const*
             return true;
         }
         case RequestVertical:
-            if(active_output) active_output->get_active_tree().request_vertical();
+            if(active_output) active_output->get_active_tree()->request_vertical();
             return true;
         case RequestHorizontal:
-            if(active_output) active_output->get_active_tree().request_horizontal();
+            if(active_output) active_output->get_active_tree()->request_horizontal();
             return true;
         case ToggleResize:
-            if(active_output) active_output->get_active_tree().toggle_resize_mode();
+            if(active_output) active_output->get_active_tree()->toggle_resize_mode();
             return true;
         case MoveUp:
-            if (active_output && active_output->get_active_tree().try_move_active_window(Direction::up))
+            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::up))
                 return true;
             return false;
         case MoveDown:
-            if (active_output && active_output->get_active_tree().try_move_active_window(Direction::down))
+            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::down))
                 return true;
             return false;
         case MoveLeft:
-            if (active_output && active_output->get_active_tree().try_move_active_window(Direction::left))
+            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::left))
                 return true;
             return false;
         case MoveRight:
-            if (active_output && active_output->get_active_tree().try_move_active_window(Direction::right))
+            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::right))
                 return true;
             return false;
         case SelectUp:
-            if (active_output && (active_output->get_active_tree().try_resize_active_window(Direction::up)
-                || active_output->get_active_tree().try_select_next(Direction::up)))
+            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::up)
+                || active_output->get_active_tree()->try_select_next(Direction::up)))
                 return true;
             return false;
         case SelectDown:
-            if (active_output && (active_output->get_active_tree().try_resize_active_window(Direction::down)
-                || active_output->get_active_tree().try_select_next(Direction::down)))
+            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::down)
+                || active_output->get_active_tree()->try_select_next(Direction::down)))
                 return true;
             return false;
         case SelectLeft:
-            if (active_output && (active_output->get_active_tree().try_resize_active_window(Direction::left)
-                || active_output->get_active_tree().try_select_next(Direction::left)))
+            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::left)
+                || active_output->get_active_tree()->try_select_next(Direction::left)))
                 return true;
             return false;
         case SelectRight:
-            if (active_output && (active_output->get_active_tree().try_resize_active_window(Direction::right)
-                || active_output->get_active_tree().try_select_next(Direction::right)))
+            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::right)
+                || active_output->get_active_tree()->try_select_next(Direction::right)))
                 return true;
             return false;
         case QuitActiveWindow:
-            if (active_output) active_output->get_active_tree().close_active_window();
+            if (active_output) active_output->get_active_tree()->close_active_window();
             return true;
         case QuitCompositor:
             runner.stop();
             return true;
         case Fullscreen:
-            if (active_output) active_output->get_active_tree().try_toggle_active_fullscreen();
+            if (active_output) active_output->get_active_tree()->try_toggle_active_fullscreen();
             return true;
         case SelectWorkspace1:
             if (active_output) workspace_manager.request_workspace(active_output, 1);
@@ -224,7 +224,7 @@ bool TilingWindowManagementPolicy::handle_pointer_event(MirPointerEvent const* e
 
             if (output->get_active_workspace() >= 0)
             {
-                active_output->get_active_tree().select_window_from_point(static_cast<int>(x), static_cast<int>(y));
+                active_output->get_active_tree()->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             }
             break;
         }
@@ -249,12 +249,12 @@ auto TilingWindowManagementPolicy::place_new_window(
     return new_spec;
 }
 
-void TilingWindowManagementPolicy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<Screen>& output)
+void TilingWindowManagementPolicy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<OutputContent>& output)
 {
     miral::WindowSpecification spec;
-    spec = output->get_active_tree().allocate_position(spec);
+    spec = output->get_active_tree()->allocate_position(spec);
     window_manager_tools.modify_window(window, spec);
-    output->get_active_tree().advise_new_window(window_manager_tools.info_for(window));
+    output->get_active_tree()->advise_new_window(window_manager_tools.info_for(window));
 }
 
 void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& window_info)
@@ -283,7 +283,7 @@ void TilingWindowManagementPolicy::advise_new_window(miral::WindowInfo const& wi
     switch (pending_type)
     {
         case WindowType::tiled:
-            metadata = shared_output->get_active_tree().advise_new_window(window_info);
+            metadata = shared_output->get_active_tree()->advise_new_window(window_info);
             break;
         case WindowType::other:
             if (window_info.state() == MirWindowState::mir_window_state_attached)
@@ -409,7 +409,7 @@ void TilingWindowManagementPolicy::advise_move_to(miral::WindowInfo const& windo
 
 void TilingWindowManagementPolicy::advise_output_create(miral::Output const& output)
 {
-    auto new_tree = std::make_shared<Screen>(
+    auto new_tree = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools, config);
     workspace_manager.request_first_available_workspace(new_tree);
         output_list.push_back(new_tree);
@@ -435,7 +435,7 @@ void TilingWindowManagementPolicy::advise_output_update(miral::Output const& upd
         {
             for (auto& workspace : output->get_workspaces())
             {
-                workspace.tree->set_output_area(updated.extents());
+                workspace->get_tree()->set_output_area(updated.extents());
             }
             break;
         }
@@ -457,7 +457,7 @@ void TilingWindowManagementPolicy::advise_output_delete(miral::Output const& out
                     // All nodes should become orphaned
                     for (auto& workspace : other_output->get_workspaces())
                     {
-                        workspace.tree->foreach_node([&](auto node)
+                        workspace->get_tree()->foreach_node([&](auto node)
                         {
                             if (node->is_window())
                             {
@@ -473,7 +473,7 @@ void TilingWindowManagementPolicy::advise_output_delete(miral::Output const& out
                     active_output = output_list[0];
                     for (auto& workspace : other_output->get_workspaces())
                     {
-                        active_output->get_active_tree().add_tree(workspace.tree);
+                        active_output->get_active_tree()->add_tree(workspace->get_tree());
                     }
                 }
             }
@@ -495,7 +495,7 @@ void TilingWindowManagementPolicy::advise_state_change(miral::WindowInfo const& 
     {
         case WindowType::tiled:
         {
-            if (&active_output->get_active_tree() != metadata->get_tiling_node()->get_tree())
+            if (active_output->get_active_tree().get() != metadata->get_tiling_node()->get_tree())
                 break;
 
             metadata->get_tiling_node()->get_tree()->advise_state_change(window_info, state);
@@ -522,7 +522,7 @@ void TilingWindowManagementPolicy::handle_modify_window(
     {
         case WindowType::tiled:
         {
-            if (&active_output->get_active_tree() != metadata->get_tiling_node()->get_tree())
+            if (active_output->get_active_tree().get() != metadata->get_tiling_node()->get_tree())
                 break;
 
             if (modifications.state().is_set())
