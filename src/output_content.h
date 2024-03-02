@@ -36,6 +36,10 @@ public:
     void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left);
     void handle_request_move(std::shared_ptr<miracle::WindowMetadata> const& metadata, const MirInputEvent *input_event);
+    void handle_request_resize(
+        std::shared_ptr<miracle::WindowMetadata> const& metadata,
+        const MirInputEvent *input_event,
+        MirResizeEdge edge);
     void advise_state_change(std::shared_ptr<miracle::WindowMetadata> const& metadata, MirWindowState state);
     void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification &modifications);
     void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);

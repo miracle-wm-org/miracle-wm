@@ -492,7 +492,14 @@ void Policy::handle_request_resize(
     const MirInputEvent *input_event,
     MirResizeEdge edge)
 {
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+    {
+        mir::log_error("handle_request_resize: window lacks metadata");
+        return;
+    }
 
+    metadata->get_output()->handle_request_resize(metadata, input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(

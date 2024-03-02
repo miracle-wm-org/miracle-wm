@@ -207,6 +207,24 @@ void OutputContent::handle_request_move(const std::shared_ptr<miracle::WindowMet
     }
 }
 
+void OutputContent::handle_request_resize(
+    const std::shared_ptr<miracle::WindowMetadata> &metadata,
+    const MirInputEvent *input_event,
+    MirResizeEdge edge)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+            break;
+        case WindowType::floating:
+            floating_window_manager.handle_request_resize(tools.info_for(metadata->get_window()), input_event, edge);
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
 void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMetadata> &metadata, MirWindowState state)
 {
     switch (metadata->get_type())
