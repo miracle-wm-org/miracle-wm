@@ -74,20 +74,18 @@ public:
 
     bool select_window_from_point(int x, int y);
 
-    bool advise_fullscreen_window(miral::WindowInfo const&);
-    bool advise_restored_window(miral::WindowInfo const &window_info);
+    bool advise_fullscreen_window(miral::Window&);
+    bool advise_restored_window(miral::Window&);
     bool handle_window_ready(miral::WindowInfo& window_info);
 
-    bool advise_state_change(miral::WindowInfo const& window_info, MirWindowState state);
+    bool advise_state_change(miral::Window const& window, MirWindowState state);
     bool confirm_placement_on_display(
-        const miral::WindowInfo &window_info,
+        miral::Window const& window,
         MirWindowState new_state,
         mir::geometry::Rectangle &new_placement);
 
     /// Constrains the window to its tile if it is in this tree.
-    bool constrain(miral::WindowInfo& window_info);
-
-    void add_tree(std::shared_ptr<Tree> const&);
+    bool constrain(miral::Window& window);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
     void close_active_window();

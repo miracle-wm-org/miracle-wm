@@ -24,17 +24,38 @@ public:
 
     [[nodiscard]] std::shared_ptr<Tree> get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
+    [[nodiscard]] std::shared_ptr<WorkspaceContent> get_active_workspace() const;
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
     void advise_new_window(miral::WindowInfo const& window_info, WindowType type);
+    void handle_window_ready(miral::WindowInfo &window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_state_change(std::shared_ptr<miracle::WindowMetadata> const& metadata, MirWindowState state);
+    void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification &modifications);
+    mir::geometry::Rectangle confirm_placement_on_display(
+        std::shared_ptr<miracle::WindowMetadata> const& metadata,
+        MirWindowState new_state,
+        const mir::geometry::Rectangle &new_placement);
+    void select_window_from_point(int x, int y);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<std::shared_ptr<WorkspaceContent>> const& get_workspaces() { return workspaces; }
+    std::vector<std::shared_ptr<WorkspaceContent>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
     bool point_is_in_output(int x, int y);
+    void close_active_window();
+    bool resize_active_window(Direction direction);
+    bool select(Direction direction);
+    bool move_active_window(Direction direction);
+    void request_vertical();
+    void request_horizontal();
+    void toggle_resize_mode();
+    void toggle_fullscreen();
+    void update_area(geom::Rectangle const& area);
+    std::vector<miral::Window> collect_all_windows() const;
 
     geom::Rectangle const& get_area() { return area; }
     std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }

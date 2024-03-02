@@ -68,28 +68,39 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
     if (!window)
         return false;
 
-    auto original_tree = screen->get_active_tree();
     auto metadata = window_helpers::get_metadata(window, tools_);
-    auto window_node = window_helpers::get_node_for_window(window, tools_);
-    original_tree->advise_delete_window(window);
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            auto original_tree = screen->get_active_tree();
+            auto window_node = window_helpers::get_node_for_window(window, tools_);
+            original_tree->advise_delete_window(window);
 
-    auto screen_to_move_to = request_workspace(screen, workspace);
-    auto& prev_info = tools_.info_for(window);
+            auto screen_to_move_to = request_workspace(screen, workspace);
+            auto& prev_info = tools_.info_for(window);
 
-    // TODO: These need to be set so that the window is correctly seen as tileable
-    miral::WindowSpecification spec;
-    spec.type() = prev_info.type();
-    spec.state() = prev_info.state();
-    spec = screen_to_move_to->get_active_tree()->allocate_position(spec);
-    tools_.modify_window(window, spec);
+            // WARNING: These need to be set so that the window is correctly seen as tileable
+            miral::WindowSpecification spec;
+            spec.type() = prev_info.type();
+            spec.state() = prev_info.state();
+            spec = screen_to_move_to->get_active_tree()->allocate_position(spec);
+            tools_.modify_window(window, spec);
 
-    auto new_node = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
-    metadata->associate_to_node(new_node);
-    miral::WindowSpecification next_spec;
-    next_spec.userdata() = metadata;
-    tools_.modify_window(window, next_spec);
+            auto new_node = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
+            metadata->associate_to_node(new_node);
+            miral::WindowSpecification next_spec;
+            next_spec.userdata() = metadata;
+            tools_.modify_window(window, next_spec);
 
-    screen_to_move_to->get_active_tree()->handle_window_ready(prev_info);
+            screen_to_move_to->get_active_tree()->handle_window_ready(prev_info);
+            break;
+        }
+        default:
+            mir::log_error("Cannot move window of type %d to a new workspace", metadata->get_type());
+            return false;
+    }
+
     return true;
 }
 

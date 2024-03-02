@@ -27,7 +27,7 @@ std::shared_ptr<Tree> OutputContent::get_active_tree() const
     return get_active_workspace()->get_tree();
 }
 
-const std::shared_ptr<WorkspaceContent> &OutputContent::get_active_workspace() const
+std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
 {
     for (auto& info : workspaces)
     {
@@ -82,6 +82,141 @@ void OutputContent::advise_new_window(miral::WindowInfo const& window_info, Wind
     {
         mir::log_error("Window failed to set metadata");
     }
+}
+
+void OutputContent::handle_window_ready(miral::WindowInfo &window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->handle_window_ready(window_info);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMetadata> &metadata)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_focus_gained(metadata->get_window());
+            tools.raise_tree(metadata->get_window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::advise_focus_lost(const std::shared_ptr<miracle::WindowMetadata> &metadata)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_focus_lost(metadata->get_window());
+            tools.raise_tree(metadata->get_window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::advise_delete_window(const std::shared_ptr<miracle::WindowMetadata> &metadata)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->advise_delete_window(metadata->get_window());
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMetadata> &metadata, MirWindowState state)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            if (get_active_tree().get() != metadata->get_tiling_node()->get_tree())
+                break;
+
+            metadata->get_tiling_node()->get_tree()->advise_state_change(metadata->get_window(), state);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMetadata> &metadata,
+                                         const miral::WindowSpecification &modifications)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            if (get_active_tree().get() != metadata->get_tiling_node()->get_tree())
+                break;
+
+            if (modifications.state().is_set())
+            {
+                if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
+                    metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(metadata->get_window());
+                else if (modifications.state().value() == mir_window_state_restored)
+                    metadata->get_tiling_node()->get_tree()->advise_restored_window(metadata->get_window());
+            }
+
+            metadata->get_tiling_node()->get_tree()->constrain(metadata->get_window());
+            tools.modify_window(metadata->get_window(), modifications);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+mir::geometry::Rectangle
+OutputContent::confirm_placement_on_display(
+    const std::shared_ptr<miracle::WindowMetadata> &metadata,
+    MirWindowState new_state,
+    const mir::geometry::Rectangle &new_placement)
+{
+    mir::geometry::Rectangle modified_placement = new_placement;
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            metadata->get_tiling_node()->get_tree()->confirm_placement_on_display(
+                metadata->get_window(), new_state, modified_placement);
+            break;
+        }
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            break;
+    }
+    return new_placement;
+}
+
+void OutputContent::select_window_from_point(int x, int y)
+{
+    get_active_tree()->select_window_from_point(x, y);
 }
 
 void OutputContent::advise_new_workspace(int workspace)
@@ -171,4 +306,69 @@ void OutputContent::advise_application_zone_delete(miral::Zone const& applicatio
 bool OutputContent::point_is_in_output(int x, int y)
 {
     return area.contains(geom::Point(x, y));
+}
+
+void OutputContent::close_active_window()
+{
+    get_active_tree()->close_active_window();
+}
+
+bool OutputContent::resize_active_window(miracle::Direction direction)
+{
+    return get_active_tree()->try_resize_active_window(direction);
+}
+
+bool OutputContent::select(miracle::Direction direction)
+{
+    return get_active_tree()->try_select_next(direction);
+}
+
+bool OutputContent::move_active_window(miracle::Direction direction)
+{
+    return get_active_tree()->try_move_active_window(direction);
+}
+
+void OutputContent::request_vertical()
+{
+    get_active_tree()->request_vertical();
+}
+
+void OutputContent::request_horizontal()
+{
+    get_active_tree()->request_horizontal();
+}
+
+void OutputContent::toggle_resize_mode()
+{
+    get_active_tree()->toggle_resize_mode();
+}
+
+void OutputContent::toggle_fullscreen()
+{
+    get_active_tree()->try_toggle_active_fullscreen();
+}
+
+void OutputContent::update_area(geom::Rectangle const& new_area)
+{
+    area = new_area;
+    for (auto& workspace : workspaces)
+    {
+        workspace->get_tree()->set_output_area(area);
+    }
+}
+
+std::vector<miral::Window> OutputContent::collect_all_windows() const
+{
+    std::vector<miral::Window> windows;
+    for (auto& workspace : get_workspaces())
+    {
+        workspace->get_tree()->foreach_node([&](auto node)
+        {
+            if (node->is_window())
+            {
+                windows.push_back(node->get_window());
+            }
+        });
+    }
+    return windows;
 }

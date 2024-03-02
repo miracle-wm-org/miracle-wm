@@ -83,58 +83,58 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return true;
         }
         case RequestVertical:
-            if(active_output) active_output->get_active_tree()->request_vertical();
+            if(active_output) active_output->request_vertical();
             return true;
         case RequestHorizontal:
-            if(active_output) active_output->get_active_tree()->request_horizontal();
+            if(active_output) active_output->request_horizontal();
             return true;
         case ToggleResize:
-            if(active_output) active_output->get_active_tree()->toggle_resize_mode();
+            if(active_output) active_output->toggle_resize_mode();
             return true;
         case MoveUp:
-            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::up))
+            if (active_output && active_output->move_active_window(Direction::up))
                 return true;
             return false;
         case MoveDown:
-            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::down))
+            if (active_output && active_output->move_active_window(Direction::down))
                 return true;
             return false;
         case MoveLeft:
-            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::left))
+            if (active_output && active_output->move_active_window(Direction::left))
                 return true;
             return false;
         case MoveRight:
-            if (active_output && active_output->get_active_tree()->try_move_active_window(Direction::right))
+            if (active_output && active_output->move_active_window(Direction::right))
                 return true;
             return false;
         case SelectUp:
-            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::up)
-                || active_output->get_active_tree()->try_select_next(Direction::up)))
+            if (active_output && (active_output->resize_active_window(Direction::up)
+                || active_output->select(Direction::up)))
                 return true;
             return false;
         case SelectDown:
-            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::down)
-                || active_output->get_active_tree()->try_select_next(Direction::down)))
+            if (active_output && (active_output->resize_active_window(Direction::down)
+                || active_output->select(Direction::down)))
                 return true;
             return false;
         case SelectLeft:
-            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::left)
-                || active_output->get_active_tree()->try_select_next(Direction::left)))
+            if (active_output && (active_output->resize_active_window(Direction::left)
+                || active_output->select(Direction::left)))
                 return true;
             return false;
         case SelectRight:
-            if (active_output && (active_output->get_active_tree()->try_resize_active_window(Direction::right)
-                || active_output->get_active_tree()->try_select_next(Direction::right)))
+            if (active_output && (active_output->resize_active_window(Direction::right)
+                || active_output->select(Direction::right)))
                 return true;
             return false;
         case QuitActiveWindow:
-            if (active_output) active_output->get_active_tree()->close_active_window();
+            if (active_output) active_output->close_active_window();
             return true;
         case QuitCompositor:
             runner.stop();
             return true;
         case Fullscreen:
-            if (active_output) active_output->get_active_tree()->try_toggle_active_fullscreen();
+            if (active_output) active_output->toggle_fullscreen();
             return true;
         case SelectWorkspace1:
             if (active_output) workspace_manager.request_workspace(active_output, 1);
@@ -222,7 +222,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
             if (output->get_active_workspace_num() >= 0)
             {
-                active_output->get_active_tree()->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
+                active_output->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             }
             break;
         }
@@ -250,9 +250,10 @@ auto Policy::place_new_window(
 void Policy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<OutputContent>& output)
 {
     miral::WindowSpecification spec;
-    spec = output->get_active_tree()->allocate_position(spec);
+    pending_output = output;
+    pending_type = output->allocate_position(spec);
     window_manager_tools.modify_window(window, spec);
-    output->get_active_tree()->advise_new_window(window_manager_tools.info_for(window));
+    handle_window_ready(window_manager_tools.info_for(window));
 }
 
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
@@ -288,56 +289,31 @@ void Policy::handle_window_ready(miral::WindowInfo &window_info)
     if (!metadata)
         return;
 
-    switch (metadata->get_type())
-    {
-        case WindowType::tiled:
-        {
-            metadata->get_tiling_node()->get_tree()->handle_window_ready(window_info);
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
-    }
+    metadata->get_output()->handle_window_ready(window_info, metadata);
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
-        return;
-
-    switch (metadata->get_type())
     {
-        case WindowType::tiled:
-        {
-            metadata->get_tiling_node()->get_tree()->advise_focus_gained(window_info.window());
-            window_manager_tools.raise_tree(window_info.window());
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
+        mir::fatal_error("advise_focus_gained: metadata is not provided");
+        return;
     }
+
+    metadata->get_output()->advise_focus_gained(metadata);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
-        return;
-
-    switch (metadata->get_type())
     {
-        case WindowType::tiled:
-        {
-            metadata->get_tiling_node()->get_tree()->advise_focus_lost(window_info.window());
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
+        mir::fatal_error("advise_focus_lost: metadata is not provided");
+        return;
     }
+
+    metadata->get_output()->advise_focus_lost(metadata);
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo &window_info)
@@ -360,17 +336,7 @@ void Policy::advise_delete_window(const miral::WindowInfo &window_info)
         return;
     }
 
-    switch (metadata->get_type())
-    {
-        case WindowType::tiled:
-        {
-            metadata->get_tiling_node()->get_tree()->advise_delete_window(window_info.window());
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
-    }
+    metadata->get_output()->advise_delete_window(metadata);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -403,10 +369,7 @@ void Policy::advise_output_update(miral::Output const& updated, miral::Output co
     {
         if (output->get_output().is_same_output(original))
         {
-            for (auto& workspace : output->get_workspaces())
-            {
-                workspace->get_tree()->set_output_area(updated.extents());
-            }
+            output->update_area(updated.extents());
             break;
         }
     }
@@ -419,32 +382,26 @@ void Policy::advise_output_delete(miral::Output const& output)
         auto other_output = *it;
         if (other_output->get_output().is_same_output(output))
         {
-            it = output_list.erase(it);
-            if (other_output == active_output)
+            output_list.erase(it);
+            if (output_list.empty())
             {
-                if (output_list.empty())
+                // All nodes should become orphaned
+                for (auto& window : other_output->collect_all_windows())
                 {
-                    // All nodes should become orphaned
-                    for (auto& workspace : other_output->get_workspaces())
-                    {
-                        workspace->get_tree()->foreach_node([&](auto node)
-                        {
-                            if (node->is_window())
-                            {
-                                orphaned_window_list.push_back(node->get_window());
-                            }
-                        });
-                    }
-
-                    active_output = nullptr;
+                    orphaned_window_list.push_back(window);
+                    WindowSpecification spec;
+                    spec.userdata() = nullptr;
+                    window_manager_tools.modify_window(window, spec);
                 }
-                else
+
+                active_output = nullptr;
+            }
+            else
+            {
+                active_output = output_list.front();
+                for (auto& window : other_output->collect_all_windows())
                 {
-                    active_output = output_list[0];
-                    for (auto& workspace : other_output->get_workspaces())
-                    {
-                        active_output->get_active_tree()->add_tree(workspace->get_tree());
-                    }
+                    _add_to_output_immediately(window, active_output);
                 }
             }
             break;
@@ -461,20 +418,7 @@ void Policy::advise_state_change(miral::WindowInfo const& window_info, MirWindow
         return;
     }
 
-    switch (metadata->get_type())
-    {
-        case WindowType::tiled:
-        {
-            if (active_output->get_active_tree().get() != metadata->get_tiling_node()->get_tree())
-                break;
-
-            metadata->get_tiling_node()->get_tree()->advise_state_change(window_info, state);
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
-    }
+    metadata->get_output()->advise_state_change(metadata, state);
 }
 
 void Policy::handle_modify_window(
@@ -488,29 +432,7 @@ void Policy::handle_modify_window(
         return;
     }
 
-    switch (metadata->get_type())
-    {
-        case WindowType::tiled:
-        {
-            if (active_output->get_active_tree().get() != metadata->get_tiling_node()->get_tree())
-                break;
-
-            if (modifications.state().is_set())
-            {
-                if (modifications.state().value() == mir_window_state_fullscreen || modifications.state().value() == mir_window_state_maximized)
-                    metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(window_info);
-                else if (modifications.state().value() == mir_window_state_restored)
-                    metadata->get_tiling_node()->get_tree()->advise_restored_window(window_info);
-            }
-
-            metadata->get_tiling_node()->get_tree()->constrain(window_info);
-            window_manager_tools.modify_window(window_info.window(), modifications);
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            return;
-    }
+    metadata->get_output()->handle_modify_window(metadata, modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo &window_info)
@@ -531,19 +453,8 @@ Policy::confirm_placement_on_display(
         return new_placement;
     }
 
-    mir::geometry::Rectangle modified_placement = new_placement;
-    switch (metadata->get_type())
-    {
-        case WindowType::tiled:
-        {
-            metadata->get_tiling_node()->get_tree()->confirm_placement_on_display(window_info, new_state, modified_placement);
-            break;
-        }
-        default:
-            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-            break;
-    }
-
+    mir::geometry::Rectangle modified_placement = metadata->get_output()->confirm_placement_on_display(
+        metadata, new_state, new_placement);
     return modified_placement;
 }
 
