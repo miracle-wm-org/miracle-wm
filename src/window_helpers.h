@@ -8,6 +8,7 @@ namespace miracle
 {
 class Node;
 class Tree;
+class WindowMetadata;
 
 namespace window_helpers
 {
@@ -23,6 +24,13 @@ bool is_tileable(T const& requested_specification)
            && (state == mir_window_state_restored || state == mir_window_state_maximized)
            && !has_exclusive_rect;
 }
+
+std::shared_ptr<WindowMetadata> get_metadata(
+    miral::WindowInfo const& info);
+
+std::shared_ptr<WindowMetadata> get_metadata(
+    miral::Window const& window,
+    miral::WindowManagerTools const& tools);
 
 std::shared_ptr<Node> get_node_for_window(
     miral::Window const& window,

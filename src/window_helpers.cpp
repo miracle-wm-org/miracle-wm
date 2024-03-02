@@ -13,16 +13,33 @@ bool miracle::window_helpers::is_window_fullscreen(MirWindowState state)
            || state == mir_window_state_vertmaximized;
 }
 
+std::shared_ptr<miracle::WindowMetadata> miracle::window_helpers::get_metadata(const miral::WindowInfo &info)
+{
+    if (info.userdata())
+        return static_pointer_cast<WindowMetadata>(info.userdata());
+
+    mir::log_error("Unable to find metadata for window");
+    return nullptr;
+}
+
+std::shared_ptr<miracle::WindowMetadata>
+miracle::window_helpers::get_metadata(const miral::Window &window, const miral::WindowManagerTools &tools)
+{
+    auto& info = tools.info_for(window);
+    if (info.userdata())
+        return static_pointer_cast<WindowMetadata>(info.userdata());
+
+    mir::log_error("Unable to find metadata for window");
+    return nullptr;
+}
+
 std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window(
     miral::Window const& window,
     miral::WindowManagerTools const& tools)
 {
-    auto& info = tools.info_for(window);
-    if (info.userdata())
-    {
-        std::shared_ptr<WindowMetadata> data = static_pointer_cast<WindowMetadata>(info.userdata());
-        return data->get_tiling_node();
-    }
+    auto metadata = get_metadata(window, tools);
+    if (metadata)
+        return metadata->get_tiling_node();
 
     mir::log_error("Unable to find node for window");
     return nullptr;
@@ -35,9 +52,7 @@ std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window_by_t
 {
     auto node = get_node_for_window(window, tools);
     if (node && node->get_tree() == tree)
-    {
         return node;
-    }
 
     return nullptr;
 }
