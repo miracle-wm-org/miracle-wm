@@ -1,5 +1,5 @@
-#ifndef WINDOW_TREE_H
-#define WINDOW_TREE_H
+#ifndef MIRACLE_TREE_H
+#define MIRACLE_TREE_H
 
 #include "node.h"
 #include <memory>
@@ -16,9 +16,9 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
-class Screen;
+class OutputContent;
 class MiracleConfig;
-
+    
 enum class Direction
 {
     up,
@@ -30,14 +30,14 @@ enum class Direction
 class Tree
 {
 public:
-    Tree(Screen* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
+    Tree(OutputContent* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
     ~Tree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
-    void advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<Node> advise_new_window(miral::WindowInfo const&);
 
     /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
     void toggle_resize_mode();
@@ -74,20 +74,18 @@ public:
 
     bool select_window_from_point(int x, int y);
 
-    bool advise_fullscreen_window(miral::WindowInfo const&);
-    bool advise_restored_window(miral::WindowInfo const &window_info);
+    bool advise_fullscreen_window(miral::Window&);
+    bool advise_restored_window(miral::Window&);
     bool handle_window_ready(miral::WindowInfo& window_info);
 
-    bool advise_state_change(miral::WindowInfo const& window_info, MirWindowState state);
+    bool advise_state_change(miral::Window const& window, MirWindowState state);
     bool confirm_placement_on_display(
-        const miral::WindowInfo &window_info,
+        miral::Window const& window,
         MirWindowState new_state,
         mir::geometry::Rectangle &new_placement);
 
     /// Constrains the window to its tile if it is in this tree.
-    bool constrain(miral::WindowInfo& window_info);
-
-    void add_tree(std::shared_ptr<Tree> const&);
+    bool constrain(miral::Window& window);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
     void close_active_window();
@@ -120,7 +118,7 @@ private:
         MirWindowState state;
     };
 
-    Screen* screen;
+    OutputContent* screen;
     miral::WindowManagerTools tools;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<Node> root_lane;
@@ -144,4 +142,4 @@ private:
 }
 
 
-#endif //MIRCOMPOSITOR_WINDOW_TREE_H
+#endif //MIRACLE_TREE_H

@@ -2,9 +2,13 @@
 
 using namespace miracle;
 
-WindowMetadata::WindowMetadata(miracle::WindowType type, miral::Window const& window)
+WindowMetadata::WindowMetadata(
+    miracle::WindowType type,
+    miral::Window const& window,
+    OutputContent* output)
     : type{type},
-      window{window}
+      window{window},
+      output{output}
 {}
 
 void WindowMetadata::associate_to_node(std::shared_ptr<Node> const& node)

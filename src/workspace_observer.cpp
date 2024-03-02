@@ -32,7 +32,7 @@ void WorkspaceObserverRegistrar::unregister_interest(miracle::WorkspaceObserver&
     }));
 }
 
-void WorkspaceObserverRegistrar::advise_created(std::shared_ptr<Screen> const& info, int key)
+void WorkspaceObserverRegistrar::advise_created(std::shared_ptr<OutputContent> const& info, int key)
 {
     for (auto& observer : observers)
     {
@@ -41,7 +41,7 @@ void WorkspaceObserverRegistrar::advise_created(std::shared_ptr<Screen> const& i
     }
 }
 
-void WorkspaceObserverRegistrar::advise_removed(std::shared_ptr<Screen> const& info, int key)
+void WorkspaceObserverRegistrar::advise_removed(std::shared_ptr<OutputContent> const& info, int key)
 {
     for (auto& observer : observers)
     {
@@ -51,9 +51,9 @@ void WorkspaceObserverRegistrar::advise_removed(std::shared_ptr<Screen> const& i
 }
 
 void WorkspaceObserverRegistrar::advise_focused(
-    std::shared_ptr<Screen> const& previous,
+    std::shared_ptr<OutputContent> const& previous,
     int previous_key,
-    std::shared_ptr<Screen> const& current,
+    std::shared_ptr<OutputContent> const& current,
     int current_key)
 {
     for (auto& observer : observers)

@@ -1,8 +1,9 @@
+#include "window_metadata.h"
 #define MIR_LOG_COMPONENT "window_tree"
 
 #include "tree.h"
 #include "window_helpers.h"
-#include "screen.h"
+#include "output_content.h"
 #include "miracle_config.h"
 
 #include <memory>
@@ -13,7 +14,7 @@
 using namespace miracle;
 
 Tree::Tree(
-    Screen* screen,
+    OutputContent* screen,
     miral::WindowManagerTools const& tools,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},
@@ -40,9 +41,6 @@ Tree::~Tree()
 miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
-    if (!window_helpers::is_tileable(requested_specification))
-        return new_spec;
-
     new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width{0};
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
@@ -60,23 +58,16 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     return new_spec;
 }
 
-void Tree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<Node> Tree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    if (!window_helpers::is_tileable(window_info))
-    {
-        if (window_info.state() == MirWindowState::mir_window_state_attached)
-        {
-            tools.select_active_window(window_info.window());
-        }
-        return;
-    }
-
-    _get_active_lane()->add_window(window_info.window());
+    auto node = _get_active_lane()->add_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
         tools.select_active_window(window_info.window());
-        advise_fullscreen_window(window_info);
+        advise_fullscreen_window(window_info.window());
     }
+
+    return node;
 }
 
 void Tree::toggle_resize_mode()
@@ -164,9 +155,9 @@ bool Tree::try_toggle_active_fullscreen()
     tools.place_and_size_for_state(spec, window_info);
     tools.modify_window(active_window->get_window(), spec);
     if (is_active_window_fullscreen)
-        advise_restored_window(window_info);
+        advise_restored_window(window_info.window());
     else
-        advise_fullscreen_window(window_info);
+        advise_fullscreen_window(window_info.window());
     return true;
 }
 
@@ -634,9 +625,9 @@ void Tree::recalculate_root_node_area()
     }
 }
 
-bool Tree::advise_fullscreen_window(miral::WindowInfo const& window_info)
+bool Tree::advise_fullscreen_window(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
+    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
         return false;
 
@@ -646,9 +637,9 @@ bool Tree::advise_fullscreen_window(miral::WindowInfo const& window_info)
     return true;
 }
 
-bool Tree::advise_restored_window(miral::WindowInfo const& window_info)
+bool Tree::advise_restored_window(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
+    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
         return false;
 
@@ -670,13 +661,13 @@ bool Tree::handle_window_ready(miral::WindowInfo &window_info)
     if (window_info.can_be_active())
         tools.select_active_window(window_info.window());
 
-    constrain(window_info);
+    constrain(window_info.window());
     return true;
 }
 
-bool Tree::advise_state_change(const miral::WindowInfo &window_info, MirWindowState state)
+bool Tree::advise_state_change(miral::Window const& window, MirWindowState state)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
+    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
         return false;
 
@@ -706,11 +697,11 @@ bool Tree::advise_state_change(const miral::WindowInfo &window_info, MirWindowSt
 }
 
 bool Tree::confirm_placement_on_display(
-    const miral::WindowInfo &window_info,
+    miral::Window const& window,
     MirWindowState new_state,
     mir::geometry::Rectangle &new_placement)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
+    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
         return false;
 
@@ -727,9 +718,9 @@ bool Tree::confirm_placement_on_display(
     return true;
 }
 
-bool Tree::constrain(miral::WindowInfo &window_info)
+bool Tree::constrain(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
+    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
         return false;
 
@@ -744,19 +735,6 @@ bool Tree::constrain(miral::WindowInfo &window_info)
 
     node->get_parent()->constrain();
     return true;
-}
-
-void Tree::add_tree(std::shared_ptr<Tree> const& other_tree)
-{
-    other_tree->foreach_node([&](auto node)
-    {
-        if (node->is_window())
-        {
-            auto new_node_position = root_lane->create_new_node_position();
-            node->set_logical_area(new_node_position);
-            root_lane->add_window(node->get_window());
-        }
-    });
 }
 
 namespace

@@ -1,6 +1,6 @@
 #define MIR_LOG_COMPONENT "miracle-main"
 
-#include "tiling_window_management_policy.h"
+#include "policy.h"
 #include "miracle_config.h"
 #include "auto_restarting_launcher.h"
 
@@ -24,14 +24,13 @@ int main(int argc, char const* argv[])
     std::function<void()> shutdown_hook{[]{}};
     runner.add_stop_callback([&] { shutdown_hook(); });
 
-    InternalClientLauncher internal_client_launcher;
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
     auto config = std::make_shared<miracle::MiracleConfig>(runner);
     WindowManagerOptions window_managers
     {
-        add_window_manager_policy<miracle::TilingWindowManagementPolicy>(
-            "tiling", external_client_launcher, internal_client_launcher, runner, config)
+        add_window_manager_policy<miracle::Policy>(
+            "tiling", external_client_launcher, runner, config)
     };
 
     Keymap config_keymap;
@@ -65,7 +64,6 @@ int main(int argc, char const* argv[])
             X11Support{}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
-            internal_client_launcher,
             display_configuration_options,
             AddInitCallback(run_startup_apps)
         });
