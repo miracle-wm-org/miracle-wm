@@ -35,6 +35,7 @@ Policy::Policy(
     miral::MirRunner& runner,
     std::shared_ptr<MiracleConfig> const& config)
     : window_manager_tools{tools},
+      floating_window_manager(tools, config->get_input_event_modifier()),
       external_client_launcher{external_client_launcher},
       runner{runner},
       config{config},
@@ -196,6 +197,8 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case MoveToWorkspace0:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 0);
             break;
+        case ToggleFloating:
+            if (active_output) active_output->request_toggle_active_float();
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
@@ -228,7 +231,10 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         }
     }
 
-    return false;
+   if (active_output)
+       return active_output->handle_pointer_event(event);
+
+   return false;
 }
 
 auto Policy::place_new_window(
@@ -247,15 +253,6 @@ auto Policy::place_new_window(
     return new_spec;
 }
 
-void Policy::_add_to_output_immediately(miral::Window& window, std::shared_ptr<OutputContent>& output)
-{
-    miral::WindowSpecification spec;
-    pending_output = output;
-    pending_type = output->allocate_position(spec);
-    window_manager_tools.modify_window(window, spec);
-    handle_window_ready(window_manager_tools.info_for(window));
-}
-
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
     auto shared_output = pending_output.lock();
@@ -266,7 +263,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         if (!output_list.empty())
         {
             // Our output is gone! Let's try to add it to a different output
-            _add_to_output_immediately(window, output_list[0]);
+            output_list.front()->add_immediately(window);
         }
         else
         {
@@ -341,12 +338,20 @@ void Policy::advise_delete_window(const miral::WindowInfo &window_info)
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+    {
+        mir::log_error("advise_move_to: metadata is not provided");
+        return;
+    }
+
+    metadata->get_output()->advise_move_to(metadata, top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
 {
     auto new_tree = std::make_shared<OutputContent>(
-        output, workspace_manager, output.extents(), window_manager_tools, config);
+        output, workspace_manager, output.extents(), window_manager_tools, floating_window_manager, config);
     workspace_manager.request_first_available_workspace(new_tree);
         output_list.push_back(new_tree);
     if (active_output == nullptr)
@@ -357,7 +362,7 @@ void Policy::advise_output_create(miral::Output const& output)
     {
         for (auto& window : orphaned_window_list)
         {
-            _add_to_output_immediately(window, active_output);
+            active_output->add_immediately(window);
         }
         orphaned_window_list.clear();
     }
@@ -401,7 +406,7 @@ void Policy::advise_output_delete(miral::Output const& output)
                 active_output = output_list.front();
                 for (auto& window : other_output->collect_all_windows())
                 {
-                    _add_to_output_immediately(window, active_output);
+                    active_output->add_immediately(window);
                 }
             }
             break;
@@ -437,7 +442,14 @@ void Policy::handle_modify_window(
 
 void Policy::handle_raise_window(miral::WindowInfo &window_info)
 {
-    window_manager_tools.select_active_window(window_info.window());
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+    {
+        mir::fatal_error("handle_raise_window: metadata is not provided");
+        return;
+    }
+
+    metadata->get_output()->handle_raise_window(metadata);
 }
 
 mir::geometry::Rectangle
@@ -465,7 +477,14 @@ bool Policy::handle_touch_event(const MirTouchEvent *event)
 
 void Policy::handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event)
 {
+    auto metadata = window_helpers::get_metadata(window_info);
+    if (!metadata)
+    {
+        mir::log_error("handle_request_move: window lacks metadata");
+        return;
+    }
 
+    metadata->get_output()->handle_request_move(metadata, input_event);
 }
 
 void Policy::handle_request_resize(

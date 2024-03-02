@@ -40,6 +40,8 @@ std::shared_ptr<Node> get_node_for_window_by_tree(
     miral::Window const& window,
     miral::WindowManagerTools const& tools,
     Tree const* tree);
+
+miral::WindowSpecification copy_from(miral::WindowInfo const&);
 }
 }
 

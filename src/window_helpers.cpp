@@ -56,3 +56,33 @@ std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window_by_t
 
     return nullptr;
 }
+
+miral::WindowSpecification miracle::window_helpers::copy_from(miral::WindowInfo const& info)
+{
+    miral::WindowSpecification spec;
+    spec.name() = info.name();
+    spec.state() = info.state();
+    spec.type() = info.type();
+    spec.parent() = info.parent();
+    spec.min_width() = info.min_width();
+    spec.max_width() = info.max_width();
+    spec.min_height() = info.min_height();
+    spec.max_height() = info.max_height();
+    spec.width_inc() = info.width_inc();
+    spec.height_inc() = info.height_inc();
+    spec.min_aspect() = info.min_aspect();
+    spec.max_aspect() = info.max_aspect();
+    spec.preferred_orientation() = info.preferred_orientation();
+    spec.confine_pointer() = info.confine_pointer();
+    spec.shell_chrome() = info.shell_chrome();
+    spec.userdata() = info.userdata();
+    spec.attached_edges() = info.attached_edges();
+    if (info.exclusive_rect().is_set())
+    {
+        spec.exclusive_rect() = mir::optional_value<mir::optional_value<geom::Rectangle>>(info.exclusive_rect());
+    }
+    spec.application_id() = info.application_id();
+    spec.focus_mode() = info.focus_mode();
+    spec.visible_on_lock_screen() = info.visible_on_lock_screen();
+    return spec;
+}

@@ -32,3 +32,13 @@ void WorkspaceContent::hide()
 {
     tree->hide();
 }
+
+void WorkspaceContent::add_floating_window(miral::Window const& window)
+{
+    floating_windows.push_back(window);
+}
+
+void WorkspaceContent::remove_floating_window(miral::Window const& window)
+{
+    floating_windows.erase(std::remove(floating_windows.begin(), floating_windows.end(), window));
+}

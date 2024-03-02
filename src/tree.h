@@ -72,7 +72,7 @@ public:
     /// Called when the physical display is resized.
     void set_output_area(geom::Rectangle const& new_area);
 
-    bool select_window_from_point(int x, int y);
+    std::shared_ptr<Node> select_window_from_point(int x, int y);
 
     bool advise_fullscreen_window(miral::Window&);
     bool advise_restored_window(miral::Window&);
@@ -88,7 +88,6 @@ public:
     bool constrain(miral::Window& window);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
-    void close_active_window();
 
     /// Hides the entire tree
     void hide();
@@ -122,6 +121,8 @@ private:
     miral::WindowManagerTools tools;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<Node> root_lane;
+
+    // TODO: We can probably remove active_window and just resolve it efficiently now?
     std::shared_ptr<Node> active_window;
     bool is_resizing = false;
     bool is_active_window_fullscreen = false;

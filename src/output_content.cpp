@@ -13,11 +13,13 @@ OutputContent::OutputContent(
     WorkspaceManager& workspace_manager,
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
+    miral::MinimalWindowManager& floating_window_manager,
     std::shared_ptr<MiracleConfig> const& config)
     : output{output},
       workspace_manager{workspace_manager},
       area{area},
       tools{tools},
+      floating_window_manager{floating_window_manager},
       config{config}
 {
 }
@@ -39,6 +41,14 @@ std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
     return nullptr;
 }
 
+bool OutputContent::handle_pointer_event(const MirPointerEvent *event)
+{
+    if (floating_window_manager.handle_pointer_event(event))
+        return true;
+
+    return false;
+}
+
 WindowType OutputContent::allocate_position(miral::WindowSpecification& requested_specification)
 {
     if (!window_helpers::is_tileable(requested_specification))
@@ -58,6 +68,11 @@ void OutputContent::advise_new_window(miral::WindowInfo const& window_info, Wind
             auto node = get_active_tree()->advise_new_window(window_info);
             metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
             metadata->associate_to_node(node);
+            break;
+        }
+        case WindowType::floating:
+        {
+            floating_window_manager.advise_new_window(window_info);
             break;
         }
         case WindowType::other:
@@ -93,6 +108,11 @@ void OutputContent::handle_window_ready(miral::WindowInfo &window_info, std::sha
             metadata->get_tiling_node()->get_tree()->handle_window_ready(window_info);
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.handle_window_ready(window_info);
+            break;
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -101,6 +121,7 @@ void OutputContent::handle_window_ready(miral::WindowInfo &window_info, std::sha
 
 void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMetadata> &metadata)
 {
+    active_window = metadata->get_window();
     switch (metadata->get_type())
     {
         case WindowType::tiled:
@@ -109,6 +130,9 @@ void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMet
             tools.raise_tree(metadata->get_window());
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.advise_focus_gained(tools.info_for(metadata->get_window()));
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -125,6 +149,9 @@ void OutputContent::advise_focus_lost(const std::shared_ptr<miracle::WindowMetad
             tools.raise_tree(metadata->get_window());
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.advise_focus_lost(tools.info_for(metadata->get_window()));
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -140,6 +167,40 @@ void OutputContent::advise_delete_window(const std::shared_ptr<miracle::WindowMe
             metadata->get_tiling_node()->get_tree()->advise_delete_window(metadata->get_window());
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.advise_delete_window(tools.info_for(metadata->get_window()));
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+            break;
+        case WindowType::floating:
+            floating_window_manager.advise_move_to(tools.info_for(metadata->get_window()), top_left);
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::handle_request_move(const std::shared_ptr<miracle::WindowMetadata> &metadata,
+                                        const MirInputEvent *input_event)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+            break;
+        case WindowType::floating:
+            floating_window_manager.handle_request_move(tools.info_for(metadata->get_window()), input_event);
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -158,6 +219,9 @@ void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMet
             metadata->get_tiling_node()->get_tree()->advise_state_change(metadata->get_window(), state);
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.advise_state_change(tools.info_for(metadata->get_window()), state);
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -186,8 +250,27 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
             tools.modify_window(metadata->get_window(), modifications);
             break;
         }
+        case WindowType::floating:
+            floating_window_manager.handle_modify_window(tools.info_for(metadata->get_window()), modifications);
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::handle_raise_window(const std::shared_ptr<miracle::WindowMetadata> &metadata)
+{
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+            tools.select_active_window(metadata->get_window());
+            break;
+        case WindowType::floating:
+            floating_window_manager.handle_raise_window(tools.info_for(metadata->get_window()));
+            break;
+        default:
+            mir::log_error("handle_raise_window: unsupported window type: %d", (int)metadata->get_type());
             return;
     }
 }
@@ -207,6 +290,8 @@ OutputContent::confirm_placement_on_display(
                 metadata->get_window(), new_state, modified_placement);
             break;
         }
+        case WindowType::floating:
+            return floating_window_manager.confirm_placement_on_display(tools.info_for(metadata->get_window()), new_state, new_placement);
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             break;
@@ -216,7 +301,22 @@ OutputContent::confirm_placement_on_display(
 
 void OutputContent::select_window_from_point(int x, int y)
 {
-    get_active_tree()->select_window_from_point(x, y);
+    auto workspace = get_active_workspace();
+    for (auto const& window : workspace->get_floating_windows())
+    {
+        geom::Rectangle window_area(window.top_left(), window.size());
+        if (window_area.contains(geom::Point(x, y)))
+        {
+            tools.select_active_window(window);
+            return;
+        }
+    }
+
+    auto node = workspace->get_tree()->select_window_from_point(x, y);
+    if (node && node->get_window() != active_window)
+    {
+        tools.select_active_window(node->get_window());
+    }
 }
 
 void OutputContent::advise_new_workspace(int workspace)
@@ -310,7 +410,7 @@ bool OutputContent::point_is_in_output(int x, int y)
 
 void OutputContent::close_active_window()
 {
-    get_active_tree()->close_active_window();
+    tools.ask_client_to_close(active_window);
 }
 
 bool OutputContent::resize_active_window(miracle::Direction direction)
@@ -371,4 +471,69 @@ std::vector<miral::Window> OutputContent::collect_all_windows() const
         });
     }
     return windows;
+}
+
+void OutputContent::request_toggle_active_float()
+{
+    if (tools.active_window() == Window())
+    {
+        mir::log_warning("request_toggle_active_float: active window unset");
+        return;
+    }
+
+    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    if (!metadata)
+    {
+        mir::log_error("request_toggle_active_float: metadata not found");
+        return;
+    }
+
+    switch (metadata->get_type())
+    {
+        case WindowType::tiled:
+        {
+            auto tree = metadata->get_tiling_node()->get_tree();
+            tree->advise_delete_window(active_window);
+
+            auto& prev_info = tools.info_for(active_window);
+            WindowSpecification prev_spec = window_helpers::copy_from(prev_info);
+
+            auto& info = tools.info_for(active_window);
+            info.clip_area(area);
+
+            WindowSpecification spec = floating_window_manager.place_new_window(
+                tools.info_for(active_window.application()),
+                prev_spec);
+            spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this);
+            tools.modify_window(active_window, spec);
+
+            advise_new_window(info, WindowType::floating);
+            auto new_metadata = window_helpers::get_metadata(active_window, tools);
+            handle_window_ready(info, new_metadata);
+            tools.select_active_window(active_window);
+            get_active_workspace()->add_floating_window(active_window);
+            break;
+        }
+        case WindowType::floating:
+        {
+            add_immediately(active_window);
+            tools.select_active_window(active_window);
+            get_active_workspace()->remove_floating_window(active_window);
+            break;
+        }
+        default:
+            mir::log_warning("request_toggle_active_float: has no effect on window of type: %d", (int)metadata->get_type());
+            return;
+    }
+}
+
+void OutputContent::add_immediately(miral::Window &window)
+{
+    auto& prev_info = tools.info_for(window);
+    WindowSpecification spec = window_helpers::copy_from(prev_info);
+    WindowType type = allocate_position(spec);
+    tools.modify_window(window, spec);
+    advise_new_window(tools.info_for(window), type);
+    auto metadata = window_helpers::get_metadata(window, tools);
+    handle_window_ready(tools.info_for(window), metadata);
 }

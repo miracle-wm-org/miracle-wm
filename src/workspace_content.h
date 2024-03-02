@@ -2,6 +2,7 @@
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
 #include <miral/window_manager_tools.h>
+#include <miral/minimal_window_manager.h>
 
 namespace miracle
 {
@@ -23,9 +24,14 @@ public:
     void show();
     void hide();
 
+    void add_floating_window(miral::Window const&);
+    void remove_floating_window(miral::Window const&);
+    std::vector<miral::Window> const& get_floating_windows() { return floating_windows; }
+
 private:
     std::shared_ptr<Tree> tree;
     int workspace;
+    std::vector<miral::Window> floating_windows;
 };
 
 } // miracle
