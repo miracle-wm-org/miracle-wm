@@ -24,11 +24,13 @@ public:
     void show();
     void hide();
 
+    bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
     std::vector<miral::Window> const& get_floating_windows() { return floating_windows; }
 
 private:
+    miral::WindowManagerTools tools;
     std::shared_ptr<Tree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;

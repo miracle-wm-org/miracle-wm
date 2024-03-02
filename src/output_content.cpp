@@ -238,6 +238,9 @@ void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMet
             break;
         }
         case WindowType::floating:
+            if (!get_active_workspace()->has_floating_window(metadata->get_window()))
+                break;
+
             floating_window_manager.advise_state_change(tools.info_for(metadata->get_window()), state);
             break;
         default:
@@ -269,6 +272,9 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
             break;
         }
         case WindowType::floating:
+            if (!get_active_workspace()->has_floating_window(metadata->get_window()))
+                break;
+
             floating_window_manager.handle_modify_window(tools.info_for(metadata->get_window()), modifications);
             break;
         default:
@@ -380,7 +386,7 @@ bool OutputContent::advise_workspace_active(int key)
             if (previous_workspace != nullptr)
             {
                 auto active_tree = previous_workspace->get_tree();
-                if (active_tree->is_empty())
+                if (active_tree->is_empty() && previous_workspace->get_floating_windows().empty())
                     workspace_manager.delete_workspace(previous_workspace->get_workspace());
             }
             return true;
