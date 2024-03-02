@@ -97,7 +97,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
             break;
         }
         default:
-            mir::log_error("Cannot move window of type %d to a new workspace", metadata->get_type());
+            mir::log_error("Cannot move window of type %d to a new workspace", (int)metadata->get_type());
             return false;
     }
 
