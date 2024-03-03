@@ -29,7 +29,7 @@ public:
     [[nodiscard]] std::shared_ptr<WorkspaceContent> get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
-    void advise_new_window(miral::WindowInfo const& window_info, WindowType type);
+    std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type);
     void handle_window_ready(miral::WindowInfo &window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);

@@ -43,8 +43,15 @@ std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
 
 bool OutputContent::handle_pointer_event(const MirPointerEvent *event)
 {
-    if (floating_window_manager.handle_pointer_event(event))
-        return true;
+    if (active_window != Window())
+    {
+        auto metadata = window_helpers::get_metadata(active_window, tools);
+        if (metadata->get_type() == WindowType::floating)
+        {
+            if (floating_window_manager.handle_pointer_event(event))
+                return true;
+        }
+    }
 
     return false;
 }
@@ -58,7 +65,7 @@ WindowType OutputContent::allocate_position(miral::WindowSpecification& requeste
     return WindowType::tiled;
 }
 
-void OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
+std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
 {
     std::shared_ptr<WindowMetadata> metadata = nullptr;
     switch (type)
@@ -80,7 +87,7 @@ void OutputContent::advise_new_window(miral::WindowInfo const& window_info, Wind
             {
                 tools.select_active_window(window_info.window());
             }
-            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), this);
+            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), nullptr);
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)type);
@@ -92,10 +99,12 @@ void OutputContent::advise_new_window(miral::WindowInfo const& window_info, Wind
         miral::WindowSpecification spec;
         spec.userdata() = metadata;
         tools.modify_window(window_info.window(), spec);
+        return metadata;
     }
     else
     {
         mir::log_error("Window failed to set metadata");
+        return nullptr;
     }
 }
 
@@ -133,6 +142,8 @@ void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMet
         case WindowType::floating:
             floating_window_manager.advise_focus_gained(tools.info_for(metadata->get_window()));
             break;
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -152,6 +163,8 @@ void OutputContent::advise_focus_lost(const std::shared_ptr<miracle::WindowMetad
         case WindowType::floating:
             floating_window_manager.advise_focus_lost(tools.info_for(metadata->get_window()));
             break;
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -170,6 +183,8 @@ void OutputContent::advise_delete_window(const std::shared_ptr<miracle::WindowMe
         case WindowType::floating:
             floating_window_manager.advise_delete_window(tools.info_for(metadata->get_window()));
             break;
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -184,6 +199,8 @@ void OutputContent::advise_move_to(std::shared_ptr<miracle::WindowMetadata> cons
             break;
         case WindowType::floating:
             floating_window_manager.advise_move_to(tools.info_for(metadata->get_window()), top_left);
+            break;
+        case WindowType::other:
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
@@ -200,6 +217,8 @@ void OutputContent::handle_request_move(const std::shared_ptr<miracle::WindowMet
             break;
         case WindowType::floating:
             floating_window_manager.handle_request_move(tools.info_for(metadata->get_window()), input_event);
+            break;
+        case WindowType::other:
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
@@ -218,6 +237,8 @@ void OutputContent::handle_request_resize(
             break;
         case WindowType::floating:
             floating_window_manager.handle_request_resize(tools.info_for(metadata->get_window()), input_event, edge);
+            break;
+        case WindowType::other:
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
@@ -242,6 +263,8 @@ void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMet
                 break;
 
             floating_window_manager.advise_state_change(tools.info_for(metadata->get_window()), state);
+            break;
+        case WindowType::other:
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
@@ -277,6 +300,8 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
 
             floating_window_manager.handle_modify_window(tools.info_for(metadata->get_window()), modifications);
             break;
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             return;
@@ -292,6 +317,9 @@ void OutputContent::handle_raise_window(const std::shared_ptr<miracle::WindowMet
             break;
         case WindowType::floating:
             floating_window_manager.handle_raise_window(tools.info_for(metadata->get_window()));
+            break;
+        case WindowType::other:
+            tools.select_active_window(metadata->get_window());
             break;
         default:
             mir::log_error("handle_raise_window: unsupported window type: %d", (int)metadata->get_type());
@@ -316,6 +344,8 @@ OutputContent::confirm_placement_on_display(
         }
         case WindowType::floating:
             return floating_window_manager.confirm_placement_on_display(tools.info_for(metadata->get_window()), new_state, new_placement);
+        case WindowType::other:
+            break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
             break;

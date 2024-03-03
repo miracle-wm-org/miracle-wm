@@ -275,7 +275,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    shared_output->advise_new_window(window_info, pending_type);
+    auto metadata = shared_output->advise_new_window(window_info, pending_type);
+
     pending_type = WindowType::none;
     pending_output.reset();
 }
@@ -284,7 +285,10 @@ void Policy::handle_window_ready(miral::WindowInfo &window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
+    {
+        mir::log_error("handle_window_ready: metadata is not provided");
         return;
+    }
 
     metadata->get_output()->handle_window_ready(window_info, metadata);
 }
@@ -294,7 +298,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("advise_focus_gained: metadata is not provided");
+        mir::log_error("advise_focus_gained: metadata is not provided");
         return;
     }
 
@@ -306,7 +310,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("advise_focus_lost: metadata is not provided");
+        mir::log_error("advise_focus_lost: metadata is not provided");
         return;
     }
 
@@ -329,7 +333,7 @@ void Policy::advise_delete_window(const miral::WindowInfo &window_info)
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("advise_delete_window: metadata is not provided");
+        mir::log_error("advise_delete_window: metadata is not provided");
         return;
     }
 
@@ -419,7 +423,7 @@ void Policy::advise_state_change(miral::WindowInfo const& window_info, MirWindow
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("advise_state_changed: metadata is not provided");
+        mir::log_error("advise_state_changed: metadata is not provided");
         return;
     }
 
@@ -433,7 +437,7 @@ void Policy::handle_modify_window(
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("handle_modify_window: metadata is not provided");
+        mir::log_error("handle_modify_window: metadata is not provided");
         return;
     }
 
@@ -445,7 +449,7 @@ void Policy::handle_raise_window(miral::WindowInfo &window_info)
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::fatal_error("handle_raise_window: metadata is not provided");
+        mir::log_error("handle_raise_window: metadata is not provided");
         return;
     }
 

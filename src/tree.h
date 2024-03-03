@@ -126,7 +126,7 @@ private:
     std::shared_ptr<Node> active_window;
     bool is_resizing = false;
     bool is_active_window_fullscreen = false;
-    bool is_hidden = false;
+    bool is_hidden = true;
     std::vector<NodeResurrection> nodes_to_resurrect;
     int config_handle = 0;
 

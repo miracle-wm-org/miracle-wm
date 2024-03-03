@@ -18,7 +18,7 @@ std::shared_ptr<miracle::WindowMetadata> miracle::window_helpers::get_metadata(c
     if (info.userdata())
         return static_pointer_cast<WindowMetadata>(info.userdata());
 
-    mir::log_error("Unable to find metadata for window");
+    mir::log_error("Unable to find metadata for window info");
     return nullptr;
 }
 
