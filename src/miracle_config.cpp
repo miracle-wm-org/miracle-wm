@@ -396,7 +396,7 @@ void MiracleConfig::_load()
         },
         {
             MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+            miracle_input_event_modifier_default,
             KEY_SPACE
         }
     };

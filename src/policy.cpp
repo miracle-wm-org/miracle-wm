@@ -267,9 +267,14 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         }
         else
         {
-            // We have no output! Let's add it to a list of orphans
+            // We have no output! Let's add it to a list of orphans. Such
+            // windows are considered to be in the "other" category until
+            // we have more data on them.
             orphaned_window_list.push_back(window);
-            mir::log_info("Added an orphaned window");
+            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), nullptr);
+            miral::WindowSpecification spec;
+            spec.userdata() = metadata;
+            window_manager_tools.modify_window(window, spec);
         }
 
         return;
@@ -290,7 +295,7 @@ void Policy::handle_window_ready(miral::WindowInfo &window_info)
         return;
     }
 
-    metadata->get_output()->handle_window_ready(window_info, metadata);
+    if (metadata->get_output()) metadata->get_output()->handle_window_ready(window_info, metadata);
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
@@ -302,7 +307,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
         return;
     }
 
-    metadata->get_output()->advise_focus_gained(metadata);
+    if (metadata->get_output()) metadata->get_output()->advise_focus_gained(metadata);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
@@ -314,7 +319,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
         return;
     }
 
-    metadata->get_output()->advise_focus_lost(metadata);
+    if (metadata->get_output()) metadata->get_output()->advise_focus_lost(metadata);
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo &window_info)
@@ -337,7 +342,7 @@ void Policy::advise_delete_window(const miral::WindowInfo &window_info)
         return;
     }
 
-    metadata->get_output()->advise_delete_window(metadata);
+    if (metadata->get_output()) metadata->get_output()->advise_delete_window(metadata);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -349,7 +354,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
         return;
     }
 
-    metadata->get_output()->advise_move_to(metadata, top_left);
+    if (metadata->get_output()) metadata->get_output()->advise_move_to(metadata, top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
@@ -427,7 +432,7 @@ void Policy::advise_state_change(miral::WindowInfo const& window_info, MirWindow
         return;
     }
 
-    metadata->get_output()->advise_state_change(metadata, state);
+    if (metadata->get_output()) metadata->get_output()->advise_state_change(metadata, state);
 }
 
 void Policy::handle_modify_window(
@@ -441,7 +446,7 @@ void Policy::handle_modify_window(
         return;
     }
 
-    metadata->get_output()->handle_modify_window(metadata, modifications);
+    if (metadata->get_output()) metadata->get_output()->handle_modify_window(metadata, modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo &window_info)
@@ -453,7 +458,7 @@ void Policy::handle_raise_window(miral::WindowInfo &window_info)
         return;
     }
 
-    metadata->get_output()->handle_raise_window(metadata);
+    if (metadata->get_output()) metadata->get_output()->handle_raise_window(metadata);
 }
 
 mir::geometry::Rectangle
@@ -465,12 +470,13 @@ Policy::confirm_placement_on_display(
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::log_error("confirm_placement_on_display: window lacks metadata");
+        mir::log_warning("confirm_placement_on_display: window lacks metadata");
         return new_placement;
     }
 
-    mir::geometry::Rectangle modified_placement = metadata->get_output()->confirm_placement_on_display(
-        metadata, new_state, new_placement);
+    mir::geometry::Rectangle modified_placement = metadata->get_output()
+        ? metadata->get_output()->confirm_placement_on_display(metadata, new_state, new_placement)
+        : new_placement;
     return modified_placement;
 }
 
@@ -488,7 +494,7 @@ void Policy::handle_request_move(miral::WindowInfo &window_info, const MirInputE
         return;
     }
 
-    metadata->get_output()->handle_request_move(metadata, input_event);
+    if (metadata->get_output()) metadata->get_output()->handle_request_move(metadata, input_event);
 }
 
 void Policy::handle_request_resize(
@@ -503,7 +509,7 @@ void Policy::handle_request_resize(
         return;
     }
 
-    metadata->get_output()->handle_request_resize(metadata, input_event, edge);
+    if (metadata->get_output()) metadata->get_output()->handle_request_resize(metadata, input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(

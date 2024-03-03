@@ -18,7 +18,6 @@ std::shared_ptr<miracle::WindowMetadata> miracle::window_helpers::get_metadata(c
     if (info.userdata())
         return static_pointer_cast<WindowMetadata>(info.userdata());
 
-    mir::log_error("Unable to find metadata for window info");
     return nullptr;
 }
 
@@ -29,7 +28,6 @@ miracle::window_helpers::get_metadata(const miral::Window &window, const miral::
     if (info.userdata())
         return static_pointer_cast<WindowMetadata>(info.userdata());
 
-    mir::log_error("Unable to find metadata for window");
     return nullptr;
 }
 
@@ -41,7 +39,6 @@ std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window(
     if (metadata)
         return metadata->get_tiling_node();
 
-    mir::log_error("Unable to find node for window");
     return nullptr;
 }
 
