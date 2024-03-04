@@ -543,6 +543,7 @@ void OutputContent::request_toggle_active_float()
                 tools.info_for(active_window.application()),
                 prev_spec);
             spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this);
+            spec.top_left() = geom::Point{active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20};
             tools.modify_window(active_window, spec);
 
             advise_new_window(info, WindowType::floating);
