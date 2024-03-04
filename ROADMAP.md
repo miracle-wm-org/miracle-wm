@@ -7,7 +7,7 @@ The dates attached to these releases aren't set in stone. Any release may come
 earlier if the work is done. Also, new features may be added to the release while it's
 in progress if priority changes, which may push back the release date.
 
-# 0.1.0
+# ✅ 0.1.0
 **Proof of Concept (Due: February 17th)**
 
 Features:
@@ -38,31 +38,38 @@ Features:
   - [x] Override default keybindings
   - [x] Custom keybindings
 
-# 0.2.0
+# 🚧 0.2.0
 **Stabilization + Usability (Due: April 1st)**
 
 Features:
 - [ ] Major bugs + performance
-- [ ] Configuration File
+  - [ ] No crashes after a week of daily-driving
+- [ ] Configuration
     - [x] Hot reloading
     - [ ] Display configuration
     - [ ] Resize jump
     - [x] Outer gaps
-- [ ] Floating windows overlayed
+- [ ] Floating windows
+  - [x] Floating window support (pop out of/into tiles, resizing, moving)
   - [ ] "Pin to workspace" mode
-  - [ ] Support for "picture-in-picture" mode
 - [x] I3 IPC support for workspaces
-- [ ] Highlight border around selected window (Difficult!)
-- [ ] Improve multi monitor support
+- [ ] Multi monitor support
   - [ ] Zero monitors
-  - [ ] Fix bugs for monitors going online and offline
+- [ ] Packaging
+  - [ ] Deb
+  - [ ] Fedora
+  - [ ] Arch
 
 
 # 0.3.0
 **Pre 1.0.0 Release (Due: June 1st)**
 
+This release relies on having the *Mir*'s renderer capabilities opened up to us.
+If we can override the renderer, we can put *whatever we like* on the screen.
+
 Features:
 - [ ] Full I3 IPC integration
+- [ ] Highlight border around selected window (carry over from **0.2.0**)
 - [ ] Animation (requires access to Mir renderer)
   - [ ] Window movement interpolation
   - [ ] Window size interpolation
@@ -77,6 +84,10 @@ Features:
 **Official Release (Due July 15th)**
 
 Features:
-- [ ] Major bugs and major usability
-- [ ] **IDEA**:Workspace/window overview view (similar to GNOME)
+- [ ] Bug free
+- [ ] **IDEA**: Workspace/window overview view (similar to GNOME)
 - [ ] **IDEA**: Settings app
+- [ ] **IDEA**: Context menu on window with support for actions
+- [ ] **IDEA**: Focus mode, where the focused application appears up front and center
+- [ ] **IDEA**: "Picture in picture" mode (carry over from **0.2.0**)
+- [ ] **IDEA**: A minimal default shell, including a panel, launcher, background, etc.
