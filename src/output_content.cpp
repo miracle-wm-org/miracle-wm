@@ -134,6 +134,7 @@ void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMet
         case WindowType::tiled:
         {
             metadata->get_tiling_node()->get_tree()->advise_focus_gained(metadata->get_window());
+            tools.send_tree_to_back(metadata->get_window());
             break;
         }
         case WindowType::floating:
