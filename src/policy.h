@@ -11,6 +11,7 @@
 #include <miral/external_client.h>
 #include <miral/internal_client.h>
 #include <miral/output.h>
+#include <miral/minimal_window_manager.h>
 #include <memory>
 #include <vector>
 
@@ -47,7 +48,6 @@ public:
     void advise_output_update(miral::Output const& updated, miral::Output const& original) override;
     void advise_output_delete(miral::Output const& output) override;
     void advise_state_change(miral::WindowInfo const& window_info, MirWindowState state) override;
-
     void handle_modify_window(miral::WindowInfo &window_info, const miral::WindowSpecification &modifications) override;
 
     void handle_raise_window(miral::WindowInfo &window_info) override;
@@ -83,14 +83,13 @@ private:
     WindowType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
+    miral::MinimalWindowManager floating_window_manager;
     miral::ExternalClientLauncher const external_client_launcher;
     miral::MirRunner& runner;
     std::shared_ptr<MiracleConfig> config;
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
-
-    void _add_to_output_immediately(Window&, std::shared_ptr<OutputContent>&);
 };
 }
 

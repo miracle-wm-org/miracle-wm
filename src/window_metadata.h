@@ -32,6 +32,8 @@ public:
     }
     WindowType get_type() { return type; }
     OutputContent* get_output() { return output; }
+    void set_restore_state(MirWindowState state);
+    MirWindowState consume_restore_state();
 
 private:
 
@@ -39,6 +41,7 @@ private:
     miral::Window window;
     OutputContent* output;
     std::shared_ptr<Node> tiling_node;
+    MirWindowState restore_state;
 };
 
 }

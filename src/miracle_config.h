@@ -56,6 +56,7 @@ enum DefaultKeyCommand
     MoveToWorkspace8,
     MoveToWorkspace9,
     MoveToWorkspace0,
+    ToggleFloating,
     MAX
 };
 
