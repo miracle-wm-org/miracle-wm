@@ -4,6 +4,7 @@
 #include "window_helpers.h"
 #include "workspace_manager.h"
 #include <miral/window_info.h>
+#include <miral/toolkit_event.h>
 #include <mir/log.h>
 
 using namespace miracle;
@@ -43,15 +44,8 @@ std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
 
 bool OutputContent::handle_pointer_event(const MirPointerEvent *event)
 {
-    if (active_window != Window())
-    {
-        auto metadata = window_helpers::get_metadata(active_window, tools);
-        if (metadata->get_type() == WindowType::floating)
-        {
-            if (floating_window_manager.handle_pointer_event(event))
-                return true;
-        }
-    }
+    if (floating_window_manager.handle_pointer_event(event))
+        return true;
 
     return false;
 }
