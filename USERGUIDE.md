@@ -23,11 +23,19 @@
 - `meta + f`: Toggle fullscreen on the window
 - `meta + [0-9]`: Move to workspace *n*
 - `meta + shift + [0-9]`: Move active window to workspace *n*
+- `meta + space`: Toggle selected window as "floating"
 
 # Pointer Behavior
+
+**For tiling windows**:
 - Hovering over a window will select the window
 - Windows may be minimized, maximized, or removed using the toolbar icons
 - Window CANNOT be resized or moved with the pointer
+
+**For floating windows**:
+- Windows may be minimized, maximized, removed, resized, or moved using traditional pointer behavior
+- `meta + hold left click` to move a floating window around on the screen
+- Floating windows are *always* displayed above tiled windows
 
 # Configuration File
 
@@ -56,7 +64,7 @@ struct DefaultActionOverride
       | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
       | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
       | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
-      | "move_to_workspace_9" | "move_to_workspace_0"
+      | "move_to_workspace_9" | "move_to_workspace_0" | "toggle_floating"
       
     action: "up" | "down" | "repeat" | "modifiers"; // Action will fire based on this key event
     modifiers: Modifier[]; // Modifiers required for the action to trigger

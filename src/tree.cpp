@@ -178,24 +178,20 @@ void Tree::set_output_area(geom::Rectangle const& new_area)
     root_lane->translate_by(position_diff_x, position_diff_y);
 }
 
-bool Tree::select_window_from_point(int x, int y)
+std::shared_ptr<Node> Tree::select_window_from_point(int x, int y)
 {
     if (is_active_window_fullscreen)
     {
         tools.select_active_window(active_window->get_window());
-        return true;
+        return active_window;
     }
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
     {
         return node->is_window() && node->get_logical_area().contains(geom::Point(x, y));
     });
-    if (!node)
-        return false;
 
-    if (active_window != node)
-        tools.select_active_window(node->get_window());
-    return true;
+    return node;
 }
 
 bool Tree::try_move_active_window(miracle::Direction direction)
@@ -753,14 +749,6 @@ void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, 
 void Tree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
 {
     foreach_node_internal(f, root_lane);
-}
-
-void Tree::close_active_window()
-{
-    if (active_window && active_window->is_window())
-    {
-        tools.ask_client_to_close(active_window->get_window());
-    }
 }
 
 void Tree::hide()

@@ -426,7 +426,7 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
     }
 
     sub_nodes.erase(
-        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> content) {
+        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> const& content) {
             return content == node;
         }),
         sub_nodes.end()
@@ -437,9 +437,10 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
     {
         auto dying_lane = sub_nodes[0];
         sub_nodes.clear();
-        for (auto sub_node : dying_lane->get_sub_nodes())
+        for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
-            add_window(sub_node->get_window());
+            sub_nodes.push_back(sub_node);
+            sub_node->parent = shared_from_this();
         }
         set_direction(dying_lane->get_direction());
     }
