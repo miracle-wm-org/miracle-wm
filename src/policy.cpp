@@ -308,6 +308,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
     }
 
     if (metadata->get_output()) metadata->get_output()->advise_focus_gained(metadata);
+    else window_manager_tools.raise_tree(window_info.window());
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
@@ -447,6 +448,7 @@ void Policy::handle_modify_window(
     }
 
     if (metadata->get_output()) metadata->get_output()->handle_modify_window(metadata, modifications);
+    else window_manager_tools.modify_window(metadata->get_window(), modifications);;
 }
 
 void Policy::handle_raise_window(miral::WindowInfo &window_info)
