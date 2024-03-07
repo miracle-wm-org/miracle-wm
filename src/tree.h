@@ -54,6 +54,8 @@ public:
     /// Toggle the active window between fullscreen and not fullscreen
     bool try_toggle_active_fullscreen();
 
+    bool has_fullscreen_window() { return is_active_window_fullscreen; }
+
     // Request a change to vertical window placement
     void request_vertical();
 
