@@ -128,7 +128,6 @@ void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMet
         case WindowType::tiled:
         {
             metadata->get_tiling_node()->get_tree()->advise_focus_gained(metadata->get_window());
-            tools.send_tree_to_back(metadata->get_window());
             break;
         }
         case WindowType::floating:
@@ -326,6 +325,9 @@ OutputContent::confirm_placement_on_display(
 void OutputContent::select_window_from_point(int x, int y)
 {
     auto workspace = get_active_workspace();
+    if (workspace->get_tree()->has_fullscreen_window())
+        return;
+
     auto const& floating = workspace->get_floating_windows();
     int floating_index = -1;
     for (int i = 0; i < floating.size(); i++)
@@ -526,6 +528,12 @@ void OutputContent::request_toggle_active_float()
         case WindowType::tiled:
         {
             auto tree = metadata->get_tiling_node()->get_tree();
+            if (tree->has_fullscreen_window())
+            {
+                mir::log_warning("request_toggle_active_float: cannot float fullscreen window");
+                return;
+            }
+
             tree->advise_delete_window(active_window);
 
             auto& prev_info = tools.info_for(active_window);
