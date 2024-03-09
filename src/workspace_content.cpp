@@ -28,7 +28,7 @@ std::shared_ptr<Tree> WorkspaceContent::get_tree() const
     return tree;
 }
 
-void WorkspaceContent::show()
+void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& pinned_windows)
 {
     tree->show();
 
@@ -45,12 +45,18 @@ void WorkspaceContent::show()
         spec.state() = metadata->consume_restore_state();
         tools.modify_window(window, spec);
     }
+
+    for (auto const& metadata: pinned_windows)
+    {
+        floating_windows.push_back(metadata->get_window());
+    }
 }
 
-void WorkspaceContent::hide()
+std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
 {
     tree->hide();
 
+    std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
     for (auto const& window : floating_windows)
     {
         auto metadata = window_helpers::get_metadata(window, tools);
@@ -60,11 +66,24 @@ void WorkspaceContent::hide()
             continue;
         }
 
+        if (metadata->get_is_pinned())
+        {
+            pinned_windows.push_back(metadata);
+            break;
+        }
+
         metadata->set_restore_state(tools.info_for(window).state());
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_hidden;
         tools.modify_window(window, spec);
     }
+
+    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&](const auto&x) {
+        auto metadata = window_helpers::get_metadata(x, tools);
+        return std::find(pinned_windows.begin(), pinned_windows.end(), metadata) != pinned_windows.end();
+    }), floating_windows.end());
+
+    return pinned_windows;
 }
 
 bool WorkspaceContent::has_floating_window(miral::Window const& window)

@@ -7,7 +7,6 @@
 #include <miral/external_client.h>
 #include <miral/runner.h>
 #include <miral/window_management_options.h>
-#include <miral/internal_client.h>
 #include <miral/keymap.h>
 #include <miral/x11_support.h>
 #include <miral/wayland_extensions.h>

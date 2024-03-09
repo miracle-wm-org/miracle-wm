@@ -24,6 +24,7 @@
 - `meta + [0-9]`: Move to workspace *n*
 - `meta + shift + [0-9]`: Move active window to workspace *n*
 - `meta + space`: Toggle selected window as "floating"
+- `meta + shift + p`: Toggle whether a floating window is pinned to a workspace or not
 
 # Pointer Behavior
 
@@ -64,7 +65,7 @@ struct DefaultActionOverride
       | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
       | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
       | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
-      | "move_to_workspace_9" | "move_to_workspace_0" | "toggle_floating"
+      | "move_to_workspace_9" | "move_to_workspace_0" | "toggle_floating" | "toggle_pinned_to_workspace"
       
     action: "up" | "down" | "repeat" | "modifiers"; // Action will fire based on this key event
     modifiers: Modifier[]; // Modifiers required for the action to trigger
