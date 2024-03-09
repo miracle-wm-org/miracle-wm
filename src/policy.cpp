@@ -139,70 +139,70 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return true;
         case SelectWorkspace1:
             if (active_output) workspace_manager.request_workspace(active_output, 1);
-            break;
+            return true;
         case SelectWorkspace2:
             if (active_output) workspace_manager.request_workspace(active_output, 2);
-            break;
+            return true;
         case SelectWorkspace3:
             if (active_output) workspace_manager.request_workspace(active_output, 3);
-            break;
+            return true;
         case SelectWorkspace4:
             if (active_output) workspace_manager.request_workspace(active_output, 4);
-            break;
+            return true;
         case SelectWorkspace5:
             if (active_output) workspace_manager.request_workspace(active_output, 5);
-            break;
+            return true;
         case SelectWorkspace6:
             if (active_output) workspace_manager.request_workspace(active_output, 6);
-            break;
+            return true;
         case SelectWorkspace7:
             if (active_output) workspace_manager.request_workspace(active_output, 7);
-            break;
+            return true;
         case SelectWorkspace8:
             if (active_output) workspace_manager.request_workspace(active_output, 8);
-            break;
+            return true;
         case SelectWorkspace9:
             if (active_output) workspace_manager.request_workspace(active_output, 9);
-            break;
+            return true;
         case SelectWorkspace0:
             if (active_output) workspace_manager.request_workspace(active_output, 0);
-            break;
+            return true;
         case MoveToWorkspace1:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 1);
-            break;
+            return true;
         case MoveToWorkspace2:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 2);
-            break;
+            return true;
         case MoveToWorkspace3:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 3);
-            break;
+            return true;
         case MoveToWorkspace4:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 4);
-            break;
+            return true;
         case MoveToWorkspace5:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 5);
-            break;
+            return true;
         case MoveToWorkspace6:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 6);
-            break;
+            return true;
         case MoveToWorkspace7:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 7);
-            break;
+            return true;
         case MoveToWorkspace8:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 8);
-            break;
+            return true;
         case MoveToWorkspace9:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 9);
-            break;
+            return true;
         case MoveToWorkspace0:
             if (active_output) workspace_manager.move_active_to_workspace(active_output, 0);
-            break;
+            return true;
         case ToggleFloating:
             if (active_output) active_output->request_toggle_active_float();
-            break;
+            return true;
         case TogglePinnedToWorkspace:
             if (active_output) active_output->toggle_pinned_to_workspace();
-            break;
+            return true;
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
