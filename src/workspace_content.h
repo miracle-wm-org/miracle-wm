@@ -9,6 +9,7 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class Tree;
+class WindowMetadata;
 
 class WorkspaceContent
 {
@@ -21,8 +22,8 @@ public:
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<Tree> get_tree() const;
-    void show();
-    void hide();
+    void show(std::vector<std::shared_ptr<WindowMetadata>> const&);
+    std::vector<std::shared_ptr<WindowMetadata>> hide();
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);

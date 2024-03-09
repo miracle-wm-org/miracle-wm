@@ -199,6 +199,10 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             break;
         case ToggleFloating:
             if (active_output) active_output->request_toggle_active_float();
+            break;
+        case TogglePinnedToWorkspace:
+            if (active_output) active_output->toggle_pinned_to_workspace();
+            break;
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;

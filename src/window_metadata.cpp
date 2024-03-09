@@ -25,3 +25,11 @@ MirWindowState WindowMetadata::consume_restore_state()
 {
     return restore_state;
 }
+
+void WindowMetadata::toggle_pin_to_desktop()
+{
+    if (type == WindowType::floating)
+    {
+        is_pinned = !is_pinned;
+    }
+}
