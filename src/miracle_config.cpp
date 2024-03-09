@@ -42,8 +42,23 @@ MiracleConfig::MiracleConfig(miral::MirRunner& runner)
 
 void MiracleConfig::_load()
 {
+
     std::lock_guard<std::mutex> lock(mutex);
-    mir::log_info("Configuration is loading");
+
+    // Reset all
+    primary_modifier = mir_input_event_modifier_meta;
+    custom_key_commands = {};
+    inner_gaps_x = 10;
+    inner_gaps_y = 10;
+    outer_gaps_x = 10;
+    outer_gaps_y = 10;
+    startup_apps = {};
+    terminal = "miracle-wm-sensible-terminal";
+    desired_terminal = "";
+    resize_jump = 50;
+
+    // Load the new configuration
+    mir::log_info("Configuration is loading...");
     YAML::Node config = YAML::LoadFile(config_path);
     if (config["action_key"])
     {
@@ -533,6 +548,7 @@ void MiracleConfig::_load()
         }
     }
 
+    // Terminal
     if (config["terminal"])
     {
         terminal = config["terminal"].as<std::string>();
@@ -542,6 +558,12 @@ void MiracleConfig::_load()
     {
         desired_terminal = terminal.value();
         terminal.reset();
+    }
+
+    // Resizing
+    if (config["resize_jump"])
+    {
+        resize_jump = config["resize_jump"].as<int>();
     }
 }
 
@@ -739,4 +761,9 @@ std::optional<std::string> const& MiracleConfig::get_terminal_command() const
         notify_notification_show(n, nullptr);
     }
     return terminal;
+}
+
+int MiracleConfig::get_resize_jump() const
+{
+    return resize_jump;
 }
