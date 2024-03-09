@@ -99,8 +99,7 @@ bool Tree::try_resize_active_window(miracle::Direction direction)
         return false;
     }
 
-    // TODO: We have a hardcoded resize amount
-    _handle_resize_request(active_window, direction, 50);
+    _handle_resize_request(active_window, direction, config->get_resize_jump());
     return true;
 }
 
