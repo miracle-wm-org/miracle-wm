@@ -180,7 +180,7 @@ void MiracleConfig::_load()
                 key_command = DefaultKeyCommand::MoveToWorkspace0;
             else if (name == "toggle_floating")
                 key_command = DefaultKeyCommand::ToggleFloating;
-            else if (name == "toggle_pined_to_workspace")
+            else if (name == "toggle_pinned_to_workspace")
                 key_command = DefaultKeyCommand::TogglePinnedToWorkspace;
             else {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
