@@ -379,18 +379,19 @@ bool OutputContent::advise_workspace_active(int key)
         if (workspace->get_workspace() == key)
         {
             std::shared_ptr<WorkspaceContent> previous_workspace = nullptr;
+            std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
             for (auto& other : workspaces)
             {
                 if (other->get_workspace() == active_workspace)
                 {
                     previous_workspace = other;
-                    other->hide();
+                    pinned_windows = other->hide();
                     break;
                 }
             }
 
             active_workspace = key;
-            workspace->show();
+            workspace->show(pinned_windows);
 
             // Important: Delete the workspace only after we have shown the new one because we may want
             // to move a node to the new workspace.
@@ -481,6 +482,18 @@ void OutputContent::toggle_resize_mode()
 void OutputContent::toggle_fullscreen()
 {
     get_active_tree()->try_toggle_active_fullscreen();
+}
+
+void OutputContent::toggle_pinned_to_workspace()
+{
+    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    if (!metadata)
+    {
+        mir::log_error("toggle_pinned_to_workspace: metadata not found");
+        return;
+    }
+
+    metadata->toggle_pin_to_desktop();
 }
 
 void OutputContent::update_area(geom::Rectangle const& new_area)
