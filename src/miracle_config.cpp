@@ -40,9 +40,21 @@ MiracleConfig::MiracleConfig(miral::MirRunner& runner)
     _watch(runner);
 }
 
+MiracleConfig::MiracleConfig(miral::MirRunner& runner, std::string const& path)
+    : runner{runner},
+      config_path{path}
+{
+    {
+        std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+    }
+
+    mir::log_info("Configuration file path is: %s", config_path.c_str());
+    _load();
+    _watch(runner);
+}
+
 void MiracleConfig::_load()
 {
-
     std::lock_guard<std::mutex> lock(mutex);
 
     // Reset all
@@ -106,7 +118,23 @@ void MiracleConfig::_load()
                 continue;
             }
 
-            auto name = sub_node["name"].as<std::string>();
+            std::string name;
+            std::string action;
+            std::string key;
+            YAML::Node modifiers_node;
+            try
+            {
+                name = sub_node["name"].as<std::string>();
+                action = sub_node["action"].as<std::string>();
+                key = sub_node["key"].as<std::string>();
+                modifiers_node = sub_node["modifiers"];
+            }
+            catch (YAML::BadConversion const& e)
+            {
+                mir::log_error("Unable to parse default_action_override[%d]: %s", i, e.msg.c_str());
+                continue;
+            }
+
             DefaultKeyCommand key_command;
             if (name == "terminal")
                 key_command = DefaultKeyCommand::Terminal;
@@ -187,7 +215,6 @@ void MiracleConfig::_load()
                 continue;
             }
 
-            auto action = sub_node["action"].as<std::string>();
             MirKeyboardAction keyboard_action;
             if (action == "up")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
@@ -202,15 +229,12 @@ void MiracleConfig::_load()
                 continue;
             }
 
-            auto key = sub_node["key"].as<std::string>();
             auto code = libevdev_event_code_from_name(EV_KEY, key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
             if (code < 0)
             {
                 mir::log_error("default_action_overrides: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h", key.c_str());
                 continue;
             }
-
-            auto modifiers_node = sub_node["modifiers"];
 
             if (!modifiers_node.IsSequence())
             {
@@ -219,11 +243,24 @@ void MiracleConfig::_load()
             }
 
             uint modifiers = 0;
+            bool is_invalid = false;
             for (auto j = 0; j < modifiers_node.size(); j++)
             {
-                auto modifier = modifiers_node[j].as<std::string>();
-                modifiers = modifiers | parse_modifier(modifier);
+                try
+                {
+                    auto modifier = modifiers_node[j].as<std::string>();
+                    modifiers = modifiers | parse_modifier(modifier);
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse modifier for default_action_overrides[%d]: %s", i, e.msg.c_str());
+                    is_invalid = true;
+                    break;
+                }
             }
+
+            if (is_invalid)
+                continue;
 
             key_commands[key_command].push_back({
                 keyboard_action,
@@ -465,9 +502,24 @@ void MiracleConfig::_load()
                 continue;
             }
 
+            std::string command;
+            std::string action;
+            std::string key;
+            YAML::Node modifiers_node;
+            try
+            {
+                command = sub_node["command"].as<std::string>();
+                action = sub_node["action"].as<std::string>();
+                key = sub_node["key"].as<std::string>();
+                modifiers_node = sub_node["modifiers"];
+            }
+            catch (YAML::BadConversion const& e)
+            {
+                mir::log_error("Unable to parse custom_actions[%d]: %s", i, e.msg.c_str());
+                continue;
+            }
+
             // TODO: Copy & paste here
-            auto command = sub_node["command"].as<std::string>();
-            auto action = sub_node["action"].as<std::string>();
             MirKeyboardAction keyboard_action;
             if (action == "up")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
@@ -482,7 +534,6 @@ void MiracleConfig::_load()
                 continue;
             }
 
-            auto key = sub_node["key"].as<std::string>();
             auto code = libevdev_event_code_from_name(EV_KEY,
                                                       key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
             if (code < 0)
@@ -493,8 +544,6 @@ void MiracleConfig::_load()
                 continue;
             }
 
-            auto modifiers_node = sub_node["modifiers"];
-
             if (!modifiers_node.IsSequence())
             {
                 mir::log_error("custom_actions: Provided modifiers is not an array");
@@ -502,11 +551,24 @@ void MiracleConfig::_load()
             }
 
             uint modifiers = 0;
+            bool is_invalid = false;
             for (auto j = 0; j < modifiers_node.size(); j++)
             {
-                auto modifier = modifiers_node[j].as<std::string>();
-                modifiers = modifiers | parse_modifier(modifier);
+                try
+                {
+                    auto modifier = modifiers_node[j].as<std::string>();
+                    modifiers = modifiers | parse_modifier(modifier);
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse modifier for custom_actions[%d]: %s", i, e.msg.c_str());
+                    is_invalid = true;
+                    break;
+                }
             }
+
+            if (is_invalid)
+                continue;
 
             custom_key_commands.push_back({
                 keyboard_action,
@@ -520,45 +582,90 @@ void MiracleConfig::_load()
     // Gap sizes
     if (config["inner_gaps"])
     {
-        if (config["inner_gaps"]["x"])
-            inner_gaps_x = config["inner_gaps"]["x"].as<int>();
-        if (config["inner_gaps"]["y"])
-            inner_gaps_y = config["inner_gaps"]["y"].as<int>();
+        int new_inner_gaps_x = inner_gaps_x;
+        int new_inner_gaps_y = inner_gaps_y;
+        try
+        {
+            if (config["inner_gaps"]["x"])
+                new_inner_gaps_x = config["inner_gaps"]["x"].as<int>();
+            if (config["inner_gaps"]["y"])
+                new_inner_gaps_y = config["inner_gaps"]["y"].as<int>();
+
+            inner_gaps_x = new_inner_gaps_x;
+            inner_gaps_y = new_inner_gaps_y;
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse inner_gaps: %s", e.msg.c_str());
+        }
     }
     if (config["outer_gaps"])
     {
-        if (config["outer_gaps"]["x"])
-            outer_gaps_x = config["outer_gaps"]["x"].as<int>();
-        if (config["outer_gaps"]["y"])
-            outer_gaps_y = config["outer_gaps"]["y"].as<int>();
+        try
+        {
+            int new_outer_gaps_x = outer_gaps_x;
+            int new_outer_gaps_y = outer_gaps_y;
+            if (config["outer_gaps"]["x"])
+                new_outer_gaps_x = config["outer_gaps"]["x"].as<int>();
+            if (config["outer_gaps"]["y"])
+                new_outer_gaps_y = config["outer_gaps"]["y"].as<int>();
+
+            outer_gaps_x = new_outer_gaps_x;
+            outer_gaps_y = new_outer_gaps_y;
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse outer_gaps: %s", e.msg.c_str());
+        }
     }
 
     // Startup Apps
     if (config["startup_apps"])
     {
-        for (auto const& node : config["startup_apps"])
+        if (!config["startup_apps"].IsSequence())
         {
-            if (!node["command"])
+            mir::log_error("startup_apps is not an array");
+        }
+        else
+        {
+            for (auto const& node : config["startup_apps"])
             {
-                mir::log_error("startup_apps: app lacks a command");
-                continue;
-            }
+                if (!node["command"])
+                {
+                    mir::log_error("startup_apps: app lacks a command");
+                    continue;
+                }
 
-            auto command = node["command"].as<std::string>();
-            bool restart_on_death = false;
-            if (node["restart_on_death"])
-            {
-                restart_on_death = node["restart_on_death"].as<bool>();
-            }
+                try
+                {
+                    auto command = node["command"].as<std::string>();
+                    bool restart_on_death = false;
+                    if (node["restart_on_death"])
+                    {
+                        restart_on_death = node["restart_on_death"].as<bool>();
+                    }
 
-            startup_apps.push_back({std::move(command), restart_on_death});
+                    startup_apps.push_back({std::move(command), restart_on_death});
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse startup_apps: %s", e.msg.c_str());
+                }
+            }
         }
     }
 
     // Terminal
     if (config["terminal"])
     {
-        terminal = config["terminal"].as<std::string>();
+        try
+        {
+            terminal = config["terminal"].as<std::string>();
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse terminal: %s", e.msg.c_str());
+        }
     }
 
     if (terminal && !program_exists(terminal.value()))
@@ -570,7 +677,14 @@ void MiracleConfig::_load()
     // Resizing
     if (config["resize_jump"])
     {
-        resize_jump = config["resize_jump"].as<int>();
+        try
+        {
+            resize_jump = config["resize_jump"].as<int>();
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse resize_jump: %s", e.msg.c_str());
+        }
     }
 }
 

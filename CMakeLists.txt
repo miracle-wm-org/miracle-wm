@@ -24,8 +24,7 @@ pkg_check_modules(LIBNOTIFY REQUIRED IMPORTED_TARGET libnotify)
 
 include(GNUInstallDirs)
 
-add_executable(miracle-wm
-    src/main.cpp
+add_library(miracle-wm-implementation
     src/policy.cpp
     src/tree.cpp
     src/node.cpp
@@ -42,9 +41,17 @@ add_executable(miracle-wm
     src/workspace_content.cpp
 )
 
-target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm               ${MIRAL_LDFLAGS}
+add_executable(miracle-wm
+    src/main.cpp
+)
+
+target_include_directories(miracle-wm-implementation PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(     miracle-wm-implementation               ${MIRAL_LDFLAGS}
     PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json)
+
+target_link_libraries(miracle-wm miracle-wm-implementation)
+target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(miracle-wm ${MIRAL_LDFLAGS})
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_BINDIR}
