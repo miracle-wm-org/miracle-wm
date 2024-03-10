@@ -508,7 +508,7 @@ void MiracleConfig::_load()
             YAML::Node modifiers_node;
             try
             {
-                command = sub_node["name"].as<std::string>();
+                command = sub_node["command"].as<std::string>();
                 action = sub_node["action"].as<std::string>();
                 key = sub_node["key"].as<std::string>();
                 modifiers_node = sub_node["modifiers"];
