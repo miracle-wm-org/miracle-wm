@@ -16,7 +16,9 @@ Homepage: https://github.com/mattkae/miracle-wm
 
 Package: miracle-wm
 Architecture: any
-Depends: libmiral6
+Depends: libmiral6,
+         mir-graphics-drivers-desktop,
+         libnotify4
 Description: miracle-wm is a Wayland compositor based on Mir.
  It features a tiling window manager at its core, very much
  in the style of i3 and sway. The intention is to build a
