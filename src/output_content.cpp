@@ -378,6 +378,9 @@ bool OutputContent::advise_workspace_active(int key)
     {
         if (workspace->get_workspace() == key)
         {
+            if (active_workspace == key)
+                return true;
+
             std::shared_ptr<WorkspaceContent> previous_workspace = nullptr;
             std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
             for (auto& other : workspaces)
