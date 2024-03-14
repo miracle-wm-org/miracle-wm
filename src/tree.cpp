@@ -66,6 +66,10 @@ std::shared_ptr<Node> Tree::advise_new_window(miral::WindowInfo const& window_in
         tools.select_active_window(window_info.window());
         advise_fullscreen_window(window_info.window());
     }
+    else
+    {
+        tools.send_tree_to_back(window_info.window());
+    }
 
     return node;
 }
@@ -95,8 +99,7 @@ bool Tree::try_resize_active_window(miracle::Direction direction)
         return false;
     }
 
-    // TODO: We have a hardcoded resize amount
-    _handle_resize_request(active_window, direction, 50);
+    _handle_resize_request(active_window, direction, config->get_resize_jump());
     return true;
 }
 
@@ -344,13 +347,17 @@ void Tree::advise_focus_gained(miral::Window& window)
     }
 
     active_window = found_node;
+    if (active_window && is_active_window_fullscreen)
+        tools.raise_tree(window);
+    else
+        tools.send_tree_to_back(window);
 }
 
 void Tree::advise_focus_lost(miral::Window& window)
 {
     is_resizing = false;
 
-    if (active_window != nullptr && active_window->get_window() == window)
+    if (active_window != nullptr && active_window->get_window() == window && !is_active_window_fullscreen)
         active_window = nullptr;
 }
 
@@ -628,6 +635,7 @@ bool Tree::advise_fullscreen_window(miral::Window& window)
         return false;
 
     tools.select_active_window(node->get_window());
+    tools.raise_tree(node->get_window());
     is_active_window_fullscreen = true;
     is_resizing = false;
     return true;
@@ -640,7 +648,10 @@ bool Tree::advise_restored_window(miral::Window& window)
         return false;
 
     if (node == active_window && is_active_window_fullscreen)
+    {
         is_active_window_fullscreen = false;
+        constrain(active_window->get_window());
+    }
 
     return true;
 }

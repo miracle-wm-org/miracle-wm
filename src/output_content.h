@@ -64,6 +64,7 @@ public:
     void request_horizontal();
     void toggle_resize_mode();
     void toggle_fullscreen();
+    void toggle_pinned_to_workspace();
     void update_area(geom::Rectangle const& area);
     std::vector<miral::Window> collect_all_windows() const;
     void request_toggle_active_float();

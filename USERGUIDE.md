@@ -24,6 +24,7 @@
 - `meta + [0-9]`: Move to workspace *n*
 - `meta + shift + [0-9]`: Move active window to workspace *n*
 - `meta + space`: Toggle selected window as "floating"
+- `meta + shift + p`: Toggle whether a floating window is pinned to a workspace or not
 
 # Pointer Behavior
 
@@ -64,7 +65,7 @@ struct DefaultActionOverride
       | "select_workspace_7" | "select_workspace_8" | "select_workspace_9" | "select_workspace_0"
       | "move_to_workspace_1" | "move_to_workspace_2" | "move_to_workspace_3" | "move_to_workspace_4"
       | "move_to_workspace_5" | "move_to_workspace_6" | "move_to_workspace_7" | "move_to_workspace_8"
-      | "move_to_workspace_9" | "move_to_workspace_0" | "toggle_floating"
+      | "move_to_workspace_9" | "move_to_workspace_0" | "toggle_floating" | "toggle_pinned_to_workspace"
       
     action: "up" | "down" | "repeat" | "modifiers"; // Action will fire based on this key event
     modifiers: Modifier[]; // Modifiers required for the action to trigger
@@ -106,15 +107,16 @@ struct Vector2
 ## Definition
 With those types defined, the following table defines the allowed key/value pairs:
 
-| Key                      | Default       | Type                  | Description                                                                                                                                                                                                                                                            |
-|--------------------------|---------------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| action_key               | `meta`        | `Modifier`            | The default key that is used to initate any action.                                                                                                                                                                                                                    |
-| default_action_overrides | `[]`          | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
-| custom_actions           | []            | `CustomAction[]`      | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
-| inner_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gaps in pixels between windows                                                                                                                                                                                                                             |                                                                                                                                                                                                      |
-| outer_gaps               | `x: 10, y: 10` | `Vector2`               | Size of the gap between the window group and the edge of the screen in pixels                                                                                                                                                                                          |                                                                                                                                                                                                                 |
-| startup_apps             | []            | `StartupApp[]`        | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
-| terminal | `"miracle-mw-sensible-terminal"` | `String` | The command used when launching a terminal. Defaults to a script that attempts to find a suitable terminal, based on `i3-sensible-terminal`                                                                                                                             |
+| Key                      | Default                         | Type                      | Description                                                                                                                                                                                                                                                            |
+|--------------------------|---------------------------------|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| action_key               | `meta`                          | `Modifier`                | The default key that is used to initate any action.                                                                                                                                                                                                                    |
+| default_action_overrides | `[]`                            | `DefaultActionOverride[]` | A list overrides to apply to built-in actions. Actions may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action defined in [Default Key Commands](#default-key-commands) |
+| custom_actions           | []                              | `CustomAction[]`          | A list of custom applications that I user can execute. These actions always have precedence over built-in actions.                                                                                                                                                     |
+| inner_gaps               | `x: 10, y: 10`                  | `Vector2`                 | Size of the gaps in pixels between windows                                                                                                                                                                                                                             |                                                                                                                                                                                                      |
+| outer_gaps               | `x: 10, y: 10`                  | `Vector2`                 | Size of the gap between the window group and the edge of the screen in pixels                                                                                                                                                                                          |                                                                                                                                                                                                                 |
+| startup_apps             | []                              | `StartupApp[]`            | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
+| terminal                 | `"miracle-mw-sensible-terminal"` | `String`                  | The command used when launching a terminal. Defaults to a script that attempts to find a suitable terminal, based on `i3-sensible-terminal`                                                                                                                            |
+| resize_jump              | 50                              | `int`                     | Jump in pixels for each resize request.                                                                                                                                                                                                                                |
 
 
 ## Example

@@ -57,6 +57,7 @@ enum DefaultKeyCommand
     MoveToWorkspace9,
     MoveToWorkspace0,
     ToggleFloating,
+    TogglePinnedToWorkspace,
     MAX
 };
 
@@ -85,6 +86,7 @@ class MiracleConfig
 {
 public:
     MiracleConfig(miral::MirRunner&);
+    MiracleConfig(miral::MirRunner&, std::string const&);
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
     CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
@@ -94,6 +96,7 @@ public:
     [[nodiscard]] int get_outer_gaps_y() const;
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
     [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
+    [[nodiscard]] int get_resize_jump() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -132,6 +135,7 @@ private:
     std::vector<StartupApp> startup_apps;
     std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
     std::string desired_terminal = "";
+    int resize_jump = 50;
 };
 }
 

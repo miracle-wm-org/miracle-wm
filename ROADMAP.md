@@ -47,11 +47,11 @@ Features:
 - [ ] Configuration
     - [x] Hot reloading
     - [ ] Display configuration
-    - [ ] Resize jump
+    - [x] Resize jump
     - [x] Outer gaps
-- [ ] Floating windows
+- [x] Floating windows
   - [x] Floating window support (pop out of/into tiles, resizing, moving)
-  - [ ] "Pin to workspace" mode
+  - [x] "Pin to workspace" mode
 - [x] I3 IPC support for workspaces
 - [ ] Multi monitor support
   - [ ] Zero monitors
