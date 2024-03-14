@@ -15,6 +15,13 @@ jobs:
 
     timeout-minutes: 30
 
+    strategy:
+      matrix:
+        platform:
+          - amd64
+          - armhf
+          - arm64
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
