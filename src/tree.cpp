@@ -617,6 +617,15 @@ void Tree::_handle_node_remove(std::shared_ptr<Node> const& node)
     {
         parent->remove_node(node);
     }
+
+    for (auto it = nodes_to_resurrect.begin(); it != nodes_to_resurrect.end(); it++)
+    {
+        if (it->node == node)
+        {
+            nodes_to_resurrect.erase(it);
+            break;
+        }
+    }
 }
 
 void Tree::recalculate_root_node_area()

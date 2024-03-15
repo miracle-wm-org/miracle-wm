@@ -168,6 +168,15 @@ void OutputContent::advise_delete_window(const std::shared_ptr<miracle::WindowMe
         }
         case WindowType::floating:
             floating_window_manager.advise_delete_window(tools.info_for(metadata->get_window()));
+            // TODO: There really should be a mapping from a floating window back to its workspace
+            for (auto& workspace : workspaces)
+            {
+                if (workspace->has_floating_window(metadata->get_window()))
+                {
+                    workspace->remove_floating_window(metadata->get_window());
+                    break;
+                }
+            }
             break;
         default:
             mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
