@@ -15,12 +15,18 @@ Please see the [roadmap](./ROADMAP.md) document for the current status and direc
 ![miracle in action](./resources/screenshot1.png "miracle in action")
 
 # Install
-```
+```sh
+# snap
 sudo snap install miracle-wm --classic
+
+# deb (jammy, mantic, or noble)
+sudo add-apt-repository ppa:matthew-kosarek/miracle-wm
+sudo apt update
+sudo apt install miracle-wm
 ```
 
 Or for the nightly build:
-```
+```sh
 sudo snap install miracle-wm --classic --edge
 ```
 
@@ -28,8 +34,6 @@ sudo snap install miracle-wm --classic --edge
 > While the project is only built as a snap at this moment, I am not allergic to other packaging formats, just perhaps
 > too lazy to implement them at this moment. I will happily accept contributions in this domain.
 
-# Usage
-See the [user guide](USERGUIDE.md) for info on how to use `miracle-wm`.
 
 # Building
 **From Source**:
@@ -66,3 +70,6 @@ WAYLAND_DISPLAY=wayland-98 miracle-wm
 ```
 
 Note that this is only useful if you want to test-drive the window manager or do some development on it for yourself.
+
+# Usage
+See the [user guide](USERGUIDE.md) for info on how to use `miracle-wm`.
