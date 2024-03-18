@@ -68,7 +68,6 @@ parts:
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
-      - libfreetype6
     prime:
       - -lib/udev
       - -usr/doc

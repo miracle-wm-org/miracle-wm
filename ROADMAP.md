@@ -56,7 +56,7 @@ Features:
 - [ ] Multi monitor support
   - [ ] Zero monitors
 - [ ] Packaging
-  - [ ] Deb
+  - [x] Deb (jammy, mantic, noble, multi-architecture)
   - [ ] Fedora
   - [ ] Arch
 
