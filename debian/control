@@ -1,0 +1,26 @@
+Source: miracle-wm
+Section: devel
+Priority: optional
+Maintainer: Matthew Kosarek <matthew@matthewkosarek.xyz>
+Build-Depends: cmake,
+               pkg-config,
+               build-essential,
+               libmiral-dev,
+               libgtest-dev,
+               libyaml-cpp-dev,
+               libglib2.0-dev,
+               libevdev-dev,
+               nlohmann-json3-dev,
+               libnotify-dev
+Homepage: https://github.com/mattkae/miracle-wm
+
+Package: miracle-wm
+Architecture: any
+Depends: libmiral6,
+         mir-graphics-drivers-desktop,
+         libnotify4
+Description: miracle-wm is a Wayland compositor based on Mir.
+ It features a tiling window manager at its core, very much
+ in the style of i3 and sway. The intention is to build a
+ compositor that is flashier and more feature-rich than
+ either of those compositors, like swayfx.
