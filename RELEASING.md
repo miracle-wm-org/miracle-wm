@@ -20,16 +20,16 @@ TODO: Implement https://github.com/mattkae/miracle-wm/issues/59 to fix the weird
 ## Step 3: Deb Release
 1. Clone the repo (make sure that the folder is called `miracle-wm`)
 2. Update `debian/changelog` with:
-    - Version `X.Y.Z`
+    - Version `X.Y.Z-distro` (where `distro` is "jammy", "noble", or "mantic")
     - The same content as you in the Github release
     - A correct current timestamp
+    - `jammy` as the release (repeat with `mantic` and `noble`)
 3. Next:
 ```sh
 cd miracle-wm
-rm -rf build
-debuild -S -sd
-cd ..
-dput ppa:matthew-kosarek/miracle-wm miracle-*_source.changes
+./tools/publish-ppa.sh <X.Y.Z> <DISTRO>
 ```
 4. Navigate to https://launchpad.net/~matthew-kosarek/+archive/ubuntu/miracle-wm
 5. Wait for the CI to finish, and the package should be ready
+
+Note that you should rebuild for `mantic` and `noble`. Follow the instructions to make sure that it uploads.
