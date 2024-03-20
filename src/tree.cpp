@@ -659,6 +659,7 @@ bool Tree::advise_restored_window(miral::Window& window)
     if (node == active_window && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
+        active_window->set_logical_area(active_window->get_logical_area());
         constrain(active_window->get_window());
     }
 
