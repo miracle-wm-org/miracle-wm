@@ -102,6 +102,8 @@ public:
     std::shared_ptr<Node> get_parent() const { return parent; }
     std::vector<std::shared_ptr<Node>> const& get_sub_nodes() const { return sub_nodes; }
     Tree* get_tree() { return tree; }
+    /// Recalculates the size of the nodes in the lane.
+    void refit_node_to_area();
 
 private:
     std::shared_ptr<Node> parent;
@@ -124,8 +126,6 @@ private:
         bool has_right_neighbor,
         bool has_bottom_neighbor,
         std::shared_ptr<MiracleConfig> const& config);
-    /// Recalculates the size of the nodes in the lane.
-    void _refit_node_to_area();
     bool _has_right_neighbor() const;
     bool _has_bottom_neighbor() const;
 };

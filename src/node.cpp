@@ -156,7 +156,7 @@ geom::Rectangle Node::create_new_node_position(int index)
             [&](int index) { return sub_nodes[index]->get_logical_area().size.width.as_int();},
             [&](int index) { return sub_nodes[index]->get_logical_area().top_left.x.as_int();},
             [&](int index, int size, int pos) {
-                geom::Rectangle node_logical_area = {
+                sub_nodes[index]->pending_logical_rect = {
                     geom::Point{
                         pos,
                         placement_area.top_left.y.as_int()
@@ -165,7 +165,6 @@ geom::Rectangle Node::create_new_node_position(int index)
                         size,
                         placement_area.size.height.as_int()
                     }};
-                sub_nodes[index]->set_logical_area(node_logical_area);
             });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
@@ -177,8 +176,6 @@ geom::Rectangle Node::create_new_node_position(int index)
                 placement_area.size.height.as_int()
             }};
         pending_logical_rect = new_node_logical_rect;
-
-
 
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
@@ -197,7 +194,7 @@ geom::Rectangle Node::create_new_node_position(int index)
             [&](int index) { return sub_nodes[index]->get_logical_area().size.height.as_int();},
             [&](int index) { return sub_nodes[index]->get_logical_area().top_left.y.as_int();},
             [&](int index, int size, int pos) {
-                geom::Rectangle node_logical_area = {
+                sub_nodes[index]->pending_logical_rect =  {
                     geom::Point{
                         placement_area.top_left.x.as_int(),
                         pos
@@ -206,7 +203,6 @@ geom::Rectangle Node::create_new_node_position(int index)
                         placement_area.size.width.as_int(),
                         size
                     }};
-                sub_nodes[index]->set_logical_area(node_logical_area);
             });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
@@ -245,10 +241,18 @@ std::shared_ptr<Node> Node::add_window(miral::Window& new_window)
 
     sub_nodes.insert(sub_nodes.begin() + pending_index, node);
     pending_index = -1;
+
+    for (auto& other_node : sub_nodes)
+    {
+        if (other_node == node)
+            continue;
+        other_node->set_logical_area(other_node->pending_logical_rect);
+    }
+
     return node;
 }
 
-void Node::_refit_node_to_area()
+void Node::refit_node_to_area()
 {
     auto placement_area = get_logical_area();
     if (direction == NodeLayoutDirection::horizontal)
@@ -414,7 +418,7 @@ void Node::insert_node(std::shared_ptr<Node> const& node, int index)
     node->parent = shared_from_this();
     node->set_logical_area(pending_logical_rect);
     sub_nodes.insert(sub_nodes.begin() + index, node);
-    _refit_node_to_area();
+    refit_node_to_area();
     constrain();
 }
 
@@ -456,7 +460,7 @@ void Node::remove_node(std::shared_ptr<Node> const& node)
         set_direction(dying_lane->get_direction());
     }
 
-    _refit_node_to_area();
+    refit_node_to_area();
     constrain();
 }
 
@@ -513,7 +517,7 @@ void Node::scale_area(double x_scale, double y_scale)
         node->scale_area(x_scale, y_scale);
     }
 
-    _refit_node_to_area();
+    refit_node_to_area();
     constrain();
 }
 
@@ -526,7 +530,7 @@ void Node::translate_by(int x, int y)
         node->translate_by(x, y);
     }
 
-    _refit_node_to_area();
+    refit_node_to_area();
     constrain();
 }
 
