@@ -66,7 +66,11 @@ geom::Rectangle Node::get_logical_area()
 
 geom::Rectangle Node::get_visible_area()
 {
-    return _get_visible_from_logical(get_logical_area(), config);
+    return _get_visible_from_logical(
+        get_logical_area(),
+        _has_right_neighbor(),
+        _has_bottom_neighbor(),
+        config);
 }
 
 namespace
@@ -173,8 +177,13 @@ geom::Rectangle Node::create_new_node_position(int index)
                 placement_area.size.height.as_int()
             }};
         pending_logical_rect = new_node_logical_rect;
+
+
+
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
+            (num_nodes() > 0 && pending_index != num_nodes()) || _has_right_neighbor(),
+            _has_bottom_neighbor(),
             config);
         return new_node_visible_rect;
     }
@@ -211,6 +220,8 @@ geom::Rectangle Node::create_new_node_position(int index)
         pending_logical_rect = new_node_logical_rect;
         auto new_node_visible_rect = _get_visible_from_logical(
             new_node_logical_rect,
+            _has_right_neighbor(),
+            (num_nodes() > 0 && pending_index != num_nodes()) || _has_bottom_neighbor(),
             config);
         return new_node_visible_rect;
     }
@@ -458,6 +469,15 @@ int Node::get_index_of_node(std::shared_ptr<Node> const& node) const
     return -1;
 }
 
+int Node::get_index_of_node(Node const* node) const
+{
+    for (int i = 0; i < sub_nodes.size(); i++)
+        if (sub_nodes[i].get() == node)
+            return i;
+
+    return -1;
+}
+
 int Node::num_nodes() const
 {
     return sub_nodes.size();
@@ -512,14 +532,16 @@ void Node::translate_by(int x, int y)
 
 geom::Rectangle Node::_get_visible_from_logical(
     geom::Rectangle const& logical_area,
+    bool has_right_neighbor,
+    bool has_bottom_neighbor,
     std::shared_ptr<MiracleConfig> const& config)
 {
-    int half_gap_x = (int)(ceilf((float) config->get_inner_gaps_x() / 2.f));
-    int half_gap_y = (int)(ceilf((float) config->get_inner_gaps_y() / 2.f));
+    int half_gap_x = has_right_neighbor ? (int)(ceilf((float) config->get_inner_gaps_x() / 2.f)) : 0;
+    int half_gap_y = has_bottom_neighbor ? (int)(ceilf((float) config->get_inner_gaps_y() / 2.f)) : 0;
     return {
         geom::Point{
-            logical_area.top_left.x.as_int() + half_gap_x,
-            logical_area.top_left.y.as_int() + half_gap_y
+            logical_area.top_left.x.as_int(),
+            logical_area.top_left.y.as_int()
         },
         geom::Size{
             logical_area.size.width.as_int() - 2 * half_gap_x,
@@ -581,16 +603,25 @@ int Node::get_min_height() const
     return 50;
 }
 
-void Node::_set_window_rectangle(geom::Rectangle area)
+void Node::_set_window_rectangle(geom::Rectangle const& area)
 {
-    auto visible_rect = _get_visible_from_logical(area, config);
-    window.move_to(visible_rect.top_left);
-    window.resize(visible_rect.size);
+    auto visible_rect = _get_visible_from_logical(
+        area,
+        _has_right_neighbor(),
+        _has_bottom_neighbor(),
+        config);
+    miral::WindowSpecification spec;
+    spec.top_left() = visible_rect.top_left;
+    spec.size() = visible_rect.size;
+    tools.modify_window(window, spec);
+
     auto& window_info = tools.info_for(window);
-    for (auto child : window_info.children())
+    for (auto const& child : window_info.children())
     {
-        child.move_to(visible_rect.top_left);
-        child.resize(visible_rect.size);
+        miral::WindowSpecification sub_spec;
+        sub_spec.top_left() = visible_rect.top_left;
+        sub_spec.size() = visible_rect.size;
+        tools.modify_window(child, sub_spec);
     }
 }
 
@@ -610,4 +641,30 @@ void Node::constrain()
     {
         node->constrain();
     }
+}
+
+bool Node::_has_right_neighbor() const
+{
+    if (!parent)
+        return false;
+
+    if (parent->get_direction() != NodeLayoutDirection::horizontal)
+        return parent->_has_right_neighbor();
+
+    auto index = parent->get_index_of_node(this);
+    return (parent->num_nodes() > 1 && index != parent->num_nodes() - 1)
+        || parent->_has_right_neighbor();
+}
+
+bool Node::_has_bottom_neighbor() const
+{
+    if (!parent)
+        return false;
+
+    if (parent->get_direction() != NodeLayoutDirection::vertical)
+        return parent->_has_bottom_neighbor();
+
+    auto index = parent->get_index_of_node(this);
+    return (parent->num_nodes() > 1 && index != parent->num_nodes() - 1)
+           || parent->_has_bottom_neighbor();
 }

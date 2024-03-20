@@ -89,6 +89,7 @@ public:
 
     std::shared_ptr<Node> find_where(std::function<bool(std::shared_ptr<Node> const&)> func) const;
     int get_index_of_node(std::shared_ptr<Node> const&) const;
+    int get_index_of_node(Node const*) const;
     int num_nodes() const;
     std::shared_ptr<Node> node_at(int i) const;
     std::shared_ptr<Node> find_nth_window_child(int i) const;
@@ -116,13 +117,17 @@ private:
     int pending_index = -1;
     geom::Rectangle pending_logical_rect;
 
-    void _set_window_rectangle(geom::Rectangle area);
+    void _set_window_rectangle(geom::Rectangle const& area);
     geom::Rectangle get_logical_area_internal(geom::Rectangle const& rectangle);
     static geom::Rectangle _get_visible_from_logical(
         geom::Rectangle const& logical_area,
+        bool has_right_neighbor,
+        bool has_bottom_neighbor,
         std::shared_ptr<MiracleConfig> const& config);
     /// Recalculates the size of the nodes in the lane.
     void _refit_node_to_area();
+    bool _has_right_neighbor() const;
+    bool _has_bottom_neighbor() const;
 };
 }
 
