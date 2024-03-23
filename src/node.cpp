@@ -90,7 +90,7 @@ InsertNodeInternalResult insert_node_internal(
     std::function<int(int)> const& get_node_position,
     std::function<void(int, int, int)> const& set_node_size_position)
 {
-    int new_item_size = floorf64((double)lane_size / (double)(node_count + 1));
+    int new_item_size = floor((double)lane_size / (double)(node_count + 1));
     int new_item_position = lane_pos + index * new_item_size;
 
     int size_lost = 0;
@@ -105,7 +105,7 @@ InsertNodeInternalResult insert_node_internal(
         // (meaning that larger nodes give more width, and lesser nodes give less width)
         double percent_size_lost =
             ((double)node_size / (double)lane_size);
-        int width_to_lose = (int)floorf64(percent_size_lost * new_item_size);
+        int width_to_lose = (int)floor(percent_size_lost * new_item_size);
         size_lost += width_to_lose;
 
         if (i == index)
@@ -314,14 +314,16 @@ void Node::set_logical_area(geom::Rectangle const& target_rect)
         // However, the "non-main-axis" dimension will be consistent across each node.
         auto placement_area = get_logical_area();
         auto target_placement_area = get_logical_area_internal(target_rect);
+        std::vector<geom::Rectangle> pending_size_updates;
         if (direction == NodeLayoutDirection::horizontal)
         {
+            int total_width = 0;
             for (size_t idx = 0; idx < sub_nodes.size(); idx++)
             {
                 auto item = sub_nodes[idx];
                 auto item_rect = item->get_logical_area();
-                float percent_width_taken = (float)item_rect.size.width.as_int() / (float)placement_area.size.width.as_int();
-                int new_width = (int)ceilf((float)target_placement_area.size.width.as_int() * percent_width_taken);
+                double percent_width_taken = (double)item_rect.size.width.as_int() / (double)placement_area.size.width.as_int();
+                int new_width = (int)ceil((double)target_placement_area.size.width.as_int() * percent_width_taken);
 
                 geom::Rectangle new_item_rect;
                 new_item_rect.size = geom::Size{
@@ -337,24 +339,32 @@ void Node::set_logical_area(geom::Rectangle const& target_rect)
                 }
                 else
                 {
-                    auto prev_rect = sub_nodes[idx - 1]->get_logical_area();
+                    auto const& prev_rect = pending_size_updates[idx - 1];
                     new_item_rect.top_left = geom::Point{
                         geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()},
                         target_placement_area.top_left.y
                     };
                 }
 
-                item->set_logical_area(new_item_rect);
+                pending_size_updates.push_back(new_item_rect);
+                total_width += new_width;
+            }
+
+            if (!pending_size_updates.empty())
+            {
+                int leftover_width = target_placement_area.size.width.as_int() - total_width;
+                pending_size_updates.back().size.width = geom::Width {pending_size_updates.back().size.width.as_int() + leftover_width};
             }
         }
         else
         {
+            int total_height = 0;
             for (size_t idx = 0; idx < sub_nodes.size(); idx++)
             {
                 auto item = sub_nodes[idx];
                 auto item_rect = item->get_logical_area();
-                float percent_height_taken = static_cast<float>(item_rect.size.height.as_int()) / placement_area.size.height.as_int();
-                int new_height = (int)floorf((float)target_placement_area.size.height.as_int() * percent_height_taken);
+                double percent_height_taken = static_cast<double>(item_rect.size.height.as_int()) / placement_area.size.height.as_int();
+                int new_height = (int)floor((double)target_placement_area.size.height.as_int() * percent_height_taken);
 
                 geom::Rectangle new_item_rect;
                 new_item_rect.size = geom::Size{
@@ -370,17 +380,30 @@ void Node::set_logical_area(geom::Rectangle const& target_rect)
                 }
                 else
                 {
-                    auto prev_rect = sub_nodes[idx - 1]->get_logical_area();
+                    auto const& prev_rect = pending_size_updates[idx - 1];
                     new_item_rect.top_left = geom::Point{
                         target_placement_area.top_left.x,
                         geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()},
                     };
                 }
 
-                item->set_logical_area(new_item_rect);
+                pending_size_updates.push_back(new_item_rect);
+                total_height += new_height;
+            }
+
+            if (!pending_size_updates.empty())
+            {
+                int leftover_height = target_placement_area.size.height.as_int() - total_height;
+                pending_size_updates.back().size.height = geom::Height {pending_size_updates.back().size.height.as_int() + leftover_height};
             }
         }
+
+        for (size_t i = 0; i < sub_nodes.size(); i++)
+        {
+            sub_nodes[i]->set_logical_area(pending_size_updates[i]);
+        }
     }
+
 
     // Important that we update the area _after_ changes have taken place!
     logical_area = target_rect;
@@ -540,8 +563,8 @@ geom::Rectangle Node::_get_visible_from_logical(
     bool has_bottom_neighbor,
     std::shared_ptr<MiracleConfig> const& config)
 {
-    int half_gap_x = has_right_neighbor ? (int)(ceilf((float) config->get_inner_gaps_x() / 2.f)) : 0;
-    int half_gap_y = has_bottom_neighbor ? (int)(ceilf((float) config->get_inner_gaps_y() / 2.f)) : 0;
+    int half_gap_x = has_right_neighbor ? (int)(ceil((double) config->get_inner_gaps_x() / 2.0)) : 0;
+    int half_gap_y = has_bottom_neighbor ? (int)(ceil((double) config->get_inner_gaps_y() / 2.0)) : 0;
     return {
         geom::Point{
             logical_area.top_left.x.as_int(),
