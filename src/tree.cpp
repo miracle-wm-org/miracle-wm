@@ -541,7 +541,8 @@ void Tree::_handle_resize_request(
     std::vector<geom::Rectangle> pending_node_resizes;
     if (is_vertical)
     {
-        int height_for_others = (int)floorf32(-(float)resize_amount / static_cast<float>(nodes.size() - 1));
+        int height_for_others = (int)floor(-(double)resize_amount / static_cast<double>(nodes.size() - 1));
+        int total_height = 0;
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
@@ -563,12 +564,18 @@ void Tree::_handle_resize_request(
                 return;
             }
 
+            total_height += other_rect.size.height.as_int();
             pending_node_resizes.push_back(other_rect);
         }
+
+        // Due to some rounding errors, we may have to extend the final node
+        int leftover_height = parent->get_logical_area().size.height.as_int() - total_height;
+        pending_node_resizes.back().size.height = geom::Height{pending_node_resizes.back().size.height.as_int() + leftover_height};
     }
     else
     {
-        int width_for_others = (int)floorf((float)-resize_amount / static_cast<float>(nodes.size() - 1));
+        int width_for_others = (int)floor((double)-resize_amount / static_cast<double>(nodes.size() - 1));
+        int total_width = 0;
         for (size_t i = 0; i < nodes.size(); i++)
         {
             auto other_node = nodes[i];
@@ -590,8 +597,13 @@ void Tree::_handle_resize_request(
                 return;
             }
 
+            total_width += other_rect.size.width.as_int();
             pending_node_resizes.push_back(other_rect);
         }
+
+        // Due to some rounding errors, we may have to extend the final node
+        int leftover_width = parent->get_logical_area().size.width.as_int() - total_width;
+        pending_node_resizes.back().size.width = geom::Width {pending_node_resizes.back().size.width.as_int() + leftover_width};
     }
 
     for (size_t i = 0; i < nodes.size(); i++)
