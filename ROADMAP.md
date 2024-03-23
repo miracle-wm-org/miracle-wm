@@ -39,7 +39,7 @@ Features:
   - [x] Custom keybindings
 
 # 🚧 0.2.0
-**Stabilization + Usability (Due: April 1st)**
+**Stabilization + Usability (Due: April 15th)**
 
 Features:
 - [ ] Major bugs + performance
