@@ -87,7 +87,6 @@ InsertNodeInternalResult insert_node_internal(
     int index,
     int node_count,
     std::function<int(int)> const& get_node_size,
-    std::function<int(int)> const& get_node_position,
     std::function<void(int, int, int)> const& set_node_size_position)
 {
     int new_item_size = floor((double)lane_size / (double)(node_count + 1));
@@ -99,7 +98,6 @@ InsertNodeInternalResult insert_node_internal(
     for (int i = 0; i < node_count; i++)
     {
         int node_size = get_node_size(i);
-        int node_pos = get_node_position(i);
 
         // Each node will lose a percentage of its width that corresponds to what it can give
         // (meaning that larger nodes give more width, and lesser nodes give less width)
@@ -154,7 +152,6 @@ geom::Rectangle Node::create_new_node_position(int index)
             index,
             sub_nodes.size(),
             [&](int index) { return sub_nodes[index]->get_logical_area().size.width.as_int();},
-            [&](int index) { return sub_nodes[index]->get_logical_area().top_left.x.as_int();},
             [&](int index, int size, int pos) {
                 sub_nodes[index]->pending_logical_rect = {
                     geom::Point{
@@ -192,7 +189,6 @@ geom::Rectangle Node::create_new_node_position(int index)
             index,
             sub_nodes.size(),
             [&](int index) { return sub_nodes[index]->get_logical_area().size.height.as_int();},
-            [&](int index) { return sub_nodes[index]->get_logical_area().top_left.y.as_int();},
             [&](int index, int size, int pos) {
                 sub_nodes[index]->pending_logical_rect =  {
                     geom::Point{
@@ -263,8 +259,8 @@ void Node::refit_node_to_area()
             total_width += node->get_logical_area().size.width.as_int();
         }
 
-        float diff_width = placement_area.size.width.as_value() - total_width;
-        int diff_per_node = diff_width / sub_nodes.size();
+        int diff_width = placement_area.size.width.as_value() - total_width;
+        int diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
@@ -281,8 +277,8 @@ void Node::refit_node_to_area()
             total_height += node->get_logical_area().size.height.as_int();
         }
 
-        float diff_width = placement_area.size.height.as_value() - total_height;
-        int diff_per_node = diff_width / sub_nodes.size();
+        int diff_width = placement_area.size.height.as_value() - total_height;
+        int diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
@@ -292,7 +288,7 @@ void Node::refit_node_to_area()
         }
     }
 
-    set_logical_area(logical_area);
+    set_logical_area(placement_area);
 }
 
 void Node::set_logical_area(geom::Rectangle const& target_rect)
@@ -439,9 +435,17 @@ void Node::insert_node(std::shared_ptr<Node> const& node, int index)
 {
     auto area_with_gaps = create_new_node_position(index);
     node->parent = shared_from_this();
-    node->set_logical_area(pending_logical_rect);
+    node->set_logical_area(area_with_gaps);
     sub_nodes.insert(sub_nodes.begin() + index, node);
-    refit_node_to_area();
+    pending_index = -1;
+
+    for (auto& other_node : sub_nodes)
+    {
+        if (other_node == node)
+            continue;
+        other_node->set_logical_area(other_node->pending_logical_rect);
+    }
+
     constrain();
 }
 

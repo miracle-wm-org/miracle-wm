@@ -1,7 +1,8 @@
 #ifndef NODE_H
 #define NODE_H
 
-#include "window_metadata.h"
+#include "leaf_node.h"
+#include "parent_node.h"
 #include <mir/geometry/rectangle.h>
 #include <vector>
 #include <memory>
@@ -22,16 +23,25 @@ enum class NodeState
     lane
 };
 
-enum class NodeLayoutDirection
-{
-    horizontal,
-    vertical
-};
-
 /// A node in the tree is either a single window or a lane.
 class Node : public std::enable_shared_from_this<Node>
 {
 public:
+    static std::shared_ptr<Node> from_leaf(std::unique_ptr<LeafNode>);
+    static std::shared_ptr<Node> from_parent(std::unique_ptr<ParentNode>);
+
+    /// Commits any changes made to this node to the screen. This must
+    /// be call for changes to be pushed to the scene. Additionally,
+    /// it is advised that this method is only called once all changes have
+    /// been made for a particular operation.
+    void commit_changes();
+
+    void set_logical_area(geom::Rectangle const&);
+    void constrain();
+    std::weak_ptr<LeafNode> as_leaf() const;
+    std::weak_ptr<ParentNode> as_lane() const;
+
+
     Node(miral::WindowManagerTools const& tools,
          geom::Rectangle const& area,
          std::shared_ptr<MiracleConfig> const& config,
@@ -106,6 +116,9 @@ public:
     void refit_node_to_area();
 
 private:
+    std::unique_ptr<LeafNode> leaf_node;
+    std::unique_ptr<ParentNode> parent_node;
+
     std::shared_ptr<Node> parent;
     miral::WindowManagerTools tools;
     Tree* tree;

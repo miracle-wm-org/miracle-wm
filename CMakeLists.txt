@@ -39,6 +39,8 @@ add_library(miracle-wm-implementation
     src/workspace_observer.cpp
     src/window_metadata.cpp
     src/workspace_content.cpp
+    src/leaf_node.cpp
+    src/parent_node.cpp
 )
 
 add_executable(miracle-wm

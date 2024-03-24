@@ -11,11 +11,15 @@ include_directories(
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(MIRTEST mirtest REQUIRED)
 find_package(GTest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 
-add_executable(miracle-wm-tests miracle_config_test.cpp)
+add_executable(miracle-wm-tests
+    miracle_config_test.cpp
+    tree_test.cpp)
 
-target_include_directories(miracle-wm-tests PUBLIC SYSTEM ${GTEST_INCLUDE_DIRS} ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(miracle-wm-tests GTest::gtest_main miracle-wm-implementation ${GTEST_LIBRARIES} ${MIRAL_LDFLAGS} PkgConfig::YAML  pthread)
+target_include_directories(miracle-wm-tests PUBLIC SYSTEM ${GTEST_INCLUDE_DIRS} ${MIRAL_INCLUDE_DIRS}
+    ${MIRTEST_INCLUDE_DIRS})
+target_link_libraries(miracle-wm-tests GTest::gtest_main miracle-wm-implementation ${GTEST_LIBRARIES} ${MIRAL_LDFLAGS} ${MIRTEST_LDFLAGS} PkgConfig::YAML  pthread)
 gtest_discover_tests(miracle-wm-tests)

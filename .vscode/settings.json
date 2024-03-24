@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "memory": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "optional": "cpp"
+    }
+}
