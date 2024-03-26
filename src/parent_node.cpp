@@ -368,7 +368,7 @@ std::shared_ptr<Node> ParentNode::find_where(std::function<bool(std::shared_ptr<
     {
         if (node->is_lane())
         {
-            if (auto retval = node->as_lane()->find_where(func))
+            if (auto retval = as_lane(node)->find_where(func))
                 return retval;
         }
     }
@@ -408,12 +408,12 @@ void ParentNode::remove(const std::shared_ptr<Node> &node)
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
     if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
     {
-        auto dying_lane = sub_nodes[0]->as_lane();
+        auto dying_lane = as_lane(sub_nodes[0]);
         sub_nodes.clear();
         for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
             sub_nodes.push_back(sub_node);
-            sub_node->set_parent(this);
+            sub_node->set_parent(as_lane(shared_from_this()));
         }
         set_direction(dying_lane->get_direction());
     }

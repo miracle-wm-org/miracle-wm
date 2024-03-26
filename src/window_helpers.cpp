@@ -43,7 +43,7 @@ std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window(
     return nullptr;
 }
 
-std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window_by_tree(
+std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window_by_tree(
     const miral::Window &window,
     const miral::WindowManagerTools &tools,
     const miracle::Tree *tree)

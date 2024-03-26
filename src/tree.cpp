@@ -337,9 +337,10 @@ void Tree::_handle_direction_request(NodeLayoutDirection direction)
     }
 
     if (active_window->get_parent().lock()->num_nodes() != 1)
-        active_window = active_window->to_lane();
-
-    _get_active_lane()->set_direction(direction);
+        //active_window = active_window->to_lane();
+        (void)active_window; // TODO!
+    else
+        _get_active_lane()->set_direction(direction);
 }
 
 void Tree::advise_focus_gained(miral::Window& window)

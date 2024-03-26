@@ -1,6 +1,7 @@
 #define MIR_LOG_COMPONENT "workspace_content"
 
 #include "workspace_content.h"
+#include "window_metadata.h"
 #include "tree.h"
 #include "window_helpers.h"
 #include <mir/log.h>
@@ -11,9 +12,10 @@ WorkspaceContent::WorkspaceContent(
     miracle::OutputContent *screen,
     miral::WindowManagerTools const& tools,
     int workspace,
-    std::shared_ptr<MiracleConfig> const& config)
+    std::shared_ptr<MiracleConfig> const& config,
+    std::shared_ptr<NodeInterface> const& node_interface)
     : tools{tools},
-      tree(std::make_shared<Tree>(screen, tools, config)),
+      tree(std::make_shared<Tree>(screen, node_interface, config)),
       workspace{workspace}
 {
 }

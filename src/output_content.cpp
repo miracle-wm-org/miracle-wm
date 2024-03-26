@@ -17,7 +17,7 @@ OutputContent::OutputContent(
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
     std::shared_ptr<MiracleConfig> const& config,
-    std::shared_ptr<WindowManagerToolsNodeInterface> const& node_interface)
+    std::shared_ptr<NodeInterface> const& node_interface)
     : output{output},
       workspace_manager{workspace_manager},
       area{area},
@@ -369,7 +369,7 @@ void OutputContent::select_window_from_point(int x, int y)
 void OutputContent::advise_new_workspace(int workspace)
 {
     workspaces.push_back(
-        std::make_shared<WorkspaceContent>(this, tools, workspace, config));
+        std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface));
 }
 
 void OutputContent::advise_workspace_deleted(int workspace)
