@@ -8,7 +8,7 @@
 namespace miracle
 {
 class OutputContent;
-class Node;
+class LeafNode;
 
 enum class WindowType
 {
@@ -23,9 +23,9 @@ class WindowMetadata
 {
 public:
     WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output);
-    void associate_to_node(std::shared_ptr<Node> const&);
+    void associate_to_node(std::shared_ptr<LeafNode> const&);
     miral::Window& get_window() { return window; }
-    std::shared_ptr<Node> get_tiling_node() const {
+    std::shared_ptr<LeafNode> get_tiling_node() const {
         if (type == WindowType::tiled)
             return tiling_node;
         return nullptr;
@@ -42,7 +42,7 @@ private:
     WindowType type;
     miral::Window window;
     OutputContent* output;
-    std::shared_ptr<Node> tiling_node;
+    std::shared_ptr<LeafNode> tiling_node;
     MirWindowState restore_state;
     bool is_pinned = false;
 };

@@ -2,6 +2,8 @@
 #define MIR_LOG_COMPONENT "window_tree"
 
 #include "tree.h"
+#include "parent_node.h"
+#include "leaf_node.h"
 #include "window_helpers.h"
 #include "output_content.h"
 #include "miracle_config.h"
@@ -15,14 +17,15 @@ using namespace miracle;
 
 Tree::Tree(
     OutputContent* screen,
-    miral::WindowManagerTools const& tools,
+    std::shared_ptr<NodeInterface> const& node_interface,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},
-      root_lane{std::make_shared<Node>(
-        tools,
+      root_lane{std::make_shared<ParentNode>(
+        node_interface,
         std::move(geom::Rectangle{screen->get_area().top_left, screen->get_area().size}),
         config,
-        this)},
+        this,
+        nullptr)},
       tools{tools},
       config{config}
 {
@@ -46,7 +49,8 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     new_spec.max_width() = geom::Width{std::numeric_limits<int>::max()};
     new_spec.min_height() = geom::Height{0};
     new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
-    auto rect = _get_active_lane()->create_new_node_position();
+    auto node = _get_active_lane()->create_space_for_window();
+    auto rect = node->get_logical_area();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
 
@@ -58,9 +62,9 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     return new_spec;
 }
 
-std::shared_ptr<Node> Tree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<LeafNode> Tree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    auto node = _get_active_lane()->add_window(window_info.window());
+    auto node = _get_active_lane()->confirm_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
         tools.select_active_window(window_info.window());
@@ -178,10 +182,10 @@ void Tree::set_output_area(geom::Rectangle const& new_area)
         geom::Height {ceil(area.size.height.as_int() * y_scale)}};
 
     root_lane->scale_area(x_scale, y_scale);
-    root_lane->translate_by(position_diff_x, position_diff_y);
+    root_lane->translate(position_diff_x, position_diff_y);
 }
 
-std::shared_ptr<Node> Tree::select_window_from_point(int x, int y)
+std::shared_ptr<LeafNode> Tree::select_window_from_point(int x, int y)
 {
     if (is_active_window_fullscreen)
     {
@@ -191,10 +195,10 @@ std::shared_ptr<Node> Tree::select_window_from_point(int x, int y)
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
     {
-        return node->is_window() && node->get_logical_area().contains(geom::Point(x, y));
+        return node->is_leaf() && node->get_logical_area().contains(geom::Point(x, y));
     });
 
-    return node;
+    return Node::as_leaf(node);
 }
 
 bool Tree::try_move_active_window(miracle::Direction direction)
@@ -229,14 +233,14 @@ bool Tree::try_move_active_window(miracle::Direction direction)
                 return false;
             }
 
-            auto second_parent = second_window->get_parent();
-            if (!second_parent)
+            auto second_parent = second_window->get_parent().lock();
+            if (second_parent)
             {
                 mir::log_warning("Unable to move active window: second_window has no second_parent");
                 return false;
             }
 
-            auto first_parent = active_window->get_parent();
+            auto first_parent = active_window->get_parent().lock();
             if (first_parent == second_parent)
             {
                 first_parent->swap_nodes(active_window, second_window);
@@ -244,12 +248,13 @@ bool Tree::try_move_active_window(miracle::Direction direction)
             }
 
             // TODO: I don't like this very much, but at least it doesn't crash any more
+            auto first_grandparent = first_parent->get_parent().lock();
+            auto second_grandparent = second_parent->get_parent().lock();
             if (first_parent->num_nodes() == 1 && second_parent->num_nodes() == 1)
             {
-                if (first_parent->get_parent() == second_parent->get_parent())
+                if (first_grandparent == second_grandparent)
                 {
-                    auto grandparent = first_parent->get_parent();
-                    grandparent->swap_nodes(first_parent, second_parent);
+                    first_grandparent->swap_nodes(first_parent, second_parent);
                     break;
                 }
 
@@ -258,10 +263,10 @@ bool Tree::try_move_active_window(miracle::Direction direction)
 
             if (first_parent->num_nodes() == 1)
             {
-                if (second_parent == first_parent->get_parent())
+                if (second_parent == first_grandparent)
                 {
                     auto grandparent = first_parent->get_parent();
-                    grandparent->swap_nodes(first_parent, second_window);
+                    first_grandparent->swap_nodes(first_parent, second_window);
                     break;
                 }
 
@@ -272,21 +277,23 @@ bool Tree::try_move_active_window(miracle::Direction direction)
             auto index = second_parent->get_index_of_node(second_window);
             auto moving_node = active_window;
             _handle_node_remove(moving_node);
-            second_parent->insert_node(moving_node, index + 1);
+            second_parent->graft_existing(moving_node, index + 1);
             break;
         }
         case MoveResult::traversal_type_append:
         {
+            auto lane_node = Node::as_lane(traversal_result.node);
             auto moving_node = active_window;
             _handle_node_remove(moving_node);
-            traversal_result.node->insert_node(moving_node, traversal_result.node->num_nodes());
+            lane_node->graft_existing(moving_node, lane_node->num_nodes());
             break;
         }
         case MoveResult::traversal_type_prepend:
         {
+            auto lane_node = Node::as_lane(traversal_result.node);
             auto moving_node = active_window;
             _handle_node_remove(moving_node);
-            traversal_result.node->insert_node(moving_node, 0);
+            lane_node->graft_existing(moving_node, 0);
             break;
         }
         default:
@@ -329,7 +336,7 @@ void Tree::_handle_direction_request(NodeLayoutDirection direction)
         return;
     }
 
-    if (active_window->get_parent()->num_nodes() != 1)
+    if (active_window->get_parent().lock()->num_nodes() != 1)
         active_window = active_window->to_lane();
 
     _get_active_lane()->set_direction(direction);
@@ -382,7 +389,7 @@ void Tree::advise_delete_window(miral::Window& window)
 
 namespace
 {
-std::shared_ptr<Node> get_closest_window_to_select_from_node(
+std::shared_ptr<LeafNode> get_closest_window_to_select_from_node(
     std::shared_ptr<Node> node,
     miracle::Direction direction)
 {
@@ -390,17 +397,18 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
     // from as a hint. If the node that we want to move to has the same direction as that which we are coming
     // from, a seamless experience would mean that - at times - we select the _LAST_ node in that list, instead
     // of the first one. This makes it feel as though we are moving "across" the screen.
-    if (node->is_window())
-        return node;
+    if (node->is_leaf())
+        return Node::as_leaf(node);
 
     bool is_vertical = direction == Direction::up || direction == Direction::down;
     bool is_negative = direction == Direction::up || direction == Direction::left;
-    if (is_vertical && node->get_direction() == NodeLayoutDirection::vertical
-        || !is_vertical && node->get_direction() == NodeLayoutDirection::horizontal)
+    auto lane_node = Node::as_lane(node);
+    if (is_vertical && lane_node->get_direction() == NodeLayoutDirection::vertical
+        || !is_vertical && lane_node->get_direction() == NodeLayoutDirection::horizontal)
     {
         if (is_negative)
         {
-            auto sub_nodes = node->get_sub_nodes();
+            auto sub_nodes = lane_node->get_sub_nodes();
             for (auto i = sub_nodes.size()  - 1; i != 0; i--)
             {
                 if (auto retval = get_closest_window_to_select_from_node(sub_nodes[i], direction))
@@ -409,7 +417,7 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
         }
     }
 
-    for (auto const& sub_node : node->get_sub_nodes())
+    for (auto const& sub_node : lane_node->get_sub_nodes())
     {
         if (auto retval = get_closest_window_to_select_from_node(sub_node, direction))
             return retval;
@@ -419,7 +427,7 @@ std::shared_ptr<Node> get_closest_window_to_select_from_node(
 }
 }
 
-std::shared_ptr<Node> Tree::_select(
+std::shared_ptr<LeafNode> Tree::_select(
     const std::shared_ptr<Node> &from,
     miracle::Direction direction)
 {
@@ -433,7 +441,7 @@ std::shared_ptr<Node> Tree::_select(
     bool is_vertical = direction == Direction::up || direction == Direction::down;
     bool is_negative = direction == Direction::up || direction == Direction::left;
     auto current_node = from;
-    auto parent = current_node->get_parent();
+    auto parent = current_node->get_parent().lock();
     if (!parent)
     {
         mir::log_warning("Cannot _select the root node");
@@ -449,17 +457,17 @@ std::shared_ptr<Node> Tree::_select(
             if (is_negative)
             {
                 if (index > 0)
-                    return get_closest_window_to_select_from_node(parent->node_at(index - 1), direction);
+                    return get_closest_window_to_select_from_node(parent->at(index - 1), direction);
             }
             else
             {
                 if (index < parent->num_nodes() - 1)
-                    return get_closest_window_to_select_from_node(parent->node_at(index + 1), direction);
+                    return get_closest_window_to_select_from_node(parent->at(index + 1), direction);
             }
         }
 
         current_node = parent;
-        parent = parent->get_parent();
+        parent = parent->get_parent().lock();
     } while (parent != nullptr);
 
     return nullptr;
@@ -480,7 +488,7 @@ Tree::MoveResult Tree::_move(std::shared_ptr<Node>const& from, Direction directi
         };
     }
 
-    auto parent = from->get_parent();
+    auto parent = from->get_parent().lock();
     if (root_lane->get_direction() != parent->get_direction())
     {
         bool is_negative = direction == Direction::left || direction == Direction::up;
@@ -499,12 +507,12 @@ Tree::MoveResult Tree::_move(std::shared_ptr<Node>const& from, Direction directi
     return {};
 }
 
-std::shared_ptr<Node> Tree::_get_active_lane()
+std::shared_ptr<ParentNode> Tree::_get_active_lane()
 {
     if (!active_window)
         return root_lane;
 
-    return active_window->get_parent();
+    return active_window->get_parent().lock();
 }
 
 void Tree::_handle_resize_request(
@@ -512,7 +520,7 @@ void Tree::_handle_resize_request(
     Direction direction,
     int amount)
 {
-    auto parent = node->get_parent();
+    auto parent = node->get_parent().lock();
     if (parent == nullptr)
     {
         // Can't resize, most likely the root
@@ -614,20 +622,20 @@ void Tree::_handle_resize_request(
 
 void Tree::_handle_node_remove(std::shared_ptr<Node> const& node)
 {
-    auto parent = node->get_parent();
+    auto parent = node->get_parent().lock();
     if (parent == nullptr)
         return;
 
-    if (parent->num_nodes() == 1 && parent->get_parent())
+    if (parent->num_nodes() == 1 && parent->get_parent().lock())
     {
         // Remove the entire lane if this lane is now empty
         auto prev_active = parent;
-        parent = parent->get_parent();
-        parent->remove_node(prev_active);
+        parent = parent->get_parent().lock();
+        parent->remove(prev_active);
     }
     else
     {
-        parent->remove_node(node);
+        parent->remove(node);
     }
 
     for (auto it = nodes_to_resurrect.begin(); it != nodes_to_resurrect.end(); it++)
@@ -706,22 +714,17 @@ bool Tree::advise_state_change(miral::Window const& window, MirWindowState state
     switch (state)
     {
         case mir_window_state_restored:
-            if (auto parent = node->get_parent())
-            {
-                parent->restore(node);
-            }
+            node->show();
             break;
         case mir_window_state_hidden:
         case mir_window_state_minimized:
-            if (auto parent = node->get_parent())
-            {
-                parent->minimize(node);
-            }
+            node->hide();
             break;
         default:
             break;
     }
 
+    node->commit_changes();
     return true;
 }
 
@@ -756,13 +759,13 @@ bool Tree::constrain(miral::Window& window)
     if (is_hidden)
         return false;
 
-    if (!node->get_parent())
+    if (node->get_parent().expired())
     {
-        std::cerr << "Unable to constrain node without parent\n";
+        mir::log_error("Unable to constrain node without parent");
         return true;
     }
 
-    node->get_parent()->constrain();
+    node->get_parent().lock()->constrain();
     return true;
 }
 
@@ -771,10 +774,10 @@ namespace
 void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, std::shared_ptr<Node> const& parent)
 {
     f(parent);
-    if (parent->is_window())
+    if (parent->is_leaf())
         return;
 
-    for (auto& node : parent->get_sub_nodes())
+    for (auto& node : Node::as_lane(parent)->get_sub_nodes())
         foreach_node_internal(f, node);
 }
 }
@@ -795,11 +798,13 @@ void Tree::hide()
     is_hidden = true;
     foreach_node([&](auto node)
     {
-        if (node->is_window())
+        auto leaf_node = Node::as_leaf(node);
+        if (leaf_node)
         {
-            miral::WindowInfo& window_info = tools.info_for(node->get_window());
+
+            miral::WindowInfo& window_info = tools.info_for(leaf_node->get_window());
             nodes_to_resurrect.push_back({
-                node,
+                leaf_node,
                 window_info.state()
             });
         }
@@ -843,11 +848,5 @@ std::shared_ptr<Node> Tree::get_root_node()
 
 bool Tree::is_empty()
 {
-    bool empty = true;
-    foreach_node([&](auto node)
-    {
-        if (node->is_window())
-            empty = false;
-    });
-    return empty;
+    return root_lane->num_nodes() == 0;
 }

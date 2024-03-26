@@ -11,10 +11,12 @@ namespace miracle
 class NodeInterface
 {
 public:
-    virtual bool is_fullscreen(miral::Window const&);
-    virtual void set_rectangle(miral::Window const&, geom::Rectangle const&);
-    virtual void show(miral::Window const&);
-    virtual void hide(miral::Window const&);
+    virtual bool is_fullscreen(miral::Window const&) = 0;
+    virtual void set_rectangle(miral::Window const&, geom::Rectangle const&) = 0;
+    virtual void show(miral::Window const&) = 0;
+    virtual void hide(miral::Window const&) = 0;
+    virtual void clip(miral::Window const&, geom::Rectangle const&) = 0;
+    virtual void noclip(miral::Window const&) = 0;
 };
 
 }

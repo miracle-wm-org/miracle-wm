@@ -9,12 +9,12 @@ LeafNode::LeafNode(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     Tree* tree,
-    Node* parent)
-    : node_interface{node_interface},
+    std::shared_ptr<ParentNode> const& parent)
+    : Node(parent),
+      node_interface{node_interface},
       logical_area{std::move(area)},
       config{config},
-      tree{tree},
-      parent{parent}
+      tree{tree}
 {
 }
 
@@ -31,6 +31,23 @@ geom::Rectangle LeafNode::get_logical_area() const
 void LeafNode::set_logical_area(geom::Rectangle const& target_rect)
 {
     logical_area = target_rect;
+}
+
+void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
+{
+    parent = in_parent;
+}
+
+void LeafNode::scale_area(double x, double y)
+{
+    logical_area.size.width = geom::Width{ceil(x * logical_area.size.width.as_int())};
+    logical_area.size.height = geom::Height {ceil(y * logical_area.size.height.as_int())};
+}
+
+void LeafNode::translate(int x, int y)
+{
+    logical_area.top_left.x = geom::X{logical_area.top_left.x.as_int() + x};
+    logical_area.top_left.y = geom::Y{logical_area.top_left.y.as_int() + y};
 }
 
 geom::Rectangle LeafNode::get_visible_area() const
@@ -50,6 +67,24 @@ geom::Rectangle LeafNode::get_visible_area() const
             logical_area.size.height.as_int() - 2 * half_gap_y
         }
     };
+}
+
+void LeafNode::constrain()
+{
+    if (node_interface->is_fullscreen(window))
+        node_interface->noclip(window);
+    else
+        node_interface->clip(window, get_visible_area());
+}
+
+size_t LeafNode::get_min_width() const
+{
+    return 50;
+}
+
+size_t LeafNode::get_min_height() const
+{
+    return 50;
 }
 
 void LeafNode::show()

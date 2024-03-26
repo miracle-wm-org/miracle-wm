@@ -68,18 +68,18 @@ ParentNode::ParentNode(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     Tree* tree,
-    Node* parent)
-    : node_interface{node_interface},
+    std::shared_ptr<ParentNode> const& parent)
+    : Node(parent),
+      node_interface{node_interface},
       logical_area{std::move(area)},
       tree{tree},
-      config{config},
-      parent{parent}
+      config{config}
 {
 }
 
 geom::Rectangle ParentNode::get_logical_area() const
 {
-    if (parent == nullptr)
+    if (parent.lock() == nullptr)
     {
         auto x = config->get_outer_gaps_x();
         auto y = config->get_outer_gaps_y();
@@ -100,8 +100,12 @@ size_t ParentNode::num_nodes() const
     return sub_nodes.size();
 }
 
-void ParentNode::create_space_for_window(int pending_index)
+geom::Rectangle ParentNode::create_space(int pending_index)
 {
+    // TODO: When making space, we should ask the currently
+    //  selected window if it wants to be a lane. If it does, we
+    //  will grant its request and create a new lane.
+
     auto placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
     if (direction == NodeLayoutDirection::horizontal)
@@ -114,14 +118,14 @@ void ParentNode::create_space_for_window(int pending_index)
             [&](int index) { return sub_nodes[index]->get_logical_area().size.width.as_int();},
             [&](int index, int size, int pos) {
                 sub_nodes[index]->set_logical_area({
-                    geom::Point{
-                        pos,
-                        placement_area.top_left.y.as_int()
-                    },
-                    geom::Size{
-                        size,
-                        placement_area.size.height.as_int()
-                    }});
+                   geom::Point{
+                       pos,
+                       placement_area.top_left.y.as_int()
+                   },
+                   geom::Size{
+                       size,
+                       placement_area.size.height.as_int()
+                   }});
             });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
@@ -144,14 +148,14 @@ void ParentNode::create_space_for_window(int pending_index)
             [&](int index) { return sub_nodes[index]->get_logical_area().size.height.as_int();},
             [&](int index, int size, int pos) {
                 sub_nodes[index]->set_logical_area({
-                    geom::Point{
-                        placement_area.top_left.x.as_int(),
-                        pos
-                    },
-                    geom::Size{
-                        placement_area.size.width.as_int(),
-                        size
-                    }});
+                   geom::Point{
+                       placement_area.top_left.x.as_int(),
+                       pos
+                   },
+                   geom::Size{
+                       placement_area.size.width.as_int(),
+                       size
+                   }});
             });
         geom::Rectangle new_node_logical_rect = {
             geom::Point{
@@ -164,28 +168,45 @@ void ParentNode::create_space_for_window(int pending_index)
             }};
         pending_logical_rect = new_node_logical_rect;
     }
-
-    pending_node = Node::from_leaf(std::make_unique<LeafNode>(
-        node_interface,
-        pending_logical_rect,
-        config,
-        tree,
-        parent));
-    sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
+    return pending_logical_rect;
 }
 
-void ParentNode::confirm_window(miral::Window const& window)
+std::shared_ptr<LeafNode> ParentNode::create_space_for_window(int pending_index)
+{
+    pending_node = std::make_shared<LeafNode>(
+        node_interface,
+        create_space(pending_index),
+        config,
+        tree,
+        as_lane(shared_from_this()));
+    sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
+    return pending_node;
+}
+
+std::shared_ptr<LeafNode> ParentNode::confirm_window(miral::Window const& window)
 {
     if (pending_node == nullptr)
     {
         mir::fatal_error("Unable to add the window to the scene. Was create_space_for_window called?");
-        return;
+        return nullptr;
     }
 
-    pending_node->as_leaf().lock()->associate_to_window(window);
+    auto retval = pending_node;
+    pending_node->associate_to_window(window);
     for (auto const& node : sub_nodes)
         node->commit_changes();
     pending_node = nullptr;
+    return retval;
+}
+
+void ParentNode::graft_existing(std::shared_ptr<Node> const& node, int index)
+{
+    auto rectangle = create_space(index);
+    node->set_parent(as_lane(shared_from_this()));
+    node->set_logical_area(rectangle);
+    sub_nodes.insert(sub_nodes.begin() + index, node);
+    relayout();
+    constrain();
 }
 
 void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
@@ -288,10 +309,76 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
     }
 }
 
+void ParentNode::scale_area(double x, double y)
+{
+    logical_area.size.width = geom::Width{ceil(x * logical_area.size.width.as_int())};
+    logical_area.size.height = geom::Height {ceil(y * logical_area.size.height.as_int())};
+
+    for (auto const& node : sub_nodes)
+        node->scale_area(x, y);
+
+    relayout();
+    constrain();
+}
+
+void ParentNode::translate(int x, int y)
+{
+    logical_area.top_left.x = geom::X{logical_area.top_left.x.as_int() + x};
+    logical_area.top_left.y = geom::Y{logical_area.top_left.y.as_int() + y};
+    for (auto const& node : sub_nodes)
+        node->translate(x, y);
+
+    relayout();
+    constrain();
+}
+
 void ParentNode::commit_changes()
 {
     for (auto& node : sub_nodes)
         node->commit_changes();
+}
+
+std::shared_ptr<Node> ParentNode::at(size_t i) const
+{
+    if (i >= num_nodes())
+        return nullptr;
+
+    return sub_nodes[i];
+}
+
+std::shared_ptr<LeafNode> ParentNode::get_nth_window(size_t i) const
+{
+    if (i >= sub_nodes.size())
+        return nullptr;
+
+    if (sub_nodes[i]->is_leaf())
+        return as_leaf(sub_nodes[i]);
+
+    // The lane is correct, so let's get the first window in that lane.
+    return as_lane(sub_nodes[i])->get_nth_window(0);
+}
+
+std::shared_ptr<Node> ParentNode::find_where(std::function<bool(std::shared_ptr<Node> const&)> func) const
+{
+    for (auto node : sub_nodes)
+        if (func(node))
+            return node;
+
+    for (auto const& node : sub_nodes)
+    {
+        if (node->is_lane())
+        {
+            if (auto retval = node->as_lane()->find_where(func))
+                return retval;
+        }
+    }
+
+    return nullptr;
+}
+
+const std::vector<std::shared_ptr<Node>> &ParentNode::get_sub_nodes() const
+{
+    return sub_nodes;
 }
 
 void ParentNode::set_direction(miracle::NodeLayoutDirection new_direction)
@@ -321,30 +408,56 @@ void ParentNode::remove(const std::shared_ptr<Node> &node)
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
     if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
     {
-        auto dying_lane = sub_nodes[0];
+        auto dying_lane = sub_nodes[0]->as_lane();
         sub_nodes.clear();
         for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
             sub_nodes.push_back(sub_node);
-            sub_node->parent = shared_from_this();
+            sub_node->set_parent(this);
         }
         set_direction(dying_lane->get_direction());
     }
 }
 
-int ParentNode::get_index_of_node(std::shared_ptr<Node> const& node) const
+int ParentNode::get_index_of_node(miracle::Node const* node) const
 {
     for (int i = 0; i < sub_nodes.size(); i++)
-        if (sub_nodes[i] == node)
+        if (sub_nodes[i].get() == node)
             return i;
 
     return -1;
+}
+
+int ParentNode::get_index_of_node(std::shared_ptr<Node> const& node) const
+{
+    return get_index_of_node(node.get());
 }
 
 void ParentNode::constrain()
 {
     for (auto& node : sub_nodes)
         node->constrain();
+}
+
+size_t ParentNode::get_min_width() const
+{
+    size_t size = 0;
+    for (auto const& node : sub_nodes)
+        size += node->get_min_width();
+    return size;
+}
+
+size_t ParentNode::get_min_height() const
+{
+    size_t size = 0;
+    for (auto const& node : sub_nodes)
+        size += node->get_min_height();
+    return size;
+}
+
+void ParentNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
+{
+    parent = in_parent;
 }
 
 void ParentNode::relayout()

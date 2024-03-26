@@ -3,6 +3,7 @@
 
 #include "tree.h"
 #include "workspace_content.h"
+#include "window_metadata.h"
 #include <memory>
 #include <miral/output.h>
 #include <miral/minimal_window_manager.h>
@@ -11,6 +12,7 @@ namespace miracle
 {
 class WorkspaceManager;
 class MiracleConfig;
+class WindowManagerToolsNodeInterface;
 
 class OutputContent
 {
@@ -21,7 +23,8 @@ public:
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
         miral::MinimalWindowManager& floating_window_manager,
-        std::shared_ptr<MiracleConfig> const& options);
+        std::shared_ptr<MiracleConfig> const& options,
+        std::shared_ptr<WindowManagerToolsNodeInterface> const&);
     ~OutputContent() = default;
 
     [[nodiscard]] std::shared_ptr<Tree> get_active_tree() const;
@@ -89,6 +92,7 @@ private:
     miral::MinimalWindowManager& floating_window_manager;
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
+    std::shared_ptr<WindowManagerToolsNodeInterface> node_interface;
     int active_workspace = -1;
     std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
     std::vector<miral::Zone> application_zone_list;

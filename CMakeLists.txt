@@ -41,6 +41,7 @@ add_library(miracle-wm-implementation
     src/workspace_content.cpp
     src/leaf_node.cpp
     src/parent_node.cpp
+    src/window_manager_tools_node_interface.cpp
 )
 
 add_executable(miracle-wm

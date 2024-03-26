@@ -3,6 +3,7 @@
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include "node.h"
+#include "leaf_node.h"
 #include <mir/log.h>
 
 bool miracle::window_helpers::is_window_fullscreen(MirWindowState state)
@@ -31,7 +32,7 @@ miracle::window_helpers::get_metadata(const miral::Window &window, const miral::
     return nullptr;
 }
 
-std::shared_ptr<miracle::Node> miracle::window_helpers::get_node_for_window(
+std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window(
     miral::Window const& window,
     miral::WindowManagerTools const& tools)
 {
