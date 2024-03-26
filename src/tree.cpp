@@ -18,6 +18,7 @@ using namespace miracle;
 Tree::Tree(
     OutputContent* screen,
     std::shared_ptr<NodeInterface> const& node_interface,
+    miral::WindowManagerTools const& tools,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},
       root_lane{std::make_shared<ParentNode>(

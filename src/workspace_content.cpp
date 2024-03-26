@@ -15,7 +15,7 @@ WorkspaceContent::WorkspaceContent(
     std::shared_ptr<MiracleConfig> const& config,
     std::shared_ptr<NodeInterface> const& node_interface)
     : tools{tools},
-      tree(std::make_shared<Tree>(screen, node_interface, config)),
+      tree(std::make_shared<Tree>(screen, node_interface, tools, config)),
       workspace{workspace}
 {
 }

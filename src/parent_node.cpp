@@ -173,6 +173,8 @@ geom::Rectangle ParentNode::create_space(int pending_index)
 
 std::shared_ptr<LeafNode> ParentNode::create_space_for_window(int pending_index)
 {
+    if (pending_index < 0)
+        pending_index = num_nodes();
     pending_node = std::make_shared<LeafNode>(
         node_interface,
         create_space(pending_index),

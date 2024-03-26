@@ -100,8 +100,9 @@ void LeafNode::hide()
 void LeafNode::commit_changes()
 {
     node_interface->set_rectangle(window, logical_area);
-    if (is_shown)
-        node_interface->show(window);
-    else
-        node_interface->hide(window);
+    // TODO:
+//    if (is_shown)
+//        node_interface->show(window);
+//    else
+//        node_interface->hide(window);
 }
