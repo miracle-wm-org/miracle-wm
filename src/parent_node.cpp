@@ -524,5 +524,6 @@ void ParentNode::relayout()
         }
     }
 
-    set_logical_area(placement_area);
+    // Note that it is important to use the logical_area here instead of the placement area
+    set_logical_area(logical_area);
 }
