@@ -34,8 +34,7 @@ class TilingWindowTree
 public:
     TilingWindowTree(
         OutputContent* parent,
-        std::shared_ptr<TilingInterface> const&,
-        miral::WindowManagerTools const& tools,
+        TilingInterface&,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
@@ -119,7 +118,7 @@ private:
     };
 
     OutputContent* screen;
-    miral::WindowManagerTools tools;
+    TilingInterface& tiling_interface;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentNode> root_lane;
 

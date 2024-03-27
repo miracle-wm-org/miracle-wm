@@ -92,7 +92,7 @@ private:
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
-    std::shared_ptr<WindowManagerToolsTilingInterface> node_interface;
+    WindowManagerToolsTilingInterface node_interface;
 };
 }
 

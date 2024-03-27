@@ -6,7 +6,7 @@
 using namespace miracle;
 
 LeafNode::LeafNode(
-    std::shared_ptr<TilingInterface> const& node_interface,
+    TilingInterface& node_interface,
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
@@ -69,10 +69,10 @@ geom::Rectangle LeafNode::get_visible_area() const
 
 void LeafNode::constrain()
 {
-    if (node_interface->is_fullscreen(window))
-        node_interface->noclip(window);
+    if (node_interface.is_fullscreen(window))
+        node_interface.noclip(window);
     else
-        node_interface->clip(window, get_visible_area());
+        node_interface.clip(window, get_visible_area());
 }
 
 size_t LeafNode::get_min_width() const
@@ -93,13 +93,13 @@ void LeafNode::show()
 
 void LeafNode::hide()
 {
-    before_shown_state = node_interface->get_state(window);
+    before_shown_state = node_interface.get_state(window);
     next_state = mir_window_state_hidden;
 }
 
 void LeafNode::toggle_fullscreen()
 {
-    auto state = node_interface->get_state(window);
+    auto state = node_interface.get_state(window);
     if (state == mir_window_state_fullscreen)
         next_state = mir_window_state_restored;
     else
@@ -110,9 +110,9 @@ void LeafNode::commit_changes()
 {
     if (next_state)
     {
-        node_interface->change_state(window, next_state.value());
+        node_interface.change_state(window, next_state.value());
         next_state.reset();
     }
-    node_interface->set_rectangle(window, logical_area);
+    node_interface.set_rectangle(window, logical_area);
     constrain();
 }

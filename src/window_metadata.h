@@ -9,6 +9,7 @@ namespace miracle
 {
 class OutputContent;
 class LeafNode;
+class TilingWindowTree;
 
 enum class WindowType
 {

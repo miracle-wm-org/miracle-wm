@@ -18,7 +18,7 @@ class TilingWindowTree;
 class ParentNode : public Node
 {
 public:
-    ParentNode(std::shared_ptr<TilingInterface> const&,
+    ParentNode(TilingInterface&,
                geom::Rectangle,
                std::shared_ptr<MiracleConfig> const&,
                TilingWindowTree* tree,
@@ -49,7 +49,7 @@ public:
     void set_parent(std::shared_ptr<ParentNode> const&) override;
 
 private:
-    std::shared_ptr<TilingInterface> node_interface;
+    TilingInterface& node_interface;
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;

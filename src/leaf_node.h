@@ -25,7 +25,7 @@ class LeafNode : public Node
 {
 public:
     LeafNode(
-        std::shared_ptr<TilingInterface> const& node_interface,
+        TilingInterface& node_interface,
         geom::Rectangle area,
         std::shared_ptr<MiracleConfig> const& config,
         TilingWindowTree* tree,
@@ -49,7 +49,7 @@ public:
     void commit_changes() override;
 
 private:
-    std::shared_ptr<TilingInterface> node_interface;
+    TilingInterface& node_interface;
     geom::Rectangle logical_area;
     std::shared_ptr<MiracleConfig> config;
     TilingWindowTree* tree;

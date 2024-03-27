@@ -20,7 +20,7 @@ public:
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
-        std::shared_ptr<TilingInterface> const& node_interface);
+        TilingInterface& node_interface);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;

@@ -17,7 +17,7 @@ OutputContent::OutputContent(
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
     std::shared_ptr<MiracleConfig> const& config,
-    std::shared_ptr<TilingInterface> const& node_interface)
+    TilingInterface& node_interface)
     : output{output},
       workspace_manager{workspace_manager},
       area{area},

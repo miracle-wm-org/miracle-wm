@@ -17,18 +17,17 @@ using namespace miracle;
 
 TilingWindowTree::TilingWindowTree(
     OutputContent* screen,
-    std::shared_ptr<TilingInterface> const& node_interface,
-    miral::WindowManagerTools const& tools,
+    TilingInterface& tiling_interface,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},
       root_lane{std::make_shared<ParentNode>(
-        node_interface,
+        tiling_interface,
         std::move(geom::Rectangle{screen->get_area().top_left, screen->get_area().size}),
         config,
         this,
         nullptr)},
-      tools{tools},
-      config{config}
+      config{config},
+      tiling_interface{tiling_interface}
 {
     recalculate_root_node_area();
     config_handle = config->register_listener([&](auto&)
@@ -68,12 +67,12 @@ std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo 
     auto node = get_active_lane()->confirm_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
     {
-        tools.select_active_window(window_info.window());
+        tiling_interface.select_active_window(window_info.window());
         advise_fullscreen_window(window_info.window());
     }
     else
     {
-        tools.send_tree_to_back(window_info.window());
+        tiling_interface.send_to_back(window_info.window());
     }
 
     return node;
@@ -135,7 +134,7 @@ bool TilingWindowTree::try_select_next(miracle::Direction direction)
         return false;
     }
 
-    tools.select_active_window(node->get_window());
+    tiling_interface.select_active_window(node->get_window());
     return true;
 }
 
@@ -155,11 +154,10 @@ bool TilingWindowTree::try_toggle_active_fullscreen()
 
     active_window->toggle_fullscreen();
     active_window->commit_changes();
-    auto& window_info = tools.info_for(active_window->get_window());
     if (is_active_window_fullscreen)
-        advise_restored_window(window_info.window());
+        advise_restored_window(active_window->get_window());
     else
-        advise_fullscreen_window(window_info.window());
+        advise_fullscreen_window(active_window->get_window());
     return true;
 }
 
@@ -184,7 +182,7 @@ std::shared_ptr<LeafNode> TilingWindowTree::select_window_from_point(int x, int 
 {
     if (is_active_window_fullscreen)
     {
-        tools.select_active_window(active_window->get_window());
+        tiling_interface.select_active_window(active_window->get_window());
         return active_window;
     }
 
@@ -316,18 +314,18 @@ void TilingWindowTree::advise_focus_gained(miral::Window& window)
 {
     is_resizing = false;
 
-    auto found_node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!found_node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
     {
         active_window = nullptr;
         return;
     }
 
-    active_window = found_node;
+    active_window = metadata->get_tiling_node();
     if (active_window && is_active_window_fullscreen)
-        tools.raise_tree(window);
+        tiling_interface.raise(window);
     else
-        tools.send_tree_to_back(window);
+        tiling_interface.send_to_back(window);
 }
 
 void TilingWindowTree::advise_focus_lost(miral::Window& window)
@@ -340,13 +338,14 @@ void TilingWindowTree::advise_focus_lost(miral::Window& window)
 
 void TilingWindowTree::advise_delete_window(miral::Window& window)
 {
-    auto window_node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!window_node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
     {
         mir::log_warning("Unable to delete window: cannot find node");
         return;
     }
 
+    auto window_node = metadata->get_tiling_node();
     if (window_node == active_window)
     {
         active_window = nullptr;
@@ -638,12 +637,12 @@ void TilingWindowTree::recalculate_root_node_area()
 
 bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
+    auto node = tiling_interface.get_metadata(window, this);
     if (!node)
         return false;
 
-    tools.select_active_window(node->get_window());
-    tools.raise_tree(node->get_window());
+    tiling_interface.select_active_window(node->get_window());
+    tiling_interface.raise(node->get_window());
     is_active_window_fullscreen = true;
     is_resizing = false;
     return true;
@@ -651,11 +650,11 @@ bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
 
 bool TilingWindowTree::advise_restored_window(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
         return false;
 
-    if (node == active_window && is_active_window_fullscreen)
+    if (metadata->get_tiling_node() == active_window && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
         active_window->set_logical_area(active_window->get_logical_area());
@@ -667,15 +666,15 @@ bool TilingWindowTree::advise_restored_window(miral::Window& window)
 
 bool TilingWindowTree::handle_window_ready(miral::WindowInfo &window_info)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
-    if (!node)
+    auto metadata = tiling_interface.get_metadata(window_info.window(), this);
+    if (!metadata)
         return false;
 
     if (is_active_window_fullscreen)
         return true;
 
     if (window_info.can_be_active())
-        tools.select_active_window(window_info.window());
+        tiling_interface.select_active_window(window_info.window());
 
     constrain(window_info.window());
     return true;
@@ -683,13 +682,14 @@ bool TilingWindowTree::handle_window_ready(miral::WindowInfo &window_info)
 
 bool TilingWindowTree::advise_state_change(miral::Window const& window, MirWindowState state)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
         return false;
 
     if (is_hidden)
         return true;
 
+    auto node = metadata->get_tiling_node();
     switch (state)
     {
         case mir_window_state_restored:
@@ -712,10 +712,11 @@ bool TilingWindowTree::confirm_placement_on_display(
     MirWindowState new_state,
     mir::geometry::Rectangle &new_placement)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
         return false;
 
+    auto node = metadata->get_tiling_node();
     auto node_rectangle = node->get_visible_area();
     switch (new_state)
     {
@@ -731,13 +732,14 @@ bool TilingWindowTree::confirm_placement_on_display(
 
 bool TilingWindowTree::constrain(miral::Window& window)
 {
-    auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
-    if (!node)
+    auto metadata = tiling_interface.get_metadata(window, this);
+    if (!metadata)
         return false;
 
     if (is_hidden)
         return false;
 
+    auto node = metadata->get_tiling_node();
     if (node->get_parent().expired())
     {
         mir::log_error("Unable to constrain node without parent");
