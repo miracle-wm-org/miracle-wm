@@ -64,7 +64,7 @@ InsertNodeInternalResult insert_node_internal(
 }
 
 ParentNode::ParentNode(
-    std::shared_ptr<NodeInterface> const& node_interface,
+    std::shared_ptr<TilingInterface> const& node_interface,
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,

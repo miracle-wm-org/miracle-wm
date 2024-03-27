@@ -5,7 +5,7 @@
 #include "miracle_config.h"
 #include "workspace_manager.h"
 #include "ipc.h"
-#include "window_manager_tools_node_interface.h"
+#include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
 
 #include <miral/window_manager_tools.h>
@@ -92,7 +92,7 @@ private:
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
-    std::shared_ptr<WindowManagerToolsNodeInterface> node_interface;
+    std::shared_ptr<WindowManagerToolsTilingInterface> node_interface;
 };
 }
 

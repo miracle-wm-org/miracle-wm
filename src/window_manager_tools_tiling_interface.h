@@ -1,15 +1,15 @@
-#ifndef MIRACLEWM_WINDOW_MANAGER_TOOLS_NODE_INTERFACE_H
-#define MIRACLEWM_WINDOW_MANAGER_TOOLS_NODE_INTERFACE_H
+#ifndef MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H
+#define MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H
 
-#include "node_interface.h"
+#include "tiling_interface.h"
 #include <miral/window_manager_tools.h>
 
 namespace miracle
 {
-class WindowManagerToolsNodeInterface : public NodeInterface
+class WindowManagerToolsTilingInterface : public TilingInterface
 {
 public:
-    WindowManagerToolsNodeInterface(miral::WindowManagerTools const&);
+    WindowManagerToolsTilingInterface(miral::WindowManagerTools const&);
     bool is_fullscreen(miral::Window const&) override;
     void set_rectangle(miral::Window const&, geom::Rectangle const&) override;
     MirWindowState get_state(miral::Window const&) override;
@@ -23,4 +23,4 @@ private:
 }
 
 
-#endif //MIRACLEWM_WINDOW_MANAGER_TOOLS_NODE_INTERFACE_H
+#endif //MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H

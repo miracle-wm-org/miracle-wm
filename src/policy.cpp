@@ -44,7 +44,7 @@ Policy::Policy(
           workspace_observer_registrar,
           [&]() { return get_active_output(); })},
       ipc{std::make_shared<Ipc>(runner, workspace_manager)},
-      node_interface(std::make_shared<WindowManagerToolsNodeInterface>(tools))
+      node_interface(std::make_shared<WindowManagerToolsTilingInterface>(tools))
 {
     workspace_observer_registrar.register_interest(ipc);
     config->register_listener([&](auto& new_config)

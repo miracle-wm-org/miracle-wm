@@ -1,21 +1,21 @@
-#include "window_manager_tools_node_interface.h"
+#include "window_manager_tools_tiling_interface.h"
 #include "window_helpers.h"
 
 using namespace miracle;
 
-WindowManagerToolsNodeInterface::WindowManagerToolsNodeInterface(
+WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
     miral::WindowManagerTools const& tools)
     : tools{tools}
 {
 }
 
-bool WindowManagerToolsNodeInterface::is_fullscreen(miral::Window const& window)
+bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& window)
 {
     auto& info = tools.info_for(window);
     return window_helpers::is_window_fullscreen(info.state());
 }
 
-void WindowManagerToolsNodeInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
+void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
 {
     miral::WindowSpecification spec;
     spec.top_left() = r.top_left;
@@ -32,13 +32,13 @@ void WindowManagerToolsNodeInterface::set_rectangle(miral::Window const& window,
     }
 }
 
-MirWindowState WindowManagerToolsNodeInterface::get_state(miral::Window const& window)
+MirWindowState WindowManagerToolsTilingInterface::get_state(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
     return window_info.state();
 }
 
-void WindowManagerToolsNodeInterface::change_state(miral::Window const& window, MirWindowState state)
+void WindowManagerToolsTilingInterface::change_state(miral::Window const& window, MirWindowState state)
 {
     auto& window_info = tools.info_for(window);
     miral::WindowSpecification spec;
@@ -47,13 +47,13 @@ void WindowManagerToolsNodeInterface::change_state(miral::Window const& window, 
     tools.place_and_size_for_state(spec, window_info);
 }
 
-void WindowManagerToolsNodeInterface::clip(miral::Window const& window, geom::Rectangle const& r)
+void WindowManagerToolsTilingInterface::clip(miral::Window const& window, geom::Rectangle const& r)
 {
     auto& window_info = tools.info_for(window);
     window_info.clip_area(r);
 }
 
-void WindowManagerToolsNodeInterface::noclip(miral::Window const& window)
+void WindowManagerToolsTilingInterface::noclip(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
     window_info.clip_area(mir::optional_value<geom::Rectangle>());

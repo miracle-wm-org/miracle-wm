@@ -13,7 +13,7 @@ WorkspaceContent::WorkspaceContent(
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    std::shared_ptr<NodeInterface> const& node_interface)
+    std::shared_ptr<TilingInterface> const& node_interface)
     : tools{tools},
       tree(std::make_shared<TilingWindowTree>(screen, node_interface, tools, config)),
       workspace{workspace}

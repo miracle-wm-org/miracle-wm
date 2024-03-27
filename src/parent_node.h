@@ -2,7 +2,7 @@
 #define MIRACLEWM_PARENT_NODE_H
 
 #include "node_common.h"
-#include "node_interface.h"
+#include "tiling_interface.h"
 #include "node.h"
 #include <mir/geometry/rectangle.h>
 
@@ -18,7 +18,7 @@ class TilingWindowTree;
 class ParentNode : public Node
 {
 public:
-    ParentNode(std::shared_ptr<NodeInterface> const&,
+    ParentNode(std::shared_ptr<TilingInterface> const&,
                geom::Rectangle,
                std::shared_ptr<MiracleConfig> const&,
                TilingWindowTree* tree,
@@ -49,7 +49,7 @@ public:
     void set_parent(std::shared_ptr<ParentNode> const&) override;
 
 private:
-    std::shared_ptr<NodeInterface> node_interface;
+    std::shared_ptr<TilingInterface> node_interface;
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;

@@ -17,7 +17,7 @@ using namespace miracle;
 
 TilingWindowTree::TilingWindowTree(
     OutputContent* screen,
-    std::shared_ptr<NodeInterface> const& node_interface,
+    std::shared_ptr<TilingInterface> const& node_interface,
     miral::WindowManagerTools const& tools,
     std::shared_ptr<MiracleConfig> const& config)
     : screen{screen},

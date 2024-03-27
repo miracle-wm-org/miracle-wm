@@ -1,5 +1,5 @@
-#ifndef MIRACLEWM_NODE_INTERFACE_H
-#define MIRACLEWM_NODE_INTERFACE_H
+#ifndef MIRACLEWM_TILING_INTERFACE_H
+#define MIRACLEWM_TILING_INTERFACE_H
 
 #include <miral/window.h>
 
@@ -8,7 +8,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
-class NodeInterface
+class TilingInterface
 {
 public:
     virtual bool is_fullscreen(miral::Window const&) = 0;

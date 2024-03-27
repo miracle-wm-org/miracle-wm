@@ -19,7 +19,7 @@ namespace miracle
 
 class OutputContent;
 class MiracleConfig;
-class NodeInterface;
+class TilingInterface;
     
 enum class Direction
 {
@@ -34,7 +34,7 @@ class TilingWindowTree
 public:
     TilingWindowTree(
         OutputContent* parent,
-        std::shared_ptr<NodeInterface> const&,
+        std::shared_ptr<TilingInterface> const&,
         miral::WindowManagerTools const& tools,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
