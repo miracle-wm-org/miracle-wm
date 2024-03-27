@@ -211,6 +211,26 @@ void ParentNode::graft_existing(std::shared_ptr<Node> const& node, int index)
     constrain();
 }
 
+void ParentNode::convert_to_lane(std::shared_ptr<LeafNode> const& node)
+{
+    auto index = get_index_of_node(node);
+    if (index < 0)
+    {
+        mir::fatal_error("Attempting to convert a node to lane with an incorrect parent");
+        return;
+    }
+
+    auto new_parent_node = std::make_shared<ParentNode>(
+        node_interface,
+        node->get_logical_area(),
+        config,
+        tree,
+        as_lane(shared_from_this()));
+    new_parent_node->sub_nodes.push_back(node);
+    node->set_parent(new_parent_node);
+    sub_nodes[index] = new_parent_node;
+}
+
 void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
 {
     // We are setting the size of the lane, but each window might have an idea of how
@@ -419,6 +439,8 @@ void ParentNode::remove(const std::shared_ptr<Node> &node)
         }
         set_direction(dying_lane->get_direction());
     }
+
+    relayout();
 }
 
 int ParentNode::get_index_of_node(miracle::Node const* node) const

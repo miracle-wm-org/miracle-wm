@@ -1,5 +1,6 @@
 #include "leaf_node.h"
 #include "miracle_config.h"
+#include "parent_node.h"
 #include <cmath>
 
 using namespace miracle;
@@ -52,11 +53,8 @@ void LeafNode::translate(int x, int y)
 
 geom::Rectangle LeafNode::get_visible_area() const
 {
-    // TODO!
-    bool has_right_neighbor = false;
-    bool has_bottom_neighbor = false;
-    int half_gap_x = has_right_neighbor ? (int)(ceil((double) config->get_inner_gaps_x() / 2.0)) : 0;
-    int half_gap_y = has_bottom_neighbor ? (int)(ceil((double) config->get_inner_gaps_y() / 2.0)) : 0;
+    int half_gap_x = _has_right_neighbor() ? (int)(ceil((double) config->get_inner_gaps_x() / 2.0)) : 0;
+    int half_gap_y = _has_bottom_neighbor() ? (int)(ceil((double) config->get_inner_gaps_y() / 2.0)) : 0;
     return {
         geom::Point{
             logical_area.top_left.x.as_int(),
@@ -89,20 +87,32 @@ size_t LeafNode::get_min_height() const
 
 void LeafNode::show()
 {
-    is_shown = true;
+    next_state = before_shown_state;
+    before_shown_state.reset();
 }
 
 void LeafNode::hide()
 {
-    is_shown = false;
+    before_shown_state = node_interface->get_state(window);
+    next_state = mir_window_state_hidden;
+}
+
+void LeafNode::toggle_fullscreen()
+{
+    auto state = node_interface->get_state(window);
+    if (state == mir_window_state_fullscreen)
+        next_state = mir_window_state_restored;
+    else
+        next_state = mir_window_state_fullscreen;
 }
 
 void LeafNode::commit_changes()
 {
+    if (next_state)
+    {
+        node_interface->change_state(window, next_state.value());
+        next_state.reset();
+    }
     node_interface->set_rectangle(window, logical_area);
-    // TODO:
-//    if (is_shown)
-//        node_interface->show(window);
-//    else
-//        node_interface->hide(window);
+    constrain();
 }

@@ -17,12 +17,6 @@ class Tree;
 class LeafNode;
 class ParentNode;
 
-enum class NodeState
-{
-    window ,
-    lane
-};
-
 /// A node in the tree is either a single window or a lane.
 class Node : public std::enable_shared_from_this<Node>
 {

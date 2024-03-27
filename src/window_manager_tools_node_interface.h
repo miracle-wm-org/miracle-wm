@@ -12,8 +12,8 @@ public:
     WindowManagerToolsNodeInterface(miral::WindowManagerTools const&);
     bool is_fullscreen(miral::Window const&) override;
     void set_rectangle(miral::Window const&, geom::Rectangle const&) override;
-    void show(miral::Window const&) override;
-    void hide(miral::Window const&) override;
+    MirWindowState get_state(miral::Window const&) override;
+    void change_state(miral::Window const&, MirWindowState state)override;
     void clip(miral::Window const&, geom::Rectangle const&) override;
     void noclip(miral::Window const&) override;
 

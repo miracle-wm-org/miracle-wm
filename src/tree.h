@@ -60,7 +60,7 @@ public:
     /// Toggle the active window between fullscreen and not fullscreen
     bool try_toggle_active_fullscreen();
 
-    bool has_fullscreen_window() { return is_active_window_fullscreen; }
+    bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
     void request_vertical();
@@ -103,7 +103,6 @@ public:
     /// Shows the entire tree
     void show();
 
-    std::shared_ptr<Node> get_root_node();
     void recalculate_root_node_area();
     bool is_empty();
 
@@ -119,12 +118,6 @@ private:
         std::shared_ptr<Node> node = nullptr;
     };
 
-    struct NodeResurrection
-    {
-        std::shared_ptr<LeafNode> node;
-        MirWindowState state;
-    };
-
     OutputContent* screen;
     miral::WindowManagerTools tools;
     std::shared_ptr<MiracleConfig> config;
@@ -134,18 +127,31 @@ private:
     std::shared_ptr<LeafNode> active_window;
     bool is_resizing = false;
     bool is_active_window_fullscreen = false;
-    bool is_hidden = true;
-    std::vector<NodeResurrection> nodes_to_resurrect;
+    bool is_hidden = false;
     int config_handle = 0;
 
-    std::shared_ptr<ParentNode> _get_active_lane();
-    void _handle_direction_request(NodeLayoutDirection direction);
-    void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
-    void _handle_node_remove(std::shared_ptr<Node> const& node);
+    std::shared_ptr<ParentNode> get_active_lane();
+    void handle_direction_change(NodeLayoutDirection direction);
+    void handle_resize(std::shared_ptr<Node> const& node, Direction direction, int amount);
+
+    /// Removes the node from the tree
+    /// @returns The parent that will need to have its changes committed
+    std::shared_ptr<ParentNode> handle_remove(std::shared_ptr<Node> const& node);
+
+    /// Transfer a node from its current parent to the parent of 'to'
+    /// in a position right after 'to'.
+    /// @returns The two parents who will need to have their changes committed
+    std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> transfer_node(
+        std::shared_ptr<LeafNode> const& node,
+        std::shared_ptr<Node> const& to);
+
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    MoveResult _move(std::shared_ptr<Node> const& from, Direction direction);
-    static std::shared_ptr<LeafNode> _select(std::shared_ptr<Node> const& from, Direction direction);
+    MoveResult handle_move(std::shared_ptr<Node> const& from, Direction direction);
+
+    /// Selects the next node in the provided direction
+    /// @returns The next selectable window or nullptr if none is found
+    static std::shared_ptr<LeafNode> handle_select(std::shared_ptr<Node> const &from, Direction direction);
 };
 
 }

@@ -32,18 +32,19 @@ void WindowManagerToolsNodeInterface::set_rectangle(miral::Window const& window,
     }
 }
 
-void WindowManagerToolsNodeInterface::show(miral::Window const& window)
+MirWindowState WindowManagerToolsNodeInterface::get_state(miral::Window const& window)
 {
-    miral::WindowSpecification spec;
-    spec.state() = mir_window_state_restored;
-    tools.modify_window(window, spec);
+    auto& window_info = tools.info_for(window);
+    return window_info.state();
 }
 
-void WindowManagerToolsNodeInterface::hide(miral::Window const& window)
+void WindowManagerToolsNodeInterface::change_state(miral::Window const& window, MirWindowState state)
 {
+    auto& window_info = tools.info_for(window);
     miral::WindowSpecification spec;
-    spec.state() = mir_window_state_hidden;
+    spec.state() = state;
     tools.modify_window(window, spec);
+    tools.place_and_size_for_state(spec, window_info);
 }
 
 void WindowManagerToolsNodeInterface::clip(miral::Window const& window, geom::Rectangle const& r)

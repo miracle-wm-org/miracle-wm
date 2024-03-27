@@ -28,6 +28,7 @@ public:
     std::shared_ptr<LeafNode> create_space_for_window(int index = -1);
     std::shared_ptr<LeafNode> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Node> const& node, int index);
+    void convert_to_lane(std::shared_ptr<LeafNode> const&);
     void set_logical_area(geom::Rectangle const& target_rect) override;
     void scale_area(double x_scale, double y_scale) override;
     void translate(int x, int y) override;

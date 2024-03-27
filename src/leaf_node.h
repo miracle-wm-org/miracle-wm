@@ -3,8 +3,10 @@
 
 #include "node.h"
 #include "node_interface.h"
+#include "node_common.h"
 #include <miral/window_manager_tools.h>
 #include <miral/window.h>
+#include <optional>
 
 namespace geom = mir::geometry;
 
@@ -38,6 +40,7 @@ public:
     void translate(int x, int y) override;
     void show();
     void hide();
+    void toggle_fullscreen();
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
@@ -51,7 +54,9 @@ private:
     std::shared_ptr<MiracleConfig> config;
     Tree* tree;
     miral::Window window;
-    bool is_shown = true;
+    std::optional<MirWindowState> before_shown_state;
+    std::optional<MirWindowState> next_state;
+    NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
 };
 
 } // miracle
