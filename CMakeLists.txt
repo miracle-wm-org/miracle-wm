@@ -26,7 +26,7 @@ include(GNUInstallDirs)
 
 add_library(miracle-wm-implementation
     src/policy.cpp
-    src/tree.cpp
+    src/tiling_window_tree.cpp
     src/node.cpp
     src/window_helpers.h
     src/window_helpers.cpp

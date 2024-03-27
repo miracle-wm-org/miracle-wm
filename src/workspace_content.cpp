@@ -2,7 +2,7 @@
 
 #include "workspace_content.h"
 #include "window_metadata.h"
-#include "tree.h"
+#include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 
@@ -15,7 +15,7 @@ WorkspaceContent::WorkspaceContent(
     std::shared_ptr<MiracleConfig> const& config,
     std::shared_ptr<NodeInterface> const& node_interface)
     : tools{tools},
-      tree(std::make_shared<Tree>(screen, node_interface, tools, config)),
+      tree(std::make_shared<TilingWindowTree>(screen, node_interface, tools, config)),
       workspace{workspace}
 {
 }
@@ -25,7 +25,7 @@ int WorkspaceContent::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<Tree> WorkspaceContent::get_tree() const
+std::shared_ptr<TilingWindowTree> WorkspaceContent::get_tree() const
 {
     return tree;
 }

@@ -29,15 +29,15 @@ enum class Direction
     right
 };
 
-class Tree
+class TilingWindowTree
 {
 public:
-    Tree(
+    TilingWindowTree(
         OutputContent* parent,
         std::shared_ptr<NodeInterface> const&,
         miral::WindowManagerTools const& tools,
         std::shared_ptr<MiracleConfig> const& options);
-    ~Tree();
+    ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.

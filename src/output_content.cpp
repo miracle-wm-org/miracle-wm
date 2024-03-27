@@ -28,7 +28,7 @@ OutputContent::OutputContent(
 {
 }
 
-std::shared_ptr<Tree> OutputContent::get_active_tree() const
+std::shared_ptr<TilingWindowTree> OutputContent::get_active_tree() const
 {
     return get_active_workspace()->get_tree();
 }

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "tree.h"
+#include "tiling_window_tree.h"
 #include <miral/window_management_options.h>
 
 using namespace miracle;
@@ -19,5 +19,5 @@ public:
     {
     }
 
-    std::shared_ptr<Tree> tree;
+    std::shared_ptr<TilingWindowTree> tree;
 };

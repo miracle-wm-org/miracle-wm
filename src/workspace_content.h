@@ -8,7 +8,7 @@ namespace miracle
 {
 class OutputContent;
 class MiracleConfig;
-class Tree;
+class TilingWindowTree;
 class WindowMetadata;
 class NodeInterface;
 
@@ -23,7 +23,7 @@ public:
         std::shared_ptr<NodeInterface> const& node_interface);
 
     [[nodiscard]] int get_workspace() const;
-    [[nodiscard]] std::shared_ptr<Tree> get_tree() const;
+    [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
     void show(std::vector<std::shared_ptr<WindowMetadata>> const&);
     std::vector<std::shared_ptr<WindowMetadata>> hide();
 
@@ -34,7 +34,7 @@ public:
 
 private:
     miral::WindowManagerTools tools;
-    std::shared_ptr<Tree> tree;
+    std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
 };

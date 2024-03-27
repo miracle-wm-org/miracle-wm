@@ -67,7 +67,7 @@ ParentNode::ParentNode(
     std::shared_ptr<NodeInterface> const& node_interface,
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
-    Tree* tree,
+    TilingWindowTree* tree,
     std::shared_ptr<ParentNode> const& parent)
     : Node(parent),
       node_interface{node_interface},

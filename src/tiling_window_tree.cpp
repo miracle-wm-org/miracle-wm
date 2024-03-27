@@ -1,7 +1,7 @@
 #include "window_metadata.h"
 #define MIR_LOG_COMPONENT "window_tree"
 
-#include "tree.h"
+#include "tiling_window_tree.h"
 #include "parent_node.h"
 #include "leaf_node.h"
 #include "window_helpers.h"
@@ -15,7 +15,7 @@
 
 using namespace miracle;
 
-Tree::Tree(
+TilingWindowTree::TilingWindowTree(
     OutputContent* screen,
     std::shared_ptr<NodeInterface> const& node_interface,
     miral::WindowManagerTools const& tools,
@@ -37,12 +37,12 @@ Tree::Tree(
     });
 }
 
-Tree::~Tree()
+TilingWindowTree::~TilingWindowTree()
 {
     config->unregister_listener(config_handle);
 }
 
-miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecification &requested_specification)
+miral::WindowSpecification TilingWindowTree::allocate_position(const miral::WindowSpecification &requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;
@@ -63,7 +63,7 @@ miral::WindowSpecification Tree::allocate_position(const miral::WindowSpecificat
     return new_spec;
 }
 
-std::shared_ptr<LeafNode> Tree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
     auto node = get_active_lane()->confirm_window(window_info.window());
     if (window_helpers::is_window_fullscreen(window_info.state()))
@@ -79,12 +79,12 @@ std::shared_ptr<LeafNode> Tree::advise_new_window(miral::WindowInfo const& windo
     return node;
 }
 
-void Tree::toggle_resize_mode()
+void TilingWindowTree::toggle_resize_mode()
 {
     is_resizing = !is_resizing;
 }
 
-bool Tree::try_resize_active_window(miracle::Direction direction)
+bool TilingWindowTree::try_resize_active_window(miracle::Direction direction)
 {
     if (!is_resizing)
     {
@@ -108,7 +108,7 @@ bool Tree::try_resize_active_window(miracle::Direction direction)
     return true;
 }
 
-bool Tree::try_select_next(miracle::Direction direction)
+bool TilingWindowTree::try_select_next(miracle::Direction direction)
 {
     if (is_active_window_fullscreen)
     {
@@ -139,7 +139,7 @@ bool Tree::try_select_next(miracle::Direction direction)
     return true;
 }
 
-bool Tree::try_toggle_active_fullscreen()
+bool TilingWindowTree::try_toggle_active_fullscreen()
 {
     if (is_resizing)
     {
@@ -163,7 +163,7 @@ bool Tree::try_toggle_active_fullscreen()
     return true;
 }
 
-void Tree::set_output_area(geom::Rectangle const& new_area)
+void TilingWindowTree::set_output_area(geom::Rectangle const& new_area)
 {
     auto area = screen->get_area();
     double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
@@ -180,7 +180,7 @@ void Tree::set_output_area(geom::Rectangle const& new_area)
     root_lane->translate(position_diff_x, position_diff_y);
 }
 
-std::shared_ptr<LeafNode> Tree::select_window_from_point(int x, int y)
+std::shared_ptr<LeafNode> TilingWindowTree::select_window_from_point(int x, int y)
 {
     if (is_active_window_fullscreen)
     {
@@ -196,7 +196,7 @@ std::shared_ptr<LeafNode> Tree::select_window_from_point(int x, int y)
     return Node::as_leaf(node);
 }
 
-bool Tree::try_move_active_window(miracle::Direction direction)
+bool TilingWindowTree::try_move_active_window(miracle::Direction direction)
 {
     if (is_active_window_fullscreen)
     {
@@ -276,17 +276,17 @@ bool Tree::try_move_active_window(miracle::Direction direction)
     return true;
 }
 
-void Tree::request_vertical()
+void TilingWindowTree::request_vertical()
 {
     handle_direction_change(NodeLayoutDirection::vertical);
 }
 
-void Tree::request_horizontal()
+void TilingWindowTree::request_horizontal()
 {
     handle_direction_change(NodeLayoutDirection::horizontal);
 }
 
-void Tree::handle_direction_change(NodeLayoutDirection direction)
+void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
 {
     if (is_active_window_fullscreen)
     {
@@ -312,7 +312,7 @@ void Tree::handle_direction_change(NodeLayoutDirection direction)
     get_active_lane()->set_direction(direction);
 }
 
-void Tree::advise_focus_gained(miral::Window& window)
+void TilingWindowTree::advise_focus_gained(miral::Window& window)
 {
     is_resizing = false;
 
@@ -330,7 +330,7 @@ void Tree::advise_focus_gained(miral::Window& window)
         tools.send_tree_to_back(window);
 }
 
-void Tree::advise_focus_lost(miral::Window& window)
+void TilingWindowTree::advise_focus_lost(miral::Window& window)
 {
     is_resizing = false;
 
@@ -338,7 +338,7 @@ void Tree::advise_focus_lost(miral::Window& window)
         active_window = nullptr;
 }
 
-void Tree::advise_delete_window(miral::Window& window)
+void TilingWindowTree::advise_delete_window(miral::Window& window)
 {
     auto window_node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!window_node)
@@ -398,7 +398,7 @@ std::shared_ptr<LeafNode> get_closest_window_to_select_from_node(
 }
 }
 
-std::shared_ptr<LeafNode> Tree::handle_select(
+std::shared_ptr<LeafNode> TilingWindowTree::handle_select(
     std::shared_ptr<Node> const &from,
     Direction direction)
 {
@@ -444,7 +444,7 @@ std::shared_ptr<LeafNode> Tree::handle_select(
     return nullptr;
 }
 
-Tree::MoveResult Tree::handle_move(std::shared_ptr<Node>const& from, Direction direction)
+TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Node>const& from, Direction direction)
 {
     // Algorithm:
     //  1. Perform the _select algorithm. If that passes, then we want to be where the selected node
@@ -478,7 +478,7 @@ Tree::MoveResult Tree::handle_move(std::shared_ptr<Node>const& from, Direction d
     return {};
 }
 
-std::shared_ptr<ParentNode> Tree::get_active_lane()
+std::shared_ptr<ParentNode> TilingWindowTree::get_active_lane()
 {
     if (!active_window)
         return root_lane;
@@ -486,7 +486,7 @@ std::shared_ptr<ParentNode> Tree::get_active_lane()
     return active_window->get_parent().lock();
 }
 
-void Tree::handle_resize(
+void TilingWindowTree::handle_resize(
     std::shared_ptr<Node> const& node,
     Direction direction,
     int amount)
@@ -592,7 +592,7 @@ void Tree::handle_resize(
     }
 }
 
-std::shared_ptr<ParentNode> Tree::handle_remove(std::shared_ptr<Node> const& node)
+std::shared_ptr<ParentNode> TilingWindowTree::handle_remove(std::shared_ptr<Node> const& node)
 {
     auto parent = node->get_parent().lock();
     if (parent == nullptr)
@@ -613,7 +613,7 @@ std::shared_ptr<ParentNode> Tree::handle_remove(std::shared_ptr<Node> const& nod
     return parent;
 }
 
-std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> Tree::transfer_node(std::shared_ptr<LeafNode> const& node, std::shared_ptr<Node> const& to)
+std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> TilingWindowTree::transfer_node(std::shared_ptr<LeafNode> const& node, std::shared_ptr<Node> const& to)
 {
     // We are moving the active window to a new lane
     auto to_update = handle_remove(node);
@@ -627,7 +627,7 @@ std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> Tree::trans
     return {target_parent, to_update};
 }
 
-void Tree::recalculate_root_node_area()
+void TilingWindowTree::recalculate_root_node_area()
 {
     for (auto const& zone : screen->get_app_zones())
     {
@@ -636,7 +636,7 @@ void Tree::recalculate_root_node_area()
     }
 }
 
-bool Tree::advise_fullscreen_window(miral::Window& window)
+bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
 {
     auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
@@ -649,7 +649,7 @@ bool Tree::advise_fullscreen_window(miral::Window& window)
     return true;
 }
 
-bool Tree::advise_restored_window(miral::Window& window)
+bool TilingWindowTree::advise_restored_window(miral::Window& window)
 {
     auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
@@ -665,7 +665,7 @@ bool Tree::advise_restored_window(miral::Window& window)
     return true;
 }
 
-bool Tree::handle_window_ready(miral::WindowInfo &window_info)
+bool TilingWindowTree::handle_window_ready(miral::WindowInfo &window_info)
 {
     auto node = window_helpers::get_node_for_window_by_tree(window_info.window(), tools, this);
     if (!node)
@@ -681,7 +681,7 @@ bool Tree::handle_window_ready(miral::WindowInfo &window_info)
     return true;
 }
 
-bool Tree::advise_state_change(miral::Window const& window, MirWindowState state)
+bool TilingWindowTree::advise_state_change(miral::Window const& window, MirWindowState state)
 {
     auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
@@ -707,7 +707,7 @@ bool Tree::advise_state_change(miral::Window const& window, MirWindowState state
     return true;
 }
 
-bool Tree::confirm_placement_on_display(
+bool TilingWindowTree::confirm_placement_on_display(
     miral::Window const& window,
     MirWindowState new_state,
     mir::geometry::Rectangle &new_placement)
@@ -729,7 +729,7 @@ bool Tree::confirm_placement_on_display(
     return true;
 }
 
-bool Tree::constrain(miral::Window& window)
+bool TilingWindowTree::constrain(miral::Window& window)
 {
     auto node = window_helpers::get_node_for_window_by_tree(window, tools, this);
     if (!node)
@@ -761,12 +761,12 @@ void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, 
 }
 }
 
-void Tree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
+void TilingWindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
 {
     foreach_node_internal(f, root_lane);
 }
 
-void Tree::hide()
+void TilingWindowTree::hide()
 {
     if (is_hidden)
     {
@@ -786,7 +786,7 @@ void Tree::hide()
     });
 }
 
-void Tree::show()
+void TilingWindowTree::show()
 {
     if (!is_hidden)
     {
@@ -807,7 +807,7 @@ void Tree::show()
 
 }
 
-bool Tree::is_empty()
+bool TilingWindowTree::is_empty()
 {
     return root_lane->num_nodes() == 0;
 }

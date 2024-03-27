@@ -1,7 +1,7 @@
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
-#include "tree.h"
+#include "tiling_window_tree.h"
 #include "workspace_content.h"
 #include "window_metadata.h"
 #include <memory>
@@ -27,7 +27,7 @@ public:
         std::shared_ptr<NodeInterface> const&);
     ~OutputContent() = default;
 
-    [[nodiscard]] std::shared_ptr<Tree> get_active_tree() const;
+    [[nodiscard]] std::shared_ptr<TilingWindowTree> get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
     [[nodiscard]] std::shared_ptr<WorkspaceContent> get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);

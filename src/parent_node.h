@@ -13,16 +13,16 @@ namespace miracle
 
 class LeafNode;
 class MiracleConfig;
-class Tree;
+class TilingWindowTree;
 
 class ParentNode : public Node
 {
 public:
     ParentNode(std::shared_ptr<NodeInterface> const&,
-        geom::Rectangle,
-        std::shared_ptr<MiracleConfig> const&,
-        Tree* tree,
-        std::shared_ptr<ParentNode> const& parent);
+               geom::Rectangle,
+               std::shared_ptr<MiracleConfig> const&,
+               TilingWindowTree* tree,
+               std::shared_ptr<ParentNode> const& parent);
     geom::Rectangle get_logical_area() const override;
     size_t num_nodes() const;
     std::shared_ptr<LeafNode> create_space_for_window(int index = -1);
@@ -51,7 +51,7 @@ public:
 private:
     std::shared_ptr<NodeInterface> node_interface;
     geom::Rectangle logical_area;
-    Tree* tree;
+    TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     std::vector<std::shared_ptr<Node>> sub_nodes;

@@ -14,7 +14,7 @@ namespace miracle
 {
 
 class MiracleConfig;
-class Tree;
+class TilingWindowTree;
 
 class LeafNodeInterface
 {
@@ -28,7 +28,7 @@ public:
         std::shared_ptr<NodeInterface> const& node_interface,
         geom::Rectangle area,
         std::shared_ptr<MiracleConfig> const& config,
-        Tree* tree,
+        TilingWindowTree* tree,
         std::shared_ptr<ParentNode> const& parent);
 
     void associate_to_window(miral::Window const&);
@@ -44,7 +44,7 @@ public:
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
-    [[nodiscard]] Tree* get_tree() const { return tree; }
+    [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
     [[nodiscard]] miral::Window& get_window() { return window; }
     void commit_changes() override;
 
@@ -52,7 +52,7 @@ private:
     std::shared_ptr<NodeInterface> node_interface;
     geom::Rectangle logical_area;
     std::shared_ptr<MiracleConfig> config;
-    Tree* tree;
+    TilingWindowTree* tree;
     miral::Window window;
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;

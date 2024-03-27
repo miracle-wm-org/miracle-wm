@@ -13,7 +13,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 class MiracleConfig;
-class Tree;
+class TilingWindowTree;
 class LeafNode;
 class ParentNode;
 
