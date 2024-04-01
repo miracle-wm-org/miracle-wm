@@ -3,21 +3,19 @@ Version:        0.0.1
 Release:        1%{?dist}
 Summary:        A tiling Wayland compositor based on Mir 
 
-License:        GPLv3+
+License:        GPL-3.0-or-later
 URL:            https://github.com/mattkae/miracle-wm
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  g++
-BuildRequires:  mir-devel
+BuildRequires:  pkgconfig(miral)
 BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  glib2-devel
-BuildRequires:  yaml-cpp-devel
-BuildRequires:  libevdev-devel
-BuildRequires:  json-devel
-BuildRequires:  libnotify-devel
+BuildRequires:  pkgconfig(yaml-cpp)
+BuildRequires:  pkgconfig(libevdev)
+BuildRequires:  cmake(nlohmann_json) >= 3.2.0
+BuildRequires:  pkgconfig(libnotify)
 BuildRequires:  cmake(gtest)
-BuildRequires:  gtest-devel
 BuildRequires:  libxkbcommon-devel
 
 %description
@@ -45,5 +43,6 @@ those compositors, like swayfx.
 
 
 %changelog
-* Thu Mar 28 2024 mk
-- First Test
+* Mon Apr 01 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.0.1-1
+- Initial version
+
