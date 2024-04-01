@@ -57,8 +57,8 @@ install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-configure_file(session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop.in miracle-wm-non-snap.desktop @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-non-snap.desktop
+configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 add_custom_target(miracle-wm-sensible-terminal ALL
