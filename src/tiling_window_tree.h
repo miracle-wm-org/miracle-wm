@@ -2,6 +2,7 @@
 #define MIRACLE_TREE_H
 
 #include "node.h"
+#include "node_common.h"
 #include <memory>
 #include <vector>
 #include <miral/window.h>
@@ -18,6 +19,7 @@ namespace miracle
 
 class OutputContent;
 class MiracleConfig;
+class TilingInterface;
     
 enum class Direction
 {
@@ -27,17 +29,20 @@ enum class Direction
     right
 };
 
-class Tree
+class TilingWindowTree
 {
 public:
-    Tree(OutputContent* parent, miral::WindowManagerTools const& tools, std::shared_ptr<MiracleConfig> const& options);
-    ~Tree();
+    TilingWindowTree(
+        OutputContent* parent,
+        TilingInterface&,
+        std::shared_ptr<MiracleConfig> const& options);
+    ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
 
-    std::shared_ptr<Node> advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<LeafNode> advise_new_window(miral::WindowInfo const&);
 
     /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
     void toggle_resize_mode();
@@ -54,7 +59,7 @@ public:
     /// Toggle the active window between fullscreen and not fullscreen
     bool try_toggle_active_fullscreen();
 
-    bool has_fullscreen_window() { return is_active_window_fullscreen; }
+    bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
     void request_vertical();
@@ -74,7 +79,7 @@ public:
     /// Called when the physical display is resized.
     void set_output_area(geom::Rectangle const& new_area);
 
-    std::shared_ptr<Node> select_window_from_point(int x, int y);
+    std::shared_ptr<LeafNode> select_window_from_point(int x, int y);
 
     bool advise_fullscreen_window(miral::Window&);
     bool advise_restored_window(miral::Window&);
@@ -97,7 +102,6 @@ public:
     /// Shows the entire tree
     void show();
 
-    std::shared_ptr<Node> get_root_node();
     void recalculate_root_node_area();
     bool is_empty();
 
@@ -113,33 +117,40 @@ private:
         std::shared_ptr<Node> node = nullptr;
     };
 
-    struct NodeResurrection
-    {
-        std::shared_ptr<Node> node;
-        MirWindowState state;
-    };
-
     OutputContent* screen;
-    miral::WindowManagerTools tools;
+    TilingInterface& tiling_interface;
     std::shared_ptr<MiracleConfig> config;
-    std::shared_ptr<Node> root_lane;
+    std::shared_ptr<ParentNode> root_lane;
 
     // TODO: We can probably remove active_window and just resolve it efficiently now?
-    std::shared_ptr<Node> active_window;
+    std::shared_ptr<LeafNode> active_window;
     bool is_resizing = false;
     bool is_active_window_fullscreen = false;
-    bool is_hidden = true;
-    std::vector<NodeResurrection> nodes_to_resurrect;
+    bool is_hidden = false;
     int config_handle = 0;
 
-    std::shared_ptr<Node> _get_active_lane();
-    void _handle_direction_request(NodeLayoutDirection direction);
-    void _handle_resize_request(std::shared_ptr<Node> const& node, Direction direction, int amount);
-    void _handle_node_remove(std::shared_ptr<Node> const& node);
+    std::shared_ptr<ParentNode> get_active_lane();
+    void handle_direction_change(NodeLayoutDirection direction);
+    void handle_resize(std::shared_ptr<Node> const& node, Direction direction, int amount);
+
+    /// Removes the node from the tree
+    /// @returns The parent that will need to have its changes committed
+    std::shared_ptr<ParentNode> handle_remove(std::shared_ptr<Node> const& node);
+
+    /// Transfer a node from its current parent to the parent of 'to'
+    /// in a position right after 'to'.
+    /// @returns The two parents who will need to have their changes committed
+    std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> transfer_node(
+        std::shared_ptr<LeafNode> const& node,
+        std::shared_ptr<Node> const& to);
+
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    MoveResult _move(std::shared_ptr<Node> const& from, Direction direction);
-    static std::shared_ptr<Node> _select(std::shared_ptr<Node> const& from, Direction direction);
+    MoveResult handle_move(std::shared_ptr<Node> const& from, Direction direction);
+
+    /// Selects the next node in the provided direction
+    /// @returns The next selectable window or nullptr if none is found
+    static std::shared_ptr<LeafNode> handle_select(std::shared_ptr<Node> const &from, Direction direction);
 };
 
 }

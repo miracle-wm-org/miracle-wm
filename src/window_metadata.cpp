@@ -11,7 +11,7 @@ WindowMetadata::WindowMetadata(
       output{output}
 {}
 
-void WindowMetadata::associate_to_node(std::shared_ptr<Node> const& node)
+void WindowMetadata::associate_to_node(std::shared_ptr<LeafNode> const& node)
 {
     tiling_node = node;
 }

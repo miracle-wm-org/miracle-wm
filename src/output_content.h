@@ -1,8 +1,9 @@
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
-#include "tree.h"
+#include "tiling_window_tree.h"
 #include "workspace_content.h"
+#include "window_metadata.h"
 #include <memory>
 #include <miral/output.h>
 #include <miral/minimal_window_manager.h>
@@ -11,6 +12,7 @@ namespace miracle
 {
 class WorkspaceManager;
 class MiracleConfig;
+class WindowManagerToolsTilingInterface;
 
 class OutputContent
 {
@@ -21,10 +23,11 @@ public:
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
         miral::MinimalWindowManager& floating_window_manager,
-        std::shared_ptr<MiracleConfig> const& options);
+        std::shared_ptr<MiracleConfig> const& options,
+        TilingInterface&);
     ~OutputContent() = default;
 
-    [[nodiscard]] std::shared_ptr<Tree> get_active_tree() const;
+    [[nodiscard]] std::shared_ptr<TilingWindowTree> get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
     [[nodiscard]] std::shared_ptr<WorkspaceContent> get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
@@ -89,6 +92,7 @@ private:
     miral::MinimalWindowManager& floating_window_manager;
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
+    TilingInterface& node_interface;
     int active_workspace = -1;
     std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
     std::vector<miral::Zone> application_zone_list;

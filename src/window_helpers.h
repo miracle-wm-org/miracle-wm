@@ -6,8 +6,8 @@
 
 namespace miracle
 {
-class Node;
-class Tree;
+class LeafNode;
+class TilingWindowTree;
 class WindowMetadata;
 
 namespace window_helpers
@@ -32,14 +32,14 @@ std::shared_ptr<WindowMetadata> get_metadata(
     miral::Window const& window,
     miral::WindowManagerTools const& tools);
 
-std::shared_ptr<Node> get_node_for_window(
+std::shared_ptr<LeafNode> get_node_for_window(
     miral::Window const& window,
     miral::WindowManagerTools const& tools);
 
-std::shared_ptr<Node> get_node_for_window_by_tree(
+std::shared_ptr<LeafNode> get_node_for_window_by_tree(
     miral::Window const& window,
     miral::WindowManagerTools const& tools,
-    Tree const* tree);
+    TilingWindowTree const* tree);
 
 miral::WindowSpecification copy_from(miral::WindowInfo const&);
 }
