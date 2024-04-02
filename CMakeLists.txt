@@ -25,6 +25,7 @@ pkg_check_modules(LIBNOTIFY REQUIRED IMPORTED_TARGET libnotify)
 include(GNUInstallDirs)
 
 add_library(miracle-wm-implementation
+    STATIC
     src/policy.cpp
     src/tiling_window_tree.cpp
     src/node.cpp
@@ -52,16 +53,15 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM ${MIRAL_INCLU
 target_link_libraries(     miracle-wm-implementation               ${MIRAL_LDFLAGS}
     PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json)
 
-target_link_libraries(miracle-wm miracle-wm-implementation)
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(miracle-wm ${MIRAL_LDFLAGS})
+target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
 
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-configure_file(session/usr/local/share/wayland-sessions/miracle-wm-non-snap.desktop.in miracle-wm-non-snap.desktop @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-non-snap.desktop
+configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 add_custom_target(miracle-wm-sensible-terminal ALL

@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Miracle
+Comment=A wayland tiling window manager based on Mir
+Exec=sh -l -c @CMAKE_INSTALL_FULL_BINDIR@/miracle-wm
+Type=Application

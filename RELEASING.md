@@ -33,3 +33,22 @@ cd miracle-wm
 5. Wait for the CI to finish, and the package should be ready
 
 Note that you should rebuild for `mantic` and `noble`. Follow the instructions to make sure that it uploads.
+
+## Step 4: RPM Release
+Before following these steps, make sure that you've at least followed [this tutorial](https://www.redhat.com/sysadmin/create-rpm-package).
+
+1. Open up `rpm/miracle-wm.spec`
+2. Update the version to `X.Y.Z`
+3. Updated `BuildRequires` or `Requires` if need be
+4. Add a new entry to the changelog with the same data that is in the Github release, your user name, and a correct timestamp
+5. Move to a directory above `miracle-wm` and run:
+   ```
+    tar --create --file miracle-wm-X.Y.Z.tar.gz miracle-wm
+    ```
+6. `mv miracle-wm-X.Y.Z.tar.gz ~/rpmbuild/SOURCES`
+7. `cp miracle-wm/specs/miracle-wm.spec ~/rpmbuild/SPECS/`
+8. `rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec`
+9. After the build, you should be able to install your rpm:
+   ```sh
+   sudo dnf install ~/rpmbuild/RPMS/<ARCH_TRIPLET>/miracle-wm-X.Y.Z-<REVISION>.<HASH>.<ARCH_TRIPLET>.rpm
+   ```
