@@ -5,7 +5,7 @@ Summary:        A tiling Wayland compositor based on Mir
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/mattkae/miracle-wm
-Source0:        https://github.com/mattkae/miracle-wm/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  g++
