@@ -43,7 +43,8 @@ Policy::Policy(
           tools,
           workspace_observer_registrar,
           [&]() { return get_active_output(); })},
-      ipc{std::make_shared<Ipc>(runner, workspace_manager)}
+      ipc{std::make_shared<Ipc>(runner, workspace_manager)},
+      node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);
     config->register_listener([&](auto& new_config)
@@ -365,7 +366,8 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 void Policy::advise_output_create(miral::Output const& output)
 {
     auto new_tree = std::make_shared<OutputContent>(
-        output, workspace_manager, output.extents(), window_manager_tools, floating_window_manager, config);
+        output, workspace_manager, output.extents(), window_manager_tools,
+        floating_window_manager, config, node_interface);
     workspace_manager.request_first_available_workspace(new_tree);
         output_list.push_back(new_tree);
     if (active_output == nullptr)
