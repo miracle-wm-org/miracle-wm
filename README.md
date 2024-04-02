@@ -60,7 +60,7 @@ sudo snap install --dangerous --classic miracle-wm_*.snap
 Once installed, you may select the "Miracle" option from your display manager before you login (e.g. GDM or LightDM).
 In most environments, this presents itself as a little "settings" button after you select your name.
 
-Note that if you build directly from source, the option may read "Miracle (Non Snap)" to distinguish it from the snapped version.
+Note that if you installed the snap, the option may read "Miracle (snap)" to distinguish it from the binary version.
 
 **Hosted**:
 

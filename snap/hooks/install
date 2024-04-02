@@ -1,4 +1,4 @@
 #!/bin/sh -e
 
 mkdir -p /usr/share/wayland-sessions/
-cp "$SNAP/usr/local/share/wayland-sessions/miracle-wm.desktop" "/usr/share/wayland-sessions/miracle-wm.desktop"
+cp "$SNAP/usr/local/share/wayland-sessions/miracle-wm-snap.desktop.in" "/usr/share/wayland-sessions/miracle-wm-snap.desktop"

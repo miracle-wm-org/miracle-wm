@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Miracle Non Snap
+Name=Miracle (snap)
 Comment=A wayland tiling window manager based on Mir
-Exec=sh -l -c @CMAKE_INSTALL_FULL_BINDIR@/miracle-wm
+Exec=sh -l -c /snap/bin/miracle-wm
 Type=Application
