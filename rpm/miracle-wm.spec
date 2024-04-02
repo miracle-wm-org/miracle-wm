@@ -1,11 +1,11 @@
 Name:           miracle-wm
-Version:        0.0.1
+Version:        0.1.0
 Release:        1%{?dist}
 Summary:        A tiling Wayland compositor based on Mir 
 
 License:        GPL-3.0-or-later
 URL:            https://github.com/mattkae/miracle-wm
-Source0:        %{name}-%{version}.tar.gz
+Source0:        https://github.com/mattkae/miracle-wm/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  g++
@@ -43,6 +43,6 @@ those compositors, like swayfx.
 
 
 %changelog
-* Mon Apr 01 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.0.1-1
+* Mon Apr 01 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.1.0-1
 - Initial version
 
