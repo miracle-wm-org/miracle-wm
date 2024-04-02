@@ -113,6 +113,6 @@ void LeafNode::commit_changes()
         node_interface.change_state(window, next_state.value());
         next_state.reset();
     }
-    node_interface.set_rectangle(window, logical_area);
+    node_interface.set_rectangle(window, get_visible_area());
     constrain();
 }
