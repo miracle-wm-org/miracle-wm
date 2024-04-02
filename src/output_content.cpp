@@ -3,6 +3,7 @@
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
+#include "leaf_node.h"
 #include <miral/window_info.h>
 #include <miral/toolkit_event.h>
 #include <mir/log.h>
@@ -15,17 +16,19 @@ OutputContent::OutputContent(
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
-    std::shared_ptr<MiracleConfig> const& config)
+    std::shared_ptr<MiracleConfig> const& config,
+    TilingInterface& node_interface)
     : output{output},
       workspace_manager{workspace_manager},
       area{area},
       tools{tools},
       floating_window_manager{floating_window_manager},
-      config{config}
+      config{config},
+      node_interface{node_interface}
 {
 }
 
-std::shared_ptr<Tree> OutputContent::get_active_tree() const
+std::shared_ptr<TilingWindowTree> OutputContent::get_active_tree() const
 {
     return get_active_workspace()->get_tree();
 }
@@ -366,7 +369,7 @@ void OutputContent::select_window_from_point(int x, int y)
 void OutputContent::advise_new_workspace(int workspace)
 {
     workspaces.push_back(
-        std::make_shared<WorkspaceContent>(this, tools, workspace, config));
+        std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface));
 }
 
 void OutputContent::advise_workspace_deleted(int workspace)
@@ -522,12 +525,11 @@ std::vector<miral::Window> OutputContent::collect_all_windows() const
     std::vector<miral::Window> windows;
     for (auto& workspace : get_workspaces())
     {
-        workspace->get_tree()->foreach_node([&](auto node)
+        workspace->get_tree()->foreach_node([&](auto const& node)
         {
-            if (node->is_window())
-            {
-                windows.push_back(node->get_window());
-            }
+            auto leaf_node = Node::as_leaf(node);
+            if (leaf_node)
+                windows.push_back(leaf_node->get_window());
         });
     }
     return windows;
