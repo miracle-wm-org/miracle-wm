@@ -41,6 +41,7 @@ public:
     void show();
     void hide();
     void toggle_fullscreen();
+    bool is_fullscreen() const;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
@@ -51,6 +52,7 @@ public:
 private:
     TilingInterface& node_interface;
     geom::Rectangle logical_area;
+    std::optional<geom::Rectangle> next_logical_area;
     std::shared_ptr<MiracleConfig> config;
     TilingWindowTree* tree;
     miral::Window window;

@@ -26,12 +26,12 @@ void LeafNode::associate_to_window(miral::Window const& in_window)
 
 geom::Rectangle LeafNode::get_logical_area() const
 {
-    return logical_area;
+    return next_logical_area ? next_logical_area.value() : logical_area;
 }
 
 void LeafNode::set_logical_area(geom::Rectangle const& target_rect)
 {
-    logical_area = target_rect;
+    next_logical_area = target_rect;
 }
 
 void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
@@ -106,13 +106,25 @@ void LeafNode::toggle_fullscreen()
         next_state = mir_window_state_fullscreen;
 }
 
+bool LeafNode::is_fullscreen() const
+{
+    return node_interface.get_state(window) == mir_window_state_fullscreen;
+}
+
 void LeafNode::commit_changes()
 {
     if (next_state)
     {
         node_interface.change_state(window, next_state.value());
+        constrain();
         next_state.reset();
     }
-    node_interface.set_rectangle(window, get_visible_area());
-    constrain();
+
+    if (next_logical_area)
+    {
+        logical_area = next_logical_area.value();
+        next_logical_area.reset();
+        node_interface.set_rectangle(window, get_visible_area());
+        constrain();
+    }
 }

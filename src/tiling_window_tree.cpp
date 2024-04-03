@@ -658,7 +658,7 @@ bool TilingWindowTree::advise_restored_window(miral::Window& window)
     {
         is_active_window_fullscreen = false;
         active_window->set_logical_area(active_window->get_logical_area());
-        constrain(active_window->get_window());
+        active_window->commit_changes();
     }
 
     return true;
@@ -689,21 +689,6 @@ bool TilingWindowTree::advise_state_change(miral::Window const& window, MirWindo
     if (is_hidden)
         return true;
 
-    auto node = metadata->get_tiling_node();
-    switch (state)
-    {
-        case mir_window_state_restored:
-            node->show();
-            break;
-        case mir_window_state_hidden:
-        case mir_window_state_minimized:
-            node->hide();
-            break;
-        default:
-            break;
-    }
-
-    node->commit_changes();
     return true;
 }
 
@@ -804,9 +789,14 @@ void TilingWindowTree::show()
         {
             leaf_node->show();
             leaf_node->commit_changes();
+
+            if (leaf_node->is_fullscreen())
+            {
+                tiling_interface.select_active_window(leaf_node->get_window());
+                tiling_interface.raise(leaf_node->get_window());
+            }
         }
     });
-
 }
 
 bool TilingWindowTree::is_empty()
