@@ -45,8 +45,8 @@ void WindowManagerToolsTilingInterface::change_state(miral::Window const& window
     auto& window_info = tools.info_for(window);
     miral::WindowSpecification spec;
     spec.state() = state;
-    tools.modify_window(window, spec);
     tools.place_and_size_for_state(spec, window_info);
+    tools.modify_window(window, spec);
 }
 
 void WindowManagerToolsTilingInterface::clip(miral::Window const& window, geom::Rectangle const& r)

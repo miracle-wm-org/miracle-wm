@@ -430,18 +430,6 @@ void Policy::advise_output_delete(miral::Output const& output)
     }
 }
 
-void Policy::advise_state_change(miral::WindowInfo const& window_info, MirWindowState state)
-{
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
-    {
-        mir::log_error("advise_state_changed: metadata is not provided");
-        return;
-    }
-
-    if (metadata->get_output()) metadata->get_output()->advise_state_change(metadata, state);
-}
-
 void Policy::handle_modify_window(
     miral::WindowInfo &window_info,
     const miral::WindowSpecification &modifications)

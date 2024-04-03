@@ -241,13 +241,7 @@ void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMet
     switch (metadata->get_type())
     {
         case WindowType::tiled:
-        {
-            if (get_active_tree().get() != metadata->get_tiling_node()->get_tree())
-                break;
-
-            metadata->get_tiling_node()->get_tree()->advise_state_change(metadata->get_window(), state);
             break;
-        }
         case WindowType::floating:
             if (!get_active_workspace()->has_floating_window(metadata->get_window()))
                 break;
