@@ -35,7 +35,7 @@ jobs:
               echo 'RUN rpmdev-setuptree'
               echo 'COPY ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'WORKDIR ../'
-              echo 'tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm'
+              echo 'RUN tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm'
               echo 'COPY miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCE'
               echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
