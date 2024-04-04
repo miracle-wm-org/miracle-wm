@@ -1,4 +1,4 @@
-name: Snap Publish
+name: Fedora RPM
 
 on:
   push:
