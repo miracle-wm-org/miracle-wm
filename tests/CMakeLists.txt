@@ -16,7 +16,7 @@ pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 
 add_executable(miracle-wm-tests
     miracle_config_test.cpp
-    tree_test.cpp)
+    tiling_window_tree_test.cpp)
 
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM ${GTEST_INCLUDE_DIRS} ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm-tests GTest::gtest_main miracle-wm-implementation ${GTEST_LIBRARIES} ${MIRAL_LDFLAGS} PkgConfig::YAML  pthread)
