@@ -8,7 +8,7 @@ URL:            https://github.com/mattkae/miracle-wm
 Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  g++
+BuildRequires:  gcc-c++
 BuildRequires:  pkgconfig(miral)
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(yaml-cpp)
@@ -17,6 +17,7 @@ BuildRequires:  cmake(nlohmann_json) >= 3.2.0
 BuildRequires:  pkgconfig(libnotify)
 BuildRequires:  cmake(gtest)
 BuildRequires:  libxkbcommon-devel
+BuildRequires:  desktop-file-utils
 
 %description
 miracle-wm is a Wayland compositor based on Mir. It features a tiling window 
@@ -36,10 +37,14 @@ those compositors, like swayfx.
 %install
 %cmake_install
 
+%check
+desktop-file-validate %{_datarootdir}/wayland-sessions/miracle-wm.desktop
+
 %files
 %{_bindir}/miracle-wm
 %{_bindir}/miracle-wm-sensible-terminal
 %{_datarootdir}/wayland-sessions/miracle-wm.desktop
+%license LICENSE
 
 
 %changelog
