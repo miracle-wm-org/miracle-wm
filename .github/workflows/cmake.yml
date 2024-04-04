@@ -34,3 +34,6 @@ jobs:
 
     - name: Test
       run: cd ${{github.workspace}}/build && ./bin/miracle-wm-tests
+
+    - name: Check Licenses
+      run: python tools/check_license.py
