@@ -1,12 +1,17 @@
-name: Fedora rpm
+name: Snap Publish
+
 on:
   push:
-    branches:
-      - master
+    branches: [ "master" ]
   pull_request:
-  
+    branches: [ "master" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number && format('pr{0}', github.event.number) || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  Fedora:
     name: fedora
     runs-on: ubuntu-latest
     
@@ -15,4 +20,23 @@ jobs:
         run: |
           sudo apt update
           sudo apt-get -y install podman
-          podman pull fedora:38
+          podman pull fedora:40
+
+      - uses: actions/checkout@v3
+
+      - name: Create container install the spec file
+        run: |
+          {
+              echo 'FROM fedora:38'
+              echo '# set TZ to ensure the test using timestamp'
+              echo 'RUN dnf -y update'
+              echo 'RUN dnf install -y rpmdevtools rpmlint'
+              echo 'RUN dnf clean all'
+              echo 'RUN rpmdev-setuptree'
+              echo 'COPY ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
+              echo 'WORKDIR ../'
+              echo 'tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm'
+              echo 'COPY miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCE'
+              echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
+          } > podmanfile
+          podman build --tag fedora40test -f ./podmanfile
