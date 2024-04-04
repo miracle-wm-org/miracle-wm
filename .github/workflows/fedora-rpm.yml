@@ -38,9 +38,9 @@ jobs:
               echo 'RUN rpmdev-setuptree'
               echo 'COPY miracle-wm miracle-wm'
               echo 'RUN tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm'
-              echo 'COPY miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCE'
+              echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCE'
               echo 'WORKDIR miracle-wm'
-              echo 'COPY ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
+              echo 'RUN cp ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
