@@ -34,7 +34,6 @@ jobs:
               echo '# set TZ to ensure the test using timestamp'
               echo 'RUN dnf -y update'
               echo 'RUN dnf install -y rpmdevtools rpmlint'
-              echo 'RUN dnf install -y cmake gcc-c++ miral glib-2.0 yaml-cpp libevdev nlohmann_json libnotify gtest libxkbcommon-devel desktop-file-utils'
               echo 'RUN dnf clean all'
               echo 'RUN rpmdev-setuptree'
               echo 'COPY miracle-wm miracle-wm'
