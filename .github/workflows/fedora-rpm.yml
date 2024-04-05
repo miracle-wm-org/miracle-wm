@@ -34,6 +34,7 @@ jobs:
               echo '# set TZ to ensure the test using timestamp'
               echo 'RUN dnf -y update'
               echo 'RUN dnf install -y rpmdevtools rpmlint'
+              echo 'RUN dnf install -y cmake g++ mir-dev glib2 yaml-cpp-dev libevdev json-devel libnotify gtest libxkbcommon-devel desktop-file-utils'
               echo 'RUN dnf clean all'
               echo 'RUN rpmdev-setuptree'
               echo 'COPY miracle-wm miracle-wm'
@@ -42,6 +43,6 @@ jobs:
               echo 'WORKDIR miracle-wm'
               echo 'RUN cp ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'RUN rpmbuild -bs ~/rpmbuild/SPECS/miracle-wm.spec' 
-              echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec'
+              echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
