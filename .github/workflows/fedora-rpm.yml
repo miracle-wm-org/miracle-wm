@@ -27,7 +27,7 @@ jobs:
         with:
           path: 'miracle-wm'
 
-      - name: Create container install the spec file
+      - name: Create the Binary Build
         run: |
           {
               echo 'FROM fedora:40'
@@ -42,7 +42,6 @@ jobs:
               echo 'WORKDIR miracle-wm'
               echo 'RUN cp ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'RUN dnf -y builddep ~/rpmbuild/SPECS/miracle-wm.spec'
-              echo 'RUN rpmbuild -bs ~/rpmbuild/SPECS/miracle-wm.spec' 
               echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
