@@ -38,6 +38,7 @@ those compositors, like swayfx.
 %cmake_install
 
 %check
+(%ctest)
 desktop-file-validate %{_datarootdir}/wayland-sessions/miracle-wm.desktop
 
 %files
@@ -50,4 +51,3 @@ desktop-file-validate %{_datarootdir}/wayland-sessions/miracle-wm.desktop
 %changelog
 * Mon Apr 01 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.1.0-1
 - Initial version
-
