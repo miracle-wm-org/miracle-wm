@@ -41,6 +41,11 @@ sudo snap install miracle-wm --classic --edge
 git clone https://github.com/mattkae/miracle-wm.git
 cd miracle-wm
 
+# If you are on Debian you will need to install these dependencies:
+
+sudo apt install cmake pkg-config build-essential libmiral-dev libgtest-dev \
+     	 	 libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev
+
 cmake -Bbuild
 cmake --build build
 WAYLAND_DISPLAY=wayland-98 ./build/bin/miracle-wm
