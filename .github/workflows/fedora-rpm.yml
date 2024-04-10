@@ -37,11 +37,9 @@ jobs:
               echo 'RUN dnf clean all'
               echo 'RUN rpmdev-setuptree'
               echo 'COPY miracle-wm miracle-wm-0.1.0'
-              echo 'RUN chmod -R a+rwx miracle-wm-0.1.0'
-              echo 'RUN tar --owner=0 --group=0 --no-same-owner --no-same-permissions --create --file miracle-wm-0.1.0.tar.gz miracle-wm-0.1.0'
-              echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCES'
               echo 'WORKDIR miracle-wm-0.1.0'
               echo 'RUN cp ./rpm/miracle-wm.spec ~/rpmbuild/SPECS'
+              echo 'RUN mv miracle-wm-0.1.0 ~/rpmbuild/SOURCES'
               echo 'RUN dnf -y builddep ~/rpmbuild/SPECS/miracle-wm.spec'
               echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
