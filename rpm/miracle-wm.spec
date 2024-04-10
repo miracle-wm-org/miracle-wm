@@ -39,7 +39,7 @@ those compositors, like swayfx.
 
 
 %check
-%ctest
+%{_vpath_builddir}/bin/miracle-wm-tests
 desktop-file-validate %{buildroot}%{_datadir}/wayland-sessions/miracle-wm.desktop
 
 

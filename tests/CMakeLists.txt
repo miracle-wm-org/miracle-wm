@@ -21,7 +21,3 @@ add_executable(miracle-wm-tests
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM ${GTEST_INCLUDE_DIRS} ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm-tests GTest::gtest_main miracle-wm-implementation ${GTEST_LIBRARIES} ${MIRAL_LDFLAGS} PkgConfig::YAML  pthread)
 gtest_discover_tests(miracle-wm-tests)
-add_test(
-    NAME miracle-wm-tests
-    COMMAND miracle-wm-tests
-)
