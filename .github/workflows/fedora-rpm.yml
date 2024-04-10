@@ -37,6 +37,7 @@ jobs:
               echo 'RUN dnf clean all'
               echo 'RUN rpmdev-setuptree'
               echo 'COPY miracle-wm miracle-wm-0.1.0'
+              echo 'RUN rm -rf miracle-wm-0.1.0/.git'
               echo 'RUN tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm-0.1.0'
               echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCES'
               echo 'WORKDIR miracle-wm-0.1.0'
