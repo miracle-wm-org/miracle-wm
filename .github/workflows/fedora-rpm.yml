@@ -42,6 +42,6 @@ jobs:
               echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCES'
               echo 'RUN cp ./miracle-wm-0.1.0/rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'RUN dnf -y builddep ~/rpmbuild/SPECS/miracle-wm.spec'
-              echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec' 
+              echo 'RUN rpmbuild -bs ~/rpmbuild/SPECS/miracle-wm.spec' 
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
