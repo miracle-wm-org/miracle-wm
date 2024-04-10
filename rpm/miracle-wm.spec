@@ -37,9 +37,11 @@ those compositors, like swayfx.
 %install
 %cmake_install
 
+
 %check
-(%ctest)
-desktop-file-validate %{_datarootdir}/wayland-sessions/miracle-wm.desktop
+%{__cmake_builddir}/bin/miracle-wm-tests
+desktop-file-validate %{buildroot}%{_datadir}/wayland-sessions/miracle-wm.desktop
+
 
 %files
 %{_bindir}/miracle-wm
