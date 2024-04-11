@@ -31,16 +31,11 @@ jobs:
         run: |
           chmod -R 755 miracle-wm
           {
-              echo 'FROM fedora:40'
-              echo 'RUN dnf -y update'
-              echo 'RUN dnf install -y rpmdevtools rpmlint dnf-plugins-core'
-              echo 'RUN dnf clean all'
-              echo 'RUN rpmdev-setuptree'
+              echo 'FROM fedora:rawhide'
+              echo 'RUN dnf install -y mock mock-core-configs distribution-gpg-keys'
               echo 'COPY miracle-wm miracle-wm-0.1.0'
+              echo 'RUN chmod -R a+rwx miracle-wm-0.1.0'
               echo 'RUN tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm-0.1.0'
-              echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCES'
-              echo 'RUN cp ./miracle-wm-0.1.0/rpm/miracle-wm.spec ~/rpmbuild/SPECS'
-              echo 'RUN dnf -y builddep ~/rpmbuild/SPECS/miracle-wm.spec'
-              echo 'RUN rpmbuild -bb ~/rpmbuild/SPECS/miracle-wm.spec'
+              echo 'RUN mock --no-bootstrap-image --isolation=simple --root=fedora-40-x86_64 --sources . --spec miracle-wm-0.1.0/rpm/miracle-wm.spec'
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
