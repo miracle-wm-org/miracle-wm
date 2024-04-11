@@ -31,7 +31,7 @@ jobs:
         run: |
           {
               echo 'FROM fedora:40'
-              echo '# set TZ to ensure the test using timestamp'
+              echo 'USER root'
               echo 'RUN dnf -y update'
               echo 'RUN dnf install -y rpmdevtools rpmlint dnf-plugins-core'
               echo 'RUN dnf clean all'
