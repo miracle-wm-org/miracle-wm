@@ -29,7 +29,7 @@ jobs:
 
       - name: Build the rpm
         run: |
-          chmod -R a+rwx miracle-wm
+          chmod -R 755 miracle-wm
           {
               echo 'FROM fedora:40'
               echo 'RUN dnf -y update'
