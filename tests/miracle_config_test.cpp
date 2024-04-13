@@ -296,3 +296,40 @@ TEST_F(MiracleConfigTest, StartupAppsInvalidRestartOnDeathIsNotParsed)
     MiracleConfig config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
+
+TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenKeyIsMissing)
+{
+    YAML::Node node;
+    YAML::Node environment_variable;
+    environment_variable["value"] = "1";
+    node["environment_variables"].push_back(environment_variable);
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_env_variables().size(), 0);
+}
+
+TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenValueIsMissing)
+{
+    YAML::Node node;
+    YAML::Node environment_variable;
+    environment_variable["key"] = "my_key";
+    node["environment_variables"].push_back(environment_variable);
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_env_variables().size(), 0);
+}
+
+TEST_F(MiracleConfigTest, EnvironmentVariableCanBeParsed)
+{
+    YAML::Node node;
+    YAML::Node environment_variable;
+    environment_variable["key"] = "my_key";
+    environment_variable["value"] = "1";
+    node["environment_variables"].push_back(environment_variable);
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_env_variables().size(), 1);
+}

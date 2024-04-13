@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
 #include <libnotify/notify.h>
+#include <stdlib.h>
 
 using namespace miral;
 
@@ -43,6 +44,11 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
     auto config = std::make_shared<miracle::MiracleConfig>(runner);
+    for (auto const& env : config->get_env_variables())
+    {
+        setenv(env.key.c_str(), env.value.c_str(), 1);
+    }
+
     WindowManagerOptions window_managers
     {
         add_window_manager_policy<miracle::Policy>(

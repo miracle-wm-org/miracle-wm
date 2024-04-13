@@ -102,6 +102,12 @@ struct Vector2
     int x;
     int y;
 };
+
+struct EnvironmentVariable
+{
+    string key;
+    string value;
+};
 ```
 
 ## Definition
@@ -117,7 +123,7 @@ With those types defined, the following table defines the allowed key/value pair
 | startup_apps             | []                              | `StartupApp[]`            | List of applications to be started when the compositor starts                                                                                                                                                                                                          |
 | terminal                 | `"miracle-mw-sensible-terminal"` | `String`                  | The command used when launching a terminal. Defaults to a script that attempts to find a suitable terminal, based on `i3-sensible-terminal`                                                                                                                            |
 | resize_jump              | 50                              | `int`                     | Jump in pixels for each resize request.                                                                                                                                                                                                                                |
-
+| environment_variables    | []                              | `EnvironmentVariable[]`   | Environment variables to be set by the compositor on startup |
 
 ## Example
 ```yaml

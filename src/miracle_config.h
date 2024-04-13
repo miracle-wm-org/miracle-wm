@@ -99,6 +99,12 @@ struct StartupApp
     bool restart_on_death = false;
 };
 
+struct EnvironmentVariable
+{
+    std::string key;
+    std::string value;
+};
+
 class MiracleConfig
 {
 public:
@@ -114,6 +120,7 @@ public:
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
     [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
     [[nodiscard]] int get_resize_jump() const;
+    [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -153,6 +160,7 @@ private:
     std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
     std::string desired_terminal = "";
     int resize_jump = 50;
+    std::vector<EnvironmentVariable> environment_variables;
 };
 }
 

@@ -703,6 +703,43 @@ void MiracleConfig::_load()
             mir::log_error("Unable to parse resize_jump: %s", e.msg.c_str());
         }
     }
+
+    // Environment variables
+    if (config["environment_variables"])
+    {
+        if (!config["environment_variables"].IsSequence())
+        {
+            mir::log_error("environment_variables is not an array");
+        }
+        else
+        {
+            for (auto const& node : config["environment_variables"])
+            {
+                if (!node["key"])
+                {
+                    mir::log_error("environment_variables: item is missing a 'key'");
+                    continue;
+                }
+
+                if (!node["value"])
+                {
+                    mir::log_error("environment_variables: item is missing a 'value'");
+                    continue;
+                }
+                
+                try
+                {
+                    auto key = node["key"].as<std::string>();
+                    auto value = node["value"].as<std::string>();
+                    environment_variables.push_back({ key, value });
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse environment_variable_entry: %s", e.msg.c_str());
+                }
+            }
+        }
+    }
 }
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
@@ -904,4 +941,9 @@ std::optional<std::string> const& MiracleConfig::get_terminal_command() const
 int MiracleConfig::get_resize_jump() const
 {
     return resize_jump;
+}
+
+std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
+{
+    return environment_variables;
 }
