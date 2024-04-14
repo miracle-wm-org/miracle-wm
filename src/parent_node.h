@@ -47,8 +47,6 @@ public:
     void graft_existing(std::shared_ptr<Node> const& node, int index);
     void convert_to_lane(std::shared_ptr<LeafNode> const&);
     void set_logical_area(geom::Rectangle const& target_rect) override;
-    void scale_area(double x_scale, double y_scale) override;
-    void translate(int x, int y) override;
     void set_direction(NodeLayoutDirection direction);
     void swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> const& second);
     void remove(std::shared_ptr<Node> const& node);

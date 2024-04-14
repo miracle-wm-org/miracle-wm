@@ -180,19 +180,8 @@ bool TilingWindowTree::try_toggle_active_fullscreen()
 
 void TilingWindowTree::set_output_area(geom::Rectangle const& new_area)
 {
-    auto area = screen->get_area();
-    double x_scale = static_cast<double>(new_area.size.width.as_int()) / static_cast<double>(area.size.width.as_int());
-    double y_scale = static_cast<double>(new_area.size.height.as_int()) / static_cast<double>(area.size.height.as_int());
-
-    int position_diff_x = new_area.top_left.x.as_int() - area.top_left.x.as_int();
-    int position_diff_y = new_area.top_left.y.as_int() - area.top_left.y.as_int();
-    area.top_left = new_area.top_left;
-    area.size = geom::Size{
-        geom::Width{ceil(area.size.width.as_int() * x_scale)},
-        geom::Height {ceil(area.size.height.as_int() * y_scale)}};
-
-    root_lane->scale_area(x_scale, y_scale);
-    root_lane->translate(position_diff_x, position_diff_y);
+    root_lane->set_logical_area(new_area);
+    root_lane->commit_changes();
 }
 
 std::shared_ptr<LeafNode> TilingWindowTree::select_window_from_point(int x, int y)

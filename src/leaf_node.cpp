@@ -56,18 +56,6 @@ void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
     parent = in_parent;
 }
 
-void LeafNode::scale_area(double x, double y)
-{
-    logical_area.size.width = geom::Width{ceil(x * logical_area.size.width.as_int())};
-    logical_area.size.height = geom::Height {ceil(y * logical_area.size.height.as_int())};
-}
-
-void LeafNode::translate(int x, int y)
-{
-    logical_area.top_left.x = geom::X{logical_area.top_left.x.as_int() + x};
-    logical_area.top_left.y = geom::Y{logical_area.top_left.y.as_int() + y};
-}
-
 geom::Rectangle LeafNode::get_visible_area() const
 {
     // TODO: Could cache these half values in the config

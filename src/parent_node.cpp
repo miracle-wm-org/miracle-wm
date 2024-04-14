@@ -347,29 +347,6 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
     }
 }
 
-void ParentNode::scale_area(double x, double y)
-{
-    logical_area.size.width = geom::Width{ceil(x * logical_area.size.width.as_int())};
-    logical_area.size.height = geom::Height {ceil(y * logical_area.size.height.as_int())};
-
-    for (auto const& node : sub_nodes)
-        node->scale_area(x, y);
-
-    relayout();
-    constrain();
-}
-
-void ParentNode::translate(int x, int y)
-{
-    logical_area.top_left.x = geom::X{logical_area.top_left.x.as_int() + x};
-    logical_area.top_left.y = geom::Y{logical_area.top_left.y.as_int() + y};
-    for (auto const& node : sub_nodes)
-        node->translate(x, y);
-
-    relayout();
-    constrain();
-}
-
 void ParentNode::commit_changes()
 {
     for (auto& node : sub_nodes)
