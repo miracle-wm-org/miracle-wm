@@ -376,6 +376,33 @@ void TilingWindowTree::advise_delete_window(miral::Window& window)
 
 namespace
 {
+NodeLayoutDirection from_direction(Direction direction)
+{
+    switch (direction)
+    {
+        case Direction::up:
+        case Direction::down:
+            return NodeLayoutDirection::vertical;
+        case Direction::right:
+        case Direction::left:
+            return NodeLayoutDirection::horizontal;
+        default:
+            mir::log_error(
+        "from_direction: somehow we are trying to create a NodeLayoutDirection from an incorrect Direction");
+            return NodeLayoutDirection::horizontal;
+    }
+}
+
+bool is_negative_direction(Direction direction)
+{
+    return direction == Direction::left || direction == Direction::up;
+}
+
+bool is_vertical_direction(Direction direction)
+{
+    return direction == Direction::up || direction == Direction::down;
+}
+
 std::shared_ptr<LeafNode> get_closest_window_to_select_from_node(
     std::shared_ptr<Node> node,
     miracle::Direction direction)
@@ -387,8 +414,8 @@ std::shared_ptr<LeafNode> get_closest_window_to_select_from_node(
     if (node->is_leaf())
         return Node::as_leaf(node);
 
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_negative = direction == Direction::up || direction == Direction::left;
+    bool is_vertical = is_vertical_direction(direction);
+    bool is_negative = is_negative_direction(direction);
     auto lane_node = Node::as_lane(node);
     if (is_vertical && lane_node->get_direction() == NodeLayoutDirection::vertical
         || !is_vertical && lane_node->get_direction() == NodeLayoutDirection::horizontal)
@@ -425,8 +452,8 @@ std::shared_ptr<LeafNode> TilingWindowTree::handle_select(
     //  3. If the current_node does NOT match the target direction,
     //     then we climb the tree until we find a current_node who matches
     //  4. If none match, we return nullptr
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_negative = direction == Direction::up || direction == Direction::left;
+    bool is_vertical = is_vertical_direction(direction);
+    bool is_negative = is_negative_direction(direction);
     auto current_node = from;
     auto parent = current_node->get_parent().lock();
     if (!parent)
@@ -476,22 +503,34 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Node>
     }
 
     auto parent = from->get_parent().lock();
-    if (root_lane->get_direction() != parent->get_direction())
+    if (root_lane == parent)
     {
-        bool is_negative = direction == Direction::left || direction == Direction::up;
-        if (is_negative)
-            return {
-                MoveResult::traversal_type_prepend,
-                root_lane
-            };
-        else
-            return {
-                MoveResult::traversal_type_append,
-                root_lane
-            };
+        auto new_layout_direction = from_direction(direction);
+        if (new_layout_direction == root_lane->get_direction())
+            return {};
+
+        auto after_root_lane = std::make_shared<ParentNode>(
+                tiling_interface,
+                std::move(geom::Rectangle{screen->get_area().top_left, screen->get_area().size}),
+                config,
+                this,
+                nullptr);
+        after_root_lane->set_direction(new_layout_direction);
+        after_root_lane->graft_existing(root_lane, 0);
+        root_lane = after_root_lane;
     }
 
-    return {};
+    bool is_negative = is_negative_direction(direction);
+    if (is_negative)
+        return {
+            MoveResult::traversal_type_prepend,
+            root_lane
+        };
+    else
+        return {
+            MoveResult::traversal_type_append,
+            root_lane
+        };
 }
 
 std::shared_ptr<ParentNode> TilingWindowTree::get_active_lane()
