@@ -51,8 +51,6 @@ public:
     virtual void set_logical_area(geom::Rectangle const&) = 0;
     virtual void constrain() = 0;
     virtual void set_parent(std::shared_ptr<ParentNode> const&) = 0;
-    virtual void scale_area(double x, double y) = 0;
-    virtual void translate(int x, int y) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
     bool is_leaf();

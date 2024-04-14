@@ -53,8 +53,6 @@ public:
     [[nodiscard]] geom::Rectangle get_visible_area() const;
     void set_logical_area(geom::Rectangle const& target_rect) override;
     void set_parent(std::shared_ptr<ParentNode> const&) override;
-    void scale_area(double x, double y) override;
-    void translate(int x, int y) override;
     void show();
     void hide();
     void toggle_fullscreen();
