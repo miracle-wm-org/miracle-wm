@@ -67,7 +67,7 @@ miral::WindowSpecification TilingWindowTree::allocate_position(const miral::Wind
     new_spec.min_height() = geom::Height{0};
     new_spec.max_height() = geom::Height{std::numeric_limits<int>::max()};
     auto node = get_active_lane()->create_space_for_window();
-    auto rect = node->get_logical_area();
+    auto rect = node->get_visible_area();
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
 

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef NODE_H
 #define NODE_H
 
+#include "direction.h"
 #include <mir/geometry/rectangle.h>
 #include <vector>
 #include <memory>
@@ -63,8 +64,7 @@ public:
 
 protected:
     std::weak_ptr<ParentNode> parent;
-    [[nodiscard]] bool _has_right_neighbor() const;
-    [[nodiscard]] bool _has_bottom_neighbor() const;
+    [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
 };
 }
 

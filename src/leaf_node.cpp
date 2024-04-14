@@ -70,17 +70,36 @@ void LeafNode::translate(int x, int y)
 
 geom::Rectangle LeafNode::get_visible_area() const
 {
-    int half_gap_x = _has_right_neighbor() ? (int)(ceil((double) config->get_inner_gaps_x() / 2.0)) : 0;
-    int half_gap_y = _has_bottom_neighbor() ? (int)(ceil((double) config->get_inner_gaps_y() / 2.0)) : 0;
+    // TODO: Could cache these half values in the config
+    int const half_gap_x = (int)(ceil((double) config->get_inner_gaps_x() / 2.0));
+    int const half_gap_y = (int)(ceil((double) config->get_inner_gaps_y() / 2.0));
+    auto neighbors = get_neighbors();
+    int x = logical_area.top_left.x.as_int();
+    int y = logical_area.top_left.y.as_int();
+    int width = logical_area.size.width.as_int();
+    int height = logical_area.size.height.as_int();
+    if (neighbors[(int)Direction::left])
+    {
+        x += half_gap_x;
+        width -= half_gap_x;
+    }
+    if (neighbors[(int)Direction::right])
+    {
+        width -= half_gap_x;
+    }
+    if (neighbors[(int)Direction::up])
+    {
+        y += half_gap_y;
+        height -= half_gap_y;
+    }
+    if (neighbors[(int)Direction::down])
+    {
+        height -= half_gap_y;
+    }
+
     return {
-        geom::Point{
-            logical_area.top_left.x.as_int(),
-            logical_area.top_left.y.as_int()
-        },
-        geom::Size{
-            logical_area.size.width.as_int() - 2 * half_gap_x,
-            logical_area.size.height.as_int() - 2 * half_gap_y
-        }
+        geom::Point{x, y},
+        geom::Size{width, height}
     };
 }
 

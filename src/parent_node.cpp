@@ -212,8 +212,7 @@ std::shared_ptr<LeafNode> ParentNode::confirm_window(miral::Window const& window
 
     auto retval = pending_node;
     pending_node->associate_to_window(window);
-    for (auto const& node : sub_nodes)
-        node->commit_changes();
+    commit_changes();
     pending_node = nullptr;
     return retval;
 }

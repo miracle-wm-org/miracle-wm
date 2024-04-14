@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "node.h"
 #include "node_common.h"
+#include "direction.h"
 #include <memory>
 #include <vector>
 #include <miral/window.h>
@@ -37,14 +38,6 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class TilingInterface;
-    
-enum class Direction
-{
-    up,
-    left,
-    down,
-    right
-};
 
 class TilingWindowTree
 {

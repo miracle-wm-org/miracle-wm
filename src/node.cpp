@@ -51,30 +51,61 @@ std::weak_ptr<ParentNode> Node::get_parent() const
     return parent;
 }
 
-bool Node::_has_right_neighbor() const
+namespace
 {
-    auto shared_parent = parent.lock();
+bool has_neighbor(Node const* node, NodeLayoutDirection direction, size_t cannot_be_index)
+{
+    auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
         return false;
 
-    if (shared_parent->get_direction() != NodeLayoutDirection::horizontal)
-        return shared_parent->_has_right_neighbor();
+    if (shared_parent->get_direction() != direction)
+        return has_neighbor(shared_parent.get(), direction, cannot_be_index);
 
-    auto index = shared_parent->get_index_of_node(this);
-    return (shared_parent->num_nodes() > 1 && index != shared_parent->num_nodes() - 1)
-        || shared_parent->_has_right_neighbor();
+    auto index = shared_parent->get_index_of_node(node);
+    return (shared_parent->num_nodes() > 1 && index != cannot_be_index)
+       || has_neighbor(shared_parent.get(), direction, cannot_be_index);
 }
 
-bool Node::_has_bottom_neighbor() const
+bool has_right_neighbor(Node const* node)
 {
-    auto shared_parent = parent.lock();
+    auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
         return false;
+    return has_neighbor(node, NodeLayoutDirection::horizontal, shared_parent->num_nodes() - 1);
+}
 
-    if (shared_parent->get_direction() != NodeLayoutDirection::vertical)
-        return shared_parent->_has_bottom_neighbor();
+bool has_bottom_neighbor(Node const* node)
+{
+    auto shared_parent = node->get_parent().lock();
+    if (!shared_parent)
+        return false;
+    return has_neighbor(node, NodeLayoutDirection::vertical, shared_parent->num_nodes() - 1);
+}
 
-    auto index = shared_parent->get_index_of_node(this);
-    return (shared_parent->num_nodes() > 1 && index != shared_parent->num_nodes() - 1)
-           || shared_parent->_has_bottom_neighbor();
+bool has_left_neighbor(Node const* node)
+{
+    auto shared_parent = node->get_parent().lock();
+    if (!shared_parent)
+        return false;
+    return has_neighbor(node, NodeLayoutDirection::horizontal, 0);
+}
+
+bool has_top_neighbor(Node const* node)
+{
+    auto shared_parent = node->get_parent().lock();
+    if (!shared_parent)
+        return false;
+    return has_neighbor(node, NodeLayoutDirection::vertical, 0);
+}
+}
+
+std::array<bool, (size_t)Direction::MAX> Node::get_neighbors() const
+{
+    return {
+        has_top_neighbor(this),
+        has_left_neighbor(this),
+        has_bottom_neighbor(this),
+        has_right_neighbor(this)
+    };
 }
