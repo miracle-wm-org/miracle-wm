@@ -60,7 +60,7 @@ Policy::Policy(
           tools,
           workspace_observer_registrar,
           [&]() { return get_active_output(); })},
-      ipc{std::make_shared<Ipc>(runner, workspace_manager)},
+      ipc{std::make_shared<Ipc>(runner, workspace_manager, *this)},
       node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);

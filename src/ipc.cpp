@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ipc.h"
 #include "output_content.h"
+#include "policy.h"
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -87,10 +88,53 @@ json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
     };
 }
 
+json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
+{
+    json outputs_json;
+    for (auto const& output : outputs)
+    {
+        json workspaces;
+        for (auto const& workspace : output->get_workspaces())
+        {
+            workspaces.push_back(workspace_to_json(output, workspace->get_workspace()));
+        }
+
+        auto area = outputs[0]->get_area();
+        auto miral_output = output->get_output();
+        outputs_json.push_back({
+           {"id", miral_output.id()},
+           {"name",  miral_output.name()},
+           {"layout",  "output"},
+           {"rect", {
+                {"x", area.top_left.x.as_int()},
+                {"y", area.top_left.y.as_int()},
+                {"width", area.size.width.as_int()},
+                {"height", area.size.height.as_int()},
+            }},
+           {"nodes", workspaces}
+        });
+    }
+
+    auto area = outputs[0]->get_area();
+    json root = {
+        {"id", 0},
+        {"name", "root"},
+        {"rect", {
+            {"x", area.top_left.x.as_int()},
+            {"y", area.top_left.y.as_int()},
+            {"width", area.size.width.as_int()},
+            {"height", area.size.height.as_int()}
+        }},
+        {"nodes", outputs_json}
+    };
+    return root;
 }
 
-Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager)
-    : workspace_manager{workspace_manager}
+}
+
+Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager, Policy& policy)
+    : workspace_manager{workspace_manager},
+      policy{policy}
 {
     auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -201,6 +245,7 @@ Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager)
 
                 memcpy(&client.pending_read_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
                 memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
+                mir::log_debug("Received request from IPC client: %d", (int)client.pending_type);
 
                 if (read_available - received >= (long)client.pending_read_length)
                 {
@@ -359,15 +404,44 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
         for (auto const& i : j)
         {
             std::string event_type = i.template get<std::string>();
+            mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
             if (event_type == "workspace")
             {
                 client.subscribed_events |= event_mask(IPC_EVENT_WORKSPACE);
                 const std::string msg = "{\"success\": true}";
                 send_reply(client, payload_type, msg);
             }
-
+            else if (event_type == "window")
+            {
+                client.subscribed_events |= event_mask(IPC_EVENT_WINDOW);
+                const std::string msg = "{\"success\": true}";
+                send_reply(client, payload_type, msg);
+            }
+            else if (event_type == "input")
+            {
+                client.subscribed_events |= event_mask(IPC_EVENT_INPUT);
+                const std::string msg = "{\"success\": true}";
+                send_reply(client, payload_type, msg);
+            }
+            else if (event_type == "mode")
+            {
+                client.subscribed_events |= event_mask(IPC_EVENT_MODE);
+                const std::string msg = "{\"success\": true}";
+                send_reply(client, payload_type, msg);
+            }
+            else
+            {
+                mir::log_error("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
+                disconnect(client);
+            }
         }
         break;
+    }
+    case IPC_GET_TREE:
+    {
+        auto json_string = to_string(outputs_to_json(policy.get_output_list()));
+        send_reply(client, payload_type, json_string);
+        return;
     }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
