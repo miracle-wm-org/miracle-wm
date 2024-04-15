@@ -93,6 +93,7 @@ public:
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
     std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
+    std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }
 
 private:
     std::shared_ptr<OutputContent> active_output;

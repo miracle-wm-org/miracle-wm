@@ -29,6 +29,8 @@ struct sockaddr_un;
 namespace miracle
 {
 
+class Policy;
+
 /// This it taken directly from SWAY
 enum IpcCommandType {
     // i3 command types - see i3's I3_REPLY_TYPE constants
@@ -72,7 +74,7 @@ enum IpcCommandType {
 class Ipc : public WorkspaceObserver
 {
 public:
-    Ipc(miral::MirRunner& runner, WorkspaceManager&);
+    Ipc(miral::MirRunner& runner, WorkspaceManager&, Policy& policy);
 
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
@@ -91,6 +93,7 @@ private:
     };
 
     WorkspaceManager& workspace_manager;
+    Policy& policy;
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
