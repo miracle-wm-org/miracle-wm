@@ -68,6 +68,7 @@ parts:
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
+      - mir-graphics-drivers-nvidia
     prime:
       - -lib/udev
       - -usr/doc
