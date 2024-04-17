@@ -42,11 +42,10 @@ Features:
 **Stabilization + Usability (Due: April 15th)**
 
 Features:
-- [ ] Major bugs + performance
-  - [ ] No crashes after a week of daily-driving
-- [ ] Configuration
+- [x] Major bugs + performance
+  - [x] No crashes after a week of daily-driving
+- [x] Configuration
     - [x] Hot reloading
-    - [ ] Display configuration
     - [x] Resize jump
     - [x] Outer gaps
 - [x] Floating windows
@@ -68,6 +67,8 @@ This release relies on having the *Mir*'s renderer capabilities opened up to us.
 If we can override the renderer, we can put *whatever we like* on the screen.
 
 Features:
+- [ ] Configuration
+  - [ ] Display configuration (depends on https://github.com/mattkae/miracle-wm/issues/93)
 - [ ] Full I3 IPC integration
 - [ ] Highlight border around selected window (carry over from **0.2.0**)
 - [ ] Animation (requires access to Mir renderer)

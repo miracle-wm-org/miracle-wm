@@ -1,7 +1,17 @@
 > This user manual will keep up to date with the current state of the project.
 > Please note that the information in here is likely to change with future release.
 
-# Built-in Key Commands
+# Index
+- [Built-in Keybinds](#built-in-keybinds)
+- [Pointer Behavior](#pointer-behavior)
+- [Configuration File](#configuration-file)
+  - [Location](#location)
+  - [Types](#types)
+  - [YAML Definition](#yaml-definition)
+  - [Example](#example)
+- [Display Configuration](#display-configuration)
+
+# Built-in Keybinds
 - `meta + enter`: Open new terminal
 - `meta + h`: Switch current lane to horizontal layout mode
 - `meta + v`: Switch current lane to vertical layout mode
@@ -110,7 +120,7 @@ struct EnvironmentVariable
 };
 ```
 
-## Definition
+## YAML Definition
 With those types defined, the following table defines the allowed key/value pairs:
 
 | Key                      | Default                         | Type                      | Description                                                                                                                                                                                                                                                            |
@@ -158,3 +168,11 @@ startup_apps:
   - command: swaybg -i /path/to/my/image
     restart_on_death: true
 ```
+
+# Display Configuration
+For the time being, you may specify the command line option for Mir:
+```
+--display-config=static=/path/to/a/display/file.yaml
+```
+
+Eventually this will move out to the configuration once https://github.com/mattkae/miracle-wm/issues/93 is implemented.
