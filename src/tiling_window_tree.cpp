@@ -676,6 +676,7 @@ void TilingWindowTree::recalculate_root_node_area()
     for (auto const& zone : screen->get_app_zones())
     {
         root_lane->set_logical_area(zone.extents());
+        root_lane->commit_changes();
         break;
     }
 }

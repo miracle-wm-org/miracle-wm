@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mutex>
 #include <functional>
 #include <optional>
+#include <atomic>
 
 namespace miral
 {
@@ -126,6 +127,7 @@ public:
     /// listener should be triggered earlier. A higher priority means later
     int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority = 5);
     void unregister_listener(int handle);
+    void try_process_change();
 
 private:
     struct ChangeListener
@@ -161,6 +163,7 @@ private:
     std::string desired_terminal = "";
     int resize_jump = 50;
     std::vector<EnvironmentVariable> environment_variables;
+    std::atomic<bool> has_changes = false;
 };
 }
 

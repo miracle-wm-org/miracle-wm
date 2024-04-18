@@ -64,10 +64,6 @@ Policy::Policy(
       node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);
-    config->register_listener([&](auto& new_config)
-    {
-        ipc->disconnect_all();
-    }, 1);
 }
 
 Policy::~Policy()

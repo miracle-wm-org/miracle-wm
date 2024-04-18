@@ -763,13 +763,22 @@ void MiracleConfig::_watch(miral::MirRunner& runner)
         if (inotify_buffer.event.mask & (IN_MODIFY))
         {
             _load();
-
-            for (auto const& on_change : on_change_listeners)
-            {
-                on_change.listener(*this);
-            }
+            has_changes = true;
         }
     });
+}
+
+void MiracleConfig::try_process_change()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!has_changes)
+        return;
+    
+    has_changes = false;
+    for (auto const& on_change : on_change_listeners)
+    {
+        on_change.listener(*this);
+    }
 }
 
 uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)

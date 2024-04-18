@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/wayland_extensions.h>
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
+#include <miral/append_event_filter.h>
 #include <libnotify/notify.h>
 #include <stdlib.h>
 
@@ -65,11 +66,6 @@ int main(int argc, char const* argv[])
         }
     };
 
-    config->register_listener([&auto_restarting_launcher](miracle::MiracleConfig& new_config)
-    {
-         auto_restarting_launcher.kill_all();
-    });
-
     notify_init("miracle-wm");
     return runner.run_with(
         {
@@ -87,6 +83,11 @@ int main(int argc, char const* argv[])
             config_keymap,
             external_client_launcher,
             display_configuration_options,
-            AddInitCallback(run_startup_apps)
+            AddInitCallback(run_startup_apps),
+            AppendEventFilter([&config](MirEvent const*)
+            {
+                config->try_process_change();
+                return false;
+            })
         });
 }
