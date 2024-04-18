@@ -22,6 +22,37 @@ pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(LIBNOTIFY REQUIRED IMPORTED_TARGET libnotify)
 
+set(MIR_GRAPHICAL_DESKTOP_DRIVERS
+    graphics-eglstream-kms.so.20
+    graphics-eglstream-kms.so.21
+    graphics-gbm-kms.so.20
+    graphics-gbm-kms.so.21
+    graphics-wayland.so.20
+    graphics-wayland.so.21
+    input-evdev.so.8
+    renderer-egl-generic.so.21
+    server-virtual.so.21
+    server-x11.so.20
+    server-x11.so.21
+)
+
+foreach(lib_name ${MIR_GRAPHICAL_DESKTOP_DRIVERS})
+    find_library(${lib_name}_LIBRARY
+        ${lib_name}
+        PATH /usr/lib/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu/mir/server-platform
+    )
+    if(${lib_name}_LIBRARY)
+        list(APPEND GFX_FOUND_LIBS_LIST ${${lib_name}_LIBRARY})
+    endif()
+endforeach()
+
+# Store the set of gfx desktop libraries in the CMake cache
+set(MIR_USER_GRAPHICS_DRIVERS_FOUND ${GFX_FOUND_LIBS_LIST} CACHE INTERNAL "List of user installed Mir graphics desktop drivers")
+
+if(NOT GFX_FOUND_LIBS_LIST)
+    message(STATUS "Optional: Detected missing Mir's graphics drivers for desktop. For more, please refer: https://mir-server.io/docs/mir-graphics-support")
+endif()
+
 include(GNUInstallDirs)
 
 add_library(miracle-wm-implementation
