@@ -1,0 +1,10 @@
+#! /bin/bash
+set -e
+if [ "$SNAP_NAME" == "miracle-wm" ]; then
+  unset __EGL_VENDOR_LIBRARY_DIRS
+  unset LIBGL_DRIVERS_PATH
+  unset LIBINPUT_QUIRKS_DIR
+
+  PATH="$(echo "$PATH" | sed "s#$SNAP[^:]*:##g")"
+fi
+exec "$@"
