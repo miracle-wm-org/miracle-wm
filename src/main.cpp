@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "miracle_config.h"
 #include "auto_restarting_launcher.h"
+#include "renderer.h"
 
 #include <miral/external_client.h>
 #include <miral/runner.h>
@@ -30,6 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/display_configuration_option.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
+#include <miral/custom_renderer.h>
+#include <mir/renderer/gl/gl_surface.h>
 #include <libnotify/notify.h>
 #include <stdlib.h>
 
@@ -88,6 +91,12 @@ int main(int argc, char const* argv[])
             {
                 config->try_process_change();
                 return false;
+            }),
+            CustomRenderer(
+            [&](std::unique_ptr<mir::graphics::gl::OutputSurface> x,
+                std::shared_ptr<mir::graphics::GLRenderingProvider> y)
+            {
+                return std::make_unique<mir::renderer::gl::Renderer>(std::move(y), std::move(x));
             })
         });
 }

@@ -16,11 +16,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(MIRRENDERER mirrenderer REQUIRED)
+pkg_check_modules(MIRPLATFORM mirplatform REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(LIBNOTIFY REQUIRED IMPORTED_TARGET libnotify)
+pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
+pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 
 include(GNUInstallDirs)
 
@@ -43,15 +47,30 @@ add_library(miracle-wm-implementation
     src/leaf_node.cpp
     src/parent_node.cpp
     src/window_manager_tools_tiling_interface.cpp
+    src/renderer.cpp
+    src/tessellation_helpers.cpp
 )
 
 add_executable(miracle-wm
     src/main.cpp
 )
 
-target_include_directories(miracle-wm-implementation PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(     miracle-wm-implementation               ${MIRAL_LDFLAGS}
-    PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json)
+target_include_directories(miracle-wm-implementation
+    PUBLIC SYSTEM
+    ${MIRAL_INCLUDE_DIRS}
+    ${MIRRENDERER_INCLUDE_DIRS}
+    ${MIRPLATFORM_INCLUDE_DIRS})
+target_link_libraries(miracle-wm-implementation
+    ${MIRAL_LDFLAGS}
+    ${MIRRENDERER_LDFLAGS}
+    ${MIRPLATFORM_LDFLAGS}
+    PkgConfig::YAML
+    PkgConfig::GLIB
+    PkgConfig::LIBEVDEV
+    PkgConfig::LIBNOTIFY
+    nlohmann_json::nlohmann_json
+    PkgConfig::EGL
+    PkgConfig::GLESv2)
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
