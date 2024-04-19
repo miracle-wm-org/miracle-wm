@@ -82,7 +82,7 @@ void MiracleConfig::_load()
     outer_gaps_x = 10;
     outer_gaps_y = 10;
     startup_apps = {};
-    terminal = "miracle-wm-sensible-terminal";
+    terminal = "miracle-wm-unsnap miracle-wm-sensible-terminal";
     desired_terminal = "";
     resize_jump = 50;
 
@@ -525,7 +525,7 @@ void MiracleConfig::_load()
             YAML::Node modifiers_node;
             try
             {
-                command = sub_node["command"].as<std::string>();
+                command = "miracle-wm-unsnap " + sub_node["command"].as<std::string>();
                 action = sub_node["action"].as<std::string>();
                 key = sub_node["key"].as<std::string>();
                 modifiers_node = sub_node["modifiers"];
@@ -655,7 +655,7 @@ void MiracleConfig::_load()
 
                 try
                 {
-                    auto command = node["command"].as<std::string>();
+                    auto command = "miracle-wm-unsnap " + node["command"].as<std::string>();
                     bool restart_on_death = false;
                     if (node["restart_on_death"])
                     {
@@ -677,7 +677,7 @@ void MiracleConfig::_load()
     {
         try
         {
-            terminal = config["terminal"].as<std::string>();
+            terminal = "miracle-wm-unsnap " + config["terminal"].as<std::string>();
         }
         catch (YAML::BadConversion const& e)
         {

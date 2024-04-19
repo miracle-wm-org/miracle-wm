@@ -68,8 +68,13 @@ add_custom_target(miracle-wm-sensible-terminal ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-sensible-terminal ${CMAKE_BINARY_DIR}/bin
 )
 
+add_custom_target(miracle-wm-unsnap ALL
+    cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-unsnap ${CMAKE_BINARY_DIR}/bin
+)
+
 install(PROGRAMS
     src/miracle-wm-sensible-terminal
+    src/miracle-wm-unsnap
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
