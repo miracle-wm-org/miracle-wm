@@ -165,7 +165,7 @@ TEST_F(MiracleConfigTest, CanCreateCustomAction)
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
         mir_input_event_modifier_meta);
-    EXPECT_EQ(custom_action->command, "echo Hi");
+    EXPECT_EQ(custom_action->command, "miracle-wm-unsnap echo Hi");
     EXPECT_EQ(custom_action->key, KEY_X);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
 }
@@ -256,7 +256,7 @@ TEST_F(MiracleConfigTest, ValidStartupAppsAreParsed)
 
     MiracleConfig config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 1);
-    EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
+    EXPECT_EQ(config.get_startup_apps()[0].command, "miracle-wm-unsnap echo Hi");
     EXPECT_EQ(config.get_startup_apps()[0].restart_on_death, true);
 }
 
