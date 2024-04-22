@@ -36,11 +36,20 @@ jobs:
               echo 'RUN dnf install -y rpmdevtools rpmlint dnf-plugins-core'
               echo 'RUN dnf clean all'
               echo 'RUN rpmdev-setuptree'
-              echo 'COPY miracle-wm miracle-wm-0.1.0'
-              echo 'RUN tar --create --file miracle-wm-0.1.0.tar.gz miracle-wm-0.1.0'
-              echo 'RUN mv miracle-wm-0.1.0.tar.gz ~/rpmbuild/SOURCES'
-              echo 'RUN cp ./miracle-wm-0.1.0/rpm/miracle-wm.spec ~/rpmbuild/SPECS'
+              echo 'COPY miracle-wm miracle-wm-0.2.0'
+              echo 'RUN tar --create --file miracle-wm-0.2.0.tar.gz miracle-wm-0.2.0'
+              echo 'RUN mv miracle-wm-0.2.0.tar.gz ~/rpmbuild/SOURCES'
+              echo 'RUN cp ./miracle-wm-0.2.0/rpm/miracle-wm.spec ~/rpmbuild/SPECS'
               echo 'RUN dnf -y builddep ~/rpmbuild/SPECS/miracle-wm.spec'
               echo 'RUN rpmbuild -bs ~/rpmbuild/SPECS/miracle-wm.spec'
           } > podmanfile
           podman build --tag fedora40test -f ./podmanfile
+          podman run --name miraclewmbuilder fedora40test
+          podman cp miraclewmbuilder:/root/rpmbuild/SRPMS/miracle-wm-0.2.0-1.fc40.src.rpm ./
+          podman stop --all 
+
+      - name: Store sources as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: miracle-wm-0.2.0-1.fc40.src.rpm
+          path: miracle-wm-0.2.0-1.fc40.src.rpm
