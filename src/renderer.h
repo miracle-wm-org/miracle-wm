@@ -97,7 +97,7 @@ protected:
 
     mutable long long frameno = 0;
 
-    virtual void draw(graphics::Renderable const& renderable) const;
+    virtual void draw(graphics::Renderable const& renderable, bool is_outline = false) const;
 
 private:
     void update_gl_viewport();

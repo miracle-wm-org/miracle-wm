@@ -49,6 +49,8 @@ add_library(miracle-wm-implementation
     src/window_manager_tools_tiling_interface.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
+        src/miracle_gl_config.cpp
+        src/miracle_gl_config.h
 )
 
 add_executable(miracle-wm

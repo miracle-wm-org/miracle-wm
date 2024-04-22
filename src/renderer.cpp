@@ -27,6 +27,7 @@
 #include "mir/graphics/program_factory.h"
 #include "mir/graphics/program.h"
 #include "mir/renderer/gl/gl_surface.h"
+#include "window_metadata.h"
 
 #define GLM_FORCE_RADIANS
 #include <glm/gtc/matrix_transform.hpp>
@@ -86,16 +87,18 @@ using ShaderHandle = GLHandle<&glDeleteShader>;
 struct Program : public mir::graphics::gl::Program
 {
 public:
-    Program(ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader)
+    Program(ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader, ProgramHandle&& outline_shader)
     : opaque_handle(std::move(opaque_shader)),
-    alpha_handle(std::move(alpha_shader)),
-    opaque{opaque_handle},
-    alpha{alpha_handle}
+        alpha_handle(std::move(alpha_shader)),
+        outline_handle(std::move(outline_shader)),
+        opaque{opaque_handle},
+        alpha{alpha_handle},
+        outline(outline_handle)
     {
     }
 
-    ProgramHandle opaque_handle, alpha_handle;
-    mir::renderer::gl::Renderer::Program opaque, alpha;
+    ProgramHandle opaque_handle, alpha_handle, outline_handle;
+    mir::renderer::gl::Renderer::Program opaque, alpha, outline;
 };
 
 const GLchar* const vertex_shader_src =
@@ -178,17 +181,31 @@ public:
         "    gl_FragColor = alpha * sample_to_rgba(v_texcoord);\n"
         "}\n";
 
+        const GLchar* const outline_shader_src = R"(
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+varying vec2 v_texcoord;
+void main() {
+    gl_FragColor = vec4(1, 1, 0, 1);
+}
+)";
+
         // GL shader compilation is *not* threadsafe, and requires external synchronisation
         std::lock_guard lock{compilation_mutex};
 
         ShaderHandle const opaque_shader{
-        compile_shader(GL_FRAGMENT_SHADER, opaque_fragment.str().c_str())};
+            compile_shader(GL_FRAGMENT_SHADER, opaque_fragment.str().c_str())};
         ShaderHandle const alpha_shader{
-        compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())};
+            compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())};
+        ShaderHandle const outline_shader{
+            compile_shader(GL_FRAGMENT_SHADER, outline_shader_src)};
 
         programs.emplace_back(id, std::make_unique<::Program>(
-        link_shader(vertex_shader, opaque_shader),
-        link_shader(vertex_shader, alpha_shader)));
+            link_shader(vertex_shader, opaque_shader),
+            link_shader(vertex_shader, alpha_shader),
+            link_shader(vertex_shader, outline_shader)));
 
         return *programs.back().second;
 
@@ -277,17 +294,87 @@ auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::
     output->make_current();
     return output;
 }
+
+class OutlineRenderable : public mir::graphics::Renderable
+{
+public:
+    OutlineRenderable(mir::graphics::Renderable const& renderable)
+        : renderable{renderable}
+    {
+    }
+
+    ID id() const override
+    {
+        return "";
+    }
+
+    std::shared_ptr<mir::graphics::Buffer> buffer() const override
+    {
+        return renderable.buffer();
+    }
+
+    geom::Rectangle screen_position() const override
+    {
+        return get_rectangle(renderable.screen_position());
+    }
+
+    std::optional<geom::Rectangle> clip_area() const override
+    {
+        auto clip_area_rect = renderable.clip_area();
+        if (!clip_area_rect)
+            return clip_area_rect;
+        return get_rectangle(clip_area_rect.value());
+    }
+
+    float alpha() const override
+    {
+        return 0;
+    }
+
+    glm::mat4 transformation() const override
+    {
+        return renderable.transformation();
+    }
+
+    bool shaped() const override
+    {
+        return renderable.shaped();
+    }
+
+    std::shared_ptr<void> userdata() const override
+    {
+        return nullptr;
+    }
+
+private:
+    geom::Rectangle get_rectangle(geom::Rectangle const& in) const
+    {
+        auto rectangle = in;
+        rectangle.top_left = {
+            rectangle.top_left.x.as_int() - OUTLINE_WIDTH_PX,
+            rectangle.top_left.y.as_int() - OUTLINE_WIDTH_PX
+        };
+        rectangle.size = {
+            rectangle.size.width.as_int() + 2 * OUTLINE_WIDTH_PX,
+            rectangle.size.height.as_int() + 2 * OUTLINE_WIDTH_PX
+        };
+        return rectangle;
+    }
+    mir::graphics::Renderable const& renderable;
+    const int OUTLINE_WIDTH_PX = 2;
+};
 }
 
 mrg::Renderer::Renderer(
 std::shared_ptr<graphics::GLRenderingProvider> gl_interface,
 std::unique_ptr<graphics::gl::OutputSurface> output)
 : output_surface{make_output_current(std::move(output))},
-clear_color{0.0f, 0.0f, 0.0f, 1.0f},
-program_factory{std::make_unique<ProgramFactory>()},
-display_transform(1),
-gl_interface{std::move(gl_interface)}
+    clear_color{0.0f, 0.0f, 0.0f, 1.0f},
+    program_factory{std::make_unique<ProgramFactory>()},
+    display_transform(1),
+    gl_interface{std::move(gl_interface)}
 {
+    // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
     EGLDisplay disp = eglGetCurrentDisplay();
     if (disp != EGL_NO_DISPLAY)
@@ -355,8 +442,10 @@ auto mrg::Renderer::render(mg::RenderableList const& renderables) const -> std::
     output_surface->bind();
 
     glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    glClearStencil(0);
+    glStencilMask(0xFF);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     ++frameno;
     for (auto const& r : renderables)
@@ -373,8 +462,10 @@ auto mrg::Renderer::render(mg::RenderableList const& renderables) const -> std::
     return output;
 }
 
-void mrg::Renderer::draw(mg::Renderable const& renderable) const
+void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) const
 {
+    auto userdata = static_pointer_cast<miracle::WindowMetadata>(renderable.userdata());
+    bool needs_outline = userdata && userdata->get_type() == miracle::WindowType::tiled;
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
     if (clip_area)
@@ -397,16 +488,34 @@ void mrg::Renderer::draw(mg::Renderable const& renderable) const
         );
     }
 
+    // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
+    if (is_outline)
+    {
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    }
+    else if (needs_outline)
+    {
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_ALWAYS, 1, 0xFF);
+        glStencilMask(0xFF);
+        glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+    }
+    else
+    {
+        glDisable(GL_STENCIL_TEST);
+    }
+
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
     auto const* const prog =
-    [this, &texture](bool alpha) -> Program const*
+    [&](bool alpha) -> Program const*
     {
         auto const& family = static_cast<::Program const&>(texture->shader(*program_factory));
+        if (is_outline)
+            return &family.outline;
         if (alpha)
-        {
             return &family.alpha;
-        }
         return &family.opaque;
     }(renderable.alpha() < 1.0f);
 
@@ -532,6 +641,13 @@ void mrg::Renderer::draw(mg::Renderable const& renderable) const
     if (renderable.clip_area())
     {
         glDisable(GL_SCISSOR_TEST);
+    }
+
+    // Next, draw the outline if we have metadata to facilitate it
+    if (needs_outline)
+    {
+        OutlineRenderable outline(renderable);
+        draw(outline, true);
     }
 }
 

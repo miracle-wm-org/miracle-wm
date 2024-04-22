@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "auto_restarting_launcher.h"
 #include "renderer.h"
+#include "miracle_gl_config.h"
 
 #include <miral/external_client.h>
 #include <miral/runner.h>
@@ -97,6 +98,6 @@ int main(int argc, char const* argv[])
                 std::shared_ptr<mir::graphics::GLRenderingProvider> y)
             {
                 return std::make_unique<mir::renderer::gl::Renderer>(std::move(y), std::move(x));
-            })
+            }, std::make_shared<miracle::GLConfig>())
         });
 }
