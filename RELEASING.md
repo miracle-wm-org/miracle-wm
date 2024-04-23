@@ -20,10 +20,10 @@ TODO: Implement https://github.com/mattkae/miracle-wm/issues/59 to fix the weird
 ## Step 3: Deb Release
 1. Clone the repo (make sure that the folder is called `miracle-wm`)
 2. Update `debian/changelog` with:
-    - Version `X.Y.Z-distro` (where `distro` is "jammy", "noble", or "mantic")
+    - Version `X.Y.Z-distro` (where `distro` is "noble", or "mantic")
     - The same content as you in the Github release
     - A correct current timestamp
-    - `jammy` as the release (repeat with `mantic` and `noble`)
+    - `mantic` as the release (repeat `noble`)
 3. Next:
 ```sh
 cd miracle-wm
