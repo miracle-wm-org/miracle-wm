@@ -1,5 +1,5 @@
 Name:           miracle-wm
-Version:        0.2.0
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        A tiling Wayland compositor based on Mir 
 
@@ -51,6 +51,9 @@ desktop-file-validate %{buildroot}%{_datadir}/wayland-sessions/miracle-wm.deskto
 
 
 %changelog
+* Mon Apr 23 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.1-1
+- Release for the deb and Fedora packages
+
 * Mon Apr 22 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.0-1
 - (#35) sway/i3 IPC support has been implemented to minimally support waybar
 - (#45) Added "floating window manager" support whereby individual windows can be made to float above the tiling grid and behave just as they would in a "traditional" floating window manager
