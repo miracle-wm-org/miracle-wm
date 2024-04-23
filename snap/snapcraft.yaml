@@ -46,6 +46,8 @@ parts:
       craftctl set version=$server_version-mir$mir_version
       if echo $mir_version | grep -e '+dev' -e '~rc' -q; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
+    cmake-parameters:
+      - -DSNAP_BUILD=ON
     source: .
     build-packages:
       - pkg-config
