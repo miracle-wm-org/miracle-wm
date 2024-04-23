@@ -16,6 +16,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(MIROIL miroil REQUIRED)
 pkg_check_modules(MIRRENDERER mirrenderer REQUIRED)
 pkg_check_modules(MIRPLATFORM mirplatform REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
@@ -49,8 +50,7 @@ add_library(miracle-wm-implementation
     src/window_manager_tools_tiling_interface.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
-        src/miracle_gl_config.cpp
-        src/miracle_gl_config.h
+    src/miracle_gl_config.cpp
 )
 
 add_executable(miracle-wm
@@ -60,10 +60,12 @@ add_executable(miracle-wm
 target_include_directories(miracle-wm-implementation
     PUBLIC SYSTEM
     ${MIRAL_INCLUDE_DIRS}
+    ${MIROIL_INCLUDE_DIRS}
     ${MIRRENDERER_INCLUDE_DIRS}
     ${MIRPLATFORM_INCLUDE_DIRS})
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
+    ${MIROIL_LDFLAGS}
     ${MIRRENDERER_LDFLAGS}
     ${MIRPLATFORM_LDFLAGS}
     PkgConfig::YAML

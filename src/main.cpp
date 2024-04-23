@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
 #include <mir/renderer/gl/gl_surface.h>
+#include <miroil/open_gl_context.h>
 #include <libnotify/notify.h>
 #include <stdlib.h>
 
@@ -98,6 +99,7 @@ int main(int argc, char const* argv[])
                 std::shared_ptr<mir::graphics::GLRenderingProvider> y)
             {
                 return std::make_unique<mir::renderer::gl::Renderer>(std::move(y), std::move(x));
-            }, std::make_shared<miracle::GLConfig>())
+            }),
+            miroil::OpenGLContext(new miracle::GLConfig())
         });
 }
