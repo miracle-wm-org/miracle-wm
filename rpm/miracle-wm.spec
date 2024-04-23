@@ -51,7 +51,7 @@ desktop-file-validate %{buildroot}%{_datadir}/wayland-sessions/miracle-wm.deskto
 
 
 %changelog
-* Mon Apr 23 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.1-1
+* Tue Apr 23 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.1-1
 - Release for the deb and Fedora packages
 
 * Mon Apr 22 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.0-1
