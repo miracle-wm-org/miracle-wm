@@ -66,14 +66,13 @@ public:
         GLint transform_uniform = -1;
         GLint screen_to_gl_coords_uniform = -1;
         GLint alpha_uniform = -1;
+        GLint outline_color_uniform = -1;
         mutable long long last_used_frameno = 0;
 
         Program(GLuint program_id);
     };
 private:
-    std::unique_ptr<graphics::gl::OutputSurface> const output_surface;
 
-protected:
     /**
      * tessellate defines the list of triangles that will be used to render
      * the surface. By default it just returns 4 vertices for a rectangle.
@@ -93,15 +92,16 @@ protected:
     virtual void tessellate(std::vector<mir::gl::Primitive>& primitives,
                             graphics::Renderable const& renderable) const;
 
-    GLfloat clear_color[4];
-
-    mutable long long frameno = 0;
-
-    virtual void draw(graphics::Renderable const& renderable, bool is_outline = false) const;
-
-private:
+    struct OutlineContext
+    {
+        glm::vec4 color;
+    };
+    virtual void draw(graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
     void update_gl_viewport();
 
+    std::unique_ptr<graphics::gl::OutputSurface> const output_surface;
+    GLfloat clear_color[4];
+    mutable long long frameno = 0;
     class ProgramFactory;
     std::unique_ptr<ProgramFactory> const program_factory;
     geometry::Rectangle viewport;

@@ -13,6 +13,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <GLES2/gl2.h>
 #define MIR_LOG_COMPONENT "GLRenderer"
 
 #include "renderer.h"
@@ -101,22 +102,24 @@ public:
     mir::renderer::gl::Renderer::Program opaque, alpha, outline;
 };
 
-const GLchar* const vertex_shader_src =
-{
-"attribute vec3 position;\n"
-"attribute vec2 texcoord;\n"
-"uniform mat4 screen_to_gl_coords;\n"
-"uniform mat4 display_transform;\n"
-"uniform mat4 transform;\n"
-"uniform vec2 centre;\n"
-"varying vec2 v_texcoord;\n"
-"void main() {\n"
-"   vec4 mid = vec4(centre, 0.0, 0.0);\n"
-"   vec4 transformed = (transform * (vec4(position, 1.0) - mid)) + mid;\n"
-"   gl_Position = display_transform * screen_to_gl_coords * transformed;\n"
-"   v_texcoord = texcoord;\n"
-"}\n"
-};
+const GLchar* const vertex_shader_src = R"(
+attribute vec3 position;
+attribute vec2 texcoord;
+uniform mat4 screen_to_gl_coords;
+uniform mat4 display_transform;
+uniform mat4 transform;
+uniform vec2 centre;
+uniform vec4 outline_color;
+varying vec2 v_texcoord;
+varying vec4 v_outline_color;
+void main() {
+   vec4 mid = vec4(centre, 0.0, 0.0);
+   vec4 transformed = (transform * (vec4(position, 1.0) - mid)) + mid;
+   gl_Position = display_transform * screen_to_gl_coords * transformed;
+   v_texcoord = texcoord;
+   v_outline_color = outline_color;
+}
+)";
 }
 
 class mrg::Renderer::ProgramFactory : public mir::graphics::gl::ProgramFactory
@@ -187,8 +190,9 @@ precision mediump float;
 #endif
 
 varying vec2 v_texcoord;
+varying vec4 v_outline_color;
 void main() {
-    gl_FragColor = vec4(1, 1, 0, 1);
+    gl_FragColor = v_outline_color;
 }
 )";
 
@@ -285,6 +289,7 @@ mrg::Renderer::Program::Program(GLuint program_id)
     transform_uniform = glGetUniformLocation(id, "transform");
     screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
     alpha_uniform = glGetUniformLocation(id, "alpha");
+    outline_color_uniform = glGetUniformLocation(id, "outline_color");
 }
 
 namespace
@@ -462,7 +467,7 @@ auto mrg::Renderer::render(mg::RenderableList const& renderables) const -> std::
     return output;
 }
 
-void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) const
+void mrg::Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
 {
     auto userdata = static_pointer_cast<miracle::WindowMetadata>(renderable.userdata());
     bool needs_outline = userdata && userdata->get_type() == miracle::WindowType::tiled;
@@ -489,7 +494,7 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) cons
     }
 
     // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
-    if (is_outline)
+    if (context)
     {
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
@@ -512,7 +517,7 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) cons
     [&](bool alpha) -> Program const*
     {
         auto const& family = static_cast<::Program const&>(texture->shader(*program_factory));
-        if (is_outline)
+        if (context)
             return &family.outline;
         if (alpha)
             return &family.alpha;
@@ -564,6 +569,13 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) cons
 
     if (prog->alpha_uniform >= 0)
         glUniform1f(prog->alpha_uniform, renderable.alpha());
+
+    if (context)
+    {
+        glUniform4f(prog->outline_color_uniform,
+                    context->color.r, context->color.g,
+                    context->color.b, context->color.a);
+    }
 
     glEnableVertexAttribArray(prog->position_attr);
     glEnableVertexAttribArray(prog->texcoord_attr);
@@ -646,8 +658,11 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, bool is_outline) cons
     // Next, draw the outline if we have metadata to facilitate it
     if (needs_outline)
     {
+        OutlineContext context = {
+            userdata->is_focused() ? glm::vec4(1, 0, 0, 1) : glm::vec4(0, 1, 0, 1)
+        };
         OutlineRenderable outline(renderable);
-        draw(outline, true);
+        draw(outline, &context);
     }
 }
 

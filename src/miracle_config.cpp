@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <glm/fwd.hpp>
 #define MIR_LOG_COMPONENT "miracle_config"
 
 #include "miracle_config.h"
@@ -36,6 +37,24 @@ int program_exists(std::string const& name)
     std::stringstream out;
     out << "command -v " << name << " > /dev/null 2>&1";
     return !system(out.str().c_str());
+}
+
+glm::vec4 parse_color(YAML::Node const& node)
+{
+    if (node.IsMap())
+    {
+        // Parse as (r, g, b, a) object
+
+    }
+    else if (node.IsSequence())
+    {
+        // Parse as [r, g, b, a] array
+
+    }
+    else
+    {
+        // Parse as hex color
+    }
 }
 }
 
@@ -740,6 +759,11 @@ void MiracleConfig::_load()
             }
         }
     }
+
+    if (config["border"])
+    {
+        auto size = config["border"]["size"].as<int>();
+    }
 }
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
@@ -955,4 +979,9 @@ int MiracleConfig::get_resize_jump() const
 std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
 {
     return environment_variables;
+}
+
+BorderConfig const& MiracleConfig::get_border_config() const
+{
+    return border_config;
 }

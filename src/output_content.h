@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
+#include "miral/window.h"
 #include "tiling_window_tree.h"
 #include "workspace_content.h"
 #include "window_metadata.h"
@@ -100,6 +101,7 @@ public:
     miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
+    miral::Window get_active_window() { return active_window; }
 
 
 private:

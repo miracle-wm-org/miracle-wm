@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <functional>
 #include <optional>
 #include <atomic>
+#include <glm/glm.hpp>
 
 namespace miral
 {
@@ -106,6 +107,13 @@ struct EnvironmentVariable
     std::string value;
 };
 
+struct BorderConfig
+{
+    glm::vec4 focus_color;
+    glm::vec4 color;
+    int size;
+};
+
 class MiracleConfig
 {
 public:
@@ -122,6 +130,7 @@ public:
     [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
     [[nodiscard]] int get_resize_jump() const;
     [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const;
+    [[nodiscard]] BorderConfig const& get_border_config() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -163,6 +172,7 @@ private:
     std::string desired_terminal = "";
     int resize_jump = 50;
     std::vector<EnvironmentVariable> environment_variables;
+    BorderConfig border_config;
     std::atomic<bool> has_changes = false;
 };
 }

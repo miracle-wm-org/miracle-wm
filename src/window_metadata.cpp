@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "window_metadata.h"
+#include "output_content.h"
 
 using namespace miracle;
 
@@ -49,4 +50,12 @@ void WindowMetadata::toggle_pin_to_desktop()
     {
         is_pinned = !is_pinned;
     }
+}
+
+bool WindowMetadata::is_focused() const
+{
+    if (!output)
+        return false;
+
+    return output->get_active_window() == window;
 }
