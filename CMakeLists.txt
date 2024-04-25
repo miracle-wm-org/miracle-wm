@@ -51,6 +51,7 @@ add_library(miracle-wm-implementation
     src/renderer.cpp
     src/tessellation_helpers.cpp
     src/miracle_gl_config.cpp
+    src/animator.cpp
 )
 
 add_executable(miracle-wm
