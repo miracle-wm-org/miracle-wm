@@ -1,0 +1,29 @@
+---
+BasedOnStyle: WebKit
+IndentWidth: 4
+---
+Language: Cpp
+AlignAfterOpenBracket: DontAlign
+AlignArrayOfStructures: Left
+AlignConsecutiveShortCaseStatements:
+    Enabled: true
+    AcrossEmptyLines: true
+    AcrossComments: true
+    AlignCaseColons: false
+AlignTrailingComments:
+    Kind: Always
+    OverEmptyLines: 2
+BraceWrapping:
+    AfterClass: true
+    AfterControlStatement: Always
+    AfterEnum: true
+    AfterFunction: true
+    AfterNamespace: true
+    AfterStruct: true
+    AfterUnion: true
+    AfterExternBlock: true
+    BeforeCatch: true
+    BeforeElse: true
+    BeforeLambdaBody: false
+    BeforeWhile: false
+BreakInheritanceList: BeforeColon
