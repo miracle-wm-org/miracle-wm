@@ -109,9 +109,9 @@ struct EnvironmentVariable
 
 struct BorderConfig
 {
+    int size;
     glm::vec4 focus_color;
     glm::vec4 color;
-    int size;
 };
 
 class MiracleConfig

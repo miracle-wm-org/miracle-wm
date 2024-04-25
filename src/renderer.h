@@ -32,45 +32,27 @@ namespace mir
 {
 namespace graphics { class GLRenderingProvider; }
 namespace graphics::gl { class OutputSurface; }
-namespace renderer
-{
-namespace gl
-{
+}
 
-class Renderer : public renderer::Renderer
+namespace miracle
+{
+class MiracleConfig;
+
+class Renderer : public mir::renderer::Renderer
 {
 public:
-    Renderer(std::shared_ptr<graphics::GLRenderingProvider> gl_interface, std::unique_ptr<graphics::gl::OutputSurface> output);
+    Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
+        std::unique_ptr<mir::graphics::gl::OutputSurface> output,
+        std::shared_ptr<MiracleConfig> const& config);
     virtual ~Renderer();
 
     // These are called with a valid GL context:
-    void set_viewport(geometry::Rectangle const& rect) override;
+    void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
-    auto render(graphics::RenderableList const&) const -> std::unique_ptr<graphics::Framebuffer> override;
+    auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
 
     // This is called _without_ a GL context:
     void suspend() override;
-
-    struct Program
-    {
-        GLuint id = 0;
-        /* 8 is the minimum number of texture units a GL implementation can provide
-         * and should comfortably provide enough textures for any conceivable buffer
-         * format
-         */
-        std::array<GLint, 8> tex_uniforms;
-        GLint position_attr = -1;
-        GLint texcoord_attr = -1;
-        GLint centre_uniform = -1;
-        GLint display_transform_uniform = -1;
-        GLint transform_uniform = -1;
-        GLint screen_to_gl_coords_uniform = -1;
-        GLint alpha_uniform = -1;
-        GLint outline_color_uniform = -1;
-        mutable long long last_used_frameno = 0;
-
-        Program(GLuint program_id);
-    };
 private:
 
     /**
@@ -90,29 +72,28 @@ private:
      *       tessellation is very much OpenGL-specific.
      */
     virtual void tessellate(std::vector<mir::gl::Primitive>& primitives,
-                            graphics::Renderable const& renderable) const;
+                            mir::graphics::Renderable const& renderable) const;
 
     struct OutlineContext
     {
         glm::vec4 color;
     };
-    virtual void draw(graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
+    virtual void draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
     void update_gl_viewport();
 
-    std::unique_ptr<graphics::gl::OutputSurface> const output_surface;
+    std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
     GLfloat clear_color[4];
     mutable long long frameno = 0;
     class ProgramFactory;
     std::unique_ptr<ProgramFactory> const program_factory;
-    geometry::Rectangle viewport;
+    mir::geometry::Rectangle viewport;
     glm::mat4 screen_to_gl_coords;
     glm::mat4 display_transform;
     std::vector<mir::gl::Primitive> mutable primitives;
-    std::shared_ptr<graphics::GLRenderingProvider> const gl_interface;
+    std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
+    std::shared_ptr<MiracleConfig> config;
 };
 
-}
-}
 }
 
 #endif // MIR_RENDERER_GL_RENDERER_H_

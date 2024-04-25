@@ -98,7 +98,7 @@ int main(int argc, char const* argv[])
             [&](std::unique_ptr<mir::graphics::gl::OutputSurface> x,
                 std::shared_ptr<mir::graphics::GLRenderingProvider> y)
             {
-                return std::make_unique<mir::renderer::gl::Renderer>(std::move(y), std::move(x));
+                return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config);
             }),
             miroil::OpenGLContext(new miracle::GLConfig())
         });

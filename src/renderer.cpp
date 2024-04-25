@@ -29,6 +29,7 @@
 #include "mir/graphics/program.h"
 #include "mir/renderer/gl/gl_surface.h"
 #include "window_metadata.h"
+#include "miracle_config.h"
 
 #define GLM_FORCE_RADIANS
 #include <glm/gtc/matrix_transform.hpp>
@@ -43,8 +44,8 @@
 
 namespace mg = mir::graphics;
 namespace mgl = mir::gl;
-namespace mrg = mir::renderer::gl;
 namespace geom = mir::geometry;
+using namespace miracle;
 
 namespace
 {
@@ -85,6 +86,46 @@ private:
 using ProgramHandle = GLHandle<&glDeleteProgram>;
 using ShaderHandle = GLHandle<&glDeleteShader>;
 
+struct ProgramData
+{
+    GLuint id = 0;
+    /* 8 is the minimum number of texture units a GL implementation can provide
+     * and should comfortably provide enough textures for any conceivable buffer
+     * format
+     */
+    std::array<GLint, 8> tex_uniforms;
+    GLint position_attr = -1;
+    GLint texcoord_attr = -1;
+    GLint centre_uniform = -1;
+    GLint display_transform_uniform = -1;
+    GLint transform_uniform = -1;
+    GLint screen_to_gl_coords_uniform = -1;
+    GLint alpha_uniform = -1;
+    GLint outline_color_uniform = -1;
+    mutable long long last_used_frameno = 0;
+
+    ProgramData(GLuint program_id)
+    {
+        id = program_id;
+        position_attr = glGetAttribLocation(id, "position");
+        texcoord_attr = glGetAttribLocation(id, "texcoord");
+        for (auto i = 0u; i < tex_uniforms.size() ; ++i)
+        {
+            /* You can reference uniform arrays as tex[0], tex[1], tex[2], … until you
+             * hit the end of the array, which will return -1 as the location.
+             */
+            auto const uniform_name = std::string{"tex["} + std::to_string(i) + "]";
+            tex_uniforms[i] = glGetUniformLocation(id, uniform_name.c_str());
+        }
+        centre_uniform = glGetUniformLocation(id, "centre");
+        display_transform_uniform = glGetUniformLocation(id, "display_transform");
+        transform_uniform = glGetUniformLocation(id, "transform");
+        screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
+        alpha_uniform = glGetUniformLocation(id, "alpha");
+        outline_color_uniform = glGetUniformLocation(id, "outline_color");
+    }
+};
+
 struct Program : public mir::graphics::gl::Program
 {
 public:
@@ -99,7 +140,7 @@ public:
     }
 
     ProgramHandle opaque_handle, alpha_handle, outline_handle;
-    mir::renderer::gl::Renderer::Program opaque, alpha, outline;
+    ProgramData opaque, alpha, outline;
 };
 
 const GLchar* const vertex_shader_src = R"(
@@ -122,7 +163,7 @@ void main() {
 )";
 }
 
-class mrg::Renderer::ProgramFactory : public mir::graphics::gl::ProgramFactory
+class Renderer::ProgramFactory : public mir::graphics::gl::ProgramFactory
 {
 public:
     // NOTE: This must be called with a current GL context
@@ -271,27 +312,6 @@ private:
     std::mutex compilation_mutex;
 };
 
-mrg::Renderer::Program::Program(GLuint program_id)
-{
-    id = program_id;
-    position_attr = glGetAttribLocation(id, "position");
-    texcoord_attr = glGetAttribLocation(id, "texcoord");
-    for (auto i = 0u; i < tex_uniforms.size() ; ++i)
-    {
-        /* You can reference uniform arrays as tex[0], tex[1], tex[2], … until you
-         * hit the end of the array, which will return -1 as the location.
-         */
-        auto const uniform_name = std::string{"tex["} + std::to_string(i) + "]";
-        tex_uniforms[i] = glGetUniformLocation(id, uniform_name.c_str());
-    }
-    centre_uniform = glGetUniformLocation(id, "centre");
-    display_transform_uniform = glGetUniformLocation(id, "display_transform");
-    transform_uniform = glGetUniformLocation(id, "transform");
-    screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
-    alpha_uniform = glGetUniformLocation(id, "alpha");
-    outline_color_uniform = glGetUniformLocation(id, "outline_color");
-}
-
 namespace
 {
 auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::unique_ptr<mg::gl::OutputSurface>
@@ -303,8 +323,10 @@ auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::
 class OutlineRenderable : public mir::graphics::Renderable
 {
 public:
-    OutlineRenderable(mir::graphics::Renderable const& renderable)
-        : renderable{renderable}
+    OutlineRenderable(mir::graphics::Renderable const& renderable, int outline_width_px, float alpha)
+        : renderable{renderable},
+          outline_width_px{outline_width_px},
+          _alpha{alpha}
     {
     }
 
@@ -333,7 +355,7 @@ public:
 
     float alpha() const override
     {
-        return 0;
+        return _alpha;
     }
 
     glm::mat4 transformation() const override
@@ -356,28 +378,31 @@ private:
     {
         auto rectangle = in;
         rectangle.top_left = {
-            rectangle.top_left.x.as_int() - OUTLINE_WIDTH_PX,
-            rectangle.top_left.y.as_int() - OUTLINE_WIDTH_PX
+            rectangle.top_left.x.as_int() - outline_width_px,
+            rectangle.top_left.y.as_int() - outline_width_px
         };
         rectangle.size = {
-            rectangle.size.width.as_int() + 2 * OUTLINE_WIDTH_PX,
-            rectangle.size.height.as_int() + 2 * OUTLINE_WIDTH_PX
+            rectangle.size.width.as_int() + 2 * outline_width_px,
+            rectangle.size.height.as_int() + 2 * outline_width_px
         };
         return rectangle;
     }
     mir::graphics::Renderable const& renderable;
-    const int OUTLINE_WIDTH_PX = 2;
+    int outline_width_px;
+    float _alpha;
 };
 }
 
-mrg::Renderer::Renderer(
-std::shared_ptr<graphics::GLRenderingProvider> gl_interface,
-std::unique_ptr<graphics::gl::OutputSurface> output)
+Renderer::Renderer(
+    std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
+    std::unique_ptr<mir::graphics::gl::OutputSurface> output,
+    std::shared_ptr<MiracleConfig> const& config)
 : output_surface{make_output_current(std::move(output))},
     clear_color{0.0f, 0.0f, 0.0f, 1.0f},
     program_factory{std::make_unique<ProgramFactory>()},
     display_transform(1),
-    gl_interface{std::move(gl_interface)}
+    gl_interface{std::move(gl_interface)},
+    config{config}
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -430,18 +455,19 @@ std::unique_ptr<graphics::gl::OutputSurface> output)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-mrg::Renderer::~Renderer()
+Renderer::~Renderer()
 {
 }
 
-void mrg::Renderer::tessellate(std::vector<mgl::Primitive>& primitives,
-                               mg::Renderable const& renderable) const
+void Renderer::tessellate(
+    std::vector<mgl::Primitive>& primitives,
+    mg::Renderable const& renderable) const
 {
     primitives.resize(1);
     primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement{0,0});
 }
 
-auto mrg::Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
+auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
 {
     output_surface->make_current();
     output_surface->bind();
@@ -467,10 +493,10 @@ auto mrg::Renderer::render(mg::RenderableList const& renderables) const -> std::
     return output;
 }
 
-void mrg::Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
+void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
 {
-    auto userdata = static_pointer_cast<miracle::WindowMetadata>(renderable.userdata());
-    bool needs_outline = userdata && userdata->get_type() == miracle::WindowType::tiled;
+    auto userdata = static_pointer_cast<WindowMetadata>(renderable.userdata());
+    bool needs_outline = userdata && userdata->get_type() == WindowType::tiled;
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
     if (clip_area)
@@ -514,7 +540,7 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, OutlineContext* conte
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
     auto const* const prog =
-    [&](bool alpha) -> Program const*
+    [&](bool alpha) -> ProgramData const*
     {
         auto const& family = static_cast<::Program const&>(texture->shader(*program_factory));
         if (context)
@@ -658,15 +684,19 @@ void mrg::Renderer::draw(mg::Renderable const& renderable, OutlineContext* conte
     // Next, draw the outline if we have metadata to facilitate it
     if (needs_outline)
     {
-        OutlineContext context = {
-            userdata->is_focused() ? glm::vec4(1, 0, 0, 1) : glm::vec4(0, 1, 0, 1)
-        };
-        OutlineRenderable outline(renderable);
-        draw(outline, &context);
+        auto border_config = config->get_border_config();
+        if (border_config.size > 0)
+        {
+            bool is_focused = userdata->is_focused();
+            auto color = is_focused ? border_config.focus_color : border_config.color;
+            OutlineContext outline_context = { color };
+            OutlineRenderable outline(renderable, border_config.size, color.a);
+            draw(outline, &outline_context);
+        }
     }
 }
 
-void mrg::Renderer::set_viewport(geometry::Rectangle const& rect)
+void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
 {
     if (rect == viewport)
         return;
@@ -709,7 +739,7 @@ void mrg::Renderer::set_viewport(geometry::Rectangle const& rect)
     update_gl_viewport();
 }
 
-void mrg::Renderer::update_gl_viewport()
+void Renderer::update_gl_viewport()
 {
     /*
      * Letterboxing: Move the glViewport to add black bars in the case that
@@ -743,15 +773,15 @@ void mrg::Renderer::update_gl_viewport()
     }
 }
 
-void mrg::Renderer::set_output_transform(glm::mat2 const& t)
+void Renderer::set_output_transform(glm::mat2 const& t)
 {
     auto new_display_transform = glm::mat4(t);
 
     switch (output_surface->layout())
     {
-        case graphics::gl::OutputSurface::Layout::GL:
+        case mir::graphics::gl::OutputSurface::Layout::GL:
             break;
-        case graphics::gl::OutputSurface::Layout::TopRowFirst:
+        case mir::graphics::gl::OutputSurface::Layout::TopRowFirst:
             // GL is going to render in its own coordinate system, but the OutputSurface
             // wants the output to be the other way up. Get GL to render upside-down instead.
             new_display_transform = glm::mat4{
@@ -770,7 +800,7 @@ void mrg::Renderer::set_output_transform(glm::mat2 const& t)
     }
 }
 
-void mrg::Renderer::suspend()
+void Renderer::suspend()
 {
     output_surface->release_current();
 }
