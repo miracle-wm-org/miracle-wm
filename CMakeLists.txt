@@ -19,6 +19,8 @@ pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(MIROIL miroil REQUIRED)
 pkg_check_modules(MIRRENDERER mirrenderer REQUIRED)
 pkg_check_modules(MIRPLATFORM mirplatform REQUIRED)
+pkg_check_modules(MIRSERVER mirserver REQUIRED)
+pkg_check_modules(MIRSERVER_INTERNAL mirserver-internal REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
@@ -62,12 +64,16 @@ target_include_directories(miracle-wm-implementation
     ${MIRAL_INCLUDE_DIRS}
     ${MIROIL_INCLUDE_DIRS}
     ${MIRRENDERER_INCLUDE_DIRS}
-    ${MIRPLATFORM_INCLUDE_DIRS})
+    ${MIRPLATFORM_INCLUDE_DIRS}
+    ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
+    ${MIRSERVER_INCLUDE_DIRS})
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
     ${MIROIL_LDFLAGS}
     ${MIRRENDERER_LDFLAGS}
     ${MIRPLATFORM_LDFLAGS}
+    ${MIRSERVER_LDFLAGS}
+    ${MIRSERVER_INTERNAL_LDFLAGS}
     PkgConfig::YAML
     PkgConfig::GLIB
     PkgConfig::LIBEVDEV
