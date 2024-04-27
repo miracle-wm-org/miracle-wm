@@ -86,7 +86,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
         return false;
 
     auto& info = tools_.info_for(window);
-    if (info.state() == mir_window_state_fullscreen || info.state() == mir_window_state_maximized)
+    if (window_helpers::is_window_fullscreen(info.state()))
     {
         mir::log_error("Unmaximize the window to move it to a new workspace");
         return false;
