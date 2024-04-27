@@ -148,7 +148,10 @@ void LeafNode::commit_changes()
     {
         logical_area = next_logical_area.value();
         next_logical_area.reset();
-        node_interface.set_rectangle(window, get_visible_area());
-        constrain();
+        if (!node_interface.is_fullscreen(window))
+        {
+            node_interface.set_rectangle(window, get_visible_area());
+            constrain();
+        }
     }
 }
