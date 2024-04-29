@@ -39,6 +39,7 @@ static const char ipc_magic[] = {'i', '3', '-', 'i', 'p', 'c'};
 
 namespace
 {
+
 struct sockaddr_un *ipc_user_sockaddr() {
     auto ipc_sockaddr = (sockaddr_un*)malloc(sizeof(struct sockaddr_un));
     if (ipc_sockaddr == nullptr)
@@ -325,6 +326,20 @@ void Ipc::on_focused(
     }
 }
 
+void Ipc::for_each_pending_command(std::function<void(I3Command const&)> f)
+{
+    size_t num_processed = 0;
+    {
+        std::shared_lock lock(pending_commands_mutex);
+        for (auto const& c : pending_commands)
+            f(c);
+        num_processed = pending_commands.size();
+    }
+
+    std::unique_lock lock(pending_commands_mutex);
+    pending_commands.erase(pending_commands.begin(), pending_commands.begin() + num_processed);
+}
+
 Ipc::IpcClient &Ipc::get_client(int fd)
 {
     for (auto& client : clients)
@@ -379,6 +394,21 @@ void Ipc::handle_command(miracle::Ipc::IpcClient &client, uint32_t payload_lengt
 
     switch (payload_type)
     {
+    case IPC_COMMAND:
+    {
+        auto result = parse_i3_command(std::string_view(buf));
+        if (result)
+        {
+            const std::string msg = "[{\"success\": true}]";
+            send_reply(client, payload_type, msg);
+        }
+        else
+        {
+            const std::string msg = "[{\"success\": false, \"parse_error\": true}]";
+            send_reply(client, payload_type, msg);
+        }
+        break;
+    }
     case IPC_GET_WORKSPACES:
     {
         json j = json::array();
@@ -494,4 +524,98 @@ void Ipc::handle_writeable(miracle::Ipc::IpcClient &client)
     }
 
     client.write_buffer_len = 0;
+}
+
+namespace
+{
+bool equals(std::string_view const& s, const char* v)
+{
+    // TODO: Perhaps this is a bit naive, as it is basically a "startswith"
+    return strncmp(s.data(), v, strlen(v)) == 0;
+}
+}
+
+bool Ipc::parse_i3_command(std::string_view const& command)
+{
+    auto split_strings = (command) | std::ranges::views::split(' ');
+
+    // Parsing criteria:
+    //  1. A scope of a command always comes before the command
+    //  2. A scope appears in square brackets
+    //  3. A scope lasts until the command is over or a semi-colon is encountered
+    //  4. A comma begins a new command but with the same scope
+    // e.g. [scope] cmd_a arg_a, cmd_b argb; cmd_c arg_c
+    std::unique_lock lock(pending_commands_mutex);
+    I3Command next_command;
+    for (auto const& string : auto{split_strings})
+    {
+        auto last_char = string.data()[string.size() - 1];
+        if (last_char == ',')
+        {
+
+        }
+
+        if (string[0] == '[')
+        {
+            // https://i3wm.org/docs/userguide.html#command_criteria
+            // We are starting a new scope
+        }
+        else if (next_command.type == I3CommandType::NONE)
+        {
+            if (equals(string.data(), "exec"))
+                next_command.type = I3CommandType::EXEC;
+            else if (equals(string.data(), "split"))
+                next_command.type = I3CommandType::SPLIT;
+            else if (equals(string.data(), "layout"))
+                next_command.type = I3CommandType::LAYOUT;
+            else if (equals(string.data(), "focus"))
+                next_command.type = I3CommandType::FOCUS;
+            else if (equals(string.data(), "move"))
+                next_command.type = I3CommandType::MOVE;
+            else if (equals(string.data(), "swap"))
+                next_command.type = I3CommandType::SWAP;
+            else if (equals(string.data(), "sticky"))
+                next_command.type = I3CommandType::STICKY;
+            else if (equals(string.data(), "workspace"))
+                next_command.type = I3CommandType::WORKSPACE;
+            else if (equals(string.data(), "mark"))
+                next_command.type = I3CommandType::MARK;
+            else if (equals(string.data(), "title_format"))
+                next_command.type = I3CommandType::TITLE_FORMAT;
+            else if (equals(string.data(), "title_window_icon"))
+                next_command.type = I3CommandType::TITLE_WINDOW_ICON;
+            else if (equals(string.data(), "border"))
+                next_command.type = I3CommandType::BORDER;
+            else if (equals(string.data(), "shm_log"))
+                next_command.type = I3CommandType::SHM_LOG;
+            else if (equals(string.data(), "debug_log"))
+                next_command.type = I3CommandType::DEBUG_LOG;
+            else if (equals(string.data(), "restart"))
+                next_command.type = I3CommandType::RESTART;
+            else if (equals(string.data(), "reload"))
+                next_command.type = I3CommandType::RELOAD;
+            else if (equals(string.data(), "exit"))
+                next_command.type = I3CommandType::EXIT;
+            else if (equals(string.data(), "scratchpad"))
+                next_command.type = I3CommandType::SCRATCHPAD;
+            else if (equals(string.data(), "nop"))
+                next_command.type = I3CommandType::NOP;
+            else if (equals(string.data(), "i3_bar"))
+                next_command.type = I3CommandType::I3_BAR;
+            else if (equals(string.data(), "gaps"))
+                next_command.type = I3CommandType::GAPS;
+            else
+            {
+                mir::log_error("Invalid i3 command type: %s", string.data());
+                return false;
+            }
+        }
+        else
+        {
+            next_command.arguments.emplace_back(string.data());
+        }
+    }
+
+    pending_commands.push_back(next_command);
+    return true;
 }

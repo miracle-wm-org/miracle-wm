@@ -20,9 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace_manager.h"
 #include "workspace_observer.h"
+#include "i3_command.h"
 #include <miral/runner.h>
 #include <mir/fd.h>
 #include <vector>
+#include <shared_mutex>
 
 struct sockaddr_un;
 
@@ -79,6 +81,7 @@ public:
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
+    void for_each_pending_command(std::function<void(I3Command const&)>);
 private:
     struct IpcClient
     {
@@ -97,12 +100,15 @@ private:
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<IpcClient> clients;
+    std::vector<I3Command> pending_commands;
+    mutable std::shared_mutex pending_commands_mutex;
 
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);
     void handle_command(IpcClient& client, uint32_t payload_length, IpcCommandType payload_type);
     void send_reply(IpcClient& client, IpcCommandType command_type, std::string const& payload);
     void handle_writeable(IpcClient& client);
+    bool parse_i3_command(std::string_view const& command);
 };
 }
 

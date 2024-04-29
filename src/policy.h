@@ -91,6 +91,7 @@ public:
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
+    void advise_end() override;
 
     std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
     std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }

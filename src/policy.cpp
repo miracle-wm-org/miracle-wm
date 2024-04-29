@@ -551,3 +551,48 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
         output->advise_application_zone_delete(application_zone);
     }
 }
+
+void Policy::advise_end()
+{
+    ipc->for_each_pending_command([&](I3Command const& command)
+    {
+         switch (command.type)
+         {
+             case I3CommandType::FOCUS:
+             {
+                 if (!active_output)
+                 {
+                     mir::log_warning("Trying to process I3 focus command, but output is not set");
+                     break;
+                 }
+
+                 // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
+                 if (command.scope)
+                 {
+
+                 }
+                 else
+                 {
+                     if (command.arguments.empty())
+                     {
+                         mir::log_warning("Focus command expected arguments but none were provided");
+                         break;
+                     }
+
+                     auto const& arg = command.arguments.front();
+                     if (arg == "left")
+                         active_output->select(Direction::left);
+                     else if (arg == "right")
+                         active_output->select(Direction::right);
+                     else if (arg == "up")
+                         active_output->select(Direction::up);
+                     else if (arg == "down")
+                         active_output->select(Direction::down);
+                 }
+                 break;
+             }
+             default:
+                 break;
+         }
+    });
+}
