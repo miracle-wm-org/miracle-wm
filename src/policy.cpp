@@ -61,7 +61,8 @@ Policy::Policy(
           workspace_observer_registrar,
           [&]() { return get_active_output(); })},
       ipc{std::make_shared<Ipc>(runner, workspace_manager, *this)},
-      node_interface(tools)
+      node_interface(tools),
+      i3_command_executor(*this, workspace_manager, tools)
 {
     workspace_observer_registrar.register_interest(ipc);
 }
@@ -289,7 +290,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             // windows are considered to be in the "other" category until
             // we have more data on them.
             orphaned_window_list.push_back(window);
-            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), nullptr);
+            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
             miral::WindowSpecification spec;
             spec.userdata() = metadata;
             window_manager_tools.modify_window(window, spec);
@@ -555,61 +556,9 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 
 void Policy::advise_end()
 {
-    // https://github.com/jpcre2/jpcre2
-    // https://github.com/PCRE2Project/pcre2
     // https://github.com/swaywm/sway/blob/646019cad9e8a075911e960fc7645471d9c26bf6/include/sway/criteria.h#L28
     ipc->for_each_pending_command([&](I3ScopedCommandList const& command_list)
     {
-        // TODO: Check the scope and gather windows that meet it
-        if (!command_list.scope.empty())
-        {
-            window_manager_tools.for_each_application([&](miral::ApplicationInfo& info)
-            {
-                for (auto const& window : info.windows())
-                {
-                    if (command_list.meets_criteria(window, window_manager_tools))
-                    {
-                        // TODO: Add it to the list of possibilities
-                        continue;
-                    }
-                }
-            });
-        }
-
-        for (auto const& command : command_list.commands)
-        {
-
-             switch (command.type)
-             {
-                 case I3CommandType::focus:
-                 {
-                     if (!active_output)
-                     {
-                         mir::log_warning("Trying to process I3 focus command, but output is not set");
-                         break;
-                     }
-
-                     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
-                     if (command.arguments.empty())
-                     {
-                         mir::log_warning("Focus command expected arguments but none were provided");
-                         break;
-                     }
-
-                     auto const& arg = command.arguments.front();
-                     if (arg == "left")
-                         active_output->select(Direction::left);
-                     else if (arg == "right")
-                         active_output->select(Direction::right);
-                     else if (arg == "up")
-                         active_output->select(Direction::up);
-                     else if (arg == "down")
-                         active_output->select(Direction::down);
-                     break;
-                 }
-                 default:
-                     break;
-             }
-        }
+        i3_command_executor.process(command_list);
     });
 }

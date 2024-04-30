@@ -68,6 +68,7 @@ public:
         MirWindowState new_state,
         const mir::geometry::Rectangle &new_placement);
     void select_window_from_point(int x, int y);
+    void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
@@ -88,6 +89,7 @@ public:
     void update_area(geom::Rectangle const& area);
     std::vector<miral::Window> collect_all_windows() const;
     void request_toggle_active_float();
+    miral::Window find_window_on_active_workspace_matching_predicate(std::function<bool(miral::Window const&)> const&) const;
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical

@@ -112,6 +112,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
             tools_.modify_window(window, spec);
 
             auto new_node = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
+            metadata->set_workspace(workspace);
             metadata->associate_to_node(new_node);
             miral::WindowSpecification next_spec;
             next_spec.userdata() = metadata;

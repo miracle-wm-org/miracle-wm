@@ -46,6 +46,7 @@ add_library(miracle-wm-implementation
     src/parent_node.cpp
     src/window_manager_tools_tiling_interface.cpp
     src/i3_command.cpp
+    src/i3_command_executor.cpp
 )
 
 add_executable(miracle-wm

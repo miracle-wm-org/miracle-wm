@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc.h"
 #include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
+#include "i3_command_executor.h"
 
 #include <miral/window_manager_tools.h>
 #include <miral/window_management_policy.h>
@@ -111,6 +112,7 @@ private:
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
     WindowManagerToolsTilingInterface node_interface;
+    I3CommandExecutor i3_command_executor;
 };
 }
 

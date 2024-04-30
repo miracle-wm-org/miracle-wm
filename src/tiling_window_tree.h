@@ -106,6 +106,8 @@ public:
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
 
+    std::shared_ptr<Node> find_node(std::function<bool(std::shared_ptr<Node> const&)> const&);
+
     /// Hides the entire tree
     void hide();
 
