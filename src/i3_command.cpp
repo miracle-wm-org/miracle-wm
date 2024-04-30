@@ -200,8 +200,7 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
     std::vector<I3ScopedCommandList> list;
 
     // First, split the view by semicolons, as that will denote different possible scopes
-    auto split_by_semi_colon = (view) | std::ranges::views::split(';');
-    for (auto const& scope : auto{split_by_semi_colon})
+    for (auto const& scope : ((view) | std::ranges::views::split(';')))
     {
         I3ScopedCommandList result;
 
@@ -211,14 +210,12 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
         result.scope = I3Scope::parse(sub_view, ptr);
 
         // Next, split the sub_view by commas to get the list of commands with the scope
-        auto commands = std::string_view(&sub_view[ptr]) | std::ranges::views::split(',');
-        for (auto const& command_view : auto{commands})
+        for (auto const& command_view : (std::string_view(&sub_view[ptr]) | std::ranges::views::split(',')))
         {
             I3Command next_command = { I3CommandType::none };
 
             // Next, we can now read the command tokens space-by-space
-            auto split_strings = (command_view) | std::ranges::views::split(' ');
-            for (auto const& command_token : auto{split_strings})
+            for (auto const& command_token : ((command_view) | std::ranges::views::split(' ')))
             {
                 if (next_command.type == I3CommandType::none)
                 {
