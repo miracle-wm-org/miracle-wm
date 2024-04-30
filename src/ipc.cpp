@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc.h"
 #include "output_content.h"
 #include "policy.h"
+#include "i3_command_executor.h"
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -133,9 +134,15 @@ json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
 
 }
 
-Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager, Policy& policy)
+Ipc::Ipc(miral::MirRunner& runner,
+    miracle::WorkspaceManager& workspace_manager,
+    Policy& policy,
+    std::shared_ptr<mir::ServerActionQueue> const& queue,
+    I3CommandExecutor& executor)
     : workspace_manager{workspace_manager},
-      policy{policy}
+      policy{policy},
+      queue{queue},
+      executor{executor}
 {
     auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -324,20 +331,6 @@ void Ipc::on_focused(
 
         send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
     }
-}
-
-void Ipc::for_each_pending_command(std::function<void(I3ScopedCommandList const&)> f)
-{
-    size_t num_processed = 0;
-    {
-        std::shared_lock lock(pending_commands_mutex);
-        for (auto const& c : pending_commands)
-            f(c);
-        num_processed = pending_commands.size();
-    }
-
-    std::unique_lock lock(pending_commands_mutex);
-    pending_commands.erase(pending_commands.begin(), pending_commands.begin() + num_processed);
 }
 
 Ipc::IpcClient &Ipc::get_client(int fd)
@@ -537,7 +530,23 @@ bool equals(std::string_view const& s, const char* v)
 
 bool Ipc::parse_i3_command(std::string_view const& command)
 {
-    std::unique_lock lock(pending_commands_mutex);
-    pending_commands = I3ScopedCommandList::parse(command);
+    {
+        std::unique_lock lock(pending_commands_mutex);
+        pending_commands = I3ScopedCommandList::parse(command);
+    }
+
+    queue->enqueue(this, [&]()
+    {
+        size_t num_processed = 0;
+        {
+            std::shared_lock lock(pending_commands_mutex);
+            for (auto const& c : pending_commands)
+                executor.process(c);
+            num_processed = pending_commands.size();
+        }
+
+        std::unique_lock lock(pending_commands_mutex);
+        pending_commands.erase(pending_commands.begin(), pending_commands.begin() + num_processed);
+    });
     return true;
 }

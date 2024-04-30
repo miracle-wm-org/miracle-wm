@@ -21,8 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include "i3_command.h"
+#include "i3_command_executor.h"
 #include <miral/runner.h>
 #include <mir/fd.h>
+#include <mir/server_action_queue.h>
 #include <vector>
 #include <shared_mutex>
 
@@ -76,12 +78,15 @@ enum IpcCommandType {
 class Ipc : public WorkspaceObserver
 {
 public:
-    Ipc(miral::MirRunner& runner, WorkspaceManager&, Policy& policy);
+    Ipc(miral::MirRunner& runner,
+        WorkspaceManager&,
+        Policy& policy,
+        std::shared_ptr<mir::ServerActionQueue> const&,
+        I3CommandExecutor&);
 
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
-    void for_each_pending_command(std::function<void(I3ScopedCommandList const&)>);
 private:
     struct IpcClient
     {
@@ -102,6 +107,8 @@ private:
     std::vector<IpcClient> clients;
     std::vector<I3ScopedCommandList> pending_commands;
     mutable std::shared_mutex pending_commands_mutex;
+    std::shared_ptr<mir::ServerActionQueue> queue;
+    I3CommandExecutor& executor;
 
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);

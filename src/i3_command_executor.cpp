@@ -179,5 +179,5 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
     else if (arg == "mode_toggle")
         mir::log_warning("'focus mode_toggle' is not supported, see https://github.com/mattkae/miracle-wm/issues/117"); // TODO
     else if (arg == "output")
-        mir::log_warning("'focus output' is not supported, see https://github.com/canonical/mir/issues/3357");
+        mir::log_warning("'focus output' is not supported, see https://github.com/canonical/mir/issues/3357"); // TODO
 }

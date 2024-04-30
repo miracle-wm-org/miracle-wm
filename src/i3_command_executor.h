@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_I_3_COMMAND_EXECUTOR_H
 
 #include "i3_command.h"
+#include <mir/glib_main_loop.h>
 
 namespace miracle
 {

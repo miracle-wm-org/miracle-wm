@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "miral/window_specification.h"
 #include "window_metadata.h"
 #define MIR_LOG_COMPONENT "miracle"
 
@@ -25,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <mir_toolkit/events/enums.h>
+#include <miral/window_specification.h>
 #include <miral/toolkit_event.h>
 #include <miral/application_info.h>
 #include <miral/zone.h>
@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <iostream>
 #include <mir/geometry/rectangle.h>
+#include <mir/server.h>
 #include <limits>
 
 using namespace miracle;
@@ -50,7 +51,8 @@ Policy::Policy(
     miral::WindowManagerTools const& tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::MirRunner& runner,
-    std::shared_ptr<MiracleConfig> const& config)
+    std::shared_ptr<MiracleConfig> const& config,
+    mir::Server const& server)
     : window_manager_tools{tools},
       floating_window_manager(tools, config->get_input_event_modifier()),
       external_client_launcher{external_client_launcher},
@@ -60,9 +62,9 @@ Policy::Policy(
           tools,
           workspace_observer_registrar,
           [&]() { return get_active_output(); })},
-      ipc{std::make_shared<Ipc>(runner, workspace_manager, *this)},
-      node_interface(tools),
-      i3_command_executor(*this, workspace_manager, tools)
+      i3_command_executor(*this, workspace_manager, tools),
+      ipc{std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor)},
+      node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);
 }
@@ -551,14 +553,4 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
     {
         output->advise_application_zone_delete(application_zone);
     }
-}
-
-
-void Policy::advise_end()
-{
-    // https://github.com/swaywm/sway/blob/646019cad9e8a075911e960fc7645471d9c26bf6/include/sway/criteria.h#L28
-    ipc->for_each_pending_command([&](I3ScopedCommandList const& command_list)
-    {
-        i3_command_executor.process(command_list);
-    });
 }

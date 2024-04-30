@@ -35,6 +35,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miral;
 
+/// Wraps another miral API so that we can gain access to the underlying Server.
+class ServerMiddleman
+{
+public:
+    explicit ServerMiddleman(std::function<void(::mir::Server&)> const& f)
+        : f{f}
+    {
+    }
+    void operator()(mir::Server& server) const
+    {
+        f(server);
+    }
+private:
+    std::function<void(::mir::Server&)> f;
+};
+
 int main(int argc, char const* argv[])
 {
     MirRunner runner{argc, argv};
@@ -50,11 +66,18 @@ int main(int argc, char const* argv[])
         setenv(env.key.c_str(), env.value.c_str(), 1);
     }
 
-    WindowManagerOptions window_managers
-    {
-        add_window_manager_policy<miracle::Policy>(
-            "tiling", external_client_launcher, runner, config)
-    };
+    WindowManagerOptions* options;
+    auto window_managers = ServerMiddleman(
+        [&](auto& server)
+        {
+            options = new WindowManagerOptions
+            {
+                add_window_manager_policy<miracle::Policy>(
+                    "tiling", external_client_launcher, runner, config, server)
+            };
+            (*options)(server);
+        }
+    );
 
     Keymap config_keymap;
 
