@@ -45,15 +45,17 @@ add_library(miracle-wm-implementation
     src/leaf_node.cpp
     src/parent_node.cpp
     src/window_manager_tools_tiling_interface.cpp
+    src/i3_command.cpp
 )
 
 add_executable(miracle-wm
     src/main.cpp
 )
 
-target_include_directories(miracle-wm-implementation PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_include_directories(miracle-wm-implementation PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(     miracle-wm-implementation               ${MIRAL_LDFLAGS}
-    PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json)
+    PkgConfig::YAML PkgConfig::GLIB PkgConfig::LIBEVDEV PkgConfig::LIBNOTIFY nlohmann_json::nlohmann_json
+    -lpcre2-8 -lpcre2-16 -lpcre2-32)
 
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)

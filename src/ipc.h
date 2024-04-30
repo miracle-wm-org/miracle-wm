@@ -81,7 +81,7 @@ public:
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
-    void for_each_pending_command(std::function<void(I3Command const&)>);
+    void for_each_pending_command(std::function<void(I3ScopedCommandList const&)>);
 private:
     struct IpcClient
     {
@@ -100,7 +100,7 @@ private:
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<IpcClient> clients;
-    std::vector<I3Command> pending_commands;
+    std::vector<I3ScopedCommandList> pending_commands;
     mutable std::shared_mutex pending_commands_mutex;
 
     void disconnect(IpcClient& client);

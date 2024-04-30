@@ -326,7 +326,7 @@ void Ipc::on_focused(
     }
 }
 
-void Ipc::for_each_pending_command(std::function<void(I3Command const&)> f)
+void Ipc::for_each_pending_command(std::function<void(I3ScopedCommandList const&)> f)
 {
     size_t num_processed = 0;
     {
@@ -537,85 +537,7 @@ bool equals(std::string_view const& s, const char* v)
 
 bool Ipc::parse_i3_command(std::string_view const& command)
 {
-    auto split_strings = (command) | std::ranges::views::split(' ');
-
-    // Parsing criteria:
-    //  1. A scope of a command always comes before the command
-    //  2. A scope appears in square brackets
-    //  3. A scope lasts until the command is over or a semi-colon is encountered
-    //  4. A comma begins a new command but with the same scope
-    // e.g. [scope] cmd_a arg_a, cmd_b argb; cmd_c arg_c
     std::unique_lock lock(pending_commands_mutex);
-    I3Command next_command;
-    for (auto const& string : auto{split_strings})
-    {
-        auto last_char = string.data()[string.size() - 1];
-        if (last_char == ',')
-        {
-
-        }
-
-        if (string[0] == '[')
-        {
-            // https://i3wm.org/docs/userguide.html#command_criteria
-            // We are starting a new scope
-        }
-        else if (next_command.type == I3CommandType::NONE)
-        {
-            if (equals(string.data(), "exec"))
-                next_command.type = I3CommandType::EXEC;
-            else if (equals(string.data(), "split"))
-                next_command.type = I3CommandType::SPLIT;
-            else if (equals(string.data(), "layout"))
-                next_command.type = I3CommandType::LAYOUT;
-            else if (equals(string.data(), "focus"))
-                next_command.type = I3CommandType::FOCUS;
-            else if (equals(string.data(), "move"))
-                next_command.type = I3CommandType::MOVE;
-            else if (equals(string.data(), "swap"))
-                next_command.type = I3CommandType::SWAP;
-            else if (equals(string.data(), "sticky"))
-                next_command.type = I3CommandType::STICKY;
-            else if (equals(string.data(), "workspace"))
-                next_command.type = I3CommandType::WORKSPACE;
-            else if (equals(string.data(), "mark"))
-                next_command.type = I3CommandType::MARK;
-            else if (equals(string.data(), "title_format"))
-                next_command.type = I3CommandType::TITLE_FORMAT;
-            else if (equals(string.data(), "title_window_icon"))
-                next_command.type = I3CommandType::TITLE_WINDOW_ICON;
-            else if (equals(string.data(), "border"))
-                next_command.type = I3CommandType::BORDER;
-            else if (equals(string.data(), "shm_log"))
-                next_command.type = I3CommandType::SHM_LOG;
-            else if (equals(string.data(), "debug_log"))
-                next_command.type = I3CommandType::DEBUG_LOG;
-            else if (equals(string.data(), "restart"))
-                next_command.type = I3CommandType::RESTART;
-            else if (equals(string.data(), "reload"))
-                next_command.type = I3CommandType::RELOAD;
-            else if (equals(string.data(), "exit"))
-                next_command.type = I3CommandType::EXIT;
-            else if (equals(string.data(), "scratchpad"))
-                next_command.type = I3CommandType::SCRATCHPAD;
-            else if (equals(string.data(), "nop"))
-                next_command.type = I3CommandType::NOP;
-            else if (equals(string.data(), "i3_bar"))
-                next_command.type = I3CommandType::I3_BAR;
-            else if (equals(string.data(), "gaps"))
-                next_command.type = I3CommandType::GAPS;
-            else
-            {
-                mir::log_error("Invalid i3 command type: %s", string.data());
-                return false;
-            }
-        }
-        else
-        {
-            next_command.arguments.emplace_back(string.data());
-        }
-    }
-
-    pending_commands.push_back(next_command);
+    pending_commands = I3ScopedCommandList::parse(command);
     return true;
 }

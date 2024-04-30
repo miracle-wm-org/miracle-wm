@@ -552,27 +552,44 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
     }
 }
 
+
 void Policy::advise_end()
 {
-    ipc->for_each_pending_command([&](I3Command const& command)
+    // https://github.com/jpcre2/jpcre2
+    // https://github.com/PCRE2Project/pcre2
+    // https://github.com/swaywm/sway/blob/646019cad9e8a075911e960fc7645471d9c26bf6/include/sway/criteria.h#L28
+    ipc->for_each_pending_command([&](I3ScopedCommandList const& command_list)
     {
-         switch (command.type)
-         {
-             case I3CommandType::FOCUS:
+        // TODO: Check the scope and gather windows that meet it
+        if (!command_list.scope.empty())
+        {
+            window_manager_tools.for_each_application([&](miral::ApplicationInfo& info)
+            {
+                for (auto const& window : info.windows())
+                {
+                    if (command_list.meets_criteria(window, window_manager_tools))
+                    {
+                        // TODO: Add it to the list of possibilities
+                        continue;
+                    }
+                }
+            });
+        }
+
+        for (auto const& command : command_list.commands)
+        {
+
+             switch (command.type)
              {
-                 if (!active_output)
+                 case I3CommandType::focus:
                  {
-                     mir::log_warning("Trying to process I3 focus command, but output is not set");
-                     break;
-                 }
+                     if (!active_output)
+                     {
+                         mir::log_warning("Trying to process I3 focus command, but output is not set");
+                         break;
+                     }
 
-                 // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
-                 if (command.scope)
-                 {
-
-                 }
-                 else
-                 {
+                     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
                      if (command.arguments.empty())
                      {
                          mir::log_warning("Focus command expected arguments but none were provided");
@@ -588,11 +605,11 @@ void Policy::advise_end()
                          active_output->select(Direction::up);
                      else if (arg == "down")
                          active_output->select(Direction::down);
+                     break;
                  }
-                 break;
+                 default:
+                     break;
              }
-             default:
-                 break;
-         }
+        }
     });
 }
