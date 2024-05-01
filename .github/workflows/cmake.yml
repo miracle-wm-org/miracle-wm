@@ -27,7 +27,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install gcc-13
-        sudo apt install libmiral-dev libmircommon-internal-dev libmirserver-internal-dev libmirserver61 libmircommon10 \
+        sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils
 
     - name: Configure CMake
