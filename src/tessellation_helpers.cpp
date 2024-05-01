@@ -14,14 +14,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tessellation_helpers.h"
-#include "mir/graphics/renderable.h"
 #include "mir/graphics/buffer.h"
+#include "mir/graphics/renderable.h"
 
 namespace mg = mir::graphics;
 namespace mgl = mir::gl;
 namespace geom = mir::geometry;
 mgl::Primitive mgl::tessellate_renderable_into_rectangle(
-mg::Renderable const& renderable, geom::Displacement const& offset)
+    mg::Renderable const& renderable, geom::Displacement const& offset)
 {
     auto rect = renderable.screen_position();
     rect.top_left = rect.top_left - offset;
@@ -37,9 +37,21 @@ mg::Renderable const& renderable, geom::Displacement const& offset)
     GLfloat const tex_bottom = 1.0f;
 
     auto& vertices = rectangle.vertices;
-    vertices[0] = {{left,  top,    0.0f}, {0.0f,      0.0f}};
-    vertices[1] = {{left,  bottom, 0.0f}, {0.0f,      tex_bottom}};
-    vertices[2] = {{right, top,    0.0f}, {tex_right, 0.0f}};
-    vertices[3] = {{right, bottom, 0.0f}, {tex_right, tex_bottom}};
+    vertices[0] = {
+        { left, top, 0.0f },
+        { 0.0f, 0.0f }
+    };
+    vertices[1] = {
+        { left, bottom, 0.0f },
+        { 0.0f, tex_bottom }
+    };
+    vertices[2] = {
+        { right, top, 0.0f },
+        { tex_right, 0.0f }
+    };
+    vertices[3] = {
+        { right, bottom, 0.0f },
+        { tex_right, tex_bottom }
+    };
     return rectangle;
 }

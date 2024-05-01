@@ -30,5 +30,4 @@ public:
 };
 }
 
-
-#endif //MIRACLEWM_MIRACLE_GL_CONFIG_H
+#endif // MIRACLEWM_MIRACLE_GL_CONFIG_H

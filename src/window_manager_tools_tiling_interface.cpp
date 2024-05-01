@@ -16,15 +16,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "window_manager_tools_tiling_interface.h"
+#include "leaf_node.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
-#include "leaf_node.h"
 
 using namespace miracle;
 
 WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
-    miral::WindowManagerTools const& tools)
-    : tools{tools}
+    miral::WindowManagerTools const& tools) :
+    tools { tools }
 {
 }
 

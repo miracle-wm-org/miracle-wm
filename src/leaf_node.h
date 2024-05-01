@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_LEAF_NODE_H
 
 #include "node.h"
-#include "tiling_interface.h"
 #include "node_common.h"
-#include <miral/window_manager_tools.h>
+#include "tiling_interface.h"
 #include <miral/window.h>
+#include <miral/window_manager_tools.h>
 #include <optional>
 
 namespace geom = mir::geometry;
@@ -78,4 +78,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_LEAF_NODE_H
+#endif // MIRACLEWM_LEAF_NODE_H

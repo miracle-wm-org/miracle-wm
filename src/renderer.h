@@ -17,11 +17,11 @@
 #ifndef MIR_RENDERER_GL_RENDERER_H_
 #define MIR_RENDERER_GL_RENDERER_H_
 
-#include <mir/renderer/renderer.h>
+#include "primitive.h"
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/buffer_id.h>
 #include <mir/graphics/renderable.h>
-#include "primitive.h"
+#include <mir/renderer/renderer.h>
 
 #include <GLES2/gl2.h>
 #include <unordered_map>
@@ -30,8 +30,14 @@
 
 namespace mir
 {
-namespace graphics { class GLRenderingProvider; }
-namespace graphics::gl { class OutputSurface; }
+namespace graphics
+{
+    class GLRenderingProvider;
+}
+namespace graphics::gl
+{
+    class OutputSurface;
+}
 }
 
 namespace miracle
@@ -53,8 +59,8 @@ public:
 
     // This is called _without_ a GL context:
     void suspend() override;
-private:
 
+private:
     /**
      * tessellate defines the list of triangles that will be used to render
      * the surface. By default it just returns 4 vertices for a rectangle.
@@ -72,7 +78,7 @@ private:
      *       tessellation is very much OpenGL-specific.
      */
     virtual void tessellate(std::vector<mir::gl::Primitive>& primitives,
-                            mir::graphics::Renderable const& renderable) const;
+        mir::graphics::Renderable const& renderable) const;
 
     struct OutlineContext
     {

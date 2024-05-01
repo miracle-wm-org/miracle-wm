@@ -23,26 +23,30 @@ namespace mir
 {
 namespace gl
 {
-struct Vertex
-{
-    GLfloat position[3];
-    GLfloat texcoord[2];
-};
-
-struct Primitive
-{
-    enum {max_vertices = 4};
-
-    Primitive()
-    : type(GL_TRIANGLE_FAN), nvertices(4)
+    struct Vertex
     {
-        // Default is a quad. Just need to assign vertices[] and tex_id.
-    }
+        GLfloat position[3];
+        GLfloat texcoord[2];
+    };
 
-    GLenum type; // GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN, GL_TRIANGLES etc
-    int nvertices;
-    Vertex vertices[max_vertices];
-};
+    struct Primitive
+    {
+        enum
+        {
+            max_vertices = 4
+        };
+
+        Primitive() :
+            type(GL_TRIANGLE_FAN),
+            nvertices(4)
+        {
+            // Default is a quad. Just need to assign vertices[] and tex_id.
+        }
+
+        GLenum type; // GL_TRIANGLE_STRIP, GL_TRIANGLE_FAN, GL_TRIANGLES etc
+        int nvertices;
+        Vertex vertices[max_vertices];
+    };
 }
 }
 #endif /* MIR_GL_PRIMITIVE_H_ */
