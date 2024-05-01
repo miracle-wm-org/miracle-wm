@@ -18,6 +18,7 @@ option(SNAP_BUILD "Building as a snap?" OFF)
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
+pkg_check_modules(MIRCOMMON mircommon REQUIRED)
 pkg_check_modules(MIRCOMMON_INTERNAL mircommon-internal REQUIRED)
 pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRSERVER_INTERNAL mirserver-internal REQUIRED)
@@ -58,13 +59,14 @@ add_executable(miracle-wm
 
 target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRAL_INCLUDE_DIRS}
+    ${MIRCOMMON_INCLUDE_DIRS}
     ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
-    ${MIRCOMMON_INTERNAL_LDFLAGS}
+    ${MIRCOMMON_LDFLAGS}
     ${MIRSERVER_INTERNAL_LDFLAGS}
     ${MIRSERVER_LDFLAGS}
     PkgConfig::YAML
