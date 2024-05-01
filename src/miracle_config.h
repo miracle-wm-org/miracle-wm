@@ -18,16 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_MIRACLE_CONFIG_H
 #define MIRACLEWM_MIRACLE_CONFIG_H
 
-#include <string>
-#include <miral/toolkit_event.h>
-#include <vector>
+#include <atomic>
+#include <functional>
 #include <linux/input.h>
 #include <memory>
 #include <mir/fd.h>
+#include <miral/toolkit_event.h>
 #include <mutex>
-#include <functional>
 #include <optional>
-#include <atomic>
+#include <string>
+#include <vector>
 
 namespace miral
 {
@@ -78,7 +78,6 @@ enum DefaultKeyCommand
     TogglePinnedToWorkspace,
     MAX
 };
-
 
 struct KeyCommand
 {
@@ -166,6 +165,5 @@ private:
     std::atomic<bool> has_changes = false;
 };
 }
-
 
 #endif

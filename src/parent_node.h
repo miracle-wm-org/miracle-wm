@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_PARENT_NODE_H
 #define MIRACLEWM_PARENT_NODE_H
 
+#include "node.h"
 #include "node_common.h"
 #include "tiling_interface.h"
-#include "node.h"
 #include <mir/geometry/rectangle.h>
 
 namespace geom = mir::geometry;
@@ -36,10 +36,10 @@ class ParentNode : public Node
 {
 public:
     ParentNode(TilingInterface&,
-               geom::Rectangle,
-               std::shared_ptr<MiracleConfig> const&,
-               TilingWindowTree* tree,
-               std::shared_ptr<ParentNode> const& parent);
+        geom::Rectangle,
+        std::shared_ptr<MiracleConfig> const&,
+        TilingWindowTree* tree,
+        std::shared_ptr<ParentNode> const& parent);
     geom::Rectangle get_logical_area() const override;
     size_t num_nodes() const;
     std::shared_ptr<LeafNode> create_space_for_window(int index = -1);
@@ -78,4 +78,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_PARENT_NODE_H
+#endif // MIRACLEWM_PARENT_NODE_H

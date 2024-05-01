@@ -19,11 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_SCREEN_H
 
 #include "tiling_window_tree.h"
-#include "workspace_content.h"
 #include "window_metadata.h"
+#include "workspace_content.h"
 #include <memory>
-#include <miral/output.h>
 #include <miral/minimal_window_manager.h>
+#include <miral/output.h>
 
 namespace miracle
 {
@@ -50,23 +50,23 @@ public:
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
     std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type);
-    void handle_window_ready(miral::WindowInfo &window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left);
-    void handle_request_move(std::shared_ptr<miracle::WindowMetadata> const& metadata, const MirInputEvent *input_event);
+    void handle_request_move(std::shared_ptr<miracle::WindowMetadata> const& metadata, const MirInputEvent* input_event);
     void handle_request_resize(
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
-        const MirInputEvent *input_event,
+        const MirInputEvent* input_event,
         MirResizeEdge edge);
     void advise_state_change(std::shared_ptr<miracle::WindowMetadata> const& metadata, MirWindowState state);
-    void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification &modifications);
+    void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification& modifications);
     void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     mir::geometry::Rectangle confirm_placement_on_display(
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
         MirWindowState new_state,
-        const mir::geometry::Rectangle &new_placement);
+        const mir::geometry::Rectangle& new_placement);
     void select_window_from_point(int x, int y);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
@@ -101,7 +101,6 @@ public:
     [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
 
-
 private:
     miral::Output output;
     WorkspaceManager& workspace_manager;
@@ -116,7 +115,7 @@ private:
     bool is_active_ = false;
     miral::Window active_window;
 };
-    
+
 }
 
 #endif

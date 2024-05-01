@@ -24,9 +24,10 @@ namespace
 static int NEXT_ID = 0;
 }
 
-WorkspaceObserver::WorkspaceObserver()
-    : id{NEXT_ID}
-{}
+WorkspaceObserver::WorkspaceObserver() :
+    id { NEXT_ID }
+{
+}
 
 int WorkspaceObserver::get_id() const
 {

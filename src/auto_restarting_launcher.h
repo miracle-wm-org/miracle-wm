@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_AUTO_RESTARTING_LAUNCHER_H
 
 #include "miracle_config.h"
+#include <map>
 #include <miral/external_client.h>
 #include <miral/runner.h>
 #include <string>
-#include <map>
 
 namespace miracle
 {
@@ -45,4 +45,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_AUTO_RESTARTING_LAUNCHER_H
+#endif // MIRACLEWM_AUTO_RESTARTING_LAUNCHER_H

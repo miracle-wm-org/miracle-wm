@@ -19,49 +19,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_metadata.h"
 #define MIR_LOG_COMPONENT "miracle"
 
+#include "miracle_config.h"
 #include "policy.h"
 #include "window_helpers.h"
-#include "miracle_config.h"
 #include "workspace_manager.h"
 
-#include <mir_toolkit/events/enums.h>
-#include <miral/toolkit_event.h>
-#include <miral/application_info.h>
-#include <miral/zone.h>
-#include <miral/runner.h>
-#include <mir/log.h>
 #include <iostream>
-#include <mir/geometry/rectangle.h>
 #include <limits>
+#include <mir/geometry/rectangle.h>
+#include <mir/log.h>
+#include <mir_toolkit/events/enums.h>
+#include <miral/application_info.h>
+#include <miral/runner.h>
+#include <miral/toolkit_event.h>
+#include <miral/zone.h>
 
 using namespace miracle;
 
 namespace
 {
-const int MODIFIER_MASK =
-    mir_input_event_modifier_alt |
-    mir_input_event_modifier_shift |
-    mir_input_event_modifier_sym |
-    mir_input_event_modifier_ctrl |
-    mir_input_event_modifier_meta;
+const int MODIFIER_MASK = mir_input_event_modifier_alt | mir_input_event_modifier_shift | mir_input_event_modifier_sym | mir_input_event_modifier_ctrl | mir_input_event_modifier_meta;
 }
 
 Policy::Policy(
     miral::WindowManagerTools const& tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::MirRunner& runner,
-    std::shared_ptr<MiracleConfig> const& config)
-    : window_manager_tools{tools},
-      floating_window_manager(tools, config->get_input_event_modifier()),
-      external_client_launcher{external_client_launcher},
-      runner{runner},
-      config{config},
-      workspace_manager{WorkspaceManager(
-          tools,
-          workspace_observer_registrar,
-          [&]() { return get_active_output(); })},
-      ipc{std::make_shared<Ipc>(runner, workspace_manager, *this)},
-      node_interface(tools)
+    std::shared_ptr<MiracleConfig> const& config) :
+    window_manager_tools { tools },
+    floating_window_manager(tools, config->get_input_event_modifier()),
+    external_client_launcher { external_client_launcher },
+    runner { runner },
+    config { config },
+    workspace_manager { WorkspaceManager(
+        tools,
+        workspace_observer_registrar,
+        [&]()
+{ return get_active_output(); }) },
+    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this) },
+    node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);
 }
@@ -90,136 +86,159 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 
     switch (key_command)
     {
-        case Terminal:
-        {
-            auto terminal_command = config->get_terminal_command();
-            if (terminal_command)
-                external_client_launcher.launch({terminal_command.value()});
+    case Terminal:
+    {
+        auto terminal_command = config->get_terminal_command();
+        if (terminal_command)
+            external_client_launcher.launch({ terminal_command.value() });
+        return true;
+    }
+    case RequestVertical:
+        if (active_output)
+            active_output->request_vertical();
+        return true;
+    case RequestHorizontal:
+        if (active_output)
+            active_output->request_horizontal();
+        return true;
+    case ToggleResize:
+        if (active_output)
+            active_output->toggle_resize_mode();
+        return true;
+    case MoveUp:
+        if (active_output && active_output->move_active_window(Direction::up))
             return true;
-        }
-        case RequestVertical:
-            if(active_output) active_output->request_vertical();
+        return false;
+    case MoveDown:
+        if (active_output && active_output->move_active_window(Direction::down))
             return true;
-        case RequestHorizontal:
-            if(active_output) active_output->request_horizontal();
+        return false;
+    case MoveLeft:
+        if (active_output && active_output->move_active_window(Direction::left))
             return true;
-        case ToggleResize:
-            if(active_output) active_output->toggle_resize_mode();
+        return false;
+    case MoveRight:
+        if (active_output && active_output->move_active_window(Direction::right))
             return true;
-        case MoveUp:
-            if (active_output && active_output->move_active_window(Direction::up))
-                return true;
-            return false;
-        case MoveDown:
-            if (active_output && active_output->move_active_window(Direction::down))
-                return true;
-            return false;
-        case MoveLeft:
-            if (active_output && active_output->move_active_window(Direction::left))
-                return true;
-            return false;
-        case MoveRight:
-            if (active_output && active_output->move_active_window(Direction::right))
-                return true;
-            return false;
-        case SelectUp:
-            if (active_output && (active_output->resize_active_window(Direction::up)
-                || active_output->select(Direction::up)))
-                return true;
-            return false;
-        case SelectDown:
-            if (active_output && (active_output->resize_active_window(Direction::down)
-                || active_output->select(Direction::down)))
-                return true;
-            return false;
-        case SelectLeft:
-            if (active_output && (active_output->resize_active_window(Direction::left)
-                || active_output->select(Direction::left)))
-                return true;
-            return false;
-        case SelectRight:
-            if (active_output && (active_output->resize_active_window(Direction::right)
-                || active_output->select(Direction::right)))
-                return true;
-            return false;
-        case QuitActiveWindow:
-            if (active_output) active_output->close_active_window();
+        return false;
+    case SelectUp:
+        if (active_output && (active_output->resize_active_window(Direction::up) || active_output->select(Direction::up)))
             return true;
-        case QuitCompositor:
-            runner.stop();
+        return false;
+    case SelectDown:
+        if (active_output && (active_output->resize_active_window(Direction::down) || active_output->select(Direction::down)))
             return true;
-        case Fullscreen:
-            if (active_output) active_output->toggle_fullscreen();
+        return false;
+    case SelectLeft:
+        if (active_output && (active_output->resize_active_window(Direction::left) || active_output->select(Direction::left)))
             return true;
-        case SelectWorkspace1:
-            if (active_output) workspace_manager.request_workspace(active_output, 1);
+        return false;
+    case SelectRight:
+        if (active_output && (active_output->resize_active_window(Direction::right) || active_output->select(Direction::right)))
             return true;
-        case SelectWorkspace2:
-            if (active_output) workspace_manager.request_workspace(active_output, 2);
-            return true;
-        case SelectWorkspace3:
-            if (active_output) workspace_manager.request_workspace(active_output, 3);
-            return true;
-        case SelectWorkspace4:
-            if (active_output) workspace_manager.request_workspace(active_output, 4);
-            return true;
-        case SelectWorkspace5:
-            if (active_output) workspace_manager.request_workspace(active_output, 5);
-            return true;
-        case SelectWorkspace6:
-            if (active_output) workspace_manager.request_workspace(active_output, 6);
-            return true;
-        case SelectWorkspace7:
-            if (active_output) workspace_manager.request_workspace(active_output, 7);
-            return true;
-        case SelectWorkspace8:
-            if (active_output) workspace_manager.request_workspace(active_output, 8);
-            return true;
-        case SelectWorkspace9:
-            if (active_output) workspace_manager.request_workspace(active_output, 9);
-            return true;
-        case SelectWorkspace0:
-            if (active_output) workspace_manager.request_workspace(active_output, 0);
-            return true;
-        case MoveToWorkspace1:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 1);
-            return true;
-        case MoveToWorkspace2:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 2);
-            return true;
-        case MoveToWorkspace3:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 3);
-            return true;
-        case MoveToWorkspace4:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 4);
-            return true;
-        case MoveToWorkspace5:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 5);
-            return true;
-        case MoveToWorkspace6:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 6);
-            return true;
-        case MoveToWorkspace7:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 7);
-            return true;
-        case MoveToWorkspace8:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 8);
-            return true;
-        case MoveToWorkspace9:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 9);
-            return true;
-        case MoveToWorkspace0:
-            if (active_output) workspace_manager.move_active_to_workspace(active_output, 0);
-            return true;
-        case ToggleFloating:
-            if (active_output) active_output->request_toggle_active_float();
-            return true;
-        case TogglePinnedToWorkspace:
-            if (active_output) active_output->toggle_pinned_to_workspace();
-            return true;
-        default:
-            std::cerr << "Unknown key_command: " << key_command << std::endl;
-            break;
+        return false;
+    case QuitActiveWindow:
+        if (active_output)
+            active_output->close_active_window();
+        return true;
+    case QuitCompositor:
+        runner.stop();
+        return true;
+    case Fullscreen:
+        if (active_output)
+            active_output->toggle_fullscreen();
+        return true;
+    case SelectWorkspace1:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 1);
+        return true;
+    case SelectWorkspace2:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 2);
+        return true;
+    case SelectWorkspace3:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 3);
+        return true;
+    case SelectWorkspace4:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 4);
+        return true;
+    case SelectWorkspace5:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 5);
+        return true;
+    case SelectWorkspace6:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 6);
+        return true;
+    case SelectWorkspace7:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 7);
+        return true;
+    case SelectWorkspace8:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 8);
+        return true;
+    case SelectWorkspace9:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 9);
+        return true;
+    case SelectWorkspace0:
+        if (active_output)
+            workspace_manager.request_workspace(active_output, 0);
+        return true;
+    case MoveToWorkspace1:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 1);
+        return true;
+    case MoveToWorkspace2:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 2);
+        return true;
+    case MoveToWorkspace3:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 3);
+        return true;
+    case MoveToWorkspace4:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 4);
+        return true;
+    case MoveToWorkspace5:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 5);
+        return true;
+    case MoveToWorkspace6:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 6);
+        return true;
+    case MoveToWorkspace7:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 7);
+        return true;
+    case MoveToWorkspace8:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 8);
+        return true;
+    case MoveToWorkspace9:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 9);
+        return true;
+    case MoveToWorkspace0:
+        if (active_output)
+            workspace_manager.move_active_to_workspace(active_output, 0);
+        return true;
+    case ToggleFloating:
+        if (active_output)
+            active_output->request_toggle_active_float();
+        return true;
+    case TogglePinnedToWorkspace:
+        if (active_output)
+            active_output->toggle_pinned_to_workspace();
+        return true;
+    default:
+        std::cerr << "Unknown key_command: " << key_command << std::endl;
+        break;
     }
     return false;
 }
@@ -235,7 +254,8 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         {
             if (active_output != output)
             {
-                if (active_output) active_output->set_is_active(false);
+                if (active_output)
+                    active_output->set_is_active(false);
                 active_output = output;
                 active_output->set_is_active(true);
                 workspace_manager.request_focus(output->get_active_workspace_num());
@@ -249,15 +269,15 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         }
     }
 
-   if (active_output)
-       return active_output->handle_pointer_event(event);
+    if (active_output)
+        return active_output->handle_pointer_event(event);
 
-   return false;
+    return false;
 }
 
 auto Policy::place_new_window(
-    const miral::ApplicationInfo &app_info,
-    const miral::WindowSpecification &requested_specification) -> miral::WindowSpecification
+    const miral::ApplicationInfo& app_info,
+    const miral::WindowSpecification& requested_specification) -> miral::WindowSpecification
 {
     if (!active_output)
     {
@@ -304,7 +324,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     pending_output.reset();
 }
 
-void Policy::handle_window_ready(miral::WindowInfo &window_info)
+void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -313,10 +333,11 @@ void Policy::handle_window_ready(miral::WindowInfo &window_info)
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->handle_window_ready(window_info, metadata);
+    if (metadata->get_output())
+        metadata->get_output()->handle_window_ready(window_info, metadata);
 }
 
-void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
+void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -325,11 +346,13 @@ void Policy::advise_focus_gained(const miral::WindowInfo &window_info)
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->advise_focus_gained(metadata);
-    else window_manager_tools.raise_tree(window_info.window());
+    if (metadata->get_output())
+        metadata->get_output()->advise_focus_gained(metadata);
+    else
+        window_manager_tools.raise_tree(window_info.window());
 }
 
-void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
+void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -338,10 +361,11 @@ void Policy::advise_focus_lost(const miral::WindowInfo &window_info)
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->advise_focus_lost(metadata);
+    if (metadata->get_output())
+        metadata->get_output()->advise_focus_lost(metadata);
 }
 
-void Policy::advise_delete_window(const miral::WindowInfo &window_info)
+void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
     for (auto it = orphaned_window_list.begin(); it != orphaned_window_list.end();)
     {
@@ -361,7 +385,8 @@ void Policy::advise_delete_window(const miral::WindowInfo &window_info)
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->advise_delete_window(metadata);
+    if (metadata->get_output())
+        metadata->get_output()->advise_delete_window(metadata);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -373,7 +398,8 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->advise_move_to(metadata, top_left);
+    if (metadata->get_output())
+        metadata->get_output()->advise_move_to(metadata, top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
@@ -382,7 +408,7 @@ void Policy::advise_output_create(miral::Output const& output)
         output, workspace_manager, output.extents(), window_manager_tools,
         floating_window_manager, config, node_interface);
     workspace_manager.request_first_available_workspace(new_tree);
-        output_list.push_back(new_tree);
+    output_list.push_back(new_tree);
     if (active_output == nullptr)
         active_output = new_tree;
 
@@ -444,8 +470,8 @@ void Policy::advise_output_delete(miral::Output const& output)
 }
 
 void Policy::handle_modify_window(
-    miral::WindowInfo &window_info,
-    const miral::WindowSpecification &modifications)
+    miral::WindowInfo& window_info,
+    const miral::WindowSpecification& modifications)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -454,11 +480,14 @@ void Policy::handle_modify_window(
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->handle_modify_window(metadata, modifications);
-    else window_manager_tools.modify_window(metadata->get_window(), modifications);;
+    if (metadata->get_output())
+        metadata->get_output()->handle_modify_window(metadata, modifications);
+    else
+        window_manager_tools.modify_window(metadata->get_window(), modifications);
+    ;
 }
 
-void Policy::handle_raise_window(miral::WindowInfo &window_info)
+void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -467,14 +496,15 @@ void Policy::handle_raise_window(miral::WindowInfo &window_info)
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->handle_raise_window(metadata);
+    if (metadata->get_output())
+        metadata->get_output()->handle_raise_window(metadata);
 }
 
 mir::geometry::Rectangle
 Policy::confirm_placement_on_display(
-    const miral::WindowInfo &window_info,
+    const miral::WindowInfo& window_info,
     MirWindowState new_state,
-    const mir::geometry::Rectangle &new_placement)
+    const mir::geometry::Rectangle& new_placement)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -489,12 +519,12 @@ Policy::confirm_placement_on_display(
     return modified_placement;
 }
 
-bool Policy::handle_touch_event(const MirTouchEvent *event)
+bool Policy::handle_touch_event(const MirTouchEvent* event)
 {
     return false;
 }
 
-void Policy::handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event)
+void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
@@ -503,12 +533,13 @@ void Policy::handle_request_move(miral::WindowInfo &window_info, const MirInputE
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->handle_request_move(metadata, input_event);
+    if (metadata->get_output())
+        metadata->get_output()->handle_request_move(metadata, input_event);
 }
 
 void Policy::handle_request_resize(
-    miral::WindowInfo &window_info,
-    const MirInputEvent *input_event,
+    miral::WindowInfo& window_info,
+    const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
     auto metadata = window_helpers::get_metadata(window_info);
@@ -518,11 +549,12 @@ void Policy::handle_request_resize(
         return;
     }
 
-    if (metadata->get_output()) metadata->get_output()->handle_request_resize(metadata, input_event, edge);
+    if (metadata->get_output())
+        metadata->get_output()->handle_request_resize(metadata, input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(
-    const miral::WindowInfo &window_info,
+    const miral::WindowInfo& window_info,
     mir::geometry::Displacement movement)
 {
     return { window_info.window().top_left() + movement, window_info.window().size() };

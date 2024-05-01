@@ -43,7 +43,8 @@ public:
     WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output);
     void associate_to_node(std::shared_ptr<LeafNode> const&);
     miral::Window& get_window() { return window; }
-    std::shared_ptr<LeafNode> get_tiling_node() const {
+    std::shared_ptr<LeafNode> get_tiling_node() const
+    {
         if (type == WindowType::tiled)
             return tiling_node;
         return nullptr;
@@ -56,7 +57,6 @@ public:
     void toggle_pin_to_desktop();
 
 private:
-
     WindowType type;
     miral::Window window;
     OutputContent* output;
@@ -67,4 +67,4 @@ private:
 
 }
 
-#endif //MIRACLEWM_WINDOW_METADATA_H
+#endif // MIRACLEWM_WINDOW_METADATA_H

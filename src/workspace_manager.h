@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace_observer.h"
 
-#include <memory>
-#include <vector>
-#include <miral/window_manager_tools.h>
+#include <functional>
 #include <list>
 #include <map>
-#include <functional>
+#include <memory>
+#include <miral/window_manager_tools.h>
+#include <vector>
 
 namespace miracle
 {
@@ -63,6 +63,7 @@ public:
 
     static int constexpr NUM_WORKSPACES = 10;
     std::array<std::shared_ptr<OutputContent>, NUM_WORKSPACES> const& get_workspaces() { return workspaces; }
+
 private:
     WindowManagerTools tools_;
     WorkspaceObserverRegistrar& registry;
