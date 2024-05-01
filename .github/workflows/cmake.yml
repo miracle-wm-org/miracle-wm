@@ -27,7 +27,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install gcc-13
-        sudo apt install libmircommon-internal-dev libmiral-dev libmirserver-internal-dev libmirserver61 libmircommon10 libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils
+        sudo apt install libmircommon-internal-dev libmiral-dev libmirserver-internal-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils
 
     - name: Configure CMake
       run: CC=gcc-13 CXX=g++-13 cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
