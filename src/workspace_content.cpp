@@ -18,22 +18,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "workspace_content"
 
 #include "workspace_content.h"
-#include "window_metadata.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
+#include "window_metadata.h"
 #include <mir/log.h>
 
 using namespace miracle;
 
 WorkspaceContent::WorkspaceContent(
-    miracle::OutputContent *screen,
+    miracle::OutputContent* screen,
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface)
-    : tools{tools},
-      tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
-      workspace{workspace}
+    TilingInterface& node_interface) :
+    tools { tools },
+    tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
+    workspace { workspace }
 {
 }
 
@@ -65,7 +65,7 @@ void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& 
         tools.modify_window(window, spec);
     }
 
-    for (auto const& metadata: pinned_windows)
+    for (auto const& metadata : pinned_windows)
     {
         floating_windows.push_back(metadata->get_window());
     }
@@ -97,10 +97,12 @@ std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
         tools.modify_window(window, spec);
     }
 
-    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&](const auto&x) {
+    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&](const auto& x)
+    {
         auto metadata = window_helpers::get_metadata(x, tools);
         return std::find(pinned_windows.begin(), pinned_windows.end(), metadata) != pinned_windows.end();
-    }), floating_windows.end());
+    }),
+        floating_windows.end());
 
     return pinned_windows;
 }

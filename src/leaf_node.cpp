@@ -28,12 +28,12 @@ LeafNode::LeafNode(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentNode> const& parent)
-    : Node(parent),
-      node_interface{node_interface},
-      logical_area{std::move(area)},
-      config{config},
-      tree{tree}
+    std::shared_ptr<ParentNode> const& parent) :
+    Node(parent),
+    node_interface { node_interface },
+    logical_area { std::move(area) },
+    config { config },
+    tree { tree }
 {
 }
 
@@ -60,8 +60,8 @@ void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
 geom::Rectangle LeafNode::get_visible_area() const
 {
     // TODO: Could cache these half values in the config
-    int const half_gap_x = (int)(ceil((double) config->get_inner_gaps_x() / 2.0));
-    int const half_gap_y = (int)(ceil((double) config->get_inner_gaps_y() / 2.0));
+    int const half_gap_x = (int)(ceil((double)config->get_inner_gaps_x() / 2.0));
+    int const half_gap_y = (int)(ceil((double)config->get_inner_gaps_y() / 2.0));
     auto neighbors = get_neighbors();
     int x = logical_area.top_left.x.as_int();
     int y = logical_area.top_left.y.as_int();
@@ -87,8 +87,8 @@ geom::Rectangle LeafNode::get_visible_area() const
     }
 
     return {
-        geom::Point{x, y},
-        geom::Size{width, height}
+        geom::Point { x,     y      },
+        geom::Size { width, height }
     };
 }
 

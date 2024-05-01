@@ -19,19 +19,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window)
-    : WindowMetadata(type, window, nullptr, -1) {}
+WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window) :
+    WindowMetadata(type, window, nullptr, -1)
+{
+}
 
 WindowMetadata::WindowMetadata(
     miracle::WindowType type,
     miral::Window const& window,
     OutputContent* output,
-    int workspace)
-    : type{type},
-      window{window},
-      output{output},
-      workspace{workspace}
-{}
+    int workspace) :
+    type { type },
+    window { window },
+    output { output },
+    workspace { workspace }
+{
+}
 
 void WindowMetadata::associate_to_node(std::shared_ptr<LeafNode> const& node)
 {
@@ -66,7 +69,8 @@ int WindowMetadata::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const {
+std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const
+{
     if (type == WindowType::tiled)
         return tiling_node;
     return nullptr;

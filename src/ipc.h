@@ -18,15 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_IPC_H
 #define MIRACLEWM_IPC_H
 
-#include "workspace_manager.h"
-#include "workspace_observer.h"
 #include "i3_command.h"
 #include "i3_command_executor.h"
-#include <miral/runner.h>
+#include "workspace_manager.h"
+#include "workspace_observer.h"
 #include <mir/fd.h>
 #include <mir/server_action_queue.h>
-#include <vector>
+#include <miral/runner.h>
 #include <shared_mutex>
+#include <vector>
 
 struct sockaddr_un;
 
@@ -36,7 +36,8 @@ namespace miracle
 class Policy;
 
 /// This it taken directly from SWAY
-enum IpcCommandType {
+enum IpcCommandType
+{
     // i3 command types - see i3's I3_REPLY_TYPE constants
     IPC_COMMAND = 0,
     IPC_GET_WORKSPACES = 1,
@@ -57,18 +58,18 @@ enum IpcCommandType {
     IPC_GET_SEATS = 101,
 
     // Events sent from sway to clients. Events have the highest bits set.
-    IPC_EVENT_WORKSPACE = ((1<<31) | 0),
-    IPC_EVENT_OUTPUT = ((1<<31) | 1),
-    IPC_EVENT_MODE = ((1<<31) | 2),
-    IPC_EVENT_WINDOW = ((1<<31) | 3),
-    IPC_EVENT_BARCONFIG_UPDATE = ((1<<31) | 4),
-    IPC_EVENT_BINDING = ((1<<31) | 5),
-    IPC_EVENT_SHUTDOWN = ((1<<31) | 6),
-    IPC_EVENT_TICK = ((1<<31) | 7),
+    IPC_EVENT_WORKSPACE = ((1 << 31) | 0),
+    IPC_EVENT_OUTPUT = ((1 << 31) | 1),
+    IPC_EVENT_MODE = ((1 << 31) | 2),
+    IPC_EVENT_WINDOW = ((1 << 31) | 3),
+    IPC_EVENT_BARCONFIG_UPDATE = ((1 << 31) | 4),
+    IPC_EVENT_BINDING = ((1 << 31) | 5),
+    IPC_EVENT_SHUTDOWN = ((1 << 31) | 6),
+    IPC_EVENT_TICK = ((1 << 31) | 7),
 
     // sway-specific event types
-    IPC_EVENT_BAR_STATE_UPDATE = ((1<<31) | 20),
-    IPC_EVENT_INPUT = ((1<<31) | 21),
+    IPC_EVENT_BAR_STATE_UPDATE = ((1 << 31) | 20),
+    IPC_EVENT_INPUT = ((1 << 31) | 21),
 };
 
 /// Inter process communication for compositor clients (e.g. waybar).
@@ -87,6 +88,7 @@ public:
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
+
 private:
     struct IpcClient
     {
@@ -119,5 +121,4 @@ private:
 };
 }
 
-
-#endif //MIRACLEWM_IPC_H
+#endif // MIRACLEWM_IPC_H

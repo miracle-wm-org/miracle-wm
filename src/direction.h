@@ -30,4 +30,4 @@ enum class Direction
 };
 }
 
-#endif //MIRACLEWM_DIRECTION_H
+#endif // MIRACLEWM_DIRECTION_H

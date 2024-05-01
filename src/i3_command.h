@@ -18,11 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_I3_COMMAND_H
 #define MIRACLEWM_I3_COMMAND_H
 
-#include <vector>
-#include <string>
-#include <optional>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace miracle
 {
@@ -105,4 +105,4 @@ struct I3ScopedCommandList
 };
 }
 
-#endif //MIRACLEWM_I3_COMMAND_H
+#endif // MIRACLEWM_I3_COMMAND_H

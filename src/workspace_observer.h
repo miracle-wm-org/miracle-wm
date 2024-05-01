@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WORKSPACE_OBSERVER_H
 
 #include "output_content.h"
-#include <mir/executor.h>
 #include <memory>
+#include <mir/executor.h>
 
 namespace miracle
 {
@@ -36,6 +36,7 @@ public:
     virtual void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) = 0;
 
     int get_id() const;
+
 protected:
     WorkspaceObserver();
 
@@ -59,4 +60,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_WORKSPACE_OBSERVER_H
+#endif // MIRACLEWM_WORKSPACE_OBSERVER_H

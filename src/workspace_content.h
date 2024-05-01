@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
-#include <miral/window_manager_tools.h>
 #include <miral/minimal_window_manager.h>
+#include <miral/window_manager_tools.h>
 
 namespace miracle
 {
@@ -58,4 +58,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_WORKSPACE_CONTENT_H
+#endif // MIRACLEWM_WORKSPACE_CONTENT_H

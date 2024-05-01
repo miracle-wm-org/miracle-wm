@@ -24,16 +24,18 @@ using namespace miracle;
 
 AutoRestartingLauncher::AutoRestartingLauncher(
     miral::MirRunner& runner,
-    miral::ExternalClientLauncher& launcher)
-    : runner{runner},
-      launcher{launcher}
+    miral::ExternalClientLauncher& launcher) :
+    runner { runner },
+    launcher { launcher }
 {
-    runner.add_start_callback([&] { runner.register_signal_handler({SIGCHLD}, [this](int) { reap(); }); });
+    runner.add_start_callback([&]
+    { runner.register_signal_handler({ SIGCHLD }, [this](int)
+      { reap(); }); });
 }
 
 void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
 {
-    std::lock_guard lock{mutex};
+    std::lock_guard lock { mutex };
     auto pid = launcher.launch(cmd.command);
     if (pid <= 0)
     {
@@ -48,7 +50,7 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
 
 void AutoRestartingLauncher::kill_all()
 {
-    std::lock_guard lock{mutex};
+    std::lock_guard lock { mutex };
     for (auto const& entry : pid_to_command_map)
     {
         if (entry.second.restart_on_death)
@@ -66,7 +68,7 @@ void AutoRestartingLauncher::reap()
         if (pid > 0)
         {
             {
-                std::lock_guard lock{mutex};
+                std::lock_guard lock { mutex };
                 if (auto it = pid_to_command_map.find(pid); it != pid_to_command_map.end())
                 {
                     cmd = it->second;

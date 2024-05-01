@@ -55,7 +55,6 @@ public:
     int get_workspace() const;
 
 private:
-
     WindowType type;
     miral::Window window;
     OutputContent* output;
@@ -67,4 +66,4 @@ private:
 
 }
 
-#endif //MIRACLEWM_WINDOW_METADATA_H
+#endif // MIRACLEWM_WINDOW_METADATA_H

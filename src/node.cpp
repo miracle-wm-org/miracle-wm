@@ -18,13 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "node"
 
 #include "node.h"
+#include "leaf_node.h"
 #include "node_common.h"
 #include "parent_node.h"
-#include "leaf_node.h"
 
 using namespace miracle;
 
-Node::Node(std::shared_ptr<ParentNode> const& parent) : parent{parent} {}
+Node::Node(std::shared_ptr<ParentNode> const& parent) :
+    parent { parent }
+{
+}
 
 std::shared_ptr<LeafNode> Node::as_leaf(std::shared_ptr<Node> const& node)
 {
@@ -64,7 +67,7 @@ bool has_neighbor(Node const* node, NodeLayoutDirection direction, size_t cannot
 
     auto index = shared_parent->get_index_of_node(node);
     return (shared_parent->num_nodes() > 1 && index != cannot_be_index)
-       || has_neighbor(shared_parent.get(), direction, cannot_be_index);
+        || has_neighbor(shared_parent.get(), direction, cannot_be_index);
 }
 
 bool has_right_neighbor(Node const* node)

@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "i3_command_executor.h"
-#include "policy.h"
-#include "window_helpers.h"
 #include "leaf_node.h"
 #include "parent_node.h"
+#include "policy.h"
+#include "window_helpers.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <mir/log.h>
@@ -30,10 +30,10 @@ using namespace miracle;
 I3CommandExecutor::I3CommandExecutor(
     miracle::Policy& policy,
     WorkspaceManager& workspace_manager,
-    miral::WindowManagerTools const& tools)
-    : policy{policy},
-      workspace_manager{workspace_manager},
-      tools{tools}
+    miral::WindowManagerTools const& tools) :
+    policy { policy },
+    workspace_manager { workspace_manager },
+    tools { tools }
 {
 }
 
@@ -43,11 +43,11 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
     {
         switch (command.type)
         {
-            case I3CommandType::focus:
-                process_focus(command, command_list);
-                break;
-            default:
-                break;
+        case I3CommandType::focus:
+            process_focus(command, command_list);
+            break;
+        default:
+            break;
         }
     }
 }

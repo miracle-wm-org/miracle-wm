@@ -16,13 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "i3_command.h"
-#include "window_helpers.h"
 #include "jpcre2.h"
+#include "window_helpers.h"
 #include <cstring>
 #include <ranges>
 #define MIR_LOG_COMPONENT "miracle::i3_command"
 #include <mir/log.h>
-
 
 using namespace miracle;
 
@@ -37,7 +36,7 @@ const char* TITLE_STRING = "title";
 const char* URGENT_STRING = "urgent";
 const char* WORKSPACE_STRING = "workspace";
 const char* ALL_STRING = "all";
-const char* FLOATING_STRING= "floating";
+const char* FLOATING_STRING = "floating";
 const char* TILING_STRING = "tiling";
 
 inline bool try_parse_i3_scope(
@@ -169,17 +168,17 @@ bool I3ScopedCommandList::meets_criteria(miral::Window const& window, miral::Win
     {
         switch (criteria.type)
         {
-            case I3ScopeType::all:
-                break;
-            case I3ScopeType::title:
-            {
-                jp::Regex re(criteria.regex.value());
-                auto const& name = window_info.name();
-                if (!re.match(name))
-                    return false;
-            }
-            default:
-                break;
+        case I3ScopeType::all:
+            break;
+        case I3ScopeType::title:
+        {
+            jp::Regex re(criteria.regex.value());
+            auto const& name = window_info.name();
+            if (!re.match(name))
+                return false;
+        }
+        default:
+            break;
         }
     }
 

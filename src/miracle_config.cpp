@@ -19,14 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle_config.h"
 #include "yaml-cpp/yaml.h"
-#include <miral/runner.h>
-#include <glib-2.0/glib.h>
+#include <cstdlib>
 #include <fstream>
-#include <mir/log.h>
+#include <glib-2.0/glib.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <libnotify/notify.h>
+#include <mir/log.h>
+#include <miral/runner.h>
 #include <sys/inotify.h>
-#include <cstdlib>
 
 using namespace miracle;
 
@@ -44,12 +44,12 @@ std::string wrap_command(std::string const& command)
     if (std::getenv("SNAP"))
         return "miracle-wm-unsnap " + command;
 
-    return  command;
+    return command;
 }
 }
 
-MiracleConfig::MiracleConfig(miral::MirRunner& runner)
-    : runner{runner}
+MiracleConfig::MiracleConfig(miral::MirRunner& runner) :
+    runner { runner }
 {
     std::stringstream config_path_stream;
     config_path_stream << g_get_user_config_dir();
@@ -66,9 +66,9 @@ MiracleConfig::MiracleConfig(miral::MirRunner& runner)
     _watch(runner);
 }
 
-MiracleConfig::MiracleConfig(miral::MirRunner& runner, std::string const& path)
-    : runner{runner},
-      config_path{path}
+MiracleConfig::MiracleConfig(miral::MirRunner& runner, std::string const& path) :
+    runner { runner },
+    config_path { path }
 {
     {
         std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
@@ -236,7 +236,8 @@ void MiracleConfig::_load()
                 key_command = DefaultKeyCommand::ToggleFloating;
             else if (name == "toggle_pinned_to_workspace")
                 key_command = DefaultKeyCommand::TogglePinnedToWorkspace;
-            else {
+            else
+            {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
                 continue;
             }
@@ -250,12 +251,13 @@ void MiracleConfig::_load()
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_repeat;
             else if (action == "modifiers")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
-            else {
+            else
+            {
                 mir::log_error("default_action_overrides: Unknown keyboard action: %s", action.c_str());
                 continue;
             }
 
-            auto code = libevdev_event_code_from_name(EV_KEY, key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
+            auto code = libevdev_event_code_from_name(EV_KEY, key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
             if (code < 0)
             {
                 mir::log_error("default_action_overrides: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h", key.c_str());
@@ -288,202 +290,125 @@ void MiracleConfig::_load()
             if (is_invalid)
                 continue;
 
-            key_commands[key_command].push_back({
-                keyboard_action,
+            key_commands[key_command].push_back({ keyboard_action,
                 modifiers,
-                code
-            });
+                code });
         }
     }
 
     // Fill in default actions if the list is zero for any one of them
-    const KeyCommand default_key_commands[DefaultKeyCommand::MAX] =
-    {
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_ENTER
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_V
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_H
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_R
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_UP
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_DOWN
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_LEFT
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_RIGHT
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_UP
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_DOWN
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_LEFT
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_RIGHT
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_Q
-        },
-        {
-            MirKeyboardAction::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_E
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_F
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_1
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_2
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_3
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_4
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_5
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_6
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_7
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_8
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_9
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_0
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_1
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_2
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_3
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_4
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_5
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_6
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_7
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_8
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_9
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_0
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default,
-            KEY_SPACE
-        },
-        {
-            MirKeyboardAction ::mir_keyboard_action_down,
-            miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-            KEY_P
-        }
+    const KeyCommand default_key_commands[DefaultKeyCommand::MAX] = {
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_ENTER },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_V     },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_H     },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_R     },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_UP    },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_DOWN  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_LEFT  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_RIGHT },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_UP    },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_DOWN  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_LEFT  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_RIGHT },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_Q     },
+        { MirKeyboardAction::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_E     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_F     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_1     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_2     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_3     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_4     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_5     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_6     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_7     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_8     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_9     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_0     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_1     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_2     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_3     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_4     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_5     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_6     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_7     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_8     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_9     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_0     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_SPACE },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_P     }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {
@@ -555,13 +480,14 @@ void MiracleConfig::_load()
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_repeat;
             else if (action == "modifiers")
                 keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
-            else {
+            else
+            {
                 mir::log_error("custom_actions: Unknown keyboard action: %s", action.c_str());
                 continue;
             }
 
             auto code = libevdev_event_code_from_name(EV_KEY,
-                                                      key.c_str()); //https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
+                key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
             if (code < 0)
             {
                 mir::log_error(
@@ -596,12 +522,10 @@ void MiracleConfig::_load()
             if (is_invalid)
                 continue;
 
-            custom_key_commands.push_back({
-                keyboard_action,
+            custom_key_commands.push_back({ keyboard_action,
                 modifiers,
                 code,
-                command
-            });
+                command });
         }
     }
 
@@ -671,7 +595,7 @@ void MiracleConfig::_load()
                         restart_on_death = node["restart_on_death"].as<bool>();
                     }
 
-                    startup_apps.push_back({std::move(command), restart_on_death});
+                    startup_apps.push_back({ std::move(command), restart_on_death });
                 }
                 catch (YAML::BadConversion const& e)
                 {
@@ -735,7 +659,7 @@ void MiracleConfig::_load()
                     mir::log_error("environment_variables: item is missing a 'value'");
                     continue;
                 }
-                
+
                 try
                 {
                     auto key = node["key"].as<std::string>();
@@ -753,7 +677,7 @@ void MiracleConfig::_load()
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
 {
-    inotify_fd = mir::Fd{inotify_init()};
+    inotify_fd = mir::Fd { inotify_init() };
     file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
     if (file_watch < 0)
         mir::fatal_error("Unable to watch the config file");
@@ -782,7 +706,7 @@ void MiracleConfig::try_process_change()
     std::lock_guard<std::mutex> lock(mutex);
     if (!has_changes)
         return;
-    
+
     has_changes = false;
     for (auto const& on_change : on_change_listeners)
     {
@@ -905,7 +829,7 @@ int MiracleConfig::get_outer_gaps_y() const
     return outer_gaps_y;
 }
 
-const std::vector<StartupApp> &MiracleConfig::get_startup_apps() const
+const std::vector<StartupApp>& MiracleConfig::get_startup_apps() const
 {
     return startup_apps;
 }
@@ -918,12 +842,12 @@ int MiracleConfig::register_listener(std::function<void(miracle::MiracleConfig&)
     {
         if (it->priority >= priority)
         {
-            on_change_listeners.insert(it, {func, priority, handle});
+            on_change_listeners.insert(it, { func, priority, handle });
             return handle;
         }
     }
 
-    on_change_listeners.push_back({func, priority, handle});
+    on_change_listeners.push_back({ func, priority, handle });
     return handle;
 }
 
@@ -937,7 +861,6 @@ void MiracleConfig::unregister_listener(int handle)
             return;
         }
     }
-
 }
 
 std::optional<std::string> const& MiracleConfig::get_terminal_command() const
@@ -948,7 +871,7 @@ std::optional<std::string> const& MiracleConfig::get_terminal_command() const
         mir::log_error("%s", error_string.c_str());
         NotifyNotification* n = notify_notification_new(
             "Terminal program does not exist",
-             error_string.c_str(),
+            error_string.c_str(),
             nullptr);
         notify_notification_set_timeout(n, 5000);
         notify_notification_show(n, nullptr);

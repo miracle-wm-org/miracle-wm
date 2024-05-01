@@ -19,12 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NODE_H
 
 #include "direction.h"
-#include <mir/geometry/rectangle.h>
-#include <vector>
+#include <functional>
 #include <memory>
+#include <mir/geometry/rectangle.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
-#include <functional>
+#include <vector>
 
 namespace geom = mir::geometry;
 
@@ -66,5 +66,4 @@ protected:
 };
 }
 
-
-#endif //MIRCOMPOSITOR_NODE_H
+#endif // MIRCOMPOSITOR_NODE_H

@@ -41,9 +41,9 @@ private:
     miral::WindowManagerTools tools;
 
     miral::Window get_window_meeting_criteria(I3ScopedCommandList const&);
-    void process_focus(I3Command const&,  I3ScopedCommandList const&);
+    void process_focus(I3Command const&, I3ScopedCommandList const&);
 };
 
 } // miracle
 
-#endif //MIRACLEWM_I_3_COMMAND_EXECUTOR_H
+#endif // MIRACLEWM_I_3_COMMAND_EXECUTOR_H
