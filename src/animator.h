@@ -41,4 +41,4 @@ public:
 
 } // miracle
 
-#endif //MIRACLEWM_ANIMATOR_H
+#endif // MIRACLEWM_ANIMATOR_H

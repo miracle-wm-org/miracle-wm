@@ -20,14 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 Animator::Animator()
-{}
-
-Animator::~Animator()
 {
+}
+
+Animator::~Animator() {
 };
 
 void Animator::animate_window_movement(
     miral::Window const&,
     mir::geometry::Point const& from,
     mir::geometry::Point const& to)
-{}
+{
+}
