@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include "yaml-cpp/yaml.h"
+#include <cstdlib>
 
 using namespace miracle;
 
@@ -165,9 +166,30 @@ TEST_F(MiracleConfigTest, CanCreateCustomAction)
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
         mir_input_event_modifier_meta);
-    EXPECT_EQ(custom_action->command, "miracle-wm-unsnap echo Hi");
+    EXPECT_EQ(custom_action->command, "echo Hi");
     EXPECT_EQ(custom_action->key, KEY_X);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
+}
+
+TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
+{
+    setenv("SNAP", "test", 1);
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["command"] = "echo Hi";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "KEY_X";
+    node["custom_actions"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    auto custom_action = config.matches_custom_key_command(
+    MirKeyboardAction::mir_keyboard_action_down,
+    KEY_X,
+    mir_input_event_modifier_meta);
+    EXPECT_EQ(custom_action->command, "miracle-wm-unsnap echo Hi");
+    unsetenv("SNAP");
 }
 
 TEST_F(MiracleConfigTest, CustomActionWithInvalidCommandIsNotAdded)
@@ -256,8 +278,23 @@ TEST_F(MiracleConfigTest, ValidStartupAppsAreParsed)
 
     MiracleConfig config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 1);
-    EXPECT_EQ(config.get_startup_apps()[0].command, "miracle-wm-unsnap echo Hi");
+    EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     EXPECT_EQ(config.get_startup_apps()[0].restart_on_death, true);
+}
+
+TEST_F(MiracleConfigTest, StartupAppsInSnapIncludeUnsnapCommand)
+{
+    setenv("SNAP", "test", 1);
+    YAML::Node node;
+    YAML::Node startup_app;
+    startup_app["command"] = "echo Hi";
+    startup_app["restart_on_death"] = true;
+    node["startup_apps"].push_back(startup_app);
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_startup_apps()[0].command, "miracle-wm-unsnap echo Hi");
+    unsetenv("SNAP");
 }
 
 TEST_F(MiracleConfigTest, StartupAppsThatIsNotAnArrayIsNotParsed)

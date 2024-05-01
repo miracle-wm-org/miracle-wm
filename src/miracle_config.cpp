@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <libnotify/notify.h>
 #include <sys/inotify.h>
+#include <cstdlib>
 
 using namespace miracle;
 
@@ -81,6 +82,14 @@ glm::vec4 parse_color(YAML::Node const& node)
 
     return {r, g, b, a};
 }
+
+std::string wrap_command(std::string const& command)
+{
+    if (std::getenv("SNAP"))
+        return "miracle-wm-unsnap " + command;
+
+    return  command;
+}
 }
 
 MiracleConfig::MiracleConfig(miral::MirRunner& runner)
@@ -126,7 +135,7 @@ void MiracleConfig::_load()
     outer_gaps_x = 10;
     outer_gaps_y = 10;
     startup_apps = {};
-    terminal = "miracle-wm-unsnap miracle-wm-sensible-terminal";
+    terminal = wrap_command("miracle-wm-sensible-terminal");
     desired_terminal = "";
     resize_jump = 50;
     border_config = { 0, glm::vec4(0), glm::vec4(0) };
@@ -570,7 +579,7 @@ void MiracleConfig::_load()
             YAML::Node modifiers_node;
             try
             {
-                command = "miracle-wm-unsnap " + sub_node["command"].as<std::string>();
+                command = wrap_command(sub_node["command"].as<std::string>());
                 action = sub_node["action"].as<std::string>();
                 key = sub_node["key"].as<std::string>();
                 modifiers_node = sub_node["modifiers"];
@@ -700,7 +709,7 @@ void MiracleConfig::_load()
 
                 try
                 {
-                    auto command = "miracle-wm-unsnap " + node["command"].as<std::string>();
+                    auto command = wrap_command(node["command"].as<std::string>());
                     bool restart_on_death = false;
                     if (node["restart_on_death"])
                     {
@@ -722,7 +731,7 @@ void MiracleConfig::_load()
     {
         try
         {
-            terminal = "miracle-wm-unsnap " + config["terminal"].as<std::string>();
+            terminal = wrap_command(config["terminal"].as<std::string>());
         }
         catch (YAML::BadConversion const& e)
         {

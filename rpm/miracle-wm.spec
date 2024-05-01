@@ -1,5 +1,5 @@
 Name:           miracle-wm
-Version:        0.1.0
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        A tiling Wayland compositor based on Mir 
 
@@ -51,5 +51,25 @@ desktop-file-validate %{buildroot}%{_datadir}/wayland-sessions/miracle-wm.deskto
 
 
 %changelog
+* Tue Apr 23 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.1-1
+- Release for the deb and Fedora packages
+
+* Mon Apr 22 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.2.0-1
+- (#35) sway/i3 IPC support has been implemented to minimally support waybar
+- (#45) Added "floating window manager" support whereby individual windows can be made to float above the tiling grid and behave just as they would in a "traditional" floating window manager
+- (#38) The user configuration now automatically reloads when a change is made to it
+- (#37) A terminal option can now be specified in the configuration to decide which terminal is opened up by the keybind. We also do a much better job of deciding on a sane default terminal
+- Environment variables can now be specified in the configuration (e.g. I needed to set mesa_glthread=false to prevent a bunch of screen tearing on my new AMD card)
+- Upgrade to Mir v2.16.4 which brought in a few important bugfixes for miracle-wm
+- (#48) Fullscreened windows are now guaranteed to be on top
+- (#34) Fixed a bug where panels could not be interacted with
+- (#50) Keyboard events are now properly consumed when a workspace switch happens
+- (#61) Outer gaps no longer include inner gaps
+- (#66) Disabled moving fullscreen windows between workspaces
+- (#67) Fixed a bug where resizing a window over and over again would make it progressively tinier due to rounding errors
+- Refactored the tiling window system in a big way for readability. This solved a number of tricky bugs in the process so I am very happy about it
+- (#81) Gaps algorithm no longer leaves some nodes smaller than others
+- The project finally has meaningful tests with many more to come 🧪
+
 * Mon Apr 01 2024 Matthew Kosarek <matt.kosarek@canonical.com> - 0.1.0-1
 - Initial version

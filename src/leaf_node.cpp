@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "leaf_node.h"
+#include "mir_toolkit/common.h"
 #include "miracle_config.h"
 #include "parent_node.h"
 #include <cmath>
@@ -123,16 +124,15 @@ void LeafNode::hide()
 
 void LeafNode::toggle_fullscreen()
 {
-    auto state = node_interface.get_state(window);
-    if (state == mir_window_state_fullscreen)
+    if (node_interface.is_fullscreen(window))
         next_state = mir_window_state_restored;
     else
-        next_state = mir_window_state_fullscreen;
+        next_state = mir_window_state_maximized;
 }
 
 bool LeafNode::is_fullscreen() const
 {
-    return node_interface.get_state(window) == mir_window_state_fullscreen;
+    return node_interface.get_state(window) == mir_window_state_maximized;
 }
 
 void LeafNode::commit_changes()
@@ -148,7 +148,10 @@ void LeafNode::commit_changes()
     {
         logical_area = next_logical_area.value();
         next_logical_area.reset();
-        node_interface.set_rectangle(window, get_visible_area());
-        constrain();
+        if (!node_interface.is_fullscreen(window))
+        {
+            node_interface.set_rectangle(window, get_visible_area());
+            constrain();
+        }
     }
 }
