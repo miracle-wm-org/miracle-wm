@@ -18,20 +18,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_POLICY_H
 #define MIRACLE_POLICY_H
 
-#include "output_content.h"
-#include "miracle_config.h"
-#include "workspace_manager.h"
 #include "ipc.h"
+#include "miracle_config.h"
+#include "output_content.h"
 #include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
+#include "workspace_manager.h"
 
-#include <miral/window_manager_tools.h>
-#include <miral/window_management_policy.h>
+#include <memory>
 #include <miral/external_client.h>
 #include <miral/internal_client.h>
-#include <miral/output.h>
 #include <miral/minimal_window_manager.h>
-#include <memory>
+#include <miral/output.h>
+#include <miral/window_management_policy.h>
+#include <miral/window_manager_tools.h>
 #include <vector>
 
 namespace miral
@@ -66,26 +66,26 @@ public:
     void advise_output_create(miral::Output const& output) override;
     void advise_output_update(miral::Output const& updated, miral::Output const& original) override;
     void advise_output_delete(miral::Output const& output) override;
-    void handle_modify_window(miral::WindowInfo &window_info, const miral::WindowSpecification &modifications) override;
+    void handle_modify_window(miral::WindowInfo& window_info, const miral::WindowSpecification& modifications) override;
 
-    void handle_raise_window(miral::WindowInfo &window_info) override;
+    void handle_raise_window(miral::WindowInfo& window_info) override;
 
     auto confirm_placement_on_display(
-        const miral::WindowInfo &window_info,
+        const miral::WindowInfo& window_info,
         MirWindowState new_state,
-        const mir::geometry::Rectangle &new_placement) -> mir::geometry::Rectangle override;
+        const mir::geometry::Rectangle& new_placement) -> mir::geometry::Rectangle override;
 
-    bool handle_touch_event(const MirTouchEvent *event) override;
+    bool handle_touch_event(const MirTouchEvent* event) override;
 
-    void handle_request_move(miral::WindowInfo &window_info, const MirInputEvent *input_event) override;
+    void handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event) override;
 
     void handle_request_resize(
-        miral::WindowInfo &window_info,
-        const MirInputEvent *input_event,
+        miral::WindowInfo& window_info,
+        const MirInputEvent* input_event,
         MirResizeEdge edge) override;
 
     auto confirm_inherited_move(
-        const miral::WindowInfo &window_info,
+        const miral::WindowInfo& window_info,
         mir::geometry::Displacement movement) -> mir::geometry::Rectangle override;
 
     void advise_application_zone_create(miral::Zone const& application_zone) override;
@@ -113,4 +113,4 @@ private:
 };
 }
 
-#endif //MIRACLE_POLICY_H
+#endif // MIRACLE_POLICY_H

@@ -1,25 +1,26 @@
-#include <gtest/gtest.h>
 #include "miracle_config.h"
-#include <miral/runner.h>
-#include <filesystem>
-#include <fstream>
-#include <vector>
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
+#include <miral/runner.h>
+#include <vector>
 
 using namespace miracle;
 
 namespace
 {
 int argc = 1;
-char const* argv[] = {"miracle-wm-tests"};
+char const* argv[] = { "miracle-wm-tests" };
 const std::string path = std::filesystem::current_path() / "test.yaml";
 }
 
 class MiracleConfigTest : public testing::Test
 {
 public:
-    MiracleConfigTest() : runner(argc, argv)
+    MiracleConfigTest() :
+        runner(argc, argv)
     {
     }
 
@@ -28,7 +29,6 @@ public:
         std::ofstream ofs;
         ofs.open(path, std::ofstream::out | std::ofstream::trunc);
         ofs.close();
-
     }
 
     void TearDown() override
@@ -185,9 +185,9 @@ TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
 
     MiracleConfig config(runner, path);
     auto custom_action = config.matches_custom_key_command(
-    MirKeyboardAction::mir_keyboard_action_down,
-    KEY_X,
-    mir_input_event_modifier_meta);
+        MirKeyboardAction::mir_keyboard_action_down,
+        KEY_X,
+        mir_input_event_modifier_meta);
     EXPECT_EQ(custom_action->command, "miracle-wm-unsnap echo Hi");
     unsetenv("SNAP");
 }

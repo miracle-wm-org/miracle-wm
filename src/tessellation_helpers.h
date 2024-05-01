@@ -16,17 +16,20 @@
 
 #ifndef MIR_GL_TESSELLATION_HELPERS_H_
 #define MIR_GL_TESSELLATION_HELPERS_H_
-#include "primitive.h"
 #include "mir/geometry/displacement.h"
+#include "primitive.h"
 
 namespace mir
 {
-namespace graphics { class Renderable; }
+namespace graphics
+{
+    class Renderable;
+}
 namespace gl
 {
 
-Primitive tessellate_renderable_into_rectangle(
-graphics::Renderable const& renderable, geometry::Displacement const& offset);
+    Primitive tessellate_renderable_into_rectangle(
+        graphics::Renderable const& renderable, geometry::Displacement const& offset);
 
 }
 }

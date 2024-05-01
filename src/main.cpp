@@ -17,35 +17,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "miracle-main"
 
-#include "policy.h"
-#include "miracle_config.h"
 #include "auto_restarting_launcher.h"
-#include "renderer.h"
+#include "miracle_config.h"
 #include "miracle_gl_config.h"
+#include "policy.h"
+#include "renderer.h"
 
-#include <miral/external_client.h>
-#include <miral/runner.h>
-#include <miral/window_management_options.h>
-#include <miral/keymap.h>
-#include <miral/x11_support.h>
-#include <miral/wayland_extensions.h>
-#include <miral/display_configuration_option.h>
+#include <libnotify/notify.h>
+#include <mir/renderer/gl/gl_surface.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
-#include <mir/renderer/gl/gl_surface.h>
+#include <miral/display_configuration_option.h>
+#include <miral/external_client.h>
+#include <miral/keymap.h>
+#include <miral/runner.h>
+#include <miral/wayland_extensions.h>
+#include <miral/window_management_options.h>
+#include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
-#include <libnotify/notify.h>
 #include <stdlib.h>
 
 using namespace miral;
 
 int main(int argc, char const* argv[])
 {
-    MirRunner runner{argc, argv};
+    MirRunner runner { argc, argv };
 
-    std::function<void()> shutdown_hook{[]{}};
-    runner.add_stop_callback([&] { shutdown_hook(); });
+    std::function<void()> shutdown_hook { [] { } };
+    runner.add_stop_callback([&]
+    { shutdown_hook(); });
 
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
@@ -55,8 +56,7 @@ int main(int argc, char const* argv[])
         setenv(env.key.c_str(), env.value.c_str(), 1);
     }
 
-    WindowManagerOptions window_managers
-    {
+    WindowManagerOptions window_managers {
         add_window_manager_policy<miracle::Policy>(
             "tiling", external_client_launcher, runner, config)
     };
@@ -73,9 +73,8 @@ int main(int argc, char const* argv[])
 
     notify_init("miracle-wm");
     return runner.run_with(
-        {
-            window_managers,
-            WaylandExtensions{}
+        { window_managers,
+            WaylandExtensions {}
                 .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
                 .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
                 .enable(miral::WaylandExtensions::zxdg_output_manager_v1)
@@ -84,22 +83,19 @@ int main(int argc, char const* argv[])
                 .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
                 .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
                 .enable(miral::WaylandExtensions::ext_session_lock_manager_v1),
-            X11Support{}.default_to_enabled(),
+            X11Support {}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
             display_configuration_options,
             AddInitCallback(run_startup_apps),
             AppendEventFilter([&config](MirEvent const*)
-            {
-                config->try_process_change();
-                return false;
-            }),
-            CustomRenderer(
-            [&](std::unique_ptr<mir::graphics::gl::OutputSurface> x,
-                std::shared_ptr<mir::graphics::GLRenderingProvider> y)
-            {
-                return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config);
-            }),
-            miroil::OpenGLContext(new miracle::GLConfig())
-        });
+    {
+        config->try_process_change();
+        return false;
+    }),
+            CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> x, std::shared_ptr<mir::graphics::GLRenderingProvider> y)
+    {
+        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config);
+    }),
+            miroil::OpenGLContext(new miracle::GLConfig()) });
 }

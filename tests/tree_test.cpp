@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "tiling_window_tree.h"
+#include <gtest/gtest.h>
 #include <miral/window_management_options.h>
 
 using namespace miracle;

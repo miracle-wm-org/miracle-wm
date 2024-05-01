@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "leaf_node.h"
 #include "parent_node.h"
+#include "leaf_node.h"
 #include "miracle_config.h"
 #include "node.h"
 #include <cmath>
@@ -51,8 +51,7 @@ InsertNodeInternalResult insert_node_internal(
 
         // Each node will lose a percentage of its width that corresponds to what it can give
         // (meaning that larger nodes give more width, and lesser nodes give less width)
-        double percent_size_lost =
-            ((double)node_size / (double)lane_size);
+        double percent_size_lost = ((double)node_size / (double)lane_size);
         int width_to_lose = (int)floor(percent_size_lost * new_item_size);
         size_lost += width_to_lose;
 
@@ -76,7 +75,7 @@ InsertNodeInternalResult insert_node_internal(
         new_item_position -= size_lost - new_item_size;
     }
 
-    return {new_item_size, new_item_position};
+    return { new_item_size, new_item_position };
 }
 }
 
@@ -85,12 +84,12 @@ ParentNode::ParentNode(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentNode> const& parent)
-    : Node(parent),
-      node_interface{node_interface},
-      logical_area{std::move(area)},
-      tree{tree},
-      config{config}
+    std::shared_ptr<ParentNode> const& parent) :
+    Node(parent),
+    node_interface { node_interface },
+    logical_area { std::move(area) },
+    tree { tree },
+    config { config }
 {
 }
 
@@ -103,8 +102,7 @@ geom::Rectangle ParentNode::get_logical_area() const
 
         auto modified_logical_area = geom::Rectangle(
             geom::Point(logical_area.top_left.x.as_int() + x, logical_area.top_left.y.as_int() + y),
-            geom::Size(logical_area.size.width.as_int() - 2 * x, logical_area.size.height.as_int() - 2 * y)
-        );
+            geom::Size(logical_area.size.width.as_int() - 2 * x, logical_area.size.height.as_int() - 2 * y));
 
         return modified_logical_area;
     }
@@ -132,27 +130,27 @@ geom::Rectangle ParentNode::create_space(int pending_index)
             placement_area.top_left.x.as_int(),
             pending_index,
             sub_nodes.size(),
-            [&](int index) { return sub_nodes[index]->get_logical_area().size.width.as_int();},
-            [&](int index, int size, int pos) {
-                sub_nodes[index]->set_logical_area({
-                   geom::Point{
-                       pos,
-                       placement_area.top_left.y.as_int()
-                   },
-                   geom::Size{
-                       size,
-                       placement_area.size.height.as_int()
-                   }});
+            [&](int index)
+        { return sub_nodes[index]->get_logical_area().size.width.as_int(); },
+            [&](int index, int size, int pos)
+        {
+            sub_nodes[index]->set_logical_area({
+                geom::Point {
+                             pos,
+                             placement_area.top_left.y.as_int()  },
+                geom::Size {
+                             size,
+                             placement_area.size.height.as_int() }
             });
+        });
         geom::Rectangle new_node_logical_rect = {
-            geom::Point{
-                result.position,
-                placement_area.top_left.y.as_int()
-            },
-            geom::Size{
-                result.size,
-                placement_area.size.height.as_int()
-            }};
+            geom::Point {
+                         result.position,
+                         placement_area.top_left.y.as_int()  },
+            geom::Size {
+                         result.size,
+                         placement_area.size.height.as_int() }
+        };
         pending_logical_rect = new_node_logical_rect;
     }
     else
@@ -162,27 +160,27 @@ geom::Rectangle ParentNode::create_space(int pending_index)
             placement_area.top_left.y.as_int(),
             pending_index,
             sub_nodes.size(),
-            [&](int index) { return sub_nodes[index]->get_logical_area().size.height.as_int();},
-            [&](int index, int size, int pos) {
-                sub_nodes[index]->set_logical_area({
-                   geom::Point{
-                       placement_area.top_left.x.as_int(),
-                       pos
-                   },
-                   geom::Size{
-                       placement_area.size.width.as_int(),
-                       size
-                   }});
+            [&](int index)
+        { return sub_nodes[index]->get_logical_area().size.height.as_int(); },
+            [&](int index, int size, int pos)
+        {
+            sub_nodes[index]->set_logical_area({
+                geom::Point {
+                             placement_area.top_left.x.as_int(),
+                             pos  },
+                geom::Size {
+                             placement_area.size.width.as_int(),
+                             size }
             });
+        });
         geom::Rectangle new_node_logical_rect = {
-            geom::Point{
-                placement_area.top_left.x.as_int(),
-                result.position
-            },
-            geom::Size{
-                placement_area.size.width.as_int(),
-                result.size
-            }};
+            geom::Point {
+                         placement_area.top_left.x.as_int(),
+                         result.position },
+            geom::Size {
+                         placement_area.size.width.as_int(),
+                         result.size     }
+        };
         pending_logical_rect = new_node_logical_rect;
     }
     return pending_logical_rect;
@@ -247,7 +245,7 @@ void ParentNode::convert_to_lane(std::shared_ptr<LeafNode> const& node)
     sub_nodes[index] = new_parent_node;
 }
 
-void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
+void ParentNode::set_logical_area(const geom::Rectangle& target_rect)
 {
     // We are setting the size of the lane, but each window might have an idea of how
     // its own height relates to the lane (e.g. I take up 300px of 900px lane while my
@@ -269,13 +267,13 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
             int new_width = (int)ceil((double)target_placement_area.size.width.as_int() * percent_width_taken);
 
             geom::Rectangle new_item_rect;
-            new_item_rect.size = geom::Size{
-                geom::Width{new_width},
+            new_item_rect.size = geom::Size {
+                geom::Width { new_width },
                 target_placement_area.size.height
             };
             if (idx == 0)
             {
-                new_item_rect.top_left = geom::Point{
+                new_item_rect.top_left = geom::Point {
                     target_placement_area.top_left.x,
                     target_placement_area.top_left.y
                 };
@@ -283,8 +281,8 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
             else
             {
                 auto const& prev_rect = pending_size_updates[idx - 1];
-                new_item_rect.top_left = geom::Point{
-                    geom::X{prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int()},
+                new_item_rect.top_left = geom::Point {
+                    geom::X { prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int() },
                     target_placement_area.top_left.y
                 };
             }
@@ -296,7 +294,7 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
         if (!pending_size_updates.empty())
         {
             int leftover_width = target_placement_area.size.width.as_int() - total_width;
-            pending_size_updates.back().size.width = geom::Width {pending_size_updates.back().size.width.as_int() + leftover_width};
+            pending_size_updates.back().size.width = geom::Width { pending_size_updates.back().size.width.as_int() + leftover_width };
         }
     }
     else
@@ -310,13 +308,13 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
             int new_height = (int)floor((double)target_placement_area.size.height.as_int() * percent_height_taken);
 
             geom::Rectangle new_item_rect;
-            new_item_rect.size = geom::Size{
+            new_item_rect.size = geom::Size {
                 target_placement_area.size.width,
-                geom::Height{new_height},
+                geom::Height { new_height },
             };
             if (idx == 0)
             {
-                new_item_rect.top_left = geom::Point{
+                new_item_rect.top_left = geom::Point {
                     target_placement_area.top_left.x,
                     target_placement_area.top_left.y
                 };
@@ -324,9 +322,9 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
             else
             {
                 auto const& prev_rect = pending_size_updates[idx - 1];
-                new_item_rect.top_left = geom::Point{
+                new_item_rect.top_left = geom::Point {
                     target_placement_area.top_left.x,
-                    geom::Y{prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int()},
+                    geom::Y { prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int() },
                 };
             }
 
@@ -337,7 +335,7 @@ void ParentNode::set_logical_area(const geom::Rectangle &target_rect)
         if (!pending_size_updates.empty())
         {
             int leftover_height = target_placement_area.size.height.as_int() - total_height;
-            pending_size_updates.back().size.height = geom::Height {pending_size_updates.back().size.height.as_int() + leftover_height};
+            pending_size_updates.back().size.height = geom::Height { pending_size_updates.back().size.height.as_int() + leftover_height };
         }
     }
 
@@ -391,7 +389,7 @@ std::shared_ptr<Node> ParentNode::find_where(std::function<bool(std::shared_ptr<
     return nullptr;
 }
 
-const std::vector<std::shared_ptr<Node>> &ParentNode::get_sub_nodes() const
+const std::vector<std::shared_ptr<Node>>& ParentNode::get_sub_nodes() const
 {
     return sub_nodes;
 }
@@ -411,14 +409,14 @@ void ParentNode::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<
     constrain();
 }
 
-void ParentNode::remove(const std::shared_ptr<Node> &node)
+void ParentNode::remove(const std::shared_ptr<Node>& node)
 {
     sub_nodes.erase(
-        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> const& content) {
-            return content == node;
-        }),
-        sub_nodes.end()
-    );
+        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> const& content)
+    {
+        return content == node;
+    }),
+        sub_nodes.end());
 
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
     if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
@@ -493,8 +491,8 @@ void ParentNode::relayout()
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
-            rectangle.size.width = geom::Width{rectangle.size.width.as_int() + diff_per_node};
-            rectangle.size.height = geom::Height{placement_area.size.height};
+            rectangle.size.width = geom::Width { rectangle.size.width.as_int() + diff_per_node };
+            rectangle.size.height = geom::Height { placement_area.size.height };
             node->set_logical_area(rectangle);
         }
     }
@@ -511,8 +509,8 @@ void ParentNode::relayout()
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
-            rectangle.size.width = geom::Width {placement_area.size.width};
-            rectangle.size.height = geom::Height {rectangle.size.height.as_int() + diff_per_node};
+            rectangle.size.width = geom::Width { placement_area.size.width };
+            rectangle.size.height = geom::Height { rectangle.size.height.as_int() + diff_per_node };
             node->set_logical_area(rectangle);
         }
     }

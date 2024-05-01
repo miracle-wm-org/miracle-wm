@@ -18,17 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_TREE_H
 #define MIRACLE_TREE_H
 
+#include "direction.h"
 #include "node.h"
 #include "node_common.h"
-#include "direction.h"
 #include <memory>
-#include <vector>
+#include <mir/geometry/rectangle.h>
 #include <miral/window.h>
-#include <miral/window_specification.h>
-#include <mir/geometry/rectangle.h>
-#include <mir/geometry/rectangle.h>
 #include <miral/window_manager_tools.h>
+#include <miral/window_specification.h>
 #include <miral/zone.h>
+#include <vector>
 
 namespace geom = mir::geometry;
 
@@ -50,7 +49,7 @@ public:
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH GAPS.
-    miral::WindowSpecification allocate_position(const miral::WindowSpecification &requested_specification);
+    miral::WindowSpecification allocate_position(const miral::WindowSpecification& requested_specification);
 
     std::shared_ptr<LeafNode> advise_new_window(miral::WindowInfo const&);
 
@@ -99,7 +98,7 @@ public:
     bool confirm_placement_on_display(
         miral::Window const& window,
         MirWindowState new_state,
-        mir::geometry::Rectangle &new_placement);
+        mir::geometry::Rectangle& new_placement);
 
     /// Constrains the window to its tile if it is in this tree.
     bool constrain(miral::Window& window);
@@ -118,12 +117,14 @@ public:
 private:
     struct MoveResult
     {
-        enum {
+        enum
+        {
             traversal_type_invalid,
             traversal_type_insert,
             traversal_type_prepend,
             traversal_type_append
-        } traversal_type = traversal_type_invalid;
+        } traversal_type
+            = traversal_type_invalid;
         std::shared_ptr<Node> node = nullptr;
     };
 
@@ -160,10 +161,9 @@ private:
 
     /// Selects the next node in the provided direction
     /// @returns The next selectable window or nullptr if none is found
-    static std::shared_ptr<LeafNode> handle_select(std::shared_ptr<Node> const &from, Direction direction);
+    static std::shared_ptr<LeafNode> handle_select(std::shared_ptr<Node> const& from, Direction direction);
 };
 
 }
 
-
-#endif //MIRACLE_TREE_H
+#endif // MIRACLE_TREE_H
