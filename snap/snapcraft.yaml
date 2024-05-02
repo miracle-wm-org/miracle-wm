@@ -56,7 +56,7 @@ parts:
       - libfreetype6-dev
       - libwayland-dev
       - libxkbcommon-dev
-      - g++
+      - g++-13
       - make
       - libgtest-dev
       - libyaml-cpp-dev
@@ -67,6 +67,7 @@ parts:
       - libevdev2
       - nlohmann-json3-dev
       - libnotify-dev
+      - pcre2-utils
     stage-packages:
       - libmiral6
       - mir-graphics-drivers-desktop
