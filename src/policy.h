@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_POLICY_H
 #define MIRACLE_POLICY_H
 
+#include "i3_command_executor.h"
 #include "ipc.h"
 #include "miracle_config.h"
 #include "output_content.h"
@@ -49,7 +50,8 @@ public:
         miral::WindowManagerTools const&,
         miral::ExternalClientLauncher const&,
         miral::MirRunner&,
-        std::shared_ptr<MiracleConfig> const&);
+        std::shared_ptr<MiracleConfig> const&,
+        mir::Server const&);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -110,6 +112,7 @@ private:
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
     WindowManagerToolsTilingInterface node_interface;
+    I3CommandExecutor i3_command_executor;
 };
 }
 

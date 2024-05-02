@@ -87,7 +87,7 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     case WindowType::tiled:
     {
         auto node = get_active_tree()->advise_new_window(window_info);
-        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
+        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this, active_workspace);
         metadata->associate_to_node(node);
         break;
     }
@@ -101,7 +101,7 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
         {
             tools.select_active_window(window_info.window());
         }
-        metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), nullptr);
+        metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
         break;
     default:
         mir::log_error("Unsupported window type: %d", (int)type);
@@ -377,6 +377,11 @@ void OutputContent::select_window_from_point(int x, int y)
     }
 }
 
+void OutputContent::select_window(miral::Window const& window)
+{
+    tools.select_active_window(window);
+}
+
 void OutputContent::advise_new_workspace(int workspace)
 {
     workspaces.push_back(
@@ -583,7 +588,7 @@ void OutputContent::request_toggle_active_float()
         WindowSpecification spec = floating_window_manager.place_new_window(
             tools.info_for(active_window.application()),
             prev_spec);
-        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this);
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this, active_workspace);
         spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
         tools.modify_window(active_window, spec);
 
@@ -605,6 +610,29 @@ void OutputContent::request_toggle_active_float()
         mir::log_warning("request_toggle_active_float: has no effect on window of type: %d", (int)metadata->get_type());
         return;
     }
+}
+
+miral::Window OutputContent::find_window_on_active_workspace_matching_predicate(
+    std::function<bool(miral::Window const&)> const& f) const
+{
+    auto workspace = get_active_workspace();
+    workspace->get_tree()->find_node([&](std::shared_ptr<Node> const& node)
+    {
+        if (auto leaf_node = Node::as_leaf(node))
+        {
+            if (f(leaf_node->get_window()))
+                return true;
+        }
+        return false;
+    });
+
+    for (auto const& floating : workspace->get_floating_windows())
+    {
+        if (f(floating))
+            return floating;
+    }
+
+    return {};
 }
 
 void OutputContent::add_immediately(miral::Window& window)

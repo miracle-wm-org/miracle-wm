@@ -40,26 +40,25 @@ enum class WindowType
 class WindowMetadata
 {
 public:
-    WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output);
+    WindowMetadata(WindowType type, miral::Window const& window);
+    WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output, int workspace);
     void associate_to_node(std::shared_ptr<LeafNode> const&);
     miral::Window& get_window() { return window; }
-    std::shared_ptr<LeafNode> get_tiling_node() const
-    {
-        if (type == WindowType::tiled)
-            return tiling_node;
-        return nullptr;
-    }
+    std::shared_ptr<LeafNode> get_tiling_node() const;
     WindowType get_type() const { return type; }
     OutputContent* get_output() const { return output; }
     bool get_is_pinned() const { return is_pinned; }
     void set_restore_state(MirWindowState state);
     MirWindowState consume_restore_state();
     void toggle_pin_to_desktop();
+    void set_workspace(int workspace);
+    int get_workspace() const;
 
 private:
     WindowType type;
     miral::Window window;
     OutputContent* output;
+    int workspace;
     std::shared_ptr<LeafNode> tiling_node;
     MirWindowState restore_state;
     bool is_pinned = false;

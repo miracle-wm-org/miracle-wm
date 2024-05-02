@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "miral/window_specification.h"
 #include "window_metadata.h"
 #define MIR_LOG_COMPONENT "miracle"
 
@@ -28,10 +27,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
+#include <mir/server.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/application_info.h>
 #include <miral/runner.h>
 #include <miral/toolkit_event.h>
+#include <miral/window_specification.h>
 #include <miral/zone.h>
 
 using namespace miracle;
@@ -45,7 +46,8 @@ Policy::Policy(
     miral::WindowManagerTools const& tools,
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::MirRunner& runner,
-    std::shared_ptr<MiracleConfig> const& config) :
+    std::shared_ptr<MiracleConfig> const& config,
+    mir::Server const& server) :
     window_manager_tools { tools },
     floating_window_manager(tools, config->get_input_event_modifier()),
     external_client_launcher { external_client_launcher },
@@ -56,7 +58,8 @@ Policy::Policy(
         workspace_observer_registrar,
         [&]()
 { return get_active_output(); }) },
-    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this) },
+    i3_command_executor(*this, workspace_manager, tools),
+    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
     node_interface(tools)
 {
     workspace_observer_registrar.register_interest(ipc);
@@ -309,7 +312,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             // windows are considered to be in the "other" category until
             // we have more data on them.
             orphaned_window_list.push_back(window);
-            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window(), nullptr);
+            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
             miral::WindowSpecification spec;
             spec.userdata() = metadata;
             window_manager_tools.modify_window(window, spec);
