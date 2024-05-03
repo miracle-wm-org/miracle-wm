@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <glm/fwd.hpp>
 #define MIR_LOG_COMPONENT "miracle_config"
 
 #include "miracle_config.h"
@@ -37,6 +38,48 @@ int program_exists(std::string const& name)
     std::stringstream out;
     out << "command -v " << name << " > /dev/null 2>&1";
     return !system(out.str().c_str());
+}
+
+glm::vec4 parse_color(YAML::Node const& node)
+{
+    const float MAX_COLOR_VALUE = 255;
+    float r, g, b, a;
+    if (node.IsMap())
+    {
+        // Parse as (r, g, b, a) object
+        if (!node["r"])
+        {
+        }
+        r = node["r"].as<float>() / MAX_COLOR_VALUE;
+        g = node["g"].as<float>() / MAX_COLOR_VALUE;
+        b = node["b"].as<float>() / MAX_COLOR_VALUE;
+        a = node["a"].as<float>() / MAX_COLOR_VALUE;
+    }
+    else if (node.IsSequence())
+    {
+        // Parse as [r, g, b, a] array
+        r = node[0].as<float>() / MAX_COLOR_VALUE;
+        g = node[1].as<float>() / MAX_COLOR_VALUE;
+        b = node[2].as<float>() / MAX_COLOR_VALUE;
+        a = node[3].as<float>() / MAX_COLOR_VALUE;
+    }
+    else
+    {
+        // Parse as hex color
+        auto value = node.as<std::string>();
+        unsigned int i = std::stoul(value, nullptr, 16);
+        r = static_cast<float>(((i >> 24) & 0xFF)) / MAX_COLOR_VALUE;
+        g = static_cast<float>(((i >> 16) & 0xFF)) / MAX_COLOR_VALUE;
+        b = static_cast<float>(((i >> 8) & 0xFF)) / MAX_COLOR_VALUE;
+        a = static_cast<float>((i & 0xFF)) / MAX_COLOR_VALUE;
+    }
+
+    r = std::clamp(r, 0.f, 1.f);
+    g = std::clamp(g, 0.f, 1.f);
+    b = std::clamp(b, 0.f, 1.f);
+    a = std::clamp(a, 0.f, 1.f);
+
+    return { r, g, b, a };
 }
 
 std::string wrap_command(std::string const& command)
@@ -94,6 +137,7 @@ void MiracleConfig::_load()
     terminal = wrap_command("miracle-wm-sensible-terminal");
     desired_terminal = "";
     resize_jump = 50;
+    border_config = { 0, glm::vec4(0), glm::vec4(0) };
 
     // Load the new configuration
     mir::log_info("Configuration is loading...");
@@ -673,6 +717,22 @@ void MiracleConfig::_load()
             }
         }
     }
+
+    if (config["border"])
+    {
+        try
+        {
+            auto border = config["border"];
+            auto size = border["size"].as<int>();
+            auto color = parse_color(border["color"]);
+            auto focus_color = parse_color(border["focus_color"]);
+            border_config = { size, focus_color, color };
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse border: %s", e.msg.c_str());
+        }
+    }
 }
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
@@ -887,4 +947,9 @@ int MiracleConfig::get_resize_jump() const
 std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
 {
     return environment_variables;
+}
+
+BorderConfig const& MiracleConfig::get_border_config() const
+{
+    return border_config;
 }

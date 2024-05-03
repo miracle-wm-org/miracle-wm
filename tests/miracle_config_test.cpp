@@ -370,3 +370,91 @@ TEST_F(MiracleConfigTest, EnvironmentVariableCanBeParsed)
     MiracleConfig config(runner, path);
     EXPECT_EQ(config.get_env_variables().size(), 1);
 }
+
+TEST_F(MiracleConfigTest, BorderCanbeParsedWithArrayColors)
+{
+    YAML::Node border;
+    border["size"] = 2;
+
+    YAML::Node color_node;
+    color_node.push_back(255);
+    color_node.push_back(155);
+    color_node.push_back(155);
+    color_node.push_back(255);
+    border["color"] = color_node;
+
+    YAML::Node focus_color;
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(255);
+    border["focus_color"] = focus_color;
+
+    YAML::Node node;
+    node["border"] = border;
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_border_config().size, 2);
+    EXPECT_EQ(config.get_border_config().color.r, 1.f);
+    EXPECT_EQ(config.get_border_config().color.g, 155.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.b, 155.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.a, 1.f);
+    EXPECT_EQ(config.get_border_config().focus_color.r, 10.f / 255.f);
+    EXPECT_EQ(config.get_border_config().focus_color.g, 10.f / 255.f);
+    EXPECT_EQ(config.get_border_config().focus_color.b, 10.f / 255.f);
+    EXPECT_EQ(config.get_border_config().focus_color.a, 1.f);
+}
+
+TEST_F(MiracleConfigTest, BorderCanbeParsedWithHexColor)
+{
+    YAML::Node border;
+    border["size"] = 2;
+
+    border["color"] = "0xDD89DDFF";
+
+    YAML::Node focus_color;
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(255);
+    border["focus_color"] = focus_color;
+
+    YAML::Node node;
+    node["border"] = border;
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_border_config().color.r, 221.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.g, 137.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.b, 221.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.a, 1.f);
+}
+
+TEST_F(MiracleConfigTest, BorderCanbeParsedObjectColor)
+{
+    YAML::Node border;
+    border["size"] = 2;
+
+    border["color"]["r"] = 15;
+    border["color"]["g"] = 25;
+    border["color"]["b"] = 30;
+    border["color"]["a"] = 55;
+
+    YAML::Node focus_color;
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(10);
+    focus_color.push_back(255);
+    border["focus_color"] = focus_color;
+
+    YAML::Node node;
+    node["border"] = border;
+    write_yaml_node(node);
+
+    MiracleConfig config(runner, path);
+    EXPECT_EQ(config.get_border_config().color.r, 15.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.g, 25.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.b, 30.f / 255.f);
+    EXPECT_EQ(config.get_border_config().color.a, 55.f / 255.f);
+}
