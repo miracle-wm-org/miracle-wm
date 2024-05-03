@@ -1,20 +1,23 @@
-/* Copyright © Canonical Ltd.
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 or 3,
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
 
 #include <GLES2/gl2.h>
 #define MIR_LOG_COMPONENT "GLRenderer"
+#include "window_tools_accessor.h"
 
 #include "mir/graphics/buffer.h"
 #include "mir/graphics/display_sink.h"
@@ -364,9 +367,9 @@ public:
         return renderable.shaped();
     }
 
-    std::shared_ptr<void> userdata() const override
+    std::optional<mir::scene::Surface const*> surface_if_any() const override
     {
-        return nullptr;
+        return {};
     }
 
 private:
@@ -392,13 +395,15 @@ private:
 Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
-    std::shared_ptr<MiracleConfig> const& config) :
+    std::shared_ptr<MiracleConfig> const& config,
+    SurfaceTracker& surface_tracker) :
     output_surface { make_output_current(std::move(output)) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
     display_transform(1),
     gl_interface { std::move(gl_interface) },
-    config { config }
+    config { config },
+    surface_tracker{ surface_tracker }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -497,7 +502,19 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
 
 void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
 {
-    auto userdata = static_pointer_cast<WindowMetadata>(renderable.userdata());
+    auto surface = renderable.surface_if_any();
+    std::shared_ptr<WindowMetadata> userdata = nullptr;
+    if (surface)
+    {
+        auto window = surface_tracker.get(surface.value());
+        if (window)
+        {
+            auto tools = WindowToolsAccessor::get_instance().get_tools();
+            auto& info = tools.info_for(window);
+            userdata = static_pointer_cast<WindowMetadata>(info.userdata());
+        }
+    }
+
     bool needs_outline = userdata && userdata->get_type() == WindowType::tiled;
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();

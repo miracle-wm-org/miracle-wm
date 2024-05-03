@@ -15,23 +15,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIR_GL_TESSELLATION_HELPERS_H_
-#define MIR_GL_TESSELLATION_HELPERS_H_
-#include "mir/geometry/displacement.h"
-#include "primitive.h"
+#include "window_tools_accessor.h"
 
-namespace mir
-{
-namespace graphics
-{
-    class Renderable;
-}
-namespace gl
-{
+using namespace miracle;
 
-    Primitive tessellate_renderable_into_rectangle(
-        graphics::Renderable const& renderable, geometry::Displacement const& offset);
+void WindowToolsAccessor::set_tools(miral::WindowManagerTools const& in_tools)
+{
+    tools = in_tools;
+}
 
+miral::WindowManagerTools const& WindowToolsAccessor::get_tools()
+{
+    return tools;
 }
+
+WindowToolsAccessor& WindowToolsAccessor::get_instance()
+{
+    static WindowToolsAccessor instance;
+    return instance;
 }
-#endif /* MIR_GL_TESSELLATION_HELPERS_H_ */
+
+WindowToolsAccessor::WindowToolsAccessor(): tools(nullptr) {}

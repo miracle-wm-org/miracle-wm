@@ -15,23 +15,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIR_GL_TESSELLATION_HELPERS_H_
-#define MIR_GL_TESSELLATION_HELPERS_H_
-#include "mir/geometry/displacement.h"
-#include "primitive.h"
+#ifndef MIRACLEWM_SURFACE_TRACKER_H
+#define MIRACLEWM_SURFACE_TRACKER_H
 
-namespace mir
-{
-namespace graphics
-{
-    class Renderable;
-}
-namespace gl
+#include <miral/window.h>
+#include <map>
+
+namespace miracle
 {
 
-    Primitive tessellate_renderable_into_rectangle(
-        graphics::Renderable const& renderable, geometry::Displacement const& offset);
+class SurfaceTracker
+{
+public:
+    void add(miral::Window const&);
+    void remove(miral::Window const&);
+    miral::Window get(mir::scene::Surface const*);
 
-}
-}
-#endif /* MIR_GL_TESSELLATION_HELPERS_H_ */
+private:
+    std::map<mir::scene::Surface const*, miral::Window> map;
+};
+
+} // miracle
+
+#endif //MIRACLEWM_SURFACE_TRACKER_H

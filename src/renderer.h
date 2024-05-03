@@ -1,27 +1,30 @@
-/*
- * Copyright © Canonical Ltd.
- *
- * This program is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 or 3,
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- */
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
 
 #ifndef MIR_RENDERER_GL_RENDERER_H_
 #define MIR_RENDERER_GL_RENDERER_H_
 
 #include "primitive.h"
+#include "surface_tracker.h"
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/buffer_id.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
+#include <miral/window_manager_tools.h>
 
 #include <GLES2/gl2.h>
 #include <unordered_map>
@@ -49,7 +52,8 @@ class Renderer : public mir::renderer::Renderer
 public:
     Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
-        std::shared_ptr<MiracleConfig> const& config);
+        std::shared_ptr<MiracleConfig> const& config,
+        SurfaceTracker& surface_tracker);
     virtual ~Renderer();
 
     // These are called with a valid GL context:
@@ -98,6 +102,7 @@ private:
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<MiracleConfig> config;
+    SurfaceTracker& surface_tracker;
 };
 
 }
