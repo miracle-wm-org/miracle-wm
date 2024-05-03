@@ -29,11 +29,10 @@ miral::WindowManagerTools const& WindowToolsAccessor::get_tools()
     return tools;
 }
 
-WindowToolsAccessor* WindowToolsAccessor::get_instance()
+WindowToolsAccessor& WindowToolsAccessor::get_instance()
 {
-    if (!instance)
-        instance = new WindowToolsAccessor();
-
+    static WindowToolsAccessor instance;
     return instance;
 }
 
+WindowToolsAccessor::WindowToolsAccessor(): tools(nullptr) {}

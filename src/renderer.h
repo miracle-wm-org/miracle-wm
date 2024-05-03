@@ -52,7 +52,7 @@ public:
     Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
         std::shared_ptr<MiracleConfig> const& config,
-        SurfaceTracker& surface_tracker;
+        SurfaceTracker& surface_tracker);
     virtual ~Renderer();
 
     // These are called with a valid GL context:

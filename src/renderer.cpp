@@ -394,7 +394,7 @@ Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
     std::shared_ptr<MiracleConfig> const& config,
-    SurfaceTracker& surface_tracker,) :
+    SurfaceTracker& surface_tracker) :
     output_surface { make_output_current(std::move(output)) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
@@ -507,7 +507,7 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
         auto window = surface_tracker.get(surface.value());
         if (window)
         {
-            auto tools = WindowToolsAccessor::get_instance()->get_tools();
+            auto tools = WindowToolsAccessor::get_instance().get_tools();
             auto& info = tools.info_for(window);
             userdata = static_pointer_cast<WindowMetadata>(info.userdata());
         }

@@ -67,8 +67,7 @@ Policy::Policy(
 {
     workspace_observer_registrar.register_interest(ipc);
 
-    auto accessor = WindowToolsAccessor::get_instance();
-    accessor->set_tools(tools);
+    WindowToolsAccessor::get_instance().set_tools(tools);
 }
 
 Policy::~Policy()

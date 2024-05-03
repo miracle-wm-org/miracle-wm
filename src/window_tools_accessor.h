@@ -32,14 +32,13 @@ public:
     WindowToolsAccessor(WindowToolsAccessor &other) = delete;
     void operator=(const WindowToolsAccessor &) = delete;
 
-    static WindowToolsAccessor* get_instance();
+    static WindowToolsAccessor& get_instance();
 
 protected:
     WindowToolsAccessor();
 
 private:
     miral::WindowManagerTools tools;
-    static WindowToolsAccessor* instance;
 };
 
 }
