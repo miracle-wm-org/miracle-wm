@@ -18,10 +18,12 @@
 #define MIR_RENDERER_GL_RENDERER_H_
 
 #include "primitive.h"
+#include "surface_tracker.h"
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/buffer_id.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
+#include <miral/window_manager_tools.h>
 
 #include <GLES2/gl2.h>
 #include <unordered_map>
@@ -49,7 +51,8 @@ class Renderer : public mir::renderer::Renderer
 public:
     Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
-        std::shared_ptr<MiracleConfig> const& config);
+        std::shared_ptr<MiracleConfig> const& config,
+        SurfaceTracker& surface_tracker;
     virtual ~Renderer();
 
     // These are called with a valid GL context:
@@ -98,6 +101,7 @@ private:
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<MiracleConfig> config;
+    SurfaceTracker& surface_tracker;
 };
 
 }

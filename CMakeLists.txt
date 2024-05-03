@@ -59,6 +59,8 @@ add_library(miracle-wm-implementation
     src/miracle_gl_config.cpp
     src/i3_command.cpp
     src/i3_command_executor.cpp
+    src/surface_tracker.cpp
+    src/window_tools_accessor.cpp
 )
 
 add_executable(miracle-wm

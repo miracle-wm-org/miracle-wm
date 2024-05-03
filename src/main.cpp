@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_gl_config.h"
 #include "policy.h"
 #include "renderer.h"
+#include "surface_tracker.h"
 
 #include <libnotify/notify.h>
 #include <mir/renderer/gl/gl_surface.h>
@@ -67,6 +68,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
+    miracle::SurfaceTracker surface_tracker;
     auto config = std::make_shared<miracle::MiracleConfig>(runner);
     for (auto const& env : config->get_env_variables())
     {
@@ -79,7 +81,7 @@ int main(int argc, char const* argv[])
     {
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
-                "tiling", external_client_launcher, runner, config, server)
+                "tiling", external_client_launcher, runner, config, surface_tracker, server)
         };
         (*options)(server);
     });
@@ -118,7 +120,7 @@ int main(int argc, char const* argv[])
     }),
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> x, std::shared_ptr<mir::graphics::GLRenderingProvider> y)
     {
-        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config);
+        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config, surface_tracker);
     }),
             miroil::OpenGLContext(new miracle::GLConfig()) });
 }
