@@ -16,6 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "i3_command_executor.h"
+#include "direction.h"
+#include "i3_command.h"
 #include "leaf_node.h"
 #include "parent_node.h"
 #include "policy.h"
@@ -45,6 +47,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         {
         case I3CommandType::focus:
             process_focus(command, command_list);
+            break;
+        case I3CommandType::move:
+            process_move(command, command_list);
             break;
         default:
             break;
@@ -180,4 +185,134 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         mir::log_warning("'focus mode_toggle' is not supported, see https://github.com/mattkae/miracle-wm/issues/117"); // TODO
     else if (arg == "output")
         mir::log_warning("'focus output' is not supported, see https://github.com/canonical/mir/issues/3357"); // TODO
+}
+
+namespace
+{
+bool parse_move_distance(std::vector<std::string> const& arguments, int total_size, int& out)
+{
+    if (arguments.size() <= 1)
+        return false;
+
+    try
+    {
+        out = std::stoi(arguments[1]);
+        if (arguments.size() > 2)
+        {
+            // We default to assuming the value is in pixels
+            if (arguments[2] == "ppt")
+            {
+                float ppt = static_cast<float>(out) / 100.f;
+                out = total_size * ppt;
+            }
+        }
+
+        return true;
+    }
+    catch (std::invalid_argument const& e)
+    {
+        mir::log_error("Invalid argument: %s", arguments[1].c_str());
+        return false;
+    }
+}
+}
+
+void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    auto active_output = policy.get_active_output();
+    if (!active_output)
+    {
+        mir::log_warning("Trying to process I3 move command, but output is not set");
+        return;
+    }
+    
+    // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
+    if (command.arguments.empty())
+    {
+        mir::log_warning("move command expects arguments");
+        return;
+    }
+
+    auto const& arg = command.arguments.front();
+
+    Direction direction = Direction::MAX;
+    int total_size = 0;
+    if (arg == "left")
+    {
+        direction = Direction::left;
+        total_size = active_output->get_area().size.width.as_int();
+    }
+    else if (arg == "right")
+    {
+        direction = Direction::right;
+        total_size = active_output->get_area().size.width.as_int();
+    }
+    else if (arg == "up")
+    {
+        direction = Direction::up;
+        total_size = active_output->get_area().size.height.as_int();
+    }
+    else if (arg == "down")
+    {
+        direction = Direction::down;
+        total_size = active_output->get_area().size.height.as_int();
+    }
+    else if (arg == "absolute")
+    {
+        if (command.arguments[2] != "position")
+        {
+            mir::log_error("move [absolute] ... expected 'position' as the third argument");
+            return;
+        }
+
+        if (command.arguments[3] != "center")
+        {
+            mir::log_error("move absolute position ... expected 'center' as the third argument");
+            return;
+        }
+
+        int x = 0, y = 0;
+        for (auto const& output : policy.get_output_list())
+        {
+            auto area = output->get_area();
+            int end_x = area.size.width.as_int() + area.top_left.x.as_int();
+            int end_y = area.size.width.as_int() + area.top_left.x.as_int();
+            if (end_x > x)
+                x = end_x;
+            if (end_y > y)
+                y = end_y;
+        }
+
+
+    }
+    else if (arg == "position")
+    {
+        if (arg.size() < 3)
+        {
+            mir::log_error("move position expected a third argument");
+            return;
+        }
+
+        if (command.arguments[2] == "center")
+        {
+            active_output->move_active_window_to_center_point()
+        }
+        else if (command.arguments[2] == "mouse")
+        {
+
+        }
+        else
+        {
+            // Parse position X and position Y
+        }
+    }
+
+    if (direction < Direction::MAX)
+    {
+        int move_distance;
+        if (parse_move_distance(command.arguments, total_size, move_distance))
+            active_output->move_active_window_by_amount(direction, move_distance);
+        else
+            active_output->move_active_window(direction);
+    }
 }

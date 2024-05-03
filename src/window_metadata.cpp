@@ -75,3 +75,27 @@ std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const
         return tiling_node;
     return nullptr;
 }
+
+void WindowMetadata::set_tiling(miracle::OutputContent* in_output, int in_workspace)
+{
+    type = WindowType::tiled;
+    output = in_output;
+    workspace = in_workspace;
+    is_pinned = false;
+}
+
+void WindowMetadata::set_floating(miracle::OutputContent* in_output, int in_workspace)
+{
+    type = WindowType::floating;
+    output = in_output;
+    workspace = in_workspace;
+    is_pinned = false;
+}
+
+void WindowMetadata::set_other()
+{
+    type = WindowType::other;
+    output = nullptr;
+    workspace = -1;
+    is_pinned = false;
+}

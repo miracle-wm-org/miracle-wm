@@ -268,7 +268,7 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
                 }
                 else
                 {
-                    next_command.arguments.emplace_back(command_token.data());
+                    next_command.arguments.emplace_back(std::move(std::string(command_token.data(), command_token.size())));
                 }
             }
 

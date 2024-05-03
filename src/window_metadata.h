@@ -53,6 +53,9 @@ public:
     void toggle_pin_to_desktop();
     void set_workspace(int workspace);
     int get_workspace() const;
+    void set_tiling(OutputContent* output, int workspace);
+    void set_floating(OutputContent* output, int workspace);
+    void set_other();
 
 private:
     WindowType type;
