@@ -784,20 +784,37 @@ bool TilingWindowTree::constrain(miral::Window& window)
 
 namespace
 {
-void foreach_node_internal(std::function<void(std::shared_ptr<Node>)> const& f, std::shared_ptr<Node> const& parent)
+std::shared_ptr<Node> foreach_node_internal(
+    std::function<bool(std::shared_ptr<Node>)> const& f,
+    std::shared_ptr<Node> const& parent)
 {
-    f(parent);
+    if (f(parent))
+        return parent;
+
     if (parent->is_leaf())
-        return;
+        return nullptr;
 
     for (auto& node : Node::as_lane(parent)->get_sub_nodes())
-        foreach_node_internal(f, node);
+    {
+        if (auto result = foreach_node_internal(f, node))
+            return result;
+    }
+
+    return nullptr;
 }
 }
 
 void TilingWindowTree::foreach_node(std::function<void(std::shared_ptr<Node>)> const& f)
 {
-    foreach_node_internal(f, root_lane);
+    foreach_node_internal(
+        [&](auto const& node)
+    { f(node); return false; },
+        root_lane);
+}
+
+std::shared_ptr<Node> TilingWindowTree::find_node(std::function<bool(std::shared_ptr<Node> const&)> const& f)
+{
+    return foreach_node_internal(f, root_lane);
 }
 
 void TilingWindowTree::hide()

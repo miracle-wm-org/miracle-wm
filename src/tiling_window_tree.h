@@ -48,7 +48,7 @@ public:
     ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
-    /// position is the position WITH GAPS.
+    /// position is the position WITH gaps.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification& requested_specification);
 
     std::shared_ptr<LeafNode> advise_new_window(miral::WindowInfo const&);
@@ -104,6 +104,8 @@ public:
     bool constrain(miral::Window& window);
 
     void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
+
+    std::shared_ptr<Node> find_node(std::function<bool(std::shared_ptr<Node> const&)> const&);
 
     /// Hides the entire tree
     void hide();

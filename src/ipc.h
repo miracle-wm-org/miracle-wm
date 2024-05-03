@@ -18,10 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_IPC_H
 #define MIRACLEWM_IPC_H
 
+#include "i3_command.h"
+#include "i3_command_executor.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
+#include <mir/server_action_queue.h>
 #include <miral/runner.h>
+#include <shared_mutex>
 #include <vector>
 
 struct sockaddr_un;
@@ -75,7 +79,11 @@ enum IpcCommandType
 class Ipc : public WorkspaceObserver
 {
 public:
-    Ipc(miral::MirRunner& runner, WorkspaceManager&, Policy& policy);
+    Ipc(miral::MirRunner& runner,
+        WorkspaceManager&,
+        Policy& policy,
+        std::shared_ptr<mir::ServerActionQueue> const&,
+        I3CommandExecutor&);
 
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
@@ -99,12 +107,17 @@ private:
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<IpcClient> clients;
+    std::vector<I3ScopedCommandList> pending_commands;
+    mutable std::shared_mutex pending_commands_mutex;
+    std::shared_ptr<mir::ServerActionQueue> queue;
+    I3CommandExecutor& executor;
 
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);
     void handle_command(IpcClient& client, uint32_t payload_length, IpcCommandType payload_type);
     void send_reply(IpcClient& client, IpcCommandType command_type, std::string const& payload);
     void handle_writeable(IpcClient& client);
+    bool parse_i3_command(std::string_view const& command);
 };
 }
 
