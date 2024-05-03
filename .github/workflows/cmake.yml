@@ -21,16 +21,25 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Add PPA
-      run: sudo apt-add-repository ppa:mir-team/release
+      run: | 
+        sudo apt-add-repository ppa:mir-team/dev
+        sudo apt update
 
     - name: Install dependencies
-      run: sudo apt-get install libmiral-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev
+      run: |
+        sudo apt update -y
+        sudo apt install gcc-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+        sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
+          libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils
+        g++ --version
+
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run:  cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Test
       run: cd ${{github.workspace}}/build && ./bin/miracle-wm-tests

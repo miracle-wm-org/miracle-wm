@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle_ipc"
 
 #include "ipc.h"
+#include "i3_command_executor.h"
 #include "output_content.h"
 #include "policy.h"
 
@@ -39,6 +40,7 @@ static const char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
 
 namespace
 {
+
 struct sockaddr_un* ipc_user_sockaddr()
 {
     auto ipc_sockaddr = (sockaddr_un*)malloc(sizeof(struct sockaddr_un));
@@ -128,9 +130,15 @@ json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
 
 }
 
-Ipc::Ipc(miral::MirRunner& runner, miracle::WorkspaceManager& workspace_manager, Policy& policy) :
+Ipc::Ipc(miral::MirRunner& runner,
+    miracle::WorkspaceManager& workspace_manager,
+    Policy& policy,
+    std::shared_ptr<mir::ServerActionQueue> const& queue,
+    I3CommandExecutor& executor) :
     workspace_manager { workspace_manager },
-    policy { policy }
+    policy { policy },
+    queue { queue },
+    executor { executor }
 {
     auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -387,6 +395,21 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
 
     switch (payload_type)
     {
+    case IPC_COMMAND:
+    {
+        auto result = parse_i3_command(std::string_view(buf));
+        if (result)
+        {
+            const std::string msg = "[{\"success\": true}]";
+            send_reply(client, payload_type, msg);
+        }
+        else
+        {
+            const std::string msg = "[{\"success\": false, \"parse_error\": true}]";
+            send_reply(client, payload_type, msg);
+        }
+        break;
+    }
     case IPC_GET_WORKSPACES:
     {
         json j = json::array();
@@ -506,4 +529,36 @@ void Ipc::handle_writeable(miracle::Ipc::IpcClient& client)
     }
 
     client.write_buffer_len = 0;
+}
+
+namespace
+{
+bool equals(std::string_view const& s, const char* v)
+{
+    // TODO: Perhaps this is a bit naive, as it is basically a "startswith"
+    return strncmp(s.data(), v, strlen(v)) == 0;
+}
+}
+
+bool Ipc::parse_i3_command(std::string_view const& command)
+{
+    {
+        std::unique_lock lock(pending_commands_mutex);
+        pending_commands = I3ScopedCommandList::parse(command);
+    }
+
+    queue->enqueue(this, [&]()
+    {
+        size_t num_processed = 0;
+        {
+            std::shared_lock lock(pending_commands_mutex);
+            for (auto const& c : pending_commands)
+                executor.process(c);
+            num_processed = pending_commands.size();
+        }
+
+        std::unique_lock lock(pending_commands_mutex);
+        pending_commands.erase(pending_commands.begin(), pending_commands.begin() + num_processed);
+    });
+    return true;
 }
