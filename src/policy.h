@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_metadata.h"
 #include "workspace_manager.h"
 #include "surface_tracker.h"
+#include "animator.h"
 
 #include <memory>
 #include <miral/external_client.h>
@@ -113,6 +114,7 @@ private:
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
+    Animator animator;
     WindowManagerToolsTilingInterface node_interface;
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;

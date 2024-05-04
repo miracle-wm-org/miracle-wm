@@ -19,15 +19,38 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_ANIMATOR_H
 
 #include <miral/window.h>
+#include <miral/window_manager_tools.h>
+#include <thread>
+
+namespace mir
+{
+class ServerActionQueue;
+}
 
 namespace miracle
 {
+
+enum class AnimationType
+{
+    move_lerp
+};
+
+struct AnimationData
+{
+    miral::Window window;
+    std::weak_ptr<mir::scene::Surface> surface;
+    mir::geometry::Point from;
+    mir::geometry::Point to;
+    AnimationType type;
+    float endtime_seconds = 1.f;
+    float runtime_seconds = 0.f;
+};
 
 class Animator
 {
 public:
     /// This will take the MainLoop to schedule animation.
-    explicit Animator();
+    explicit Animator(miral::WindowManagerTools const&, std::shared_ptr<mir::ServerActionQueue> const&);
     ~Animator();
 
     /// Queue an animation on a window from the provided point to the other
@@ -37,6 +60,14 @@ public:
         miral::Window const&,
         mir::geometry::Point const& from,
         mir::geometry::Point const& to);
+
+private:
+    void update();
+    miral::WindowManagerTools tools;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::vector<AnimationData> data;
+    std::thread run_thread;
+    bool running = false;
 };
 
 } // miracle

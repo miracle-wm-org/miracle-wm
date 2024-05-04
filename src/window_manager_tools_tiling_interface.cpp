@@ -19,12 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_node.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
+#include "animator.h"
 
 using namespace miracle;
 
 WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
-    miral::WindowManagerTools const& tools) :
-    tools { tools }
+    miral::WindowManagerTools const& tools,
+    Animator& animator) :
+    tools { tools },
+    animator { animator }
 {
 }
 
@@ -36,6 +39,11 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 
 void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
 {
+    animator.animate_window_movement(
+        window,
+        window.top_left(),
+        r.top_left
+    );
     miral::WindowSpecification spec;
     spec.top_left() = r.top_left;
     spec.size() = r.size;
