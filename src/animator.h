@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_manager_tools.h>
 #include <thread>
 #include <mutex>
+#include <glm/glm.hpp>
 
 namespace mir
 {
@@ -36,14 +37,32 @@ enum class AnimationType
     move_lerp
 };
 
-struct QueuedAnimation
+class QueuedAnimation
 {
+public:
+    static QueuedAnimation move_lerp(
+        miral::Window const& window,
+        mir::geometry::Rectangle const& from,
+        mir::geometry::Rectangle const& to);
+    QueuedAnimation& operator=(QueuedAnimation& other) = default;
+    QueuedAnimation operator=(QueuedAnimation other);
+
+    glm::mat4 step(bool& should_erase);
+    miral::Window const& get_window() const { return window; }
+    std::weak_ptr<mir::scene::Surface> get_surface() const;
+
+private:
+    QueuedAnimation(
+        miral::Window const& window,
+        AnimationType animation_type);
+
     miral::Window window;
-    mir::geometry::Point from;
-    mir::geometry::Point to;
     AnimationType type;
+    mir::geometry::Rectangle from;
+    mir::geometry::Rectangle to;
     float endtime_seconds = 1.f;
     float runtime_seconds = 0.f;
+    const float timestep_seconds = 0.016;
 };
 
 class Animator
@@ -58,8 +77,8 @@ public:
     /// "to" position.
     void animate_window_movement(
         miral::Window const&,
-        mir::geometry::Point const& from,
-        mir::geometry::Point const& to);
+        mir::geometry::Rectangle const& from,
+        mir::geometry::Rectangle const& to);
 
 private:
     void update();

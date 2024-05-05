@@ -19,9 +19,82 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/scene/surface.h>
 #include <mir/server_action_queue.h>
 #include <chrono>
+#define MIR_LOG_COMPONENT "animator"
+#include <mir/log.h>
 
 using namespace miracle;
 using namespace std::chrono_literals;
+
+QueuedAnimation::QueuedAnimation(
+    miral::Window const& window,
+    miracle::AnimationType animation_type)
+    : window{window},
+      type{animation_type}
+{
+}
+
+QueuedAnimation QueuedAnimation::operator=(miracle::QueuedAnimation other)
+{
+    QueuedAnimation result(other.window, other.type);
+    result.from = other.from;
+    result.to = other.to;
+    result.endtime_seconds = other.endtime_seconds;
+    result.runtime_seconds = other.runtime_seconds;
+    return result;
+}
+
+QueuedAnimation QueuedAnimation::move_lerp(
+    miral::Window const& window,
+    mir::geometry::Rectangle const& _from,
+    mir::geometry::Rectangle const& _to)
+{
+    QueuedAnimation result(window, AnimationType::move_lerp);
+    result.from = _from;
+    result.to = _to;
+    result.endtime_seconds = 0.3f;
+    return result;
+}
+
+std::weak_ptr<mir::scene::Surface> QueuedAnimation::get_surface() const
+{
+    return window.operator std::weak_ptr<mir::scene::Surface>();
+}
+
+glm::mat4 QueuedAnimation::step(bool& should_erase)
+{
+    auto weak_surface = window.operator std::weak_ptr<mir::scene::Surface>();
+    if (weak_surface.expired())
+    {
+        should_erase = true;
+        return glm::mat4{1.f};
+    }
+
+    runtime_seconds += timestep_seconds;
+    if (runtime_seconds >= endtime_seconds)
+    {
+        should_erase = true;
+        return glm::mat4{1.f};
+    }
+
+    should_erase = false;
+    switch (type)
+    {
+    case AnimationType::move_lerp:
+    {
+        auto distance = to.top_left - from.top_left;
+        float fraction = 1.f - (runtime_seconds / endtime_seconds);
+        float x = (float)distance.dx.as_int() * fraction;
+        float y = (float)distance.dy.as_int() * fraction;
+
+        return glm::mat4 {
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            -x, -y, 0, 1
+        };
+    }
+    }
+}
 
 Animator::Animator(
     miral::WindowManagerTools const& tools,
@@ -38,26 +111,23 @@ Animator::~Animator()
 
 void Animator::animate_window_movement(
     miral::Window const& window,
-    mir::geometry::Point const& from,
-    mir::geometry::Point const& to)
+    mir::geometry::Rectangle const& from,
+    mir::geometry::Rectangle const& to)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
     for (auto it = processing.begin(); it != processing.end(); it++)
     {
-        if (it->window == window)
+        if (it->get_window() == window)
         {
             processing.erase(it);
             break;
         }
     }
 
-    processing.push_back({
+    processing.push_back(QueuedAnimation::move_lerp(
         window,
         from,
-        to,
-        AnimationType::move_lerp,
-        0.2f
-    });
+        to));
 }
 
 namespace
@@ -74,7 +144,6 @@ void Animator::update()
     // https://gist.github.com/mariobadr/673bbd5545242fcf9482
     using clock = std::chrono::high_resolution_clock;
     constexpr std::chrono::nanoseconds timestep(16ms);
-    constexpr float timestep_seconds = 0.016;
     std::chrono::nanoseconds lag(0ns);
     auto time_start = clock::now();
     bool running = true;
@@ -95,49 +164,19 @@ void Animator::update()
             std::lock_guard<std::mutex> lock(processing_lock);
             for (auto it = processing.begin(); it != processing.end();)
             {
-                glm::mat4 transformation;
                 auto& item = *it;
-                auto window = item.window;
-                auto weak_surface = item.window.operator std::weak_ptr<mir::scene::Surface>();
-                if (weak_surface.expired())
+                bool should_remove = false;
+                auto transform = item.step(should_remove);
+
                 {
+                    std::lock_guard update(update_data_lock);
+                    update_data.push_back({item.get_surface(), transform});
+                }
+
+                if (should_remove)
                     it = processing.erase(it);
-                    goto queue_update;
-                    continue;
-                }
-
-                item.runtime_seconds += timestep_seconds;
-                if (item.runtime_seconds >= item.endtime_seconds)
-                {
-                    it = processing.erase(it);
-                    goto queue_update;
-                    continue;
-                }
-
-                switch (item.type)
-                {
-                    case AnimationType::move_lerp:
-                    {
-                        auto distance = item.to - item.from;
-                        float fraction = 1.f - (item.runtime_seconds / item.endtime_seconds);
-                        float x = distance.dx.as_int() * fraction;
-                        float y = distance.dy.as_int() * fraction;
-
-                        transformation = glm::mat4(
-                            1, 0, 0, 0,
-                            0, 1, 0, 0,
-                            0, 0, 1, 0,
-                            -x, -y, 0, 1
-                        );
-                        break;
-                    }
-                }
-
-                it++;
-
-            queue_update:
-                std::lock_guard update(update_data_lock);
-                update_data.push_back({weak_surface, transformation});
+                else
+                    it++;
             }
 
             server_action_queue->enqueue(this, [&]() {
@@ -147,6 +186,10 @@ void Animator::update()
                     if (auto surface = update_item.surface.lock())
                     {
                         surface->set_transformation(update_item.next_transform);
+                    }
+                    else
+                    {
+                        mir::log_warning("Update data item was deleted before the transformation could be set");
                     }
                 }
 
