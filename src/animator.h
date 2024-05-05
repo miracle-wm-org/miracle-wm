@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <thread>
+#include <mutex>
 
 namespace mir
 {
@@ -35,10 +36,9 @@ enum class AnimationType
     move_lerp
 };
 
-struct AnimationData
+struct QueuedAnimation
 {
     miral::Window window;
-    std::weak_ptr<mir::scene::Surface> surface;
     mir::geometry::Point from;
     mir::geometry::Point to;
     AnimationType type;
@@ -65,9 +65,9 @@ private:
     void update();
     miral::WindowManagerTools tools;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::vector<AnimationData> data;
+    std::vector<QueuedAnimation> processing;
     std::thread run_thread;
-    bool running = false;
+    std::mutex processing_lock;
 };
 
 } // miracle

@@ -39,11 +39,7 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 
 void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
 {
-    animator.animate_window_movement(
-        window,
-        window.top_left(),
-        r.top_left
-    );
+    auto old_top_left = window.top_left();
     miral::WindowSpecification spec;
     spec.top_left() = r.top_left;
     spec.size() = r.size;
@@ -57,6 +53,12 @@ void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& windo
         sub_spec.size() = r.size;
         tools.modify_window(child, sub_spec);
     }
+
+    animator.animate_window_movement(
+        window,
+        old_top_left,
+        r.top_left
+    );
 }
 
 MirWindowState WindowManagerToolsTilingInterface::get_state(miral::Window const& window)
@@ -76,8 +78,8 @@ void WindowManagerToolsTilingInterface::change_state(miral::Window const& window
 
 void WindowManagerToolsTilingInterface::clip(miral::Window const& window, geom::Rectangle const& r)
 {
-    auto& window_info = tools.info_for(window);
-    window_info.clip_area(r);
+//    auto& window_info = tools.info_for(window);
+//    window_info.clip_area(r);
 }
 
 void WindowManagerToolsTilingInterface::noclip(miral::Window const& window)
