@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #define MIR_LOG_COMPONENT "animator"
 #include <mir/log.h>
+#include <glm/gtx/string_cast.hpp>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -33,14 +34,15 @@ QueuedAnimation::QueuedAnimation(
 {
 }
 
-QueuedAnimation QueuedAnimation::operator=(miracle::QueuedAnimation other)
+QueuedAnimation& QueuedAnimation::operator=(miracle::QueuedAnimation const& other)
 {
-    QueuedAnimation result(other.window, other.type);
-    result.from = other.from;
-    result.to = other.to;
-    result.endtime_seconds = other.endtime_seconds;
-    result.runtime_seconds = other.runtime_seconds;
-    return result;
+    window = other.window;
+    type = other.type;
+    from = other.from;
+    to = other.to;
+    endtime_seconds = other.endtime_seconds;
+    runtime_seconds = other.runtime_seconds;
+    return *this;
 }
 
 QueuedAnimation QueuedAnimation::move_lerp(
@@ -51,7 +53,7 @@ QueuedAnimation QueuedAnimation::move_lerp(
     QueuedAnimation result(window, AnimationType::move_lerp);
     result.from = _from;
     result.to = _to;
-    result.endtime_seconds = 0.3f;
+    result.endtime_seconds = 1.f;
     return result;
 }
 
@@ -62,7 +64,7 @@ std::weak_ptr<mir::scene::Surface> QueuedAnimation::get_surface() const
 
 glm::mat4 QueuedAnimation::step(bool& should_erase)
 {
-    auto weak_surface = window.operator std::weak_ptr<mir::scene::Surface>();
+    auto weak_surface = get_surface();
     if (weak_surface.expired())
     {
         should_erase = true;
@@ -82,17 +84,28 @@ glm::mat4 QueuedAnimation::step(bool& should_erase)
     case AnimationType::move_lerp:
     {
         auto distance = to.top_left - from.top_left;
-        float fraction = 1.f - (runtime_seconds / endtime_seconds);
-        float x = (float)distance.dx.as_int() * fraction;
-        float y = (float)distance.dy.as_int() * fraction;
+        float fraction = (runtime_seconds / endtime_seconds);
+        float inverse_fraction = 1.f - fraction;
+        float x = (float)distance.dx.as_int() * inverse_fraction;
+        float y = (float)distance.dy.as_int() * inverse_fraction;
+
+        // The window is already the "to" size, so we need to lerp it from the previous size
+        float to_width = to.size.width.as_int();
+        float from_width = from.size.width.as_int();
+        float to_height = to.size.height.as_int();
+        float from_height = from.size.height.as_int();
+        float x_scale = (from_width / to_width) + (fraction * (1.f - (from_width / to_width)));
+        float y_scale = (from_height / to_height) + (fraction * (1.f - (from_height / to_height)));
 
         return glm::mat4 {
-            1, 0, 0, 0,
-            0, 1, 0, 0,
+            x_scale, 0, 0, 0,
+            0, y_scale, 0, 0,
             0, 0, 1, 0,
             -x, -y, 0, 1
         };
     }
+    default:
+        return glm::mat4{1.f};
     }
 }
 
@@ -101,7 +114,7 @@ Animator::Animator(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue)
     : tools{tools},
       server_action_queue{server_action_queue},
-      run_thread([&]() { update(); })
+      run_thread([&]() { run(); })
 {
 }
 
@@ -128,6 +141,7 @@ void Animator::animate_window_movement(
         window,
         from,
         to));
+    cv.notify_one();
 }
 
 namespace
@@ -139,7 +153,7 @@ struct PendingUpdateData
 };
 }
 
-void Animator::update()
+void Animator::run()
 {
     // https://gist.github.com/mariobadr/673bbd5545242fcf9482
     using clock = std::chrono::high_resolution_clock;
@@ -148,12 +162,18 @@ void Animator::update()
     auto time_start = clock::now();
     bool running = true;
 
-    std::vector<PendingUpdateData> update_data;
-    std::mutex update_data_lock;
+
     while (running)
     {
-        // Copy over pending into processing. This is also where we reconcile
-        // in-progress against new animations.
+        {
+            std::unique_lock lock(processing_lock);
+            if (processing.empty())
+            {
+                cv.wait(lock);
+                time_start = clock::now();
+            }
+        }
+
         auto delta_time = clock::now() - time_start;
         time_start = clock::now();
         lag += std::chrono::duration_cast<std::chrono::nanoseconds>(delta_time);
@@ -161,26 +181,24 @@ void Animator::update()
         while(lag >= timestep) {
             lag -= timestep;
 
-            std::lock_guard<std::mutex> lock(processing_lock);
-            for (auto it = processing.begin(); it != processing.end();)
+            std::vector<PendingUpdateData> update_data;
             {
-                auto& item = *it;
-                bool should_remove = false;
-                auto transform = item.step(should_remove);
-
+                std::lock_guard<std::mutex> lock(processing_lock);
+                for (auto it = processing.begin(); it != processing.end();)
                 {
-                    std::lock_guard update(update_data_lock);
-                    update_data.push_back({item.get_surface(), transform});
-                }
+                    auto& item = *it;
+                    bool should_remove = false;
+                    auto transform = item.step(should_remove);
 
-                if (should_remove)
-                    it = processing.erase(it);
-                else
-                    it++;
+                    update_data.push_back({ item.get_surface(), transform });
+                    if (should_remove)
+                        it = processing.erase(it);
+                    else
+                        it++;
+                }
             }
 
-            server_action_queue->enqueue(this, [&]() {
-                std::lock_guard update(update_data_lock);
+            server_action_queue->enqueue(this, [update_data]() {
                 for (auto& update_item : update_data)
                 {
                     if (auto surface = update_item.surface.lock())
@@ -192,8 +210,6 @@ void Animator::update()
                         mir::log_warning("Update data item was deleted before the transformation could be set");
                     }
                 }
-
-                update_data.clear();
             });
         }
     }

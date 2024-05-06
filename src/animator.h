@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <mutex>
 #include <glm/glm.hpp>
+#include <condition_variable>
 
 namespace mir
 {
@@ -44,8 +45,7 @@ public:
         miral::Window const& window,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to);
-    QueuedAnimation& operator=(QueuedAnimation& other) = default;
-    QueuedAnimation operator=(QueuedAnimation other);
+    QueuedAnimation& operator=(QueuedAnimation const& other);
 
     glm::mat4 step(bool& should_erase);
     miral::Window const& get_window() const { return window; }
@@ -81,12 +81,13 @@ public:
         mir::geometry::Rectangle const& to);
 
 private:
-    void update();
+    void run();
     miral::WindowManagerTools tools;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::vector<QueuedAnimation> processing;
     std::thread run_thread;
     std::mutex processing_lock;
+    std::condition_variable cv;
 };
 
 } // miracle
