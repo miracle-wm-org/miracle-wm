@@ -38,6 +38,14 @@ enum class AnimationType
     move_lerp
 };
 
+struct StepResult
+{
+    bool should_erase = false;
+    glm::vec2 position;
+    glm::vec2 size;
+    glm::mat4 transform;
+};
+
 class QueuedAnimation
 {
 public:
@@ -47,7 +55,7 @@ public:
         mir::geometry::Rectangle const& to);
     QueuedAnimation& operator=(QueuedAnimation const& other);
 
-    glm::mat4 step(bool& should_erase);
+    StepResult step();
     miral::Window const& get_window() const { return window; }
     std::weak_ptr<mir::scene::Surface> get_surface() const;
 

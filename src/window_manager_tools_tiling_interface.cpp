@@ -40,20 +40,6 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
 {
     auto old_rectangle = geom::Rectangle(window.top_left(), window.size());
-    miral::WindowSpecification spec;
-    spec.top_left() = r.top_left;
-    spec.size() = r.size;
-    tools.modify_window(window, spec);
-
-    auto& window_info = tools.info_for(window);
-    for (auto const& child : window_info.children())
-    {
-        miral::WindowSpecification sub_spec;
-        sub_spec.top_left() = r.top_left;
-        sub_spec.size() = r.size;
-        tools.modify_window(child, sub_spec);
-    }
-
     animator.animate_window_movement(
         window,
         old_rectangle,
