@@ -84,3 +84,13 @@ std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const
         return tiling_node;
     return nullptr;
 }
+
+uint32_t WindowMetadata::get_animation_handle() const
+{
+    return animation_handle;
+}
+
+void WindowMetadata::set_animation_handle(uint32_t handle)
+{
+    animation_handle = handle;
+}

@@ -25,11 +25,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 using namespace std::chrono_literals;
 
+AnimationHandle const miracle::none_animation_handle = 0;
+
 Animation::Animation(
-    miral::Window const& window,
+    AnimationHandle handle,
     miracle::AnimationType animation_type,
     std::function<void(AnimationStepResult const&)> const& callback)
-    : window{window},
+    : handle{handle},
       type{animation_type},
       callback{callback}
 {
@@ -37,52 +39,36 @@ Animation::Animation(
 
 Animation& Animation::operator=(miracle::Animation const& other)
 {
-    window = other.window;
+    handle = other.handle;
     type = other.type;
     from = other.from;
     to = other.to;
     endtime_seconds = other.endtime_seconds;
     runtime_seconds = other.runtime_seconds;
+    callback = other.callback;
     return *this;
 }
 
 Animation Animation::move_lerp(
-    miral::Window const& window,
+    AnimationHandle handle,
     mir::geometry::Rectangle const& _from,
     mir::geometry::Rectangle const& _to,
     std::function<void(AnimationStepResult const&)> const& callback)
 {
-    Animation result(window, AnimationType::move_lerp, callback);
+    Animation result(handle, AnimationType::move_lerp, callback);
     result.from = _from;
     result.to = _to;
     result.endtime_seconds = 0.25f;
     return result;
 }
 
-std::weak_ptr<mir::scene::Surface> Animation::get_surface() const
-{
-    return window.operator std::weak_ptr<mir::scene::Surface>();
-}
-
 AnimationStepResult Animation::step()
 {
-    auto weak_surface = get_surface();
-    if (weak_surface.expired())
-    {
-        return {
-            window,
-            true,
-            glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-            glm::mat4(1.f),
-        };
-    }
-
     runtime_seconds += timestep_seconds;
     if (runtime_seconds >= endtime_seconds)
     {
         return {
-            window,
+            handle,
             true,
             glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -106,7 +92,7 @@ AnimationStepResult Animation::step()
         };
 
         return {
-            window,
+            handle,
             false,
             position,
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -115,7 +101,7 @@ AnimationStepResult Animation::step()
     }
     default:
         return {
-            window,
+            handle,
             false,
             glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -135,8 +121,8 @@ Animator::~Animator()
 {
 };
 
-void Animator::animate_window_movement(
-    miral::Window const& window,
+AnimationHandle Animator::animate_window_movement(
+    AnimationHandle previous,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
     std::function<void(AnimationStepResult const&)> const& callback)
@@ -144,19 +130,21 @@ void Animator::animate_window_movement(
     std::lock_guard<std::mutex> lock(processing_lock);
     for (auto it = queued_animations.begin(); it != queued_animations.end(); it++)
     {
-        if (it->get_window() == window)
+        if (it->get_handle() == previous)
         {
             queued_animations.erase(it);
             break;
         }
     }
 
+    auto handle = next_handle++;
     queued_animations.push_back(Animation::move_lerp(
-        window,
+        handle,
         from,
         to,
         callback));
     cv.notify_one();
+    return handle;
 }
 
 namespace

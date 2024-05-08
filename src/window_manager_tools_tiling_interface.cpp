@@ -22,6 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include <mir/scene/surface.h>
 
+#define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
+#include <mir/log.h>
+
 using namespace miracle;
 
 WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
@@ -41,47 +44,57 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 void WindowManagerToolsTilingInterface::set_rectangle(
     miral::Window const& window, geom::Rectangle const& r)
 {
-    animator.animate_window_movement(
-        window,
+    auto metadata = get_metadata(window);
+    if (!metadata)
+    {
+        mir::log_error("Cannot set rectangle of window that lacks metadata");
+        return;
+    }
+
+    auto handle = animator.animate_window_movement(
+        metadata->get_animation_handle(),
         geom::Rectangle(window.top_left(), window.size()),
         r,
-        [this](miracle::AnimationStepResult const& result)
+        [this, metadata=metadata](miracle::AnimationStepResult const& result)
         {
-            if (auto surface = result.window.operator std::shared_ptr<mir::scene::Surface>())
-            {
-                surface->set_transformation(result.transform);
-                // Set the positions on the windows and the sub windows
-                miral::WindowSpecification spec;
-                spec.top_left() = mir::geometry::Point(
+            auto window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (!surface)
+                return;
+
+            surface->set_transformation(result.transform);
+            // Set the positions on the windows and the sub windows
+            miral::WindowSpecification spec;
+            spec.top_left() = mir::geometry::Point(
+                result.position.x,
+                result.position.y
+            );
+            spec.size() = mir::geometry::Size(
+                result.size.x,
+                result.size.y
+            );
+            tools.modify_window(window, spec);
+
+            auto& window_info = tools.info_for(window);
+            mir::geometry::Rectangle new_rectangle(
+                mir::geometry::Point(
                     result.position.x,
-                    result.position.y
-                );
-                spec.size() = mir::geometry::Size(
+                    result.position.y),
+                mir::geometry::Size(
                     result.size.x,
-                    result.size.y
-                );
-                tools.modify_window(result.window, spec);
+                    result.size.y));
+            clip(window, new_rectangle);
 
-                auto& window_info = tools.info_for(result.window);
-                mir::geometry::Rectangle new_rectangle(
-                    mir::geometry::Point(
-                        result.position.x,
-                        result.position.y),
-                    mir::geometry::Size(
-                        result.size.x,
-                        result.size.y));
-                clip(result.window, new_rectangle);
-
-                for (auto const& child : window_info.children())
-                {
-                    miral::WindowSpecification sub_spec;
-                    sub_spec.top_left() = spec.top_left();
-                    sub_spec.size() = spec.size();
-                    tools.modify_window(child, sub_spec);
-                }
+            for (auto const& child : window_info.children())
+            {
+                miral::WindowSpecification sub_spec;
+                sub_spec.top_left() = spec.top_left();
+                sub_spec.size() = spec.size();
+                tools.modify_window(child, sub_spec);
             }
         }
     );
+    metadata->set_animation_handle(handle);
 }
 
 MirWindowState WindowManagerToolsTilingInterface::get_state(miral::Window const& window)

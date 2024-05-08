@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_ANIMATOR_H
 #define MIRACLEWM_ANIMATOR_H
 
-#include <miral/window.h>
 #include <thread>
 #include <mutex>
 #include <glm/glm.hpp>
@@ -39,9 +38,14 @@ enum class AnimationType
     move_lerp
 };
 
+typedef uint32_t AnimationHandle;
+
+/// Reserved for windows who lack an animation handle
+extern const AnimationHandle none_animation_handle;
+
 struct AnimationStepResult
 {
-    miral::Window window;
+    AnimationHandle handle;
     bool should_erase = false;
     glm::vec2 position;
     glm::vec2 size;
@@ -52,24 +56,23 @@ class Animation
 {
 public:
     static Animation move_lerp(
-        miral::Window const& window,
+        AnimationHandle handle,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
     Animation& operator=(Animation const& other);
 
     AnimationStepResult step();
-    miral::Window const& get_window() const { return window; }
-    std::weak_ptr<mir::scene::Surface> get_surface() const;
-    std::function<void(AnimationStepResult const&)> get_callback() const { return callback; }
+    [[nodiscard]] std::function<void(AnimationStepResult const&)> const& get_callback() const { return callback; }
+    [[nodiscard]] AnimationHandle get_handle() const { return handle; }
 
 private:
     Animation(
-        miral::Window const& window,
+        AnimationHandle handle,
         AnimationType animation_type,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    miral::Window window;
+    AnimationHandle handle;
     AnimationType type;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
@@ -89,11 +92,15 @@ public:
     /// Queue an animation on a window from the provided point to the other
     /// point. It is assumed that the window has already been moved to the
     /// "to" position.
-    void animate_window_movement(
-        miral::Window const&,
+    AnimationHandle animate_window_movement(
+        AnimationHandle previous,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
+
+    void cancel(AnimationHandle);
+    void pause(AnimationHandle);
+    void resume(AnimationHandle);
 
 private:
     void run();
@@ -102,6 +109,7 @@ private:
     std::thread run_thread;
     std::mutex processing_lock;
     std::condition_variable cv;
+    AnimationHandle next_handle = 1;
 };
 
 } // miracle

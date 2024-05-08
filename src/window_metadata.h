@@ -54,6 +54,9 @@ public:
     bool is_focused() const;
     void set_workspace(int workspace);
     int get_workspace() const;
+    uint32_t get_animation_handle() const;
+    void set_animation_handle(uint32_t);
+
 
 private:
     WindowType type;
@@ -63,6 +66,7 @@ private:
     std::shared_ptr<LeafNode> tiling_node;
     MirWindowState restore_state;
     bool is_pinned = false;
+    uint32_t animation_handle = 0;
 };
 
 }
