@@ -63,7 +63,8 @@ Policy::Policy(
     i3_command_executor(*this, workspace_manager, tools),
     surface_tracker{surface_tracker},
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
-    node_interface(tools)
+    animator(server.the_main_loop()),
+    node_interface(tools, animator)
 {
     workspace_observer_registrar.register_interest(ipc);
 

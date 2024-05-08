@@ -37,7 +37,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
-#include <stdlib.h>
 
 using namespace miral;
 
