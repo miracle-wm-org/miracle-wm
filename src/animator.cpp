@@ -21,21 +21,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #define MIR_LOG_COMPONENT "animator"
 #include <mir/log.h>
-#include <glm/gtx/string_cast.hpp>
-#include <mir/geometry/rectangle.h>
 
 using namespace miracle;
 using namespace std::chrono_literals;
 
-QueuedAnimation::QueuedAnimation(
+Animation::Animation(
     miral::Window const& window,
-    miracle::AnimationType animation_type)
+    miracle::AnimationType animation_type,
+    std::function<void(AnimationStepResult const&)> const& callback)
     : window{window},
-      type{animation_type}
+      type{animation_type},
+      callback{callback}
 {
 }
 
-QueuedAnimation& QueuedAnimation::operator=(miracle::QueuedAnimation const& other)
+Animation& Animation::operator=(miracle::Animation const& other)
 {
     window = other.window;
     type = other.type;
@@ -46,29 +46,31 @@ QueuedAnimation& QueuedAnimation::operator=(miracle::QueuedAnimation const& othe
     return *this;
 }
 
-QueuedAnimation QueuedAnimation::move_lerp(
+Animation Animation::move_lerp(
     miral::Window const& window,
     mir::geometry::Rectangle const& _from,
-    mir::geometry::Rectangle const& _to)
+    mir::geometry::Rectangle const& _to,
+    std::function<void(AnimationStepResult const&)> const& callback)
 {
-    QueuedAnimation result(window, AnimationType::move_lerp);
+    Animation result(window, AnimationType::move_lerp, callback);
     result.from = _from;
     result.to = _to;
-    result.endtime_seconds = 1.f;
+    result.endtime_seconds = 0.25f;
     return result;
 }
 
-std::weak_ptr<mir::scene::Surface> QueuedAnimation::get_surface() const
+std::weak_ptr<mir::scene::Surface> Animation::get_surface() const
 {
     return window.operator std::weak_ptr<mir::scene::Surface>();
 }
 
-StepResult QueuedAnimation::step()
+AnimationStepResult Animation::step()
 {
     auto weak_surface = get_surface();
     if (weak_surface.expired())
     {
         return {
+            window,
             true,
             glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -80,6 +82,7 @@ StepResult QueuedAnimation::step()
     if (runtime_seconds >= endtime_seconds)
     {
         return {
+            window,
             true,
             glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -102,39 +105,17 @@ StepResult QueuedAnimation::step()
             from.top_left.y.as_int() + y
         };
 
-        // Next, we lerp the size. The size is held in the transform, because
-        // resizing over-and-over again is not performant to say the least.
-        // We want to scale around the bottom right corner of the surface.
-        // https://math.stackexchange.com/questions/3245481/rotate-and-scale-a-point-around-different-origins
-        auto width_diff = to.size.width.as_int() - from.size.width.as_int();
-        auto height_diff = to.size.height.as_int() - from.size.height.as_int();
-        float w = (float)width_diff * fraction;
-        float h = (float)height_diff * fraction;
-        float w_scale = (w + (float)from.size.width.as_int()) / (float)from.size.width.as_int();
-        float h_scale = (h + (float)from.size.height.as_int()) / (float)from.size.height.as_int();
-
-       auto translate_matrix = glm::translate(
-            glm::mat4(1.f),
-            glm::vec3(-(from.size.width.as_int() / 2.f), -(from.size.height.as_int() / 2.f), 0));
-        auto scale_matrix = glm::mat4{
-            w_scale, 0, 0, 0,
-            0, h_scale, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        };
-        auto reverse_translate_matrix = glm::translate(
-            glm::mat4(1.f),
-            glm::vec3(from.size.width.as_int() / 2.f, from.size.height.as_int() / 2.f, 0));
-
         return {
+            window,
             false,
             position,
-            glm::vec2(from.size.width.as_int(), from.size.height.as_int()),
-            translate_matrix * scale_matrix * reverse_translate_matrix
+            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+            glm::mat4(1.f)
         };
     }
     default:
         return {
+            window,
             false,
             glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
@@ -144,10 +125,8 @@ StepResult QueuedAnimation::step()
 }
 
 Animator::Animator(
-    miral::WindowManagerTools const& tools,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue)
-    : tools{tools},
-      server_action_queue{server_action_queue},
+    : server_action_queue{server_action_queue},
       run_thread([&]() { run(); })
 {
 }
@@ -159,22 +138,24 @@ Animator::~Animator()
 void Animator::animate_window_movement(
     miral::Window const& window,
     mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to)
+    mir::geometry::Rectangle const& to,
+    std::function<void(AnimationStepResult const&)> const& callback)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto it = processing.begin(); it != processing.end(); it++)
+    for (auto it = queued_animations.begin(); it != queued_animations.end(); it++)
     {
         if (it->get_window() == window)
         {
-            processing.erase(it);
+            queued_animations.erase(it);
             break;
         }
     }
 
-    processing.push_back(QueuedAnimation::move_lerp(
+    queued_animations.push_back(Animation::move_lerp(
         window,
         from,
-        to));
+        to,
+        callback));
     cv.notify_one();
 }
 
@@ -182,8 +163,8 @@ namespace
 {
 struct PendingUpdateData
 {
-    miral::Window window;
-    StepResult result;
+    AnimationStepResult result;
+    std::function<void(miracle::AnimationStepResult const&)> callback;
 };
 }
 
@@ -200,7 +181,7 @@ void Animator::run()
     {
         {
             std::unique_lock lock(processing_lock);
-            if (processing.empty())
+            if (queued_animations.empty())
             {
                 cv.wait(lock);
                 time_start = clock::now();
@@ -217,62 +198,22 @@ void Animator::run()
             std::vector<PendingUpdateData> update_data;
             {
                 std::lock_guard<std::mutex> lock(processing_lock);
-                for (auto it = processing.begin(); it != processing.end();)
+                for (auto it = queued_animations.begin(); it != queued_animations.end();)
                 {
                     auto& item = *it;
                     auto result = item.step();
 
-                    update_data.push_back({ item.get_window(), result });
+                    update_data.push_back({ result, item.get_callback() });
                     if (result.should_erase)
-                        it = processing.erase(it);
+                        it = queued_animations.erase(it);
                     else
                         it++;
                 }
             }
 
             server_action_queue->enqueue(this, [&, update_data]() {
-                for (auto& update_item : update_data)
-                {
-                    if (auto surface = update_item.window.operator std::shared_ptr<mir::scene::Surface>())
-                    {
-                        surface->set_transformation(update_item.result.transform);
-                        // Set the positions on the windows and the sub windows
-                        miral::WindowSpecification spec;
-                        spec.top_left() = mir::geometry::Point(
-                            update_item.result.position.x,
-                            update_item.result.position.y
-                        );
-                        spec.size() = mir::geometry::Size(
-                            update_item.result.size.x,
-                            update_item.result.size.y
-                        );
-                        tools.modify_window(update_item.window, spec);
-
-                        auto& window_info = tools.info_for(update_item.window);
-                        mir::geometry::Rectangle r(
-                            mir::geometry::Point(
-                                update_item.result.position.x,
-                                update_item.result.position.y
-                                ),
-                            mir::geometry::Size(
-                                update_item.result.size.x,
-                                update_item.result.size.y
-                                ));
-                        window_info.clip_area(r);
-
-                        for (auto const& child : window_info.children())
-                        {
-                            miral::WindowSpecification sub_spec;
-                            sub_spec.top_left() = spec.top_left();
-                            sub_spec.size() = spec.size();
-                            tools.modify_window(child, sub_spec);
-                        }
-                    }
-                    else
-                    {
-                        mir::log_warning("Update data item was deleted before the transformation could be set");
-                    }
-                }
+                for (auto const& update_item : update_data)
+                    update_item.callback(update_item.result);
             });
         }
     }

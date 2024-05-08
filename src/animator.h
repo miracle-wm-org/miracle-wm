@@ -19,11 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_ANIMATOR_H
 
 #include <miral/window.h>
-#include <miral/window_manager_tools.h>
 #include <thread>
 #include <mutex>
 #include <glm/glm.hpp>
 #include <condition_variable>
+#include <functional>
+#include <mir/geometry/rectangle.h>
 
 namespace mir
 {
@@ -38,31 +39,35 @@ enum class AnimationType
     move_lerp
 };
 
-struct StepResult
+struct AnimationStepResult
 {
+    miral::Window window;
     bool should_erase = false;
     glm::vec2 position;
     glm::vec2 size;
     glm::mat4 transform;
 };
 
-class QueuedAnimation
+class Animation
 {
 public:
-    static QueuedAnimation move_lerp(
+    static Animation move_lerp(
         miral::Window const& window,
         mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to);
-    QueuedAnimation& operator=(QueuedAnimation const& other);
+        mir::geometry::Rectangle const& to,
+        std::function<void(AnimationStepResult const&)> const& callback);
+    Animation& operator=(Animation const& other);
 
-    StepResult step();
+    AnimationStepResult step();
     miral::Window const& get_window() const { return window; }
     std::weak_ptr<mir::scene::Surface> get_surface() const;
+    std::function<void(AnimationStepResult const&)> get_callback() const { return callback; }
 
 private:
-    QueuedAnimation(
+    Animation(
         miral::Window const& window,
-        AnimationType animation_type);
+        AnimationType animation_type,
+        std::function<void(AnimationStepResult const&)> const& callback);
 
     miral::Window window;
     AnimationType type;
@@ -71,13 +76,14 @@ private:
     float endtime_seconds = 1.f;
     float runtime_seconds = 0.f;
     const float timestep_seconds = 0.016;
+    std::function<void(AnimationStepResult const&)> callback;
 };
 
 class Animator
 {
 public:
     /// This will take the MainLoop to schedule animation.
-    explicit Animator(miral::WindowManagerTools const&, std::shared_ptr<mir::ServerActionQueue> const&);
+    explicit Animator(std::shared_ptr<mir::ServerActionQueue> const&);
     ~Animator();
 
     /// Queue an animation on a window from the provided point to the other
@@ -86,13 +92,13 @@ public:
     void animate_window_movement(
         miral::Window const&,
         mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to);
+        mir::geometry::Rectangle const& to,
+        std::function<void(AnimationStepResult const&)> const& callback);
 
 private:
     void run();
-    miral::WindowManagerTools tools;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::vector<QueuedAnimation> processing;
+    std::vector<Animation> queued_animations;
     std::thread run_thread;
     std::mutex processing_lock;
     std::condition_variable cv;
