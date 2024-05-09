@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle_config.h"
 #include "yaml-cpp/yaml.h"
+#include "yaml-cpp/node/node.h"
 #include <cstdlib>
 #include <fstream>
 #include <glib-2.0/glib.h>
@@ -88,6 +89,50 @@ std::string wrap_command(std::string const& command)
         return "miracle-wm-unsnap " + command;
 
     return command;
+}
+
+template <typename T>
+bool try_parse_value(YAML::Node const& root, const char* key, T& value)
+{
+    if (!root[key])
+        return false;
+
+    auto const& node = root[key];
+    try
+    {
+        value = node.as<T>();
+    }
+    catch (YAML::BadConversion const& e)
+    {
+        mir::log_error("(L%d) Unable to parse '%s: %s", node.Mark().line, key, e.msg.c_str());
+        return false;
+    }
+    return true;
+}
+
+template <typename T>
+T try_parse_enum(YAML::Node const& root, const char* key, std::function<T(std::string const&)> const& parse, T invalid)
+{
+    T result = invalid;
+    if (!root[key])
+        return invalid;
+
+    auto const& node = root[key];
+    try
+    {
+        result = parse(node.as<std::string>());
+        if (result == invalid)
+        {
+            mir::log_error("(L%d) '%s' is invalid", node.Mark().line, key);
+            return invalid;
+        }
+    }
+    catch (YAML::BadConversion const& e)
+    {
+        mir::log_error("(L%d) Unable to parse '%s: %s", node.Mark().line, key, e.msg.c_str());
+        return invalid;
+    }
+    return result;
 }
 }
 
@@ -733,6 +778,76 @@ void MiracleConfig::_load()
             mir::log_error("Unable to parse border: %s", e.msg.c_str());
         }
     }
+
+    read_animation_definitions(config);
+}
+
+void MiracleConfig::read_animation_definitions(YAML::Node const& root)
+{
+    std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
+        {
+            AnimationType::grow,
+            EaseFunction::ease_out_back,
+            0.25f,
+            },
+        {
+            AnimationType::slide,
+            EaseFunction::ease_out_back,
+            0.25f,
+        },
+        {
+            AnimationType::shrink,
+            EaseFunction::ease_out_back,
+            0.25f,
+        }
+    });
+    if (root["animations"])
+    {
+        auto animations_node = root["animations"];
+        if (!animations_node.IsSequence())
+        {
+            mir::log_error("Unable to parse animations_node: animations_node is not an array");
+            return;
+        }
+
+        for (auto const& node : animations_node)
+        {
+            auto const& event = try_parse_enum<AnimateableEvent>(
+                node,
+                "event",
+                from_string_animateable_event,
+                AnimateableEvent::max);
+            if (event == AnimateableEvent::max)
+                continue;
+
+            auto const& type = try_parse_enum<AnimationType>(
+                node,
+                "type",
+                from_string_animation_type,
+                AnimationType::max);
+            if (type == AnimationType::max)
+                continue;
+
+            auto const& function = try_parse_enum<EaseFunction>(
+                node,
+                "function",
+                from_string_ease_function,
+                EaseFunction::max);
+            if (function == EaseFunction::max)
+                continue;
+
+            parsed[(int)event].type = type;
+            parsed[(int)event].function = function;
+            try_parse_value(node, "duration", parsed[(int)event].duration_seconds);
+            try_parse_value(node, "c1", parsed[(int)event].c1);
+            try_parse_value(node, "c3", parsed[(int)event].c3);
+        }
+    }
+
+    animation_defintions = parsed;
+
+    if (root["enable_animations"])
+        try_parse_value(root, "enable_animations", animations_enabled);
 }
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
@@ -952,4 +1067,14 @@ std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
 BorderConfig const& MiracleConfig::get_border_config() const
 {
     return border_config;
+}
+
+std::array<AnimationDefinition, (int)AnimateableEvent::max> const& MiracleConfig::get_animation_definitions() const
+{
+    return animation_defintions;
+}
+
+bool MiracleConfig::are_animations_enabled() const
+{
+    return animations_enabled;
 }

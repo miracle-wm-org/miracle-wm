@@ -91,6 +91,7 @@ std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo 
     {
         tiling_interface.send_to_back(window_info.window());
     }
+    tiling_interface.open(window_info.window());
 
     return node;
 }

@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
+#include "miracle_config.h"
 #include <mir/scene/surface.h>
 #include <mir/server_action_queue.h>
 #include <chrono>
@@ -29,10 +30,10 @@ AnimationHandle const miracle::none_animation_handle = 0;
 
 Animation::Animation(
     AnimationHandle handle,
-    miracle::AnimationType animation_type,
+    AnimationDefinition const& definition,
     std::function<void(AnimationStepResult const&)> const& callback)
     : handle{handle},
-      type{animation_type},
+      definition{definition},
       callback{callback}
 {
 }
@@ -40,32 +41,51 @@ Animation::Animation(
 Animation& Animation::operator=(miracle::Animation const& other)
 {
     handle = other.handle;
-    type = other.type;
+    definition = other.definition;
     from = other.from;
     to = other.to;
-    endtime_seconds = other.endtime_seconds;
-    runtime_seconds = other.runtime_seconds;
     callback = other.callback;
     return *this;
 }
 
-Animation Animation::move_lerp(
+Animation Animation::window_move(
     AnimationHandle handle,
+    AnimationDefinition const& definition,
     mir::geometry::Rectangle const& _from,
     mir::geometry::Rectangle const& _to,
     std::function<void(AnimationStepResult const&)> const& callback)
 {
-    Animation result(handle, AnimationType::move_lerp, callback);
+    Animation result(handle, definition, callback);
     result.from = _from;
     result.to = _to;
-    result.endtime_seconds = 0.25f;
     return result;
+}
+
+namespace
+{
+inline float ease(AnimationDefinition const& defintion, float t, float start_value, float end_value)
+{
+    // https://easings.net/
+    const float diff = end_value - start_value;
+    switch (defintion.function)
+    {
+    case EaseFunction::linear:
+        return start_value + (t * diff);
+    case EaseFunction::ease_out_back:
+    {
+        const float p = 1 + defintion.c3 * powf(t - 1, 3) + defintion.c1 * powf(t - 1, 2);
+        return start_value + (p * diff);
+    }
+    default:
+        return end_value;
+    }
+}
 }
 
 AnimationStepResult Animation::step()
 {
     runtime_seconds += timestep_seconds;
-    if (runtime_seconds >= endtime_seconds)
+    if (runtime_seconds >= definition.duration_seconds)
     {
         return {
             handle,
@@ -76,19 +96,19 @@ AnimationStepResult Animation::step()
         };
     }
 
-    switch (type)
+    float t = (runtime_seconds / definition.duration_seconds);
+    switch (definition.type)
     {
-    case AnimationType::move_lerp:
+    case AnimationType::slide:
     {
-        // First, we begin lerping the position
+        auto p = ease(definition, t, 0.f, 1.f);
         auto distance = to.top_left - from.top_left;
-        float fraction = (runtime_seconds / endtime_seconds);
-        float x = (float)distance.dx.as_int() * fraction;
-        float y = (float)distance.dy.as_int() * fraction;
+        float x = (float)distance.dx.as_int() * p;
+        float y = (float)distance.dy.as_int() * p;
 
         glm::vec2 position = {
-            from.top_left.x.as_int() + x,
-            from.top_left.y.as_int() + y
+            (float)from.top_left.x.as_int() + x,
+            (float)from.top_left.y.as_int() + y
         };
 
         return {
@@ -98,6 +118,26 @@ AnimationStepResult Animation::step()
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
             glm::mat4(1.f)
         };
+    }
+    case AnimationType::grow:
+    {
+        auto p = ease(definition, t, 0.f, 1.f);
+        glm::mat4 transform(
+            p, 0, 0, 0,
+            0, p, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+        return { handle, false, {}, {}, transform };
+    }
+    case AnimationType::shrink:
+    {
+        auto p = 1.f - ease(definition, t, 0.f, 1.f);
+        glm::mat4 transform(
+            p, 0, 0, 0,
+            0, p, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+        return { handle, false, {}, {}, transform };
     }
     default:
         return {
@@ -111,17 +151,20 @@ AnimationStepResult Animation::step()
 }
 
 Animator::Animator(
-    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue)
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+    std::shared_ptr<MiracleConfig> const& config)
     : server_action_queue{server_action_queue},
+      config{config},
       run_thread([&]() { run(); })
 {
 }
 
 Animator::~Animator()
 {
+    stop();
 };
 
-AnimationHandle Animator::animate_window_movement(
+AnimationHandle Animator::window_move(
     AnimationHandle previous,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
@@ -137,12 +180,57 @@ AnimationHandle Animator::animate_window_movement(
         }
     }
 
+    // If animations aren't enabled, let's give them the position that
+    // they want to go to immediately and don't bother animating anything.
     auto handle = next_handle++;
-    queued_animations.push_back(Animation::move_lerp(
+    if (!config->are_animations_enabled())
+    {
+        callback(
+            { handle,
+            true,
+            glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
+            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+            glm::mat4(1.f) });
+        return handle;
+    }
+
+    queued_animations.push_back(Animation::window_move(
         handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_move],
         from,
         to,
         callback));
+    cv.notify_one();
+    return handle;
+}
+
+AnimationHandle Animator::window_open(
+    AnimationHandle previous,
+    std::function<void(AnimationStepResult const&)> const& callback)
+{
+    std::lock_guard<std::mutex> lock(processing_lock);
+    for (auto it = queued_animations.begin(); it != queued_animations.end(); it++)
+    {
+        if (it->get_handle() == previous)
+        {
+            queued_animations.erase(it);
+            break;
+        }
+    }
+
+    // If animations aren't enabled, let's give them the position that
+    // they want to go to immediately and don't bother animating anything.
+    auto handle = next_handle++;
+    if (!config->are_animations_enabled())
+    {
+        callback({ handle, true});
+        return handle;
+    }
+
+    queued_animations.push_back({
+        handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_open],
+        callback});
     cv.notify_one();
     return handle;
 }
@@ -163,7 +251,7 @@ void Animator::run()
     constexpr std::chrono::nanoseconds timestep(16ms);
     std::chrono::nanoseconds lag(0ns);
     auto time_start = clock::now();
-    bool running = true;
+    running = true;
 
     while (running)
     {
@@ -192,7 +280,7 @@ void Animator::run()
                     auto result = item.step();
 
                     update_data.push_back({ result, item.get_callback() });
-                    if (result.should_erase)
+                    if (result.is_complete)
                         it = queued_animations.erase(it);
                     else
                         it++;
@@ -200,9 +288,21 @@ void Animator::run()
             }
 
             server_action_queue->enqueue(this, [&, update_data]() {
+                if (!running)
+                    return;
+
                 for (auto const& update_item : update_data)
                     update_item.callback(update_item.result);
             });
         }
     }
+}
+
+void Animator::stop()
+{
+    if (!running)
+        return;
+
+    running = false;
+    run_thread.join();
 }

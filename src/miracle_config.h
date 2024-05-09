@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_MIRACLE_CONFIG_H
 #define MIRACLEWM_MIRACLE_CONFIG_H
 
+#include "animation_defintion.h"
 #include <atomic>
 #include <functional>
 #include <glm/glm.hpp>
@@ -29,6 +30,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace YAML
+{
+class Node;
+}
 
 namespace miral
 {
@@ -130,6 +136,8 @@ public:
     [[nodiscard]] int get_resize_jump() const;
     [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const;
     [[nodiscard]] BorderConfig const& get_border_config() const;
+    [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const;
+    [[nodiscard]] bool are_animations_enabled() const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -148,6 +156,7 @@ private:
     static uint parse_modifier(std::string const& stringified_action_key);
     void _load();
     void _watch(miral::MirRunner& runner);
+    void read_animation_definitions(YAML::Node const&);
 
     miral::MirRunner& runner;
     int next_listener_handle = 0;
@@ -173,6 +182,8 @@ private:
     std::vector<EnvironmentVariable> environment_variables;
     BorderConfig border_config;
     std::atomic<bool> has_changes = false;
+    bool animations_enabled = true;
+    std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
 };
 }
 

@@ -1,0 +1,67 @@
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
+#include "animation_defintion.h"
+#define MIR_LOG_COMPONENT "animation_definition"
+#include <mir/log.h>
+
+using namespace miracle;
+
+AnimateableEvent miracle::from_string_animateable_event(std::string const& str)
+{
+    if (str == "window_open")
+        return AnimateableEvent::window_open;
+    else if (str == "window_move")
+        return AnimateableEvent::window_move;
+    else if (str == "window_close")
+        return AnimateableEvent::window_close;
+    else
+    {
+        mir::log_error("from_string_animateable_eventfrom_string: unknown string: %s", str.c_str());
+        return AnimateableEvent::max;
+    }
+}
+
+EaseFunction miracle::from_string_ease_function(std::string const& str)
+{
+    if (str == "linear")
+        return EaseFunction::linear;
+    else if (str == "ease_out_back")
+        return EaseFunction::ease_out_back;
+    else
+    {
+        mir::log_error("from_string_ease_function: unknown string: %s", str.c_str());
+        return EaseFunction::max;
+    }
+}
+
+AnimationType miracle::from_string_animation_type(std::string const& str)
+{
+    if (str == "slide")
+        return AnimationType::slide;
+    else if (str == "grow")
+        return AnimationType::grow;
+    else if (str == "shrink")
+        return AnimationType::shrink;
+    else
+    {
+        {
+            mir::log_error("from_string_animation_type: unknown string: %s", str.c_str());
+            return AnimationType::max;
+        }
+    }
+}

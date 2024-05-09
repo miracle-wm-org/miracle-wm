@@ -41,6 +41,7 @@ public:
     virtual std::shared_ptr<WindowMetadata> get_metadata(miral::Window const&, TilingWindowTree const*) = 0;
     virtual void raise(miral::Window const&) = 0;
     virtual void send_to_back(miral::Window const&) = 0;
+    virtual void open(miral::Window const&) = 0;
 };
 
 }

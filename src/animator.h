@@ -18,11 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_ANIMATOR_H
 #define MIRACLEWM_ANIMATOR_H
 
+#include "animation_defintion.h"
 #include <thread>
 #include <mutex>
 #include <glm/glm.hpp>
 #include <condition_variable>
 #include <functional>
+#include <optional>
 #include <mir/geometry/rectangle.h>
 
 namespace mir
@@ -32,31 +34,35 @@ class ServerActionQueue;
 
 namespace miracle
 {
+class MiracleConfig;
 
-enum class AnimationType
-{
-    move_lerp
-};
-
+/// Unique handle provided to track animators
 typedef uint32_t AnimationHandle;
 
 /// Reserved for windows who lack an animation handle
 extern const AnimationHandle none_animation_handle;
 
+/// Callback data provided to the caller on each tick.
 struct AnimationStepResult
 {
-    AnimationHandle handle;
-    bool should_erase = false;
-    glm::vec2 position;
-    glm::vec2 size;
-    glm::mat4 transform;
+    AnimationHandle handle = none_animation_handle;
+    bool is_complete = false;
+    std::optional<glm::vec2> position;
+    std::optional<glm::vec2> size;
+    std::optional<glm::mat4> transform;
 };
 
 class Animation
 {
 public:
-    static Animation move_lerp(
+    Animation(
         AnimationHandle handle,
+        AnimationDefinition const& definition,
+        std::function<void(AnimationStepResult const&)> const& callback);
+
+    static Animation window_move(
+        AnimationHandle handle,
+        AnimationDefinition const& definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
@@ -67,44 +73,43 @@ public:
     [[nodiscard]] AnimationHandle get_handle() const { return handle; }
 
 private:
-    Animation(
-        AnimationHandle handle,
-        AnimationType animation_type,
-        std::function<void(AnimationStepResult const&)> const& callback);
-
     AnimationHandle handle;
-    AnimationType type;
+    AnimationDefinition definition;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
-    float endtime_seconds = 1.f;
-    float runtime_seconds = 0.f;
     const float timestep_seconds = 0.016;
     std::function<void(AnimationStepResult const&)> callback;
+    float runtime_seconds = 0.f;
 };
 
 class Animator
 {
 public:
-    /// This will take the MainLoop to schedule animation.
-    explicit Animator(std::shared_ptr<mir::ServerActionQueue> const&);
+    explicit Animator(
+        std::shared_ptr<mir::ServerActionQueue> const&,
+        std::shared_ptr<MiracleConfig> const&);
     ~Animator();
 
-    /// Queue an animation on a window from the provided point to the other
-    /// point. It is assumed that the window has already been moved to the
-    /// "to" position.
-    AnimationHandle animate_window_movement(
+    AnimationHandle window_move(
         AnimationHandle previous,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
 
+    AnimationHandle window_open(
+        AnimationHandle previous,
+        std::function<void(AnimationStepResult const&)> const& callback);
+
     void cancel(AnimationHandle);
     void pause(AnimationHandle);
     void resume(AnimationHandle);
+    void stop();
 
 private:
     void run();
+    bool running = false;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<MiracleConfig> config;
     std::vector<Animation> queued_animations;
     std::thread run_thread;
     std::mutex processing_lock;
