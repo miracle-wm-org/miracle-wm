@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #define MIR_LOG_COMPONENT "animator"
 #include <mir/log.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -63,21 +65,116 @@ Animation Animation::window_move(
 
 namespace
 {
-inline float ease(AnimationDefinition const& defintion, float t, float start_value, float end_value)
+float ease_out_bounce(AnimationDefinition const& defintion, float x)
+{
+    if (x < 1 / defintion.d1) {
+        return defintion.n1 * x * x;
+    } else if (x < 2 / defintion.d1) {
+        return defintion.n1 * (x -= 1.5f / defintion.d1) * x + 0.75f;
+    } else if (x < 2.5 / defintion.d1) {
+        return defintion.n1 * (x -= 2.25f / defintion.d1) * x + 0.9375f;
+    } else {
+        return defintion.n1 * (x -= 2.625f / defintion.d1) * x + 0.984375f;
+    }
+}
+
+
+inline float ease(AnimationDefinition const& defintion, float t)
 {
     // https://easings.net/
-    const float diff = end_value - start_value;
     switch (defintion.function)
     {
     case EaseFunction::linear:
-        return start_value + (t * diff);
+        return t;
+    case EaseFunction::ease_in_sine:
+        return 1 - cosf((t * M_PIf) / 2.f);
+    case EaseFunction::ease_in_out_sine:
+        return -(cosf(M_PIf * t) - 1) / 2;
+    case EaseFunction::ease_out_sine:
+        return sinf((t * M_PIf) / 2.f);
+    case EaseFunction::ease_in_quad:
+        return t * t;
+    case EaseFunction::ease_out_quad:
+        return 1 - (1 - t) * (1 - t);
+    case EaseFunction::ease_in_out_quad:
+        return t < 0.5 ? 2 * t * t : 1 - powf(-2 * t + 2, 2) / 2;
+    case EaseFunction::ease_in_cubic:
+        return t * t * t;
+    case EaseFunction::ease_out_cubic:
+        return 1 - powf(1 - t, 3);
+    case EaseFunction::ease_in_out_cubic:
+        return t < 0.5 ? 4 * t * t * t : 1 - powf(-2 * t + 2, 3) / 2;
+    case EaseFunction::ease_in_quart:
+        return t * t * t * t;
+    case EaseFunction::ease_out_quart:
+        return 1 - powf(1 - t, 4);
+    case EaseFunction::ease_in_out_quart:
+        return t < 0.5 ? 8 * t * t * t * t : 1 - powf(-2 * t + 2, 4) / 2;
+    case EaseFunction::ease_in_quint:
+        return t * t * t * t * t;
+    case EaseFunction::ease_out_quint:
+        return 1 - powf(1 - t, 5);
+    case EaseFunction::ease_in_out_quint:
+        return t < 0.5 ? 16 * t * t * t * t * t : 1 - powf(-2 * t + 2, 5) / 2;
+    case EaseFunction::ease_in_expo:
+        return t == 0 ? 0 : powf(2, 10 * t - 10);
+    case EaseFunction::ease_out_expo:
+        return t == 1 ? 1 : 1 - powf(2, -10 * t);
+    case EaseFunction::ease_in_out_expo:
+        return t == 0
+            ? 0
+            : t == 1
+                ? 1
+                : t < 0.5 ? powf(2, 20 * t - 10) / 2
+                          : (2 - powf(2, -20 * t + 10)) / 2;
+    case EaseFunction::ease_in_circ:
+        return 1 - sqrtf(1 - powf(t, 2));
+    case EaseFunction::ease_out_circ:
+        return sqrtf(1 - powf(t - 1, 2));
+    case EaseFunction::ease_in_out_circ:
+        return t < 0.5f
+            ? (1 - sqrtf(1 - powf(2 * t, 2))) / 2
+            : (sqrtf(1 - powf(-2 * t + 2, 2)) + 1) / 2;
+    case EaseFunction::ease_in_back:
+        return defintion.c3 * t * t * t - defintion.c1 * t * t;
     case EaseFunction::ease_out_back:
     {
-        const float p = 1 + defintion.c3 * powf(t - 1, 3) + defintion.c1 * powf(t - 1, 2);
-        return start_value + (p * diff);
+        return 1 + defintion.c3 * powf(t - 1, 3) + defintion.c1 * powf(t - 1, 2);
     }
+    case EaseFunction::ease_in_out_back:
+        return t < 0.5
+            ? (powf(2 * t, 2) * ((defintion.c2 + 1) * 2 * t - defintion.c2)) / 2
+            : (powf(2 * t - 2, 2) * ((defintion.c2 + 1) * (t * 2 - 2) + defintion.c2) + 2) / 2;
+    case EaseFunction::ease_in_elastic:
+        return t == 0
+            ? 0
+            : t == 1
+                ? 1
+                : -powf(2, 10 * t - 10) * sinf((t * 10 - 10.75f) * defintion.c4);
+    case EaseFunction::ease_out_elastic:
+        return t == 0
+            ? 0
+            : t == 1
+                ? 1
+                : powf(2, -10 * t) * sinf((t * 10 - 0.75f) * defintion.c4) + 1;
+    case EaseFunction::ease_in_out_elastic:
+        return t == 0
+            ? 0
+            : t == 1
+                ? 1
+                : t < 0.5
+                    ? -(powf(2, 20 * t - 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2
+                    : (powf(2, -20 * t + 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2 + 1;
+    case EaseFunction::ease_in_bounce:
+        return 1 - ease_out_bounce(defintion, 1 - t);
+    case EaseFunction::ease_out_bounce:
+        return ease_out_bounce(defintion, t);
+    case EaseFunction::ease_in_out_bounce:
+        return t < 0.5
+            ? (1 - ease_out_bounce(defintion, 1 - 2 * t)) / 2
+            : (1 + ease_out_bounce(defintion, 2 * t - 1)) / 2;
     default:
-        return end_value;
+        return 1.f;
     }
 }
 }
@@ -101,7 +198,7 @@ AnimationStepResult Animation::step()
     {
     case AnimationType::slide:
     {
-        auto p = ease(definition, t, 0.f, 1.f);
+        auto p = ease(definition, t);
         auto distance = to.top_left - from.top_left;
         float x = (float)distance.dx.as_int() * p;
         float y = (float)distance.dy.as_int() * p;
@@ -121,7 +218,7 @@ AnimationStepResult Animation::step()
     }
     case AnimationType::grow:
     {
-        auto p = ease(definition, t, 0.f, 1.f);
+        auto p = ease(definition, t);
         glm::mat4 transform(
             p, 0, 0, 0,
             0, p, 0, 0,
@@ -131,7 +228,7 @@ AnimationStepResult Animation::step()
     }
     case AnimationType::shrink:
     {
-        auto p = 1.f - ease(definition, t, 0.f, 1.f);
+        auto p = 1.f - ease(definition, t);
         glm::mat4 transform(
             p, 0, 0, 0,
             0, p, 0, 0,
