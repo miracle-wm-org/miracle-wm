@@ -71,6 +71,7 @@ enum class EaseFunction
 
 enum class AnimationType
 {
+    disabled,
     slide,
     grow,
     shrink,

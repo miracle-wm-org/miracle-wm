@@ -185,6 +185,29 @@ inline float ease(AnimationDefinition const& defintion, float t)
 }
 }
 
+AnimationStepResult Animation::init()
+{
+    switch (definition.type)
+    {
+    case AnimationType::grow:
+        return {
+            handle,
+            false,
+            {},
+            {},
+            glm::mat4(0.f)
+        };
+    default:
+        return {
+            handle,
+            false,
+            {},
+            {},
+            glm::mat4(1.f)
+        };
+    }
+}
+
 AnimationStepResult Animation::step()
 {
     runtime_seconds += timestep_seconds;
@@ -219,7 +242,7 @@ AnimationStepResult Animation::step()
             false,
             position,
             glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-            glm::mat4(1.f)
+            std::nullopt
         };
     }
     case AnimationType::grow:
@@ -230,7 +253,7 @@ AnimationStepResult Animation::step()
             0, p, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
-        return { handle, false, {}, {}, transform };
+        return { handle, false, std::nullopt, std::nullopt, transform };
     }
     case AnimationType::shrink:
     {
@@ -240,15 +263,16 @@ AnimationStepResult Animation::step()
             0, p, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
-        return { handle, false, {}, {}, transform };
+        return { handle, false, std::nullopt, std::nullopt, transform };
     }
+    case AnimationType::disabled:
     default:
         return {
             handle,
-            false,
-            glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-            glm::mat4(1.f)
+            true,
+            std::nullopt,
+            std::nullopt,
+            std::nullopt
         };
     }
 }
@@ -268,25 +292,19 @@ Animator::~Animator()
     stop();
 };
 
-AnimationHandle Animator::window_move(
-    AnimationHandle previous,
+AnimationHandle Animator::register_animateable()
+{
+    return next_handle++;
+}
+
+void Animator::window_move(
+    AnimationHandle handle,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
     std::function<void(AnimationStepResult const&)> const& callback)
 {
-    std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto it = queued_animations.begin(); it != queued_animations.end(); it++)
-    {
-        if (it->get_handle() == previous)
-        {
-            queued_animations.erase(it);
-            break;
-        }
-    }
-
     // If animations aren't enabled, let's give them the position that
     // they want to go to immediately and don't bother animating anything.
-    auto handle = next_handle++;
     if (!config->are_animations_enabled())
     {
         callback(
@@ -295,9 +313,9 @@ AnimationHandle Animator::window_move(
                 glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
                 glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
                 glm::mat4(1.f) });
-        return handle;
     }
 
+    std::lock_guard<std::mutex> lock(processing_lock);
     queued_animations.push_back(Animation::window_move(
         handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_move],
@@ -305,37 +323,27 @@ AnimationHandle Animator::window_move(
         to,
         callback));
     cv.notify_one();
-    return handle;
 }
 
-AnimationHandle Animator::window_open(
-    AnimationHandle previous,
+void Animator::window_open(
+    AnimationHandle handle,
     std::function<void(AnimationStepResult const&)> const& callback)
 {
-    std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto it = queued_animations.begin(); it != queued_animations.end(); it++)
-    {
-        if (it->get_handle() == previous)
-        {
-            queued_animations.erase(it);
-            break;
-        }
-    }
-
     // If animations aren't enabled, let's give them the position that
     // they want to go to immediately and don't bother animating anything.
-    auto handle = next_handle++;
     if (!config->are_animations_enabled())
     {
         callback({ handle, true });
-        return handle;
+        return;
     }
 
-    queued_animations.push_back({ handle,
+    Animation animation = { handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_open],
-        callback });
+        callback };
+    callback(animation.init());
+    std::lock_guard<std::mutex> lock(processing_lock);
+    queued_animations.push_back(std::move(animation));
     cv.notify_one();
-    return handle;
 }
 
 namespace

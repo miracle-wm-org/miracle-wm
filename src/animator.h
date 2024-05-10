@@ -68,6 +68,7 @@ public:
         std::function<void(AnimationStepResult const&)> const& callback);
     Animation& operator=(Animation const& other);
 
+    AnimationStepResult init();
     AnimationStepResult step();
     [[nodiscard]] std::function<void(AnimationStepResult const&)> const& get_callback() const { return callback; }
     [[nodiscard]] AnimationHandle get_handle() const { return handle; }
@@ -82,6 +83,8 @@ private:
     float runtime_seconds = 0.f;
 };
 
+/// Manages the animation queue. If multiple animations are queued for a window,
+/// then the latest animation may override values from previous animations.
 class Animator
 {
 public:
@@ -90,14 +93,18 @@ public:
         std::shared_ptr<MiracleConfig> const&);
     ~Animator();
 
-    AnimationHandle window_move(
-        AnimationHandle previous,
+    /// Animateable components must register with the Animator before being
+    /// able to be animated.
+    AnimationHandle register_animateable();
+
+    void window_move(
+        AnimationHandle handle,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    AnimationHandle window_open(
-        AnimationHandle previous,
+    void window_open(
+        AnimationHandle handle,
         std::function<void(AnimationStepResult const&)> const& callback);
 
     void cancel(AnimationHandle);

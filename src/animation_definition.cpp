@@ -40,8 +40,66 @@ EaseFunction miracle::from_string_ease_function(std::string const& str)
 {
     if (str == "linear")
         return EaseFunction::linear;
+    else if (str == "ease_in_sine")
+        return EaseFunction::ease_in_sine;
+    else if (str == "ease_out_sine")
+        return EaseFunction::ease_out_sine;
+    else if (str == "ease_in_out_sine")
+        return EaseFunction::ease_in_out_sine;
+    else if (str == "ease_in_quad")
+        return EaseFunction::ease_in_quad;
+    else if (str == "ease_out_quad")
+        return EaseFunction::ease_out_quad;
+    else if (str == "ease_in_out_quad")
+        return EaseFunction::ease_in_out_quad;
+    else if (str == "ease_in_cubic")
+        return EaseFunction::ease_in_cubic;
+    else if (str == "ease_out_cubic")
+        return EaseFunction::ease_out_cubic;
+    else if (str == "ease_in_out_cubic")
+        return EaseFunction::ease_in_out_cubic;
+    else if (str == "ease_in_quart")
+        return EaseFunction::ease_in_quart;
+    else if (str == "ease_out_quart")
+        return EaseFunction::ease_out_quart;
+    else if (str == "ease_in_out_quart")
+        return EaseFunction::ease_in_out_quart;
+    else if (str == "ease_in_quint")
+        return EaseFunction::ease_in_quint;
+    else if (str == "ease_out_quint")
+        return EaseFunction::ease_out_quint;
+    else if (str == "ease_in_out_quint")
+        return EaseFunction::ease_in_out_quint;
+    else if (str == "ease_in_expo")
+        return EaseFunction::ease_in_expo;
+    else if (str == "ease_out_expo")
+        return EaseFunction::ease_out_expo;
+    else if (str == "ease_in_out_expo")
+        return EaseFunction::ease_in_out_expo;
+    else if (str == "ease_in_circ")
+        return EaseFunction::ease_in_circ;
+    else if (str == "ease_out_circ")
+        return EaseFunction::ease_out_circ;
+    else if (str == "ease_in_out_circ")
+        return EaseFunction::ease_in_out_circ;
+    else if (str == "ease_in_back")
+        return EaseFunction::ease_in_back;
     else if (str == "ease_out_back")
         return EaseFunction::ease_out_back;
+    else if (str == "ease_in_out_back")
+        return EaseFunction::ease_in_out_back;
+    else if (str == "ease_in_elastic")
+        return EaseFunction::ease_in_elastic;
+    else if (str == "ease_out_elastic")
+        return EaseFunction::ease_out_elastic;
+    else if (str == "ease_in_out_elastic")
+        return EaseFunction::ease_in_out_elastic;
+    else if (str == "ease_in_bounce")
+        return EaseFunction::ease_in_bounce;
+    else if (str == "ease_out_bounce")
+        return EaseFunction::ease_out_bounce;
+    else if (str == "ease_in_out_bounce")
+        return EaseFunction::ease_in_out_bounce;
     else
     {
         mir::log_error("from_string_ease_function: unknown string: %s", str.c_str());
@@ -51,7 +109,9 @@ EaseFunction miracle::from_string_ease_function(std::string const& str)
 
 AnimationType miracle::from_string_animation_type(std::string const& str)
 {
-    if (str == "slide")
+    if (str == "disabled")
+        return AnimationType::disabled;
+    else if (str == "slide")
         return AnimationType::slide;
     else if (str == "grow")
         return AnimationType::grow;
@@ -59,9 +119,7 @@ AnimationType miracle::from_string_animation_type(std::string const& str)
         return AnimationType::shrink;
     else
     {
-        {
-            mir::log_error("from_string_animation_type: unknown string: %s", str.c_str());
-            return AnimationType::max;
-        }
+        mir::log_error("from_string_animation_type: unknown string: %s", str.c_str());
+        return AnimationType::max;
     }
 }

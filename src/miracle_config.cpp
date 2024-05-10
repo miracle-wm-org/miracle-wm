@@ -787,12 +787,12 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
     std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
         {
          AnimationType::grow,
-         EaseFunction::ease_out_back,
+         EaseFunction::ease_in_out_back,
          0.25f,
          },
         {
          AnimationType::slide,
-         EaseFunction::ease_out_back,
+         EaseFunction::ease_in_out_back,
          0.25f,
          },
         {
@@ -840,7 +840,11 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
             parsed[(int)event].function = function;
             try_parse_value(node, "duration", parsed[(int)event].duration_seconds);
             try_parse_value(node, "c1", parsed[(int)event].c1);
+            try_parse_value(node, "c2", parsed[(int)event].c2);
             try_parse_value(node, "c3", parsed[(int)event].c3);
+            try_parse_value(node, "c4", parsed[(int)event].c4);
+            try_parse_value(node, "n1", parsed[(int)event].n1);
+            try_parse_value(node, "d1", parsed[(int)event].d1);
         }
     }
 

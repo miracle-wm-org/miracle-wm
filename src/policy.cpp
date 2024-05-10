@@ -329,6 +329,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     auto metadata = shared_output->advise_new_window(window_info, pending_type);
 
+    // Associate to an animation handle
+    metadata->set_animation_handle(animator.register_animateable());
+    node_interface.open(window_info.window());
+
     pending_type = WindowType::none;
     pending_output.reset();
 
