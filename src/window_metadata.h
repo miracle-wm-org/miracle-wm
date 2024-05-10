@@ -57,7 +57,6 @@ public:
     uint32_t get_animation_handle() const;
     void set_animation_handle(uint32_t);
 
-
 private:
     WindowType type;
     miral::Window window;

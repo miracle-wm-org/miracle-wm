@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_ANIMATOR_H
 
 #include "animation_defintion.h"
-#include <thread>
-#include <mutex>
-#include <glm/glm.hpp>
 #include <condition_variable>
 #include <functional>
-#include <optional>
+#include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
+#include <mutex>
+#include <optional>
+#include <thread>
 
 namespace mir
 {

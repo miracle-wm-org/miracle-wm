@@ -17,9 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animator.h"
 #include "miracle_config.h"
+#include <chrono>
 #include <mir/scene/surface.h>
 #include <mir/server_action_queue.h>
-#include <chrono>
 #define MIR_LOG_COMPONENT "animator"
 #include <mir/log.h>
 #define _USE_MATH_DEFINES
@@ -33,10 +33,10 @@ AnimationHandle const miracle::none_animation_handle = 0;
 Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,
-    std::function<void(AnimationStepResult const&)> const& callback)
-    : handle{handle},
-      definition{definition},
-      callback{callback}
+    std::function<void(AnimationStepResult const&)> const& callback) :
+    handle { handle },
+    definition { definition },
+    callback { callback }
 {
 }
 
@@ -67,17 +67,23 @@ namespace
 {
 float ease_out_bounce(AnimationDefinition const& defintion, float x)
 {
-    if (x < 1 / defintion.d1) {
+    if (x < 1 / defintion.d1)
+    {
         return defintion.n1 * x * x;
-    } else if (x < 2 / defintion.d1) {
+    }
+    else if (x < 2 / defintion.d1)
+    {
         return defintion.n1 * (x -= 1.5f / defintion.d1) * x + 0.75f;
-    } else if (x < 2.5 / defintion.d1) {
+    }
+    else if (x < 2.5 / defintion.d1)
+    {
         return defintion.n1 * (x -= 2.25f / defintion.d1) * x + 0.9375f;
-    } else {
+    }
+    else
+    {
         return defintion.n1 * (x -= 2.625f / defintion.d1) * x + 0.984375f;
     }
 }
-
 
 inline float ease(AnimationDefinition const& defintion, float t)
 {
@@ -124,9 +130,9 @@ inline float ease(AnimationDefinition const& defintion, float t)
         return t == 0
             ? 0
             : t == 1
-                ? 1
-                : t < 0.5 ? powf(2, 20 * t - 10) / 2
-                          : (2 - powf(2, -20 * t + 10)) / 2;
+            ? 1
+            : t < 0.5 ? powf(2, 20 * t - 10) / 2
+                      : (2 - powf(2, -20 * t + 10)) / 2;
     case EaseFunction::ease_in_circ:
         return 1 - sqrtf(1 - powf(t, 2));
     case EaseFunction::ease_out_circ:
@@ -149,22 +155,22 @@ inline float ease(AnimationDefinition const& defintion, float t)
         return t == 0
             ? 0
             : t == 1
-                ? 1
-                : -powf(2, 10 * t - 10) * sinf((t * 10 - 10.75f) * defintion.c4);
+            ? 1
+            : -powf(2, 10 * t - 10) * sinf((t * 10 - 10.75f) * defintion.c4);
     case EaseFunction::ease_out_elastic:
         return t == 0
             ? 0
             : t == 1
-                ? 1
-                : powf(2, -10 * t) * sinf((t * 10 - 0.75f) * defintion.c4) + 1;
+            ? 1
+            : powf(2, -10 * t) * sinf((t * 10 - 0.75f) * defintion.c4) + 1;
     case EaseFunction::ease_in_out_elastic:
         return t == 0
             ? 0
             : t == 1
-                ? 1
-                : t < 0.5
-                    ? -(powf(2, 20 * t - 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2
-                    : (powf(2, -20 * t + 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2 + 1;
+            ? 1
+            : t < 0.5
+            ? -(powf(2, 20 * t - 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2
+            : (powf(2, -20 * t + 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2 + 1;
     case EaseFunction::ease_in_bounce:
         return 1 - ease_out_bounce(defintion, 1 - t);
     case EaseFunction::ease_out_bounce:
@@ -249,10 +255,11 @@ AnimationStepResult Animation::step()
 
 Animator::Animator(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
-    std::shared_ptr<MiracleConfig> const& config)
-    : server_action_queue{server_action_queue},
-      config{config},
-      run_thread([&]() { run(); })
+    std::shared_ptr<MiracleConfig> const& config) :
+    server_action_queue { server_action_queue },
+    config { config },
+    run_thread([&]()
+{ run(); })
 {
 }
 
@@ -284,10 +291,10 @@ AnimationHandle Animator::window_move(
     {
         callback(
             { handle,
-            true,
-            glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-            glm::mat4(1.f) });
+                true,
+                glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
+                glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+                glm::mat4(1.f) });
         return handle;
     }
 
@@ -320,14 +327,13 @@ AnimationHandle Animator::window_open(
     auto handle = next_handle++;
     if (!config->are_animations_enabled())
     {
-        callback({ handle, true});
+        callback({ handle, true });
         return handle;
     }
 
-    queued_animations.push_back({
-        handle,
+    queued_animations.push_back({ handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_open],
-        callback});
+        callback });
     cv.notify_one();
     return handle;
 }
@@ -365,7 +371,8 @@ void Animator::run()
         time_start = clock::now();
         lag += std::chrono::duration_cast<std::chrono::nanoseconds>(delta_time);
 
-        while(lag >= timestep) {
+        while (lag >= timestep)
+        {
             lag -= timestep;
 
             std::vector<PendingUpdateData> update_data;
@@ -384,7 +391,8 @@ void Animator::run()
                 }
             }
 
-            server_action_queue->enqueue(this, [&, update_data]() {
+            server_action_queue->enqueue(this, [&, update_data]()
+            {
                 if (!running)
                     return;
 

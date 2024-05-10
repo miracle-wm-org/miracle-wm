@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
-#include <miral/window.h>
 #include <map>
+#include <miral/window.h>
 
 namespace miracle
 {
@@ -37,4 +37,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLEWM_SURFACE_TRACKER_H
+#endif // MIRACLEWM_SURFACE_TRACKER_H

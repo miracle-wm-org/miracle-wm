@@ -61,7 +61,7 @@ Policy::Policy(
         [&]()
 { return get_active_output(); }) },
     i3_command_executor(*this, workspace_manager, tools),
-    surface_tracker{surface_tracker},
+    surface_tracker { surface_tracker },
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
     animator(server.the_main_loop(), config),
     node_interface(tools, animator)

@@ -403,7 +403,7 @@ Renderer::Renderer(
     display_transform(1),
     gl_interface { std::move(gl_interface) },
     config { config },
-    surface_tracker{ surface_tracker }
+    surface_tracker { surface_tracker }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);

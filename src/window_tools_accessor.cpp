@@ -35,4 +35,7 @@ WindowToolsAccessor& WindowToolsAccessor::get_instance()
     return instance;
 }
 
-WindowToolsAccessor::WindowToolsAccessor(): tools(nullptr) {}
+WindowToolsAccessor::WindowToolsAccessor() :
+    tools(nullptr)
+{
+}

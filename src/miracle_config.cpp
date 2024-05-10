@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle_config"
 
 #include "miracle_config.h"
-#include "yaml-cpp/yaml.h"
 #include "yaml-cpp/node/node.h"
+#include "yaml-cpp/yaml.h"
 #include <cstdlib>
 #include <fstream>
 #include <glib-2.0/glib.h>
@@ -786,20 +786,20 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
 {
     std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
         {
-            AnimationType::grow,
-            EaseFunction::ease_out_back,
-            0.25f,
-            },
+         AnimationType::grow,
+         EaseFunction::ease_out_back,
+         0.25f,
+         },
         {
-            AnimationType::slide,
-            EaseFunction::ease_out_back,
-            0.25f,
-        },
+         AnimationType::slide,
+         EaseFunction::ease_out_back,
+         0.25f,
+         },
         {
-            AnimationType::shrink,
-            EaseFunction::ease_out_back,
-            0.25f,
-        }
+         AnimationType::shrink,
+         EaseFunction::ease_out_back,
+         0.25f,
+         }
     });
     if (root["animations"])
     {
