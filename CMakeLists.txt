@@ -62,6 +62,7 @@ add_library(miracle-wm-implementation
     src/surface_tracker.cpp
     src/window_tools_accessor.cpp
     src/animator.cpp
+    src/animation_definition.cpp
 )
 
 add_executable(miracle-wm
