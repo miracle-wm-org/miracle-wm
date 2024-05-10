@@ -71,7 +71,6 @@ public:
     AnimationStepResult init();
     AnimationStepResult step();
     [[nodiscard]] std::function<void(AnimationStepResult const&)> const& get_callback() const { return callback; }
-    [[nodiscard]] AnimationHandle get_handle() const { return handle; }
 
 private:
     AnimationHandle handle;
@@ -107,9 +106,6 @@ public:
         AnimationHandle handle,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    void cancel(AnimationHandle);
-    void pause(AnimationHandle);
-    void resume(AnimationHandle);
     void stop();
 
 private:
