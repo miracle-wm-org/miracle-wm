@@ -345,6 +345,36 @@ void Animator::window_open(
     cv.notify_one();
 }
 
+void Animator::workspace_move_to(
+    AnimationHandle handle,
+    std::function<void(AnimationStepResult const&)> const& from_callback,
+    std::function<void(AnimationStepResult const&)> const& to_callback)
+{
+    if (!config->are_animations_enabled())
+    {
+        from_callback({ handle, true });
+        to_callback({ handle, true });
+        return;
+    }
+
+    Animation from_animation = { handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
+        from_callback };
+    from_callback(from_animation.init());
+
+    Animation to_animation = { handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_show],
+        to_callback };
+
+    from_callback(from_animation.init());
+    to_callback(to_animation.init());
+
+    std::lock_guard<std::mutex> lock(processing_lock);
+    queued_animations.push_back(std::move(from_animation));
+    queued_animations.push_back(std::move(to_animation));
+    cv.notify_one();
+}
+
 namespace
 {
 struct PendingUpdateData

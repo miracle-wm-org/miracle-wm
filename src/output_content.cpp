@@ -15,13 +15,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "window_metadata.h"
+#include "workspace_content.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "output_content"
 
-#include "output_content.h"
+#include "animator.h"
 #include "leaf_node.h"
+#include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
 
@@ -34,14 +39,17 @@ OutputContent::OutputContent(
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface) :
+    TilingInterface& node_interface,
+    Animator& animator) :
     output { output },
     workspace_manager { workspace_manager },
     area { area },
     tools { tools },
     floating_window_manager { floating_window_manager },
     config { config },
-    node_interface { node_interface }
+    node_interface { node_interface },
+    animator { animator },
+    animation_handle { animator.register_animateable() }
 {
 }
 
@@ -402,6 +410,8 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
+    std::shared_ptr<WorkspaceContent> to;
+    std::shared_ptr<WorkspaceContent> from;
     for (auto& workspace : workspaces)
     {
         if (workspace->get_workspace() == key)
@@ -409,34 +419,79 @@ bool OutputContent::advise_workspace_active(int key)
             if (active_workspace == key)
                 return true;
 
-            std::shared_ptr<WorkspaceContent> previous_workspace = nullptr;
-            std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
-            for (auto& other : workspaces)
-            {
-                if (other->get_workspace() == active_workspace)
-                {
-                    previous_workspace = other;
-                    pinned_windows = other->hide();
-                    break;
-                }
-            }
+            to = workspace;
+        }
 
-            active_workspace = key;
-            workspace->show(pinned_windows);
+        if (workspace->get_workspace() == active_workspace)
+            from = workspace;
+    }
+
+    // TODO: Handle pinned windows
+    // TODO:
+    //  1. Show all windows on all workspaces from the current one to the target on this output
+    //  2. Translate all windows from their current position by the distance to travel in X
+    //  3. Hide all other windows except the windows that are being shown
+    // Except pinned windows
+    animator.workspace_move_to(animation_handle,
+        [&](AnimationStepResult const& asr)
+    {
+        if (!from)
+            return;
+
+        if (asr.is_complete)
+        {
+            from->hide();
+            return;
+        }
+
+        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            if (metadata->get_is_pinned())
+                return;
+
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (!surface)
+                return;
+
+            if (asr.transform)
+                surface->set_transformation(asr.transform.value());
+        });
+    },
+        [&](AnimationStepResult const& asr)
+    {
+        if (asr.is_complete)
+        {
+            to->show({});
 
             // Important: Delete the workspace only after we have shown the new one because we may want
             // to move a node to the new workspace.
-            if (previous_workspace != nullptr)
+            if (from != nullptr)
             {
-                auto active_tree = previous_workspace->get_tree();
-                if (active_tree->is_empty() && previous_workspace->get_floating_windows().empty())
-                    workspace_manager.delete_workspace(previous_workspace->get_workspace());
+                auto active_tree = from->get_tree();
+                if (active_tree->is_empty() && from->get_floating_windows().empty())
+                    workspace_manager.delete_workspace(from->get_workspace());
             }
-            return true;
+            return;
         }
-    }
 
-    return false;
+        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            if (metadata->get_is_pinned())
+                return;
+
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (!surface)
+                return;
+
+            if (asr.transform)
+                surface->set_transformation(asr.transform.value());
+        });
+    });
+
+    active_workspace = key;
+    return true;
 }
 
 void OutputContent::advise_application_zone_create(miral::Zone const& application_zone)

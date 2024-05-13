@@ -423,7 +423,7 @@ void Policy::advise_output_create(miral::Output const& output)
 {
     auto new_tree = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools,
-        floating_window_manager, config, node_interface);
+        floating_window_manager, config, node_interface, animator);
     workspace_manager.request_first_available_workspace(new_tree);
     output_list.push_back(new_tree);
     if (active_output == nullptr)

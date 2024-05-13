@@ -106,6 +106,11 @@ public:
         AnimationHandle handle,
         std::function<void(AnimationStepResult const&)> const& callback);
 
+    void workspace_move_to(
+        AnimationHandle handle,
+        std::function<void(AnimationStepResult const&)> const& from_callback,
+        std::function<void(AnimationStepResult const&)> const& to_callback);
+
     void stop();
 
 private:

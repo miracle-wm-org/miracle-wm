@@ -799,6 +799,16 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
          AnimationType::shrink,
          EaseFunction::ease_out_back,
          0.25f,
+         },
+        {
+         AnimationType::grow,
+         EaseFunction::ease_out_back,
+         0.5f,
+        },
+        {
+         AnimationType::shrink,
+         EaseFunction::ease_out_back,
+         0.5f,
          }
     });
     if (root["animations"])
