@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -410,10 +411,13 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
-    std::shared_ptr<WorkspaceContent> to;
-    std::shared_ptr<WorkspaceContent> from;
+    std::shared_ptr<WorkspaceContent> to = nullptr;
+    std::shared_ptr<WorkspaceContent> from = nullptr;
     for (auto& workspace : workspaces)
     {
+        if (workspace->get_workspace() == active_workspace)
+            from = workspace;
+        
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
@@ -421,9 +425,6 @@ bool OutputContent::advise_workspace_active(int key)
 
             to = workspace;
         }
-
-        if (workspace->get_workspace() == active_workspace)
-            from = workspace;
     }
 
     // TODO: Handle pinned windows
@@ -433,64 +434,71 @@ bool OutputContent::advise_workspace_active(int key)
     //  3. Hide all other windows except the windows that are being shown
     // Except pinned windows
     animator.workspace_move_to(animation_handle,
-        [&](AnimationStepResult const& asr)
-    {
-        if (!from)
-            return;
-
-        if (asr.is_complete)
+        area.size.width.as_int(),
+        [from = from, this](AnimationStepResult const& asr)
         {
-            from->hide();
-            return;
-        }
-
-        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-        {
-            if (metadata->get_is_pinned())
+            if (!from)
                 return;
 
-            auto& window = metadata->get_window();
-            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-            if (!surface)
-                return;
-
-            if (asr.transform)
-                surface->set_transformation(asr.transform.value());
-        });
-    },
-        [&](AnimationStepResult const& asr)
-    {
-        if (asr.is_complete)
-        {
-            to->show({});
-
-            // Important: Delete the workspace only after we have shown the new one because we may want
-            // to move a node to the new workspace.
-            if (from != nullptr)
+            if (asr.is_complete)
             {
-                auto active_tree = from->get_tree();
-                if (active_tree->is_empty() && from->get_floating_windows().empty())
-                    workspace_manager.delete_workspace(from->get_workspace());
+                from->hide();
+                return;
             }
-            return;
-        }
 
-        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+            from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+            {
+                if (metadata->get_is_pinned())
+                    return;
+
+                auto& window = metadata->get_window();
+                AnimationStepResult for_window = asr;
+                if (for_window.position)
+                {
+                    for_window.transform =  glm::translate(
+                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
+                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
+                    for_window.position = std::nullopt;
+                    for_window.size = std::nullopt;
+                }
+
+                node_interface.on_animation(for_window, metadata);
+            });
+        },
+        [to=to,from=from, this](AnimationStepResult const& asr)
         {
-            if (metadata->get_is_pinned())
-                return;
+            to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+            {
+                if (metadata->get_is_pinned())
+                    return;
 
-            auto& window = metadata->get_window();
-            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-            if (!surface)
-                return;
+                auto& window = metadata->get_window();
+                AnimationStepResult for_window = asr;
+                if (for_window.position)
+                {
+                    for_window.transform =  glm::translate(
+                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
+                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
+                    for_window.position = std::nullopt;
+                    for_window.size = std::nullopt;
+                }
 
-            if (asr.transform)
-                surface->set_transformation(asr.transform.value());
+                node_interface.on_animation(for_window, metadata);
+            });
         });
-    });
 
+    to->show({});
     active_workspace = key;
+
+    // Important: Delete the workspace only after we have shown the new one because we may want
+    // to move a node to the new workspace.
+    if (from != nullptr)
+    {
+        auto active_tree = from->get_tree();
+        if (active_tree->is_empty() && from->get_floating_windows().empty())
+            workspace_manager.delete_workspace(from->get_workspace());
+    }
+
     return true;
 }
 

@@ -196,6 +196,16 @@ AnimationStepResult Animation::init()
             {},
             glm::mat4(0.f)
         };
+    case AnimationType::slide:
+        return {
+            handle,
+            false,
+            from.has_value()
+                ? std::optional<glm::vec2>(glm::vec2(from.value().top_left.x.as_int(), from.value().top_left.y.as_int()))
+                : std::nullopt,
+            {},
+            {}
+        };
     default:
         return {
             handle,
@@ -215,8 +225,8 @@ AnimationStepResult Animation::step()
         return {
             handle,
             true,
-            glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+            !to.has_value() ? std::nullopt : std::optional<glm::vec2>(glm::vec2(to.value().top_left.x.as_int(), to.value().top_left.y.as_int())),
+            !to.has_value() ? std::nullopt : std::optional<glm::vec2>(glm::vec2(to.value().size.width.as_int(), to.value().size.height.as_int())),
             glm::mat4(1.f),
         };
     }
@@ -227,20 +237,20 @@ AnimationStepResult Animation::step()
     case AnimationType::slide:
     {
         auto p = ease(definition, t);
-        auto distance = to.top_left - from.top_left;
+        auto distance = to.value().top_left - from.value().top_left;
         float x = (float)distance.dx.as_int() * p;
         float y = (float)distance.dy.as_int() * p;
 
         glm::vec2 position = {
-            (float)from.top_left.x.as_int() + x,
-            (float)from.top_left.y.as_int() + y
+            (float)from.value().top_left.x.as_int() + x,
+            (float)from.value().top_left.y.as_int() + y
         };
 
         return {
             handle,
             false,
             position,
-            glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+            glm::vec2(to.value().size.width.as_int(), to.value().size.height.as_int()),
             std::nullopt
         };
     }
@@ -347,6 +357,7 @@ void Animator::window_open(
 
 void Animator::workspace_move_to(
     AnimationHandle handle,
+    int x_offset,
     std::function<void(AnimationStepResult const&)> const& from_callback,
     std::function<void(AnimationStepResult const&)> const& to_callback)
 {
@@ -357,14 +368,34 @@ void Animator::workspace_move_to(
         return;
     }
 
-    Animation from_animation = { handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
-        from_callback };
-    from_callback(from_animation.init());
+    mir::geometry::Rectangle from_start(
+        mir::geometry::Point{0, 0},
+        mir::geometry::Size{0, 0}
+    );
+    mir::geometry::Rectangle from_end(
+        mir::geometry::Point{-x_offset, 0},
+        mir::geometry::Size{0, 0}
+    );
 
-    Animation to_animation = { handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_show],
-        to_callback };
+    Animation from_animation = Animation::window_move(handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
+        from_start,
+        from_end,
+        from_callback);
+
+    mir::geometry::Rectangle to_start(
+        mir::geometry::Point{x_offset, 0},
+        mir::geometry::Size{0, 0}
+    );
+    mir::geometry::Rectangle to_end(
+        mir::geometry::Point{0, 0},
+        mir::geometry::Size{0, 0}
+    );
+    Animation to_animation = Animation::window_move(handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
+        to_start,
+        to_end,
+        to_callback);
 
     from_callback(from_animation.init());
     to_callback(to_animation.init());

@@ -75,8 +75,8 @@ public:
 private:
     AnimationHandle handle;
     AnimationDefinition definition;
-    mir::geometry::Rectangle from;
-    mir::geometry::Rectangle to;
+    std::optional<mir::geometry::Rectangle> from;
+    std::optional<mir::geometry::Rectangle> to;
     const float timestep_seconds = 0.016;
     std::function<void(AnimationStepResult const&)> callback;
     float runtime_seconds = 0.f;
@@ -108,6 +108,7 @@ public:
 
     void workspace_move_to(
         AnimationHandle handle,
+        int x_offset, // The offset in X from which the "to" callback transform begins if it is a slide
         std::function<void(AnimationStepResult const&)> const& from_callback,
         std::function<void(AnimationStepResult const&)> const& to_callback);
 

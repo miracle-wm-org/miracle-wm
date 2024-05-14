@@ -85,9 +85,6 @@ glm::vec4 parse_color(YAML::Node const& node)
 
 std::string wrap_command(std::string const& command)
 {
-    if (std::getenv("SNAP"))
-        return "miracle-wm-unsnap " + command;
-
     return command;
 }
 
@@ -801,14 +798,14 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
          0.25f,
          },
         {
-         AnimationType::grow,
-         EaseFunction::ease_out_back,
-         0.5f,
+         AnimationType::slide,
+         EaseFunction::linear,
+         1.f
         },
         {
-         AnimationType::shrink,
-         EaseFunction::ease_out_back,
-         0.5f,
+         AnimationType::slide,
+         EaseFunction::linear,
+         1.f
          }
     });
     if (root["animations"])
