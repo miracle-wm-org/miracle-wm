@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
+#include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/window_manager_tools.h>
 
@@ -43,6 +44,7 @@ public:
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
     void show(std::vector<std::shared_ptr<WindowMetadata>> const&);
     std::vector<std::shared_ptr<WindowMetadata>> hide();
+    void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);

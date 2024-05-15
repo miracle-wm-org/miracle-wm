@@ -46,21 +46,9 @@ void WindowManagerToolsTilingInterface::open(miral::Window const& window)
 
     animator.window_open(
         metadata->get_animation_handle(),
-        [this, window = window](miracle::AnimationStepResult const& result)
+        [this, metadata=metadata](miracle::AnimationStepResult const& result)
     {
-        if (!result.transform)
-            return;
-
-        auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-        if (!surface)
-            return;
-
-        surface->set_transformation(result.transform.value());
-
-        if (result.is_complete)
-            clip(window, { window.top_left(), window.size() });
-        else
-            noclip(window);
+        on_animation(result, metadata);
     });
 }
 
@@ -86,41 +74,7 @@ void WindowManagerToolsTilingInterface::set_rectangle(
         r,
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
-        auto window = metadata->get_window();
-        auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-        if (!surface)
-            return;
-
-        if (result.transform)
-            surface->set_transformation(result.transform.value());
-
-        miral::WindowSpecification spec;
-        auto top_left = result.position
-            ? mir::geometry::Point(
-                  result.position.value().x,
-                  result.position.value().y)
-            : window.top_left();
-        auto size = result.size
-            ? mir::geometry::Size(
-                  result.size.value().x,
-                  result.size.value().y)
-            : window.size();
-
-        spec.top_left() = top_left;
-        spec.size() = size;
-        tools.modify_window(window, spec);
-
-        auto& window_info = tools.info_for(window);
-        mir::geometry::Rectangle new_rectangle(top_left, size);
-        clip(window, new_rectangle);
-
-        for (auto const& child : window_info.children())
-        {
-            miral::WindowSpecification sub_spec;
-            sub_spec.top_left() = spec.top_left();
-            sub_spec.size() = spec.size();
-            tools.modify_window(child, sub_spec);
-        }
+        on_animation(result, metadata);
     });
 }
 
@@ -186,4 +140,48 @@ void WindowManagerToolsTilingInterface::raise(miral::Window const& window)
 void WindowManagerToolsTilingInterface::send_to_back(miral::Window const& window)
 {
     tools.send_tree_to_back(window);
+}
+
+void WindowManagerToolsTilingInterface::on_animation(
+    miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const& metadata)
+{
+    auto window = metadata->get_window();
+    auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+    if (!surface)
+        return;
+
+    if (result.transform)
+        surface->set_transformation(result.transform.value());
+
+    miral::WindowSpecification spec;
+    auto top_left = result.position
+        ? mir::geometry::Point(
+              result.position.value().x,
+              result.position.value().y)
+        : window.top_left();
+    auto size = result.size
+        ? mir::geometry::Size(
+              result.size.value().x,
+              result.size.value().y)
+        : window.size();
+
+    spec.top_left() = top_left;
+    spec.size() = size;
+    tools.modify_window(window, spec);
+
+    auto& window_info = tools.info_for(window);
+    mir::geometry::Rectangle new_rectangle(top_left, size);
+
+    if (result.is_complete)
+        clip(window, new_rectangle);
+    else
+        noclip(window);
+
+    for (auto const& child : window_info.children())
+    {
+        miral::WindowSpecification sub_spec;
+        sub_spec.top_left() = spec.top_left();
+        sub_spec.size() = spec.size();
+        tools.modify_window(child, sub_spec);
+    }
 }

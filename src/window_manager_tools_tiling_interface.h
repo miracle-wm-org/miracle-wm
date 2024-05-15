@@ -41,6 +41,7 @@ public:
     std::shared_ptr<WindowMetadata> get_metadata(miral::Window const&, TilingWindowTree const*) override;
     void raise(miral::Window const&) override;
     void send_to_back(miral::Window const&) override;
+    void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const&) override;
 
 private:
     miral::WindowManagerTools tools;
