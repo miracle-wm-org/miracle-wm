@@ -428,13 +428,11 @@ bool OutputContent::advise_workspace_active(int key)
     }
 
     // TODO: Handle pinned windows
-    // TODO:
-    //  1. Show all windows on all workspaces from the current one to the target on this output
-    //  2. Translate all windows from their current position by the distance to travel in X
-    //  3. Hide all other windows except the windows that are being shown
-    // Except pinned windows
+    // TODO This is an abuse of the sliding animation system, but it at least proves a point. "Slide"
+    //  means different things in different contexts, so it seems.
+    auto travel_distance = active_workspace > key ? (-area.size.width.as_int()) : area.size.width.as_int();
     animator.workspace_move_to(animation_handle,
-        area.size.width.as_int(),
+        travel_distance,
         [from = from, this](AnimationStepResult const& asr)
         {
             if (!from)
