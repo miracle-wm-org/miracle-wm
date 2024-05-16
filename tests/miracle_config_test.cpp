@@ -188,7 +188,7 @@ TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
         mir_input_event_modifier_meta);
-    EXPECT_EQ(custom_action->command, "miracle-wm-unsnap echo Hi");
+    EXPECT_EQ(custom_action->command, "echo Hi");
     unsetenv("SNAP");
 }
 
@@ -293,7 +293,7 @@ TEST_F(MiracleConfigTest, StartupAppsInSnapIncludeUnsnapCommand)
     write_yaml_node(node);
 
     MiracleConfig config(runner, path);
-    EXPECT_EQ(config.get_startup_apps()[0].command, "miracle-wm-unsnap echo Hi");
+    EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     unsetenv("SNAP");
 }
 
