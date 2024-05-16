@@ -23,17 +23,16 @@ jobs:
     - name: Add PPA
       run: | 
         sudo apt-add-repository ppa:mir-team/dev
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
 
     - name: Install dependencies
       run: |
-        sudo apt update -y
-        sudo apt install gcc-13
+        sudo apt install gcc-13  g++-13
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
         sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
           libmiroil-dev libmirrenderer-dev libgles2-mesa-dev
-        g++ --version
 
 
     - name: Configure CMake
