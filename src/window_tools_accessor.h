@@ -29,8 +29,8 @@ public:
     void set_tools(miral::WindowManagerTools const& tools);
     miral::WindowManagerTools const& get_tools();
 
-    WindowToolsAccessor(WindowToolsAccessor &other) = delete;
-    void operator=(const WindowToolsAccessor &) = delete;
+    WindowToolsAccessor(WindowToolsAccessor& other) = delete;
+    void operator=(const WindowToolsAccessor&) = delete;
 
     static WindowToolsAccessor& get_instance();
 
@@ -43,4 +43,4 @@ private:
 
 }
 
-#endif //MIRACLEWM_WINDOWTOOLSACCESSOR_H
+#endif // MIRACLEWM_WINDOWTOOLSACCESSOR_H

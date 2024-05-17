@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
+#include "animator.h"
 #include "miral/window.h"
 #include "tiling_window_tree.h"
 #include "window_metadata.h"
@@ -31,6 +32,7 @@ namespace miracle
 class WorkspaceManager;
 class MiracleConfig;
 class WindowManagerToolsTilingInterface;
+class Animator;
 
 class OutputContent
 {
@@ -42,7 +44,8 @@ public:
         miral::WindowManagerTools const& tools,
         miral::MinimalWindowManager& floating_window_manager,
         std::shared_ptr<MiracleConfig> const& options,
-        TilingInterface&);
+        TilingInterface&,
+        Animator&);
     ~OutputContent() = default;
 
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_active_tree() const;
@@ -113,11 +116,13 @@ private:
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
     TilingInterface& node_interface;
+    Animator& animator;
     int active_workspace = -1;
     std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     miral::Window active_window;
+    AnimationHandle animation_handle;
 };
 
 }

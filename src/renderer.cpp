@@ -403,7 +403,7 @@ Renderer::Renderer(
     display_transform(1),
     gl_interface { std::move(gl_interface) },
     config { config },
-    surface_tracker{ surface_tracker }
+    surface_tracker { surface_tracker }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -521,10 +521,10 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        auto clip_x = clip_area.value().top_left.x.as_int();
+        glm::vec4 transformed_position = renderable.transformation() * glm::vec4(clip_area.value().top_left.x.as_int(), clip_area.value().top_left.y.as_int(), 0, 1);
         // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int() - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_x, clip_y, 0, 1);
+        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int() - transformed_position.y - clip_area.value().size.height.as_int();
+        glm::vec4 clip_pos(transformed_position.x, clip_y, 0, 1);
         clip_pos = display_transform * clip_pos;
 
         glScissor(
