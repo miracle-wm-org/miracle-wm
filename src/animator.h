@@ -73,7 +73,6 @@ private:
     AnimationDefinition definition;
     std::optional<mir::geometry::Rectangle> from;
     std::optional<mir::geometry::Rectangle> to;
-    const float timestep_seconds = 0.016;
     std::function<void(AnimationStepResult const&)> callback;
     float runtime_seconds = 0.f;
 };
@@ -112,6 +111,7 @@ public:
     void stop();
     void step();
 
+    static constexpr float timestep_seconds = 0.016;
 private:
     void run();
 

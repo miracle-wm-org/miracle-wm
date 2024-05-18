@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -173,6 +174,16 @@ inline float ease(AnimationDefinition const& defintion, float t)
         return 1.f;
     }
 }
+
+inline float interpolate_scale(float p, float start, float end)
+{
+    float diff = end - start;
+    float current = start + diff * p;
+    float percent_traveled = current / end;
+    if (percent_traveled < 0) percent_traveled *= -1;
+    return percent_traveled;
+}
+
 }
 
 AnimationStepResult Animation::init()
@@ -180,13 +191,9 @@ AnimationStepResult Animation::init()
     switch (definition.type)
     {
     case AnimationType::grow:
-        return {
-            handle,
-            false,
-            {},
-            {},
-            glm::mat4(0.f)
-        };
+        return { handle, false, {}, {}, glm::mat4(0.f) };
+    case AnimationType::shrink:
+        return { handle, false, {}, {}, glm::mat4(1.f) };
     case AnimationType::slide:
         return {
             handle,
@@ -198,19 +205,13 @@ AnimationStepResult Animation::init()
             {}
         };
     default:
-        return {
-            handle,
-            false,
-            {},
-            {},
-            glm::mat4(1.f)
-        };
+        return { handle, false, {}, {}, {} };
     }
 }
 
 AnimationStepResult Animation::step()
 {
-    runtime_seconds += timestep_seconds;
+    runtime_seconds += Animator::timestep_seconds;
     if (runtime_seconds >= definition.duration_seconds)
     {
         return {
@@ -237,12 +238,26 @@ AnimationStepResult Animation::step()
             (float)from.value().top_left.y.as_int() + y
         };
 
+        float x_scale = interpolate_scale(p, static_cast<float>(from->size.width.as_value()), static_cast<float>(to->size.width.as_value()));
+        float y_scale = interpolate_scale(p, static_cast<float>(from->size.height.as_value()), static_cast<float>(to->size.height.as_value()));
+
+        glm::vec3 translate(
+            (float)-to->size.width.as_value() / 2.f,
+            (float)-to->size.height.as_value() / 2.f,
+            0);
+        auto inverse_translate = -translate;
+        glm::mat4 scale_matrix = glm::translate(
+            glm::scale(
+                glm::translate(translate),
+                glm::vec3(x_scale, y_scale, 1.f)),
+            inverse_translate);
+
         return {
             handle,
             false,
             position,
             glm::vec2(to.value().size.width.as_int(), to.value().size.height.as_int()),
-            std::nullopt
+            scale_matrix
         };
     }
     case AnimationType::grow:
@@ -407,7 +422,6 @@ struct PendingUpdateData
 
 void Animator::run()
 {
-    // https://gist.github.com/mariobadr/673bbd5545242fcf9482
     using clock = std::chrono::high_resolution_clock;
     constexpr std::chrono::nanoseconds timestep(16ms);
     std::chrono::nanoseconds lag(0ns);

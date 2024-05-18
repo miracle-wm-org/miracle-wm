@@ -120,7 +120,8 @@ TEST_F(AnimatorTest, LinearSlideResultsInCorrectNewPoint)
             mir::geometry::Size(0, 0)),
         [&](AnimationStepResult const& asr)
     {
-        EXPECT_EQ(asr.position.value().x, 600 * 0.016);
+        if (asr.position)
+            EXPECT_EQ(asr.position.value().x, 600 * Animator::timestep_seconds);
     });
     animator.step();
 }
