@@ -112,7 +112,9 @@ public:
         std::function<void(AnimationStepResult const&)> const& from_callback,
         std::function<void(AnimationStepResult const&)> const& to_callback);
 
+    void start();
     void stop();
+    void step();
 
 private:
     void run();

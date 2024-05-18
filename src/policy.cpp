@@ -66,8 +66,8 @@ Policy::Policy(
     animator(server.the_main_loop(), config),
     node_interface(tools, animator)
 {
+    animator.start();
     workspace_observer_registrar.register_interest(ipc);
-
     WindowToolsAccessor::get_instance().set_tools(tools);
 }
 

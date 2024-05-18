@@ -290,10 +290,13 @@ Animator::Animator(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<MiracleConfig> const& config) :
     server_action_queue { server_action_queue },
-    config { config },
-    run_thread([&]()
-{ run(); })
+    config { config }
 {
+}
+
+void Animator::start()
+{
+    run_thread = std::thread([&](){ run(); });
 }
 
 Animator::~Animator()
@@ -442,33 +445,37 @@ void Animator::run()
         while (lag >= timestep)
         {
             lag -= timestep;
-
-            std::vector<PendingUpdateData> update_data;
-            {
-                std::lock_guard<std::mutex> lock(processing_lock);
-                for (auto it = queued_animations.begin(); it != queued_animations.end();)
-                {
-                    auto& item = *it;
-                    auto result = item.step();
-
-                    update_data.push_back({ result, item.get_callback() });
-                    if (result.is_complete)
-                        it = queued_animations.erase(it);
-                    else
-                        it++;
-                }
-            }
-
-            server_action_queue->enqueue(this, [&, update_data]()
-            {
-                if (!running)
-                    return;
-
-                for (auto const& update_item : update_data)
-                    update_item.callback(update_item.result);
-            });
+            step();
         }
     }
+}
+
+void Animator::step()
+{
+    std::vector<PendingUpdateData> update_data;
+    {
+        std::lock_guard<std::mutex> lock(processing_lock);
+        for (auto it = queued_animations.begin(); it != queued_animations.end();)
+        {
+            auto& item = *it;
+            auto result = item.step();
+
+            update_data.push_back({ result, item.get_callback() });
+            if (result.is_complete)
+                it = queued_animations.erase(it);
+            else
+                it++;
+        }
+    }
+
+    server_action_queue->enqueue(this, [&, update_data]()
+    {
+        if (!running)
+            return;
+
+        for (auto const& update_item : update_data)
+            update_item.callback(update_item.result);
+    });
 }
 
 void Animator::stop()
