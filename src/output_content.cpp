@@ -96,7 +96,7 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     case WindowType::tiled:
     {
         auto node = get_active_tree()->advise_new_window(window_info);
-        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this, active_workspace);
+        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         metadata->associate_to_node(node);
         break;
     }
@@ -440,48 +440,47 @@ bool OutputContent::advise_workspace_active(int key)
 
         if (asr.is_complete)
         {
+            from->set_transform(glm::mat4(1.f));
             from->hide();
             return;
         }
 
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        from->set_transform(other.transform.value());
+
         from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
-            if (metadata->get_is_pinned())
-                return;
-
             auto& window = metadata->get_window();
-            AnimationStepResult for_window = asr;
-            if (for_window.position)
-            {
-                for_window.transform = glm::translate(
-                    for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                    glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                for_window.position = std::nullopt;
-                for_window.size = std::nullopt;
-            }
-
-            node_interface.on_animation(for_window, metadata);
+            WindowSpecification spec;
+            spec.top_left() = window.top_left();
+            tools.modify_window(window, spec);
         });
     },
         [to = to, from = from, this](AnimationStepResult const& asr)
     {
+        if (asr.is_complete)
+        {
+            to->set_transform(glm::mat4(1.f));
+            return;
+        }
+
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        to->set_transform(other.transform.value());
+
         to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
-            if (metadata->get_is_pinned())
-                return;
-
             auto& window = metadata->get_window();
-            AnimationStepResult for_window = asr;
-            if (for_window.position)
-            {
-                for_window.transform = glm::translate(
-                    for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                    glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                for_window.position = std::nullopt;
-                for_window.size = std::nullopt;
-            }
-
-            node_interface.on_animation(for_window, metadata);
+            WindowSpecification spec;
+            spec.top_left() = window.top_left();
+            tools.modify_window(window, spec);
         });
     });
 
@@ -649,7 +648,7 @@ void OutputContent::request_toggle_active_float()
         WindowSpecification spec = floating_window_manager.place_new_window(
             tools.info_for(active_window.application()),
             prev_spec);
-        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this, active_workspace);
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, get_active_workspace());
         spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
         tools.modify_window(active_window, spec);
 

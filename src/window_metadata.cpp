@@ -21,18 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window) :
-    WindowMetadata(type, window, nullptr, -1)
+    WindowMetadata(type, window, nullptr)
 {
 }
 
 WindowMetadata::WindowMetadata(
     miracle::WindowType type,
     miral::Window const& window,
-    OutputContent* output,
-    int workspace) :
+    std::shared_ptr<WorkspaceContent> const& workspace) :
     type { type },
     window { window },
-    output { output },
     workspace { workspace }
 {
 }
@@ -62,18 +60,19 @@ void WindowMetadata::toggle_pin_to_desktop()
 
 bool WindowMetadata::is_focused() const
 {
+    auto output = workspace->get_output();
     if (!output)
         return false;
 
     return output->get_active_window() == window;
 }
 
-void WindowMetadata::set_workspace(int in_workspace)
+void WindowMetadata::set_workspace(std::shared_ptr<WorkspaceContent> const& in_workspace)
 {
     workspace = in_workspace;
 }
 
-int WindowMetadata::get_workspace() const
+std::shared_ptr<WorkspaceContent> const& WindowMetadata::get_workspace() const
 {
     return workspace;
 }
@@ -93,4 +92,12 @@ uint32_t WindowMetadata::get_animation_handle() const
 void WindowMetadata::set_animation_handle(uint32_t handle)
 {
     animation_handle = handle;
+}
+
+OutputContent* WindowMetadata::get_output() const
+{
+    if (!workspace)
+        return nullptr;
+
+    return workspace->get_output();
 }
