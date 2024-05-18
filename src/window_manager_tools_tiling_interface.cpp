@@ -46,7 +46,7 @@ void WindowManagerToolsTilingInterface::open(miral::Window const& window)
 
     animator.window_open(
         metadata->get_animation_handle(),
-        [this, metadata=metadata](miracle::AnimationStepResult const& result)
+        [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);
     });

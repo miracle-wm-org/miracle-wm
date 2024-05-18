@@ -57,9 +57,9 @@ class Animation
 public:
     Animation(
         AnimationHandle handle,
-        AnimationDefinition const& definition,
+        AnimationDefinition definition,
         std::optional<mir::geometry::Rectangle> const& from,
-        std::optional<mir::geometry::Rectangle>const& to,
+        std::optional<mir::geometry::Rectangle> const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
 
     Animation& operator=(Animation const& other);
@@ -112,6 +112,7 @@ public:
     void step();
 
     static constexpr float timestep_seconds = 0.016;
+
 private:
     void run();
 

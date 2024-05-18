@@ -17,11 +17,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animator.h"
 #include "miracle_config.h"
-#include <gtest/gtest.h>
-#include <mir/server_action_queue.h>
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
+#include <mir/server_action_queue.h>
 #include <miral/runner.h>
 
 using namespace miracle;
@@ -45,19 +45,18 @@ class ImmediateServerActionQueue : public mir::ServerActionQueue
         action();
     }
 
-    void pause_processing_for(void const* owner) override {};
-    void resume_processing_for(void const* owner) override {};
+    void pause_processing_for(void const* owner) override { };
+    void resume_processing_for(void const* owner) override { };
 };
 
 class AnimatorTest : public testing::Test
 {
 public:
-    AnimatorTest()
-    : runner(argc, argv),
-      queue{std::make_shared<ImmediateServerActionQueue>()},
-      config{std::make_shared<MiracleConfig>(runner, path)}
+    AnimatorTest() :
+        runner(argc, argv),
+        queue { std::make_shared<ImmediateServerActionQueue>() },
+        config { std::make_shared<MiracleConfig>(runner, path) }
     {
-
     }
     miral::MirRunner runner;
     std::shared_ptr<mir::ServerActionQueue> queue;
@@ -88,9 +87,9 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
             mir::geometry::Point(600, 0),
             mir::geometry::Size(0, 0)),
         [&](auto const& asr)
-        {
-            was_called = true;
-        });
+    {
+        was_called = true;
+    });
     animator.step();
     EXPECT_EQ(was_called, true);
 }

@@ -25,11 +25,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
+#include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
-#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -417,7 +417,7 @@ bool OutputContent::advise_workspace_active(int key)
     {
         if (workspace->get_workspace() == active_workspace)
             from = workspace;
-        
+
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
@@ -434,56 +434,56 @@ bool OutputContent::advise_workspace_active(int key)
     animator.workspace_move_to(animation_handle,
         travel_distance,
         [from = from, this](AnimationStepResult const& asr)
+    {
+        if (!from)
+            return;
+
+        if (asr.is_complete)
         {
-            if (!from)
+            from->hide();
+            return;
+        }
+
+        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            if (metadata->get_is_pinned())
                 return;
 
-            if (asr.is_complete)
+            auto& window = metadata->get_window();
+            AnimationStepResult for_window = asr;
+            if (for_window.position)
             {
-                from->hide();
-                return;
+                for_window.transform = glm::translate(
+                    for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
+                    glm::vec3(asr.position.value().x, asr.position.value().y, 0));
+                for_window.position = std::nullopt;
+                for_window.size = std::nullopt;
             }
 
-            from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-            {
-                if (metadata->get_is_pinned())
-                    return;
-
-                auto& window = metadata->get_window();
-                AnimationStepResult for_window = asr;
-                if (for_window.position)
-                {
-                    for_window.transform =  glm::translate(
-                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                    for_window.position = std::nullopt;
-                    for_window.size = std::nullopt;
-                }
-
-                node_interface.on_animation(for_window, metadata);
-            });
-        },
-        [to=to,from=from, this](AnimationStepResult const& asr)
-        {
-            to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-            {
-                if (metadata->get_is_pinned())
-                    return;
-
-                auto& window = metadata->get_window();
-                AnimationStepResult for_window = asr;
-                if (for_window.position)
-                {
-                    for_window.transform =  glm::translate(
-                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                    for_window.position = std::nullopt;
-                    for_window.size = std::nullopt;
-                }
-
-                node_interface.on_animation(for_window, metadata);
-            });
+            node_interface.on_animation(for_window, metadata);
         });
+    },
+        [to = to, from = from, this](AnimationStepResult const& asr)
+    {
+        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            if (metadata->get_is_pinned())
+                return;
+
+            auto& window = metadata->get_window();
+            AnimationStepResult for_window = asr;
+            if (for_window.position)
+            {
+                for_window.transform = glm::translate(
+                    for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
+                    glm::vec3(asr.position.value().x, asr.position.value().y, 0));
+                for_window.position = std::nullopt;
+                for_window.size = std::nullopt;
+            }
+
+            node_interface.on_animation(for_window, metadata);
+        });
+    });
 
     to->show({});
     active_workspace = key;

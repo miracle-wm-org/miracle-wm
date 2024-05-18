@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <glm/gtx/transform.hpp>
+#include <utility>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -32,14 +33,14 @@ AnimationHandle const miracle::none_animation_handle = 0;
 
 Animation::Animation(
     AnimationHandle handle,
-    AnimationDefinition const& definition,
+    AnimationDefinition definition,
     std::optional<mir::geometry::Rectangle> const& from,
-    std::optional<mir::geometry::Rectangle>const& to,
+    std::optional<mir::geometry::Rectangle> const& to,
     std::function<void(AnimationStepResult const&)> const& callback) :
     handle { handle },
-    definition { definition },
-    to{to},
-    from{from},
+    definition { std::move(definition) },
+    to { to },
+    from { from },
     callback { callback }
 {
 }
@@ -180,7 +181,8 @@ inline float interpolate_scale(float p, float start, float end)
     float diff = end - start;
     float current = start + diff * p;
     float percent_traveled = current / end;
-    if (percent_traveled < 0) percent_traveled *= -1;
+    if (percent_traveled < 0)
+        percent_traveled *= -1;
     return percent_traveled;
 }
 
@@ -302,7 +304,8 @@ Animator::Animator(
 
 void Animator::start()
 {
-    run_thread = std::thread([&](){ run(); });
+    run_thread = std::thread([&]()
+    { run(); });
 }
 
 Animator::~Animator()
@@ -382,21 +385,17 @@ void Animator::workspace_move_to(
     }
 
     mir::geometry::Rectangle from_start(
-        mir::geometry::Point{0, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { 0, 0 },
+        mir::geometry::Size { 0, 0 });
     mir::geometry::Rectangle from_end(
-        mir::geometry::Point{-x_offset, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { -x_offset, 0 },
+        mir::geometry::Size { 0, 0 });
     mir::geometry::Rectangle to_start(
-        mir::geometry::Point{x_offset, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { x_offset, 0 },
+        mir::geometry::Size { 0, 0 });
     mir::geometry::Rectangle to_end(
-        mir::geometry::Point{0, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { 0, 0 },
+        mir::geometry::Size { 0, 0 });
 
     append(Animation(handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
