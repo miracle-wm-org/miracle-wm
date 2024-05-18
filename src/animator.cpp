@@ -32,9 +32,13 @@ AnimationHandle const miracle::none_animation_handle = 0;
 Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,
+    std::optional<mir::geometry::Rectangle> const& from,
+    std::optional<mir::geometry::Rectangle>const& to,
     std::function<void(AnimationStepResult const&)> const& callback) :
     handle { handle },
     definition { definition },
+    to{to},
+    from{from},
     callback { callback }
 {
 }
@@ -47,19 +51,6 @@ Animation& Animation::operator=(miracle::Animation const& other)
     to = other.to;
     callback = other.callback;
     return *this;
-}
-
-Animation Animation::window_move(
-    AnimationHandle handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& _from,
-    mir::geometry::Rectangle const& _to,
-    std::function<void(AnimationStepResult const&)> const& callback)
-{
-    Animation result(handle, definition, callback);
-    result.from = _from;
-    result.to = _to;
-    return result;
 }
 
 namespace
@@ -309,6 +300,13 @@ AnimationHandle Animator::register_animateable()
     return next_handle++;
 }
 
+void Animator::append(miracle::Animation&& animation)
+{
+    std::lock_guard<std::mutex> lock(processing_lock);
+    queued_animations.push_back(animation);
+    cv.notify_one();
+}
+
 void Animator::window_move(
     AnimationHandle handle,
     mir::geometry::Rectangle const& from,
@@ -327,14 +325,12 @@ void Animator::window_move(
                 glm::mat4(1.f) });
     }
 
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(Animation::window_move(
+    append(Animation(
         handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_move],
         from,
         to,
         callback));
-    cv.notify_one();
 }
 
 void Animator::window_open(
@@ -349,13 +345,12 @@ void Animator::window_open(
         return;
     }
 
-    Animation animation = { handle,
+    append(Animation(
+        handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_open],
-        callback };
-    callback(animation.init());
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(std::move(animation));
-    cv.notify_one();
+        std::nullopt,
+        std::nullopt,
+        callback));
 }
 
 void Animator::workspace_move_to(
@@ -379,13 +374,6 @@ void Animator::workspace_move_to(
         mir::geometry::Point{-x_offset, 0},
         mir::geometry::Size{0, 0}
     );
-
-    Animation from_animation = Animation::window_move(handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
-        from_start,
-        from_end,
-        from_callback);
-
     mir::geometry::Rectangle to_start(
         mir::geometry::Point{x_offset, 0},
         mir::geometry::Size{0, 0}
@@ -394,18 +382,17 @@ void Animator::workspace_move_to(
         mir::geometry::Point{0, 0},
         mir::geometry::Size{0, 0}
     );
-    Animation to_animation = Animation::window_move(handle,
+
+    append(Animation(handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
+        from_start,
+        from_end,
+        from_callback));
+    append(Animation(handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
         to_start,
         to_end,
-        to_callback);
-
-    from_callback(from_animation.init());
-    to_callback(to_animation.init());
-
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(std::move(from_animation));
-    queued_animations.push_back(std::move(to_animation));
+        to_callback));
     cv.notify_one();
 }
 
