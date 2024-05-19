@@ -440,7 +440,6 @@ bool OutputContent::advise_workspace_active(int key)
 
         if (asr.is_complete)
         {
-            from->set_transform(glm::mat4(1.f));
             from->hide();
             return;
         }
@@ -452,6 +451,7 @@ bool OutputContent::advise_workspace_active(int key)
         other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
         from->set_transform(other.transform.value());
 
+        // TODO: Ugh, sad. I am forced to set the window position so that they all update with the newest workspace transform
         from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
             auto& window = metadata->get_window();
@@ -475,6 +475,7 @@ bool OutputContent::advise_workspace_active(int key)
         other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
         to->set_transform(other.transform.value());
 
+        // TODO: Ugh, sad. I am forced to set the window position so that they all update with the newest workspace transform
         to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
             auto& window = metadata->get_window();
