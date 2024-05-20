@@ -501,7 +501,6 @@ void Policy::handle_modify_window(
         metadata->get_output()->handle_modify_window(metadata, modifications);
     else
         window_manager_tools.modify_window(metadata->get_window(), modifications);
-    ;
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)

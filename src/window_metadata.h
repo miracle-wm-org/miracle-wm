@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
+#include <glm/glm.hpp>
 
 namespace miracle
 {
@@ -57,6 +58,8 @@ public:
     uint32_t get_animation_handle() const;
     void set_animation_handle(uint32_t);
     OutputContent* get_output() const;
+    glm::mat4 const& get_transform() const { return transform; }
+    void set_transform(glm::mat4 const& in) { transform = in; }
 
 private:
     WindowType type;
@@ -66,6 +69,7 @@ private:
     MirWindowState restore_state;
     bool is_pinned = false;
     uint32_t animation_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
 };
 
 }

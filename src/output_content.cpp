@@ -292,13 +292,14 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
 
         if (modifications.state().is_set())
         {
+            auto tree = metadata->get_tiling_node()->get_tree();
             if (window_helpers::is_window_fullscreen(modifications.state().value()))
-                metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(metadata->get_window());
+                tree->advise_fullscreen_window(metadata->get_window());
             else if (modifications.state().value() == mir_window_state_restored)
-                metadata->get_tiling_node()->get_tree()->advise_restored_window(metadata->get_window());
+                tree->advise_restored_window(metadata->get_window());
+            tree->constrain(metadata->get_window());
         }
 
-        metadata->get_tiling_node()->get_tree()->constrain(metadata->get_window());
         tools.modify_window(metadata->get_window(), modifications);
         break;
     }

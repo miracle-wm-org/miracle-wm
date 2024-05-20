@@ -196,16 +196,6 @@ AnimationStepResult Animation::init()
         return { handle, false, {}, {}, glm::mat4(0.f) };
     case AnimationType::shrink:
         return { handle, false, {}, {}, glm::mat4(1.f) };
-    case AnimationType::slide:
-        return {
-            handle,
-            false,
-            from.has_value()
-                ? std::optional<glm::vec2>(glm::vec2(from.value().top_left.x.as_int(), from.value().top_left.y.as_int()))
-                : std::nullopt,
-            {},
-            {}
-        };
     default:
         return { handle, false, {}, {}, {} };
     }
@@ -321,6 +311,7 @@ AnimationHandle Animator::register_animateable()
 void Animator::append(miracle::Animation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
+    animation.get_callback()(animation.init());
     queued_animations.push_back(animation);
     cv.notify_one();
 }
@@ -341,6 +332,7 @@ void Animator::window_move(
                 glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
                 glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
                 glm::mat4(1.f) });
+        return;
     }
 
     append(Animation(

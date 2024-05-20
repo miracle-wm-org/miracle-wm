@@ -150,38 +150,51 @@ void WindowManagerToolsTilingInterface::on_animation(
     if (!surface)
         return;
 
-    if (result.transform)
-        surface->set_transformation(result.transform.value());
-
+    bool needs_modify = false;
     miral::WindowSpecification spec;
-    auto top_left = result.position
-        ? mir::geometry::Point(
-              result.position.value().x,
-              result.position.value().y)
-        : window.top_left();
-    auto size = result.size
-        ? mir::geometry::Size(
-              result.size.value().x,
-              result.size.value().y)
-        : window.size();
+    spec.top_left() = window.top_left();
+    spec.size() = window.size();
+    if (result.position)
+    {
+        spec.top_left() = mir::geometry::Point(
+            result.position.value().x,
+            result.position.value().y);
+        needs_modify = true;
+    }
 
-    spec.top_left() = top_left;
-    spec.size() = size;
-    tools.modify_window(window, spec);
+    if (result.size)
+    {
+        spec.size() = mir::geometry::Size(
+            result.size.value().x,
+            result.size.value().y);
+        needs_modify = true;
+    }
 
-    auto& window_info = tools.info_for(window);
-    mir::geometry::Rectangle new_rectangle(top_left, size);
+    if (needs_modify)
+    {
+        tools.modify_window(window, spec);
+
+        auto& window_info = tools.info_for(window);
+        for (auto const& child : window_info.children())
+        {
+            miral::WindowSpecification sub_spec;
+            sub_spec.top_left() = spec.top_left();
+            sub_spec.size() = spec.size();
+            tools.modify_window(child, sub_spec);
+        }
+    }
 
     if (result.is_complete)
+    {
+        mir::geometry::Rectangle new_rectangle(spec.top_left().value(), spec.size().value());
         clip(window, new_rectangle);
+    }
     else
         noclip(window);
 
-    for (auto const& child : window_info.children())
+    if (result.transform && result.transform.value() != metadata->get_transform())
     {
-        miral::WindowSpecification sub_spec;
-        sub_spec.top_left() = spec.top_left();
-        sub_spec.size() = spec.size();
-        tools.modify_window(child, sub_spec);
+        metadata->set_transform(result.transform.value());
+        surface->set_transformation(result.transform.value());
     }
 }
