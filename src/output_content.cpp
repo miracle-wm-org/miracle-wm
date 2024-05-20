@@ -25,11 +25,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
+#include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
-#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -96,7 +96,7 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     case WindowType::tiled:
     {
         auto node = get_active_tree()->advise_new_window(window_info);
-        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this, active_workspace);
+        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         metadata->associate_to_node(node);
         break;
     }
@@ -292,13 +292,14 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
 
         if (modifications.state().is_set())
         {
+            auto tree = metadata->get_tiling_node()->get_tree();
             if (window_helpers::is_window_fullscreen(modifications.state().value()))
-                metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(metadata->get_window());
+                tree->advise_fullscreen_window(metadata->get_window());
             else if (modifications.state().value() == mir_window_state_restored)
-                metadata->get_tiling_node()->get_tree()->advise_restored_window(metadata->get_window());
+                tree->advise_restored_window(metadata->get_window());
+            tree->constrain(metadata->get_window());
         }
 
-        metadata->get_tiling_node()->get_tree()->constrain(metadata->get_window());
         tools.modify_window(metadata->get_window(), modifications);
         break;
     }
@@ -417,7 +418,7 @@ bool OutputContent::advise_workspace_active(int key)
     {
         if (workspace->get_workspace() == active_workspace)
             from = workspace;
-        
+
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
@@ -434,56 +435,63 @@ bool OutputContent::advise_workspace_active(int key)
     animator.workspace_move_to(animation_handle,
         travel_distance,
         [from = from, this](AnimationStepResult const& asr)
-        {
-            if (!from)
-                return;
+    {
+        if (!from)
+            return;
 
-            if (asr.is_complete)
+        if (asr.is_complete)
+        {
+            from->hide();
+            return;
+        }
+
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        from->set_transform(other.transform.value());
+
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (surface)
             {
-                from->hide();
-                return;
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
             }
-
-            from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-            {
-                if (metadata->get_is_pinned())
-                    return;
-
-                auto& window = metadata->get_window();
-                AnimationStepResult for_window = asr;
-                if (for_window.position)
-                {
-                    for_window.transform =  glm::translate(
-                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                    for_window.position = std::nullopt;
-                    for_window.size = std::nullopt;
-                }
-
-                node_interface.on_animation(for_window, metadata);
-            });
-        },
-        [to=to,from=from, this](AnimationStepResult const& asr)
-        {
-            to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-            {
-                if (metadata->get_is_pinned())
-                    return;
-
-                auto& window = metadata->get_window();
-                AnimationStepResult for_window = asr;
-                if (for_window.position)
-                {
-                    for_window.transform =  glm::translate(
-                        for_window.transform ? for_window.transform.value() : glm::mat4(1.f),
-                        glm::vec3(asr.position.value().x, asr.position.value().y, 0));
-                    for_window.position = std::nullopt;
-                    for_window.size = std::nullopt;
-                }
-
-                node_interface.on_animation(for_window, metadata);
-            });
         });
+    },
+        [to = to, from = from, this](AnimationStepResult const& asr)
+    {
+        if (asr.is_complete)
+        {
+            to->set_transform(glm::mat4(1.f));
+            return;
+        }
+
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        to->set_transform(other.transform.value());
+
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            surface->clip_area() = std::nullopt;
+            if (surface)
+            {
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
+            }
+        });
+    });
 
     to->show({});
     active_workspace = key;
@@ -649,7 +657,7 @@ void OutputContent::request_toggle_active_float()
         WindowSpecification spec = floating_window_manager.place_new_window(
             tools.info_for(active_window.application()),
             prev_spec);
-        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, this, active_workspace);
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, get_active_workspace());
         spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
         tools.modify_window(active_window, spec);
 

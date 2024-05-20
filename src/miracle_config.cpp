@@ -797,16 +797,12 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
          EaseFunction::ease_out_back,
          0.25f,
          },
-        {
-         AnimationType::slide,
+        { AnimationType::slide,
          EaseFunction::ease_in_out_elastic,
-         0.5f
-        },
-        {
-         AnimationType::slide,
+         0.5f },
+        { AnimationType::slide,
          EaseFunction::ease_in_out_elastic,
-         0.5f
-         }
+         0.5f }
     });
     if (root["animations"])
     {

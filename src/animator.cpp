@@ -23,6 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <glm/gtx/transform.hpp>
+#include <utility>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -31,10 +33,14 @@ AnimationHandle const miracle::none_animation_handle = 0;
 
 Animation::Animation(
     AnimationHandle handle,
-    AnimationDefinition const& definition,
+    AnimationDefinition definition,
+    std::optional<mir::geometry::Rectangle> const& from,
+    std::optional<mir::geometry::Rectangle> const& to,
     std::function<void(AnimationStepResult const&)> const& callback) :
     handle { handle },
-    definition { definition },
+    definition { std::move(definition) },
+    to { to },
+    from { from },
     callback { callback }
 {
 }
@@ -47,19 +53,6 @@ Animation& Animation::operator=(miracle::Animation const& other)
     to = other.to;
     callback = other.callback;
     return *this;
-}
-
-Animation Animation::window_move(
-    AnimationHandle handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& _from,
-    mir::geometry::Rectangle const& _to,
-    std::function<void(AnimationStepResult const&)> const& callback)
-{
-    Animation result(handle, definition, callback);
-    result.from = _from;
-    result.to = _to;
-    return result;
 }
 
 namespace
@@ -182,6 +175,17 @@ inline float ease(AnimationDefinition const& defintion, float t)
         return 1.f;
     }
 }
+
+inline float interpolate_scale(float p, float start, float end)
+{
+    float diff = end - start;
+    float current = start + diff * p;
+    float percent_traveled = current / end;
+    if (percent_traveled < 0)
+        percent_traveled *= -1;
+    return percent_traveled;
+}
+
 }
 
 AnimationStepResult Animation::init()
@@ -189,37 +193,17 @@ AnimationStepResult Animation::init()
     switch (definition.type)
     {
     case AnimationType::grow:
-        return {
-            handle,
-            false,
-            {},
-            {},
-            glm::mat4(0.f)
-        };
-    case AnimationType::slide:
-        return {
-            handle,
-            false,
-            from.has_value()
-                ? std::optional<glm::vec2>(glm::vec2(from.value().top_left.x.as_int(), from.value().top_left.y.as_int()))
-                : std::nullopt,
-            {},
-            {}
-        };
+        return { handle, false, {}, {}, glm::mat4(0.f) };
+    case AnimationType::shrink:
+        return { handle, false, {}, {}, glm::mat4(1.f) };
     default:
-        return {
-            handle,
-            false,
-            {},
-            {},
-            glm::mat4(1.f)
-        };
+        return { handle, false, {}, {}, {} };
     }
 }
 
 AnimationStepResult Animation::step()
 {
-    runtime_seconds += timestep_seconds;
+    runtime_seconds += Animator::timestep_seconds;
     if (runtime_seconds >= definition.duration_seconds)
     {
         return {
@@ -246,12 +230,26 @@ AnimationStepResult Animation::step()
             (float)from.value().top_left.y.as_int() + y
         };
 
+        float x_scale = interpolate_scale(p, static_cast<float>(from->size.width.as_value()), static_cast<float>(to->size.width.as_value()));
+        float y_scale = interpolate_scale(p, static_cast<float>(from->size.height.as_value()), static_cast<float>(to->size.height.as_value()));
+
+        glm::vec3 translate(
+            (float)-to->size.width.as_value() / 2.f,
+            (float)-to->size.height.as_value() / 2.f,
+            0);
+        auto inverse_translate = -translate;
+        glm::mat4 scale_matrix = glm::translate(
+            glm::scale(
+                glm::translate(translate),
+                glm::vec3(x_scale, y_scale, 1.f)),
+            inverse_translate);
+
         return {
             handle,
             false,
             position,
             glm::vec2(to.value().size.width.as_int(), to.value().size.height.as_int()),
-            std::nullopt
+            scale_matrix
         };
     }
     case AnimationType::grow:
@@ -290,10 +288,14 @@ Animator::Animator(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<MiracleConfig> const& config) :
     server_action_queue { server_action_queue },
-    config { config },
-    run_thread([&]()
-{ run(); })
+    config { config }
 {
+}
+
+void Animator::start()
+{
+    run_thread = std::thread([&]()
+    { run(); });
 }
 
 Animator::~Animator()
@@ -304,6 +306,14 @@ Animator::~Animator()
 AnimationHandle Animator::register_animateable()
 {
     return next_handle++;
+}
+
+void Animator::append(miracle::Animation&& animation)
+{
+    std::lock_guard<std::mutex> lock(processing_lock);
+    animation.get_callback()(animation.init());
+    queued_animations.push_back(animation);
+    cv.notify_one();
 }
 
 void Animator::window_move(
@@ -322,16 +332,15 @@ void Animator::window_move(
                 glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
                 glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
                 glm::mat4(1.f) });
+        return;
     }
 
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(Animation::window_move(
+    append(Animation(
         handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_move],
         from,
         to,
         callback));
-    cv.notify_one();
 }
 
 void Animator::window_open(
@@ -346,13 +355,12 @@ void Animator::window_open(
         return;
     }
 
-    Animation animation = { handle,
+    append(Animation(
+        handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_open],
-        callback };
-    callback(animation.init());
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(std::move(animation));
-    cv.notify_one();
+        std::nullopt,
+        std::nullopt,
+        callback));
 }
 
 void Animator::workspace_move_to(
@@ -369,40 +377,28 @@ void Animator::workspace_move_to(
     }
 
     mir::geometry::Rectangle from_start(
-        mir::geometry::Point{0, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { 0, 0 },
+        mir::geometry::Size { 0, 0 });
     mir::geometry::Rectangle from_end(
-        mir::geometry::Point{-x_offset, 0},
-        mir::geometry::Size{0, 0}
-    );
+        mir::geometry::Point { -x_offset, 0 },
+        mir::geometry::Size { 0, 0 });
+    mir::geometry::Rectangle to_start(
+        mir::geometry::Point { x_offset, 0 },
+        mir::geometry::Size { 0, 0 });
+    mir::geometry::Rectangle to_end(
+        mir::geometry::Point { 0, 0 },
+        mir::geometry::Size { 0, 0 });
 
-    Animation from_animation = Animation::window_move(handle,
+    append(Animation(handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
         from_start,
         from_end,
-        from_callback);
-
-    mir::geometry::Rectangle to_start(
-        mir::geometry::Point{x_offset, 0},
-        mir::geometry::Size{0, 0}
-    );
-    mir::geometry::Rectangle to_end(
-        mir::geometry::Point{0, 0},
-        mir::geometry::Size{0, 0}
-    );
-    Animation to_animation = Animation::window_move(handle,
+        from_callback));
+    append(Animation(handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
         to_start,
         to_end,
-        to_callback);
-
-    from_callback(from_animation.init());
-    to_callback(to_animation.init());
-
-    std::lock_guard<std::mutex> lock(processing_lock);
-    queued_animations.push_back(std::move(from_animation));
-    queued_animations.push_back(std::move(to_animation));
+        to_callback));
     cv.notify_one();
 }
 
@@ -417,7 +413,6 @@ struct PendingUpdateData
 
 void Animator::run()
 {
-    // https://gist.github.com/mariobadr/673bbd5545242fcf9482
     using clock = std::chrono::high_resolution_clock;
     constexpr std::chrono::nanoseconds timestep(16ms);
     std::chrono::nanoseconds lag(0ns);
@@ -442,33 +437,37 @@ void Animator::run()
         while (lag >= timestep)
         {
             lag -= timestep;
-
-            std::vector<PendingUpdateData> update_data;
-            {
-                std::lock_guard<std::mutex> lock(processing_lock);
-                for (auto it = queued_animations.begin(); it != queued_animations.end();)
-                {
-                    auto& item = *it;
-                    auto result = item.step();
-
-                    update_data.push_back({ result, item.get_callback() });
-                    if (result.is_complete)
-                        it = queued_animations.erase(it);
-                    else
-                        it++;
-                }
-            }
-
-            server_action_queue->enqueue(this, [&, update_data]()
-            {
-                if (!running)
-                    return;
-
-                for (auto const& update_item : update_data)
-                    update_item.callback(update_item.result);
-            });
+            step();
         }
     }
+}
+
+void Animator::step()
+{
+    std::vector<PendingUpdateData> update_data;
+    {
+        std::lock_guard<std::mutex> lock(processing_lock);
+        for (auto it = queued_animations.begin(); it != queued_animations.end();)
+        {
+            auto& item = *it;
+            auto result = item.step();
+
+            update_data.push_back({ result, item.get_callback() });
+            if (result.is_complete)
+                it = queued_animations.erase(it);
+            else
+                it++;
+        }
+    }
+
+    server_action_queue->enqueue(this, [&, update_data]()
+    {
+        if (!running)
+            return;
+
+        for (auto const& update_item : update_data)
+            update_item.callback(update_item.result);
+    });
 }
 
 void Animator::stop()

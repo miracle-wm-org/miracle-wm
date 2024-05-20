@@ -57,15 +57,11 @@ class Animation
 public:
     Animation(
         AnimationHandle handle,
-        AnimationDefinition const& definition,
+        AnimationDefinition definition,
+        std::optional<mir::geometry::Rectangle> const& from,
+        std::optional<mir::geometry::Rectangle> const& to,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    static Animation window_move(
-        AnimationHandle handle,
-        AnimationDefinition const& definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        std::function<void(AnimationStepResult const&)> const& callback);
     Animation& operator=(Animation const& other);
 
     AnimationStepResult init();
@@ -77,7 +73,6 @@ private:
     AnimationDefinition definition;
     std::optional<mir::geometry::Rectangle> from;
     std::optional<mir::geometry::Rectangle> to;
-    const float timestep_seconds = 0.016;
     std::function<void(AnimationStepResult const&)> callback;
     float runtime_seconds = 0.f;
 };
@@ -112,10 +107,16 @@ public:
         std::function<void(AnimationStepResult const&)> const& from_callback,
         std::function<void(AnimationStepResult const&)> const& to_callback);
 
+    void start();
     void stop();
+    void step();
+
+    static constexpr float timestep_seconds = 0.016;
 
 private:
     void run();
+
+    void append(Animation&&);
     bool running = false;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<MiracleConfig> config;

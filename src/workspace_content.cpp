@@ -32,6 +32,7 @@ WorkspaceContent::WorkspaceContent(
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
     TilingInterface& node_interface) :
+    output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace }

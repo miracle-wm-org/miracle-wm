@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <GLES2/gl2.h>
 #define MIR_LOG_COMPONENT "GLRenderer"
 #include "window_tools_accessor.h"
+#include "workspace_content.h"
 
 #include "mir/graphics/buffer.h"
 #include "mir/graphics/display_sink.h"
@@ -101,6 +102,7 @@ struct ProgramData
     GLint texcoord_attr = -1;
     GLint centre_uniform = -1;
     GLint display_transform_uniform = -1;
+    GLint workspace_transform_uniform = -1;
     GLint transform_uniform = -1;
     GLint screen_to_gl_coords_uniform = -1;
     GLint alpha_uniform = -1;
@@ -122,6 +124,7 @@ struct ProgramData
         }
         centre_uniform = glGetUniformLocation(id, "centre");
         display_transform_uniform = glGetUniformLocation(id, "display_transform");
+        workspace_transform_uniform = glGetUniformLocation(id, "workspace_transform");
         transform_uniform = glGetUniformLocation(id, "transform");
         screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
         alpha_uniform = glGetUniformLocation(id, "alpha");
@@ -151,6 +154,7 @@ attribute vec3 position;
 attribute vec2 texcoord;
 uniform mat4 screen_to_gl_coords;
 uniform mat4 display_transform;
+uniform mat4 workspace_transform;
 uniform mat4 transform;
 uniform vec2 centre;
 uniform vec4 outline_color;
@@ -159,7 +163,7 @@ varying vec4 v_outline_color;
 void main() {
    vec4 mid = vec4(centre, 0.0, 0.0);
    vec4 transformed = (transform * (vec4(position, 1.0) - mid)) + mid;
-   gl_Position = display_transform * screen_to_gl_coords * transformed;
+   gl_Position = display_transform * screen_to_gl_coords * workspace_transform * transformed;
    v_texcoord = texcoord;
    v_outline_color = outline_color;
 }
@@ -521,10 +525,10 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        glm::vec4 transformed_position = renderable.transformation() * glm::vec4(clip_area.value().top_left.x.as_int(), clip_area.value().top_left.y.as_int(), 0, 1);
         // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int() - transformed_position.y - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(transformed_position.x, clip_y, 0, 1);
+        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
+            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
+        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
         clip_pos = display_transform * clip_pos;
 
         glScissor(
@@ -608,6 +612,17 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
 
     if (prog->alpha_uniform >= 0)
         glUniform1f(prog->alpha_uniform, renderable.alpha());
+
+    if (userdata)
+    {
+        if (auto workspace = userdata->get_workspace())
+            glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
+                glm::value_ptr(workspace->get_transform()));
+        else
+            glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
+                glm::value_ptr(glm::mat4(1.f)));
+    }
+    // Otherwise, keep the transform from last time...
 
     if (context)
     {

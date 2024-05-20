@@ -66,8 +66,8 @@ Policy::Policy(
     animator(server.the_main_loop(), config),
     node_interface(tools, animator)
 {
+    animator.start();
     workspace_observer_registrar.register_interest(ipc);
-
     WindowToolsAccessor::get_instance().set_tools(tools);
 }
 
@@ -501,7 +501,6 @@ void Policy::handle_modify_window(
         metadata->get_output()->handle_modify_window(metadata, modifications);
     else
         window_manager_tools.modify_window(metadata->get_window(), modifications);
-    ;
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
