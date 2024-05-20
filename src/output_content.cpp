@@ -451,13 +451,16 @@ bool OutputContent::advise_workspace_active(int key)
         other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
         from->set_transform(other.transform.value());
 
-        // TODO: Ugh, sad. I am forced to set the window position so that they all update with the newest workspace transform
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
         from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
             auto& window = metadata->get_window();
-            WindowSpecification spec;
-            spec.top_left() = window.top_left();
-            tools.modify_window(window, spec);
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (surface)
+            {
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
+            }
         });
     },
         [to = to, from = from, this](AnimationStepResult const& asr)
@@ -475,13 +478,17 @@ bool OutputContent::advise_workspace_active(int key)
         other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
         to->set_transform(other.transform.value());
 
-        // TODO: Ugh, sad. I am forced to set the window position so that they all update with the newest workspace transform
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
         to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
         {
             auto& window = metadata->get_window();
-            WindowSpecification spec;
-            spec.top_left() = window.top_left();
-            tools.modify_window(window, spec);
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            surface->clip_area() = std::nullopt;
+            if (surface)
+            {
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
+            }
         });
     });
 
