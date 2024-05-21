@@ -22,11 +22,11 @@ apps:
     command: &_command usr/local/bin/miracle-wm
     environment: &_environment
       # Prep for Mir
-      MIR_SERVER_PLATFORM_PATH: ${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/mir/server-platform
+      MIR_SERVER_PLATFORM_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/mir/server-platform
       __EGL_VENDOR_LIBRARY_DIRS: $SNAP/etc/glvnd/egl_vendor.d:$SNAP/usr/share/glvnd/egl_vendor.d
-      LIBGL_DRIVERS_PATH: $SNAP/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+      LIBGL_DRIVERS_PATH: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
       LIBINPUT_QUIRKS_DIR: ${SNAP}/usr/share/libinput
-      PATH: ${SNAP}/usr/local/bin/:${PATH}
+      PATH: ${SNAP}/bin/:${SNAP}/usr/bin/:${SNAP}/usr/local/bin/:${PATH}
       # For "reasons" this is being set despite this being a classic snap. This overwrites the nonsense
       LD_LIBRARY_PATH: ""
 
@@ -52,6 +52,7 @@ parts:
     build-packages:
       - pkg-config
       - libmiral-dev
+      - libmiroil-dev
       - libmircommon-internal-dev
       - libmircommon-dev
       - libmirserver-internal-dev
@@ -61,6 +62,7 @@ parts:
       - libxkbcommon-dev
       - g++
       - make
+      - git
       - libgtest-dev
       - libyaml-cpp-dev
       - libyaml-cpp0.8
@@ -70,10 +72,14 @@ parts:
       - libevdev2
       - nlohmann-json3-dev
       - libnotify-dev
+      - libgles2-mesa-dev
+      - libmirrenderer-dev
     stage-packages:
       - libmiral7
+      - libmiroil5
       - mir-graphics-drivers-desktop
       - mir-graphics-drivers-nvidia
+      - pcre2-utils
     prime:
       - -lib/udev
       - -usr/doc
@@ -99,17 +105,13 @@ parts:
       - enable-patchelf
     plugin: nil
     stage-packages:
-      - libgl1-mesa-dri
-      - libtinfo5
-      # included in this part because it tries to pull in mesa bits
-      - gvncviewer
-      - swaybg
-      - synapse
-      - xvfb
-      - xwayland
+    - libgl1-mesa-dri
+    - libtinfo6
+    # included in this part because they try to pull in mesa bits
+    - xwayland
     stage:
       # The libraries in .../dri need no-patchelf, so they come from the mesa-unpatched part
-      - -usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+      - -usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
 
   mesa-no-patchelf:
     plugin: nil
@@ -119,4 +121,4 @@ parts:
       - no-patchelf # Otherwise snapcraft may strip the build ID and cause the driver to crash
     stage:
       # Only the libraries in .../dri need to not be patched, the rest come from the mesa part
-      - usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+      - usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
