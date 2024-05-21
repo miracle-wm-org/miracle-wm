@@ -79,7 +79,7 @@ bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<OutputC
     return false;
 }
 
-bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> screen, int workspace)
+bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> const& screen, int workspace)
 {
     auto window = tools_.active_window();
     if (!window)
@@ -112,7 +112,7 @@ bool WorkspaceManager::move_active_to_workspace(std::shared_ptr<OutputContent> s
         tools_.modify_window(window, spec);
 
         auto new_node = screen_to_move_to->get_active_tree()->advise_new_window(prev_info);
-        metadata->set_workspace(workspace);
+        metadata->set_workspace(screen_to_move_to->get_active_workspace());
         metadata->associate_to_node(new_node);
         miral::WindowSpecification next_spec;
         next_spec.userdata() = metadata;

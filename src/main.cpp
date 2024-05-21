@@ -19,11 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "auto_restarting_launcher.h"
 #include "miracle_config.h"
+#include "miracle_gl_config.h"
 #include "policy.h"
+#include "renderer.h"
+#include "surface_tracker.h"
 
 #include <libnotify/notify.h>
+#include <mir/renderer/gl/gl_surface.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
+#include <miral/custom_renderer.h>
 #include <miral/display_configuration_option.h>
 #include <miral/external_client.h>
 #include <miral/keymap.h>
@@ -31,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
-#include <stdlib.h>
+#include <miroil/open_gl_context.h>
 
 using namespace miral;
 
@@ -62,6 +67,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
+    miracle::SurfaceTracker surface_tracker;
     auto config = std::make_shared<miracle::MiracleConfig>(runner);
     for (auto const& env : config->get_env_variables())
     {
@@ -74,7 +80,7 @@ int main(int argc, char const* argv[])
     {
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
-                "tiling", external_client_launcher, runner, config, server)
+                "tiling", external_client_launcher, runner, config, surface_tracker, server)
         };
         (*options)(server);
     });
@@ -110,5 +116,10 @@ int main(int argc, char const* argv[])
     {
         config->try_process_change();
         return false;
-    }) });
+    }),
+            CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> x, std::shared_ptr<mir::graphics::GLRenderingProvider> y)
+    {
+        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config, surface_tracker);
+    }),
+            miroil::OpenGLContext(new miracle::GLConfig()) });
 }

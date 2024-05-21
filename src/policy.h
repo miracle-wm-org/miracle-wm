@@ -18,10 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_POLICY_H
 #define MIRACLE_POLICY_H
 
+#include "animator.h"
 #include "i3_command_executor.h"
 #include "ipc.h"
 #include "miracle_config.h"
 #include "output_content.h"
+#include "surface_tracker.h"
 #include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
 #include "workspace_manager.h"
@@ -51,6 +53,7 @@ public:
         miral::ExternalClientLauncher const&,
         miral::MirRunner&,
         std::shared_ptr<MiracleConfig> const&,
+        SurfaceTracker&,
         mir::Server const&);
     ~Policy() override;
 
@@ -111,8 +114,10 @@ private:
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
+    Animator animator;
     WindowManagerToolsTilingInterface node_interface;
     I3CommandExecutor i3_command_executor;
+    SurfaceTracker& surface_tracker;
 };
 }
 

@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "window_metadata.h"
+#include "window_tools_accessor.h"
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "miracle_config.h"
@@ -47,6 +48,7 @@ Policy::Policy(
     miral::ExternalClientLauncher const& external_client_launcher,
     miral::MirRunner& runner,
     std::shared_ptr<MiracleConfig> const& config,
+    SurfaceTracker& surface_tracker,
     mir::Server const& server) :
     window_manager_tools { tools },
     floating_window_manager(tools, config->get_input_event_modifier()),
@@ -59,10 +61,14 @@ Policy::Policy(
         [&]()
 { return get_active_output(); }) },
     i3_command_executor(*this, workspace_manager, tools),
+    surface_tracker { surface_tracker },
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
-    node_interface(tools)
+    animator(server.the_main_loop(), config),
+    node_interface(tools, animator)
 {
+    animator.start();
     workspace_observer_registrar.register_interest(ipc);
+    WindowToolsAccessor::get_instance().set_tools(tools);
 }
 
 Policy::~Policy()
@@ -323,8 +329,14 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     auto metadata = shared_output->advise_new_window(window_info, pending_type);
 
+    // Associate to an animation handle
+    metadata->set_animation_handle(animator.register_animateable());
+    node_interface.open(window_info.window());
+
     pending_type = WindowType::none;
     pending_output.reset();
+
+    surface_tracker.add(window_info.window());
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
@@ -390,6 +402,8 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
     if (metadata->get_output())
         metadata->get_output()->advise_delete_window(metadata);
+
+    surface_tracker.remove(window_info.window());
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -409,7 +423,7 @@ void Policy::advise_output_create(miral::Output const& output)
 {
     auto new_tree = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools,
-        floating_window_manager, config, node_interface);
+        floating_window_manager, config, node_interface, animator);
     workspace_manager.request_first_available_workspace(new_tree);
     output_list.push_back(new_tree);
     if (active_output == nullptr)
@@ -487,7 +501,6 @@ void Policy::handle_modify_window(
         metadata->get_output()->handle_modify_window(metadata, modifications);
     else
         window_manager_tools.modify_window(metadata->get_window(), modifications);
-    ;
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)

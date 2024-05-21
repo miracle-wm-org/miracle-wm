@@ -15,9 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <glm/fwd.hpp>
 #define MIR_LOG_COMPONENT "miracle_config"
 
 #include "miracle_config.h"
+#include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
 #include <fstream>
@@ -39,12 +41,95 @@ int program_exists(std::string const& name)
     return !system(out.str().c_str());
 }
 
+glm::vec4 parse_color(YAML::Node const& node)
+{
+    const float MAX_COLOR_VALUE = 255;
+    float r, g, b, a;
+    if (node.IsMap())
+    {
+        // Parse as (r, g, b, a) object
+        if (!node["r"])
+        {
+        }
+        r = node["r"].as<float>() / MAX_COLOR_VALUE;
+        g = node["g"].as<float>() / MAX_COLOR_VALUE;
+        b = node["b"].as<float>() / MAX_COLOR_VALUE;
+        a = node["a"].as<float>() / MAX_COLOR_VALUE;
+    }
+    else if (node.IsSequence())
+    {
+        // Parse as [r, g, b, a] array
+        r = node[0].as<float>() / MAX_COLOR_VALUE;
+        g = node[1].as<float>() / MAX_COLOR_VALUE;
+        b = node[2].as<float>() / MAX_COLOR_VALUE;
+        a = node[3].as<float>() / MAX_COLOR_VALUE;
+    }
+    else
+    {
+        // Parse as hex color
+        auto value = node.as<std::string>();
+        unsigned int i = std::stoul(value, nullptr, 16);
+        r = static_cast<float>(((i >> 24) & 0xFF)) / MAX_COLOR_VALUE;
+        g = static_cast<float>(((i >> 16) & 0xFF)) / MAX_COLOR_VALUE;
+        b = static_cast<float>(((i >> 8) & 0xFF)) / MAX_COLOR_VALUE;
+        a = static_cast<float>((i & 0xFF)) / MAX_COLOR_VALUE;
+    }
+
+    r = std::clamp(r, 0.f, 1.f);
+    g = std::clamp(g, 0.f, 1.f);
+    b = std::clamp(b, 0.f, 1.f);
+    a = std::clamp(a, 0.f, 1.f);
+
+    return { r, g, b, a };
+}
+
 std::string wrap_command(std::string const& command)
 {
-    if (std::getenv("SNAP"))
-        return "miracle-wm-unsnap " + command;
-
     return command;
+}
+
+template <typename T>
+bool try_parse_value(YAML::Node const& root, const char* key, T& value)
+{
+    if (!root[key])
+        return false;
+
+    auto const& node = root[key];
+    try
+    {
+        value = node.as<T>();
+    }
+    catch (YAML::BadConversion const& e)
+    {
+        mir::log_error("(L%d) Unable to parse '%s: %s", node.Mark().line, key, e.msg.c_str());
+        return false;
+    }
+    return true;
+}
+
+template <typename T>
+T try_parse_enum(YAML::Node const& root, const char* key, std::function<T(std::string const&)> const& parse, T invalid)
+{
+    T result = invalid;
+    if (!root[key])
+        return invalid;
+
+    auto const& node = root[key];
+    try
+    {
+        result = parse(node.as<std::string>());
+        if (result == invalid)
+        {
+            mir::log_error("(L%d) '%s' is invalid", node.Mark().line, key);
+            return invalid;
+        }
+    }
+    catch (YAML::BadConversion const& e)
+    {
+        mir::log_error("(L%d) Unable to parse '%s: %s", node.Mark().line, key, e.msg.c_str());
+        return invalid;
+    }
+    return result;
 }
 }
 
@@ -94,6 +179,7 @@ void MiracleConfig::_load()
     terminal = wrap_command("miracle-wm-sensible-terminal");
     desired_terminal = "";
     resize_jump = 50;
+    border_config = { 0, glm::vec4(0), glm::vec4(0) };
 
     // Load the new configuration
     mir::log_info("Configuration is loading...");
@@ -673,6 +759,102 @@ void MiracleConfig::_load()
             }
         }
     }
+
+    if (config["border"])
+    {
+        try
+        {
+            auto border = config["border"];
+            auto size = border["size"].as<int>();
+            auto color = parse_color(border["color"]);
+            auto focus_color = parse_color(border["focus_color"]);
+            border_config = { size, focus_color, color };
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse border: %s", e.msg.c_str());
+        }
+    }
+
+    read_animation_definitions(config);
+}
+
+void MiracleConfig::read_animation_definitions(YAML::Node const& root)
+{
+    std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
+        {
+         AnimationType::grow,
+         EaseFunction::ease_in_out_back,
+         0.25f,
+         },
+        {
+         AnimationType::slide,
+         EaseFunction::ease_in_out_back,
+         0.25f,
+         },
+        {
+         AnimationType::shrink,
+         EaseFunction::ease_out_back,
+         0.25f,
+         },
+        { AnimationType::slide,
+         EaseFunction::ease_in_out_elastic,
+         0.5f },
+        { AnimationType::slide,
+         EaseFunction::ease_in_out_elastic,
+         0.5f }
+    });
+    if (root["animations"])
+    {
+        auto animations_node = root["animations"];
+        if (!animations_node.IsSequence())
+        {
+            mir::log_error("Unable to parse animations_node: animations_node is not an array");
+            return;
+        }
+
+        for (auto const& node : animations_node)
+        {
+            auto const& event = try_parse_enum<AnimateableEvent>(
+                node,
+                "event",
+                from_string_animateable_event,
+                AnimateableEvent::max);
+            if (event == AnimateableEvent::max)
+                continue;
+
+            auto const& type = try_parse_enum<AnimationType>(
+                node,
+                "type",
+                from_string_animation_type,
+                AnimationType::max);
+            if (type == AnimationType::max)
+                continue;
+
+            auto const& function = try_parse_enum<EaseFunction>(
+                node,
+                "function",
+                from_string_ease_function,
+                EaseFunction::max);
+            if (function == EaseFunction::max)
+                continue;
+
+            parsed[(int)event].type = type;
+            parsed[(int)event].function = function;
+            try_parse_value(node, "duration", parsed[(int)event].duration_seconds);
+            try_parse_value(node, "c1", parsed[(int)event].c1);
+            try_parse_value(node, "c2", parsed[(int)event].c2);
+            try_parse_value(node, "c3", parsed[(int)event].c3);
+            try_parse_value(node, "c4", parsed[(int)event].c4);
+            try_parse_value(node, "n1", parsed[(int)event].n1);
+            try_parse_value(node, "d1", parsed[(int)event].d1);
+        }
+    }
+
+    animation_defintions = parsed;
+
+    if (root["enable_animations"])
+        try_parse_value(root, "enable_animations", animations_enabled);
 }
 
 void MiracleConfig::_watch(miral::MirRunner& runner)
@@ -887,4 +1069,19 @@ int MiracleConfig::get_resize_jump() const
 std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
 {
     return environment_variables;
+}
+
+BorderConfig const& MiracleConfig::get_border_config() const
+{
+    return border_config;
+}
+
+std::array<AnimationDefinition, (int)AnimateableEvent::max> const& MiracleConfig::get_animation_definitions() const
+{
+    return animation_defintions;
+}
+
+bool MiracleConfig::are_animations_enabled() const
+{
+    return animations_enabled;
 }

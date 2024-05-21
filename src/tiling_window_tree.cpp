@@ -664,7 +664,7 @@ std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> TilingWindo
     auto to_update = handle_remove(node);
 
     // Note: When we remove moving_node from its initial position, there's a chance
-    // that the target_lane was melted into another lane. Hence, we need to update it
+    // that the target_lane was melted into another lane. Hence, we need to run it
     auto target_parent = to->get_parent().lock();
     auto index = target_parent->get_index_of_node(to);
     target_parent->graft_existing(node, index + 1);

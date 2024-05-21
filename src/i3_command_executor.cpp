@@ -108,7 +108,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         auto window = get_window_meeting_criteria(command_list);
         auto metadata = window_helpers::get_metadata(window, tools);
         if (metadata)
-            workspace_manager.request_focus(metadata->get_workspace());
+            workspace_manager.request_focus(metadata->get_workspace()->get_workspace());
     }
     else if (arg == "left")
         active_output->select(Direction::left);

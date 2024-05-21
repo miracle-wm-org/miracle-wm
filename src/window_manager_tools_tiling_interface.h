@@ -23,10 +23,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class Animator;
+
 class WindowManagerToolsTilingInterface : public TilingInterface
 {
 public:
-    explicit WindowManagerToolsTilingInterface(miral::WindowManagerTools const&);
+    WindowManagerToolsTilingInterface(miral::WindowManagerTools const&, Animator& animator);
+    void open(miral::Window const&) override;
     bool is_fullscreen(miral::Window const&) override;
     void set_rectangle(miral::Window const&, geom::Rectangle const&) override;
     MirWindowState get_state(miral::Window const&) override;
@@ -38,9 +41,11 @@ public:
     std::shared_ptr<WindowMetadata> get_metadata(miral::Window const&, TilingWindowTree const*) override;
     void raise(miral::Window const&) override;
     void send_to_back(miral::Window const&) override;
+    void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const&) override;
 
 private:
     miral::WindowManagerTools tools;
+    Animator& animator;
 };
 }
 
