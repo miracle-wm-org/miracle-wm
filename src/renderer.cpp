@@ -622,7 +622,9 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
             glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
                 glm::value_ptr(glm::mat4(1.f)));
     }
-    // Otherwise, keep the transform from last time...
+    else
+        glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
+                           glm::value_ptr(glm::mat4(1.f)));
 
     if (context)
     {
