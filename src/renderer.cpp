@@ -719,7 +719,7 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     }
 
     // Next, draw the outline if we have metadata to facilitate it
-    if (needs_outline && false)
+    if (needs_outline)
     {
         auto border_config = config->get_border_config();
         if (border_config.size > 0)

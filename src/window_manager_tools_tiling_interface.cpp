@@ -153,8 +153,17 @@ void WindowManagerToolsTilingInterface::on_animation(
 
     bool needs_modify = false;
     miral::WindowSpecification spec;
-    spec.top_left() = window.top_left();
-    spec.size() = window.size();
+    if (auto node = metadata->get_tiling_node())
+    {
+        spec.top_left() = node->get_visible_area().top_left;
+        spec.size() = node->get_visible_area().size;
+    }
+    else
+    {
+        spec.top_left() = window.top_left();
+        spec.size() = window.size();
+    }
+
     if (result.position)
     {
         spec.top_left() = mir::geometry::Point(
@@ -191,24 +200,23 @@ void WindowManagerToolsTilingInterface::on_animation(
         surface->set_transformation(result.transform.value());
     }
 
-    // NOTE: The window rectangle is being clipped to the current transformation.
-    // TODO: This needs to handle rotations
-    // TODO: We probably need to translate this so that the center is around (0, 0)...
-    // TODO: This may have bad performance implications if many windows are animating at once
+    // NOTE: The clip area needs to reflect the current position + transform of the window.
+    // Failing to set a clip area will cause overflowing windows to briefly disregard their
+    // compacted size.
+    // TODO: When we have rotation in our transforms, then we need to handle rotations.
+    //  At that point, the top_left corner will change. We will need to find an AABB
+    //  to represent the clip area.
     auto transform = metadata->get_transform();
-    auto width = (float)spec.size().value().width.as_int();
-    auto height = (float)spec.size().value().height.as_int();
-    glm::vec4 top_left = glm::vec4(
-        spec.top_left().value().x.as_int(),
-        spec.top_left().value().y.as_int(),
-        0, 1);
-    glm::vec4 bottom_right = glm::vec4(
-        spec.top_left().value().x.as_int() + width,
-        spec.top_left().value().y.as_int() + height,
+    auto width = spec.size().value().width.as_int();
+    auto height = spec.size().value().height.as_int();
+
+    glm::vec4 scale = transform * glm::vec4(
+        width,
+        height,
         0, 1);
 
     mir::geometry::Rectangle new_rectangle(
-        { top_left.x, top_left.y },
-        { bottom_right.x - top_left.x, bottom_right.y - top_left.y });
+        { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
+        { scale.x, scale.y });
     clip(window, new_rectangle);
 }
