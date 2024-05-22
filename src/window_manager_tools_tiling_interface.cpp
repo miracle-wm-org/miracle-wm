@@ -184,17 +184,31 @@ void WindowManagerToolsTilingInterface::on_animation(
         }
     }
 
-    if (result.is_complete)
-    {
-        mir::geometry::Rectangle new_rectangle(spec.top_left().value(), spec.size().value());
-        clip(window, new_rectangle);
-    }
-    else
-        noclip(window);
-
     if (result.transform && result.transform.value() != metadata->get_transform())
     {
         metadata->set_transform(result.transform.value());
         surface->set_transformation(result.transform.value());
     }
+
+    // NOTE: The window rectangle is being clipped to the current transformation.
+    // TODO: This needs to handle rotations
+    // TODO: We probably need to translate this so that the center is around (0, 0)...
+    // TODO: This may have bad performance implications if many windows are animating at once
+    auto transform = metadata->get_transform();
+    if (auto node = metadata->get_tiling_node())
+    {
+        spec.top_left() = node->get_visible_area().top_left;
+        spec.size() = node->get_visible_area().size;
+    }
+
+    float half_width = spec.size().value().width.as_int() / 2.f;
+    float half_height = spec.size().value().height.as_int() / 2.f;
+    glm::vec4 top_left = transform * glm::vec4(-half_width, -half_height, 0, 1);
+    glm::vec4 bottom_right = transform * glm::vec4(half_width, half_height, 0, 1);
+    glm::vec4 bottom_left = transform * glm::vec4(-half_width, half_height, 0, 1);
+
+    mir::geometry::Rectangle new_rectangle(
+        { top_left.x, top_left.y },
+        { bottom_right.x - top_left.x, bottom_right.y - top_left.y });
+    clip(window, new_rectangle);
 }
