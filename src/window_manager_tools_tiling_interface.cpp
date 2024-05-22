@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
 #include <mir/log.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace miracle;
 
@@ -195,17 +196,16 @@ void WindowManagerToolsTilingInterface::on_animation(
     // TODO: We probably need to translate this so that the center is around (0, 0)...
     // TODO: This may have bad performance implications if many windows are animating at once
     auto transform = metadata->get_transform();
-    if (auto node = metadata->get_tiling_node())
-    {
-        spec.top_left() = node->get_visible_area().top_left;
-        spec.size() = node->get_visible_area().size;
-    }
-
-    float half_width = spec.size().value().width.as_int() / 2.f;
-    float half_height = spec.size().value().height.as_int() / 2.f;
-    glm::vec4 top_left = transform * glm::vec4(-half_width, -half_height, 0, 1);
-    glm::vec4 bottom_right = transform * glm::vec4(half_width, half_height, 0, 1);
-    glm::vec4 bottom_left = transform * glm::vec4(-half_width, half_height, 0, 1);
+    auto width = (float)spec.size().value().width.as_int();
+    auto height = (float)spec.size().value().height.as_int();
+    glm::vec4 top_left = glm::vec4(
+        spec.top_left().value().x.as_int(),
+        spec.top_left().value().y.as_int(),
+        0, 1);
+    glm::vec4 bottom_right = glm::vec4(
+        spec.top_left().value().x.as_int() + width,
+        spec.top_left().value().y.as_int() + height,
+        0, 1);
 
     mir::geometry::Rectangle new_rectangle(
         { top_left.x, top_left.y },
