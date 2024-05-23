@@ -717,13 +717,14 @@ bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
     if (!metadata)
         return false;
 
+    constrain(window_info.window());
+
     if (is_active_window_fullscreen)
         return true;
 
     if (window_info.can_be_active())
         tiling_interface.select_active_window(window_info.window());
 
-    constrain(window_info.window());
     return true;
 }
 

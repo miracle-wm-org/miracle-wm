@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
 #include <mir/log.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace miracle;
 
@@ -59,7 +60,7 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 }
 
 void WindowManagerToolsTilingInterface::set_rectangle(
-    miral::Window const& window, geom::Rectangle const& r)
+    miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to)
 {
     auto metadata = get_metadata(window);
     if (!metadata)
@@ -70,8 +71,8 @@ void WindowManagerToolsTilingInterface::set_rectangle(
 
     animator.window_move(
         metadata->get_animation_handle(),
-        geom::Rectangle(window.top_left(), window.size()),
-        r,
+        from,
+        to,
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);
@@ -152,8 +153,20 @@ void WindowManagerToolsTilingInterface::on_animation(
 
     bool needs_modify = false;
     miral::WindowSpecification spec;
-    spec.top_left() = window.top_left();
-    spec.size() = window.size();
+    if (auto node = metadata->get_tiling_node())
+    {
+        spec.top_left() = node->get_visible_area().top_left;
+        spec.size() = node->get_visible_area().size;
+    }
+    else
+    {
+        spec.top_left() = window.top_left();
+        spec.size() = window.size();
+    }
+
+    spec.min_width() = mir::geometry::Width(0);
+    spec.min_height() = mir::geometry::Height(0);
+
     if (result.position)
     {
         spec.top_left() = mir::geometry::Point(
@@ -184,17 +197,29 @@ void WindowManagerToolsTilingInterface::on_animation(
         }
     }
 
-    if (result.is_complete)
-    {
-        mir::geometry::Rectangle new_rectangle(spec.top_left().value(), spec.size().value());
-        clip(window, new_rectangle);
-    }
-    else
-        noclip(window);
-
     if (result.transform && result.transform.value() != metadata->get_transform())
     {
         metadata->set_transform(result.transform.value());
         surface->set_transformation(result.transform.value());
     }
+
+    // NOTE: The clip area needs to reflect the current position + transform of the window.
+    // Failing to set a clip area will cause overflowing windows to briefly disregard their
+    // compacted size.
+    // TODO: When we have rotation in our transforms, then we need to handle rotations.
+    //  At that point, the top_left corner will change. We will need to find an AABB
+    //  to represent the clip area.
+    auto transform = metadata->get_transform();
+    auto width = spec.size().value().width.as_int();
+    auto height = spec.size().value().height.as_int();
+
+    glm::vec4 scale = transform * glm::vec4(
+        width,
+        height,
+        0, 1);
+
+    mir::geometry::Rectangle new_rectangle(
+        { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
+        { scale.x, scale.y });
+    clip(window, new_rectangle);
 }

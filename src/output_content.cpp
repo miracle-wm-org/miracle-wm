@@ -121,6 +121,8 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     {
         miral::WindowSpecification spec;
         spec.userdata() = metadata;
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
         tools.modify_window(window_info.window(), spec);
         return metadata;
     }

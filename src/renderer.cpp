@@ -524,12 +524,19 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     auto const clip_area = renderable.clip_area();
     if (clip_area)
     {
+        glm::mat4 workspace_transform(1.f);
+        if (userdata)
+        {
+            if (auto workspace = userdata->get_workspace())
+                workspace_transform = workspace->get_transform();
+        }
+
         glEnable(GL_SCISSOR_TEST);
         // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
         auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
             - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
         glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * clip_pos;
+        clip_pos = display_transform * workspace_transform * clip_pos;
 
         glScissor(
             (int)clip_pos.x - viewport.top_left.x.as_int(),
