@@ -402,10 +402,12 @@ void ParentNode::set_direction(miracle::NodeLayoutDirection new_direction)
 void ParentNode::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> const& second)
 {
     auto first_index = get_index_of_node(first);
+    auto first_area = first->get_logical_area();
     auto second_index = get_index_of_node(second);
+    auto second_area = second->get_logical_area();
     sub_nodes[second_index] = first;
     sub_nodes[first_index] = second;
-    set_logical_area(logical_area);
+    relayout();
     constrain();
 }
 

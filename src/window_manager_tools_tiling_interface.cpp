@@ -60,7 +60,7 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
 }
 
 void WindowManagerToolsTilingInterface::set_rectangle(
-    miral::Window const& window, geom::Rectangle const& r)
+    miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to)
 {
     auto metadata = get_metadata(window);
     if (!metadata)
@@ -71,8 +71,8 @@ void WindowManagerToolsTilingInterface::set_rectangle(
 
     animator.window_move(
         metadata->get_animation_handle(),
-        geom::Rectangle(window.top_left(), window.size()),
-        r,
+        from,
+        to,
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);
@@ -163,6 +163,9 @@ void WindowManagerToolsTilingInterface::on_animation(
         spec.top_left() = window.top_left();
         spec.size() = window.size();
     }
+
+    spec.min_width() = mir::geometry::Width(0);
+    spec.min_height() = mir::geometry::Height(0);
 
     if (result.position)
     {
