@@ -508,6 +508,7 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Node>
         after_root_lane->set_direction(new_layout_direction);
         after_root_lane->graft_existing(root_lane, 0);
         root_lane = after_root_lane;
+        recalculate_root_node_area();
     }
 
     bool is_negative = is_negative_direction(direction);
