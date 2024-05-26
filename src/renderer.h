@@ -20,12 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "primitive.h"
 #include "surface_tracker.h"
+#include "program_factory.h"
+
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/buffer_id.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
 #include <miral/window_manager_tools.h>
-
 #include <GLES2/gl2.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -46,7 +47,6 @@ namespace graphics::gl
 namespace miracle
 {
 class MiracleConfig;
-class ProgramFactory;
 
 class Renderer : public mir::renderer::Renderer
 {
@@ -55,7 +55,7 @@ public:
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
         std::shared_ptr<MiracleConfig> const& config,
         SurfaceTracker& surface_tracker);
-    virtual ~Renderer();
+    ~Renderer() override = default;
 
     // These are called with a valid GL context:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
@@ -82,14 +82,14 @@ private:
      *       the only OpenGL-specific class in the display server, and
      *       tessellation is very much OpenGL-specific.
      */
-    virtual void tessellate(std::vector<mir::gl::Primitive>& primitives,
-        mir::graphics::Renderable const& renderable) const;
+    static void tessellate(std::vector<mir::gl::Primitive>& primitives,
+        mir::graphics::Renderable const& renderable);
 
     struct OutlineContext
     {
         glm::vec4 color;
     };
-    virtual void draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
+    void draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
     void update_gl_viewport();
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;

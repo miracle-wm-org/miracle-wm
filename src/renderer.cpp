@@ -15,34 +15,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <GLES2/gl2.h>
+#define GLM_FORCE_RADIANS
 #define MIR_LOG_COMPONENT "GLRenderer"
+
+#include <GLES2/gl2.h>
 #include "window_tools_accessor.h"
 #include "workspace_content.h"
 #include "program_factory.h"
-
-#include "mir/graphics/buffer.h"
-#include "mir/graphics/display_sink.h"
-#include "mir/graphics/platform.h"
-#include "mir/graphics/program_factory.h"
-#include "mir/graphics/renderable.h"
-#include "mir/graphics/texture.h"
-#include "mir/log.h"
-#include "mir/renderer/gl/gl_surface.h"
 #include "miracle_config.h"
 #include "renderer.h"
 #include "tessellation_helpers.h"
 #include "window_metadata.h"
 
-#define GLM_FORCE_RADIANS
+#include <mir/graphics/buffer.h>
+#include <mir/graphics/display_sink.h>
+#include <mir/graphics/platform.h>
+#include <mir/graphics/program_factory.h>
+#include <mir/graphics/renderable.h>
+#include <mir/graphics/texture.h>
+#include <mir/log.h>
+#include <mir/renderer/gl/gl_surface.h>
 #include <EGL/egl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <boost/throw_exception.hpp>
 #include <cmath>
-#include <mutex>
-#include <sstream>
 #include <stdexcept>
 
 namespace mg = mir::graphics;
@@ -68,22 +64,22 @@ public:
     {
     }
 
-    ID id() const override
+    [[nodiscard]] ID id() const override
     {
         return "";
     }
 
-    std::shared_ptr<mir::graphics::Buffer> buffer() const override
+    [[nodiscard]] std::shared_ptr<mir::graphics::Buffer> buffer() const override
     {
         return renderable.buffer();
     }
 
-    geom::Rectangle screen_position() const override
+    [[nodiscard]] geom::Rectangle screen_position() const override
     {
         return get_rectangle(renderable.screen_position());
     }
 
-    std::optional<geom::Rectangle> clip_area() const override
+    [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
     {
         auto clip_area_rect = renderable.clip_area();
         if (!clip_area_rect)
@@ -91,28 +87,28 @@ public:
         return get_rectangle(clip_area_rect.value());
     }
 
-    float alpha() const override
+    [[nodiscard]] float alpha() const override
     {
         return _alpha;
     }
 
-    glm::mat4 transformation() const override
+    [[nodiscard]] glm::mat4 transformation() const override
     {
         return renderable.transformation();
     }
 
-    bool shaped() const override
+    [[nodiscard]] bool shaped() const override
     {
         return renderable.shaped();
     }
 
-    std::optional<mir::scene::Surface const*> surface_if_any() const override
+    [[nodiscard]] std::optional<mir::scene::Surface const*> surface_if_any() const override
     {
         return {};
     }
 
 private:
-    geom::Rectangle get_rectangle(geom::Rectangle const& in) const
+    [[nodiscard]] geom::Rectangle get_rectangle(geom::Rectangle const& in) const
     {
         auto rectangle = in;
         rectangle.top_left = {
@@ -140,6 +136,7 @@ Renderer::Renderer(
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
     display_transform(1),
+    screen_to_gl_coords(1),
     gl_interface { std::move(gl_interface) },
     config { config },
     surface_tracker { surface_tracker }
@@ -201,13 +198,9 @@ Renderer::Renderer(
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-Renderer::~Renderer()
-{
-}
-
 void Renderer::tessellate(
     std::vector<mgl::Primitive>& primitives,
-    mg::Renderable const& renderable) const
+    mg::Renderable const& renderable)
 {
     primitives.resize(1);
     primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 });
@@ -303,7 +296,7 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     auto const* const prog =
         [&](bool alpha) -> ProgramData const*
     {
-        auto const& family = static_cast<::Program const&>(texture->shader(*program_factory));
+        auto const& family = dynamic_cast<Program const&>(texture->shader(*program_factory));
         if (context)
             return &family.outline;
         if (alpha)
@@ -320,7 +313,7 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
         {
             if (prog->tex_uniforms[i] != -1)
             {
-                glUniform1i(prog->tex_uniforms[i], i);
+                glUniform1i(prog->tex_uniforms[i], (int)i);
             }
         }
         glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
@@ -332,8 +325,8 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
     glActiveTexture(GL_TEXTURE0);
 
     auto const& rect = renderable.screen_position();
-    GLfloat centrex = rect.top_left.x.as_int() + rect.size.width.as_int() / 2.0f;
-    GLfloat centrey = rect.top_left.y.as_int() + rect.size.height.as_int() / 2.0f;
+    GLfloat centrex = (float)rect.top_left.x.as_int() + (float)rect.size.width.as_int() / 2.0f;
+    GLfloat centrey = (float)rect.top_left.y.as_int() + (float)rect.size.height.as_int() / 2.0f;
     glUniform2f(prog->centre_uniform, centrex, centrey);
 
     glm::mat4 transform = renderable.transformation();
@@ -493,12 +486,13 @@ void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
     screen_to_gl_coords[2][3] = -1.0f;
 
     float const vertical_fov_degrees = 30.0f;
-    float const near = (rect.size.height.as_int() / 2.0f) / std::tan((vertical_fov_degrees * M_PI / 180.0f) / 2.0f);
+    float half_height = (float)rect.size.height.as_int() / 2.f;
+    float const near = half_height / tanf((float)(vertical_fov_degrees * M_PI / 180.0f) / 2.f);
     float const far = -near;
 
     screen_to_gl_coords = glm::scale(screen_to_gl_coords,
-        glm::vec3 { 2.0f / rect.size.width.as_int(),
-            -2.0f / rect.size.height.as_int(),
+        glm::vec3 { 2.0f / (float)rect.size.width.as_int(),
+            -2.0f / (float)rect.size.height.as_int(),
             2.0f / (near - far) });
     screen_to_gl_coords = glm::translate(screen_to_gl_coords,
         glm::vec3 { -rect.top_left.x.as_int(),
@@ -521,17 +515,17 @@ void Renderer::update_gl_viewport()
     auto viewport_height = fabs(transformed_viewport[1]);
 
     auto const output_size = output_surface->size();
-    auto const output_width = output_size.width.as_value();
-    auto const output_height = output_size.height.as_value();
+    int const output_width = output_size.width.as_value();
+    int const output_height = output_size.height.as_value();
 
     if (viewport_width > 0.0f && viewport_height > 0.0f && output_width > 0 && output_height > 0)
     {
         GLint reduced_width = output_width, reduced_height = output_height;
         // if viewport_aspect_ratio >= output_aspect_ratio
-        if (viewport_width * output_height >= output_width * viewport_height)
-            reduced_height = output_width * viewport_height / viewport_width;
+        if (viewport_width * (float)output_height >= (float)output_width * viewport_height)
+            reduced_height = (int)((float)output_width * viewport_height / viewport_width);
         else
-            reduced_width = output_height * viewport_width / viewport_height;
+            reduced_width = (int)((float)output_height * viewport_width / viewport_height);
 
         GLint offset_x = (output_width - reduced_width) / 2;
         GLint offset_y = (output_height - reduced_height) / 2;
