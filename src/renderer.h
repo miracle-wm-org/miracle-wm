@@ -87,9 +87,11 @@ private:
 
     struct OutlineContext
     {
+        bool enabled = false;
         glm::vec4 color;
+        int size;
     };
-    void draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
+    OutlineContext draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
     void update_gl_viewport();
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;

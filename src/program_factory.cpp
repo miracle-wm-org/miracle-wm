@@ -15,30 +15,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "program_factory"
+
 #include "program_factory.h"
 #include <sstream>
 #include <boost/throw_exception.hpp>
-#include "mir/graphics/egl_error.h"
+#include <mir/graphics/egl_error.h>
+#include <mir/log.h>
 
 namespace
 {
 const GLchar* const vertex_shader_src = R"(
 attribute vec3 position;
 attribute vec2 texcoord;
+
 uniform mat4 screen_to_gl_coords;
 uniform mat4 display_transform;
 uniform mat4 workspace_transform;
 uniform mat4 transform;
 uniform vec2 centre;
-uniform vec4 outline_color;
+
 varying vec2 v_texcoord;
-varying vec4 v_outline_color;
+
 void main() {
    vec4 mid = vec4(centre, 0.0, 0.0);
    vec4 transformed = (transform * (vec4(position, 1.0) - mid)) + mid;
    gl_Position = display_transform * screen_to_gl_coords * workspace_transform * transformed;
    v_texcoord = texcoord;
-   v_outline_color = outline_color;
 }
 )";
 }
@@ -47,7 +50,11 @@ miracle::ProgramData::ProgramData(GLuint program_id)
 {
     id = program_id;
     position_attr = glGetAttribLocation(id, "position");
+    if (position_attr < 0)
+        mir::log_warning("Program is missing position_attr");
     texcoord_attr = glGetAttribLocation(id, "texcoord");
+    if (position_attr < 0)
+        mir::log_warning("Program is missing texcoord_attr");
     for (auto i = 0u; i < tex_uniforms.size(); ++i)
     {
         /* You can reference uniform arrays as tex[0], tex[1], tex[2], … until you
@@ -57,12 +64,32 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         tex_uniforms[i] = glGetUniformLocation(id, uniform_name.c_str());
     }
     centre_uniform = glGetUniformLocation(id, "centre");
+    if (centre_uniform < 0)
+        mir::log_warning("Program is missing centre_uniform");
+
     display_transform_uniform = glGetUniformLocation(id, "display_transform");
+    if (display_transform_uniform < 0)
+        mir::log_warning("Program is missing display_transform_uniform");
+
     workspace_transform_uniform = glGetUniformLocation(id, "workspace_transform");
+    if (workspace_transform_uniform < 0)
+        mir::log_warning("Program is missing workspace_transform_uniform");
+
     transform_uniform = glGetUniformLocation(id, "transform");
+    if (transform_uniform < 0)
+        mir::log_warning("Program is missing transform_uniform");
+
     screen_to_gl_coords_uniform = glGetUniformLocation(id, "screen_to_gl_coords");
+    if (screen_to_gl_coords_uniform < 0)
+        mir::log_warning("Program is missing screen_to_gl_coords_uniform");
+
     alpha_uniform = glGetUniformLocation(id, "alpha");
+    if (alpha_uniform < 0)
+        mir::log_warning("Program is missing alpha_uniform");
+
     outline_color_uniform = glGetUniformLocation(id, "outline_color");
+    if (outline_color_uniform < 0)
+        mir::log_warning("Program is missing outline_color_uniform");
 }
 
 miracle::Program::Program(
@@ -131,9 +158,9 @@ precision mediump float;
 #endif
 
 uniform float alpha;
-varying vec4 v_outline_color;
+uniform vec4 outline_color;
 void main() {
-    gl_FragColor = alpha * v_outline_color;
+    gl_FragColor = alpha * outline_color;
 }
 )";
 

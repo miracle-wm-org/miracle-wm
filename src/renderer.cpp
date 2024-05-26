@@ -220,7 +220,12 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     ++frameno;
     for (auto const& r : renderables)
     {
-        draw(*r);
+        auto context = draw(*r);
+        if (context.enabled)
+        {
+            OutlineRenderable outline(*r, context.size, context.color.a);
+            draw(outline, &context);
+        }
     }
 
     auto output = output_surface->commit();
@@ -232,7 +237,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     return output;
 }
 
-void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
+miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
 {
     auto surface = renderable.surface_if_any();
     std::shared_ptr<WindowMetadata> userdata = nullptr;
@@ -361,7 +366,7 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
         glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
                            glm::value_ptr(glm::mat4(1.f)));
 
-    if (context)
+    if (prog->outline_color_uniform >= 0 && context)
     {
         glUniform4f(prog->outline_color_uniform,
             context->color.r, context->color.g,
@@ -454,11 +459,11 @@ void Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) c
         {
             bool is_focused = userdata->is_focused();
             auto color = is_focused ? border_config.focus_color : border_config.color;
-            OutlineContext outline_context = { color };
-            OutlineRenderable outline(renderable, border_config.size, color.a);
-            draw(outline, &outline_context);
+            return OutlineContext{ true, color, border_config.size };
         }
     }
+
+    return OutlineContext{ false };
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
