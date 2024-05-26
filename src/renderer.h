@@ -46,6 +46,7 @@ namespace graphics::gl
 namespace miracle
 {
 class MiracleConfig;
+class ProgramFactory;
 
 class Renderer : public mir::renderer::Renderer
 {
@@ -94,7 +95,6 @@ private:
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
     GLfloat clear_color[4];
     mutable long long frameno = 0;
-    class ProgramFactory;
     std::unique_ptr<ProgramFactory> const program_factory;
     mir::geometry::Rectangle viewport;
     glm::mat4 screen_to_gl_coords;
