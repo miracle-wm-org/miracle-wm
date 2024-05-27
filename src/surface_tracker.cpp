@@ -33,7 +33,7 @@ void SurfaceTracker::remove(miral::Window const& window)
         map.erase(it);
 }
 
-miral::Window SurfaceTracker::get(mir::scene::Surface const* surface)
+miral::Window SurfaceTracker::get(mir::scene::Surface const* surface) const
 {
     auto it = map.find(surface);
     if (it == map.end())
