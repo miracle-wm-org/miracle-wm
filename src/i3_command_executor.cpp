@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_node.h"
 #include "policy.h"
 #include "window_helpers.h"
+#include "auto_restarting_launcher.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <mir/log.h>
@@ -30,10 +31,12 @@ using namespace miracle;
 I3CommandExecutor::I3CommandExecutor(
     miracle::Policy& policy,
     WorkspaceManager& workspace_manager,
-    miral::WindowManagerTools const& tools) :
+    miral::WindowManagerTools const& tools,
+    AutoRestartingLauncher& launcher) :
     policy { policy },
     workspace_manager { workspace_manager },
-    tools { tools }
+    tools { tools },
+    launcher{ launcher }
 {
 }
 
@@ -43,6 +46,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
     {
         switch (command.type)
         {
+        case I3CommandType::exec:
+            process_exec(command, command_list);
+            break;
         case I3CommandType::focus:
             process_focus(command, command_list);
             break;
@@ -69,6 +75,32 @@ miral::Window I3CommandExecutor::get_window_meeting_criteria(I3ScopedCommandList
         return false;
     });
     return result;
+}
+
+void I3CommandExecutor::process_exec(miracle::I3Command const& command, miracle::I3ScopedCommandList const& command_list)
+{
+    if (command.arguments.empty())
+    {
+        mir::log_warning("process_exec: no arguments were supplied");
+        return;
+    }
+
+    size_t arg_index = 0;
+    bool no_startup_id = false;
+    if (command.arguments[arg_index] == "--no-startup-id")
+    {
+        no_startup_id = true;
+        arg_index++;
+    }
+
+    if (arg_index >= command.arguments.size())
+    {
+        mir::log_warning("process_exec: argument does not have a command to run");
+        return;
+    }
+
+    StartupApp app{ command.arguments[arg_index], false, no_startup_id };
+    launcher.launch(app);
 }
 
 void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandList const& command_list)

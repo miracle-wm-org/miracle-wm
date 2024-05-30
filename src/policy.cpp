@@ -45,7 +45,7 @@ const int MODIFIER_MASK = mir_input_event_modifier_alt | mir_input_event_modifie
 
 Policy::Policy(
     miral::WindowManagerTools const& tools,
-    miral::ExternalClientLauncher const& external_client_launcher,
+    AutoRestartingLauncher& external_client_launcher,
     miral::MirRunner& runner,
     std::shared_ptr<MiracleConfig> const& config,
     SurfaceTracker& surface_tracker,
@@ -60,7 +60,7 @@ Policy::Policy(
         workspace_observer_registrar,
         [&]()
 { return get_active_output(); }) },
-    i3_command_executor(*this, workspace_manager, tools),
+    i3_command_executor(*this, workspace_manager, tools, external_client_launcher),
     surface_tracker { surface_tracker },
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
     animator(server.the_main_loop(), config),
@@ -85,7 +85,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
     if (custom_key_command != nullptr)
     {
-        external_client_launcher.launch(custom_key_command->command);
+        external_client_launcher.launch({ custom_key_command->command });
         return true;
     }
 

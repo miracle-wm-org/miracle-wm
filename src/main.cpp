@@ -80,7 +80,7 @@ int main(int argc, char const* argv[])
     {
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
-                "tiling", external_client_launcher, runner, config, surface_tracker, server)
+                "tiling", auto_restarting_launcher, runner, config, surface_tracker, server)
         };
         (*options)(server);
     });

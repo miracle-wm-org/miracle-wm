@@ -104,6 +104,7 @@ struct StartupApp
 {
     std::string command;
     bool restart_on_death = false;
+    bool no_startup_id = false;
 };
 
 struct EnvironmentVariable
