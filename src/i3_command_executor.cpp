@@ -49,6 +49,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         case I3CommandType::exec:
             process_exec(command, command_list);
             break;
+        case I3CommandType::split:
+            process_split(command, command_list);
+            break;
         case I3CommandType::focus:
             process_focus(command, command_list);
             break;
@@ -101,6 +104,40 @@ void I3CommandExecutor::process_exec(miracle::I3Command const& command, miracle:
 
     StartupApp app{ command.arguments[arg_index], false, no_startup_id };
     launcher.launch(app);
+}
+
+void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle::I3ScopedCommandList const& command_list)
+{
+    auto active_output = policy.get_active_output();
+    if (!active_output)
+    {
+        mir::log_warning("process_split: output is null");
+        return;
+    }
+
+    if (command.arguments.empty())
+    {
+        mir::log_warning("process_split: no arguments were supplied");
+        return;
+    }
+
+    if (command.arguments.front() == "vertical")
+    {
+        active_output->request_vertical();
+    }
+    else if (command.arguments.front() == "horizontal")
+    {
+        active_output->request_horizontal();
+    }
+    else if (command.arguments.front() == "toggle")
+    {
+        active_output->toggle_layout();
+    }
+    else
+    {
+        mir::log_warning("process_split: unknown argument %s", command.arguments.front().c_str());
+        return;
+    }
 }
 
 void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandList const& command_list)

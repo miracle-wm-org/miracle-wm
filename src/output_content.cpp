@@ -576,6 +576,11 @@ void OutputContent::request_horizontal()
     get_active_tree()->request_horizontal();
 }
 
+void OutputContent::toggle_layout()
+{
+    get_active_tree()->toggle_layout();
+}
+
 void OutputContent::toggle_resize_mode()
 {
     get_active_tree()->toggle_resize_mode();
