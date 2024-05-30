@@ -85,3 +85,13 @@ TEST_F(I3CommandTest, CanParseSingleI3Command)
     ASSERT_EQ(commands[0].commands[0].type, I3CommandType::exec);
     ASSERT_EQ(commands[0].commands[0].arguments[0], "gedit");
 }
+
+TEST_F(I3CommandTest, CanParseExecCommandWithNoStartupId)
+{
+    std::string v = "exec --no-startup-id gedit";
+    auto commands = I3ScopedCommandList::parse(v);
+    ASSERT_EQ(commands[0].commands.size(), 1);
+    ASSERT_EQ(commands[0].commands[0].type, I3CommandType::exec);
+    ASSERT_EQ(commands[0].commands[0].arguments[0], "--no-startup-id");
+    ASSERT_EQ(commands[0].commands[0].arguments[1], "gedit");
+}

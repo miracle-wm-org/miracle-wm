@@ -26,21 +26,28 @@ namespace miracle
 
 class Policy;
 class WorkspaceManager;
+class AutoRestartingLauncher;
 
 /// Processes all commands coming from i3 IPC. This class is mostly for organizational
 /// purposes, as a lot of logic is associated with processing these operations.
 class I3CommandExecutor
 {
 public:
-    I3CommandExecutor(Policy&, WorkspaceManager&, miral::WindowManagerTools const&);
+    I3CommandExecutor(
+        Policy&,
+        WorkspaceManager&,
+        miral::WindowManagerTools const&,
+        AutoRestartingLauncher&);
     void process(I3ScopedCommandList const&);
 
 private:
     Policy& policy;
     WorkspaceManager& workspace_manager;
     miral::WindowManagerTools tools;
+    AutoRestartingLauncher& launcher;
 
     miral::Window get_window_meeting_criteria(I3ScopedCommandList const&);
+    void process_exec(I3Command const&, I3ScopedCommandList const&);
     void process_focus(I3Command const&, I3ScopedCommandList const&);
 };
 
