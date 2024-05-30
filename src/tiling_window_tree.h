@@ -76,6 +76,9 @@ public:
     // Request a change to horizontal window placement
     void request_horizontal();
 
+    // Request a change from the current layout scheme to another layout scheme
+    void toggle_layout();
+
     /// Advises us to focus the provided window.
     void advise_focus_gained(miral::Window&);
 

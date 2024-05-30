@@ -290,6 +290,18 @@ void TilingWindowTree::request_horizontal()
     handle_direction_change(NodeLayoutDirection::horizontal);
 }
 
+void TilingWindowTree::toggle_layout()
+{
+    auto const& lane = get_active_lane();
+    if (!lane)
+        return;
+
+    if (lane->get_direction() == NodeLayoutDirection::horizontal)
+        handle_direction_change(NodeLayoutDirection::vertical);
+    else
+        handle_direction_change(NodeLayoutDirection::horizontal);
+}
+
 void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
 {
     if (is_active_window_fullscreen)
