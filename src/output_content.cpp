@@ -15,9 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "direction.h"
-#include "miral/window_specification.h"
-#include "window_metadata.h"
 #include "window_metadata.h"
 #include "workspace_content.h"
 #include <memory>
@@ -93,38 +90,27 @@ WindowType OutputContent::allocate_position(miral::WindowSpecification& requeste
 
 std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
 {
-    std::shared_ptr<WindowMetadata> metadata = window_helpers::get_metadata(window_info.window(), tools);
+    std::shared_ptr<WindowMetadata> metadata = nullptr;
     switch (type)
     {
     case WindowType::tiled:
     {
         auto node = get_active_tree()->advise_new_window(window_info);
-
-        if (metadata)
-            metadata->set_tiling(this, get_active_workspace());
-        else
-            metadata = std::make_shared<WindowMetadata>(
-                WindowType::tiled, window_info.window(), get_active_workspace());
+        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         metadata->associate_to_node(node);
         break;
     }
     case WindowType::floating:
     {
         floating_window_manager.advise_new_window(window_info);
-        if (metadata)
-            metadata->set_floating(this, get_active_workspace());
-        else
-            metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         break;
     }
     case WindowType::other:
         if (window_info.state() == MirWindowState::mir_window_state_attached)
+        {
             tools.select_active_window(window_info.window());
-
-        if (metadata)
-            metadata->set_other();
-        else
-            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
+        }
+        metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
         break;
     default:
         mir::log_error("Unsupported window type: %d", (int)type);
@@ -583,13 +569,13 @@ bool OutputContent::move_active_window(miracle::Direction direction)
 
     switch (metadata->get_type())
     {
-    case WindowType::floating:
-        return move_active_window_by_amount(direction, 10);
-    case WindowType::tiled:
-        return get_active_tree()->try_move_active_window(direction);
-    default:
-        mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
-        return false;
+        case WindowType::floating:
+            return move_active_window_by_amount(direction, 10);
+        case WindowType::tiled:
+            return get_active_tree()->try_move_active_window(direction);
+        default:
+            mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
+            return false;
     }
 }
 
@@ -610,29 +596,29 @@ bool OutputContent::move_active_window_by_amount(Direction direction, int pixels
     miral::WindowSpecification spec;
     switch (direction)
     {
-    case Direction::down:
-        spec.top_left() = {
+        case Direction::down:
+            spec.top_left() = {
             prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
-        };
-        break;
-    case Direction::up:
-        spec.top_left() = {
+            };
+            break;
+        case Direction::up:
+            spec.top_left() = {
             prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
-        };
-        break;
-    case Direction::left:
-        spec.top_left() = {
+            };
+            break;
+        case Direction::left:
+            spec.top_left() = {
             prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
-        };
-        break;
-    case Direction::right:
-        spec.top_left() = {
+            };
+            break;
+        case Direction::right:
+            spec.top_left() = {
             prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
-        };
-        break;
-    default:
-        mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
-        return false;
+            };
+            break;
+        default:
+            mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
+            return false;
     }
 
     tools.modify_window(info, spec);
@@ -655,14 +641,14 @@ bool OutputContent::move_active_window_to_center_point(int x, int y)
     auto window_size = active_window.size();
     miral::WindowSpecification spec;
     spec.top_left() = {
-        std::clamp(
-            x - (int)(window_size.width.as_int() / 2.f),
-            output_size.top_left.x.as_int(),
-            output_size.top_left.x.as_int() + output_size.size.width.as_value()),
-        std::clamp(
-            y - (int)(window_size.height.as_int() / 2.f),
-            output_size.top_left.y.as_int(),
-            output_size.top_left.y.as_int() + output_size.size.height.as_value()),
+    std::clamp(
+    x - (int)(window_size.width.as_int() / 2.f),
+    output_size.top_left.x.as_int(),
+    output_size.top_left.x.as_int() + output_size.size.width.as_value()),
+    std::clamp(
+    y - (int)(window_size.height.as_int() / 2.f),
+    output_size.top_left.y.as_int(),
+    output_size.top_left.y.as_int() + output_size.size.height.as_value()),
     };
     tools.modify_window(tools.info_for(active_window), spec);
     return true;
@@ -763,15 +749,17 @@ void OutputContent::request_toggle_active_float()
         auto& info = tools.info_for(active_window);
         info.clip_area(area);
 
+        WindowSpecification spec = floating_window_manager.place_new_window(
+            tools.info_for(active_window.application()),
+            prev_spec);
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, get_active_workspace());
+        spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
+        tools.modify_window(active_window, spec);
+
+        advise_new_window(info, WindowType::floating);
         auto new_metadata = window_helpers::get_metadata(active_window, tools);
         handle_window_ready(info, new_metadata);
-
-        WindowSpecification spec = floating_window_manager.place_new_window(tools.info_for(active_window.application()), prev_spec);
-        spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
-        spec.userdata() = new_metadata;
-        tools.modify_window(active_window, spec);
         tools.select_active_window(active_window);
-
         get_active_workspace()->add_floating_window(active_window);
         break;
     }
@@ -817,6 +805,7 @@ void OutputContent::add_immediately(miral::Window& window)
     WindowSpecification spec = window_helpers::copy_from(prev_info);
     WindowType type = allocate_position(spec);
     tools.modify_window(window, spec);
-    auto metadata = advise_new_window(tools.info_for(window), type);
+    advise_new_window(tools.info_for(window), type);
+    auto metadata = window_helpers::get_metadata(window, tools);
     handle_window_ready(tools.info_for(window), metadata);
 }

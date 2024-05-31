@@ -84,27 +84,6 @@ std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const
     return nullptr;
 }
 
-void WindowMetadata::set_tiling(miracle::OutputContent* in_output, std::shared_ptr<WorkspaceContent> const& in_workspace)
-{
-    type = WindowType::tiled;
-    workspace = in_workspace;
-    is_pinned = false;
-}
-
-void WindowMetadata::set_floating(miracle::OutputContent* in_output, std::shared_ptr<WorkspaceContent> const& in_workspace)
-{
-    type = WindowType::floating;
-    workspace = in_workspace;
-    is_pinned = false;
-}
-
-void WindowMetadata::set_other()
-{
-    type = WindowType::other;
-    workspace = nullptr;
-    is_pinned = false;
-}
-
 uint32_t WindowMetadata::get_animation_handle() const
 {
     return animation_handle;

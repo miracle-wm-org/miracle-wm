@@ -364,7 +364,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
 
         if (command.arguments[2] == "center")
         {
-            active_output->move_active_window_to_center_point()
+            //active_output->move_active_window_to_center_point();
         }
         else if (command.arguments[2] == "mouse")
         {

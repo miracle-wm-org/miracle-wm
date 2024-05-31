@@ -303,10 +303,10 @@ auto Policy::place_new_window(
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
     auto shared_output = pending_output.lock();
-    auto window = window_info.window();
     if (!shared_output)
     {
         mir::log_warning("advise_new_window: output unavailable");
+        auto window = window_info.window();
         if (!output_list.empty())
         {
             // Our output is gone! Let's try to add it to a different output
@@ -328,9 +328,6 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     }
 
     auto metadata = shared_output->advise_new_window(window_info, pending_type);
-    miral::WindowSpecification spec;
-    spec.userdata() = metadata;
-    window_manager_tools.modify_window(window, spec);
 
     // Associate to an animation handle
     metadata->set_animation_handle(animator.register_animateable());
