@@ -55,7 +55,7 @@ public:
 
     bool request_first_available_workspace(std::shared_ptr<OutputContent> screen);
 
-    bool move_active_to_workspace(std::shared_ptr<OutputContent> screen, int workspace);
+    bool move_active_to_workspace(std::shared_ptr<OutputContent> const& screen, int workspace);
 
     bool delete_workspace(int workspace);
 

@@ -26,12 +26,13 @@ namespace miracle
 {
 class WindowMetadata;
 class TilingWindowTree;
+class AnimationStepResult;
 
 class TilingInterface
 {
 public:
     virtual bool is_fullscreen(miral::Window const&) = 0;
-    virtual void set_rectangle(miral::Window const&, geom::Rectangle const&) = 0;
+    virtual void set_rectangle(miral::Window const&, geom::Rectangle const&, geom::Rectangle const&) = 0;
     virtual MirWindowState get_state(miral::Window const&) = 0;
     virtual void change_state(miral::Window const&, MirWindowState state) = 0;
     virtual void clip(miral::Window const&, geom::Rectangle const&) = 0;
@@ -41,6 +42,8 @@ public:
     virtual std::shared_ptr<WindowMetadata> get_metadata(miral::Window const&, TilingWindowTree const*) = 0;
     virtual void raise(miral::Window const&) = 0;
     virtual void send_to_back(miral::Window const&) = 0;
+    virtual void open(miral::Window const&) = 0;
+    virtual void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const&) = 0;
 };
 
 }

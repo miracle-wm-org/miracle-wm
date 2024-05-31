@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "workspace_content"
 
 #include "workspace_content.h"
+#include "leaf_node.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
@@ -31,6 +32,7 @@ WorkspaceContent::WorkspaceContent(
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
     TilingInterface& node_interface) :
+    output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace }
@@ -69,6 +71,26 @@ void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& 
     {
         floating_windows.push_back(metadata->get_window());
     }
+}
+
+void WorkspaceContent::for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const& f)
+{
+    for (auto const& window : floating_windows)
+    {
+        auto metadata = window_helpers::get_metadata(window, tools);
+        if (metadata)
+            f(metadata);
+    }
+
+    tree->foreach_node([&](std::shared_ptr<Node> const& node)
+    {
+        if (auto leaf = Node::as_leaf(node))
+        {
+            auto metadata = window_helpers::get_metadata(leaf->get_window(), tools);
+            if (metadata)
+                f(metadata);
+        }
+    });
 }
 
 std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()

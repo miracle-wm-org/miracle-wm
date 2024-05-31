@@ -21,12 +21,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
+#include <glm/glm.hpp>
 
 namespace miracle
 {
-class OutputContent;
+class WorkspaceContent;
 class LeafNode;
 class TilingWindowTree;
+class OutputContent;
 
 enum class WindowType
 {
@@ -41,30 +43,36 @@ class WindowMetadata
 {
 public:
     WindowMetadata(WindowType type, miral::Window const& window);
-    WindowMetadata(WindowType type, miral::Window const& window, OutputContent* output, int workspace);
+    WindowMetadata(WindowType type, miral::Window const& window, std::shared_ptr<WorkspaceContent> const& workspace);
     void associate_to_node(std::shared_ptr<LeafNode> const&);
     miral::Window& get_window() { return window; }
     std::shared_ptr<LeafNode> get_tiling_node() const;
     WindowType get_type() const { return type; }
-    OutputContent* get_output() const { return output; }
     bool get_is_pinned() const { return is_pinned; }
     void set_restore_state(MirWindowState state);
     MirWindowState consume_restore_state();
     void toggle_pin_to_desktop();
-    void set_workspace(int workspace);
-    int get_workspace() const;
-    void set_tiling(OutputContent* output, int workspace);
-    void set_floating(OutputContent* output, int workspace);
+    void set_tiling(OutputContent* output, std::shared_ptr<WorkspaceContent> const& workspace);
+    void set_floating(OutputContent* output, std::shared_ptr<WorkspaceContent> const& workspace);
     void set_other();
+    bool is_focused() const;
+    void set_workspace(std::shared_ptr<WorkspaceContent> const& workspace);
+    std::shared_ptr<WorkspaceContent> const& get_workspace() const;
+    uint32_t get_animation_handle() const;
+    void set_animation_handle(uint32_t);
+    OutputContent* get_output() const;
+    glm::mat4 const& get_transform() const { return transform; }
+    void set_transform(glm::mat4 const& in) { transform = in; }
 
 private:
     WindowType type;
     miral::Window window;
-    OutputContent* output;
-    int workspace;
+    std::shared_ptr<WorkspaceContent> workspace;
     std::shared_ptr<LeafNode> tiling_node;
     MirWindowState restore_state;
     bool is_pinned = false;
+    uint32_t animation_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
 };
 
 }

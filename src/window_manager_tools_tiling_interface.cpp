@@ -16,16 +16,41 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "window_manager_tools_tiling_interface.h"
+#include "animator.h"
 #include "leaf_node.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
+#include <mir/scene/surface.h>
+
+#define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
+#include <mir/log.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace miracle;
 
 WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
-    miral::WindowManagerTools const& tools) :
-    tools { tools }
+    miral::WindowManagerTools const& tools,
+    Animator& animator) :
+    tools { tools },
+    animator { animator }
 {
+}
+
+void WindowManagerToolsTilingInterface::open(miral::Window const& window)
+{
+    auto metadata = get_metadata(window);
+    if (!metadata)
+    {
+        mir::log_error("Cannot set rectangle of window that lacks metadata");
+        return;
+    }
+
+    animator.window_open(
+        metadata->get_animation_handle(),
+        [this, metadata = metadata](miracle::AnimationStepResult const& result)
+    {
+        on_animation(result, metadata);
+    });
 }
 
 bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& window)
@@ -34,21 +59,24 @@ bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& windo
     return window_helpers::is_window_fullscreen(info.state());
 }
 
-void WindowManagerToolsTilingInterface::set_rectangle(miral::Window const& window, geom::Rectangle const& r)
+void WindowManagerToolsTilingInterface::set_rectangle(
+    miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to)
 {
-    miral::WindowSpecification spec;
-    spec.top_left() = r.top_left;
-    spec.size() = r.size;
-    tools.modify_window(window, spec);
-
-    auto& window_info = tools.info_for(window);
-    for (auto const& child : window_info.children())
+    auto metadata = get_metadata(window);
+    if (!metadata)
     {
-        miral::WindowSpecification sub_spec;
-        sub_spec.top_left() = r.top_left;
-        sub_spec.size() = r.size;
-        tools.modify_window(child, sub_spec);
+        mir::log_error("Cannot set rectangle of window that lacks metadata");
+        return;
     }
+
+    animator.window_move(
+        metadata->get_animation_handle(),
+        from,
+        to,
+        [this, metadata = metadata](miracle::AnimationStepResult const& result)
+    {
+        on_animation(result, metadata);
+    });
 }
 
 MirWindowState WindowManagerToolsTilingInterface::get_state(miral::Window const& window)
@@ -113,4 +141,85 @@ void WindowManagerToolsTilingInterface::raise(miral::Window const& window)
 void WindowManagerToolsTilingInterface::send_to_back(miral::Window const& window)
 {
     tools.send_tree_to_back(window);
+}
+
+void WindowManagerToolsTilingInterface::on_animation(
+    miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const& metadata)
+{
+    auto window = metadata->get_window();
+    auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+    if (!surface)
+        return;
+
+    bool needs_modify = false;
+    miral::WindowSpecification spec;
+    if (auto node = metadata->get_tiling_node())
+    {
+        spec.top_left() = node->get_visible_area().top_left;
+        spec.size() = node->get_visible_area().size;
+    }
+    else
+    {
+        spec.top_left() = window.top_left();
+        spec.size() = window.size();
+    }
+
+    spec.min_width() = mir::geometry::Width(0);
+    spec.min_height() = mir::geometry::Height(0);
+
+    if (result.position)
+    {
+        spec.top_left() = mir::geometry::Point(
+            result.position.value().x,
+            result.position.value().y);
+        needs_modify = true;
+    }
+
+    if (result.size)
+    {
+        spec.size() = mir::geometry::Size(
+            result.size.value().x,
+            result.size.value().y);
+        needs_modify = true;
+    }
+
+    if (needs_modify)
+    {
+        tools.modify_window(window, spec);
+
+        auto& window_info = tools.info_for(window);
+        for (auto const& child : window_info.children())
+        {
+            miral::WindowSpecification sub_spec;
+            sub_spec.top_left() = spec.top_left();
+            sub_spec.size() = spec.size();
+            tools.modify_window(child, sub_spec);
+        }
+    }
+
+    if (result.transform && result.transform.value() != metadata->get_transform())
+    {
+        metadata->set_transform(result.transform.value());
+        surface->set_transformation(result.transform.value());
+    }
+
+    // NOTE: The clip area needs to reflect the current position + transform of the window.
+    // Failing to set a clip area will cause overflowing windows to briefly disregard their
+    // compacted size.
+    // TODO: When we have rotation in our transforms, then we need to handle rotations.
+    //  At that point, the top_left corner will change. We will need to find an AABB
+    //  to represent the clip area.
+    auto transform = metadata->get_transform();
+    auto width = spec.size().value().width.as_int();
+    auto height = spec.size().value().height.as_int();
+
+    glm::vec4 scale = transform * glm::vec4(
+        width,
+        height,
+        0, 1);
+
+    mir::geometry::Rectangle new_rectangle(
+        { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
+        { scale.x, scale.y });
+    clip(window, new_rectangle);
 }

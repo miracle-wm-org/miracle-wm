@@ -18,16 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_POLICY_H
 #define MIRACLE_POLICY_H
 
+#include "animator.h"
 #include "i3_command_executor.h"
 #include "ipc.h"
 #include "miracle_config.h"
 #include "output_content.h"
+#include "surface_tracker.h"
 #include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
 #include "workspace_manager.h"
+#include "auto_restarting_launcher.h"
 
 #include <memory>
-#include <miral/external_client.h>
 #include <miral/internal_client.h>
 #include <miral/minimal_window_manager.h>
 #include <miral/output.h>
@@ -48,9 +50,10 @@ class Policy : public miral::WindowManagementPolicy
 public:
     Policy(
         miral::WindowManagerTools const&,
-        miral::ExternalClientLauncher const&,
+        AutoRestartingLauncher&,
         miral::MirRunner&,
         std::shared_ptr<MiracleConfig> const&,
+        SurfaceTracker&,
         mir::Server const&);
     ~Policy() override;
 
@@ -105,14 +108,16 @@ private:
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::MinimalWindowManager floating_window_manager;
-    miral::ExternalClientLauncher const external_client_launcher;
+    AutoRestartingLauncher& external_client_launcher;
     miral::MirRunner& runner;
     std::shared_ptr<MiracleConfig> config;
     WorkspaceObserverRegistrar workspace_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
+    Animator animator;
     WindowManagerToolsTilingInterface node_interface;
     I3CommandExecutor i3_command_executor;
+    SurfaceTracker& surface_tracker;
 };
 }
 

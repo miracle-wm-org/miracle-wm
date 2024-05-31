@@ -174,8 +174,7 @@ bool I3ScopedCommandList::meets_criteria(miral::Window const& window, miral::Win
         {
             jp::Regex re(criteria.regex.value());
             auto const& name = window_info.name();
-            if (!re.match(name))
-                return false;
+            return re.match(name);
         }
         default:
             break;
@@ -268,7 +267,8 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
                 }
                 else
                 {
-                    next_command.arguments.emplace_back(std::move(std::string(command_token.data(), command_token.size())));
+                    auto s = std::string(command_token.data(), command_token.size());
+                    next_command.arguments.emplace_back(s);
                 }
             }
 

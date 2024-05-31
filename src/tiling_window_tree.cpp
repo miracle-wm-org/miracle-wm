@@ -290,6 +290,18 @@ void TilingWindowTree::request_horizontal()
     handle_direction_change(NodeLayoutDirection::horizontal);
 }
 
+void TilingWindowTree::toggle_layout()
+{
+    auto const& lane = get_active_lane();
+    if (!lane)
+        return;
+
+    if (lane->get_direction() == NodeLayoutDirection::horizontal)
+        handle_direction_change(NodeLayoutDirection::vertical);
+    else
+        handle_direction_change(NodeLayoutDirection::horizontal);
+}
+
 void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
 {
     if (is_active_window_fullscreen)
@@ -508,6 +520,7 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Node>
         after_root_lane->set_direction(new_layout_direction);
         after_root_lane->graft_existing(root_lane, 0);
         root_lane = after_root_lane;
+        recalculate_root_node_area();
     }
 
     bool is_negative = is_negative_direction(direction);
@@ -664,7 +677,7 @@ std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> TilingWindo
     auto to_update = handle_remove(node);
 
     // Note: When we remove moving_node from its initial position, there's a chance
-    // that the target_lane was melted into another lane. Hence, we need to update it
+    // that the target_lane was melted into another lane. Hence, we need to run it
     auto target_parent = to->get_parent().lock();
     auto index = target_parent->get_index_of_node(to);
     target_parent->graft_existing(node, index + 1);
@@ -717,13 +730,14 @@ bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
     if (!metadata)
         return false;
 
+    constrain(window_info.window());
+
     if (is_active_window_fullscreen)
         return true;
 
     if (window_info.can_be_active())
         tiling_interface.select_active_window(window_info.window());
 
-    constrain(window_info.window());
     return true;
 }
 

@@ -18,13 +18,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "direction.h"
 #include "miral/window_specification.h"
 #include "window_metadata.h"
+#include "window_metadata.h"
+#include "workspace_content.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "output_content"
 
-#include "output_content.h"
+#include "animator.h"
 #include "leaf_node.h"
+#include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
+#include <glm/gtx/transform.hpp>
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
 
@@ -37,14 +43,17 @@ OutputContent::OutputContent(
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface) :
+    TilingInterface& node_interface,
+    Animator& animator) :
     output { output },
     workspace_manager { workspace_manager },
     area { area },
     tools { tools },
     floating_window_manager { floating_window_manager },
     config { config },
-    node_interface { node_interface }
+    node_interface { node_interface },
+    animator { animator },
+    animation_handle { animator.register_animateable() }
 {
 }
 
@@ -92,12 +101,10 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
         auto node = get_active_tree()->advise_new_window(window_info);
 
         if (metadata)
-        {
-            metadata->set_tiling(this, active_workspace);
-        }
+            metadata->set_tiling(this, get_active_workspace());
         else
             metadata = std::make_shared<WindowMetadata>(
-                WindowType::tiled, window_info.window(), this, active_workspace);
+                WindowType::tiled, window_info.window(), get_active_workspace());
         metadata->associate_to_node(node);
         break;
     }
@@ -105,10 +112,9 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     {
         floating_window_manager.advise_new_window(window_info);
         if (metadata)
-            metadata->set_floating(this, active_workspace);
+            metadata->set_floating(this, get_active_workspace());
         else
-            metadata = std::make_shared<WindowMetadata>(
-                WindowType::floating, window_info.window(), this, active_workspace);
+            metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         break;
     }
     case WindowType::other:
@@ -125,7 +131,20 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
         break;
     }
 
-    return metadata;
+    if (metadata)
+    {
+        miral::WindowSpecification spec;
+        spec.userdata() = metadata;
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+        tools.modify_window(window_info.window(), spec);
+        return metadata;
+    }
+    else
+    {
+        mir::log_error("Window failed to set metadata");
+        return nullptr;
+    }
 }
 
 void OutputContent::handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata)
@@ -289,13 +308,14 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
 
         if (modifications.state().is_set())
         {
+            auto tree = metadata->get_tiling_node()->get_tree();
             if (window_helpers::is_window_fullscreen(modifications.state().value()))
-                metadata->get_tiling_node()->get_tree()->advise_fullscreen_window(metadata->get_window());
+                tree->advise_fullscreen_window(metadata->get_window());
             else if (modifications.state().value() == mir_window_state_restored)
-                metadata->get_tiling_node()->get_tree()->advise_restored_window(metadata->get_window());
+                tree->advise_restored_window(metadata->get_window());
+            tree->constrain(metadata->get_window());
         }
 
-        metadata->get_tiling_node()->get_tree()->constrain(metadata->get_window());
         tools.modify_window(metadata->get_window(), modifications);
         break;
     }
@@ -408,41 +428,100 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
+    std::shared_ptr<WorkspaceContent> to = nullptr;
+    std::shared_ptr<WorkspaceContent> from = nullptr;
     for (auto& workspace : workspaces)
     {
+        if (workspace->get_workspace() == active_workspace)
+            from = workspace;
+
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
                 return true;
 
-            std::shared_ptr<WorkspaceContent> previous_workspace = nullptr;
-            std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
-            for (auto& other : workspaces)
-            {
-                if (other->get_workspace() == active_workspace)
-                {
-                    previous_workspace = other;
-                    pinned_windows = other->hide();
-                    break;
-                }
-            }
-
-            active_workspace = key;
-            workspace->show(pinned_windows);
-
-            // Important: Delete the workspace only after we have shown the new one because we may want
-            // to move a node to the new workspace.
-            if (previous_workspace != nullptr)
-            {
-                auto active_tree = previous_workspace->get_tree();
-                if (active_tree->is_empty() && previous_workspace->get_floating_windows().empty())
-                    workspace_manager.delete_workspace(previous_workspace->get_workspace());
-            }
-            return true;
+            to = workspace;
         }
     }
 
-    return false;
+    // TODO: Handle pinned windows
+    // TODO This is an abuse of the sliding animation system, but it at least proves a point. "Slide"
+    //  means different things in different contexts, so it seems.
+    auto travel_distance = active_workspace > key ? (-area.size.width.as_int()) : area.size.width.as_int();
+    animator.workspace_move_to(animation_handle,
+        travel_distance,
+        [from = from, this](AnimationStepResult const& asr)
+    {
+        if (!from)
+            return;
+
+        if (asr.is_complete)
+        {
+            from->hide();
+            return;
+        }
+
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        from->set_transform(other.transform.value());
+
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            if (surface)
+            {
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
+            }
+        });
+    },
+        [to = to, from = from, this](AnimationStepResult const& asr)
+    {
+        if (asr.is_complete)
+        {
+            to->set_transform(glm::mat4(1.f));
+            return;
+        }
+
+        if (!asr.position)
+            return;
+
+        AnimationStepResult other;
+        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
+        to->set_transform(other.transform.value());
+
+        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+        {
+            auto& window = metadata->get_window();
+            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+            surface->clip_area() = std::nullopt;
+            if (surface)
+            {
+                surface->set_clip_area(std::nullopt);
+                surface->set_transformation(glm::mat4(1.f));
+            }
+        });
+    });
+
+    to->show({});
+    active_workspace = key;
+
+    // Important: Delete the workspace only after we have shown the new one because we may want
+    // to move a node to the new workspace.
+    if (from != nullptr)
+    {
+        auto active_tree = from->get_tree();
+        if (active_tree->is_empty() && from->get_floating_windows().empty())
+            workspace_manager.delete_workspace(from->get_workspace());
+    }
+
+    return true;
 }
 
 void OutputContent::advise_application_zone_create(miral::Zone const& application_zone)
@@ -599,6 +678,11 @@ void OutputContent::request_horizontal()
     get_active_tree()->request_horizontal();
 }
 
+void OutputContent::toggle_layout()
+{
+    get_active_tree()->toggle_layout();
+}
+
 void OutputContent::toggle_resize_mode()
 {
     get_active_tree()->toggle_resize_mode();
@@ -679,7 +763,7 @@ void OutputContent::request_toggle_active_float()
         auto& info = tools.info_for(active_window);
         info.clip_area(area);
 
-        auto new_metadata = advise_new_window(info, WindowType::floating);
+        auto new_metadata = window_helpers::get_metadata(active_window, tools);
         handle_window_ready(info, new_metadata);
 
         WindowSpecification spec = floating_window_manager.place_new_window(tools.info_for(active_window.application()), prev_spec);
