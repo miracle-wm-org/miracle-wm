@@ -625,7 +625,7 @@ bool OutputContent::move_active_window_by_amount(Direction direction, int pixels
     return true;
 }
 
-bool OutputContent::move_active_window_to_center_point(int x, int y)
+bool OutputContent::move_active_window_to(int x, int y)
 {
     auto metadata = window_helpers::get_metadata(active_window, tools);
     if (!metadata)
@@ -633,23 +633,12 @@ bool OutputContent::move_active_window_to_center_point(int x, int y)
 
     if (metadata->get_type() != WindowType::floating)
     {
-        mir::log_warning("Cannot move a non-floating window by an amount, type=%d", (int) metadata->get_type());
+        mir::log_warning("Cannot move a non-floating window to a position, type=%d", (int) metadata->get_type());
         return false;
     }
 
-    auto output_size = get_area();
-    auto window_size = active_window.size();
     miral::WindowSpecification spec;
-    spec.top_left() = {
-    std::clamp(
-    x - (int)(window_size.width.as_int() / 2.f),
-    output_size.top_left.x.as_int(),
-    output_size.top_left.x.as_int() + output_size.size.width.as_value()),
-    std::clamp(
-    y - (int)(window_size.height.as_int() / 2.f),
-    output_size.top_left.y.as_int(),
-    output_size.top_left.y.as_int() + output_size.size.height.as_value()),
-    };
+    spec.top_left() = { x, y, };
     tools.modify_window(tools.info_for(active_window), spec);
     return true;
 }

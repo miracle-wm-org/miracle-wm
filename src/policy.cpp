@@ -256,6 +256,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
+    cursor_position = { x, y };
 
     for (auto const& output : output_list)
     {

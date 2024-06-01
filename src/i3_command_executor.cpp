@@ -258,21 +258,22 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
 
 namespace
 {
-bool parse_move_distance(std::vector<std::string> const& arguments, int total_size, int& out)
+bool parse_move_distance(std::vector<std::string> const& arguments, int& index, int total_size, int& out)
 {
-    if (arguments.size() <= 1)
+    auto size = arguments.size() - index;
+    if (size <= 1)
         return false;
 
     try
     {
-        out = std::stoi(arguments[1]);
-        if (arguments.size() > 2)
+        out = std::stoi(arguments[index]);
+        if (size == 2)
         {
             // We default to assuming the value is in pixels
-            if (arguments[2] == "ppt")
+            if (arguments[index + 1] == "ppt")
             {
                 float ppt = static_cast<float>(out) / 100.f;
-                out = total_size * ppt;
+                out = (float)total_size * ppt;
             }
         }
 
@@ -280,7 +281,7 @@ bool parse_move_distance(std::vector<std::string> const& arguments, int total_si
     }
     catch (std::invalid_argument const& e)
     {
-        mir::log_error("Invalid argument: %s", arguments[1].c_str());
+        mir::log_error("Invalid argument: %s", arguments[index].c_str());
         return false;
     }
 }
@@ -291,95 +292,123 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
     auto active_output = policy.get_active_output();
     if (!active_output)
     {
-        mir::log_warning("Trying to process I3 move command, but output is not set");
+        mir::log_warning("process_move: output is not set");
         return;
     }
     
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
     {
-        mir::log_warning("move command expects arguments");
+        mir::log_warning("process_move: move command expects arguments");
         return;
     }
 
-    auto const& arg = command.arguments.front();
-
+    int index = 0;
+    auto const& arg0 = command.arguments[index++];
     Direction direction = Direction::MAX;
     int total_size = 0;
-    if (arg == "left")
+    if (arg0 == "left")
     {
         direction = Direction::left;
         total_size = active_output->get_area().size.width.as_int();
     }
-    else if (arg == "right")
+    else if (arg0 == "right")
     {
         direction = Direction::right;
         total_size = active_output->get_area().size.width.as_int();
     }
-    else if (arg == "up")
+    else if (arg0 == "up")
     {
         direction = Direction::up;
         total_size = active_output->get_area().size.height.as_int();
     }
-    else if (arg == "down")
+    else if (arg0 == "down")
     {
         direction = Direction::down;
         total_size = active_output->get_area().size.height.as_int();
     }
-    else if (arg == "absolute")
+    else if (arg0 == "position")
     {
-        if (command.arguments[2] != "position")
+        if (command.arguments.size() < 2)
         {
-            mir::log_error("move [absolute] ... expected 'position' as the third argument");
+            mir::log_error("process_move: move position expected a third argument");
             return;
         }
 
-        if (command.arguments[3] != "center")
+        auto const& arg1 = command.arguments[index++];
+        if (arg1 == "center")
         {
-            mir::log_error("move absolute position ... expected 'center' as the third argument");
+            auto active_window = active_output->get_active_window();
+            auto area = active_output->get_area();
+            float x = (float)area.size.width.as_int() / 2.f - (float)active_window.size().width.as_int() / 2.f;
+            float y = (float)area.size.height.as_int() / 2.f - (float)active_window.size().height.as_int() / 2.f;
+            active_output->move_active_window_to((int)x, (int)y);
+        }
+        else if (arg1 == "mouse")
+        {
+            auto const& position = policy.get_cursor_position();
+            active_output->move_active_window_to((int)position.x.as_int(), (int)position.y.as_int());
+        }
+        else
+        {
+            int move_distance_x;
+            int move_distance_y;
+
+            if (!parse_move_distance(command.arguments, index, total_size, move_distance_x))
+            {
+                mir::log_error("process_move: move position <x> <y>: unable to parse x");
+                return;
+            }
+
+            if (!parse_move_distance(command.arguments, index, total_size, move_distance_y))
+            {
+                mir::log_error("process_move: move position <x> <y>: unable to parse y");
+                return;
+            }
+
+            active_output->move_active_window_to(move_distance_x, move_distance_y);
+        }
+        return;
+    }
+    else if (arg0 == "absolute")
+    {
+        auto const& arg1 = command.arguments[index++];
+        auto const& arg2 = command.arguments[index++];
+        if (arg1 != "position")
+        {
+            mir::log_error("process_move: move [absolute] ... expected 'position' as the third argument");
             return;
         }
 
-        int x = 0, y = 0;
+        if (arg2 != "center")
+        {
+            mir::log_error("process_move: move absolute position ... expected 'center' as the third argument");
+            return;
+        }
+
+        float x = 0, y = 0;
         for (auto const& output : policy.get_output_list())
         {
             auto area = output->get_area();
-            int end_x = area.size.width.as_int() + area.top_left.x.as_int();
-            int end_y = area.size.width.as_int() + area.top_left.x.as_int();
+            float end_x = (float)area.size.width.as_int() + (float)area.top_left.x.as_int();
+            float end_y = (float)area.size.height.as_int() + (float)area.top_left.y.as_int();
             if (end_x > x)
                 x = end_x;
             if (end_y > y)
                 y = end_y;
         }
 
-
-    }
-    else if (arg == "position")
-    {
-        if (arg.size() < 3)
-        {
-            mir::log_error("move position expected a third argument");
-            return;
-        }
-
-        if (command.arguments[2] == "center")
-        {
-            //active_output->move_active_window_to_center_point();
-        }
-        else if (command.arguments[2] == "mouse")
-        {
-
-        }
-        else
-        {
-            // Parse position X and position Y
-        }
+        auto active_window = active_output->get_active_window();
+        float x_pos = x / 2.f - (float)active_window.size().width.as_int() / 2.f;
+        float y_pos = y / 2.f - (float)active_window.size().height.as_int() / 2.f;
+        active_output->move_active_window_to((int)x_pos, (int)y_pos);
+        return;
     }
 
     if (direction < Direction::MAX)
     {
         int move_distance;
-        if (parse_move_distance(command.arguments, total_size, move_distance))
+        if (parse_move_distance(command.arguments, index, total_size, move_distance))
             active_output->move_active_window_by_amount(direction, move_distance);
         else
             active_output->move_active_window(direction);
