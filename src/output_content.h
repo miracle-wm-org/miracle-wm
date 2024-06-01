@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
+#include "direction.h"
 #include "animator.h"
 #include "miral/window.h"
 #include "tiling_window_tree.h"
@@ -85,6 +86,8 @@ public:
     bool resize_active_window(Direction direction);
     bool select(Direction direction);
     bool move_active_window(Direction direction);
+    bool move_active_window_by_amount(Direction direction, int pixels);
+    bool move_active_window_to(int x, int y);
     void request_vertical();
     void request_horizontal();
     void toggle_layout();

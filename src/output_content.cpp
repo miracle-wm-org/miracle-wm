@@ -563,7 +563,84 @@ bool OutputContent::select(miracle::Direction direction)
 
 bool OutputContent::move_active_window(miracle::Direction direction)
 {
-    return get_active_tree()->try_move_active_window(direction);
+    auto metadata = window_helpers::get_metadata(active_window, tools);
+    if (!metadata)
+        return false;
+
+    switch (metadata->get_type())
+    {
+        case WindowType::floating:
+            return move_active_window_by_amount(direction, 10);
+        case WindowType::tiled:
+            return get_active_tree()->try_move_active_window(direction);
+        default:
+            mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
+            return false;
+    }
+}
+
+bool OutputContent::move_active_window_by_amount(Direction direction, int pixels)
+{
+    auto metadata = window_helpers::get_metadata(active_window, tools);
+    if (!metadata)
+        return false;
+
+    if (metadata->get_type() != WindowType::floating)
+    {
+        mir::log_warning("Cannot move a non-floating window by an amount, type=%d", (int)metadata->get_type());
+        return false;
+    }
+
+    auto& info = tools.info_for(active_window);
+    auto prev_pos = active_window.top_left();
+    miral::WindowSpecification spec;
+    switch (direction)
+    {
+        case Direction::down:
+            spec.top_left() = {
+            prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
+            };
+            break;
+        case Direction::up:
+            spec.top_left() = {
+            prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
+            };
+            break;
+        case Direction::left:
+            spec.top_left() = {
+            prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
+            };
+            break;
+        case Direction::right:
+            spec.top_left() = {
+            prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
+            };
+            break;
+        default:
+            mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
+            return false;
+    }
+
+    tools.modify_window(info, spec);
+    return true;
+}
+
+bool OutputContent::move_active_window_to(int x, int y)
+{
+    auto metadata = window_helpers::get_metadata(active_window, tools);
+    if (!metadata)
+        return false;
+
+    if (metadata->get_type() != WindowType::floating)
+    {
+        mir::log_warning("Cannot move a non-floating window to a position, type=%d", (int) metadata->get_type());
+        return false;
+    }
+
+    miral::WindowSpecification spec;
+    spec.top_left() = { x, y, };
+    tools.modify_window(tools.info_for(active_window), spec);
+    return true;
 }
 
 void OutputContent::request_vertical()

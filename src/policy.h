@@ -99,6 +99,7 @@ public:
 
     std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
     std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }
+    [[nodiscard]] geom::Point const& get_cursor_position() const { return cursor_position; }
 
 private:
     std::shared_ptr<OutputContent> active_output;
@@ -118,6 +119,7 @@ private:
     WindowManagerToolsTilingInterface node_interface;
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;
+    geom::Point cursor_position;
 };
 }
 
