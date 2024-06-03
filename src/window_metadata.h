@@ -52,6 +52,7 @@ public:
     void set_restore_state(MirWindowState state);
     MirWindowState consume_restore_state();
     void toggle_pin_to_desktop();
+    void set_is_pinned(bool is_pinned);
     bool is_focused() const;
     void set_workspace(std::shared_ptr<WorkspaceContent> const& workspace);
     std::shared_ptr<WorkspaceContent> const& get_workspace() const;

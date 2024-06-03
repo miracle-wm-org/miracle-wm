@@ -53,9 +53,13 @@ MirWindowState WindowMetadata::consume_restore_state()
 void WindowMetadata::toggle_pin_to_desktop()
 {
     if (type == WindowType::floating)
-    {
         is_pinned = !is_pinned;
-    }
+}
+
+void WindowMetadata::set_is_pinned(bool in_is_pinned)
+{
+    if (type == WindowType::floating)
+        is_pinned = in_is_pinned;
 }
 
 bool WindowMetadata::is_focused() const
