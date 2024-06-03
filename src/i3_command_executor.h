@@ -51,6 +51,7 @@ private:
     void process_split(I3Command const&, I3ScopedCommandList const&);
     void process_focus(I3Command const&, I3ScopedCommandList const&);
     void process_move(I3Command const&, I3ScopedCommandList const&);
+    void process_sticky(I3Command const&, I3ScopedCommandList const&);
 };
 
 } // miracle

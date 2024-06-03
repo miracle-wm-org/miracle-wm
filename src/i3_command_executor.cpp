@@ -60,6 +60,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         case I3CommandType::move:
             process_move(command, command_list);
             break;
+        case I3CommandType::sticky:
+            process_sticky(command, command_list);
+            break;
         default:
             break;
         }
@@ -413,4 +416,30 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         else
             active_output->move_active_window(direction);
     }
+}
+
+void I3CommandExecutor::process_sticky(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    auto active_output = policy.get_active_output();
+    if (!active_output)
+    {
+        mir::log_warning("process_sticky: output is not set");
+        return;
+    }
+
+    if (command.arguments.empty())
+    {
+        mir::log_warning("process_sticky: expects arguments");
+        return;
+    }
+
+    auto const& arg0 = command.arguments[0];
+    if (arg0 == "enable")
+        active_output->set_is_pinned(true);
+    else if (arg0 == "disable")
+        active_output->set_is_pinned(false);
+    else if (arg0 == "toggle")
+        active_output->toggle_pinned_to_workspace();
+    else
+        mir::log_warning("process_sticky: unknown arguments: %s", arg0.c_str());
 }

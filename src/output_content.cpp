@@ -680,6 +680,18 @@ void OutputContent::toggle_pinned_to_workspace()
     metadata->toggle_pin_to_desktop();
 }
 
+void OutputContent::set_is_pinned(bool is_pinned)
+{
+    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    if (!metadata)
+    {
+        mir::log_error("set_is_pinned: metadata not found");
+        return;
+    }
+
+    metadata->set_is_pinned(is_pinned);
+}
+
 void OutputContent::update_area(geom::Rectangle const& new_area)
 {
     area = new_area;
