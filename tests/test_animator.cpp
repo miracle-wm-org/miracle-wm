@@ -86,6 +86,9 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
         mir::geometry::Rectangle(
             mir::geometry::Point(600, 0),
             mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)),
         [&](auto const& asr)
     {
         was_called = true;
@@ -117,10 +120,37 @@ TEST_F(AnimatorTest, LinearSlideResultsInCorrectNewPoint)
         mir::geometry::Rectangle(
             mir::geometry::Point(600, 0),
             mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)),
         [&](AnimationStepResult const& asr)
     {
         if (asr.position)
             EXPECT_EQ(asr.position.value().x, 600 * Animator::timestep_seconds);
     });
     animator.step();
+}
+
+TEST_F(AnimatorTest, InterruptingSlideResultsInModifiedAnimationDuration)
+{
+    AnimationHandle handle = 0;
+    AnimationDefinition definition;
+    definition.duration_seconds = 6;
+    definition.type = AnimationType::slide;
+    definition.function = EaseFunction::linear;
+    Animation animation(
+        handle,
+        definition,
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(600, 600),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(200, 200),
+            mir::geometry::Size(0, 0)),
+        [](auto const& asr) {}
+    );
+    ASSERT_NEAR(animation.get_runtime_seconds(), 2, 0.05);
 }

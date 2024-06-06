@@ -60,6 +60,7 @@ public:
         AnimationDefinition definition,
         std::optional<mir::geometry::Rectangle> const& from,
         std::optional<mir::geometry::Rectangle> const& to,
+        std::optional<mir::geometry::Rectangle> const& current,
         std::function<void(AnimationStepResult const&)> const& callback);
 
     Animation& operator=(Animation const& other);
@@ -67,6 +68,8 @@ public:
     AnimationStepResult init();
     AnimationStepResult step();
     [[nodiscard]] std::function<void(AnimationStepResult const&)> const& get_callback() const { return callback; }
+    [[nodiscard]] AnimationHandle get_handle() const { return handle; }
+    float get_runtime_seconds() const { return runtime_seconds; }
 
 private:
     AnimationHandle handle;
@@ -95,6 +98,7 @@ public:
         AnimationHandle handle,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
+        mir::geometry::Rectangle const& current,
         std::function<void(AnimationStepResult const&)> const& callback);
 
     void window_open(
