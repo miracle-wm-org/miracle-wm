@@ -37,8 +37,11 @@ inline glm::vec2 to_glm_vec2(mir::geometry::Point const& p) {
 
 inline float get_percent_complete(float target, float real)
 {
+    if (target == 0)
+        return 1.f;
+
     float percent = real / target;
-    if (isnanf(percent) || percent > 1.f)
+    if (isinff(percent) != 0 || percent > 1.f)
         return 1.f;
     else
         return percent;
@@ -87,8 +90,6 @@ Animation::Animation(
 
             float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
             runtime_seconds = percentage * definition.duration_seconds;
-            printf("NEW! %f, %d\n", runtime_seconds, handle);
-
             break;
         }
         default:
@@ -272,7 +273,6 @@ AnimationStepResult Animation::step()
     {
     case AnimationType::slide:
     {
-        printf("%f, %d\n", runtime_seconds, handle);
         auto p = ease(definition, t);
         auto distance = to.value().top_left - from.value().top_left;
         float x = (float)distance.dx.as_int() * p;
