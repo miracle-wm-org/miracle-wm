@@ -131,7 +131,9 @@ TEST_F(AnimatorTest, LinearSlideResultsInCorrectNewPoint)
     animator.step();
 }
 
-TEST_F(AnimatorTest, InterruptingSlideResultsInModifiedAnimationDuration)
+class AnimationTest : public testing::Test {};
+
+TEST_F(AnimationTest, InterruptingSlideResultsInModifiedAnimationDuration)
 {
     AnimationHandle handle = 0;
     AnimationDefinition definition;
