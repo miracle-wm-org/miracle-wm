@@ -23,6 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/log.h>
+#include <mir/scene/surface.h>
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -31,11 +33,13 @@ WorkspaceContent::WorkspaceContent(
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface) :
+    TilingInterface& node_interface,
+    AnimationHandle handle) :
     output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
-    workspace { workspace }
+    workspace { workspace },
+    handle{ handle }
 {
 }
 
@@ -148,4 +152,50 @@ void WorkspaceContent::add_floating_window(miral::Window const& window)
 void WorkspaceContent::remove_floating_window(miral::Window const& window)
 {
     floating_windows.erase(std::remove(floating_windows.begin(), floating_windows.end(), window));
+}
+
+std::vector<miral::Window> const& WorkspaceContent::get_floating_windows() const
+{
+    return floating_windows;
+}
+
+glm::mat4 WorkspaceContent::get_transform() const
+{
+    return final_transform;
+}
+
+void WorkspaceContent::set_transform(glm::mat4 const& in)
+{
+    transform = in;
+    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
+}
+
+void WorkspaceContent::set_position(glm::vec2 const& v)
+{
+    position_offset = v;
+    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
+}
+
+OutputContent *WorkspaceContent::get_output()
+{
+    return output;
+}
+
+void WorkspaceContent::trigger_rerender()
+{
+    // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+    for_each_window([&](std::shared_ptr<WindowMetadata> const &metadata)
+    {
+        auto& window = metadata->get_window();
+        auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+        if (surface)
+        {
+            surface->set_transformation(glm::mat4(1.f));
+        }
+    });
+}
+
+AnimationHandle WorkspaceContent::get_handle() const
+{
+    return handle;
 }

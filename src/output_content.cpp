@@ -49,8 +49,7 @@ OutputContent::OutputContent(
     floating_window_manager { floating_window_manager },
     config { config },
     node_interface { node_interface },
-    animator { animator },
-    animation_handle { animator.register_animateable() }
+    animator { animator }
 {
 }
 
@@ -397,7 +396,7 @@ void OutputContent::select_window(miral::Window const& window)
 void OutputContent::advise_new_workspace(int workspace)
 {
     workspaces.push_back(
-        std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface));
+        std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface, animator.register_animateable()));
 }
 
 void OutputContent::advise_workspace_deleted(int workspace)
@@ -430,68 +429,73 @@ bool OutputContent::advise_workspace_active(int key)
         }
     }
 
+    if (!to)
+    {
+        mir::fatal_error("advise_workspace_active: unable to find workspace: %d", key);
+        return false;
+    }
+
+    if (!from)
+    {
+        to->show({});
+        active_workspace = key;
+        return true;
+    }
+
+    auto from_src = get_workspace_rectangle(from->get_workspace());
+    auto to_src = get_workspace_rectangle(to->get_workspace());
+    auto from_x_dest = from_src.top_left.x.as_int() - to_src.top_left.x.as_int();
+    geom::Rectangle from_dest{
+        {geom::X{from_x_dest}, geom::Y{from_src.top_left.y.as_int()}},
+        from_src.size
+    };
+    geom::Rectangle to_dest{
+        {geom::X{0}, geom::Y{to_src.top_left.y.as_int()}},
+        to_src.size
+    };
+
     // TODO: Handle pinned windows
-    // TODO This is an abuse of the sliding animation system, but it at least proves a point. "Slide"
-    //  means different things in different contexts, so it seems.
-    auto travel_distance = active_workspace > key ? (-area.size.width.as_int()) : area.size.width.as_int();
-    animator.workspace_move_to(animation_handle,
-        travel_distance,
-        [from = from, this](AnimationStepResult const& asr)
-    {
-        if (!from)
-            return;
-
-        if (asr.is_complete)
+    animator.workspace_hide(
+        from->get_handle(),
+        from_src,
+        from_dest,
+        from_src,
+        [from=from](AnimationStepResult const& asr)
         {
-            from->hide();
-            return;
-        }
-
-        if (!asr.position)
-            return;
-
-        AnimationStepResult other;
-        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
-        from->set_transform(other.transform.value());
-
-        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
-        from->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
-        {
-            auto& window = metadata->get_window();
-            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-            if (surface)
+            if (asr.is_complete)
             {
-                surface->set_transformation(glm::mat4(1.f));
+                if (asr.position) from->set_position(asr.position.value());
+                if (asr.transform) from->set_transform(asr.transform.value());
+                from->trigger_rerender();
+                from->hide();
+                return;
             }
-        });
-    },
-        [to = to, from = from, this](AnimationStepResult const& asr)
-    {
-        if (asr.is_complete)
-        {
-            to->set_transform(glm::mat4(1.f));
-            return;
+
+            if (asr.position) from->set_position(asr.position.value());
+            if (asr.transform) from->set_transform(asr.transform.value());
+            from->trigger_rerender();
         }
+    );
 
-        if (!asr.position)
-            return;
-
-        AnimationStepResult other;
-        other.transform = glm::translate(glm::vec3(asr.position->x, asr.position->y, 0));
-        to->set_transform(other.transform.value());
-
-        // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
-        to->for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
+    animator.workspace_show(
+        to->get_handle(),
+        to_src,
+        to_dest,
+        to_src,
+        [to=to](AnimationStepResult const& asr)
         {
-            auto& window = metadata->get_window();
-            auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
-            surface->clip_area() = std::nullopt;
-            if (surface)
+            if (asr.is_complete)
             {
-                surface->set_transformation(glm::mat4(1.f));
+                if (asr.position) to->set_position(asr.position.value());
+                if (asr.transform) to->set_transform(asr.transform.value());
+                return;
             }
-        });
-    });
+
+            if (asr.position) to->set_position(asr.position.value());
+            if (asr.transform) to->set_transform(asr.transform.value());
+            to->trigger_rerender();
+        }
+    );
 
     to->show({});
     active_workspace = key;
@@ -775,29 +779,6 @@ void OutputContent::request_toggle_active_float()
     }
 }
 
-miral::Window OutputContent::find_window_on_active_workspace_matching_predicate(
-    std::function<bool(miral::Window const&)> const& f) const
-{
-    auto workspace = get_active_workspace();
-    workspace->get_tree()->find_node([&](std::shared_ptr<Node> const& node)
-    {
-        if (auto leaf_node = Node::as_leaf(node))
-        {
-            if (f(leaf_node->get_window()))
-                return true;
-        }
-        return false;
-    });
-
-    for (auto const& floating : workspace->get_floating_windows())
-    {
-        if (f(floating))
-            return floating;
-    }
-
-    return {};
-}
-
 void OutputContent::add_immediately(miral::Window& window)
 {
     auto& prev_info = tools.info_for(window);
@@ -807,4 +788,27 @@ void OutputContent::add_immediately(miral::Window& window)
     advise_new_window(tools.info_for(window), type);
     auto metadata = window_helpers::get_metadata(window, tools);
     handle_window_ready(tools.info_for(window), metadata);
+}
+
+geom::Rectangle OutputContent::get_workspace_rectangle(int workspace) const
+{
+    int offset_from_selected = 0;
+    size_t workspace_index = 0;
+    size_t active_workspace_index = 0;
+    for (size_t i = 0; i < workspaces.size(); i++)
+    {
+        if (workspaces[i]->get_workspace() == workspace)
+            workspace_index = i;
+        if (workspaces[i]->get_workspace() == active_workspace)
+            active_workspace_index = i;
+    }
+
+    offset_from_selected = static_cast<int>(workspace_index - active_workspace_index);
+
+    // TODO: Support vertical workspaces one day in the future
+    size_t x = offset_from_selected * area.size.width.as_int();
+    return geom::Rectangle{
+        geom::Point{geom::X{x}, geom::Y{0}},
+        geom::Size{area.size.width.as_int(), area.size.height.as_int()}
+    };
 }

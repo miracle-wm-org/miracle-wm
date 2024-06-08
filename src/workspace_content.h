@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
+#include "animator.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/window_manager_tools.h>
@@ -39,7 +40,8 @@ public:
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
-        TilingInterface& node_interface);
+        TilingInterface& node_interface,
+        AnimationHandle handle);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
@@ -50,10 +52,13 @@ public:
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
-    std::vector<miral::Window> const& get_floating_windows() const { return floating_windows; }
-    glm::mat4 get_transform() const { return transform; }
-    void set_transform(glm::mat4 const& in) { transform = in; }
-    OutputContent* get_output() const { return output; }
+    [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
+    [[nodiscard]] glm::mat4 get_transform() const;
+    void set_transform(glm::mat4 const& in);
+    void set_position(glm::vec2 const&);
+    OutputContent* get_output();
+    void trigger_rerender();
+    AnimationHandle get_handle() const;
 
 private:
     OutputContent* output;
@@ -61,7 +66,16 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
+    AnimationHandle handle;
+
+    /// The position of the workspace
+    glm::vec2 position_offset = glm::vec2(0.f);
+
+    /// The transform applied to the workspace
     glm::mat4 transform = glm::mat4(1.f);
+
+    /// A matrix resulting from combining position + transform
+    glm::mat4 final_transform = glm::mat4(1.f);
 };
 
 } // miracle

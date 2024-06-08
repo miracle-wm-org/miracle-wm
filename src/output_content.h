@@ -96,9 +96,12 @@ public:
     void toggle_pinned_to_workspace();
     void set_is_pinned(bool is_pinned);
     void update_area(geom::Rectangle const& area);
-    std::vector<miral::Window> collect_all_windows() const;
+    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const;
     void request_toggle_active_float();
-    miral::Window find_window_on_active_workspace_matching_predicate(std::function<bool(miral::Window const&)> const&) const;
+
+    /// Gets the relative position of the current rectangle (e.g. the active
+    /// rectangle with be at position (0, 0))
+    [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
@@ -127,7 +130,6 @@ private:
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     miral::Window active_window;
-    AnimationHandle animation_handle;
 };
 
 }

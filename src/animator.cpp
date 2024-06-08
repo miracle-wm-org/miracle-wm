@@ -364,6 +364,16 @@ AnimationHandle Animator::register_animateable()
 void Animator::append(miracle::Animation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
+    for (auto it = queued_animations.begin(); it != queued_animations.end();)
+    {
+        if (it->get_handle() == animation.get_handle())
+        {
+            it = queued_animations.erase(it);
+        }
+        else
+            it++;
+    }
+
     animation.get_callback()(animation.init());
     queued_animations.push_back(animation);
     cv.notify_one();
@@ -387,19 +397,6 @@ void Animator::window_move(
                 glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
                 glm::mat4(1.f) });
         return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(processing_lock);
-        for (auto it = queued_animations.begin(); it != queued_animations.end();)
-        {
-            if (it->get_handle() == handle)
-            {
-                it = queued_animations.erase(it);
-            }
-            else
-                it++;
-        }
     }
 
     append(Animation(
@@ -432,45 +429,58 @@ void Animator::window_open(
         callback));
 }
 
-void Animator::workspace_move_to(
+void Animator::workspace_hide(
     AnimationHandle handle,
-    int x_offset,
-    std::function<void(AnimationStepResult const&)> const& from_callback,
-    std::function<void(AnimationStepResult const&)> const& to_callback)
+    mir::geometry::Rectangle const& from,
+    mir::geometry::Rectangle const& to,
+    mir::geometry::Rectangle const& current,
+    std::function<void(AnimationStepResult const&)> const& callback)
 {
     if (!config->are_animations_enabled())
     {
-        from_callback({ handle, true });
-        to_callback({ handle, true });
+        callback(
+        { handle,
+          true,
+          glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
+          glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+          glm::mat4(1.f) });
         return;
     }
 
-    mir::geometry::Rectangle from_start(
-        mir::geometry::Point { 0, 0 },
-        mir::geometry::Size { 0, 0 });
-    mir::geometry::Rectangle from_end(
-        mir::geometry::Point { -x_offset, 0 },
-        mir::geometry::Size { 0, 0 });
-    mir::geometry::Rectangle to_start(
-        mir::geometry::Point { x_offset, 0 },
-        mir::geometry::Size { 0, 0 });
-    mir::geometry::Rectangle to_end(
-        mir::geometry::Point { 0, 0 },
-        mir::geometry::Size { 0, 0 });
+    append(Animation(
+        handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::workspace_hide],
+        from,
+        to,
+        current,
+        callback));
+}
 
-    append(Animation(handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
-        from_start,
-        from_end,
-        from_start, // TODO
-        from_callback));
-    append(Animation(handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_show],
-        to_start,
-        to_end,
-        to_start, // TODO
-        to_callback));
-    cv.notify_one();
+void Animator::workspace_show(
+    AnimationHandle handle,
+    mir::geometry::Rectangle const& from,
+    mir::geometry::Rectangle const& to,
+    mir::geometry::Rectangle const& current,
+    std::function<void(AnimationStepResult const&)> const& callback)
+{
+    if (!config->are_animations_enabled())
+    {
+        callback(
+        { handle,
+          true,
+          glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
+          glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+          glm::mat4(1.f) });
+        return;
+    }
+
+    append(Animation(
+        handle,
+        config->get_animation_definitions()[(int)AnimateableEvent::workspace_show],
+        from,
+        to,
+        current,
+        callback));
 }
 
 namespace
