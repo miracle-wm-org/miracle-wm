@@ -73,6 +73,7 @@ void WindowManagerToolsTilingInterface::set_rectangle(
         metadata->get_animation_handle(),
         from,
         to,
+        geom::Rectangle{window.top_left(), window.size()},
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);

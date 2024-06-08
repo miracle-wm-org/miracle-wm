@@ -29,6 +29,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 using namespace std::chrono_literals;
 
+namespace
+{
+inline glm::vec2 to_glm_vec2(mir::geometry::Point const& p) {
+    return {p.x.as_int(), p.y.as_int()};
+}
+
+inline float get_percent_complete(float target, float real)
+{
+    if (target == 0)
+        return 1.f;
+
+    float percent = real / target;
+    if (isinff(percent) != 0 || percent > 1.f)
+        return 1.f;
+    else
+        return percent;
+}
+}
+
 AnimationHandle const miracle::none_animation_handle = 0;
 
 Animation::Animation(
@@ -36,13 +55,46 @@ Animation::Animation(
     AnimationDefinition definition,
     std::optional<mir::geometry::Rectangle> const& from,
     std::optional<mir::geometry::Rectangle> const& to,
+    std::optional<mir::geometry::Rectangle> const& current,
     std::function<void(AnimationStepResult const&)> const& callback) :
     handle { handle },
     definition { std::move(definition) },
     to { to },
-    from { from },
-    callback { callback }
+    from { current },
+    callback { callback },
+    runtime_seconds{ 0.f }
 {
+    switch (definition.type)
+    {
+        case AnimationType::slide:
+        {
+            assert(from != std::nullopt);
+            assert(to != std::nullopt);
+            assert(current != std::nullopt);
+
+            // Find out the percentage that we're already through the move. This could be negative, by design.
+            glm::vec2 end = to_glm_vec2(to.value().top_left);
+            glm::vec2 start = to_glm_vec2(from.value().top_left);
+            glm::vec2 real_start = to_glm_vec2(current.value().top_left);
+            auto percent_x = get_percent_complete(end.x - start.x, real_start.x - start.x);
+            auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
+
+            // Find out the percentage that we're already through the resize. This could be negative, by design.
+            float width_change = to.value().size.width.as_int()  - from.value().size.width.as_int();
+            float height_change = to.value().size.height.as_int()  - from.value().size.height.as_int();
+            float real_width_change = current.value().size.width.as_int()  - from.value().size.width.as_int();
+            float real_height_change = current.value().size.height.as_int()  - from.value().size.height.as_int();
+
+            float percent_w = get_percent_complete(width_change, real_width_change);
+            float percent_h = get_percent_complete(height_change, real_height_change);
+
+            float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
+            runtime_seconds = percentage * definition.duration_seconds;
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 Animation& Animation::operator=(miracle::Animation const& other)
@@ -52,6 +104,7 @@ Animation& Animation::operator=(miracle::Animation const& other)
     from = other.from;
     to = other.to;
     callback = other.callback;
+    runtime_seconds = other.runtime_seconds;
     return *this;
 }
 
@@ -320,6 +373,7 @@ void Animator::window_move(
     AnimationHandle handle,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
+    mir::geometry::Rectangle const& current,
     std::function<void(AnimationStepResult const&)> const& callback)
 {
     // If animations aren't enabled, let's give them the position that
@@ -335,11 +389,25 @@ void Animator::window_move(
         return;
     }
 
+    {
+        std::lock_guard<std::mutex> lock(processing_lock);
+        for (auto it = queued_animations.begin(); it != queued_animations.end();)
+        {
+            if (it->get_handle() == handle)
+            {
+                it = queued_animations.erase(it);
+            }
+            else
+                it++;
+        }
+    }
+
     append(Animation(
         handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_move],
         from,
         to,
+        current,
         callback));
 }
 
@@ -358,6 +426,7 @@ void Animator::window_open(
     append(Animation(
         handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_open],
+        std::nullopt,
         std::nullopt,
         std::nullopt,
         callback));
@@ -393,11 +462,13 @@ void Animator::workspace_move_to(
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
         from_start,
         from_end,
+        from_start, // TODO
         from_callback));
     append(Animation(handle,
         config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
         to_start,
         to_end,
+        from_start, // TODO
         to_callback));
     cv.notify_one();
 }
