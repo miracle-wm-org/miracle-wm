@@ -231,8 +231,8 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     auto output = output_surface->commit();
 
     // Report any GL errors after commit, to catch any *during* commit
-//    while (auto const gl_error = glGetError())
-//        mir::log_debug("GL error: %d", gl_error);
+    while (auto const gl_error = glGetError())
+        mir::log_debug("GL error: %d", gl_error);
 
     return output;
 }
