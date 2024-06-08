@@ -465,10 +465,10 @@ void Animator::workspace_move_to(
         from_start, // TODO
         from_callback));
     append(Animation(handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_hide],
+        config->get_animation_definitions()[(int)AnimateableEvent::window_workspace_show],
         to_start,
         to_end,
-        from_start, // TODO
+        to_start, // TODO
         to_callback));
     cv.notify_one();
 }

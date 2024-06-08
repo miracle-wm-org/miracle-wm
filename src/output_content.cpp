@@ -461,7 +461,6 @@ bool OutputContent::advise_workspace_active(int key)
             auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
             if (surface)
             {
-                surface->set_clip_area(std::nullopt);
                 surface->set_transformation(glm::mat4(1.f));
             }
         });
@@ -489,7 +488,6 @@ bool OutputContent::advise_workspace_active(int key)
             surface->clip_area() = std::nullopt;
             if (surface)
             {
-                surface->set_clip_area(std::nullopt);
                 surface->set_transformation(glm::mat4(1.f));
             }
         });

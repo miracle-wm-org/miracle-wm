@@ -64,6 +64,9 @@ void WindowMetadata::set_is_pinned(bool in_is_pinned)
 
 bool WindowMetadata::is_focused() const
 {
+    if (!workspace)
+        return false;
+
     auto output = workspace->get_output();
     if (!output)
         return false;
