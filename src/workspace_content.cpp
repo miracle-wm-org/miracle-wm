@@ -176,6 +176,11 @@ void WorkspaceContent::set_position(glm::vec2 const& v)
     final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
 }
 
+const glm::vec2 &WorkspaceContent::get_position() const
+{
+    return position_offset;
+}
+
 OutputContent *WorkspaceContent::get_output()
 {
     return output;
@@ -189,9 +194,7 @@ void WorkspaceContent::trigger_rerender()
         auto& window = metadata->get_window();
         auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
         if (surface)
-        {
-            surface->set_transformation(glm::mat4(1.f));
-        }
+            surface->set_transformation(metadata->get_transform());
     });
 }
 

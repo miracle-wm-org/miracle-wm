@@ -56,6 +56,7 @@ public:
     [[nodiscard]] glm::mat4 get_transform() const;
     void set_transform(glm::mat4 const& in);
     void set_position(glm::vec2 const&);
+    glm::vec2 const& get_position() const;
     OutputContent* get_output();
     void trigger_rerender();
     AnimationHandle get_handle() const;

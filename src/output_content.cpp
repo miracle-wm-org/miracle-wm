@@ -393,10 +393,28 @@ void OutputContent::select_window(miral::Window const& window)
     tools.select_active_window(window);
 }
 
+namespace
+{
+template< typename T, typename Pred >
+typename std::vector<T>::iterator
+insert_sorted( std::vector<T> & vec, T const& item, Pred pred )
+{
+    return vec.insert
+    (
+        std::upper_bound( vec.begin(), vec.end(), item, pred ),
+        item
+    );
+}
+}
+
 void OutputContent::advise_new_workspace(int workspace)
 {
-    workspaces.push_back(
-        std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface, animator.register_animateable()));
+    // Workspaces are always kept in sorted order
+    auto new_workspace = std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface, animator.register_animateable());
+    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceContent> const& a, std::shared_ptr<WorkspaceContent> const& b)
+    {
+        return a->get_workspace() < b->get_workspace();
+    });
 }
 
 void OutputContent::advise_workspace_deleted(int workspace)
@@ -413,75 +431,107 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
-    std::shared_ptr<WorkspaceContent> to = nullptr;
-    std::shared_ptr<WorkspaceContent> from = nullptr;
-    for (auto& workspace : workspaces)
+    int to_index = workspaces.size();
+    int from_index = workspaces.size();
+    for (size_t i = 0; i < workspaces.size(); i++)
     {
+        auto const& workspace = workspaces[i];
         if (workspace->get_workspace() == active_workspace)
-            from = workspace;
+            from_index = i;
 
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
                 return true;
 
-            to = workspace;
+            to_index = i;
         }
     }
 
-    if (!to)
+    if (to_index == workspaces.size())
     {
         mir::fatal_error("advise_workspace_active: unable to find workspace: %d", key);
         return false;
     }
 
-    if (!from)
+    if (from_index == workspaces.size())
     {
-        to->show({});
+        workspaces[to_index]->show({});
         active_workspace = key;
         return true;
     }
 
-    auto from_src = get_workspace_rectangle(from->get_workspace());
+    // Animate all workspaces between to and from
+    auto const& to = workspaces[to_index];
     auto to_src = get_workspace_rectangle(to->get_workspace());
-    auto from_x_dest = from_src.top_left.x.as_int() - to_src.top_left.x.as_int();
-    geom::Rectangle from_dest{
-        {geom::X{from_x_dest}, geom::Y{from_src.top_left.y.as_int()}},
-        from_src.size
+
+    auto const animate_from = [&](std::shared_ptr<WorkspaceContent> const& from)
+    {
+        from->show({});
+        auto from_src = get_workspace_rectangle(from->get_workspace());
+        geom::Rectangle from_real{
+            {geom::X{from_src.top_left.x.as_int()}, geom::Y{from_src.top_left.y.as_int()}},
+            from_src.size
+        };
+        auto from_x_dest = from_src.top_left.x.as_int() - to_src.top_left.x.as_int();
+        geom::Rectangle from_dest{
+            {geom::X{from_x_dest}, geom::Y{from_src.top_left.y.as_int()}},
+            from_src.size
+        };
+
+        animator.workspace_hide(
+            from->get_handle(),
+            from_src,
+            from_dest,
+            from_real,
+            [this, from=from](AnimationStepResult const& asr)
+            {
+                if (asr.is_complete)
+                {
+                    if (asr.position) from->set_position(asr.position.value());
+                    if (asr.transform) from->set_transform(asr.transform.value());
+                    from->trigger_rerender();
+                    from->hide();
+
+                    // Important: Delete the workspace only after we have shown the new one because we may want
+                    // to move a node to the new workspace.
+                    auto active_tree = from->get_tree();
+                    if (active_tree->is_empty() && from->get_floating_windows().empty())
+                        workspace_manager.delete_workspace(from->get_workspace());
+                    return;
+                }
+
+                if (asr.position) from->set_position(asr.position.value());
+                if (asr.transform) from->set_transform(asr.transform.value());
+                from->trigger_rerender();
+            }
+        );
+    };
+
+    if (to_index < from_index)
+    {
+        for (int i = to_index + 1; i <= from_index; i++)
+            animate_from(workspaces[i]);
+    }
+    else
+    {
+        for (int i = to_index - 1; i >= from_index; i--)
+            animate_from(workspaces[i]);
+    }
+
+    geom::Rectangle to_real{
+        {geom::X{to_src.top_left.x.as_int()}, geom::Y{to_src.top_left.y.as_int()}},
+        to_src.size
     };
     geom::Rectangle to_dest{
         {geom::X{0}, geom::Y{to_src.top_left.y.as_int()}},
         to_src.size
     };
-
-    // TODO: Handle pinned windows
-    animator.workspace_hide(
-        from->get_handle(),
-        from_src,
-        from_dest,
-        from_src,
-        [from=from](AnimationStepResult const& asr)
-        {
-            if (asr.is_complete)
-            {
-                if (asr.position) from->set_position(asr.position.value());
-                if (asr.transform) from->set_transform(asr.transform.value());
-                from->trigger_rerender();
-                from->hide();
-                return;
-            }
-
-            if (asr.position) from->set_position(asr.position.value());
-            if (asr.transform) from->set_transform(asr.transform.value());
-            from->trigger_rerender();
-        }
-    );
-
     animator.workspace_show(
         to->get_handle(),
         to_src,
         to_dest,
-        to_src,
+        to_real,
         [to=to](AnimationStepResult const& asr)
         {
             if (asr.is_complete)
@@ -499,15 +549,6 @@ bool OutputContent::advise_workspace_active(int key)
 
     to->show({});
     active_workspace = key;
-
-    // Important: Delete the workspace only after we have shown the new one because we may want
-    // to move a node to the new workspace.
-    if (from != nullptr)
-    {
-        auto active_tree = from->get_tree();
-        if (active_tree->is_empty() && from->get_floating_windows().empty())
-            workspace_manager.delete_workspace(from->get_workspace());
-    }
 
     return true;
 }
