@@ -30,8 +30,7 @@ enum class AnimateableEvent
     window_open,
     window_move,
     window_close,
-    workspace_show,
-    workspace_hide,
+    workspace_switch,
     max
 };
 

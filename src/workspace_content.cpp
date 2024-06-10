@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_metadata.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
-#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -33,13 +32,11 @@ WorkspaceContent::WorkspaceContent(
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface,
-    AnimationHandle handle) :
+    TilingInterface& node_interface) :
     output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
-    workspace { workspace },
-    handle{ handle }
+    workspace { workspace }
 {
 }
 
@@ -53,7 +50,7 @@ std::shared_ptr<TilingWindowTree> WorkspaceContent::get_tree() const
     return tree;
 }
 
-void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& pinned_windows)
+void WorkspaceContent::show()
 {
     tree->show();
 
@@ -66,14 +63,13 @@ void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& 
             continue;
         }
 
+        // Pinned windows don't require restoration
+        if (metadata->get_is_pinned())
+            continue;
+
         miral::WindowSpecification spec;
         spec.state() = metadata->consume_restore_state();
         tools.modify_window(window, spec);
-    }
-
-    for (auto const& metadata : pinned_windows)
-    {
-        floating_windows.push_back(metadata->get_window());
     }
 }
 
@@ -97,11 +93,10 @@ void WorkspaceContent::for_each_window(std::function<void(std::shared_ptr<Window
     });
 }
 
-std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
+void WorkspaceContent::hide()
 {
     tree->hide();
 
-    std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
     for (auto const& window : floating_windows)
     {
         auto metadata = window_helpers::get_metadata(window, tools);
@@ -111,26 +106,33 @@ std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
             continue;
         }
 
-        if (metadata->get_is_pinned())
-        {
-            pinned_windows.push_back(metadata);
-            break;
-        }
-
         metadata->set_restore_state(tools.info_for(window).state());
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_hidden;
         tools.modify_window(window, spec);
     }
+}
 
-    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&](const auto& x)
+void WorkspaceContent::transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other)
+{
+    for (auto it = floating_windows.begin(); it != floating_windows.end();)
     {
-        auto metadata = window_helpers::get_metadata(x, tools);
-        return std::find(pinned_windows.begin(), pinned_windows.end(), metadata) != pinned_windows.end();
-    }),
-        floating_windows.end());
+        auto metadata = window_helpers::get_metadata(*it, tools);
+        if (!metadata)
+        {
+            mir::log_error("transfer_pinned_windows_to: floating window lacks metadata");
+            it++;
+            continue;
+        }
 
-    return pinned_windows;
+        if (metadata->get_is_pinned())
+        {
+            other->add_floating_window(*it);
+            it = floating_windows.erase(it);
+        }
+        else
+            it++;
+    }
 }
 
 bool WorkspaceContent::has_floating_window(miral::Window const& window)
@@ -159,28 +161,6 @@ std::vector<miral::Window> const& WorkspaceContent::get_floating_windows() const
     return floating_windows;
 }
 
-glm::mat4 WorkspaceContent::get_transform() const
-{
-    return final_transform;
-}
-
-void WorkspaceContent::set_transform(glm::mat4 const& in)
-{
-    transform = in;
-    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
-}
-
-void WorkspaceContent::set_position(glm::vec2 const& v)
-{
-    position_offset = v;
-    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
-}
-
-const glm::vec2 &WorkspaceContent::get_position() const
-{
-    return position_offset;
-}
-
 OutputContent *WorkspaceContent::get_output()
 {
     return output;
@@ -196,9 +176,4 @@ void WorkspaceContent::trigger_rerender()
         if (surface)
             surface->set_transformation(metadata->get_transform());
     });
-}
-
-AnimationHandle WorkspaceContent::get_handle() const
-{
-    return handle;
 }

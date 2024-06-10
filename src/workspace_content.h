@@ -40,26 +40,21 @@ public:
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
-        TilingInterface& node_interface,
-        AnimationHandle handle);
+        TilingInterface& node_interface);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
-    void show(std::vector<std::shared_ptr<WindowMetadata>> const&);
-    std::vector<std::shared_ptr<WindowMetadata>> hide();
+    void show();
+    void hide();
+    void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
     void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
     [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
-    [[nodiscard]] glm::mat4 get_transform() const;
-    void set_transform(glm::mat4 const& in);
-    void set_position(glm::vec2 const&);
-    glm::vec2 const& get_position() const;
     OutputContent* get_output();
     void trigger_rerender();
-    AnimationHandle get_handle() const;
 
 private:
     OutputContent* output;
@@ -67,16 +62,6 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
-    AnimationHandle handle;
-
-    /// The position of the workspace
-    glm::vec2 position_offset = glm::vec2(0.f);
-
-    /// The transform applied to the workspace
-    glm::mat4 transform = glm::mat4(1.f);
-
-    /// A matrix resulting from combining position + transform
-    glm::mat4 final_transform = glm::mat4(1.f);
 };
 
 } // miracle

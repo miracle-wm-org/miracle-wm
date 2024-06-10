@@ -29,10 +29,8 @@ AnimateableEvent miracle::from_string_animateable_event(std::string const& str)
         return AnimateableEvent::window_move;
     else if (str == "window_close")
         return AnimateableEvent::window_close;
-    else if (str == "workspace_show")
-        return AnimateableEvent::workspace_show;
-    else if (str == "workspace_hide")
-        return AnimateableEvent::workspace_hide;
+    else if (str == "workspace_switch")
+        return AnimateableEvent::workspace_switch;
     else
     {
         mir::log_error("from_string_animateable_eventfrom_string: unknown string: %s", str.c_str());

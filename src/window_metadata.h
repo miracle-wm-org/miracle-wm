@@ -53,14 +53,16 @@ public:
     MirWindowState consume_restore_state();
     void toggle_pin_to_desktop();
     void set_is_pinned(bool is_pinned);
-    bool is_focused() const;
+    [[nodiscard]] bool is_focused() const;
     void set_workspace(std::shared_ptr<WorkspaceContent> const& workspace);
-    std::shared_ptr<WorkspaceContent> const& get_workspace() const;
-    uint32_t get_animation_handle() const;
+    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_workspace() const;
+    [[nodiscard]] uint32_t get_animation_handle() const;
     void set_animation_handle(uint32_t);
-    OutputContent* get_output() const;
-    glm::mat4 const& get_transform() const { return transform; }
+    [[nodiscard]] OutputContent* get_output() const;
+    [[nodiscard]] glm::mat4 const& get_transform() const { return transform; }
     void set_transform(glm::mat4 const& in) { transform = in; }
+    [[nodiscard]] glm::mat4 get_workspace_transform() const;
+    [[nodiscard]] glm::mat4 get_output_transform() const;
 
 private:
     WindowType type;

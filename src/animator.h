@@ -105,14 +105,7 @@ public:
         AnimationHandle handle,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    void workspace_hide(
-        AnimationHandle handle,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current,
-        std::function<void(AnimationStepResult const&)> const& callback);
-
-    void workspace_show(
+    void workspace_switch(
         AnimationHandle handle,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,

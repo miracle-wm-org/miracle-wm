@@ -49,7 +49,8 @@ OutputContent::OutputContent(
     floating_window_manager { floating_window_manager },
     config { config },
     node_interface { node_interface },
-    animator { animator }
+    animator { animator },
+    handle { animator.register_animateable() }
 {
 }
 
@@ -410,7 +411,7 @@ insert_sorted( std::vector<T> & vec, T const& item, Pred pred )
 void OutputContent::advise_new_workspace(int workspace)
 {
     // Workspaces are always kept in sorted order
-    auto new_workspace = std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface, animator.register_animateable());
+    auto new_workspace = std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface);
     insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceContent> const& a, std::shared_ptr<WorkspaceContent> const& b)
     {
         return a->get_workspace() < b->get_workspace();
@@ -431,125 +432,84 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
-    int to_index = workspaces.size();
-    int from_index = workspaces.size();
-    for (size_t i = 0; i < workspaces.size(); i++)
+    std::shared_ptr<WorkspaceContent> from = nullptr;
+    std::shared_ptr<WorkspaceContent> to = nullptr;
+    for (auto const& workspace :workspaces)
     {
-        auto const& workspace = workspaces[i];
         if (workspace->get_workspace() == active_workspace)
-            from_index = i;
+            from = workspace;
 
         if (workspace->get_workspace() == key)
         {
             if (active_workspace == key)
                 return true;
 
-            to_index = i;
+            to = workspace;
         }
     }
 
-    if (to_index == workspaces.size())
+    if (!to)
     {
-        mir::fatal_error("advise_workspace_active: unable to find workspace: %d", key);
+        mir::fatal_error("advise_workspace_active: swithc to workspace that doesn't exist: %d", key);
         return false;
     }
 
-    if (from_index == workspaces.size())
+    if (!from)
     {
-        workspaces[to_index]->show({});
+        to->show();
         active_workspace = key;
         return true;
     }
 
-    // Animate all workspaces between to and from
-    auto const& to = workspaces[to_index];
     auto to_src = get_workspace_rectangle(to->get_workspace());
+    auto from_src = get_workspace_rectangle(from->get_workspace());
+    from->transfer_pinned_windows_to(to);
 
-    auto const animate_from = [&](std::shared_ptr<WorkspaceContent> const& from)
-    {
-        from->show({});
-        auto from_src = get_workspace_rectangle(from->get_workspace());
-        geom::Rectangle from_real{
-            {geom::X{from_src.top_left.x.as_int()}, geom::Y{from_src.top_left.y.as_int()}},
-            from_src.size
-        };
-        auto from_x_dest = from_src.top_left.x.as_int() - to_src.top_left.x.as_int();
-        geom::Rectangle from_dest{
-            {geom::X{from_x_dest}, geom::Y{from_src.top_left.y.as_int()}},
-            from_src.size
-        };
+    // Show everyone so that we can animate over all workspaces
+    for (auto const& workspace : workspaces)
+        workspace->show();
 
-        animator.workspace_hide(
-            from->get_handle(),
-            from_src,
-            from_dest,
-            from_real,
-            [this, from=from](AnimationStepResult const& asr)
-            {
-                if (asr.is_complete)
-                {
-                    if (asr.position) from->set_position(asr.position.value());
-                    if (asr.transform) from->set_transform(asr.transform.value());
-                    from->trigger_rerender();
-                    from->hide();
-
-                    // Important: Delete the workspace only after we have shown the new one because we may want
-                    // to move a node to the new workspace.
-                    auto active_tree = from->get_tree();
-                    if (active_tree->is_empty() && from->get_floating_windows().empty())
-                        workspace_manager.delete_workspace(from->get_workspace());
-                    return;
-                }
-
-                if (asr.position) from->set_position(asr.position.value());
-                if (asr.transform) from->set_transform(asr.transform.value());
-                from->trigger_rerender();
-            }
-        );
+    geom::Rectangle src{
+        {geom::X{-from_src.top_left.x.as_int()}, geom::Y{from_src.top_left.y.as_int()}},
+        area.size
     };
-
-    if (to_index < from_index)
-    {
-        for (int i = to_index + 1; i <= from_index; i++)
-            animate_from(workspaces[i]);
-    }
-    else
-    {
-        for (int i = to_index - 1; i >= from_index; i--)
-            animate_from(workspaces[i]);
-    }
-
-    geom::Rectangle to_real{
-        {geom::X{to_src.top_left.x.as_int()}, geom::Y{to_src.top_left.y.as_int()}},
-        to_src.size
+    geom::Rectangle real{ {geom::X{position_offset.x}, geom::Y{position_offset.y}}, area.size };
+    geom::Rectangle dest{
+        {geom::X{-to_src.top_left.x.as_int()}, geom::Y{to_src.top_left.y.as_int()}},
+        area.size
     };
-    geom::Rectangle to_dest{
-        {geom::X{0}, geom::Y{to_src.top_left.y.as_int()}},
-        to_src.size
-    };
-    animator.workspace_show(
-        to->get_handle(),
-        to_src,
-        to_dest,
-        to_real,
-        [to=to](AnimationStepResult const& asr)
+    animator.workspace_switch(
+        handle,
+        src,
+        dest,
+        real,
+        [this, to=to, from=from](AnimationStepResult const& asr)
         {
             if (asr.is_complete)
             {
-                if (asr.position) to->set_position(asr.position.value());
-                if (asr.transform) to->set_transform(asr.transform.value());
+                if (asr.position) set_position(asr.position.value());
+                if (asr.transform) set_transform(asr.transform.value());
+
+                for (auto const& workspace : workspaces)
+                {
+                    if (workspace != to)
+                        workspace->hide();
+                }
+                auto active_tree = from->get_tree();
+                if (active_tree->is_empty() && from->get_floating_windows().empty())
+                    workspace_manager.delete_workspace(from->get_workspace());
                 return;
             }
 
-            if (asr.position) to->set_position(asr.position.value());
-            if (asr.transform) to->set_transform(asr.transform.value());
-            to->trigger_rerender();
+            if (asr.position) set_position(asr.position.value());
+            if (asr.transform) set_transform(asr.transform.value());
+
+            for (auto const& workspace : workspaces)
+                workspace->trigger_rerender();
         }
     );
 
-    to->show({});
     active_workspace = key;
-
     return true;
 }
 
@@ -833,23 +793,42 @@ void OutputContent::add_immediately(miral::Window& window)
 
 geom::Rectangle OutputContent::get_workspace_rectangle(int workspace) const
 {
-    int offset_from_selected = 0;
     size_t workspace_index = 0;
-    size_t active_workspace_index = 0;
     for (size_t i = 0; i < workspaces.size(); i++)
     {
         if (workspaces[i]->get_workspace() == workspace)
+        {
             workspace_index = i;
-        if (workspaces[i]->get_workspace() == active_workspace)
-            active_workspace_index = i;
+            break;
+        }
     }
 
-    offset_from_selected = static_cast<int>(workspace_index - active_workspace_index);
-
     // TODO: Support vertical workspaces one day in the future
-    size_t x = offset_from_selected * area.size.width.as_int();
+    size_t x = workspace_index * area.size.width.as_int();
     return geom::Rectangle{
         geom::Point{geom::X{x}, geom::Y{0}},
         geom::Size{area.size.width.as_int(), area.size.height.as_int()}
     };
+}
+
+glm::mat4 OutputContent::get_transform() const
+{
+    return final_transform;
+}
+
+void OutputContent::set_transform(glm::mat4 const& in)
+{
+    transform = in;
+    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
+}
+
+void OutputContent::set_position(glm::vec2 const& v)
+{
+    position_offset = v;
+    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
+}
+
+glm::vec2 const& OutputContent::get_position() const
+{
+    return position_offset;
 }

@@ -429,7 +429,7 @@ void Animator::window_open(
         callback));
 }
 
-void Animator::workspace_hide(
+void Animator::workspace_switch(
     AnimationHandle handle,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
@@ -449,34 +449,7 @@ void Animator::workspace_hide(
 
     append(Animation(
         handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::workspace_hide],
-        from,
-        to,
-        current,
-        callback));
-}
-
-void Animator::workspace_show(
-    AnimationHandle handle,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current,
-    std::function<void(AnimationStepResult const&)> const& callback)
-{
-    if (!config->are_animations_enabled())
-    {
-        callback(
-        { handle,
-          true,
-          glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-          glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-          glm::mat4(1.f) });
-        return;
-    }
-
-    append(Animation(
-        handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::workspace_show],
+        config->get_animation_definitions()[(int)AnimateableEvent::workspace_switch],
         from,
         to,
         current,

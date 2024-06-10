@@ -116,6 +116,10 @@ public:
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
     miral::Window get_active_window() { return active_window; }
 
+    [[nodiscard]] glm::mat4 get_transform() const;
+    void set_transform(glm::mat4 const& in);
+    void set_position(glm::vec2 const&);
+    [[nodiscard]] glm::vec2 const& get_position() const;
 private:
     miral::Output output;
     WorkspaceManager& workspace_manager;
@@ -130,6 +134,16 @@ private:
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     miral::Window active_window;
+    AnimationHandle handle;
+
+    /// The position of the output for scrolling across workspaces
+    glm::vec2 position_offset = glm::vec2(0.f);
+
+    /// The transform applied to the workspace
+    glm::mat4 transform = glm::mat4(1.f);
+
+    /// A matrix resulting from combining position + transform
+    glm::mat4 final_transform = glm::mat4(1.f);
 };
 
 }
