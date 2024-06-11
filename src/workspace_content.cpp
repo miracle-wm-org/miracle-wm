@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 
 using namespace miracle;
 
@@ -49,7 +50,7 @@ std::shared_ptr<TilingWindowTree> WorkspaceContent::get_tree() const
     return tree;
 }
 
-void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& pinned_windows)
+void WorkspaceContent::show()
 {
     tree->show();
 
@@ -62,14 +63,16 @@ void WorkspaceContent::show(std::vector<std::shared_ptr<WindowMetadata>> const& 
             continue;
         }
 
-        miral::WindowSpecification spec;
-        spec.state() = metadata->consume_restore_state();
-        tools.modify_window(window, spec);
-    }
+        // Pinned windows don't require restoration
+        if (metadata->get_is_pinned())
+            continue;
 
-    for (auto const& metadata : pinned_windows)
-    {
-        floating_windows.push_back(metadata->get_window());
+        if (auto state = metadata->consume_restore_state())
+        {
+            miral::WindowSpecification spec;
+            spec.state() = state.value();
+            tools.modify_window(window, spec);
+        }
     }
 }
 
@@ -93,11 +96,10 @@ void WorkspaceContent::for_each_window(std::function<void(std::shared_ptr<Window
     });
 }
 
-std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
+void WorkspaceContent::hide()
 {
     tree->hide();
 
-    std::vector<std::shared_ptr<WindowMetadata>> pinned_windows;
     for (auto const& window : floating_windows)
     {
         auto metadata = window_helpers::get_metadata(window, tools);
@@ -107,26 +109,33 @@ std::vector<std::shared_ptr<WindowMetadata>> WorkspaceContent::hide()
             continue;
         }
 
-        if (metadata->get_is_pinned())
-        {
-            pinned_windows.push_back(metadata);
-            break;
-        }
-
         metadata->set_restore_state(tools.info_for(window).state());
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_hidden;
         tools.modify_window(window, spec);
     }
+}
 
-    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&](const auto& x)
+void WorkspaceContent::transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other)
+{
+    for (auto it = floating_windows.begin(); it != floating_windows.end();)
     {
-        auto metadata = window_helpers::get_metadata(x, tools);
-        return std::find(pinned_windows.begin(), pinned_windows.end(), metadata) != pinned_windows.end();
-    }),
-        floating_windows.end());
+        auto metadata = window_helpers::get_metadata(*it, tools);
+        if (!metadata)
+        {
+            mir::log_error("transfer_pinned_windows_to: floating window lacks metadata");
+            it++;
+            continue;
+        }
 
-    return pinned_windows;
+        if (metadata->get_is_pinned())
+        {
+            other->add_floating_window(*it);
+            it = floating_windows.erase(it);
+        }
+        else
+            it++;
+    }
 }
 
 bool WorkspaceContent::has_floating_window(miral::Window const& window)
@@ -148,4 +157,39 @@ void WorkspaceContent::add_floating_window(miral::Window const& window)
 void WorkspaceContent::remove_floating_window(miral::Window const& window)
 {
     floating_windows.erase(std::remove(floating_windows.begin(), floating_windows.end(), window));
+}
+
+std::vector<miral::Window> const& WorkspaceContent::get_floating_windows() const
+{
+    return floating_windows;
+}
+
+OutputContent *WorkspaceContent::get_output()
+{
+    return output;
+}
+
+void WorkspaceContent::trigger_rerender()
+{
+    // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
+    for_each_window([&](std::shared_ptr<WindowMetadata> const &metadata)
+    {
+        auto& window = metadata->get_window();
+        auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
+        if (surface)
+            surface->set_transformation(metadata->get_transform());
+    });
+}
+
+bool WorkspaceContent::is_empty() const
+{
+    return tree->is_empty() && floating_windows.empty();
+}
+
+int WorkspaceContent::workspace_to_number(int workspace)
+{
+    if (workspace == 0)
+        return 10;
+
+    return  workspace - 1;
 }

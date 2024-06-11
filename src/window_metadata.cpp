@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "window_metadata.h"
 #include "output_content.h"
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -45,9 +46,11 @@ void WindowMetadata::set_restore_state(MirWindowState state)
     restore_state = state;
 }
 
-MirWindowState WindowMetadata::consume_restore_state()
+std::optional<MirWindowState> WindowMetadata::consume_restore_state()
 {
-    return restore_state;
+    auto state = restore_state;
+    restore_state.reset();
+    return state;
 }
 
 void WindowMetadata::toggle_pin_to_desktop()
@@ -64,6 +67,9 @@ void WindowMetadata::set_is_pinned(bool in_is_pinned)
 
 bool WindowMetadata::is_focused() const
 {
+    if (!workspace)
+        return false;
+
     auto output = workspace->get_output();
     if (!output)
         return false;
@@ -104,4 +110,30 @@ OutputContent* WindowMetadata::get_output() const
         return nullptr;
 
     return workspace->get_output();
+}
+
+glm::mat4 WindowMetadata::get_workspace_transform() const
+{
+    if (is_pinned)
+        return glm::mat4(1.f);
+
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    auto const workspace_rect = output->get_workspace_rectangle(workspace->get_workspace());
+    return glm::translate(
+        glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
+}
+
+glm::mat4 WindowMetadata::get_output_transform() const
+{
+    if (is_pinned)
+        return glm::mat4(1.f);
+
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    return output->get_transform();
 }

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
+#include "animator.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/window_manager_tools.h>
@@ -43,17 +44,19 @@ public:
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
-    void show(std::vector<std::shared_ptr<WindowMetadata>> const&);
-    std::vector<std::shared_ptr<WindowMetadata>> hide();
+    void show();
+    void hide();
+    void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
     void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
-    std::vector<miral::Window> const& get_floating_windows() const { return floating_windows; }
-    glm::mat4 get_transform() const { return transform; }
-    void set_transform(glm::mat4 const& in) { transform = in; }
-    OutputContent* get_output() const { return output; }
+    [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
+    OutputContent* get_output();
+    void trigger_rerender();
+    [[nodiscard]] bool is_empty() const;
+    static int workspace_to_number(int workspace);
 
 private:
     OutputContent* output;
@@ -61,7 +64,6 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
-    glm::mat4 transform = glm::mat4(1.f);
 };
 
 } // miracle

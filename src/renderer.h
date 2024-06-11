@@ -85,13 +85,24 @@ private:
     static void tessellate(std::vector<mir::gl::Primitive>& primitives,
         mir::graphics::Renderable const& renderable);
 
-    struct OutlineContext
+    struct DrawData
     {
         bool enabled = false;
-        glm::vec4 color;
-        int size;
+        bool needs_outline = false;
+        glm::mat4 workspace_transform = glm::mat4(1.f);
+        bool is_focused = false;
+
+        struct
+        {
+            bool enabled = false;
+            glm::vec4 color;
+            int size;
+        } outline_context;
     };
-    OutlineContext draw(mir::graphics::Renderable const& renderable, OutlineContext* context = nullptr) const;
+
+    DrawData get_draw_data(mir::graphics::Renderable const&) const;
+    /// Draws the current renderable and returns a follow-up draw if required.
+    DrawData draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void update_gl_viewport();
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;

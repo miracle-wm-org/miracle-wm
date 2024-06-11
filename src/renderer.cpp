@@ -206,6 +206,27 @@ void Renderer::tessellate(
     primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 });
 }
 
+Renderer::DrawData Renderer::get_draw_data(mir::graphics::Renderable const& renderable) const
+{
+    DrawData data = { true };
+    auto surface = renderable.surface_if_any();
+    if (surface)
+    {
+        auto window = surface_tracker.get(surface.value());
+        if (window)
+        {
+            auto tools = WindowToolsAccessor::get_instance().get_tools();
+            auto& info = tools.info_for(window);
+            auto userdata = static_pointer_cast<WindowMetadata>(info.userdata());
+            data.needs_outline = userdata->get_type() == WindowType::tiled || userdata->get_type() == WindowType::floating;
+            data.workspace_transform = userdata->get_output_transform() * userdata->get_workspace_transform();
+            data.is_focused = userdata->is_focused();
+        }
+    }
+
+    return data;
+}
+
 auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
 {
     output_surface->make_current();
@@ -220,11 +241,11 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     ++frameno;
     for (auto const& r : renderables)
     {
-        auto context = draw(*r);
-        if (context.enabled)
+        auto data = draw(*r, get_draw_data(*r));
+        if (data.enabled && data.outline_context.enabled)
         {
-            OutlineRenderable outline(*r, context.size, context.color.a);
-            draw(outline, &context);
+            OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
+            draw(outline, data);
         }
     }
 
@@ -237,39 +258,20 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     return output;
 }
 
-miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderable, OutlineContext* context) const
+miracle::Renderer::DrawData Renderer::draw(
+    mg::Renderable const& renderable,
+    DrawData const& data) const
 {
-    auto surface = renderable.surface_if_any();
-    std::shared_ptr<WindowMetadata> userdata = nullptr;
-    if (surface)
-    {
-        auto window = surface_tracker.get(surface.value());
-        if (window)
-        {
-            auto tools = WindowToolsAccessor::get_instance().get_tools();
-            auto& info = tools.info_for(window);
-            userdata = static_pointer_cast<WindowMetadata>(info.userdata());
-        }
-    }
-
-    bool needs_outline = userdata && userdata->get_type() == WindowType::tiled;
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
     if (clip_area)
     {
-        glm::mat4 workspace_transform(1.f);
-        if (userdata)
-        {
-            if (auto workspace = userdata->get_workspace())
-                workspace_transform = workspace->get_transform();
-        }
-
         glEnable(GL_SCISSOR_TEST);
         // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
         auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
             - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
         glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * workspace_transform * clip_pos;
+        clip_pos = display_transform * data.workspace_transform * clip_pos;
 
         glScissor(
             (int)clip_pos.x - viewport.top_left.x.as_int(),
@@ -279,12 +281,12 @@ miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderabl
     }
 
     // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
-    if (context)
+    if (data.outline_context.enabled)
     {
         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
         glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     }
-    else if (needs_outline)
+    else if (data.needs_outline)
     {
         glEnable(GL_STENCIL_TEST);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -302,7 +304,7 @@ miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderabl
         [&](bool alpha) -> ProgramData const*
     {
         auto const& family = dynamic_cast<Program const&>(texture->shader(*program_factory));
-        if (context)
+        if (data.outline_context.enabled)
             return &family.outline;
         if (alpha)
             return &family.alpha;
@@ -353,24 +355,17 @@ miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderabl
     if (prog->alpha_uniform >= 0)
         glUniform1f(prog->alpha_uniform, renderable.alpha());
 
-    if (userdata)
-    {
-        if (auto workspace = userdata->get_workspace())
-            glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
-                glm::value_ptr(workspace->get_transform()));
-        else
-            glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
-                glm::value_ptr(glm::mat4(1.f)));
-    }
-    else
-        glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
-                           glm::value_ptr(glm::mat4(1.f)));
+    glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
+        glm::value_ptr(data.workspace_transform));
 
-    if (prog->outline_color_uniform >= 0 && context)
+    if (prog->outline_color_uniform >= 0 && data.outline_context.enabled)
     {
-        glUniform4f(prog->outline_color_uniform,
-            context->color.r, context->color.g,
-            context->color.b, context->color.a);
+        glUniform4f(
+            prog->outline_color_uniform,
+            data.outline_context.color.r,
+            data.outline_context.color.g,
+            data.outline_context.color.b,
+            data.outline_context.color.a);
     }
 
     glEnableVertexAttribArray(prog->position_attr);
@@ -452,18 +447,27 @@ miracle::Renderer::OutlineContext Renderer::draw(mg::Renderable const& renderabl
     }
 
     // Next, draw the outline if we have metadata to facilitate it
-    if (needs_outline)
+    if (data.needs_outline)
     {
         auto border_config = config->get_border_config();
         if (border_config.size > 0)
         {
-            bool is_focused = userdata->is_focused();
-            auto color = is_focused ? border_config.focus_color : border_config.color;
-            return OutlineContext{ true, color, border_config.size };
+            auto color = data.is_focused ? border_config.focus_color : border_config.color;
+            return DrawData{
+                true,
+                false,
+                data.workspace_transform,
+                false,
+                {
+                    true,
+                    color,
+                    border_config.size
+                }
+            };
         }
     }
 
-    return OutlineContext{ false };
+    return { false };
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)

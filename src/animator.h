@@ -105,11 +105,12 @@ public:
         AnimationHandle handle,
         std::function<void(AnimationStepResult const&)> const& callback);
 
-    void workspace_move_to(
+    void workspace_switch(
         AnimationHandle handle,
-        int x_offset, // The offset in X from which the "to" callback transform begins if it is a slide
-        std::function<void(AnimationStepResult const&)> const& from_callback,
-        std::function<void(AnimationStepResult const&)> const& to_callback);
+        mir::geometry::Rectangle const& from,
+        mir::geometry::Rectangle const& to,
+        mir::geometry::Rectangle const& current,
+        std::function<void(AnimationStepResult const&)> const& callback);
 
     void start();
     void stop();
