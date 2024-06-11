@@ -432,12 +432,17 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
+    int from_index = -1, to_index = -1;
     std::shared_ptr<WorkspaceContent> from = nullptr;
     std::shared_ptr<WorkspaceContent> to = nullptr;
-    for (auto const& workspace :workspaces)
+    for (int i = 0; i < workspaces.size(); i++)
     {
+        auto const& workspace = workspaces[i];
         if (workspace->get_workspace() == active_workspace)
+        {
             from = workspace;
+            from_index = i;
+        }
 
         if (workspace->get_workspace() == key)
         {
@@ -445,12 +450,13 @@ bool OutputContent::advise_workspace_active(int key)
                 return true;
 
             to = workspace;
+            to_index = i;
         }
     }
 
     if (!to)
     {
-        mir::fatal_error("advise_workspace_active: swithc to workspace that doesn't exist: %d", key);
+        mir::fatal_error("advise_workspace_active: switch to workspace that doesn't exist: %d", key);
         return false;
     }
 
@@ -458,22 +464,32 @@ bool OutputContent::advise_workspace_active(int key)
     {
         to->show();
         active_workspace = key;
+
+        auto to_rectangle = get_workspace_rectangle(active_workspace);
+        set_position(glm::vec2(
+            to_rectangle.top_left.x.as_int(),
+            to_rectangle.top_left.y.as_int()));
+        to->trigger_rerender();
         return true;
     }
 
-    auto to_src = get_workspace_rectangle(to->get_workspace());
     auto from_src = get_workspace_rectangle(from->get_workspace());
     from->transfer_pinned_windows_to(to);
+
+    // If 'from' is empty, we can delete the workspace. However, this means that from_src is now incorrect
+    if (from->is_empty())
+        workspace_manager.delete_workspace(from->get_workspace());
 
     // Show everyone so that we can animate over all workspaces
     for (auto const& workspace : workspaces)
         workspace->show();
 
+    geom::Rectangle real{ {geom::X{position_offset.x}, geom::Y{position_offset.y}}, area.size };
+    auto to_src = get_workspace_rectangle(to->get_workspace());
     geom::Rectangle src{
         {geom::X{-from_src.top_left.x.as_int()}, geom::Y{from_src.top_left.y.as_int()}},
         area.size
     };
-    geom::Rectangle real{ {geom::X{position_offset.x}, geom::Y{position_offset.y}}, area.size };
     geom::Rectangle dest{
         {geom::X{-to_src.top_left.x.as_int()}, geom::Y{to_src.top_left.y.as_int()}},
         area.size
@@ -495,9 +511,8 @@ bool OutputContent::advise_workspace_active(int key)
                     if (workspace != to)
                         workspace->hide();
                 }
-                auto active_tree = from->get_tree();
-                if (active_tree->is_empty() && from->get_floating_windows().empty())
-                    workspace_manager.delete_workspace(from->get_workspace());
+
+                to->trigger_rerender();
                 return;
             }
 
@@ -793,18 +808,8 @@ void OutputContent::add_immediately(miral::Window& window)
 
 geom::Rectangle OutputContent::get_workspace_rectangle(int workspace) const
 {
-    size_t workspace_index = 0;
-    for (size_t i = 0; i < workspaces.size(); i++)
-    {
-        if (workspaces[i]->get_workspace() == workspace)
-        {
-            workspace_index = i;
-            break;
-        }
-    }
-
     // TODO: Support vertical workspaces one day in the future
-    size_t x = workspace_index * area.size.width.as_int();
+    size_t x = (WorkspaceContent::workspace_to_number(workspace)) * area.size.width.as_int();
     return geom::Rectangle{
         geom::Point{geom::X{x}, geom::Y{0}},
         geom::Size{area.size.width.as_int(), area.size.height.as_int()}

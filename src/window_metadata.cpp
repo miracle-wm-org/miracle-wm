@@ -46,9 +46,11 @@ void WindowMetadata::set_restore_state(MirWindowState state)
     restore_state = state;
 }
 
-MirWindowState WindowMetadata::consume_restore_state()
+std::optional<MirWindowState> WindowMetadata::consume_restore_state()
 {
-    return restore_state;
+    auto state = restore_state;
+    restore_state.reset();
+    return state;
 }
 
 void WindowMetadata::toggle_pin_to_desktop()

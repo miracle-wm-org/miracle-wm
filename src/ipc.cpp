@@ -74,7 +74,7 @@ json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
     auto area = screen->get_area();
 
     return {
-        { "num",     key                               },
+        { "num",     WorkspaceContent::workspace_to_number(key)},
         { "id",      key                               },
         { "type",    "workspace"                       },
         { "name",    std::to_string(key)               },

@@ -96,10 +96,6 @@ struct AnimationDefinition
     float c5 = 1.3962634015954636;
     float n1 = 7.5625;
     float d1 = 2.75;
-
-    // Slide-specific values
-    std::optional<mir::geometry::Point> slide_to;
-    std::optional<mir::geometry::Point> slide_from;
 };
 
 AnimateableEvent from_string_animateable_event(std::string const&);

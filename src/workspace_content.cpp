@@ -67,9 +67,12 @@ void WorkspaceContent::show()
         if (metadata->get_is_pinned())
             continue;
 
-        miral::WindowSpecification spec;
-        spec.state() = metadata->consume_restore_state();
-        tools.modify_window(window, spec);
+        if (auto state = metadata->consume_restore_state())
+        {
+            miral::WindowSpecification spec;
+            spec.state() = state.value();
+            tools.modify_window(window, spec);
+        }
     }
 }
 
@@ -176,4 +179,17 @@ void WorkspaceContent::trigger_rerender()
         if (surface)
             surface->set_transformation(metadata->get_transform());
     });
+}
+
+bool WorkspaceContent::is_empty() const
+{
+    return tree->is_empty() && floating_windows.empty();
+}
+
+int WorkspaceContent::workspace_to_number(int workspace)
+{
+    if (workspace == 0)
+        return 10;
+
+    return  workspace - 1;
 }

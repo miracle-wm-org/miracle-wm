@@ -50,7 +50,7 @@ public:
     WindowType get_type() const { return type; }
     bool get_is_pinned() const { return is_pinned; }
     void set_restore_state(MirWindowState state);
-    MirWindowState consume_restore_state();
+    std::optional<MirWindowState> consume_restore_state();
     void toggle_pin_to_desktop();
     void set_is_pinned(bool is_pinned);
     [[nodiscard]] bool is_focused() const;
@@ -69,7 +69,7 @@ private:
     miral::Window window;
     std::shared_ptr<WorkspaceContent> workspace;
     std::shared_ptr<LeafNode> tiling_node;
-    MirWindowState restore_state;
+    std::optional<MirWindowState> restore_state;
     bool is_pinned = false;
     uint32_t animation_handle = 0;
     glm::mat4 transform = glm::mat4(1.f);

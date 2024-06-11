@@ -55,6 +55,8 @@ public:
     [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
     OutputContent* get_output();
     void trigger_rerender();
+    [[nodiscard]] bool is_empty() const;
+    static int workspace_to_number(int workspace);
 
 private:
     OutputContent* output;

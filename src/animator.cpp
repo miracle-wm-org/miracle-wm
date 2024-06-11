@@ -249,6 +249,14 @@ AnimationStepResult Animation::init()
         return { handle, false, {}, {}, glm::mat4(0.f) };
     case AnimationType::shrink:
         return { handle, false, {}, {}, glm::mat4(1.f) };
+    case AnimationType::disabled:
+        return {
+            handle,
+            true,
+            !to.has_value() ? std::nullopt : std::optional<glm::vec2>(glm::vec2(to.value().top_left.x.as_int(), to.value().top_left.y.as_int())),
+            !to.has_value() ? std::nullopt : std::optional<glm::vec2>(glm::vec2(to.value().size.width.as_int(), to.value().size.height.as_int())),
+            glm::mat4(1.f),
+        };
     default:
         return { handle, false, {}, {}, {} };
     }
