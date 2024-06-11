@@ -34,6 +34,7 @@ namespace miracle
 {
 
 class Policy;
+class MiracleConfig;
 
 /// This it taken directly from SWAY
 enum IpcCommandType
@@ -83,7 +84,8 @@ public:
         WorkspaceManager&,
         Policy& policy,
         std::shared_ptr<mir::ServerActionQueue> const&,
-        I3CommandExecutor&);
+        I3CommandExecutor&,
+        std::shared_ptr<MiracleConfig> const&);
 
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
@@ -111,6 +113,7 @@ private:
     mutable std::shared_mutex pending_commands_mutex;
     std::shared_ptr<mir::ServerActionQueue> queue;
     I3CommandExecutor& executor;
+    std::shared_ptr<MiracleConfig> config;
 
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);

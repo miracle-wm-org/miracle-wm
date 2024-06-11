@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "i3_command_executor.h"
 #include "output_content.h"
 #include "policy.h"
+#include "version.h"
+#include "miracle_config.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -71,7 +73,7 @@ struct sockaddr_un* ipc_user_sockaddr()
 json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
 {
     bool is_focused = screen->get_active_workspace_num() == key;
-    auto area = screen->get_area();
+    auto area = screen->get_workspace_rectangle(key);
 
     return {
         { "num",     WorkspaceContent::workspace_to_number(key)},
@@ -91,6 +93,22 @@ json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
     };
 }
 
+json output_to_json(std::shared_ptr<OutputContent> const& output)
+{
+    auto area = output->get_area();
+    auto miral_output = output->get_output();
+    return {
+       { "id",     miral_output.id()    },
+       { "name",   miral_output.name()  },
+       { "layout", "output"             },
+       { "rect",   {
+                   { "x", area.top_left.x.as_int() },
+                   { "y", area.top_left.y.as_int() },
+                   { "width", area.size.width.as_int() },
+                   { "height", area.size.height.as_int() },
+                   } }};
+}
+
 json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
 {
     json outputs_json;
@@ -102,7 +120,7 @@ json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
             workspaces.push_back(workspace_to_json(output, workspace->get_workspace()));
         }
 
-        auto area = outputs[0]->get_area();
+        auto area = output->get_area();
         auto miral_output = output->get_output();
         outputs_json.push_back({
             { "id",     miral_output.id()    },
@@ -134,11 +152,13 @@ Ipc::Ipc(miral::MirRunner& runner,
     miracle::WorkspaceManager& workspace_manager,
     Policy& policy,
     std::shared_ptr<mir::ServerActionQueue> const& queue,
-    I3CommandExecutor& executor) :
+    I3CommandExecutor& executor,
+    std::shared_ptr<MiracleConfig> const& config) :
     workspace_manager { workspace_manager },
     policy { policy },
     queue { queue },
-    executor { executor }
+    executor { executor },
+    config { config }
 {
     auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -423,6 +443,17 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
         send_reply(client, payload_type, json_string);
         break;
     }
+    case IPC_GET_OUTPUTS:
+    {
+        json j = json::array();
+        for (auto const& output : policy.get_output_list())
+        {
+            j.push_back(output_to_json(output));
+        }
+        auto json_string = to_string(j);
+        send_reply(client, payload_type, json_string);
+        break;
+    }
     case IPC_SUBSCRIBE:
     {
         json j = json::parse(buf);
@@ -466,6 +497,18 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     {
         auto json_string = to_string(outputs_to_json(policy.get_output_list()));
         send_reply(client, payload_type, json_string);
+        return;
+    }
+    case IPC_GET_VERSION:
+    {
+        json response = {
+            { "major", MIRACLE_WM_MAJOR },
+            {"minor", MIRACLE_WM_MINOR},
+            {"patch", MIRACLE_WM_PATCH},
+            {"human_readable", MIRACLE_VERSION_STRING},
+            {"loaded_config_file_name", config->get_filename()}
+        };
+        send_reply(client, payload_type, to_string(response));
         return;
     }
     default:

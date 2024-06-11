@@ -936,6 +936,11 @@ uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
     return mir_input_event_modifier_none;
 }
 
+std::string const& MiracleConfig::get_filename() const
+{
+    return config_path;
+}
+
 MirInputEventModifier MiracleConfig::get_input_event_modifier() const
 {
     return (MirInputEventModifier)primary_modifier;

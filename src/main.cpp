@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "miracle-main"
 
+#include "version.h"
 #include "auto_restarting_launcher.h"
 #include "miracle_config.h"
 #include "miracle_gl_config.h"
@@ -37,6 +38,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
+#include <mir/log.h>
+
+#define PRINT_OPENING_MESSAGE(x) mir::log_info("Welcome to miracle-wm v%s", x);
 
 using namespace miral;
 
@@ -59,6 +63,7 @@ private:
 
 int main(int argc, char const* argv[])
 {
+    PRINT_OPENING_MESSAGE(MIRACLE_VERSION_STRING);
     MirRunner runner { argc, argv };
 
     std::function<void()> shutdown_hook { [] { } };
