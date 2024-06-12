@@ -53,9 +53,6 @@ public:
 
     std::shared_ptr<LeafNode> advise_new_window(miral::WindowInfo const&);
 
-    /// Places us into resize mode. Other operations are prohibited while we are in resize mode.
-    void toggle_resize_mode();
-
     /// Try to resize the current active window in the provided direction
     bool try_resize_active_window(Direction direction);
 
@@ -140,7 +137,6 @@ private:
 
     // TODO: We can probably remove active_window and just resolve it efficiently now?
     std::shared_ptr<LeafNode> active_window;
-    bool is_resizing = false;
     bool is_active_window_fullscreen = false;
     bool is_hidden = false;
     int config_handle = 0;

@@ -108,7 +108,7 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     case WindowType::other:
         if (window_info.state() == MirWindowState::mir_window_state_attached)
         {
-            tools.select_active_window(window_info.window());
+            node_interface.select_active_window(window_info.window());
         }
         metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
         break;
@@ -322,7 +322,7 @@ void OutputContent::handle_raise_window(const std::shared_ptr<miracle::WindowMet
     switch (metadata->get_type())
     {
     case WindowType::tiled:
-        tools.select_active_window(metadata->get_window());
+        node_interface.select_active_window(metadata->get_window());
         break;
     case WindowType::floating:
         floating_window_manager.handle_raise_window(tools.info_for(metadata->get_window()));
@@ -378,20 +378,20 @@ void OutputContent::select_window_from_point(int x, int y)
 
     if (floating_index >= 0)
     {
-        tools.select_active_window(floating[floating_index]);
+        node_interface.select_active_window(floating[floating_index]);
         return;
     }
 
     auto node = workspace->get_tree()->select_window_from_point(x, y);
     if (node && node->get_window() != active_window)
     {
-        tools.select_active_window(node->get_window());
+        node_interface.select_active_window(node->get_window());
     }
 }
 
 void OutputContent::select_window(miral::Window const& window)
 {
-    tools.select_active_window(window);
+    node_interface.select_active_window(window);
 }
 
 namespace
@@ -676,11 +676,6 @@ void OutputContent::toggle_layout()
     get_active_tree()->toggle_layout();
 }
 
-void OutputContent::toggle_resize_mode()
-{
-    get_active_tree()->toggle_resize_mode();
-}
-
 void OutputContent::toggle_fullscreen()
 {
     get_active_tree()->try_toggle_active_fullscreen();
@@ -778,14 +773,14 @@ void OutputContent::request_toggle_active_float()
         advise_new_window(info, WindowType::floating);
         auto new_metadata = window_helpers::get_metadata(active_window, tools);
         handle_window_ready(info, new_metadata);
-        tools.select_active_window(active_window);
+        node_interface.select_active_window(active_window);
         get_active_workspace()->add_floating_window(active_window);
         break;
     }
     case WindowType::floating:
     {
         add_immediately(active_window);
-        tools.select_active_window(active_window);
+        node_interface.select_active_window(active_window);
         get_active_workspace()->remove_floating_window(active_window);
         break;
     }

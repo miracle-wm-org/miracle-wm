@@ -50,6 +50,10 @@ enum DefaultKeyCommand
     RequestVertical,
     RequestHorizontal,
     ToggleResize,
+    ResizeUp,
+    ResizeDown,
+    ResizeLeft,
+    ResizeRight,
     MoveUp,
     MoveDown,
     MoveLeft,
@@ -123,11 +127,11 @@ struct BorderConfig
 class MiracleConfig
 {
 public:
-    MiracleConfig(miral::MirRunner&);
+    explicit MiracleConfig(miral::MirRunner&);
     MiracleConfig(miral::MirRunner&, std::string const&);
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
-    CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
-    [[nodiscard]] DefaultKeyCommand matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
+    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
+    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const;
     [[nodiscard]] int get_inner_gaps_x() const;
     [[nodiscard]] int get_inner_gaps_y() const;
     [[nodiscard]] int get_outer_gaps_x() const;

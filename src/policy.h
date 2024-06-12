@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_metadata.h"
 #include "workspace_manager.h"
 #include "auto_restarting_launcher.h"
+#include "compositor_state.h"
 
 #include <memory>
 #include <miral/internal_client.h>
@@ -96,10 +97,23 @@ public:
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
+    bool try_request_horizontal();
+    bool try_request_vertical();
+    void try_toggle_resize_mode();
+    bool try_resize(Direction direction);
+    bool try_move(Direction direction);
+    bool try_select(Direction direction);
+    bool try_close_window();
+    bool quit();
+    bool try_toggle_fullscreen();
+    bool select_workspace(int number);
+    bool move_active_to_workspace(int number);
+    bool toggle_floating();
+    bool toggle_pinned_to_workspace();
 
     std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
     std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }
-    [[nodiscard]] geom::Point const& get_cursor_position() const { return cursor_position; }
+    [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
 
 private:
     std::shared_ptr<OutputContent> active_output;
@@ -119,7 +133,7 @@ private:
     WindowManagerToolsTilingInterface node_interface;
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;
-    geom::Point cursor_position;
+    CompositorState state;
 };
 }
 

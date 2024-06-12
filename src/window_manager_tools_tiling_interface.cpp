@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_node.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
+#include "compositor_state.h"
 #include <mir/scene/surface.h>
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
@@ -30,9 +31,11 @@ using namespace miracle;
 
 WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
     miral::WindowManagerTools const& tools,
-    Animator& animator) :
+    Animator& animator,
+    CompositorState& state) :
     tools { tools },
-    animator { animator }
+    animator { animator },
+    state { state }
 {
 }
 
@@ -109,6 +112,9 @@ void WindowManagerToolsTilingInterface::noclip(miral::Window const& window)
 
 void WindowManagerToolsTilingInterface::select_active_window(miral::Window const& window)
 {
+    if (state.mode == WindowManagerMode::resizing)
+        return;
+
     tools.select_active_window(window);
 }
 

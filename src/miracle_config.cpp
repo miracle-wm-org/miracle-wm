@@ -256,6 +256,14 @@ void MiracleConfig::_load()
                 key_command = DefaultKeyCommand::RequestHorizontal;
             else if (name == "toggle_resize")
                 key_command = DefaultKeyCommand::ToggleResize;
+            else if (name == "resize_up")
+                key_command = DefaultKeyCommand::ResizeUp;
+            else if (name == "resize_down")
+                key_command = DefaultKeyCommand::ResizeDown;
+            else if (name == "resize_left")
+                key_command = DefaultKeyCommand::ResizeLeft;
+            else if (name == "resize_right")
+                key_command = DefaultKeyCommand::ResizeRight;
             else if (name == "move_up")
                 key_command = DefaultKeyCommand::MoveUp;
             else if (name == "move_down")
@@ -396,6 +404,18 @@ void MiracleConfig::_load()
         { MirKeyboardAction::mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_R     },
+        { MirKeyboardAction::mir_keyboard_action_down,
+        miracle_input_event_modifier_default,
+        KEY_UP    },
+        { MirKeyboardAction::mir_keyboard_action_down,
+        miracle_input_event_modifier_default,
+        KEY_DOWN  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+        miracle_input_event_modifier_default,
+        KEY_LEFT  },
+        { MirKeyboardAction::mir_keyboard_action_down,
+        miracle_input_event_modifier_default,
+        KEY_RIGHT },
         { MirKeyboardAction::mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_UP    },
@@ -964,7 +984,7 @@ MiracleConfig::matches_custom_key_command(MirKeyboardAction action, int scan_cod
     return nullptr;
 }
 
-DefaultKeyCommand MiracleConfig::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
+bool MiracleConfig::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const
 {
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {
@@ -981,11 +1001,14 @@ DefaultKeyCommand MiracleConfig::matches_key_command(MirKeyboardAction action, i
                 continue;
 
             if (scan_code == command.key)
-                return (DefaultKeyCommand)i;
+            {
+                if (f((DefaultKeyCommand)i))
+                    return true;
+            }
         }
     }
 
-    return DefaultKeyCommand::MAX;
+    return false;
 }
 
 int MiracleConfig::get_inner_gaps_x() const

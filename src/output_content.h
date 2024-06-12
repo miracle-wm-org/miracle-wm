@@ -91,7 +91,6 @@ public:
     void request_vertical();
     void request_horizontal();
     void toggle_layout();
-    void toggle_resize_mode();
     void toggle_fullscreen();
     void toggle_pinned_to_workspace();
     void set_is_pinned(bool is_pinned);

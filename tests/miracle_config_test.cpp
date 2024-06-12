@@ -102,12 +102,15 @@ TEST_F(MiracleConfigTest, CanOverrideDefaultAction)
     write_yaml_node(node);
 
     MiracleConfig config(runner, path);
-    EXPECT_EQ(
-        config.matches_key_command(
-            MirKeyboardAction::mir_keyboard_action_down,
-            KEY_X,
-            mir_input_event_modifier_meta),
-        Terminal);
+    config.matches_key_command(
+        MirKeyboardAction::mir_keyboard_action_down,
+        KEY_X,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand command)
+        {
+            EXPECT_EQ(Terminal, command);
+            return true;
+        });
 }
 
 TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItIsNotAdded)
@@ -122,12 +125,15 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItI
     write_yaml_node(node);
 
     MiracleConfig config(runner, path);
-    EXPECT_EQ(
-        config.matches_key_command(
-            MirKeyboardAction::mir_keyboard_action_down,
-            KEY_ENTER,
-            mir_input_event_modifier_meta),
-        Terminal);
+    config.matches_key_command(
+        MirKeyboardAction::mir_keyboard_action_down,
+        KEY_ENTER,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand command)
+        {
+            EXPECT_EQ(Terminal, command);
+            return true;
+        });
 }
 
 TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersThenItIsNotAdded)
@@ -142,12 +148,15 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersTh
     write_yaml_node(node);
 
     MiracleConfig config(runner, path);
-    EXPECT_EQ(
-        config.matches_key_command(
-            MirKeyboardAction::mir_keyboard_action_down,
-            KEY_ENTER,
-            mir_input_event_modifier_meta),
-        Terminal);
+    config.matches_key_command(
+        MirKeyboardAction::mir_keyboard_action_down,
+        KEY_ENTER,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand command)
+        {
+            EXPECT_EQ(Terminal, command);
+            return true;
+        });
 }
 
 TEST_F(MiracleConfigTest, CanCreateCustomAction)
