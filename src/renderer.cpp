@@ -246,6 +246,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         {
             OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
             draw(outline, data);
+            glClear(GL_STENCIL_BUFFER_BIT);
         }
     }
 

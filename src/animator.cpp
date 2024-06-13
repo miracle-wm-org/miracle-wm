@@ -90,6 +90,7 @@ Animation::Animation(
         float percent_h = get_percent_complete(height_change, real_height_change);
 
         float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
+        percentage = std::clamp(percentage, 0.f, 1.f);
         runtime_seconds = percentage * definition.duration_seconds;
         break;
     }
