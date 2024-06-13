@@ -581,7 +581,7 @@ void Policy::try_toggle_resize_mode()
 
 bool Policy::try_request_vertical()
 {
-    if (state.mode != WindowManagerMode::resizing)
+    if (state.mode == WindowManagerMode::resizing)
         return false;
 
     if (!active_output)
@@ -593,7 +593,7 @@ bool Policy::try_request_vertical()
 
 bool Policy::try_request_horizontal()
 {
-    if (state.mode != WindowManagerMode::resizing)
+    if (state.mode == WindowManagerMode::resizing)
         return false;
 
     if (!active_output)
