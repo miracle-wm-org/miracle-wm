@@ -24,4 +24,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIRACLE_VERSION_STRING "0.2.1"
 
-#endif //MIRACLE_WM_VERSION_H
+#endif // MIRACLE_WM_VERSION_H

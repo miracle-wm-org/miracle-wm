@@ -396,15 +396,13 @@ void OutputContent::select_window(miral::Window const& window)
 
 namespace
 {
-template< typename T, typename Pred >
+template <typename T, typename Pred>
 typename std::vector<T>::iterator
-insert_sorted( std::vector<T> & vec, T const& item, Pred pred )
+insert_sorted(std::vector<T>& vec, T const& item, Pred pred)
 {
-    return vec.insert
-    (
-        std::upper_bound( vec.begin(), vec.end(), item, pred ),
-        item
-    );
+    return vec.insert(
+        std::upper_bound(vec.begin(), vec.end(), item, pred),
+        item);
 }
 }
 
@@ -484,14 +482,17 @@ bool OutputContent::advise_workspace_active(int key)
     for (auto const& workspace : workspaces)
         workspace->show();
 
-    geom::Rectangle real{ {geom::X{position_offset.x}, geom::Y{position_offset.y}}, area.size };
-    auto to_src = get_workspace_rectangle(to->get_workspace());
-    geom::Rectangle src{
-        {geom::X{-from_src.top_left.x.as_int()}, geom::Y{from_src.top_left.y.as_int()}},
+    geom::Rectangle real {
+        { geom::X { position_offset.x }, geom::Y { position_offset.y } },
         area.size
     };
-    geom::Rectangle dest{
-        {geom::X{-to_src.top_left.x.as_int()}, geom::Y{to_src.top_left.y.as_int()}},
+    auto to_src = get_workspace_rectangle(to->get_workspace());
+    geom::Rectangle src {
+        { geom::X { -from_src.top_left.x.as_int() }, geom::Y { from_src.top_left.y.as_int() } },
+        area.size
+    };
+    geom::Rectangle dest {
+        { geom::X { -to_src.top_left.x.as_int() }, geom::Y { to_src.top_left.y.as_int() } },
         area.size
     };
     animator.workspace_switch(
@@ -499,30 +500,33 @@ bool OutputContent::advise_workspace_active(int key)
         src,
         dest,
         real,
-        [this, to=to, from=from](AnimationStepResult const& asr)
+        [this, to = to, from = from](AnimationStepResult const& asr)
+    {
+        if (asr.is_complete)
         {
-            if (asr.is_complete)
-            {
-                if (asr.position) set_position(asr.position.value());
-                if (asr.transform) set_transform(asr.transform.value());
-
-                for (auto const& workspace : workspaces)
-                {
-                    if (workspace != to)
-                        workspace->hide();
-                }
-
-                to->trigger_rerender();
-                return;
-            }
-
-            if (asr.position) set_position(asr.position.value());
-            if (asr.transform) set_transform(asr.transform.value());
+            if (asr.position)
+                set_position(asr.position.value());
+            if (asr.transform)
+                set_transform(asr.transform.value());
 
             for (auto const& workspace : workspaces)
-                workspace->trigger_rerender();
+            {
+                if (workspace != to)
+                    workspace->hide();
+            }
+
+            to->trigger_rerender();
+            return;
         }
-    );
+
+        if (asr.position)
+            set_position(asr.position.value());
+        if (asr.transform)
+            set_transform(asr.transform.value());
+
+        for (auto const& workspace : workspaces)
+            workspace->trigger_rerender();
+    });
 
     active_workspace = key;
     return true;
@@ -587,13 +591,13 @@ bool OutputContent::move_active_window(miracle::Direction direction)
 
     switch (metadata->get_type())
     {
-        case WindowType::floating:
-            return move_active_window_by_amount(direction, 10);
-        case WindowType::tiled:
-            return get_active_tree()->try_move_active_window(direction);
-        default:
-            mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
-            return false;
+    case WindowType::floating:
+        return move_active_window_by_amount(direction, 10);
+    case WindowType::tiled:
+        return get_active_tree()->try_move_active_window(direction);
+    default:
+        mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
+        return false;
     }
 }
 
@@ -614,29 +618,29 @@ bool OutputContent::move_active_window_by_amount(Direction direction, int pixels
     miral::WindowSpecification spec;
     switch (direction)
     {
-        case Direction::down:
-            spec.top_left() = {
+    case Direction::down:
+        spec.top_left() = {
             prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
-            };
-            break;
-        case Direction::up:
-            spec.top_left() = {
+        };
+        break;
+    case Direction::up:
+        spec.top_left() = {
             prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
-            };
-            break;
-        case Direction::left:
-            spec.top_left() = {
+        };
+        break;
+    case Direction::left:
+        spec.top_left() = {
             prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
-            };
-            break;
-        case Direction::right:
-            spec.top_left() = {
+        };
+        break;
+    case Direction::right:
+        spec.top_left() = {
             prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
-            };
-            break;
-        default:
-            mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
-            return false;
+        };
+        break;
+    default:
+        mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
+        return false;
     }
 
     tools.modify_window(info, spec);
@@ -651,12 +655,15 @@ bool OutputContent::move_active_window_to(int x, int y)
 
     if (metadata->get_type() != WindowType::floating)
     {
-        mir::log_warning("Cannot move a non-floating window to a position, type=%d", (int) metadata->get_type());
+        mir::log_warning("Cannot move a non-floating window to a position, type=%d", (int)metadata->get_type());
         return false;
     }
 
     miral::WindowSpecification spec;
-    spec.top_left() = { x, y, };
+    spec.top_left() = {
+        x,
+        y,
+    };
     tools.modify_window(tools.info_for(active_window), spec);
     return true;
 }
@@ -805,9 +812,9 @@ geom::Rectangle OutputContent::get_workspace_rectangle(int workspace) const
 {
     // TODO: Support vertical workspaces one day in the future
     size_t x = (WorkspaceContent::workspace_to_number(workspace)) * area.size.width.as_int();
-    return geom::Rectangle{
-        geom::Point{geom::X{x}, geom::Y{0}},
-        geom::Size{area.size.width.as_int(), area.size.height.as_int()}
+    return geom::Rectangle {
+        geom::Point { geom::X { x },            geom::Y { 0 }             },
+        geom::Size { area.size.width.as_int(), area.size.height.as_int() }
     };
 }
 

@@ -19,16 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_POLICY_H
 
 #include "animator.h"
+#include "auto_restarting_launcher.h"
+#include "compositor_state.h"
 #include "i3_command_executor.h"
 #include "ipc.h"
 #include "miracle_config.h"
+#include "mode_observer.h"
 #include "output_content.h"
 #include "surface_tracker.h"
 #include "window_manager_tools_tiling_interface.h"
 #include "window_metadata.h"
 #include "workspace_manager.h"
-#include "auto_restarting_launcher.h"
-#include "compositor_state.h"
 
 #include <memory>
 #include <miral/internal_client.h>
@@ -114,6 +115,7 @@ public:
     std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
     std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
+    [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
     std::shared_ptr<OutputContent> active_output;
@@ -127,6 +129,7 @@ private:
     miral::MirRunner& runner;
     std::shared_ptr<MiracleConfig> config;
     WorkspaceObserverRegistrar workspace_observer_registrar;
+    ModeObserverRegistrar mode_observer_registrar;
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
     Animator animator;

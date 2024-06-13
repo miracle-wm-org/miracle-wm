@@ -16,13 +16,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "i3_command_executor.h"
+#include "auto_restarting_launcher.h"
 #include "direction.h"
 #include "i3_command.h"
 #include "leaf_node.h"
 #include "parent_node.h"
 #include "policy.h"
 #include "window_helpers.h"
-#include "auto_restarting_launcher.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <mir/log.h>
@@ -38,7 +38,7 @@ I3CommandExecutor::I3CommandExecutor(
     policy { policy },
     workspace_manager { workspace_manager },
     tools { tools },
-    launcher{ launcher }
+    launcher { launcher }
 {
 }
 
@@ -110,7 +110,7 @@ void I3CommandExecutor::process_exec(miracle::I3Command const& command, miracle:
         return;
     }
 
-    StartupApp app{ command.arguments[arg_index], false, no_startup_id };
+    StartupApp app { command.arguments[arg_index], false, no_startup_id };
     launcher.launch(app);
 }
 
@@ -298,7 +298,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         mir::log_warning("process_move: output is not set");
         return;
     }
-    
+
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
     {

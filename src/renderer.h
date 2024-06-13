@@ -19,15 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_RENDERER_GL_RENDERER_H_
 
 #include "primitive.h"
-#include "surface_tracker.h"
 #include "program_factory.h"
+#include "surface_tracker.h"
 
+#include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/buffer_id.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
 #include <miral/window_manager_tools.h>
-#include <GLES2/gl2.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ipc.h"
 #include "i3_command_executor.h"
+#include "miracle_config.h"
 #include "output_content.h"
 #include "policy.h"
 #include "version.h"
-#include "miracle_config.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -76,20 +76,20 @@ json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
     auto area = screen->get_workspace_rectangle(key);
 
     return {
-        { "num",     WorkspaceContent::workspace_to_number(key)},
-        { "id",      key                               },
-        { "type",    "workspace"                       },
-        { "name",    std::to_string(key)               },
-        { "visible", screen->is_active() && is_focused },
-        { "focused", screen->is_active() && is_focused },
-        { "urgent",  false                             },
-        { "output",  screen->get_output().name()       },
+        { "num",     WorkspaceContent::workspace_to_number(key) },
+        { "id",      key                                        },
+        { "type",    "workspace"                                },
+        { "name",    std::to_string(key)                        },
+        { "visible", screen->is_active() && is_focused          },
+        { "focused", screen->is_active() && is_focused          },
+        { "urgent",  false                                      },
+        { "output",  screen->get_output().name()                },
         { "rect",    {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                   }
+                  }                            }
     };
 }
 
@@ -98,15 +98,16 @@ json output_to_json(std::shared_ptr<OutputContent> const& output)
     auto area = output->get_area();
     auto miral_output = output->get_output();
     return {
-       { "id",     miral_output.id()    },
-       { "name",   miral_output.name()  },
-       { "layout", "output"             },
-       { "rect",   {
-                   { "x", area.top_left.x.as_int() },
-                   { "y", area.top_left.y.as_int() },
-                   { "width", area.size.width.as_int() },
-                   { "height", area.size.height.as_int() },
-                   } }};
+        { "id",     miral_output.id()   },
+        { "name",   miral_output.name() },
+        { "layout", "output"            },
+        { "rect",   {
+                      { "x", area.top_left.x.as_int() },
+                      { "y", area.top_left.y.as_int() },
+                      { "width", area.size.width.as_int() },
+                      { "height", area.size.height.as_int() },
+                  }    }
+    };
 }
 
 json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
@@ -146,6 +147,25 @@ json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
     return root;
 }
 
+json mode_to_json(WindowManagerMode mode)
+{
+    switch (mode)
+    {
+    case WindowManagerMode::normal:
+        return {
+            { "name", "default" }
+        };
+    case WindowManagerMode::resizing:
+        return {
+            { "name", "resize" }
+        };
+    default:
+    {
+        mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
+        return {};
+    }
+    }
+}
 }
 
 Ipc::Ipc(miral::MirRunner& runner,
@@ -360,6 +380,20 @@ void Ipc::on_focused(
     }
 }
 
+void Ipc::on_changed(WindowManagerMode mode)
+{
+    auto response = to_string(mode_to_json(mode));
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_MODE)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_MODE, response);
+    }
+}
+
 Ipc::IpcClient& Ipc::get_client(int fd)
 {
     for (auto& client : clients)
@@ -502,13 +536,27 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     case IPC_GET_VERSION:
     {
         json response = {
-            { "major", MIRACLE_WM_MAJOR },
-            {"minor", MIRACLE_WM_MINOR},
-            {"patch", MIRACLE_WM_PATCH},
-            {"human_readable", MIRACLE_VERSION_STRING},
-            {"loaded_config_file_name", config->get_filename()}
+            { "major",                   MIRACLE_WM_MAJOR       },
+            { "minor",                   MIRACLE_WM_MINOR       },
+            { "patch",                   MIRACLE_WM_PATCH       },
+            { "human_readable",          MIRACLE_VERSION_STRING },
+            { "loaded_config_file_name", config->get_filename() }
         };
         send_reply(client, payload_type, to_string(response));
+        return;
+    }
+    case IPC_GET_BINDING_MODES:
+    {
+        json response;
+        response.push_back("default");
+        response.push_back("resize");
+        send_reply(client, payload_type, to_string(response));
+        return;
+    }
+    case IPC_GET_BINDING_STATE:
+    {
+        auto const& state = policy.get_state();
+        send_reply(client, payload_type, to_string(mode_to_json(state.mode)));
         return;
     }
     default:

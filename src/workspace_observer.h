@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_OBSERVER_H
 #define MIRACLEWM_WORKSPACE_OBSERVER_H
 
+#include "observer_registrar.h"
 #include "output_content.h"
 #include <memory>
 #include <mir/executor.h>
@@ -34,28 +35,15 @@ public:
     virtual void on_created(std::shared_ptr<OutputContent> const&, int) = 0;
     virtual void on_removed(std::shared_ptr<OutputContent> const&, int) = 0;
     virtual void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) = 0;
-
-    int get_id() const;
-
-protected:
-    WorkspaceObserver();
-
-private:
-    int id;
 };
 
-class WorkspaceObserverRegistrar
+class WorkspaceObserverRegistrar : public ObserverRegistrar<WorkspaceObserver>
 {
 public:
     WorkspaceObserverRegistrar() = default;
-    void register_interest(std::weak_ptr<WorkspaceObserver>);
-    void unregister_interest(WorkspaceObserver&);
     void advise_created(std::shared_ptr<OutputContent> const&, int);
     void advise_removed(std::shared_ptr<OutputContent> const&, int);
     void advise_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int);
-
-private:
-    std::vector<std::weak_ptr<WorkspaceObserver>> observers;
 };
 
 } // miracle

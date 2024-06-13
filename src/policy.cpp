@@ -68,12 +68,14 @@ Policy::Policy(
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
+    mode_observer_registrar.register_interest(ipc);
     WindowToolsAccessor::get_instance().set_tools(tools);
 }
 
 Policy::~Policy()
 {
-    workspace_observer_registrar.unregister_interest(*ipc);
+    workspace_observer_registrar.unregister_interest(ipc.get());
+    mode_observer_registrar.unregister_interest(ipc.get());
 }
 
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
@@ -137,7 +139,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case QuitActiveWindow:
             return try_close_window();
         case QuitCompositor:
-           return quit();
+            return quit();
         case Fullscreen:
             return try_toggle_fullscreen();
         case SelectWorkspace1:
@@ -573,6 +575,8 @@ void Policy::try_toggle_resize_mode()
         state.mode = WindowManagerMode::normal;
     else
         state.mode = WindowManagerMode::resizing;
+
+    mode_observer_registrar.advise_changed(state.mode);
 }
 
 bool Policy::try_request_vertical()
