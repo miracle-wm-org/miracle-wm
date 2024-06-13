@@ -95,19 +95,8 @@ std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo 
     return node;
 }
 
-void TilingWindowTree::toggle_resize_mode()
-{
-    is_resizing = !is_resizing;
-}
-
 bool TilingWindowTree::try_resize_active_window(miracle::Direction direction)
 {
-    if (!is_resizing)
-    {
-        mir::log_warning("Unable to resize the active window: not resizing");
-        return false;
-    }
-
     if (is_active_window_fullscreen)
     {
         mir::log_warning("Unable to resize the next window: fullscreened");
@@ -132,12 +121,6 @@ bool TilingWindowTree::try_select_next(miracle::Direction direction)
         return false;
     }
 
-    if (is_resizing)
-    {
-        mir::log_warning("Unable to select the next window: resizing");
-        return false;
-    }
-
     if (!active_window)
     {
         mir::log_warning("Unable to select the next window: active window not set");
@@ -157,12 +140,6 @@ bool TilingWindowTree::try_select_next(miracle::Direction direction)
 
 bool TilingWindowTree::try_toggle_active_fullscreen()
 {
-    if (is_resizing)
-    {
-        mir::log_warning("Cannot toggle fullscreen while resizing");
-        return false;
-    }
-
     if (!active_window)
     {
         mir::log_warning("Active window is null while trying to toggle fullscreen");
@@ -205,12 +182,6 @@ bool TilingWindowTree::try_move_active_window(miracle::Direction direction)
     if (is_active_window_fullscreen)
     {
         mir::log_warning("Unable to move active window: fullscreen");
-        return false;
-    }
-
-    if (is_resizing)
-    {
-        mir::log_warning("Unable to move active window: resizing");
         return false;
     }
 
@@ -310,12 +281,6 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
         return;
     }
 
-    if (is_resizing)
-    {
-        mir::log_warning("Unable to handle direction request: resizing");
-        return;
-    }
-
     if (!active_window)
     {
         mir::log_warning("Unable to handle direction request: active window not set");
@@ -330,8 +295,6 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
 
 void TilingWindowTree::advise_focus_gained(miral::Window& window)
 {
-    is_resizing = false;
-
     auto metadata = tiling_interface.get_metadata(window, this);
     if (!metadata)
     {
@@ -348,8 +311,6 @@ void TilingWindowTree::advise_focus_gained(miral::Window& window)
 
 void TilingWindowTree::advise_focus_lost(miral::Window& window)
 {
-    is_resizing = false;
-
     if (active_window != nullptr && active_window->get_window() == window && !is_active_window_fullscreen)
         active_window = nullptr;
 }
@@ -704,7 +665,6 @@ bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
     tiling_interface.select_active_window(node->get_window());
     tiling_interface.raise(node->get_window());
     is_active_window_fullscreen = true;
-    is_resizing = false;
     return true;
 }
 

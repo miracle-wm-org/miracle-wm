@@ -64,7 +64,7 @@ Policy::Policy(
     surface_tracker { surface_tracker },
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) },
     animator(server.the_main_loop(), config),
-    node_interface(tools, animator)
+    node_interface(tools, animator, state)
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
@@ -89,174 +89,114 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    auto key_command = config->matches_key_command(action, scan_code, modifiers);
-    if (key_command == DefaultKeyCommand::MAX)
-        return false;
+    return config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
+    {
+        if (key_command == DefaultKeyCommand::MAX)
+            return false;
 
-    switch (key_command)
-    {
-    case Terminal:
-    {
-        auto terminal_command = config->get_terminal_command();
-        if (terminal_command)
-            external_client_launcher.launch({ terminal_command.value() });
-        return true;
-    }
-    case RequestVertical:
-        if (active_output)
-            active_output->request_vertical();
-        return true;
-    case RequestHorizontal:
-        if (active_output)
-            active_output->request_horizontal();
-        return true;
-    case ToggleResize:
-        if (active_output)
-            active_output->toggle_resize_mode();
-        return true;
-    case MoveUp:
-        if (active_output && active_output->move_active_window(Direction::up))
+        switch (key_command)
+        {
+        case Terminal:
+        {
+            auto terminal_command = config->get_terminal_command();
+            if (terminal_command)
+                external_client_launcher.launch({ terminal_command.value() });
             return true;
-        return false;
-    case MoveDown:
-        if (active_output && active_output->move_active_window(Direction::down))
+        }
+        case RequestVertical:
+            return try_request_vertical();
+        case RequestHorizontal:
+            return try_request_horizontal();
+        case ToggleResize:
+            try_toggle_resize_mode();
             return true;
+        case ResizeUp:
+            return try_resize(Direction::up);
+        case ResizeDown:
+            return try_resize(Direction::down);
+        case ResizeLeft:
+            return try_resize(Direction::left);
+        case ResizeRight:
+            return try_resize(Direction::right);
+        case MoveUp:
+            return try_move(Direction::up);
+        case MoveDown:
+            return try_move(Direction::down);
+        case MoveLeft:
+            return try_move(Direction::left);
+        case MoveRight:
+            return try_move(Direction::right);
+        case SelectUp:
+            return try_select(Direction::up);
+        case SelectDown:
+            return try_select(Direction::down);
+        case SelectLeft:
+            return try_select(Direction::left);
+        case SelectRight:
+            return try_select(Direction::right);
+        case QuitActiveWindow:
+            return try_close_window();
+        case QuitCompositor:
+           return quit();
+        case Fullscreen:
+            return try_toggle_fullscreen();
+        case SelectWorkspace1:
+            return select_workspace(1);
+        case SelectWorkspace2:
+            return select_workspace(2);
+        case SelectWorkspace3:
+            return select_workspace(3);
+        case SelectWorkspace4:
+            return select_workspace(4);
+        case SelectWorkspace5:
+            return select_workspace(5);
+        case SelectWorkspace6:
+            return select_workspace(6);
+        case SelectWorkspace7:
+            return select_workspace(7);
+        case SelectWorkspace8:
+            return select_workspace(8);
+        case SelectWorkspace9:
+            return select_workspace(9);
+        case SelectWorkspace0:
+            return select_workspace(0);
+        case MoveToWorkspace1:
+            return move_active_to_workspace(1);
+        case MoveToWorkspace2:
+            return move_active_to_workspace(2);
+        case MoveToWorkspace3:
+            return move_active_to_workspace(3);
+        case MoveToWorkspace4:
+            return move_active_to_workspace(4);
+        case MoveToWorkspace5:
+            return move_active_to_workspace(5);
+        case MoveToWorkspace6:
+            return move_active_to_workspace(6);
+        case MoveToWorkspace7:
+            return move_active_to_workspace(7);
+        case MoveToWorkspace8:
+            return move_active_to_workspace(8);
+        case MoveToWorkspace9:
+            return move_active_to_workspace(9);
+        case MoveToWorkspace0:
+            return move_active_to_workspace(0);
+        case ToggleFloating:
+            return toggle_floating();
+        case TogglePinnedToWorkspace:
+            return toggle_pinned_to_workspace();
+        default:
+            std::cerr << "Unknown key_command: " << key_command << std::endl;
+            break;
+        }
         return false;
-    case MoveLeft:
-        if (active_output && active_output->move_active_window(Direction::left))
-            return true;
-        return false;
-    case MoveRight:
-        if (active_output && active_output->move_active_window(Direction::right))
-            return true;
-        return false;
-    case SelectUp:
-        if (active_output && (active_output->resize_active_window(Direction::up) || active_output->select(Direction::up)))
-            return true;
-        return false;
-    case SelectDown:
-        if (active_output && (active_output->resize_active_window(Direction::down) || active_output->select(Direction::down)))
-            return true;
-        return false;
-    case SelectLeft:
-        if (active_output && (active_output->resize_active_window(Direction::left) || active_output->select(Direction::left)))
-            return true;
-        return false;
-    case SelectRight:
-        if (active_output && (active_output->resize_active_window(Direction::right) || active_output->select(Direction::right)))
-            return true;
-        return false;
-    case QuitActiveWindow:
-        if (active_output)
-            active_output->close_active_window();
-        return true;
-    case QuitCompositor:
-        runner.stop();
-        return true;
-    case Fullscreen:
-        if (active_output)
-            active_output->toggle_fullscreen();
-        return true;
-    case SelectWorkspace1:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 1);
-        return true;
-    case SelectWorkspace2:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 2);
-        return true;
-    case SelectWorkspace3:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 3);
-        return true;
-    case SelectWorkspace4:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 4);
-        return true;
-    case SelectWorkspace5:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 5);
-        return true;
-    case SelectWorkspace6:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 6);
-        return true;
-    case SelectWorkspace7:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 7);
-        return true;
-    case SelectWorkspace8:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 8);
-        return true;
-    case SelectWorkspace9:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 9);
-        return true;
-    case SelectWorkspace0:
-        if (active_output)
-            workspace_manager.request_workspace(active_output, 0);
-        return true;
-    case MoveToWorkspace1:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 1);
-        return true;
-    case MoveToWorkspace2:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 2);
-        return true;
-    case MoveToWorkspace3:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 3);
-        return true;
-    case MoveToWorkspace4:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 4);
-        return true;
-    case MoveToWorkspace5:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 5);
-        return true;
-    case MoveToWorkspace6:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 6);
-        return true;
-    case MoveToWorkspace7:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 7);
-        return true;
-    case MoveToWorkspace8:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 8);
-        return true;
-    case MoveToWorkspace9:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 9);
-        return true;
-    case MoveToWorkspace0:
-        if (active_output)
-            workspace_manager.move_active_to_workspace(active_output, 0);
-        return true;
-    case ToggleFloating:
-        if (active_output)
-            active_output->request_toggle_active_float();
-        return true;
-    case TogglePinnedToWorkspace:
-        if (active_output)
-            active_output->toggle_pinned_to_workspace();
-        return true;
-    default:
-        std::cerr << "Unknown key_command: " << key_command << std::endl;
-        break;
-    }
-    return false;
+    });
 }
 
 bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
-    cursor_position = { x, y };
+    state.cursor_position = { x, y };
 
     for (auto const& output : output_list)
     {
@@ -271,7 +211,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 workspace_manager.request_focus(output->get_active_workspace_num());
             }
 
-            if (output->get_active_workspace_num() >= 0)
+            if (output->get_active_workspace_num() >= 0 && state.mode != WindowManagerMode::resizing)
             {
                 active_output->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
             }
@@ -319,6 +259,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             // windows are considered to be in the "other" category until
             // we have more data on them.
             orphaned_window_list.push_back(window);
+            surface_tracker.add(window);
             auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
             miral::WindowSpecification spec;
             spec.userdata() = metadata;
@@ -383,15 +324,14 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
-    for (auto it = orphaned_window_list.begin(); it != orphaned_window_list.end();)
+    for (auto it = orphaned_window_list.begin(); it != orphaned_window_list.end(); it++)
     {
         if (*it == window_info.window())
         {
             orphaned_window_list.erase(it);
+            surface_tracker.remove(window_info.window());
             return;
         }
-        else
-            it++;
     }
 
     auto metadata = window_helpers::get_metadata(window_info);
@@ -599,4 +539,170 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
     {
         output->advise_application_zone_delete(application_zone);
     }
+}
+
+void Policy::try_toggle_resize_mode()
+{
+    if (!active_output)
+    {
+        state.mode = WindowManagerMode::normal;
+        return;
+    }
+
+    auto const& window = active_output->get_active_window();
+    if (!window)
+    {
+        state.mode = WindowManagerMode::normal;
+        return;
+    }
+
+    auto metadata = window_helpers::get_metadata(window, window_manager_tools);
+    if (!metadata)
+    {
+        state.mode = WindowManagerMode::normal;
+        return;
+    }
+
+    if (metadata->get_type() != WindowType::tiled)
+    {
+        state.mode = WindowManagerMode::normal;
+        return;
+    }
+
+    if (state.mode == WindowManagerMode::resizing)
+        state.mode = WindowManagerMode::normal;
+    else
+        state.mode = WindowManagerMode::resizing;
+}
+
+bool Policy::try_request_vertical()
+{
+    if (state.mode != WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    active_output->request_vertical();
+    return true;
+}
+
+bool Policy::try_request_horizontal()
+{
+    if (state.mode != WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    active_output->request_horizontal();
+    return true;
+}
+
+bool Policy::try_resize(miracle::Direction direction)
+{
+    if (state.mode != WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    return active_output->resize_active_window(direction);
+}
+
+bool Policy::try_move(miracle::Direction direction)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    return active_output->move_active_window(direction);
+}
+
+bool Policy::try_select(miracle::Direction direction)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    return active_output->select(direction);
+}
+
+bool Policy::try_close_window()
+{
+    if (!active_output)
+        return false;
+
+    active_output->close_active_window();
+    return true;
+}
+
+bool Policy::quit()
+{
+    runner.stop();
+    return true;
+}
+
+bool Policy::try_toggle_fullscreen()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    active_output->toggle_fullscreen();
+    return true;
+}
+
+bool Policy::select_workspace(int number)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    workspace_manager.request_workspace(active_output, number);
+    return true;
+}
+
+bool Policy::move_active_to_workspace(int number)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    workspace_manager.move_active_to_workspace(active_output, number);
+    return true;
+}
+
+bool Policy::toggle_floating()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    active_output->request_toggle_active_float();
+    return true;
+}
+
+bool Policy::toggle_pinned_to_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!active_output)
+        return false;
+
+    active_output->toggle_pinned_to_workspace();
+    return true;
 }
