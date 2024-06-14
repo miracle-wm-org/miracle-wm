@@ -18,15 +18,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_FORCE_RADIANS
 #define MIR_LOG_COMPONENT "GLRenderer"
 
-#include <GLES2/gl2.h>
-#include "window_tools_accessor.h"
-#include "workspace_content.h"
-#include "program_factory.h"
-#include "miracle_config.h"
 #include "renderer.h"
+#include "miracle_config.h"
+#include "program_factory.h"
 #include "tessellation_helpers.h"
 #include "window_metadata.h"
+#include "window_tools_accessor.h"
+#include "workspace_content.h"
+#include <GLES2/gl2.h>
 
+#include <EGL/egl.h>
+#include <cmath>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <mir/graphics/buffer.h>
 #include <mir/graphics/display_sink.h>
 #include <mir/graphics/platform.h>
@@ -35,10 +39,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/graphics/texture.h>
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
-#include <EGL/egl.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <cmath>
 #include <stdexcept>
 
 namespace mg = mir::graphics;
@@ -246,6 +246,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         {
             OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
             draw(outline, data);
+            glClear(GL_STENCIL_BUFFER_BIT);
         }
     }
 
@@ -453,16 +454,14 @@ miracle::Renderer::DrawData Renderer::draw(
         if (border_config.size > 0)
         {
             auto color = data.is_focused ? border_config.focus_color : border_config.color;
-            return DrawData{
+            return DrawData {
                 true,
                 false,
                 data.workspace_transform,
                 false,
-                {
-                    true,
-                    color,
-                    border_config.size
-                }
+                { true,
+                  color,
+                  border_config.size }
             };
         }
     }

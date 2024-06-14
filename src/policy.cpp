@@ -62,18 +62,20 @@ Policy::Policy(
 { return get_active_output(); }) },
     i3_command_executor(*this, workspace_manager, tools, external_client_launcher),
     surface_tracker { surface_tracker },
-    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor) },
+    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) },
     animator(server.the_main_loop(), config),
     node_interface(tools, animator, state)
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
+    mode_observer_registrar.register_interest(ipc);
     WindowToolsAccessor::get_instance().set_tools(tools);
 }
 
 Policy::~Policy()
 {
-    workspace_observer_registrar.unregister_interest(*ipc);
+    workspace_observer_registrar.unregister_interest(ipc.get());
+    mode_observer_registrar.unregister_interest(ipc.get());
 }
 
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
@@ -137,7 +139,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case QuitActiveWindow:
             return try_close_window();
         case QuitCompositor:
-           return quit();
+            return quit();
         case Fullscreen:
             return try_toggle_fullscreen();
         case SelectWorkspace1:
@@ -573,11 +575,13 @@ void Policy::try_toggle_resize_mode()
         state.mode = WindowManagerMode::normal;
     else
         state.mode = WindowManagerMode::resizing;
+
+    mode_observer_registrar.advise_changed(state.mode);
 }
 
 bool Policy::try_request_vertical()
 {
-    if (state.mode != WindowManagerMode::resizing)
+    if (state.mode == WindowManagerMode::resizing)
         return false;
 
     if (!active_output)
@@ -589,7 +593,7 @@ bool Policy::try_request_vertical()
 
 bool Policy::try_request_horizontal()
 {
-    if (state.mode != WindowManagerMode::resizing)
+    if (state.mode == WindowManagerMode::resizing)
         return false;
 
     if (!active_output)

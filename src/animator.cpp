@@ -31,8 +31,9 @@ using namespace std::chrono_literals;
 
 namespace
 {
-inline glm::vec2 to_glm_vec2(mir::geometry::Point const& p) {
-    return {p.x.as_int(), p.y.as_int()};
+inline glm::vec2 to_glm_vec2(mir::geometry::Point const& p)
+{
+    return { p.x.as_int(), p.y.as_int() };
 }
 
 inline float get_percent_complete(float target, float real)
@@ -62,38 +63,39 @@ Animation::Animation(
     to { to },
     from { current },
     callback { callback },
-    runtime_seconds{ 0.f }
+    runtime_seconds { 0.f }
 {
     switch (definition.type)
     {
-        case AnimationType::slide:
-        {
-            assert(from != std::nullopt);
-            assert(to != std::nullopt);
-            assert(current != std::nullopt);
+    case AnimationType::slide:
+    {
+        assert(from != std::nullopt);
+        assert(to != std::nullopt);
+        assert(current != std::nullopt);
 
-            // Find out the percentage that we're already through the move. This could be negative, by design.
-            glm::vec2 end = to_glm_vec2(to.value().top_left);
-            glm::vec2 start = to_glm_vec2(from.value().top_left);
-            glm::vec2 real_start = to_glm_vec2(current.value().top_left);
-            auto percent_x = get_percent_complete(end.x - start.x, real_start.x - start.x);
-            auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
+        // Find out the percentage that we're already through the move. This could be negative, by design.
+        glm::vec2 end = to_glm_vec2(to.value().top_left);
+        glm::vec2 start = to_glm_vec2(from.value().top_left);
+        glm::vec2 real_start = to_glm_vec2(current.value().top_left);
+        auto percent_x = get_percent_complete(end.x - start.x, real_start.x - start.x);
+        auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
 
-            // Find out the percentage that we're already through the resize. This could be negative, by design.
-            float width_change = to.value().size.width.as_int()  - from.value().size.width.as_int();
-            float height_change = to.value().size.height.as_int()  - from.value().size.height.as_int();
-            float real_width_change = current.value().size.width.as_int()  - from.value().size.width.as_int();
-            float real_height_change = current.value().size.height.as_int()  - from.value().size.height.as_int();
+        // Find out the percentage that we're already through the resize. This could be negative, by design.
+        float width_change = to.value().size.width.as_int() - from.value().size.width.as_int();
+        float height_change = to.value().size.height.as_int() - from.value().size.height.as_int();
+        float real_width_change = current.value().size.width.as_int() - from.value().size.width.as_int();
+        float real_height_change = current.value().size.height.as_int() - from.value().size.height.as_int();
 
-            float percent_w = get_percent_complete(width_change, real_width_change);
-            float percent_h = get_percent_complete(height_change, real_height_change);
+        float percent_w = get_percent_complete(width_change, real_width_change);
+        float percent_h = get_percent_complete(height_change, real_height_change);
 
-            float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
-            runtime_seconds = percentage * definition.duration_seconds;
-            break;
-        }
-        default:
-            break;
+        float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
+        percentage = std::clamp(percentage, 0.f, 1.f);
+        runtime_seconds = percentage * definition.duration_seconds;
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -447,11 +449,11 @@ void Animator::workspace_switch(
     if (!config->are_animations_enabled())
     {
         callback(
-        { handle,
-          true,
-          glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-          glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-          glm::mat4(1.f) });
+            { handle,
+                true,
+                glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
+                glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
+                glm::mat4(1.f) });
         return;
     }
 

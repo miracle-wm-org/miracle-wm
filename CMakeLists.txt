@@ -63,6 +63,7 @@ add_library(miracle-wm-implementation
     src/animator.cpp
     src/animation_definition.cpp
     src/program_factory.cpp
+    src/mode_observer.cpp
 )
 
 add_executable(miracle-wm

@@ -18,12 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PROGRAM_FACTORY_H
 #define MIRACLE_WM_PROGRAM_FACTORY_H
 
-#include <mir/graphics/program_factory.h>
-#include <mir/graphics/program.h>
 #include <GLES2/gl2.h>
-#include <vector>
 #include <array>
+#include <mir/graphics/program.h>
+#include <mir/graphics/program_factory.h>
 #include <mutex>
+#include <vector>
 
 namespace miracle
 {
@@ -33,7 +33,7 @@ class GLHandle
 {
 public:
     explicit GLHandle(GLuint id) :
-    id { id }
+        id { id }
     {
     }
 
@@ -48,7 +48,7 @@ public:
     GLHandle& operator=(GLHandle const&) = delete;
 
     GLHandle(GLHandle&& from) :
-    id { from.id }
+        id { from.id }
     {
         from.id = 0;
     }
@@ -118,4 +118,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLE_WM_PROGRAM_FACTORY_H
+#endif // MIRACLE_WM_PROGRAM_FACTORY_H

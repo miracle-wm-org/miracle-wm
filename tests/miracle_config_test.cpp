@@ -107,10 +107,10 @@ TEST_F(MiracleConfigTest, CanOverrideDefaultAction)
         KEY_X,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
-        {
-            EXPECT_EQ(Terminal, command);
-            return true;
-        });
+    {
+        EXPECT_EQ(Terminal, command);
+        return true;
+    });
 }
 
 TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItIsNotAdded)
@@ -130,10 +130,10 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItI
         KEY_ENTER,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
-        {
-            EXPECT_EQ(Terminal, command);
-            return true;
-        });
+    {
+        EXPECT_EQ(Terminal, command);
+        return true;
+    });
 }
 
 TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersThenItIsNotAdded)
@@ -153,10 +153,10 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersTh
         KEY_ENTER,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
-        {
-            EXPECT_EQ(Terminal, command);
-            return true;
-        });
+    {
+        EXPECT_EQ(Terminal, command);
+        return true;
+    });
 }
 
 TEST_F(MiracleConfigTest, CanCreateCustomAction)

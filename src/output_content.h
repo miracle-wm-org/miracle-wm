@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_SCREEN_H
 #define MIRACLE_SCREEN_H
 
-#include "direction.h"
 #include "animator.h"
+#include "direction.h"
 #include "miral/window.h"
 #include "tiling_window_tree.h"
 #include "window_metadata.h"
@@ -119,6 +119,7 @@ public:
     void set_transform(glm::mat4 const& in);
     void set_position(glm::vec2 const&);
     [[nodiscard]] glm::vec2 const& get_position() const;
+
 private:
     miral::Output output;
     WorkspaceManager& workspace_manager;

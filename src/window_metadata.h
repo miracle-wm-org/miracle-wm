@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WINDOW_METADATA_H
 #define MIRACLEWM_WINDOW_METADATA_H
 
+#include <glm/glm.hpp>
 #include <memory>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
-#include <glm/glm.hpp>
 
 namespace miracle
 {

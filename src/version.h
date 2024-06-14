@@ -15,28 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_COMPOSITOR_STATE_H
-#define MIRACLE_WM_COMPOSITOR_STATE_H
+#ifndef MIRACLE_WM_VERSION_H
+#define MIRACLE_WM_VERSION_H
 
-#include <mir/geometry/point.h>
+#define MIRACLE_WM_MAJOR 0
+#define MIRACLE_WM_MINOR 2
+#define MIRACLE_WM_PATCH 1
 
-namespace miracle
-{
-enum class WindowManagerMode
-{
-    normal = 0,
+#define MIRACLE_VERSION_STRING "0.2.1"
 
-    /// While resizing, only the window that was selected during
-    /// resize can be selected. If that window closes, resize
-    /// is completed.
-    resizing
-};
-
-struct CompositorState
-{
-    mir::geometry::Point cursor_position;
-    WindowManagerMode mode = WindowManagerMode::normal;
-};
-}
-
-#endif // MIRACLE_WM_COMPOSITOR_STATE_H
+#endif // MIRACLE_WM_VERSION_H

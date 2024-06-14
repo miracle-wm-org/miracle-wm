@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "i3_command.h"
 #include "i3_command_executor.h"
+#include "mode_observer.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
@@ -34,6 +35,7 @@ namespace miracle
 {
 
 class Policy;
+class MiracleConfig;
 
 /// This it taken directly from SWAY
 enum IpcCommandType
@@ -76,18 +78,20 @@ enum IpcCommandType
 /// This class will implement I3's interface: https://i3wm.org/docs/ipc.html
 /// plus some of the sway-specific items.
 /// It may be extended in the future.
-class Ipc : public WorkspaceObserver
+class Ipc : public virtual WorkspaceObserver, public virtual ModeObserver
 {
 public:
     Ipc(miral::MirRunner& runner,
         WorkspaceManager&,
         Policy& policy,
         std::shared_ptr<mir::ServerActionQueue> const&,
-        I3CommandExecutor&);
+        I3CommandExecutor&,
+        std::shared_ptr<MiracleConfig> const&);
 
     void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
     void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
+    void on_changed(WindowManagerMode mode) override;
 
 private:
     struct IpcClient
@@ -111,6 +115,7 @@ private:
     mutable std::shared_mutex pending_commands_mutex;
     std::shared_ptr<mir::ServerActionQueue> queue;
     I3CommandExecutor& executor;
+    std::shared_ptr<MiracleConfig> config;
 
     void disconnect(IpcClient& client);
     IpcClient& get_client(int fd);

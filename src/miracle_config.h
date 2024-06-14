@@ -129,6 +129,8 @@ class MiracleConfig
 public:
     explicit MiracleConfig(miral::MirRunner&);
     MiracleConfig(miral::MirRunner&, std::string const&);
+
+    [[nodiscard]] std::string const& get_filename() const;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
     bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const;

@@ -17,15 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "window_manager_tools_tiling_interface.h"
 #include "animator.h"
+#include "compositor_state.h"
 #include "leaf_node.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
-#include "compositor_state.h"
 #include <mir/scene/surface.h>
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
-#include <mir/log.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -76,7 +76,7 @@ void WindowManagerToolsTilingInterface::set_rectangle(
         metadata->get_animation_handle(),
         from,
         to,
-        geom::Rectangle{window.top_left(), window.size()},
+        geom::Rectangle { window.top_left(), window.size() },
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);
@@ -220,10 +220,7 @@ void WindowManagerToolsTilingInterface::on_animation(
     auto width = spec.size().value().width.as_int();
     auto height = spec.size().value().height.as_int();
 
-    glm::vec4 scale = transform * glm::vec4(
-        width,
-        height,
-        0, 1);
+    glm::vec4 scale = transform * glm::vec4(width, height, 0, 1);
 
     mir::geometry::Rectangle new_rectangle(
         { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },

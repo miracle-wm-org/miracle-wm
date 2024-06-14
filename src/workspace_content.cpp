@@ -164,7 +164,7 @@ std::vector<miral::Window> const& WorkspaceContent::get_floating_windows() const
     return floating_windows;
 }
 
-OutputContent *WorkspaceContent::get_output()
+OutputContent* WorkspaceContent::get_output()
 {
     return output;
 }
@@ -172,7 +172,7 @@ OutputContent *WorkspaceContent::get_output()
 void WorkspaceContent::trigger_rerender()
 {
     // TODO: Ugh, sad. I am forced to set the surface transform so that the surface is rerendered
-    for_each_window([&](std::shared_ptr<WindowMetadata> const &metadata)
+    for_each_window([&](std::shared_ptr<WindowMetadata> const& metadata)
     {
         auto& window = metadata->get_window();
         auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
@@ -191,5 +191,5 @@ int WorkspaceContent::workspace_to_number(int workspace)
     if (workspace == 0)
         return 10;
 
-    return  workspace - 1;
+    return workspace - 1;
 }

@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "program_factory"
 
 #include "program_factory.h"
-#include <sstream>
 #include <boost/throw_exception.hpp>
 #include <mir/graphics/egl_error.h>
 #include <mir/log.h>
+#include <sstream>
 
 namespace
 {
@@ -99,58 +99,62 @@ miracle::Program::Program(
     outline_handle(std::move(outline_shader)),
     opaque { opaque_handle },
     alpha { alpha_handle },
-    outline(outline_handle) {}
+    outline(outline_handle)
+{
+}
 
 miracle::ProgramFactory::ProgramFactory() :
-    vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) } {}
+    vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) }
+{
+}
 
 mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
     void const* id,
     char const* extension_fragment,
     char const* fragment_fragment)
-    {
+{
     /* NOTE: This does not lock the programs vector as there is one ProgramFactory instance
      * per rendering thread.
      */
 
     for (auto const& pair : programs)
     {
-    if (pair.first == id)
-    {
-    return *pair.second;
-    }
+        if (pair.first == id)
+        {
+            return *pair.second;
+        }
     }
 
     std::stringstream opaque_fragment;
     opaque_fragment
-    << extension_fragment
-    << "\n"
-    << "#ifdef GL_ES\n"
-    "precision mediump float;\n"
-    "#endif\n"
-    << "\n"
-    << fragment_fragment
-    << "\n"
-    << "varying vec2 v_texcoord;\n"
-    "void main() {\n"
-    "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
-    "}\n";
+        << extension_fragment
+        << "\n"
+        << "#ifdef GL_ES\n"
+           "precision mediump float;\n"
+           "#endif\n"
+        << "\n"
+        << fragment_fragment
+        << "\n"
+        << "varying vec2 v_texcoord;\n"
+           "void main() {\n"
+           "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+           "}\n";
 
     std::stringstream alpha_fragment;
     alpha_fragment
-    << extension_fragment
-    << "\n"
-    << "#ifdef GL_ES\n"
-    "precision mediump float;\n"
-    "#endif\n"
-    << "\n"
-    << fragment_fragment
-    << "\n"
-    << "varying vec2 v_texcoord;\n"
-    "uniform float alpha;\n"
-    "void main() {\n"
-    "    gl_FragColor = alpha * sample_to_rgba(v_texcoord);\n"
-    "}\n";
+        << extension_fragment
+        << "\n"
+        << "#ifdef GL_ES\n"
+           "precision mediump float;\n"
+           "#endif\n"
+        << "\n"
+        << fragment_fragment
+        << "\n"
+        << "varying vec2 v_texcoord;\n"
+           "uniform float alpha;\n"
+           "void main() {\n"
+           "    gl_FragColor = alpha * sample_to_rgba(v_texcoord);\n"
+           "}\n";
 
     const GLchar* const outline_shader_src = R"(
 #ifdef GL_ES
@@ -168,19 +172,16 @@ void main() {
     std::lock_guard lock { compilation_mutex };
 
     ShaderHandle const opaque_shader {
-    compile_shader(GL_FRAGMENT_SHADER, opaque_fragment.str().c_str())
+        compile_shader(GL_FRAGMENT_SHADER, opaque_fragment.str().c_str())
     };
     ShaderHandle const alpha_shader {
-    compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())
+        compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())
     };
     ShaderHandle const outline_shader {
-    compile_shader(GL_FRAGMENT_SHADER, outline_shader_src)
+        compile_shader(GL_FRAGMENT_SHADER, outline_shader_src)
     };
 
-    programs.emplace_back(id, std::make_unique<miracle::Program>(
-        link_shader(vertex_shader, opaque_shader),
-        link_shader(vertex_shader, alpha_shader),
-        link_shader(vertex_shader, outline_shader)));
+    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, opaque_shader), link_shader(vertex_shader, alpha_shader), link_shader(vertex_shader, outline_shader)));
 
     return *programs.back().second;
 
@@ -207,7 +208,7 @@ GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)
         glDeleteShader(id);
         BOOST_THROW_EXCEPTION(
             std::runtime_error(
-            std::string("Compile failed: ") + log + " for:\n" + src));
+                std::string("Compile failed: ") + log + " for:\n" + src));
     }
     return id;
 }
@@ -229,7 +230,7 @@ miracle::ProgramHandle miracle::ProgramFactory::link_shader(
         log[sizeof log - 1] = '\0';
         BOOST_THROW_EXCEPTION(
             std::runtime_error(
-            std::string("Linking GL shader failed: ") + log));
+                std::string("Linking GL shader failed: ") + log));
     }
 
     return program;

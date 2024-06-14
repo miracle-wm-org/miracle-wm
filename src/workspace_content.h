@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
 #include "animator.h"
+#include <glm/glm.hpp>
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/window_manager_tools.h>
-#include <glm/glm.hpp>
 
 namespace miracle
 {

@@ -405,17 +405,17 @@ void MiracleConfig::_load()
          miracle_input_event_modifier_default,
          KEY_R     },
         { MirKeyboardAction::mir_keyboard_action_down,
-        miracle_input_event_modifier_default,
-        KEY_UP    },
+         miracle_input_event_modifier_default,
+         KEY_UP    },
         { MirKeyboardAction::mir_keyboard_action_down,
-        miracle_input_event_modifier_default,
-        KEY_DOWN  },
+         miracle_input_event_modifier_default,
+         KEY_DOWN  },
         { MirKeyboardAction::mir_keyboard_action_down,
-        miracle_input_event_modifier_default,
-        KEY_LEFT  },
+         miracle_input_event_modifier_default,
+         KEY_LEFT  },
         { MirKeyboardAction::mir_keyboard_action_down,
-        miracle_input_event_modifier_default,
-        KEY_RIGHT },
+         miracle_input_event_modifier_default,
+         KEY_RIGHT },
         { MirKeyboardAction::mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_UP    },
@@ -954,6 +954,11 @@ uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
     else
         mir::log_error("Unable to process action_key: %s", stringified_action_key.c_str());
     return mir_input_event_modifier_none;
+}
+
+std::string const& MiracleConfig::get_filename() const
+{
+    return config_path;
 }
 
 MirInputEventModifier MiracleConfig::get_input_event_modifier() const

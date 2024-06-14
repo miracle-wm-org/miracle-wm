@@ -23,8 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "renderer.h"
 #include "surface_tracker.h"
+#include "version.h"
 
 #include <libnotify/notify.h>
+#include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
@@ -37,6 +39,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
+
+#define PRINT_OPENING_MESSAGE(x) mir::log_info("Welcome to miracle-wm v%s", x);
 
 using namespace miral;
 
@@ -59,6 +63,7 @@ private:
 
 int main(int argc, char const* argv[])
 {
+    PRINT_OPENING_MESSAGE(MIRACLE_VERSION_STRING);
     MirRunner runner { argc, argv };
 
     std::function<void()> shutdown_hook { [] { } };
