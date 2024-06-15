@@ -370,7 +370,10 @@ miracle::Renderer::DrawData Renderer::draw(
     }
 
     glEnableVertexAttribArray(prog->position_attr);
-    glEnableVertexAttribArray(prog->texcoord_attr);
+
+    bool has_texcoord_attr = prog->texcoord_attr >= 0;
+    if (has_texcoord_attr)
+        glEnableVertexAttribArray(prog->texcoord_attr);
 
     primitives.clear();
     tessellate(primitives, renderable);
@@ -415,9 +418,13 @@ miracle::Renderer::DrawData Renderer::draw(
             glVertexAttribPointer(prog->position_attr, 3, GL_FLOAT,
                 GL_FALSE, sizeof(mgl::Vertex),
                 &p.vertices[0].position);
-            glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT,
-                GL_FALSE, sizeof(mgl::Vertex),
-                &p.vertices[0].texcoord);
+
+            if (has_texcoord_attr)
+            {
+                glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT,
+                    GL_FALSE, sizeof(mgl::Vertex),
+                    &p.vertices[0].texcoord);
+            }
 
             if (blend.dst_rgb == GL_ZERO)
             {
@@ -440,7 +447,9 @@ miracle::Renderer::DrawData Renderer::draw(
     {
     }
 
-    glDisableVertexAttribArray(prog->texcoord_attr);
+    if (has_texcoord_attr)
+        glDisableVertexAttribArray(prog->texcoord_attr);
+
     glDisableVertexAttribArray(prog->position_attr);
     if (renderable.clip_area())
     {
