@@ -820,6 +820,7 @@ void TilingWindowTree::show()
     }
 
     is_hidden = false;
+    std::shared_ptr<LeafNode> fullscreen_node = nullptr;
     foreach_node([&](auto node)
     {
         auto leaf_node = Node::as_leaf(node);
@@ -829,12 +830,15 @@ void TilingWindowTree::show()
             leaf_node->commit_changes();
 
             if (leaf_node->is_fullscreen())
-            {
-                tiling_interface.select_active_window(leaf_node->get_window());
-                tiling_interface.raise(leaf_node->get_window());
-            }
+                fullscreen_node = leaf_node;
         }
     });
+
+    if (fullscreen_node)
+    {
+        tiling_interface.select_active_window(fullscreen_node->get_window());
+        tiling_interface.raise(fullscreen_node->get_window());
+    }
 }
 
 bool TilingWindowTree::is_empty()
