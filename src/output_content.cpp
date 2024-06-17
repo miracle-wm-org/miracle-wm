@@ -289,20 +289,25 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
     {
     case WindowType::tiled:
     {
-        if (get_active_tree().get() != metadata->get_tiling_node()->get_tree())
+        auto& window = metadata->get_window();
+        auto node = metadata->get_tiling_node();
+        auto const& info = tools.info_for(window);
+        if (get_active_tree().get() != node->get_tree())
             break;
 
-        if (modifications.state().is_set())
+        if (modifications.state().is_set() && modifications.state().value() != info.state())
         {
             auto tree = metadata->get_tiling_node()->get_tree();
+            node->set_state(modifications.state().value());
+            node->commit_changes();
+
             if (window_helpers::is_window_fullscreen(modifications.state().value()))
-                tree->advise_fullscreen_window(metadata->get_window());
+                tree->advise_fullscreen_window(window);
             else if (modifications.state().value() == mir_window_state_restored)
-                tree->advise_restored_window(metadata->get_window());
-            tree->constrain(metadata->get_window());
+                tree->advise_restored_window(window);
         }
 
-        tools.modify_window(metadata->get_window(), modifications);
+        tools.modify_window(window, modifications);
         break;
     }
     case WindowType::floating:

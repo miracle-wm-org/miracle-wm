@@ -57,6 +57,11 @@ void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
     parent = in_parent;
 }
 
+void LeafNode::set_state(MirWindowState state)
+{
+    next_state = state;
+}
+
 geom::Rectangle LeafNode::get_visible_area() const
 {
     // TODO: Could cache these half values in the config
@@ -132,7 +137,7 @@ void LeafNode::toggle_fullscreen()
 
 bool LeafNode::is_fullscreen() const
 {
-    return node_interface.get_state(window) == mir_window_state_maximized;
+    return node_interface.is_fullscreen(window);
 }
 
 void LeafNode::commit_changes()
