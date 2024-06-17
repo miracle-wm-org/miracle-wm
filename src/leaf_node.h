@@ -53,6 +53,7 @@ public:
     [[nodiscard]] geom::Rectangle get_visible_area() const;
     void set_logical_area(geom::Rectangle const& target_rect) override;
     void set_parent(std::shared_ptr<ParentNode> const&) override;
+    void set_state(MirWindowState state);
     void show();
     void hide();
     void toggle_fullscreen();
