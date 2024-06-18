@@ -87,10 +87,6 @@ std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo 
         tiling_interface.select_active_window(window_info.window());
         advise_fullscreen_window(window_info.window());
     }
-    else
-    {
-        tiling_interface.send_to_back(window_info.window());
-    }
 
     return node;
 }
@@ -302,8 +298,6 @@ void TilingWindowTree::advise_focus_gained(miral::Window& window)
     active_window = metadata->get_tiling_node();
     if (active_window && is_active_window_fullscreen)
         tiling_interface.raise(window);
-    else
-        tiling_interface.send_to_back(window);
 }
 
 void TilingWindowTree::advise_focus_lost(miral::Window& window)
@@ -808,12 +802,12 @@ void TilingWindowTree::hide()
     });
 }
 
-void TilingWindowTree::show()
+std::shared_ptr<LeafNode> TilingWindowTree::show()
 {
     if (!is_hidden)
     {
         mir::log_warning("Tree is already shown");
-        return;
+        return nullptr;
     }
 
     is_hidden = false;
@@ -828,14 +822,12 @@ void TilingWindowTree::show()
 
             if (leaf_node->is_fullscreen())
                 fullscreen_node = leaf_node;
+            else
+                tiling_interface.raise(leaf_node->get_window());
         }
     });
 
-    if (fullscreen_node)
-    {
-        tiling_interface.select_active_window(fullscreen_node->get_window());
-        tiling_interface.raise(fullscreen_node->get_window());
-    }
+    return fullscreen_node;
 }
 
 bool TilingWindowTree::is_empty()
