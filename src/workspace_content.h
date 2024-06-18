@@ -43,7 +43,7 @@ public:
         TilingInterface& node_interface);
 
     [[nodiscard]] int get_workspace() const;
-    [[nodiscard]] std::shared_ptr<TilingWindowTree> get_tree() const;
+    [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);

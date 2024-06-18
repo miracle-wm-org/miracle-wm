@@ -49,9 +49,9 @@ public:
         Animator&);
     ~OutputContent() = default;
 
-    [[nodiscard]] std::shared_ptr<TilingWindowTree> get_active_tree() const;
+    [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<WorkspaceContent> get_active_workspace() const;
+    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::WindowSpecification& requested_specification);
     std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type);
@@ -72,7 +72,7 @@ public:
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
         MirWindowState new_state,
         const mir::geometry::Rectangle& new_placement);
-    void select_window_from_point(int x, int y);
+    bool select_window_from_point(int x, int y);
     void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
@@ -135,6 +135,7 @@ private:
     bool is_active_ = false;
     miral::Window active_window;
     AnimationHandle handle;
+    bool has_clicked_floating_window = false;
 
     /// The position of the output for scrolling across workspaces
     glm::vec2 position_offset = glm::vec2(0.f);

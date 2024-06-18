@@ -164,10 +164,7 @@ void TilingWindowTree::set_output_area(geom::Rectangle const& new_area)
 std::shared_ptr<LeafNode> TilingWindowTree::select_window_from_point(int x, int y)
 {
     if (is_active_window_fullscreen)
-    {
-        tiling_interface.select_active_window(active_window->get_window());
         return active_window;
-    }
 
     auto node = root_lane->find_where([&](std::shared_ptr<Node> const& node)
     {
