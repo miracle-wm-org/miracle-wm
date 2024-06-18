@@ -45,7 +45,7 @@ int WorkspaceContent::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<TilingWindowTree> WorkspaceContent::get_tree() const
+std::shared_ptr<TilingWindowTree> const& WorkspaceContent::get_tree() const
 {
     return tree;
 }

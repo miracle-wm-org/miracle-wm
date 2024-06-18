@@ -200,6 +200,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
     state.cursor_position = { x, y };
 
+    // Select the output first
     for (auto const& output : output_list)
     {
         if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
@@ -212,16 +213,11 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 active_output->set_is_active(true);
                 workspace_manager.request_focus(output->get_active_workspace_num());
             }
-
-            if (output->get_active_workspace_num() >= 0 && state.mode != WindowManagerMode::resizing)
-            {
-                active_output->select_window_from_point(static_cast<int>(x), static_cast<int>(y));
-            }
             break;
         }
     }
 
-    if (active_output)
+    if (active_output && state.mode != WindowManagerMode::resizing)
         return active_output->handle_pointer_event(event);
 
     return false;
@@ -275,7 +271,9 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     // Associate to an animation handle
     metadata->set_animation_handle(animator.register_animateable());
-    node_interface.open(window_info.window());
+
+    if (metadata->get_type() != WindowType::other)
+        node_interface.open(window_info.window());
 
     pending_type = WindowType::none;
     pending_output.reset();

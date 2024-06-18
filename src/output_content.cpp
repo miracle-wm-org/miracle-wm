@@ -54,12 +54,12 @@ OutputContent::OutputContent(
 {
 }
 
-std::shared_ptr<TilingWindowTree> OutputContent::get_active_tree() const
+std::shared_ptr<TilingWindowTree> const& OutputContent::get_active_tree() const
 {
     return get_active_workspace()->get_tree();
 }
 
-std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
+std::shared_ptr<WorkspaceContent> const& OutputContent::get_active_workspace() const
 {
     for (auto& info : workspaces)
     {
@@ -68,13 +68,27 @@ std::shared_ptr<WorkspaceContent> OutputContent::get_active_workspace() const
     }
 
     throw std::runtime_error("get_active_workspace: unable to find the active workspace. We shouldn't be here!");
-    return nullptr;
 }
 
 bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
 {
-    if (floating_window_manager.handle_pointer_event(event))
+    auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
+    auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
+    if (get_active_workspace_num() < 0)
+        return false;
+
+    if (select_window_from_point(static_cast<int>(x), static_cast<int>(y)))
         return true;
+
+    auto const action = mir_pointer_event_action(event);
+    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(active_window))
+    {
+        if (action == mir_pointer_action_button_down)
+            has_clicked_floating_window = true;
+        else if (action == mir_pointer_action_button_up)
+            has_clicked_floating_window = false;
+        return floating_window_manager.handle_pointer_event(event);
+    }
 
     return false;
 }
@@ -362,11 +376,11 @@ OutputContent::confirm_placement_on_display(
     return new_placement;
 }
 
-void OutputContent::select_window_from_point(int x, int y)
+bool OutputContent::select_window_from_point(int x, int y)
 {
-    auto workspace = get_active_workspace();
+    auto const& workspace = get_active_workspace();
     if (workspace->get_tree()->has_fullscreen_window())
-        return;
+        return false;
 
     auto const& floating = workspace->get_floating_windows();
     int floating_index = -1;
@@ -374,24 +388,25 @@ void OutputContent::select_window_from_point(int x, int y)
     {
         geom::Rectangle window_area(floating[i].top_left(), floating[i].size());
         if (floating[i] == active_window && window_area.contains(geom::Point(x, y)))
-            return;
+            return false;
         else if (window_area.contains(geom::Point(x, y)))
-        {
             floating_index = i;
-        }
     }
 
     if (floating_index >= 0)
     {
         node_interface.select_active_window(floating[floating_index]);
-        return;
+        return true;
     }
 
     auto node = workspace->get_tree()->select_window_from_point(x, y);
     if (node && node->get_window() != active_window)
     {
         node_interface.select_active_window(node->get_window());
+        return true;
     }
+
+    return false;
 }
 
 void OutputContent::select_window(miral::Window const& window)
@@ -791,9 +806,8 @@ void OutputContent::request_toggle_active_float()
     }
     case WindowType::floating:
     {
+        advise_delete_window(window_helpers::get_metadata(active_window, tools));
         add_immediately(active_window);
-        node_interface.select_active_window(active_window);
-        get_active_workspace()->remove_floating_window(active_window);
         break;
     }
     default:
