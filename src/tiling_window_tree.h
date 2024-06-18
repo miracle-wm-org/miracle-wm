@@ -37,6 +37,7 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class TilingInterface;
+class LeafNode;
 
 class TilingWindowTree
 {
@@ -110,8 +111,8 @@ public:
     /// Hides the entire tree
     void hide();
 
-    /// Shows the entire tree
-    void show();
+    /// Shows the tree and returns a fullscreen node
+    std::shared_ptr<LeafNode> show();
 
     void recalculate_root_node_area();
     bool is_empty();

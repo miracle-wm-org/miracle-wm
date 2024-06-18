@@ -64,6 +64,7 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
+    TilingInterface& node_interface;
 };
 
 } // miracle

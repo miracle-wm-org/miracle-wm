@@ -153,7 +153,16 @@ void OutputContent::handle_window_ready(miral::WindowInfo& window_info, std::sha
     {
     case WindowType::tiled:
     {
-        metadata->get_tiling_node()->get_tree()->handle_window_ready(window_info);
+        auto tree = metadata->get_tiling_node()->get_tree();
+        tree->handle_window_ready(window_info);
+
+        // Note: By default, new windows are raised. To properly maintain the ordering, we must
+        // raise floating windows and then raise fullscreen windows.
+        for (auto const& window : get_active_workspace()->get_floating_windows())
+            node_interface.raise(window);
+
+        if (tree->has_fullscreen_window())
+            node_interface.raise(active_window);
         break;
     }
     case WindowType::floating:

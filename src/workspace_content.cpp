@@ -36,7 +36,8 @@ WorkspaceContent::WorkspaceContent(
     output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
-    workspace { workspace }
+    workspace { workspace },
+    node_interface{ node_interface}
 {
 }
 
@@ -52,8 +53,7 @@ std::shared_ptr<TilingWindowTree> const& WorkspaceContent::get_tree() const
 
 void WorkspaceContent::show()
 {
-    tree->show();
-
+    auto fullscreen_node = tree->show();
     for (auto const& window : floating_windows)
     {
         auto metadata = window_helpers::get_metadata(window, tools);
@@ -65,14 +65,25 @@ void WorkspaceContent::show()
 
         // Pinned windows don't require restoration
         if (metadata->get_is_pinned())
+        {
+            tools.raise_tree(window);
             continue;
+        }
 
         if (auto state = metadata->consume_restore_state())
         {
             miral::WindowSpecification spec;
             spec.state() = state.value();
             tools.modify_window(window, spec);
+            tools.raise_tree(window);
         }
+    }
+
+    // TODO: ugh that's ugly. Fullscreen nodes should show above floating nodes
+    if (fullscreen_node)
+    {
+        node_interface.select_active_window(fullscreen_node->get_window());
+        node_interface.raise(fullscreen_node->get_window());
     }
 }
 
@@ -113,6 +124,7 @@ void WorkspaceContent::hide()
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_hidden;
         tools.modify_window(window, spec);
+        node_interface.send_to_back(window);
     }
 }
 
