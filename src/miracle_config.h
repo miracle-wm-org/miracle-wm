@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_MIRACLE_CONFIG_H
 
 #include "animation_defintion.h"
+#include "window_metadata.h"
 #include <atomic>
 #include <functional>
 #include <glm/glm.hpp>
@@ -124,6 +125,12 @@ struct BorderConfig
     glm::vec4 color;
 };
 
+struct WorkspaceConfig
+{
+    int num = -1;
+    WindowType layout = WindowType::tiled;
+};
+
 class MiracleConfig
 {
 public:
@@ -145,6 +152,7 @@ public:
     [[nodiscard]] BorderConfig const& get_border_config() const;
     [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const;
     [[nodiscard]] bool are_animations_enabled() const;
+    [[nodiscard]] WorkspaceConfig get_workspace_config(int key) const;
 
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
@@ -191,6 +199,7 @@ private:
     std::atomic<bool> has_changes = false;
     bool animations_enabled = true;
     std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
+    std::vector<WorkspaceConfig> workspace_configs;
 };
 }
 

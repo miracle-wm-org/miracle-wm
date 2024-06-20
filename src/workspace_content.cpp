@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
+#include "miracle_config.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 
@@ -37,7 +38,8 @@ WorkspaceContent::WorkspaceContent(
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace },
-    node_interface{ node_interface}
+    node_interface{ node_interface},
+    config { config }
 {
 }
 
@@ -49,6 +51,21 @@ int WorkspaceContent::get_workspace() const
 std::shared_ptr<TilingWindowTree> const& WorkspaceContent::get_tree() const
 {
     return tree;
+}
+
+WindowType WorkspaceContent::allocate_position(miral::WindowSpecification& requested_specification)
+{
+    auto layout = config->get_workspace_config(workspace).layout;
+    switch (layout)
+    {
+    case WindowType::tiled:
+    {
+        requested_specification = tree->allocate_position(requested_specification);
+        return WindowType::tiled;
+    }
+    default:
+        return layout;
+    }
 }
 
 void WorkspaceContent::show()

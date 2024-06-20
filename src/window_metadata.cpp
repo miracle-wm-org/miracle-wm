@@ -21,6 +21,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+WindowType miracle::window_type_from_string(std::string const& str)
+{
+    if (str == "tiled")
+        return WindowType::tiled;
+    else if (str == "floating")
+        return WindowType::floating;
+    else if (str == "other")
+        return WindowType::other;
+    else
+        return WindowType::none;
+}
+
 WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window) :
     WindowMetadata(type, window, nullptr)
 {

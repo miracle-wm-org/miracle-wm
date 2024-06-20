@@ -38,6 +38,8 @@ enum class WindowType
     other
 };
 
+WindowType window_type_from_string(std::string const&);
+
 /// Applied to WindowInfo to enable
 class WindowMetadata
 {

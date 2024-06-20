@@ -77,8 +77,7 @@ bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
     if (get_active_workspace_num() < 0)
         return false;
 
-    if (select_window_from_point(static_cast<int>(x), static_cast<int>(y)))
-        return true;
+    select_window_from_point(static_cast<int>(x), static_cast<int>(y));
 
     auto const action = mir_pointer_event_action(event);
     if (has_clicked_floating_window || get_active_workspace()->has_floating_window(active_window))
@@ -93,13 +92,18 @@ bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
     return false;
 }
 
-WindowType OutputContent::allocate_position(miral::WindowSpecification& requested_specification)
+WindowType OutputContent::allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification)
 {
     if (!window_helpers::is_tileable(requested_specification))
         return WindowType::other;
 
-    requested_specification = get_active_tree()->allocate_position(requested_specification);
-    return WindowType::tiled;
+    auto type = get_active_workspace()->allocate_position(requested_specification);
+    if (type == WindowType::floating)
+    {
+        requested_specification = floating_window_manager.place_new_window(app_info, requested_specification);
+    }
+
+    return type;
 }
 
 std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
@@ -109,7 +113,8 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     {
     case WindowType::tiled:
     {
-        auto node = get_active_tree()->advise_new_window(window_info);
+        auto const& tree = get_active_tree();
+        auto node = tree->advise_new_window(window_info);
         metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
         metadata->associate_to_node(node);
         break;
@@ -117,6 +122,8 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
     case WindowType::floating:
     {
         floating_window_manager.advise_new_window(window_info);
+        metadata = std::make_shared<WindowMetadata>(WindowType::floating, window_info.window(), get_active_workspace());
+        get_active_workspace()->add_floating_window(window_info.window());
         break;
     }
     case WindowType::other:
@@ -138,6 +145,12 @@ std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowIn
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         tools.modify_window(window_info.window(), spec);
+
+        // Warning: We need to advise fullscreen only after we've associated the userdata() appropriately
+        if (type == WindowType::tiled && window_helpers::is_window_fullscreen(window_info.state()))
+        {
+            get_active_tree()->advise_fullscreen_window(window_info.window());
+        }
         return metadata;
     }
     else
@@ -382,7 +395,7 @@ OutputContent::confirm_placement_on_display(
         mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
         break;
     }
-    return new_placement;
+    return modified_placement;
 }
 
 bool OutputContent::select_window_from_point(int x, int y)
@@ -829,7 +842,7 @@ void OutputContent::add_immediately(miral::Window& window)
 {
     auto& prev_info = tools.info_for(window);
     WindowSpecification spec = window_helpers::copy_from(prev_info);
-    WindowType type = allocate_position(spec);
+    WindowType type = allocate_position(tools.info_for(window.application()), spec);
     tools.modify_window(window, spec);
     advise_new_window(tools.info_for(window), type);
     auto metadata = window_helpers::get_metadata(window, tools);
