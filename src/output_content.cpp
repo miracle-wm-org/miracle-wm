@@ -77,7 +77,8 @@ bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
     if (get_active_workspace_num() < 0)
         return false;
 
-    select_window_from_point(static_cast<int>(x), static_cast<int>(y));
+    if (select_window_from_point(static_cast<int>(x), static_cast<int>(y)))
+        return true;
 
     auto const action = mir_pointer_event_action(event);
     if (has_clicked_floating_window || get_active_workspace()->has_floating_window(active_window))

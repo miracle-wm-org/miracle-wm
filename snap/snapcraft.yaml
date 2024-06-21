@@ -48,6 +48,7 @@ parts:
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
+      - -DCMAKE_BUILD_TYPE=Release
     source: .
     build-packages:
       - pkg-config
