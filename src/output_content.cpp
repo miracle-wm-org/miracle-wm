@@ -776,6 +776,8 @@ std::vector<miral::Window> OutputContent::collect_all_windows() const
                 windows.push_back(leaf_node->get_window());
         });
     }
+
+    mir::log_info("OutputContent::collect_all_windows: found %zu windows", windows.size());
     return windows;
 }
 
@@ -843,6 +845,11 @@ void OutputContent::add_immediately(miral::Window& window)
 {
     auto& prev_info = tools.info_for(window);
     WindowSpecification spec = window_helpers::copy_from(prev_info);
+
+    // If we are adding a window immediately, let's force it back into existence
+    if (spec.state() == mir_window_state_hidden)
+        spec.state() = mir_window_state_restored;
+    
     WindowType type = allocate_position(tools.info_for(window.application()), spec);
     tools.modify_window(window, spec);
     advise_new_window(tools.info_for(window), type);

@@ -373,7 +373,7 @@ void Policy::advise_output_create(miral::Output const& output)
     // Let's rehome some orphan windows if we need to
     if (!orphaned_window_list.empty())
     {
-        mir::log_info("Policy::advise_output_create: orphaned windows are being added to the new output");
+        mir::log_info("Policy::advise_output_create: orphaned windows are being added to the new output, num=%zu", orphaned_window_list.size());
         for (auto& window : orphaned_window_list)
         {
             active_output->add_immediately(window);
@@ -412,6 +412,16 @@ void Policy::advise_output_delete(miral::Output const& output)
                     spec.userdata() = std::make_shared<WindowMetadata>(WindowType::other, window);
                     window_manager_tools.modify_window(window, spec);
                 }
+
+                // All workspaces should be deleted
+                // WARNING: We copy all of the workspace numbers first because we shouldn't delete while iterating
+                std::vector<int> workspaces;
+                workspaces.reserve(other_output->get_workspaces().size());
+                for (auto const& workspace : other_output->get_workspaces())
+                    workspaces.push_back(workspace->get_workspace());
+
+                for (auto w : workspaces)
+                    workspace_manager.delete_workspace(w);
 
                 mir::log_info("Policy::advise_output_delete: final output has been removed and windows have been orphaned");
                 active_output = nullptr;
