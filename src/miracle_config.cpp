@@ -796,6 +796,39 @@ void MiracleConfig::_load()
         }
     }
 
+    if (config["workspaces"])
+    {
+        try
+        {
+            auto const& workspaces = config["workspaces"];
+            if (!workspaces.IsSequence())
+            {
+                mir::log_error("workspaces: expected sequence: L%d:%d", workspaces.Mark().line, workspaces.Mark().column);
+            }
+            else
+            {
+                for (auto const& workspace : workspaces)
+                {
+                    auto num = workspace["number"].as<int>();
+                    auto type = window_type_from_string(workspace["layout"].as<std::string>());
+                    if (type != WindowType::tiled && type != WindowType::floating)
+                    {
+                        mir::log_error("layout should be 'tiled' or 'floating': L%d:%d", workspace["layout"].Mark().line, workspace["layout"].Mark().column);
+                        continue;
+                    }
+
+                    workspace_configs.push_back({
+                        num, type
+                    });
+                }
+            }
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("workspaces: unable to parse: %s, L%d:%d", e.msg.c_str(), e.mark.line, e.mark.column);
+        }
+    }
+
     read_animation_definitions(config);
 }
 
@@ -1109,4 +1142,15 @@ std::array<AnimationDefinition, (int)AnimateableEvent::max> const& MiracleConfig
 bool MiracleConfig::are_animations_enabled() const
 {
     return animations_enabled;
+}
+
+WorkspaceConfig MiracleConfig::get_workspace_config(int key) const
+{
+    for (auto const& config : workspace_configs)
+    {
+        if (config.num == key)
+            return config;
+    }
+
+    return { key, WindowType::tiled };
 }

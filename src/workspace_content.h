@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
 #include "animator.h"
+#include "window_metadata.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <miral/minimal_window_manager.h>
@@ -29,7 +30,6 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class TilingWindowTree;
-class WindowMetadata;
 class TilingInterface;
 
 class WorkspaceContent
@@ -44,6 +44,7 @@ public:
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
+    WindowType allocate_position(miral::WindowSpecification& requested_specification);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
@@ -65,6 +66,7 @@ private:
     int workspace;
     std::vector<miral::Window> floating_windows;
     TilingInterface& node_interface;
+    std::shared_ptr<MiracleConfig> config;
 };
 
 } // miracle

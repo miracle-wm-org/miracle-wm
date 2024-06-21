@@ -225,5 +225,9 @@ void WindowManagerToolsTilingInterface::on_animation(
     mir::geometry::Rectangle new_rectangle(
         { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
         { scale.x, scale.y });
-    clip(window, new_rectangle);
+
+    if (metadata->get_type() == WindowType::tiled)
+        clip(window, new_rectangle);
+    else
+        noclip(window);
 }

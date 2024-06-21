@@ -68,27 +68,20 @@ miral::WindowSpecification TilingWindowTree::allocate_position(const miral::Wind
     new_spec.max_height() = geom::Height { std::numeric_limits<int>::max() };
     auto node = get_active_lane()->create_space_for_window();
     auto rect = node->get_visible_area();
-    new_spec.size() = rect.size;
-    new_spec.top_left() = rect.top_left;
 
-    if (new_spec.state().is_set() && window_helpers::is_window_fullscreen(new_spec.state().value()))
+    if (!new_spec.state().is_set() || !window_helpers::is_window_fullscreen(new_spec.state().value()))
     {
-        // Don't start anyone in fullscreen mode
-        new_spec.state() = mir::optional_value<MirWindowState>();
+        // We only set the size immediately if we have no strong opinions about the size
+        new_spec.size() = rect.size;
+        new_spec.top_left() = rect.top_left;
     }
+
     return new_spec;
 }
 
 std::shared_ptr<LeafNode> TilingWindowTree::advise_new_window(miral::WindowInfo const& window_info)
 {
-    auto node = get_active_lane()->confirm_window(window_info.window());
-    if (window_helpers::is_window_fullscreen(window_info.state()))
-    {
-        tiling_interface.select_active_window(window_info.window());
-        advise_fullscreen_window(window_info.window());
-    }
-
-    return node;
+    return get_active_lane()->confirm_window(window_info.window());
 }
 
 bool TilingWindowTree::try_resize_active_window(miracle::Direction direction)

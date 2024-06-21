@@ -132,7 +132,7 @@ void LeafNode::toggle_fullscreen()
     if (node_interface.is_fullscreen(window))
         next_state = mir_window_state_restored;
     else
-        next_state = mir_window_state_maximized;
+        next_state = mir_window_state_fullscreen;
 }
 
 bool LeafNode::is_fullscreen() const

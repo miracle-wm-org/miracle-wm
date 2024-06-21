@@ -235,7 +235,7 @@ auto Policy::place_new_window(
 
     auto new_spec = requested_specification;
     pending_output = active_output;
-    pending_type = active_output->allocate_position(new_spec);
+    pending_type = active_output->allocate_position(app_info, new_spec);
     return new_spec;
 }
 
