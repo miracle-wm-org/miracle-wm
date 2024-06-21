@@ -362,17 +362,18 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 
 void Policy::advise_output_create(miral::Output const& output)
 {
-    auto new_tree = std::make_shared<OutputContent>(
+    auto output_content = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools,
         floating_window_manager, config, node_interface, animator);
-    workspace_manager.request_first_available_workspace(new_tree);
-    output_list.push_back(new_tree);
+    workspace_manager.request_first_available_workspace(output_content);
+    output_list.push_back(output_content);
     if (active_output == nullptr)
-        active_output = new_tree;
+        active_output = output_content;
 
     // Let's rehome some orphan windows if we need to
     if (!orphaned_window_list.empty())
     {
+        mir::log_info("Policy::advise_output_create: orphaned windows are being added to the new output, num=%zu", orphaned_window_list.size());
         for (auto& window : orphaned_window_list)
         {
             active_output->add_immediately(window);
@@ -395,7 +396,7 @@ void Policy::advise_output_update(miral::Output const& updated, miral::Output co
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
-    for (auto it = output_list.begin(); it != output_list.end();)
+    for (auto it = output_list.begin(); it != output_list.end(); it++)
     {
         auto other_output = *it;
         if (other_output->get_output().is_same_output(output))
@@ -408,10 +409,21 @@ void Policy::advise_output_delete(miral::Output const& output)
                 {
                     orphaned_window_list.push_back(window);
                     WindowSpecification spec;
-                    spec.userdata() = nullptr;
+                    spec.userdata() = std::make_shared<WindowMetadata>(WindowType::other, window);
                     window_manager_tools.modify_window(window, spec);
                 }
 
+                // All workspaces should be deleted
+                // WARNING: We copy all of the workspace numbers first because we shouldn't delete while iterating
+                std::vector<int> workspaces;
+                workspaces.reserve(other_output->get_workspaces().size());
+                for (auto const& workspace : other_output->get_workspaces())
+                    workspaces.push_back(workspace->get_workspace());
+
+                for (auto w : workspaces)
+                    workspace_manager.delete_workspace(w);
+
+                mir::log_info("Policy::advise_output_delete: final output has been removed and windows have been orphaned");
                 active_output = nullptr;
             }
             else
