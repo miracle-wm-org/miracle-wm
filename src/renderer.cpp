@@ -195,6 +195,7 @@ Renderer::Renderer(
     mir::log_info("GL framebuffer bits: RGBA=%d%d%d%d, depth=%d, stencil=%d",
         rbits, gbits, bbits, abits, dbits, sbits);
 
+    has_stencil_support = dbits > 0;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -244,9 +245,16 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         auto data = draw(*r, get_draw_data(*r));
         if (data.enabled && data.outline_context.enabled)
         {
-            OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
-            draw(outline, data);
-            glClear(GL_STENCIL_BUFFER_BIT);
+            if (has_stencil_support)
+            {
+                OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
+                draw(outline, data);
+                glClear(GL_STENCIL_BUFFER_BIT);
+            }
+            else
+            {
+                mir::log_warning("Renderer::render: outlines are not supported for the provided surface");
+            }
         }
     }
 

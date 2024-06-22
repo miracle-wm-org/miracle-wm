@@ -107,6 +107,7 @@ private:
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
     GLfloat clear_color[4];
+    bool has_stencil_support = false;
     mutable long long frameno = 0;
     std::unique_ptr<ProgramFactory> const program_factory;
     mir::geometry::Rectangle viewport;
