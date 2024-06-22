@@ -191,18 +191,7 @@ void WindowManagerToolsTilingInterface::on_animation(
     }
 
     if (needs_modify)
-    {
         tools.modify_window(window, spec);
-
-        auto& window_info = tools.info_for(window);
-        for (auto const& child : window_info.children())
-        {
-            miral::WindowSpecification sub_spec;
-            sub_spec.top_left() = spec.top_left();
-            sub_spec.size() = spec.size();
-            tools.modify_window(child, sub_spec);
-        }
-    }
 
     if (result.transform && result.transform.value() != metadata->get_transform())
     {

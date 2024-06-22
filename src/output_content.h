@@ -65,7 +65,6 @@ public:
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
         const MirInputEvent* input_event,
         MirResizeEdge edge);
-    void advise_state_change(std::shared_ptr<miracle::WindowMetadata> const& metadata, MirWindowState state);
     void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification& modifications);
     void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     mir::geometry::Rectangle confirm_placement_on_display(

@@ -40,11 +40,12 @@ public:
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
-        TilingInterface& node_interface);
+        TilingInterface& node_interface,
+        miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
-    WindowType allocate_position(miral::WindowSpecification& requested_specification);
+    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
@@ -67,6 +68,7 @@ private:
     std::vector<miral::Window> floating_windows;
     TilingInterface& node_interface;
     std::shared_ptr<MiracleConfig> config;
+    miral::MinimalWindowManager& floating_window_manager;
 };
 
 } // miracle

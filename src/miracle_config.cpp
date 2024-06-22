@@ -817,9 +817,7 @@ void MiracleConfig::_load()
                         continue;
                     }
 
-                    workspace_configs.push_back({
-                        num, type
-                    });
+                    workspace_configs.push_back({ num, type });
                 }
             }
         }

@@ -685,18 +685,6 @@ bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
     return true;
 }
 
-bool TilingWindowTree::advise_state_change(miral::Window const& window, MirWindowState state)
-{
-    auto metadata = tiling_interface.get_metadata(window, this);
-    if (!metadata)
-        return false;
-
-    if (is_hidden)
-        return true;
-
-    return true;
-}
-
 bool TilingWindowTree::confirm_placement_on_display(
     miral::Window const& window,
     MirWindowState new_state,

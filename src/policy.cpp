@@ -15,17 +15,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "window_metadata.h"
-#include "window_tools_accessor.h"
 #define MIR_LOG_COMPONENT "miracle"
 
-#include "miracle_config.h"
 #include "policy.h"
+#include "miracle_config.h"
 #include "window_helpers.h"
+#include "window_metadata.h"
+#include "window_tools_accessor.h"
 #include "workspace_manager.h"
-
 #include <iostream>
-#include <limits>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
@@ -352,7 +350,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
-        mir::log_error("advise_move_to: metadata is not provided");
+        mir::log_error("advise_move_to: metadata is not provided: %s", window_info.application_id().c_str());
         return;
     }
 

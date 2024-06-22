@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace_content.h"
 #include "leaf_node.h"
+#include "miracle_config.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
-#include "miracle_config.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 
@@ -33,13 +33,15 @@ WorkspaceContent::WorkspaceContent(
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface) :
+    TilingInterface& node_interface,
+    miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace },
-    node_interface{ node_interface},
-    config { config }
+    node_interface { node_interface },
+    config { config },
+    floating_window_manager { floating_window_manager }
 {
 }
 
@@ -53,7 +55,9 @@ std::shared_ptr<TilingWindowTree> const& WorkspaceContent::get_tree() const
     return tree;
 }
 
-WindowType WorkspaceContent::allocate_position(miral::WindowSpecification& requested_specification)
+WindowType WorkspaceContent::allocate_position(
+    miral::ApplicationInfo const& app_info,
+    miral::WindowSpecification& requested_specification)
 {
     auto layout = config->get_workspace_config(workspace).layout;
     switch (layout)
@@ -62,6 +66,11 @@ WindowType WorkspaceContent::allocate_position(miral::WindowSpecification& reque
     {
         requested_specification = tree->allocate_position(requested_specification);
         return WindowType::tiled;
+    }
+    case WindowType::floating:
+    {
+        requested_specification = floating_window_manager.place_new_window(app_info, requested_specification);
+        return WindowType::floating;
     }
     default:
         return layout;

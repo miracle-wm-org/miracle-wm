@@ -37,9 +37,11 @@ namespace window_helpers
         auto t = requested_specification.type();
         auto state = requested_specification.state();
         auto has_exclusive_rect = requested_specification.exclusive_rect().is_set();
+        auto has_parent = requested_specification.parent().is_set();
         return (t == mir_window_type_normal || t == mir_window_type_freestyle)
             && (state == mir_window_state_restored || state == mir_window_state_maximized)
-            && !has_exclusive_rect;
+            && !has_exclusive_rect
+            && !has_parent;
     }
 
     std::shared_ptr<WindowMetadata> get_metadata(

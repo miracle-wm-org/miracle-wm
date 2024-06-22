@@ -102,17 +102,17 @@ int main(int argc, char const* argv[])
 
     notify_init("miracle-wm");
 
-    WaylandExtensions wayland_extensions = WaylandExtensions{}
-        .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
-        .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
-        .enable(miral::WaylandExtensions::zxdg_output_manager_v1)
-        .enable(miral::WaylandExtensions::zwp_virtual_keyboard_manager_v1)
-        .enable(miral::WaylandExtensions::zwlr_virtual_pointer_manager_v1)
-        .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
-        .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
-        .enable(miral::WaylandExtensions::ext_session_lock_manager_v1);
+    WaylandExtensions wayland_extensions = WaylandExtensions {}
+                                               .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
+                                               .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
+                                               .enable(miral::WaylandExtensions::zxdg_output_manager_v1)
+                                               .enable(miral::WaylandExtensions::zwp_virtual_keyboard_manager_v1)
+                                               .enable(miral::WaylandExtensions::zwlr_virtual_pointer_manager_v1)
+                                               .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
+                                               .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
+                                               .enable(miral::WaylandExtensions::ext_session_lock_manager_v1);
 
-    for (auto const& extension : {"zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1"})
+    for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);
 
     return runner.run_with(
