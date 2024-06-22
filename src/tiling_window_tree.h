@@ -95,7 +95,6 @@ public:
     bool advise_restored_window(miral::Window&);
     bool handle_window_ready(miral::WindowInfo& window_info);
 
-    bool advise_state_change(miral::Window const& window, MirWindowState state);
     bool confirm_placement_on_display(
         miral::Window const& window,
         MirWindowState new_state,

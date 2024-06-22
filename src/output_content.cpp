@@ -98,13 +98,7 @@ WindowType OutputContent::allocate_position(miral::ApplicationInfo const& app_in
     if (!window_helpers::is_tileable(requested_specification))
         return WindowType::other;
 
-    auto type = get_active_workspace()->allocate_position(requested_specification);
-    if (type == WindowType::floating)
-    {
-        requested_specification = floating_window_manager.place_new_window(app_info, requested_specification);
-    }
-
-    return type;
+    return get_active_workspace()->allocate_position(app_info, requested_specification);
 }
 
 std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
@@ -301,24 +295,6 @@ void OutputContent::handle_request_resize(
     }
 }
 
-void OutputContent::advise_state_change(const std::shared_ptr<miracle::WindowMetadata>& metadata, MirWindowState state)
-{
-    switch (metadata->get_type())
-    {
-    case WindowType::tiled:
-        break;
-    case WindowType::floating:
-        if (!get_active_workspace()->has_floating_window(metadata->get_window()))
-            break;
-
-        floating_window_manager.advise_state_change(tools.info_for(metadata->get_window()), state);
-        break;
-    default:
-        mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
-        return;
-    }
-}
-
 void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMetadata>& metadata,
     const miral::WindowSpecification& modifications)
 {
@@ -332,19 +308,20 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
         if (get_active_tree().get() != node->get_tree())
             break;
 
-        if (modifications.state().is_set() && modifications.state().value() != info.state())
+        auto mods = modifications;
+        if (mods.state().is_set() && mods.state().value() != info.state())
         {
             auto tree = metadata->get_tiling_node()->get_tree();
-            node->set_state(modifications.state().value());
+            node->set_state(mods.state().value());
             node->commit_changes();
 
-            if (window_helpers::is_window_fullscreen(modifications.state().value()))
+            if (window_helpers::is_window_fullscreen(mods.state().value()))
                 tree->advise_fullscreen_window(window);
-            else if (modifications.state().value() == mir_window_state_restored)
+            else if (mods.state().value() == mir_window_state_restored)
                 tree->advise_restored_window(window);
         }
 
-        tools.modify_window(window, modifications);
+        tools.modify_window(window, mods);
         break;
     }
     case WindowType::floating:
@@ -452,7 +429,8 @@ insert_sorted(std::vector<T>& vec, T const& item, Pred pred)
 void OutputContent::advise_new_workspace(int workspace)
 {
     // Workspaces are always kept in sorted order
-    auto new_workspace = std::make_shared<WorkspaceContent>(this, tools, workspace, config, node_interface);
+    auto new_workspace = std::make_shared<WorkspaceContent>(
+        this, tools, workspace, config, node_interface, floating_window_manager);
     insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceContent> const& a, std::shared_ptr<WorkspaceContent> const& b)
     {
         return a->get_workspace() < b->get_workspace();
@@ -473,17 +451,12 @@ void OutputContent::advise_workspace_deleted(int workspace)
 
 bool OutputContent::advise_workspace_active(int key)
 {
-    int from_index = -1, to_index = -1;
     std::shared_ptr<WorkspaceContent> from = nullptr;
     std::shared_ptr<WorkspaceContent> to = nullptr;
-    for (int i = 0; i < workspaces.size(); i++)
+    for (auto const& workspace : workspaces)
     {
-        auto const& workspace = workspaces[i];
         if (workspace->get_workspace() == active_workspace)
-        {
             from = workspace;
-            from_index = i;
-        }
 
         if (workspace->get_workspace() == key)
         {
@@ -491,7 +464,6 @@ bool OutputContent::advise_workspace_active(int key)
                 return true;
 
             to = workspace;
-            to_index = i;
         }
     }
 
@@ -849,7 +821,7 @@ void OutputContent::add_immediately(miral::Window& window)
     // If we are adding a window immediately, let's force it back into existence
     if (spec.state() == mir_window_state_hidden)
         spec.state() = mir_window_state_restored;
-    
+
     WindowType type = allocate_position(tools.info_for(window.application()), spec);
     tools.modify_window(window, spec);
     advise_new_window(tools.info_for(window), type);
