@@ -57,9 +57,13 @@ std::shared_ptr<TilingWindowTree> const& WorkspaceContent::get_tree() const
 
 WindowType WorkspaceContent::allocate_position(
     miral::ApplicationInfo const& app_info,
-    miral::WindowSpecification& requested_specification)
+    miral::WindowSpecification& requested_specification,
+    WindowType hint)
 {
-    auto layout = config->get_workspace_config(workspace).layout;
+    // If there's no ideal layout type, use the one provided by the workspace
+    auto layout = hint == WindowType::none
+        ? config->get_workspace_config(workspace).layout
+        : hint;
     switch (layout)
     {
     case WindowType::tiled:
@@ -70,6 +74,7 @@ WindowType WorkspaceContent::allocate_position(
     case WindowType::floating:
     {
         requested_specification = floating_window_manager.place_new_window(app_info, requested_specification);
+        requested_specification.server_side_decorated() = false;
         return WindowType::floating;
     }
     default:

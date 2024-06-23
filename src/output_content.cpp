@@ -93,12 +93,16 @@ bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
     return false;
 }
 
-WindowType OutputContent::allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification)
+WindowType OutputContent::allocate_position(
+    miral::ApplicationInfo const& app_info,
+    miral::WindowSpecification& requested_specification,
+    WindowType hint)
 {
-    if (!window_helpers::is_tileable(requested_specification))
+    auto ideal_type = hint == WindowType::none ? window_helpers::get_ideal_type(requested_specification) : hint;
+    if (ideal_type == WindowType::other)
         return WindowType::other;
 
-    return get_active_workspace()->allocate_position(app_info, requested_specification);
+    return get_active_workspace()->allocate_position(app_info, requested_specification, ideal_type);
 }
 
 std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
@@ -804,7 +808,7 @@ void OutputContent::request_toggle_active_float()
     case WindowType::floating:
     {
         advise_delete_window(window_helpers::get_metadata(active_window, tools));
-        add_immediately(active_window);
+        add_immediately(active_window, WindowType::tiled);
         break;
     }
     default:
@@ -813,7 +817,7 @@ void OutputContent::request_toggle_active_float()
     }
 }
 
-void OutputContent::add_immediately(miral::Window& window)
+void OutputContent::add_immediately(miral::Window& window, WindowType hint)
 {
     auto& prev_info = tools.info_for(window);
     WindowSpecification spec = window_helpers::copy_from(prev_info);
@@ -822,7 +826,7 @@ void OutputContent::add_immediately(miral::Window& window)
     if (spec.state() == mir_window_state_hidden)
         spec.state() = mir_window_state_restored;
 
-    WindowType type = allocate_position(tools.info_for(window.application()), spec);
+    WindowType type = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
     advise_new_window(tools.info_for(window), type);
     auto metadata = window_helpers::get_metadata(window, tools);

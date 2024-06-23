@@ -53,7 +53,7 @@ public:
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
     [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
-    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification);
+    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
     std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type);
     void handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
@@ -105,7 +105,7 @@ public:
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'allocate_position' followed
     /// by 'advise_new_window'.
-    void add_immediately(miral::Window& window);
+    void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
 
     geom::Rectangle const& get_area() { return area; }
     std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }

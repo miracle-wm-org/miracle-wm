@@ -45,7 +45,10 @@ public:
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
-    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification);
+    WindowType allocate_position(
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification& requested_specification,
+        WindowType hint);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
