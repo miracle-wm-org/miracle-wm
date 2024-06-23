@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "primitive.h"
 #include "program_factory.h"
 #include "surface_tracker.h"
+#include "immediate_renderer.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -117,6 +118,8 @@ private:
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<MiracleConfig> config;
     SurfaceTracker& surface_tracker;
+    std::shared_ptr<ImmediateRenderer> immediate_renderer;
+    std::shared_ptr<Model> model;
 };
 
 }

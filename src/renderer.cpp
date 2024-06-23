@@ -197,6 +197,10 @@ Renderer::Renderer(
 
     has_stencil_support = dbits > 0;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    immediate_renderer = std::make_shared<ImmediateRenderer>();
+    immediate_renderer->use();
+    model = std::make_shared<Model>(std::vector<Mesh>{ Mesh::create_rectangle(glm::vec4(1.f, 1.f, 0.f, 1.f)) });
 }
 
 void Renderer::tessellate(
@@ -255,9 +259,12 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             else
             {
                 mir::log_warning("Renderer::render: outlines are not supported for the provided surface");
+
             }
         }
     }
+
+    immediate_renderer->render(*model);
 
     auto output = output_surface->commit();
 
