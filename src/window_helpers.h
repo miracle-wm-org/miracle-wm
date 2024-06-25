@@ -35,7 +35,8 @@ namespace window_helpers
     WindowType get_ideal_type(T const& requested_specification)
     {
         auto has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-        if (has_exclusive_rect)
+        auto is_attached = requested_specification.attached_edges().is_set();
+        if (has_exclusive_rect || is_attached)
             return WindowType::other;
 
         auto t = requested_specification.type();
