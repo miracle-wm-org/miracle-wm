@@ -399,6 +399,18 @@ void Policy::advise_output_delete(miral::Output const& output)
         auto other_output = *it;
         if (other_output->get_output().is_same_output(output))
         {
+            auto const remove_workspaces = [&]()
+            {
+                // WARNING: We copy the workspace numbers first because we shouldn't delete while iterating
+                std::vector<int> workspaces;
+                workspaces.reserve(other_output->get_workspaces().size());
+                for (auto const& workspace : other_output->get_workspaces())
+                    workspaces.push_back(workspace->get_workspace());
+
+                for (auto w : workspaces)
+                    workspace_manager.delete_workspace(w);
+            };
+
             output_list.erase(it);
             if (output_list.empty())
             {
@@ -411,15 +423,7 @@ void Policy::advise_output_delete(miral::Output const& output)
                     window_manager_tools.modify_window(window, spec);
                 }
 
-                // All workspaces should be deleted
-                // WARNING: We copy all of the workspace numbers first because we shouldn't delete while iterating
-                std::vector<int> workspaces;
-                workspaces.reserve(other_output->get_workspaces().size());
-                for (auto const& workspace : other_output->get_workspaces())
-                    workspaces.push_back(workspace->get_workspace());
-
-                for (auto w : workspaces)
-                    workspace_manager.delete_workspace(w);
+                remove_workspaces();
 
                 mir::log_info("Policy::advise_output_delete: final output has been removed and windows have been orphaned");
                 active_output = nullptr;
@@ -431,6 +435,8 @@ void Policy::advise_output_delete(miral::Output const& output)
                 {
                     active_output->add_immediately(window);
                 }
+
+                remove_workspaces();
             }
             break;
         }
