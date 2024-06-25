@@ -75,16 +75,16 @@ static GLuint load_shader(const char *src, GLenum type)
 }
 }
 
-Mesh::Mesh(std::vector<Vertex> const& vertices, std::vector<GLuint> indices)
-    : vertices{vertices},
-      indices{indices}
+Mesh::Mesh(std::vector<Vertex> const& vertices_, std::vector<GLuint> indices_)
+    : vertices{vertices_},
+      indices{indices_}
 {
-    glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ebo);
+}
 
-    glBindVertexArray(vao);
-
+void Mesh::render() const
+{
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
@@ -92,21 +92,17 @@ Mesh::Mesh(std::vector<Vertex> const& vertices, std::vector<GLuint> indices)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
 
     // Position
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)0);
 
     // Color
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, color));
     glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid *)offsetof(Vertex, color));
 
-    glBindVertexArray(0);
-}
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 
-void Mesh::render() const
-{
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, static_cast<GLuint>(indices.size()), GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
 }
 
 Mesh Mesh::create_rectangle(glm::vec4 color)
@@ -128,7 +124,6 @@ Mesh Mesh::create_rectangle(glm::vec4 color)
 
 Mesh::~Mesh()
 {
-    if (vao) glDeleteVertexArrays(1, &vao);
     if (vbo) glDeleteBuffers(1, &vbo);
     if (ebo) glDeleteBuffers(1, &ebo);
 }
@@ -136,6 +131,7 @@ Mesh::~Mesh()
 Model::Model(const std::vector<Mesh> &meshes)
     : meshes{meshes}
 {
+    transform = glm::scale(transform, glm::vec3(0.5f));
 }
 
 void Model::render() const
@@ -168,6 +164,8 @@ ImmediateRenderer::ImmediateRenderer()
         return;
     }
 
+    glBindAttribLocation(program_id, 0, "position");
+    glBindAttribLocation(program_id, 1, "color");
     attributes.position = glGetAttribLocation(program_id, "position");
     attributes.color = glGetAttribLocation(program_id, "color");
     uniforms.model = glGetUniformLocation(program_id, "model");
@@ -192,13 +190,9 @@ void ImmediateRenderer::use()
 void ImmediateRenderer::render(miracle::Model const& model)
 {
     use();
-    glEnableVertexAttribArray(attributes.position);
-    glEnableVertexAttribArray(attributes.color);
     glUniformMatrix4fv(uniforms.view, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(uniforms.projection, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(uniforms.model, 1, GL_FALSE, glm::value_ptr(model.transform));
     model.render();
-    glDisableVertexAttribArray(attributes.position);
-    glDisableVertexAttribArray(attributes.color);
     glUseProgram(0);
 }

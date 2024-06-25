@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <glm/glm.hpp>
 #include <vector>
-#include <GLES3/gl3.h>
+#include <GLES2/gl2.h>
 
 namespace miracle
 {
@@ -41,7 +41,6 @@ public:
 
     void render() const;
 private:
-    GLuint vao = 0;
     GLuint vbo = 0;
     GLuint ebo = 0;
     std::vector<Vertex> vertices;
