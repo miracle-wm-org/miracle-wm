@@ -81,6 +81,7 @@ parts:
       - mir-graphics-drivers-desktop
       - mir-graphics-drivers-nvidia
       - pcre2-utils
+      - libnotify4
     prime:
       - -lib/udev
       - -usr/doc
