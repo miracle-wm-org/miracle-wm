@@ -325,6 +325,15 @@ void OutputContent::handle_modify_window(const std::shared_ptr<miracle::WindowMe
                 tree->advise_restored_window(window);
         }
 
+        // If we are trying to set the window size to something that we don't want it
+        // to be, then let's consume it.
+        if (!node->is_fullscreen()
+            && mods.size().is_set()
+            && node->get_visible_area().size != mods.size().value())
+        {
+            mods.size().consume();
+        }
+
         tools.modify_window(window, mods);
         break;
     }
