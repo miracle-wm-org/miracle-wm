@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>

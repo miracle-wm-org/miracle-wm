@@ -21,8 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/server_action_queue.h>
 #define MIR_LOG_COMPONENT "animator"
 #include <mir/log.h>
-#define _USE_MATH_DEFINES
-#include <cmath>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <utility>
 
@@ -42,7 +41,7 @@ inline float get_percent_complete(float target, float real)
         return 1.f;
 
     float percent = real / target;
-    if (isinff(percent) != 0 || percent > 1.f)
+    if (std::isinf(percent) != 0 || percent > 1.f)
         return 1.f;
     else
         return percent;
@@ -140,11 +139,11 @@ inline float ease(AnimationDefinition const& defintion, float t)
     case EaseFunction::linear:
         return t;
     case EaseFunction::ease_in_sine:
-        return 1 - cosf((t * M_PIf) / 2.f);
+        return 1 - cosf((t * M_PI) / 2.f);
     case EaseFunction::ease_in_out_sine:
-        return -(cosf(M_PIf * t) - 1) / 2;
+        return -(cosf(M_PI * t) - 1) / 2;
     case EaseFunction::ease_out_sine:
-        return sinf((t * M_PIf) / 2.f);
+        return sinf((t * M_PI) / 2.f);
     case EaseFunction::ease_in_quad:
         return t * t;
     case EaseFunction::ease_out_quad:
