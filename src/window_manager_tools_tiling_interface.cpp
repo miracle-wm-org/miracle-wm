@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_manager_tools_tiling_interface.h"
 #include "animator.h"
 #include "compositor_state.h"
-#include "leaf_node.h"
+#include "leaf_container.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/scene/surface.h>

@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_LEAF_NODE_H
 #define MIRACLEWM_LEAF_NODE_H
 
-#include "node.h"
+#include "container.h"
 #include "node_common.h"
 #include "tiling_interface.h"
 #include <miral/window.h>
@@ -33,26 +33,25 @@ namespace miracle
 class MiracleConfig;
 class TilingWindowTree;
 
-class LeafNodeInterface
+/**
+ * A leaf container contains one or many windows,
+ * in the even that windows are stacked or tabbed.
+ */
+class LeafContainer : public Container
 {
 public:
-};
-
-class LeafNode : public Node
-{
-public:
-    LeafNode(
+    LeafContainer(
         TilingInterface& node_interface,
         geom::Rectangle area,
         std::shared_ptr<MiracleConfig> const& config,
         TilingWindowTree* tree,
-        std::shared_ptr<ParentNode> const& parent);
+        std::shared_ptr<ParentContainer> const& parent);
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
     [[nodiscard]] geom::Rectangle get_visible_area() const;
     void set_logical_area(geom::Rectangle const& target_rect) override;
-    void set_parent(std::shared_ptr<ParentNode> const&) override;
+    void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void set_state(MirWindowState state);
     void show();
     void hide();

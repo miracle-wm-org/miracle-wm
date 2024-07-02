@@ -15,10 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "parent_node.h"
-#include "leaf_node.h"
+#include "parent_container.h"
+#include "leaf_container.h"
 #include "miracle_config.h"
-#include "node.h"
+#include "container.h"
 #include <cmath>
 
 using namespace miracle;
@@ -79,13 +79,13 @@ InsertNodeInternalResult insert_node_internal(
 }
 }
 
-ParentNode::ParentNode(
+ParentContainer::ParentContainer(
     TilingInterface& node_interface,
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentNode> const& parent) :
-    Node(parent),
+    std::shared_ptr<ParentContainer> const& parent) :
+    Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
     tree { tree },
@@ -93,7 +93,7 @@ ParentNode::ParentNode(
 {
 }
 
-geom::Rectangle ParentNode::get_logical_area() const
+geom::Rectangle ParentContainer::get_logical_area() const
 {
     if (parent.lock() == nullptr)
     {
@@ -110,12 +110,12 @@ geom::Rectangle ParentNode::get_logical_area() const
     return logical_area;
 }
 
-size_t ParentNode::num_nodes() const
+size_t ParentContainer::num_nodes() const
 {
     return sub_nodes.size();
 }
 
-geom::Rectangle ParentNode::create_space(int pending_index)
+geom::Rectangle ParentContainer::create_space(int pending_index)
 {
     // TODO: When making space, we should ask the currently
     //  selected window if it wants to be a lane. If it does, we
@@ -186,11 +186,11 @@ geom::Rectangle ParentNode::create_space(int pending_index)
     return pending_logical_rect;
 }
 
-std::shared_ptr<LeafNode> ParentNode::create_space_for_window(int pending_index)
+std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pending_index)
 {
     if (pending_index < 0)
         pending_index = num_nodes();
-    pending_node = std::make_shared<LeafNode>(
+    pending_node = std::make_shared<LeafContainer>(
         node_interface,
         create_space(pending_index),
         config,
@@ -200,7 +200,7 @@ std::shared_ptr<LeafNode> ParentNode::create_space_for_window(int pending_index)
     return pending_node;
 }
 
-std::shared_ptr<LeafNode> ParentNode::confirm_window(miral::Window const& window)
+std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window const& window)
 {
     if (pending_node == nullptr)
     {
@@ -215,7 +215,7 @@ std::shared_ptr<LeafNode> ParentNode::confirm_window(miral::Window const& window
     return retval;
 }
 
-void ParentNode::graft_existing(std::shared_ptr<Node> const& node, int index)
+void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int index)
 {
     auto rectangle = create_space(index);
     node->set_parent(as_lane(shared_from_this()));
@@ -225,7 +225,7 @@ void ParentNode::graft_existing(std::shared_ptr<Node> const& node, int index)
     constrain();
 }
 
-void ParentNode::convert_to_lane(std::shared_ptr<LeafNode> const& node)
+void ParentContainer::convert_to_lane(std::shared_ptr<LeafContainer> const& node)
 {
     auto index = get_index_of_node(node);
     if (index < 0)
@@ -234,7 +234,7 @@ void ParentNode::convert_to_lane(std::shared_ptr<LeafNode> const& node)
         return;
     }
 
-    auto new_parent_node = std::make_shared<ParentNode>(
+    auto new_parent_node = std::make_shared<ParentContainer>(
         node_interface,
         node->get_logical_area(),
         config,
@@ -245,7 +245,7 @@ void ParentNode::convert_to_lane(std::shared_ptr<LeafNode> const& node)
     sub_nodes[index] = new_parent_node;
 }
 
-void ParentNode::set_logical_area(const geom::Rectangle& target_rect)
+void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
 {
     // We are setting the size of the lane, but each window might have an idea of how
     // its own height relates to the lane (e.g. I take up 300px of 900px lane while my
@@ -345,13 +345,13 @@ void ParentNode::set_logical_area(const geom::Rectangle& target_rect)
     }
 }
 
-void ParentNode::commit_changes()
+void ParentContainer::commit_changes()
 {
     for (auto& node : sub_nodes)
         node->commit_changes();
 }
 
-std::shared_ptr<Node> ParentNode::at(size_t i) const
+std::shared_ptr<Container> ParentContainer::at(size_t i) const
 {
     if (i >= num_nodes())
         return nullptr;
@@ -359,7 +359,7 @@ std::shared_ptr<Node> ParentNode::at(size_t i) const
     return sub_nodes[i];
 }
 
-std::shared_ptr<LeafNode> ParentNode::get_nth_window(size_t i) const
+std::shared_ptr<LeafContainer> ParentContainer::get_nth_window(size_t i) const
 {
     if (i >= sub_nodes.size())
         return nullptr;
@@ -371,7 +371,7 @@ std::shared_ptr<LeafNode> ParentNode::get_nth_window(size_t i) const
     return as_lane(sub_nodes[i])->get_nth_window(0);
 }
 
-std::shared_ptr<Node> ParentNode::find_where(std::function<bool(std::shared_ptr<Node> const&)> func) const
+std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const
 {
     for (auto node : sub_nodes)
         if (func(node))
@@ -389,17 +389,17 @@ std::shared_ptr<Node> ParentNode::find_where(std::function<bool(std::shared_ptr<
     return nullptr;
 }
 
-const std::vector<std::shared_ptr<Node>>& ParentNode::get_sub_nodes() const
+const std::vector<std::shared_ptr<Container>>& ParentContainer::get_sub_nodes() const
 {
     return sub_nodes;
 }
 
-void ParentNode::set_direction(miracle::NodeLayoutDirection new_direction)
+void ParentContainer::set_direction(miracle::NodeLayoutDirection new_direction)
 {
     direction = new_direction;
 }
 
-void ParentNode::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<Node> const& second)
+void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
     auto first_index = get_index_of_node(first);
     auto first_area = first->get_logical_area();
@@ -411,10 +411,10 @@ void ParentNode::swap_nodes(std::shared_ptr<Node> const& first, std::shared_ptr<
     constrain();
 }
 
-void ParentNode::remove(const std::shared_ptr<Node>& node)
+void ParentContainer::remove(const std::shared_ptr<Container>& node)
 {
     sub_nodes.erase(
-        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Node> const& content)
+        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Container> const& content)
     {
         return content == node;
     }),
@@ -436,7 +436,7 @@ void ParentNode::remove(const std::shared_ptr<Node>& node)
     relayout();
 }
 
-int ParentNode::get_index_of_node(miracle::Node const* node) const
+int ParentContainer::get_index_of_node(miracle::Container const* node) const
 {
     for (int i = 0; i < sub_nodes.size(); i++)
         if (sub_nodes[i].get() == node)
@@ -445,18 +445,18 @@ int ParentNode::get_index_of_node(miracle::Node const* node) const
     return -1;
 }
 
-int ParentNode::get_index_of_node(std::shared_ptr<Node> const& node) const
+int ParentContainer::get_index_of_node(std::shared_ptr<Container> const& node) const
 {
     return get_index_of_node(node.get());
 }
 
-void ParentNode::constrain()
+void ParentContainer::constrain()
 {
     for (auto& node : sub_nodes)
         node->constrain();
 }
 
-size_t ParentNode::get_min_width() const
+size_t ParentContainer::get_min_width() const
 {
     size_t size = 0;
     for (auto const& node : sub_nodes)
@@ -464,7 +464,7 @@ size_t ParentNode::get_min_width() const
     return size;
 }
 
-size_t ParentNode::get_min_height() const
+size_t ParentContainer::get_min_height() const
 {
     size_t size = 0;
     for (auto const& node : sub_nodes)
@@ -472,12 +472,12 @@ size_t ParentNode::get_min_height() const
     return size;
 }
 
-void ParentNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
+void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
 {
     parent = in_parent;
 }
 
-void ParentNode::relayout()
+void ParentContainer::relayout()
 {
     auto placement_area = get_logical_area();
     if (direction == NodeLayoutDirection::horizontal)

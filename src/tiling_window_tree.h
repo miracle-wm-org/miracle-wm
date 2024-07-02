@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_TREE_H
 
 #include "direction.h"
-#include "node.h"
+#include "container.h"
 #include "node_common.h"
 #include <memory>
 #include <mir/geometry/rectangle.h>
@@ -37,7 +37,7 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class TilingInterface;
-class LeafNode;
+class LeafContainer;
 
 class TilingWindowTree
 {
@@ -52,7 +52,7 @@ public:
     /// position is the position WITH gaps.
     miral::WindowSpecification allocate_position(const miral::WindowSpecification& requested_specification);
 
-    std::shared_ptr<LeafNode> advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<LeafContainer> advise_new_window(miral::WindowInfo const&);
 
     /// Try to resize the current active window in the provided direction
     bool try_resize_active_window(Direction direction);
@@ -89,7 +89,7 @@ public:
     /// Called when the physical display is resized.
     void set_output_area(geom::Rectangle const& new_area);
 
-    std::shared_ptr<LeafNode> select_window_from_point(int x, int y);
+    std::shared_ptr<LeafContainer> select_window_from_point(int x, int y);
 
     bool advise_fullscreen_window(miral::Window&);
     bool advise_restored_window(miral::Window&);
@@ -103,15 +103,15 @@ public:
     /// Constrains the window to its tile if it is in this tree.
     bool constrain(miral::Window& window);
 
-    void foreach_node(std::function<void(std::shared_ptr<Node>)> const&);
+    void foreach_node(std::function<void(std::shared_ptr<Container>)> const&);
 
-    std::shared_ptr<Node> find_node(std::function<bool(std::shared_ptr<Node> const&)> const&);
+    std::shared_ptr<Container> find_node(std::function<bool(std::shared_ptr<Container> const&)> const&);
 
     /// Hides the entire tree
     void hide();
 
     /// Shows the tree and returns a fullscreen node
-    std::shared_ptr<LeafNode> show();
+    std::shared_ptr<LeafContainer> show();
 
     void recalculate_root_node_area();
     bool is_empty();
@@ -127,42 +127,42 @@ private:
             traversal_type_append
         } traversal_type
             = traversal_type_invalid;
-        std::shared_ptr<Node> node = nullptr;
+        std::shared_ptr<Container> node = nullptr;
     };
 
     OutputContent* screen;
     TilingInterface& tiling_interface;
     std::shared_ptr<MiracleConfig> config;
-    std::shared_ptr<ParentNode> root_lane;
+    std::shared_ptr<ParentContainer> root_lane;
 
     // TODO: We can probably remove active_window and just resolve it efficiently now?
-    std::shared_ptr<LeafNode> active_window;
+    std::shared_ptr<LeafContainer> active_window;
     bool is_active_window_fullscreen = false;
     bool is_hidden = false;
     int config_handle = 0;
 
-    std::shared_ptr<ParentNode> get_active_lane();
+    std::shared_ptr<ParentContainer> get_active_lane();
     void handle_direction_change(NodeLayoutDirection direction);
-    void handle_resize(std::shared_ptr<Node> const& node, Direction direction, int amount);
+    void handle_resize(std::shared_ptr<Container> const& node, Direction direction, int amount);
 
     /// Removes the node from the tree
     /// @returns The parent that will need to have its changes committed
-    std::shared_ptr<ParentNode> handle_remove(std::shared_ptr<Node> const& node);
+    std::shared_ptr<ParentContainer> handle_remove(std::shared_ptr<Container> const& node);
 
     /// Transfer a node from its current parent to the parent of 'to'
     /// in a position right after 'to'.
     /// @returns The two parents who will need to have their changes committed
-    std::tuple<std::shared_ptr<ParentNode>, std::shared_ptr<ParentNode>> transfer_node(
-        std::shared_ptr<LeafNode> const& node,
-        std::shared_ptr<Node> const& to);
+    std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> transfer_node(
+        std::shared_ptr<LeafContainer> const& node,
+        std::shared_ptr<Container> const& to);
 
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    MoveResult handle_move(std::shared_ptr<Node> const& from, Direction direction);
+    MoveResult handle_move(std::shared_ptr<Container> const& from, Direction direction);
 
     /// Selects the next node in the provided direction
     /// @returns The next selectable window or nullptr if none is found
-    static std::shared_ptr<LeafNode> handle_select(std::shared_ptr<Node> const& from, Direction direction);
+    static std::shared_ptr<LeafContainer> handle_select(std::shared_ptr<Container> const& from, Direction direction);
 };
 
 }

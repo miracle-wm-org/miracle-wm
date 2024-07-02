@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class LeafNode;
+class LeafContainer;
 class TilingWindowTree;
 
 namespace window_helpers
@@ -55,11 +55,11 @@ namespace window_helpers
         miral::Window const& window,
         miral::WindowManagerTools const& tools);
 
-    std::shared_ptr<LeafNode> get_node_for_window(
+    std::shared_ptr<LeafContainer> get_node_for_window(
         miral::Window const& window,
         miral::WindowManagerTools const& tools);
 
-    std::shared_ptr<LeafNode> get_node_for_window_by_tree(
+    std::shared_ptr<LeafContainer> get_node_for_window_by_tree(
         miral::Window const& window,
         miral::WindowManagerTools const& tools,
         TilingWindowTree const* tree);

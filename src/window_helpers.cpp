@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "window_helpers"
 
 #include "window_helpers.h"
-#include "leaf_node.h"
-#include "node.h"
+#include "leaf_container.h"
+#include "container.h"
 #include "window_metadata.h"
 #include <mir/log.h>
 
@@ -49,7 +49,7 @@ miracle::window_helpers::get_metadata(const miral::Window& window, const miral::
     return nullptr;
 }
 
-std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window(
+std::shared_ptr<miracle::LeafContainer> miracle::window_helpers::get_node_for_window(
     miral::Window const& window,
     miral::WindowManagerTools const& tools)
 {
@@ -60,7 +60,7 @@ std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window(
     return nullptr;
 }
 
-std::shared_ptr<miracle::LeafNode> miracle::window_helpers::get_node_for_window_by_tree(
+std::shared_ptr<miracle::LeafContainer> miracle::window_helpers::get_node_for_window_by_tree(
     const miral::Window& window,
     const miral::WindowManagerTools& tools,
     const miracle::TilingWindowTree* tree)

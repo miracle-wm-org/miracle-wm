@@ -49,7 +49,7 @@ WindowMetadata::WindowMetadata(
 {
 }
 
-void WindowMetadata::associate_to_node(std::shared_ptr<LeafNode> const& node)
+void WindowMetadata::associate_to_node(std::shared_ptr<LeafContainer> const& node)
 {
     tiling_node = node;
 }
@@ -100,7 +100,7 @@ std::shared_ptr<WorkspaceContent> const& WindowMetadata::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<LeafNode> WindowMetadata::get_tiling_node() const
+std::shared_ptr<LeafContainer> WindowMetadata::get_tiling_node() const
 {
     if (type == WindowType::tiled)
         return tiling_node;

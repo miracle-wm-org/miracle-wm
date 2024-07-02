@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "output_content"
 
 #include "animator.h"
-#include "leaf_node.h"
+#include "leaf_container.h"
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
@@ -757,7 +757,7 @@ std::vector<miral::Window> OutputContent::collect_all_windows() const
     {
         workspace->get_tree()->foreach_node([&](auto const& node)
         {
-            auto leaf_node = Node::as_leaf(node);
+            auto leaf_node = Container::as_leaf(node);
             if (leaf_node)
                 windows.push_back(leaf_node->get_window());
         });
