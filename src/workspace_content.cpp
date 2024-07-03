@@ -20,13 +20,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_content.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
+#include "output_content.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
+#include <miral/zone.h>
 
 using namespace miracle;
+
+namespace
+{
+class OutputTilingWindowTreeInterface: public TilingWindowTreeInterface
+{
+public:
+    explicit OutputTilingWindowTreeInterface(miracle::OutputContent* screen)
+        : screen{screen} {}
+
+    geom::Rectangle const& get_area() override
+    {
+        return screen->get_area();
+    }
+
+    std::vector<miral::Zone> const& get_zones() override
+    {
+        return screen->get_app_zones();
+    }
+
+private:
+    miracle::OutputContent* screen;
+};
+
+}
 
 WorkspaceContent::WorkspaceContent(
     miracle::OutputContent* screen,
@@ -37,11 +63,13 @@ WorkspaceContent::WorkspaceContent(
     miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
-    tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace },
     node_interface { node_interface },
     config { config },
-    floating_window_manager { floating_window_manager }
+    floating_window_manager { floating_window_manager },
+    tree(std::make_shared<TilingWindowTree>(
+    std::make_unique<OutputTilingWindowTreeInterface>(output),
+    node_interface, config))
 {
 }
 

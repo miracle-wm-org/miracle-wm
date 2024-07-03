@@ -39,11 +39,18 @@ class MiracleConfig;
 class WindowController;
 class LeafContainer;
 
+class TilingWindowTreeInterface
+{
+public:
+    virtual geom::Rectangle const& get_area() = 0;
+    virtual std::vector<miral::Zone> const& get_zones() = 0;
+};
+
 class TilingWindowTree
 {
 public:
     TilingWindowTree(
-        OutputContent* parent,
+        std::unique_ptr<TilingWindowTreeInterface> tree_interface,
         WindowController&,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
@@ -130,10 +137,10 @@ private:
         std::shared_ptr<Container> node = nullptr;
     };
 
-    OutputContent* screen;
-    WindowController& tiling_interface;
+    WindowController& window_controller;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentContainer> root_lane;
+    std::unique_ptr<TilingWindowTreeInterface> tree_interface;
 
     // TODO: We can probably remove active_window and just resolve it efficiently now?
     std::shared_ptr<LeafContainer> active_window;

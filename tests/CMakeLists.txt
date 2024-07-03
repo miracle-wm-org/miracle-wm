@@ -14,8 +14,8 @@ find_package(GTest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 
 add_executable(miracle-wm-tests
-    miracle_config_test.cpp
-    tree_test.cpp
+        filesystem_configuration_test.cpp
+        tiling_window_tree_test.cpp
     test_i3_command.cpp
     test_animator.cpp)
 

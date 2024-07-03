@@ -55,7 +55,7 @@ public:
     AnimatorTest() :
         runner(argc, argv),
         queue { std::make_shared<ImmediateServerActionQueue>() },
-        config { std::make_shared<MiracleConfig>(runner, path) }
+        config { std::make_shared<FilesystemConfiguration>(runner, path) }
     {
     }
     miral::MirRunner runner;

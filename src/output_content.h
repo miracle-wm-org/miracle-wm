@@ -108,7 +108,7 @@ public:
     void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
 
     geom::Rectangle const& get_area() { return area; }
-    std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }
+    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
     miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }

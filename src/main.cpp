@@ -73,7 +73,7 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
     miracle::SurfaceTracker surface_tracker;
-    auto config = std::make_shared<miracle::MiracleConfig>(runner);
+    auto config = std::make_shared<miracle::FilesystemConfiguration>(runner);
     for (auto const& env : config->get_env_variables())
     {
         setenv(env.key.c_str(), env.value.c_str(), 1);

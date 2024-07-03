@@ -133,7 +133,7 @@ T try_parse_enum(YAML::Node const& root, const char* key, std::function<T(std::s
 }
 }
 
-MiracleConfig::MiracleConfig(miral::MirRunner& runner) :
+FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
     runner { runner }
 {
     std::stringstream config_path_stream;
@@ -151,7 +151,7 @@ MiracleConfig::MiracleConfig(miral::MirRunner& runner) :
     _watch(runner);
 }
 
-MiracleConfig::MiracleConfig(miral::MirRunner& runner, std::string const& path) :
+FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner, std::string const& path) :
     runner { runner },
     config_path { path }
 {
@@ -164,7 +164,7 @@ MiracleConfig::MiracleConfig(miral::MirRunner& runner, std::string const& path) 
     _watch(runner);
 }
 
-void MiracleConfig::_load()
+void FilesystemConfiguration::_load()
 {
     std::lock_guard<std::mutex> lock(mutex);
 
@@ -830,7 +830,7 @@ void MiracleConfig::_load()
     read_animation_definitions(config);
 }
 
-void MiracleConfig::read_animation_definitions(YAML::Node const& root)
+void FilesystemConfiguration::read_animation_definitions(YAML::Node const& root)
 {
     std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
         {
@@ -905,7 +905,7 @@ void MiracleConfig::read_animation_definitions(YAML::Node const& root)
         try_parse_value(root, "enable_animations", animations_enabled);
 }
 
-void MiracleConfig::_watch(miral::MirRunner& runner)
+void FilesystemConfiguration::_watch(miral::MirRunner& runner)
 {
     inotify_fd = mir::Fd { inotify_init() };
     file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
@@ -931,7 +931,7 @@ void MiracleConfig::_watch(miral::MirRunner& runner)
     });
 }
 
-void MiracleConfig::try_process_change()
+void FilesystemConfiguration::try_process_change()
 {
     std::lock_guard<std::mutex> lock(mutex);
     if (!has_changes)
@@ -944,7 +944,7 @@ void MiracleConfig::try_process_change()
     }
 }
 
-uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
+uint FilesystemConfiguration::parse_modifier(std::string const& stringified_action_key)
 {
     if (stringified_action_key == "alt")
         return mir_input_event_modifier_alt;
@@ -987,18 +987,18 @@ uint MiracleConfig::parse_modifier(std::string const& stringified_action_key)
     return mir_input_event_modifier_none;
 }
 
-std::string const& MiracleConfig::get_filename() const
+std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
 }
 
-MirInputEventModifier MiracleConfig::get_input_event_modifier() const
+MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
 {
     return (MirInputEventModifier)primary_modifier;
 }
 
 CustomKeyCommand const*
-MiracleConfig::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
+FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
 {
     // TODO: Copy & paste
     for (auto const& command : custom_key_commands)
@@ -1020,7 +1020,7 @@ MiracleConfig::matches_custom_key_command(MirKeyboardAction action, int scan_cod
     return nullptr;
 }
 
-bool MiracleConfig::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const
+bool FilesystemConfiguration::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const
 {
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {
@@ -1047,32 +1047,38 @@ bool MiracleConfig::matches_key_command(MirKeyboardAction action, int scan_code,
     return false;
 }
 
-int MiracleConfig::get_inner_gaps_x() const
+int FilesystemConfiguration::get_inner_gaps_x() const
 {
     return inner_gaps_x;
 }
 
-int MiracleConfig::get_inner_gaps_y() const
+int FilesystemConfiguration::get_inner_gaps_y() const
 {
     return inner_gaps_y;
 }
 
-int MiracleConfig::get_outer_gaps_x() const
+int FilesystemConfiguration::get_outer_gaps_x() const
 {
     return outer_gaps_x;
 }
 
-int MiracleConfig::get_outer_gaps_y() const
+int FilesystemConfiguration::get_outer_gaps_y() const
 {
     return outer_gaps_y;
 }
 
-const std::vector<StartupApp>& MiracleConfig::get_startup_apps() const
+const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const
 {
     return startup_apps;
 }
 
-int MiracleConfig::register_listener(std::function<void(miracle::MiracleConfig&)> const& func, int priority)
+
+int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func)
+{
+    return register_listener(func, 5);
+}
+
+int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func, int priority)
 {
     int handle = next_listener_handle++;
 
@@ -1089,7 +1095,7 @@ int MiracleConfig::register_listener(std::function<void(miracle::MiracleConfig&)
     return handle;
 }
 
-void MiracleConfig::unregister_listener(int handle)
+void FilesystemConfiguration::unregister_listener(int handle)
 {
     for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
     {
@@ -1101,7 +1107,7 @@ void MiracleConfig::unregister_listener(int handle)
     }
 }
 
-std::optional<std::string> const& MiracleConfig::get_terminal_command() const
+std::optional<std::string> const& FilesystemConfiguration::get_terminal_command() const
 {
     if (!terminal)
     {
@@ -1117,32 +1123,32 @@ std::optional<std::string> const& MiracleConfig::get_terminal_command() const
     return terminal;
 }
 
-int MiracleConfig::get_resize_jump() const
+int FilesystemConfiguration::get_resize_jump() const
 {
     return resize_jump;
 }
 
-std::vector<EnvironmentVariable> const& MiracleConfig::get_env_variables() const
+std::vector<EnvironmentVariable> const& FilesystemConfiguration::get_env_variables() const
 {
     return environment_variables;
 }
 
-BorderConfig const& MiracleConfig::get_border_config() const
+BorderConfig const& FilesystemConfiguration::get_border_config() const
 {
     return border_config;
 }
 
-std::array<AnimationDefinition, (int)AnimateableEvent::max> const& MiracleConfig::get_animation_definitions() const
+std::array<AnimationDefinition, (int)AnimateableEvent::max> const& FilesystemConfiguration::get_animation_definitions() const
 {
     return animation_defintions;
 }
 
-bool MiracleConfig::are_animations_enabled() const
+bool FilesystemConfiguration::are_animations_enabled() const
 {
     return animations_enabled;
 }
 
-WorkspaceConfig MiracleConfig::get_workspace_config(int key) const
+WorkspaceConfig FilesystemConfiguration::get_workspace_config(int key) const
 {
     for (auto const& config : workspace_configs)
     {

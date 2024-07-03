@@ -15,14 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "window_metadata.h"
 #define MIR_LOG_COMPONENT "window_tree"
 
+#include "tiling_window_tree.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
 #include "output_content.h"
 #include "parent_container.h"
-#include "tiling_window_tree.h"
 #include "window_helpers.h"
 
 #include <cmath>
@@ -33,18 +32,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 TilingWindowTree::TilingWindowTree(
-    OutputContent* screen,
-    WindowController& tiling_interface,
+    std::unique_ptr<TilingWindowTreeInterface> tree_interface,
+    WindowController& window_controller,
     std::shared_ptr<MiracleConfig> const& config) :
-    screen { screen },
     root_lane { std::make_shared<ParentContainer>(
-        tiling_interface,
-        std::move(geom::Rectangle { screen->get_area().top_left, screen->get_area().size }),
+        window_controller,
+        tree_interface->get_area(),
         config,
         this,
         nullptr) },
     config { config },
-    tiling_interface { tiling_interface }
+    window_controller { window_controller },
+    tree_interface{std::move(tree_interface)}
 {
     recalculate_root_node_area();
     config_handle = config->register_listener([&](auto&)
@@ -123,7 +122,7 @@ bool TilingWindowTree::try_select_next(miracle::Direction direction)
         return false;
     }
 
-    tiling_interface.select_active_window(node->get_window());
+    window_controller.select_active_window(node->get_window());
     return true;
 }
 
@@ -281,7 +280,7 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
 
 void TilingWindowTree::advise_focus_gained(miral::Window& window)
 {
-    auto metadata = tiling_interface.get_metadata(window, this);
+    auto metadata = window_controller.get_metadata(window, this);
     if (!metadata)
     {
         active_window = nullptr;
@@ -290,7 +289,7 @@ void TilingWindowTree::advise_focus_gained(miral::Window& window)
 
     active_window = metadata->get_tiling_node();
     if (active_window && is_active_window_fullscreen)
-        tiling_interface.raise(window);
+        window_controller.raise(window);
 }
 
 void TilingWindowTree::advise_focus_lost(miral::Window& window)
@@ -301,7 +300,7 @@ void TilingWindowTree::advise_focus_lost(miral::Window& window)
 
 void TilingWindowTree::advise_delete_window(miral::Window& window)
 {
-    auto metadata = tiling_interface.get_metadata(window, this);
+    auto metadata = window_controller.get_metadata(window, this);
     if (!metadata)
     {
         mir::log_warning("Unable to delete window: cannot find node");
@@ -457,8 +456,8 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Conta
             return {};
 
         auto after_root_lane = std::make_shared<ParentContainer>(
-            tiling_interface,
-            std::move(geom::Rectangle { screen->get_area().top_left, screen->get_area().size }),
+            window_controller,
+            root_lane->get_logical_area(),
             config,
             this,
             nullptr);
@@ -632,7 +631,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> T
 
 void TilingWindowTree::recalculate_root_node_area()
 {
-    for (auto const& zone : screen->get_app_zones())
+    for (auto const& zone : tree_interface->get_zones())
     {
         root_lane->set_logical_area(zone.extents());
         root_lane->commit_changes();
@@ -642,19 +641,19 @@ void TilingWindowTree::recalculate_root_node_area()
 
 bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
 {
-    auto node = tiling_interface.get_metadata(window, this);
+    auto node = window_controller.get_metadata(window, this);
     if (!node)
         return false;
 
-    tiling_interface.select_active_window(node->get_window());
-    tiling_interface.raise(node->get_window());
+    window_controller.select_active_window(node->get_window());
+    window_controller.raise(node->get_window());
     is_active_window_fullscreen = true;
     return true;
 }
 
 bool TilingWindowTree::advise_restored_window(miral::Window& window)
 {
-    auto metadata = tiling_interface.get_metadata(window, this);
+    auto metadata = window_controller.get_metadata(window, this);
     if (!metadata)
         return false;
 
@@ -670,7 +669,7 @@ bool TilingWindowTree::advise_restored_window(miral::Window& window)
 
 bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
 {
-    auto metadata = tiling_interface.get_metadata(window_info.window(), this);
+    auto metadata = window_controller.get_metadata(window_info.window(), this);
     if (!metadata)
         return false;
 
@@ -680,7 +679,7 @@ bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
         return true;
 
     if (window_info.can_be_active())
-        tiling_interface.select_active_window(window_info.window());
+        window_controller.select_active_window(window_info.window());
 
     return true;
 }
@@ -690,7 +689,7 @@ bool TilingWindowTree::confirm_placement_on_display(
     MirWindowState new_state,
     mir::geometry::Rectangle& new_placement)
 {
-    auto metadata = tiling_interface.get_metadata(window, this);
+    auto metadata = window_controller.get_metadata(window, this);
     if (!metadata)
         return false;
 
@@ -710,7 +709,7 @@ bool TilingWindowTree::confirm_placement_on_display(
 
 bool TilingWindowTree::constrain(miral::Window& window)
 {
-    auto metadata = tiling_interface.get_metadata(window, this);
+    auto metadata = window_controller.get_metadata(window, this);
     if (!metadata)
         return false;
 
@@ -804,7 +803,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::show()
             if (leaf_node->is_fullscreen())
                 fullscreen_node = leaf_node;
             else
-                tiling_interface.raise(leaf_node->get_window());
+                window_controller.raise(leaf_node->get_window());
         }
     });
 

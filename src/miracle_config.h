@@ -120,9 +120,9 @@ struct EnvironmentVariable
 
 struct BorderConfig
 {
-    int size;
-    glm::vec4 focus_color;
-    glm::vec4 color;
+    int size = 0;
+    glm::vec4 focus_color = glm::vec4(0);
+    glm::vec4 color = glm::vec4(0);
 };
 
 struct WorkspaceConfig
@@ -134,31 +134,57 @@ struct WorkspaceConfig
 class MiracleConfig
 {
 public:
-    explicit MiracleConfig(miral::MirRunner&);
-    MiracleConfig(miral::MirRunner&, std::string const&);
+    [[nodiscard]] virtual std::string const& get_filename() const = 0;
+    [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
+    [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
+    virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
+    [[nodiscard]] virtual int get_inner_gaps_x() const = 0;
+    [[nodiscard]] virtual int get_inner_gaps_y() const = 0;
+    [[nodiscard]] virtual int get_outer_gaps_x() const = 0;
+    [[nodiscard]] virtual int get_outer_gaps_y() const = 0;
+    [[nodiscard]] virtual std::vector<StartupApp> const& get_startup_apps() const = 0;
+    [[nodiscard]] virtual std::optional<std::string> const& get_terminal_command() const = 0;
+    [[nodiscard]] virtual int get_resize_jump() const = 0;
+    [[nodiscard]] virtual std::vector<EnvironmentVariable> const& get_env_variables() const = 0;
+    [[nodiscard]] virtual BorderConfig const& get_border_config() const = 0;
+    [[nodiscard]] virtual std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const = 0;
+    [[nodiscard]] virtual bool are_animations_enabled() const = 0;
+    [[nodiscard]] virtual WorkspaceConfig get_workspace_config(int key) const  = 0;
 
-    [[nodiscard]] std::string const& get_filename() const;
-    [[nodiscard]] MirInputEventModifier get_input_event_modifier() const;
-    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const;
-    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const;
-    [[nodiscard]] int get_inner_gaps_x() const;
-    [[nodiscard]] int get_inner_gaps_y() const;
-    [[nodiscard]] int get_outer_gaps_x() const;
-    [[nodiscard]] int get_outer_gaps_y() const;
-    [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const;
-    [[nodiscard]] std::optional<std::string> const& get_terminal_command() const;
-    [[nodiscard]] int get_resize_jump() const;
-    [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const;
-    [[nodiscard]] BorderConfig const& get_border_config() const;
-    [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const;
-    [[nodiscard]] bool are_animations_enabled() const;
-    [[nodiscard]] WorkspaceConfig get_workspace_config(int key) const;
-
+    virtual int register_listener(std::function<void(miracle::MiracleConfig&)> const&) = 0;
     /// Register a listener on configuration change. A lower "priority" number signifies that the
     /// listener should be triggered earlier. A higher priority means later
-    int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority = 5);
-    void unregister_listener(int handle);
-    void try_process_change();
+    virtual int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) = 0;
+    virtual void unregister_listener(int handle) = 0;
+    virtual void try_process_change() = 0;
+};
+
+class FilesystemConfiguration : public MiracleConfig
+{
+public:
+    explicit FilesystemConfiguration(miral::MirRunner&);
+    FilesystemConfiguration(miral::MirRunner&, std::string const&);
+
+    [[nodiscard]] std::string const& get_filename() const override;
+    [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
+    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
+    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
+    [[nodiscard]] int get_inner_gaps_x() const override;
+    [[nodiscard]] int get_inner_gaps_y() const override;
+    [[nodiscard]] int get_outer_gaps_x() const override;
+    [[nodiscard]] int get_outer_gaps_y() const override;
+    [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const override;
+    [[nodiscard]] std::optional<std::string> const& get_terminal_command() const override;
+    [[nodiscard]] int get_resize_jump() const override;
+    [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const override;
+    [[nodiscard]] BorderConfig const& get_border_config() const override;
+    [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const override;
+    [[nodiscard]] bool are_animations_enabled() const override;
+    [[nodiscard]] WorkspaceConfig get_workspace_config(int key) const override;
+    int register_listener(std::function<void(miracle::MiracleConfig&)> const&) override;
+    int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) override;
+    void unregister_listener(int handle) override;
+    void try_process_change() override;
 
 private:
     struct ChangeListener
