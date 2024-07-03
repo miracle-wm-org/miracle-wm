@@ -33,9 +33,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 TilingWindowTree::TilingWindowTree(
-    OutputContent* screen,
-    TilingInterface& tiling_interface,
-    std::shared_ptr<MiracleConfig> const& config) :
+OutputContent* screen,
+WindowController& tiling_interface,
+std::shared_ptr<MiracleConfig> const& config) :
     screen { screen },
     root_lane { std::make_shared<ParentContainer>(
         tiling_interface,
@@ -274,7 +274,7 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
     }
 
     if (active_window->get_parent().lock()->num_nodes() != 1)
-        get_active_lane()->convert_to_lane(active_window);
+        get_active_lane()->convert_to_parent(active_window);
 
     get_active_lane()->set_direction(direction);
 }

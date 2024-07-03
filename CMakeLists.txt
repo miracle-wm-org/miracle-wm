@@ -52,7 +52,7 @@ add_library(miracle-wm-implementation
     src/workspace_content.cpp
     src/leaf_container.cpp
     src/parent_container.cpp
-    src/window_manager_tools_tiling_interface.cpp
+        src/window_manager_tools_window_controller.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
     src/miracle_gl_config.cpp

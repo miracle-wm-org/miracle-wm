@@ -80,11 +80,11 @@ InsertNodeInternalResult insert_node_internal(
 }
 
 ParentContainer::ParentContainer(
-    TilingInterface& node_interface,
-    geom::Rectangle area,
-    std::shared_ptr<MiracleConfig> const& config,
-    TilingWindowTree* tree,
-    std::shared_ptr<ParentContainer> const& parent) :
+WindowController& node_interface,
+geom::Rectangle area,
+std::shared_ptr<MiracleConfig> const& config,
+TilingWindowTree* tree,
+std::shared_ptr<ParentContainer> const& parent) :
     Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
@@ -225,7 +225,7 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
     constrain();
 }
 
-void ParentContainer::convert_to_lane(std::shared_ptr<LeafContainer> const& node)
+void ParentContainer::convert_to_parent(std::shared_ptr<LeafContainer> const& node)
 {
     auto index = get_index_of_node(node);
     if (index < 0)

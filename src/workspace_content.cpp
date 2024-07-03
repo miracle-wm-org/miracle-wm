@@ -29,12 +29,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 WorkspaceContent::WorkspaceContent(
-    miracle::OutputContent* screen,
-    miral::WindowManagerTools const& tools,
-    int workspace,
-    std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface,
-    miral::MinimalWindowManager& floating_window_manager) :
+miracle::OutputContent* screen,
+miral::WindowManagerTools const& tools,
+int workspace,
+std::shared_ptr<MiracleConfig> const& config,
+WindowController& node_interface,
+miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
     tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),

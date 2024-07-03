@@ -30,18 +30,18 @@ namespace miracle
 class OutputContent;
 class MiracleConfig;
 class TilingWindowTree;
-class TilingInterface;
+class WindowController;
 
 class WorkspaceContent
 {
 public:
     WorkspaceContent(
-        OutputContent* output,
-        miral::WindowManagerTools const& tools,
-        int workspace,
-        std::shared_ptr<MiracleConfig> const& config,
-        TilingInterface& node_interface,
-        miral::MinimalWindowManager& floating_window_manager);
+    OutputContent* output,
+    miral::WindowManagerTools const& tools,
+    int workspace,
+    std::shared_ptr<MiracleConfig> const& config,
+    WindowController& node_interface,
+    miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
@@ -69,7 +69,7 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
-    TilingInterface& node_interface;
+    WindowController& node_interface;
     std::shared_ptr<MiracleConfig> config;
     miral::MinimalWindowManager& floating_window_manager;
 };

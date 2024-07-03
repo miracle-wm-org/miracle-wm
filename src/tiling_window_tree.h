@@ -36,16 +36,16 @@ namespace miracle
 
 class OutputContent;
 class MiracleConfig;
-class TilingInterface;
+class WindowController;
 class LeafContainer;
 
 class TilingWindowTree
 {
 public:
     TilingWindowTree(
-        OutputContent* parent,
-        TilingInterface&,
-        std::shared_ptr<MiracleConfig> const& options);
+    OutputContent* parent,
+    WindowController&,
+    std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
@@ -131,7 +131,7 @@ private:
     };
 
     OutputContent* screen;
-    TilingInterface& tiling_interface;
+    WindowController& tiling_interface;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentContainer> root_lane;
 

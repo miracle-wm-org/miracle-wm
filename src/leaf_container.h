@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "node_common.h"
-#include "tiling_interface.h"
+#include "window_controller.h"
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <optional>
@@ -41,11 +41,11 @@ class LeafContainer : public Container
 {
 public:
     LeafContainer(
-        TilingInterface& node_interface,
-        geom::Rectangle area,
-        std::shared_ptr<MiracleConfig> const& config,
-        TilingWindowTree* tree,
-        std::shared_ptr<ParentContainer> const& parent);
+    WindowController& node_interface,
+    geom::Rectangle area,
+    std::shared_ptr<MiracleConfig> const& config,
+    TilingWindowTree* tree,
+    std::shared_ptr<ParentContainer> const& parent);
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
@@ -65,7 +65,7 @@ public:
     void commit_changes() override;
 
 private:
-    TilingInterface& node_interface;
+    WindowController& node_interface;
     geom::Rectangle logical_area;
     std::optional<geom::Rectangle> next_logical_area;
     std::shared_ptr<MiracleConfig> config;

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "node_common.h"
-#include "tiling_interface.h"
+#include "window_controller.h"
 #include <mir/geometry/rectangle.h>
 
 namespace geom = mir::geometry;
@@ -38,7 +38,7 @@ class TilingWindowTree;
 class ParentContainer : public Container
 {
 public:
-    ParentContainer(TilingInterface&,
+    ParentContainer(WindowController&,
                     geom::Rectangle,
                     std::shared_ptr<MiracleConfig> const&,
                     TilingWindowTree* tree,
@@ -48,7 +48,7 @@ public:
     std::shared_ptr<LeafContainer> create_space_for_window(int index = -1);
     std::shared_ptr<LeafContainer> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Container> const& node, int index);
-    void convert_to_lane(std::shared_ptr<LeafContainer> const&);
+    void convert_to_parent(std::shared_ptr<LeafContainer> const &node);
     void set_logical_area(geom::Rectangle const& target_rect) override;
     void set_direction(NodeLayoutDirection direction);
     void swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
@@ -67,7 +67,7 @@ public:
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
 
 private:
-    TilingInterface& node_interface;
+    WindowController& node_interface;
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
