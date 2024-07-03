@@ -41,11 +41,11 @@ class LeafContainer : public Container
 {
 public:
     LeafContainer(
-    WindowController& node_interface,
-    geom::Rectangle area,
-    std::shared_ptr<MiracleConfig> const& config,
-    TilingWindowTree* tree,
-    std::shared_ptr<ParentContainer> const& parent);
+        WindowController& node_interface,
+        geom::Rectangle area,
+        std::shared_ptr<MiracleConfig> const& config,
+        TilingWindowTree* tree,
+        std::shared_ptr<ParentContainer> const& parent);
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;

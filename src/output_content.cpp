@@ -35,21 +35,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 OutputContent::OutputContent(
-miral::Output const& output,
-WorkspaceManager& workspace_manager,
-geom::Rectangle const& area,
-miral::WindowManagerTools const& tools,
-miral::MinimalWindowManager& floating_window_manager,
-std::shared_ptr<MiracleConfig> const& config,
-WindowController& node_interface,
-Animator& animator) :
+    miral::Output const& output,
+    WorkspaceManager& workspace_manager,
+    geom::Rectangle const& area,
+    miral::WindowManagerTools const& tools,
+    miral::MinimalWindowManager& floating_window_manager,
+    std::shared_ptr<MiracleConfig> const& config,
+    WindowController& node_interface,
+    Animator& animator) :
     output { output },
     workspace_manager { workspace_manager },
     area { area },
     tools { tools },
     floating_window_manager { floating_window_manager },
     config { config },
-    window_controller {node_interface },
+    window_controller { node_interface },
     animator { animator },
     handle { animator.register_animateable() }
 {
@@ -444,7 +444,7 @@ void OutputContent::advise_new_workspace(int workspace)
 {
     // Workspaces are always kept in sorted order
     auto new_workspace = std::make_shared<WorkspaceContent>(
-    this, tools, workspace, config, window_controller, floating_window_manager);
+        this, tools, workspace, config, window_controller, floating_window_manager);
     insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceContent> const& a, std::shared_ptr<WorkspaceContent> const& b)
     {
         return a->get_workspace() < b->get_workspace();

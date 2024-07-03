@@ -39,16 +39,16 @@ class ParentContainer : public Container
 {
 public:
     ParentContainer(WindowController&,
-                    geom::Rectangle,
-                    std::shared_ptr<MiracleConfig> const&,
-                    TilingWindowTree* tree,
-                    std::shared_ptr<ParentContainer> const& parent);
+        geom::Rectangle,
+        std::shared_ptr<MiracleConfig> const&,
+        TilingWindowTree* tree,
+        std::shared_ptr<ParentContainer> const& parent);
     geom::Rectangle get_logical_area() const override;
     size_t num_nodes() const;
     std::shared_ptr<LeafContainer> create_space_for_window(int index = -1);
     std::shared_ptr<LeafContainer> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Container> const& node, int index);
-    void convert_to_parent(std::shared_ptr<LeafContainer> const &node);
+    void convert_to_parent(std::shared_ptr<LeafContainer> const& node);
     void set_logical_area(geom::Rectangle const& target_rect) override;
     void set_direction(NodeLayoutDirection direction);
     void swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);

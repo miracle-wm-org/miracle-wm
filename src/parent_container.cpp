@@ -16,9 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "parent_container.h"
+#include "container.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
-#include "container.h"
 #include <cmath>
 
 using namespace miracle;
@@ -80,11 +80,11 @@ InsertNodeInternalResult insert_node_internal(
 }
 
 ParentContainer::ParentContainer(
-WindowController& node_interface,
-geom::Rectangle area,
-std::shared_ptr<MiracleConfig> const& config,
-TilingWindowTree* tree,
-std::shared_ptr<ParentContainer> const& parent) :
+    WindowController& node_interface,
+    geom::Rectangle area,
+    std::shared_ptr<MiracleConfig> const& config,
+    TilingWindowTree* tree,
+    std::shared_ptr<ParentContainer> const& parent) :
     Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },

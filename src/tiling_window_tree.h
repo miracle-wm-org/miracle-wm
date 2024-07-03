@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_TREE_H
 #define MIRACLE_TREE_H
 
-#include "direction.h"
 #include "container.h"
+#include "direction.h"
 #include "node_common.h"
 #include <memory>
 #include <mir/geometry/rectangle.h>
@@ -43,9 +43,9 @@ class TilingWindowTree
 {
 public:
     TilingWindowTree(
-    OutputContent* parent,
-    WindowController&,
-    std::shared_ptr<MiracleConfig> const& options);
+        OutputContent* parent,
+        WindowController&,
+        std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned

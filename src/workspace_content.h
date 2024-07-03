@@ -36,12 +36,12 @@ class WorkspaceContent
 {
 public:
     WorkspaceContent(
-    OutputContent* output,
-    miral::WindowManagerTools const& tools,
-    int workspace,
-    std::shared_ptr<MiracleConfig> const& config,
-    WindowController& node_interface,
-    miral::MinimalWindowManager& floating_window_manager);
+        OutputContent* output,
+        miral::WindowManagerTools const& tools,
+        int workspace,
+        std::shared_ptr<MiracleConfig> const& config,
+        WindowController& node_interface,
+        miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;

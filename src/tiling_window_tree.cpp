@@ -33,9 +33,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 TilingWindowTree::TilingWindowTree(
-OutputContent* screen,
-WindowController& tiling_interface,
-std::shared_ptr<MiracleConfig> const& config) :
+    OutputContent* screen,
+    WindowController& tiling_interface,
+    std::shared_ptr<MiracleConfig> const& config) :
     screen { screen },
     root_lane { std::make_shared<ParentContainer>(
         tiling_interface,

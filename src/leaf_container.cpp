@@ -24,11 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 LeafContainer::LeafContainer(
-WindowController& node_interface,
-geom::Rectangle area,
-std::shared_ptr<MiracleConfig> const& config,
-TilingWindowTree* tree,
-std::shared_ptr<ParentContainer> const& parent) :
+    WindowController& node_interface,
+    geom::Rectangle area,
+    std::shared_ptr<MiracleConfig> const& config,
+    TilingWindowTree* tree,
+    std::shared_ptr<ParentContainer> const& parent) :
     Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },

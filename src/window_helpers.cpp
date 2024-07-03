@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "window_helpers"
 
 #include "window_helpers.h"
-#include "leaf_container.h"
 #include "container.h"
+#include "leaf_container.h"
 #include "window_metadata.h"
 #include <mir/log.h>
 

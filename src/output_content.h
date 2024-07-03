@@ -39,14 +39,14 @@ class OutputContent
 {
 public:
     OutputContent(
-    miral::Output const& output,
-    WorkspaceManager& workspace_manager,
-    geom::Rectangle const& area,
-    miral::WindowManagerTools const& tools,
-    miral::MinimalWindowManager& floating_window_manager,
-    std::shared_ptr<MiracleConfig> const& options,
-    WindowController&,
-    Animator&);
+        miral::Output const& output,
+        WorkspaceManager& workspace_manager,
+        geom::Rectangle const& area,
+        miral::WindowManagerTools const& tools,
+        miral::MinimalWindowManager& floating_window_manager,
+        std::shared_ptr<MiracleConfig> const& options,
+        WindowController&,
+        Animator&);
     ~OutputContent() = default;
 
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_active_tree() const;

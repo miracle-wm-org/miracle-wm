@@ -356,8 +356,8 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 void Policy::advise_output_create(miral::Output const& output)
 {
     auto output_content = std::make_shared<OutputContent>(
-    output, workspace_manager, output.extents(), window_manager_tools,
-    floating_window_manager, config, window_controller, animator);
+        output, workspace_manager, output.extents(), window_manager_tools,
+        floating_window_manager, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
     output_list.push_back(output_content);
     if (active_output == nullptr)
