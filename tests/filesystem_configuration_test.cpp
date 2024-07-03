@@ -16,10 +16,10 @@ char const* argv[] = { "miracle-wm-tests" };
 const std::string path = std::filesystem::current_path() / "test.yaml";
 }
 
-class MiracleConfigTest : public testing::Test
+class FilesystemConfigurationTest : public testing::Test
 {
 public:
-    MiracleConfigTest() :
+    FilesystemConfigurationTest() :
         runner(argc, argv)
     {
     }
@@ -51,46 +51,46 @@ public:
     miral::MirRunner runner;
 };
 
-TEST_F(MiracleConfigTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotExist)
+TEST_F(FilesystemConfigurationTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotExist)
 {
     std::filesystem::remove(path.c_str());
-    EXPECT_NO_THROW(MiracleConfig config(runner, path));
+    EXPECT_NO_THROW(FilesystemConfiguration config(runner, path));
 }
 
-TEST_F(MiracleConfigTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotContainYaml)
+TEST_F(FilesystemConfigurationTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotContainYaml)
 {
     std::fstream file(path, std::ios::app);
     file << "Hello my name is Matthew { \"fifteen\": 15 } Goodbye then!";
-    EXPECT_NO_THROW(MiracleConfig config(runner, path));
+    EXPECT_NO_THROW(FilesystemConfiguration config(runner, path));
 }
 
-TEST_F(MiracleConfigTest, DefaultModifierIsMeta)
+TEST_F(FilesystemConfigurationTest, DefaultModifierIsMeta)
 {
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_meta);
 }
 
-TEST_F(MiracleConfigTest, CanWriteDefaultModifier)
+TEST_F(FilesystemConfigurationTest, CanWriteDefaultModifier)
 {
     write_kvp("action_key", "alt");
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_alt);
 }
 
-TEST_F(MiracleConfigTest, UnknownModifiersResultsInMeta)
+TEST_F(FilesystemConfigurationTest, UnknownModifiersResultsInMeta)
 {
     write_kvp("action_key", "unknown");
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_meta);
 }
 
-TEST_F(MiracleConfigTest, WhenDefaultActionOverridesIsNotArrayThenWeDoNotFail)
+TEST_F(FilesystemConfigurationTest, WhenDefaultActionOverridesIsNotArrayThenWeDoNotFail)
 {
     write_kvp("default_action_overrides", "hello");
-    EXPECT_NO_THROW(MiracleConfig config(runner, path));
+    EXPECT_NO_THROW(FilesystemConfiguration config(runner, path));
 }
 
-TEST_F(MiracleConfigTest, CanOverrideDefaultAction)
+TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -101,7 +101,7 @@ TEST_F(MiracleConfigTest, CanOverrideDefaultAction)
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -113,7 +113,7 @@ TEST_F(MiracleConfigTest, CanOverrideDefaultAction)
     });
 }
 
-TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItIsNotAdded)
+TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItIsNotAdded)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -124,7 +124,7 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItI
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_ENTER,
@@ -136,7 +136,7 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidNameThenItI
     });
 }
 
-TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersThenItIsNotAdded)
+TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersThenItIsNotAdded)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -147,7 +147,7 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersTh
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_ENTER,
@@ -159,7 +159,7 @@ TEST_F(MiracleConfigTest, WhenEntryInDefaultActionOverridesHasInvalidModifiersTh
     });
 }
 
-TEST_F(MiracleConfigTest, CanCreateCustomAction)
+TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -170,7 +170,7 @@ TEST_F(MiracleConfigTest, CanCreateCustomAction)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -180,7 +180,7 @@ TEST_F(MiracleConfigTest, CanCreateCustomAction)
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
 }
 
-TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
+TEST_F(FilesystemConfigurationTest, CustomActionsInSnapIncludeUnsnapCommand)
 {
     setenv("SNAP", "test", 1);
     YAML::Node node;
@@ -192,7 +192,7 @@ TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -201,7 +201,7 @@ TEST_F(MiracleConfigTest, CustomActionsInSnapIncludeUnsnapCommand)
     unsetenv("SNAP");
 }
 
-TEST_F(MiracleConfigTest, CustomActionWithInvalidCommandIsNotAdded)
+TEST_F(FilesystemConfigurationTest, CustomActionWithInvalidCommandIsNotAdded)
 {
     YAML::Node node;
     YAML::Node action_override_node;
@@ -212,7 +212,7 @@ TEST_F(MiracleConfigTest, CustomActionWithInvalidCommandIsNotAdded)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -220,7 +220,7 @@ TEST_F(MiracleConfigTest, CustomActionWithInvalidCommandIsNotAdded)
     EXPECT_EQ(custom_action, nullptr);
 }
 
-TEST_F(MiracleConfigTest, InvalidInnerGapsResolveToDefault)
+TEST_F(FilesystemConfigurationTest, InvalidInnerGapsResolveToDefault)
 {
     YAML::Node node;
     YAML::Node vec;
@@ -229,12 +229,12 @@ TEST_F(MiracleConfigTest, InvalidInnerGapsResolveToDefault)
     node["inner_gaps"] = vec;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_inner_gaps_x(), 10);
     EXPECT_EQ(config.get_inner_gaps_y(), 10);
 }
 
-TEST_F(MiracleConfigTest, ValidInnerGapsAreSetCorrectly)
+TEST_F(FilesystemConfigurationTest, ValidInnerGapsAreSetCorrectly)
 {
     YAML::Node node;
     YAML::Node vec;
@@ -243,12 +243,12 @@ TEST_F(MiracleConfigTest, ValidInnerGapsAreSetCorrectly)
     node["inner_gaps"] = vec;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_inner_gaps_x(), 33);
     EXPECT_EQ(config.get_inner_gaps_y(), 44);
 }
 
-TEST_F(MiracleConfigTest, InvalidOuterGapsResolveToDefault)
+TEST_F(FilesystemConfigurationTest, InvalidOuterGapsResolveToDefault)
 {
     YAML::Node node;
     YAML::Node vec;
@@ -257,12 +257,12 @@ TEST_F(MiracleConfigTest, InvalidOuterGapsResolveToDefault)
     node["outer_gaps"] = vec;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_outer_gaps_x(), 10);
     EXPECT_EQ(config.get_outer_gaps_y(), 10);
 }
 
-TEST_F(MiracleConfigTest, ValidOuterGapsAreSetCorrectly)
+TEST_F(FilesystemConfigurationTest, ValidOuterGapsAreSetCorrectly)
 {
     YAML::Node node;
     YAML::Node vec;
@@ -271,12 +271,12 @@ TEST_F(MiracleConfigTest, ValidOuterGapsAreSetCorrectly)
     node["outer_gaps"] = vec;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_outer_gaps_x(), 33);
     EXPECT_EQ(config.get_outer_gaps_y(), 44);
 }
 
-TEST_F(MiracleConfigTest, ValidStartupAppsAreParsed)
+TEST_F(FilesystemConfigurationTest, ValidStartupAppsAreParsed)
 {
     YAML::Node node;
     YAML::Node startup_app;
@@ -285,13 +285,13 @@ TEST_F(MiracleConfigTest, ValidStartupAppsAreParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 1);
     EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     EXPECT_EQ(config.get_startup_apps()[0].restart_on_death, true);
 }
 
-TEST_F(MiracleConfigTest, StartupAppsInSnapIncludeUnsnapCommand)
+TEST_F(FilesystemConfigurationTest, StartupAppsInSnapIncludeUnsnapCommand)
 {
     setenv("SNAP", "test", 1);
     YAML::Node node;
@@ -301,23 +301,23 @@ TEST_F(MiracleConfigTest, StartupAppsInSnapIncludeUnsnapCommand)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     unsetenv("SNAP");
 }
 
-TEST_F(MiracleConfigTest, StartupAppsThatIsNotAnArrayIsNotParsed)
+TEST_F(FilesystemConfigurationTest, StartupAppsThatIsNotAnArrayIsNotParsed)
 {
     YAML::Node node;
     YAML::Node startup_app;
     node["startup_apps"] = "Hello";
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
-TEST_F(MiracleConfigTest, StartupAppsInvalidCommandIsNotParsed)
+TEST_F(FilesystemConfigurationTest, StartupAppsInvalidCommandIsNotParsed)
 {
     YAML::Node node;
     YAML::Node startup_app;
@@ -326,11 +326,11 @@ TEST_F(MiracleConfigTest, StartupAppsInvalidCommandIsNotParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
-TEST_F(MiracleConfigTest, StartupAppsInvalidRestartOnDeathIsNotParsed)
+TEST_F(FilesystemConfigurationTest, StartupAppsInvalidRestartOnDeathIsNotParsed)
 {
     YAML::Node node;
     YAML::Node startup_app;
@@ -339,11 +339,11 @@ TEST_F(MiracleConfigTest, StartupAppsInvalidRestartOnDeathIsNotParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
-TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenKeyIsMissing)
+TEST_F(FilesystemConfigurationTest, EnvironmentVariableInvalidWhenKeyIsMissing)
 {
     YAML::Node node;
     YAML::Node environment_variable;
@@ -351,11 +351,11 @@ TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenKeyIsMissing)
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_env_variables().size(), 0);
 }
 
-TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenValueIsMissing)
+TEST_F(FilesystemConfigurationTest, EnvironmentVariableInvalidWhenValueIsMissing)
 {
     YAML::Node node;
     YAML::Node environment_variable;
@@ -363,11 +363,11 @@ TEST_F(MiracleConfigTest, EnvironmentVariableInvalidWhenValueIsMissing)
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_env_variables().size(), 0);
 }
 
-TEST_F(MiracleConfigTest, EnvironmentVariableCanBeParsed)
+TEST_F(FilesystemConfigurationTest, EnvironmentVariableCanBeParsed)
 {
     YAML::Node node;
     YAML::Node environment_variable;
@@ -376,11 +376,11 @@ TEST_F(MiracleConfigTest, EnvironmentVariableCanBeParsed)
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_env_variables().size(), 1);
 }
 
-TEST_F(MiracleConfigTest, BorderCanbeParsedWithArrayColors)
+TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithArrayColors)
 {
     YAML::Node border;
     border["size"] = 2;
@@ -403,7 +403,7 @@ TEST_F(MiracleConfigTest, BorderCanbeParsedWithArrayColors)
     node["border"] = border;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_border_config().size, 2);
     EXPECT_EQ(config.get_border_config().color.r, 1.f);
     EXPECT_EQ(config.get_border_config().color.g, 155.f / 255.f);
@@ -415,7 +415,7 @@ TEST_F(MiracleConfigTest, BorderCanbeParsedWithArrayColors)
     EXPECT_EQ(config.get_border_config().focus_color.a, 1.f);
 }
 
-TEST_F(MiracleConfigTest, BorderCanbeParsedWithHexColor)
+TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithHexColor)
 {
     YAML::Node border;
     border["size"] = 2;
@@ -433,14 +433,14 @@ TEST_F(MiracleConfigTest, BorderCanbeParsedWithHexColor)
     node["border"] = border;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_border_config().color.r, 221.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.g, 137.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.b, 221.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.a, 1.f);
 }
 
-TEST_F(MiracleConfigTest, BorderCanbeParsedObjectColor)
+TEST_F(FilesystemConfigurationTest, BorderCanbeParsedObjectColor)
 {
     YAML::Node border;
     border["size"] = 2;
@@ -461,7 +461,7 @@ TEST_F(MiracleConfigTest, BorderCanbeParsedObjectColor)
     node["border"] = border;
     write_yaml_node(node);
 
-    MiracleConfig config(runner, path);
+    FilesystemConfiguration config(runner, path);
     EXPECT_EQ(config.get_border_config().color.r, 15.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.g, 25.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.b, 30.f / 255.f);

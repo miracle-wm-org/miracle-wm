@@ -17,46 +17,46 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "node"
 
-#include "node.h"
-#include "leaf_node.h"
+#include "container.h"
+#include "leaf_container.h"
 #include "node_common.h"
-#include "parent_node.h"
+#include "parent_container.h"
 
 using namespace miracle;
 
-Node::Node(std::shared_ptr<ParentNode> const& parent) :
+Container::Container(std::shared_ptr<ParentContainer> const& parent) :
     parent { parent }
 {
 }
 
-std::shared_ptr<LeafNode> Node::as_leaf(std::shared_ptr<Node> const& node)
+std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> const& node)
 {
-    return std::dynamic_pointer_cast<LeafNode>(node);
+    return std::dynamic_pointer_cast<LeafContainer>(node);
 }
 
-std::shared_ptr<ParentNode> Node::as_lane(std::shared_ptr<Node> const& node)
+std::shared_ptr<ParentContainer> Container::as_lane(std::shared_ptr<Container> const& node)
 {
-    return std::dynamic_pointer_cast<ParentNode>(node);
+    return std::dynamic_pointer_cast<ParentContainer>(node);
 }
 
-bool Node::is_leaf()
+bool Container::is_leaf()
 {
     return as_leaf(shared_from_this()) != nullptr;
 }
 
-bool Node::is_lane()
+bool Container::is_lane()
 {
     return as_lane(shared_from_this()) != nullptr;
 }
 
-std::weak_ptr<ParentNode> Node::get_parent() const
+std::weak_ptr<ParentContainer> Container::get_parent() const
 {
     return parent;
 }
 
 namespace
 {
-bool has_neighbor(Node const* node, NodeLayoutDirection direction, size_t cannot_be_index)
+bool has_neighbor(Container const* node, NodeLayoutDirection direction, size_t cannot_be_index)
 {
     auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
@@ -70,7 +70,7 @@ bool has_neighbor(Node const* node, NodeLayoutDirection direction, size_t cannot
         || has_neighbor(shared_parent.get(), direction, cannot_be_index);
 }
 
-bool has_right_neighbor(Node const* node)
+bool has_right_neighbor(Container const* node)
 {
     auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
@@ -78,7 +78,7 @@ bool has_right_neighbor(Node const* node)
     return has_neighbor(node, NodeLayoutDirection::horizontal, shared_parent->num_nodes() - 1);
 }
 
-bool has_bottom_neighbor(Node const* node)
+bool has_bottom_neighbor(Container const* node)
 {
     auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
@@ -86,7 +86,7 @@ bool has_bottom_neighbor(Node const* node)
     return has_neighbor(node, NodeLayoutDirection::vertical, shared_parent->num_nodes() - 1);
 }
 
-bool has_left_neighbor(Node const* node)
+bool has_left_neighbor(Container const* node)
 {
     auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
@@ -94,7 +94,7 @@ bool has_left_neighbor(Node const* node)
     return has_neighbor(node, NodeLayoutDirection::horizontal, 0);
 }
 
-bool has_top_neighbor(Node const* node)
+bool has_top_neighbor(Container const* node)
 {
     auto shared_parent = node->get_parent().lock();
     if (!shared_parent)
@@ -103,7 +103,7 @@ bool has_top_neighbor(Node const* node)
 }
 }
 
-std::array<bool, (size_t)Direction::MAX> Node::get_neighbors() const
+std::array<bool, (size_t)Direction::MAX> Container::get_neighbors() const
 {
     return {
         has_top_neighbor(this),

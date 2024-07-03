@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H
 #define MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H
 
-#include "tiling_interface.h"
+#include "window_controller.h"
 #include <miral/window_manager_tools.h>
 
 namespace miracle
@@ -26,10 +26,10 @@ namespace miracle
 class Animator;
 class CompositorState;
 
-class WindowManagerToolsTilingInterface : public TilingInterface
+class WindowManagerToolsWindowController : public WindowController
 {
 public:
-    WindowManagerToolsTilingInterface(
+    WindowManagerToolsWindowController(
         miral::WindowManagerTools const&,
         Animator& animator,
         CompositorState& state);
@@ -46,6 +46,10 @@ public:
     void raise(miral::Window const&) override;
     void send_to_back(miral::Window const&) override;
     void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const&) override;
+    void set_user_data(miral::Window const&, std::shared_ptr<void> const&) override;
+    void modify(miral::Window const&, miral::WindowSpecification const&) override;
+    miral::WindowInfo& info_for(miral::Window const&) override;
+    void close(miral::Window const& window) override;
 
 private:
     miral::WindowManagerTools tools;

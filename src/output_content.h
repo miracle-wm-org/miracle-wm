@@ -32,7 +32,7 @@ namespace miracle
 {
 class WorkspaceManager;
 class MiracleConfig;
-class WindowManagerToolsTilingInterface;
+class WindowManagerToolsWindowController;
 class Animator;
 
 class OutputContent
@@ -45,7 +45,7 @@ public:
         miral::WindowManagerTools const& tools,
         miral::MinimalWindowManager& floating_window_manager,
         std::shared_ptr<MiracleConfig> const& options,
-        TilingInterface&,
+        WindowController&,
         Animator&);
     ~OutputContent() = default;
 
@@ -108,7 +108,7 @@ public:
     void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
 
     geom::Rectangle const& get_area() { return area; }
-    std::vector<miral::Zone> const& get_app_zones() { return application_zone_list; }
+    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
     miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
@@ -126,7 +126,7 @@ private:
     miral::MinimalWindowManager& floating_window_manager;
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
-    TilingInterface& node_interface;
+    WindowController& window_controller;
     Animator& animator;
     int active_workspace = -1;
     std::vector<std::shared_ptr<WorkspaceContent>> workspaces;

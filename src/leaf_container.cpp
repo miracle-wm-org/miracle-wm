@@ -15,21 +15,21 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "leaf_node.h"
+#include "leaf_container.h"
 #include "mir_toolkit/common.h"
 #include "miracle_config.h"
-#include "parent_node.h"
+#include "parent_container.h"
 #include <cmath>
 
 using namespace miracle;
 
-LeafNode::LeafNode(
-    TilingInterface& node_interface,
+LeafContainer::LeafContainer(
+    WindowController& node_interface,
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentNode> const& parent) :
-    Node(parent),
+    std::shared_ptr<ParentContainer> const& parent) :
+    Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
     config { config },
@@ -37,32 +37,32 @@ LeafNode::LeafNode(
 {
 }
 
-void LeafNode::associate_to_window(miral::Window const& in_window)
+void LeafContainer::associate_to_window(miral::Window const& in_window)
 {
     window = in_window;
 }
 
-geom::Rectangle LeafNode::get_logical_area() const
+geom::Rectangle LeafContainer::get_logical_area() const
 {
     return next_logical_area ? next_logical_area.value() : logical_area;
 }
 
-void LeafNode::set_logical_area(geom::Rectangle const& target_rect)
+void LeafContainer::set_logical_area(geom::Rectangle const& target_rect)
 {
     next_logical_area = target_rect;
 }
 
-void LeafNode::set_parent(std::shared_ptr<ParentNode> const& in_parent)
+void LeafContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
 {
     parent = in_parent;
 }
 
-void LeafNode::set_state(MirWindowState state)
+void LeafContainer::set_state(MirWindowState state)
 {
     next_state = state;
 }
 
-geom::Rectangle LeafNode::get_visible_area() const
+geom::Rectangle LeafContainer::get_visible_area() const
 {
     // TODO: Could cache these half values in the config
     int const half_gap_x = (int)(ceil((double)config->get_inner_gaps_x() / 2.0));
@@ -97,7 +97,7 @@ geom::Rectangle LeafNode::get_visible_area() const
     };
 }
 
-void LeafNode::constrain()
+void LeafContainer::constrain()
 {
     if (node_interface.is_fullscreen(window))
         node_interface.noclip(window);
@@ -105,29 +105,29 @@ void LeafNode::constrain()
         node_interface.clip(window, get_visible_area());
 }
 
-size_t LeafNode::get_min_width() const
+size_t LeafContainer::get_min_width() const
 {
     return 50;
 }
 
-size_t LeafNode::get_min_height() const
+size_t LeafContainer::get_min_height() const
 {
     return 50;
 }
 
-void LeafNode::show()
+void LeafContainer::show()
 {
     next_state = before_shown_state;
     before_shown_state.reset();
 }
 
-void LeafNode::hide()
+void LeafContainer::hide()
 {
     before_shown_state = node_interface.get_state(window);
     next_state = mir_window_state_hidden;
 }
 
-void LeafNode::toggle_fullscreen()
+void LeafContainer::toggle_fullscreen()
 {
     if (node_interface.is_fullscreen(window))
         next_state = mir_window_state_restored;
@@ -135,12 +135,12 @@ void LeafNode::toggle_fullscreen()
         next_state = mir_window_state_fullscreen;
 }
 
-bool LeafNode::is_fullscreen() const
+bool LeafContainer::is_fullscreen() const
 {
     return node_interface.is_fullscreen(window);
 }
 
-void LeafNode::commit_changes()
+void LeafContainer::commit_changes()
 {
     if (next_state)
     {

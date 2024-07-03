@@ -38,7 +38,7 @@ add_library(miracle-wm-implementation
     STATIC
     src/policy.cpp
     src/tiling_window_tree.cpp
-    src/node.cpp
+    src/container.cpp
     src/window_helpers.h
     src/window_helpers.cpp
     src/miracle_config.cpp
@@ -50,9 +50,9 @@ add_library(miracle-wm-implementation
     src/workspace_observer.cpp
     src/window_metadata.cpp
     src/workspace_content.cpp
-    src/leaf_node.cpp
-    src/parent_node.cpp
-    src/window_manager_tools_tiling_interface.cpp
+    src/leaf_container.cpp
+    src/parent_container.cpp
+        src/window_manager_tools_window_controller.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
     src/miracle_gl_config.cpp

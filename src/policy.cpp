@@ -62,7 +62,7 @@ Policy::Policy(
     surface_tracker { surface_tracker },
     ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) },
     animator(server.the_main_loop(), config),
-    node_interface(tools, animator, state)
+    window_controller(tools, animator, state)
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
@@ -257,9 +257,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             orphaned_window_list.push_back(window);
             surface_tracker.add(window);
             auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
-            miral::WindowSpecification spec;
-            spec.userdata() = metadata;
-            window_manager_tools.modify_window(window, spec);
+            window_controller.set_user_data(window, metadata);
         }
 
         return;
@@ -271,7 +269,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     metadata->set_animation_handle(animator.register_animateable());
 
     if (metadata->get_type() != WindowType::other)
-        node_interface.open(window_info.window());
+        window_controller.open(window_info.window());
 
     pending_type = WindowType::none;
     pending_output.reset();
@@ -301,10 +299,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_focus_gained(metadata);
-    else
-        window_manager_tools.raise_tree(window_info.window());
+    metadata->get_output()->advise_focus_gained(metadata);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
@@ -362,7 +357,7 @@ void Policy::advise_output_create(miral::Output const& output)
 {
     auto output_content = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools,
-        floating_window_manager, config, node_interface, animator);
+        floating_window_manager, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
     output_list.push_back(output_content);
     if (active_output == nullptr)
@@ -418,9 +413,7 @@ void Policy::advise_output_delete(miral::Output const& output)
                 for (auto& window : other_output->collect_all_windows())
                 {
                     orphaned_window_list.push_back(window);
-                    WindowSpecification spec;
-                    spec.userdata() = std::make_shared<WindowMetadata>(WindowType::other, window);
-                    window_manager_tools.modify_window(window, spec);
+                    window_controller.set_user_data(window, std::make_shared<WindowMetadata>(WindowType::other, window));
                 }
 
                 remove_workspaces();

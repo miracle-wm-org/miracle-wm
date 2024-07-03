@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "auto_restarting_launcher.h"
 #include "direction.h"
 #include "i3_command.h"
-#include "leaf_node.h"
-#include "parent_node.h"
+#include "leaf_container.h"
+#include "parent_container.h"
 #include "policy.h"
 #include "window_helpers.h"
 

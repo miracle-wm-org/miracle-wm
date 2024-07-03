@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mode_observer.h"
 #include "output_content.h"
 #include "surface_tracker.h"
-#include "window_manager_tools_tiling_interface.h"
+#include "window_manager_tools_window_controller.h"
 #include "window_metadata.h"
 #include "workspace_manager.h"
 
@@ -46,6 +46,8 @@ class MirRunner;
 
 namespace miracle
 {
+
+class Container;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -133,7 +135,7 @@ private:
     WorkspaceManager workspace_manager;
     std::shared_ptr<Ipc> ipc;
     Animator animator;
-    WindowManagerToolsTilingInterface node_interface;
+    WindowManagerToolsWindowController window_controller;
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;
     CompositorState state;

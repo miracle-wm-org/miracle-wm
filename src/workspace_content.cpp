@@ -18,30 +18,58 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "workspace_content"
 
 #include "workspace_content.h"
-#include "leaf_node.h"
+#include "leaf_container.h"
 #include "miracle_config.h"
+#include "output_content.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
+#include <miral/zone.h>
 
 using namespace miracle;
+
+namespace
+{
+class OutputTilingWindowTreeInterface: public TilingWindowTreeInterface
+{
+public:
+    explicit OutputTilingWindowTreeInterface(miracle::OutputContent* screen)
+        : screen{screen} {}
+
+    geom::Rectangle const& get_area() override
+    {
+        return screen->get_area();
+    }
+
+    std::vector<miral::Zone> const& get_zones() override
+    {
+        return screen->get_app_zones();
+    }
+
+private:
+    miracle::OutputContent* screen;
+};
+
+}
 
 WorkspaceContent::WorkspaceContent(
     miracle::OutputContent* screen,
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    TilingInterface& node_interface,
+    WindowController& node_interface,
     miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
-    tree(std::make_shared<TilingWindowTree>(screen, node_interface, config)),
     workspace { workspace },
     node_interface { node_interface },
     config { config },
-    floating_window_manager { floating_window_manager }
+    floating_window_manager { floating_window_manager },
+    tree(std::make_shared<TilingWindowTree>(
+    std::make_unique<OutputTilingWindowTreeInterface>(output),
+    node_interface, config))
 {
 }
 
@@ -127,9 +155,9 @@ void WorkspaceContent::for_each_window(std::function<void(std::shared_ptr<Window
             f(metadata);
     }
 
-    tree->foreach_node([&](std::shared_ptr<Node> const& node)
+    tree->foreach_node([&](std::shared_ptr<Container> const& node)
     {
-        if (auto leaf = Node::as_leaf(node))
+        if (auto leaf = Container::as_leaf(node))
         {
             auto metadata = window_helpers::get_metadata(leaf->get_window(), tools);
             if (metadata)

@@ -15,10 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "window_manager_tools_tiling_interface.h"
+#include "window_manager_tools_window_controller.h"
 #include "animator.h"
 #include "compositor_state.h"
-#include "leaf_node.h"
+#include "leaf_container.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
 #include <mir/scene/surface.h>
@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
+WindowManagerToolsWindowController::WindowManagerToolsWindowController(
     miral::WindowManagerTools const& tools,
     Animator& animator,
     CompositorState& state) :
@@ -39,7 +39,7 @@ WindowManagerToolsTilingInterface::WindowManagerToolsTilingInterface(
 {
 }
 
-void WindowManagerToolsTilingInterface::open(miral::Window const& window)
+void WindowManagerToolsWindowController::open(miral::Window const& window)
 {
     auto metadata = get_metadata(window);
     if (!metadata)
@@ -56,13 +56,13 @@ void WindowManagerToolsTilingInterface::open(miral::Window const& window)
     });
 }
 
-bool WindowManagerToolsTilingInterface::is_fullscreen(miral::Window const& window)
+bool WindowManagerToolsWindowController::is_fullscreen(miral::Window const& window)
 {
     auto& info = tools.info_for(window);
     return window_helpers::is_window_fullscreen(info.state());
 }
 
-void WindowManagerToolsTilingInterface::set_rectangle(
+void WindowManagerToolsWindowController::set_rectangle(
     miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to)
 {
     auto metadata = get_metadata(window);
@@ -83,13 +83,13 @@ void WindowManagerToolsTilingInterface::set_rectangle(
     });
 }
 
-MirWindowState WindowManagerToolsTilingInterface::get_state(miral::Window const& window)
+MirWindowState WindowManagerToolsWindowController::get_state(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
     return window_info.state();
 }
 
-void WindowManagerToolsTilingInterface::change_state(miral::Window const& window, MirWindowState state)
+void WindowManagerToolsWindowController::change_state(miral::Window const& window, MirWindowState state)
 {
     auto& window_info = tools.info_for(window);
     miral::WindowSpecification spec;
@@ -98,19 +98,19 @@ void WindowManagerToolsTilingInterface::change_state(miral::Window const& window
     tools.modify_window(window, spec);
 }
 
-void WindowManagerToolsTilingInterface::clip(miral::Window const& window, geom::Rectangle const& r)
+void WindowManagerToolsWindowController::clip(miral::Window const& window, geom::Rectangle const& r)
 {
     auto& window_info = tools.info_for(window);
     window_info.clip_area(r);
 }
 
-void WindowManagerToolsTilingInterface::noclip(miral::Window const& window)
+void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
     window_info.clip_area(mir::optional_value<geom::Rectangle>());
 }
 
-void WindowManagerToolsTilingInterface::select_active_window(miral::Window const& window)
+void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)
 {
     if (state.mode == WindowManagerMode::resizing)
         return;
@@ -118,7 +118,7 @@ void WindowManagerToolsTilingInterface::select_active_window(miral::Window const
     tools.select_active_window(window);
 }
 
-std::shared_ptr<WindowMetadata> WindowManagerToolsTilingInterface::get_metadata(miral::Window const& window)
+std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(miral::Window const& window)
 {
     auto& info = tools.info_for(window);
     if (info.userdata())
@@ -127,7 +127,7 @@ std::shared_ptr<WindowMetadata> WindowManagerToolsTilingInterface::get_metadata(
     return nullptr;
 }
 
-std::shared_ptr<WindowMetadata> WindowManagerToolsTilingInterface::get_metadata(
+std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(
     miral::Window const& window, TilingWindowTree const* tree)
 {
     auto node = get_metadata(window);
@@ -140,17 +140,17 @@ std::shared_ptr<WindowMetadata> WindowManagerToolsTilingInterface::get_metadata(
     return nullptr;
 }
 
-void WindowManagerToolsTilingInterface::raise(miral::Window const& window)
+void WindowManagerToolsWindowController::raise(miral::Window const& window)
 {
     tools.raise_tree(window);
 }
 
-void WindowManagerToolsTilingInterface::send_to_back(miral::Window const& window)
+void WindowManagerToolsWindowController::send_to_back(miral::Window const& window)
 {
     tools.send_tree_to_back(window);
 }
 
-void WindowManagerToolsTilingInterface::on_animation(
+void WindowManagerToolsWindowController::on_animation(
     miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const& metadata)
 {
     auto window = metadata->get_window();
@@ -219,4 +219,28 @@ void WindowManagerToolsTilingInterface::on_animation(
         clip(window, new_rectangle);
     else
         noclip(window);
+}
+
+void WindowManagerToolsWindowController::set_user_data(
+    miral::Window const& window, std::shared_ptr<void> const& data)
+{
+    miral::WindowSpecification spec;
+    spec.userdata() = data;
+    tools.modify_window(window, spec);
+}
+
+void WindowManagerToolsWindowController::modify(
+    miral::Window const& window, miral::WindowSpecification const& spec)
+{
+    tools.modify_window(window, spec);
+}
+
+miral::WindowInfo& WindowManagerToolsWindowController::info_for(miral::Window const& window)
+{
+    return tools.info_for(window);
+}
+
+void WindowManagerToolsWindowController::close(miral::Window const& window)
+{
+    tools.ask_client_to_close(window);
 }
