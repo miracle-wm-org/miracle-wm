@@ -4,7 +4,7 @@
 2. Draft a new release
 3. Name the tag `v.X.Y.Z`
 4. Title the release `v.X.Y.Z`
-5. Target a branch, most likely `master`
+5. Target a branch, most likely `develop`
 6. Describe the release (You may generate release notes, but please make sure that they make sense before doing so)
 
 ## Step 2: Snap Release
