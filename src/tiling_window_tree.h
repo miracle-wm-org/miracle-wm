@@ -34,7 +34,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 
-class OutputContent;
+class CompositorState;
 class MiracleConfig;
 class WindowController;
 class LeafContainer;
@@ -52,6 +52,7 @@ public:
     TilingWindowTree(
         std::unique_ptr<TilingWindowTreeInterface> tree_interface,
         WindowController&,
+        CompositorState&,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
@@ -86,9 +87,6 @@ public:
 
     /// Advises us to focus the provided window.
     void advise_focus_gained(miral::Window&);
-
-    /// Advises us to lose focus on the provided window.
-    void advise_focus_lost(miral::Window&);
 
     /// Called when the window was deleted.
     void advise_delete_window(miral::Window&);
@@ -138,12 +136,11 @@ private:
     };
 
     WindowController& window_controller;
+    CompositorState& state;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentContainer> root_lane;
     std::unique_ptr<TilingWindowTreeInterface> tree_interface;
 
-    // TODO: We can probably remove active_window and just resolve it efficiently now?
-    std::shared_ptr<LeafContainer> active_window;
     bool is_active_window_fullscreen = false;
     bool is_hidden = false;
     int config_handle = 0;
@@ -170,6 +167,8 @@ private:
     /// Selects the next node in the provided direction
     /// @returns The next selectable window or nullptr if none is found
     static std::shared_ptr<LeafContainer> handle_select(std::shared_ptr<Container> const& from, Direction direction);
+
+    std::shared_ptr<LeafContainer> active_container() const;
 };
 
 }

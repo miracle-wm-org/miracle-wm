@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "window_metadata.h"
 #include "output_content.h"
+#include "compositor_state.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
@@ -87,7 +88,7 @@ bool WindowMetadata::is_focused() const
     if (!output)
         return false;
 
-    return output->get_active_window() == window;
+    return output->get_state().active_window == window;
 }
 
 void WindowMetadata::set_workspace(std::shared_ptr<WorkspaceContent> const& in_workspace)
