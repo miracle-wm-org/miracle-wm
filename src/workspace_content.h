@@ -31,6 +31,7 @@ class OutputContent;
 class MiracleConfig;
 class TilingWindowTree;
 class WindowController;
+class CompositorState;
 
 class WorkspaceContent
 {
@@ -40,7 +41,8 @@ public:
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
-        WindowController& node_interface,
+        WindowController& window_controller,
+        CompositorState& state,
         miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;

@@ -33,6 +33,7 @@ namespace miracle
 class WorkspaceManager;
 class MiracleConfig;
 class WindowManagerToolsWindowController;
+class CompositorState;
 class Animator;
 
 class OutputContent
@@ -44,6 +45,7 @@ public:
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
         miral::MinimalWindowManager& floating_window_manager,
+        CompositorState& state,
         std::shared_ptr<MiracleConfig> const& options,
         WindowController&,
         Animator&);
@@ -112,7 +114,7 @@ public:
     miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
-    miral::Window get_active_window() { return active_window; }
+    [[nodiscard]] CompositorState const& get_state() const { return state; }
 
     [[nodiscard]] glm::mat4 get_transform() const;
     void set_transform(glm::mat4 const& in);
@@ -124,6 +126,7 @@ private:
     WorkspaceManager& workspace_manager;
     miral::WindowManagerTools tools;
     miral::MinimalWindowManager& floating_window_manager;
+    CompositorState& state;
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;
     WindowController& window_controller;
@@ -132,7 +135,6 @@ private:
     std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
-    miral::Window active_window;
     AnimationHandle handle;
     bool has_clicked_floating_window = false;
 

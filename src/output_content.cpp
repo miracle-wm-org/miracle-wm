@@ -15,22 +15,23 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "output_content"
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "window_metadata.h"
 #include "workspace_content.h"
-#include <memory>
-#define MIR_LOG_COMPONENT "output_content"
-
 #include "animator.h"
 #include "leaf_container.h"
 #include "output_content.h"
 #include "window_helpers.h"
 #include "workspace_manager.h"
-#define GLM_ENABLE_EXPERIMENTAL
+#include "compositor_state.h"
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
+#include <memory>
 
 using namespace miracle;
 
@@ -40,6 +41,7 @@ OutputContent::OutputContent(
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
     miral::MinimalWindowManager& floating_window_manager,
+    CompositorState& state,
     std::shared_ptr<MiracleConfig> const& config,
     WindowController& node_interface,
     Animator& animator) :
@@ -48,6 +50,7 @@ OutputContent::OutputContent(
     area { area },
     tools { tools },
     floating_window_manager { floating_window_manager },
+    state { state },
     config { config },
     window_controller { node_interface },
     animator { animator },
@@ -82,7 +85,7 @@ bool OutputContent::handle_pointer_event(const MirPointerEvent* event)
         return true;
 
     auto const action = mir_pointer_event_action(event);
-    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(active_window))
+    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(state.active_window))
     {
         if (action == mir_pointer_action_button_down)
             has_clicked_floating_window = true;
@@ -175,7 +178,7 @@ void OutputContent::handle_window_ready(miral::WindowInfo& window_info, std::sha
             window_controller.raise(window);
 
         if (tree->has_fullscreen_window())
-            window_controller.raise(active_window);
+            window_controller.raise(window_info.window());
         break;
     }
     case WindowType::floating:
@@ -189,7 +192,6 @@ void OutputContent::handle_window_ready(miral::WindowInfo& window_info, std::sha
 
 void OutputContent::advise_focus_gained(const std::shared_ptr<miracle::WindowMetadata>& metadata)
 {
-    active_window = metadata->get_window();
     switch (metadata->get_type())
     {
     case WindowType::tiled:
@@ -211,10 +213,7 @@ void OutputContent::advise_focus_lost(const std::shared_ptr<miracle::WindowMetad
     switch (metadata->get_type())
     {
     case WindowType::tiled:
-    {
-        metadata->get_tiling_node()->get_tree()->advise_focus_lost(metadata->get_window());
         break;
-    }
     case WindowType::floating:
         floating_window_manager.advise_focus_lost(window_controller.info_for(metadata->get_window()));
         break;
@@ -401,7 +400,7 @@ bool OutputContent::select_window_from_point(int x, int y)
     for (int i = 0; i < floating.size(); i++)
     {
         geom::Rectangle window_area(floating[i].top_left(), floating[i].size());
-        if (floating[i] == active_window && window_area.contains(geom::Point(x, y)))
+        if (floating[i] == state.active_window && window_area.contains(geom::Point(x, y)))
             return false;
         else if (window_area.contains(geom::Point(x, y)))
             floating_index = i;
@@ -414,7 +413,7 @@ bool OutputContent::select_window_from_point(int x, int y)
     }
 
     auto node = workspace->get_tree()->select_window_from_point(x, y);
-    if (node && node->get_window() != active_window)
+    if (node && node->get_window() != state.active_window)
     {
         window_controller.select_active_window(node->get_window());
         return true;
@@ -444,7 +443,7 @@ void OutputContent::advise_new_workspace(int workspace)
 {
     // Workspaces are always kept in sorted order
     auto new_workspace = std::make_shared<WorkspaceContent>(
-        this, tools, workspace, config, window_controller, floating_window_manager);
+        this, tools, workspace, config, window_controller, state, floating_window_manager);
     insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceContent> const& a, std::shared_ptr<WorkspaceContent> const& b)
     {
         return a->get_workspace() < b->get_workspace();
@@ -599,7 +598,7 @@ bool OutputContent::point_is_in_output(int x, int y)
 
 void OutputContent::close_active_window()
 {
-    window_controller.close(active_window);
+    window_controller.close(state.active_window);
 }
 
 bool OutputContent::resize_active_window(miracle::Direction direction)
@@ -614,7 +613,7 @@ bool OutputContent::select(miracle::Direction direction)
 
 bool OutputContent::move_active_window(miracle::Direction direction)
 {
-    auto metadata = window_helpers::get_metadata(active_window, tools);
+    auto metadata = window_helpers::get_metadata(state.active_window, tools);
     if (!metadata)
         return false;
 
@@ -632,7 +631,7 @@ bool OutputContent::move_active_window(miracle::Direction direction)
 
 bool OutputContent::move_active_window_by_amount(Direction direction, int pixels)
 {
-    auto metadata = window_helpers::get_metadata(active_window, tools);
+    auto metadata = window_helpers::get_metadata(state.active_window, tools);
     if (!metadata)
         return false;
 
@@ -642,8 +641,8 @@ bool OutputContent::move_active_window_by_amount(Direction direction, int pixels
         return false;
     }
 
-    auto& info = window_controller.info_for(active_window);
-    auto prev_pos = active_window.top_left();
+    auto& info = window_controller.info_for(state.active_window);
+    auto prev_pos = state.active_window.top_left();
     miral::WindowSpecification spec;
     switch (direction)
     {
@@ -678,7 +677,7 @@ bool OutputContent::move_active_window_by_amount(Direction direction, int pixels
 
 bool OutputContent::move_active_window_to(int x, int y)
 {
-    auto metadata = window_helpers::get_metadata(active_window, tools);
+    auto metadata = window_helpers::get_metadata(state.active_window, tools);
     if (!metadata)
         return false;
 
@@ -693,7 +692,7 @@ bool OutputContent::move_active_window_to(int x, int y)
         x,
         y,
     };
-    window_controller.modify(active_window, spec);
+    window_controller.modify(state.active_window, spec);
     return true;
 }
 
@@ -793,32 +792,32 @@ void OutputContent::request_toggle_active_float()
             return;
         }
 
-        tree->advise_delete_window(active_window);
+        tree->advise_delete_window(state.active_window);
 
-        auto& prev_info = window_controller.info_for(active_window);
+        auto& prev_info = window_controller.info_for(state.active_window);
         WindowSpecification prev_spec = window_helpers::copy_from(prev_info);
 
-        auto& info = window_controller.info_for(active_window);
+        auto& info = window_controller.info_for(state.active_window);
         info.clip_area(area);
 
         WindowSpecification spec = floating_window_manager.place_new_window(
-            tools.info_for(active_window.application()),
+            tools.info_for(state.active_window.application()),
             prev_spec);
-        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, active_window, get_active_workspace());
-        spec.top_left() = geom::Point { active_window.top_left().x.as_int() + 20, active_window.top_left().y.as_int() + 20 };
-        tools.modify_window(active_window, spec);
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, state.active_window, get_active_workspace());
+        spec.top_left() = geom::Point { state.active_window.top_left().x.as_int() + 20, state.active_window.top_left().y.as_int() + 20 };
+        tools.modify_window(state.active_window, spec);
 
         advise_new_window(info, WindowType::floating);
-        auto new_metadata = window_helpers::get_metadata(active_window, tools);
+        auto new_metadata = window_helpers::get_metadata(state.active_window, tools);
         handle_window_ready(info, new_metadata);
-        window_controller.select_active_window(active_window);
-        get_active_workspace()->add_floating_window(active_window);
+        window_controller.select_active_window(state.active_window);
+        get_active_workspace()->add_floating_window(state.active_window);
         break;
     }
     case WindowType::floating:
     {
-        advise_delete_window(window_helpers::get_metadata(active_window, tools));
-        add_immediately(active_window, WindowType::tiled);
+        advise_delete_window(window_helpers::get_metadata(state.active_window, tools));
+        add_immediately(state.active_window, WindowType::tiled);
         break;
     }
     default:

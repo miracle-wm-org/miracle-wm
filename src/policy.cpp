@@ -292,6 +292,7 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
+    state.active_window = window_info.window();
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
@@ -304,6 +305,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
+    state.active_window = Window();
     auto metadata = window_helpers::get_metadata(window_info);
     if (!metadata)
     {
@@ -338,6 +340,9 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         metadata->get_output()->advise_delete_window(metadata);
 
     surface_tracker.remove(window_info.window());
+
+    if (state.active_window == window_info.window())
+        state.active_window = Window();
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -357,7 +362,7 @@ void Policy::advise_output_create(miral::Output const& output)
 {
     auto output_content = std::make_shared<OutputContent>(
         output, workspace_manager, output.extents(), window_manager_tools,
-        floating_window_manager, config, window_controller, animator);
+        floating_window_manager, state, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
     output_list.push_back(output_content);
     if (active_output == nullptr)
@@ -558,7 +563,7 @@ void Policy::try_toggle_resize_mode()
         return;
     }
 
-    auto const& window = active_output->get_active_window();
+    auto const& window = state.active_window;
     if (!window)
     {
         state.mode = WindowManagerMode::normal;
@@ -687,10 +692,21 @@ bool Policy::move_active_to_workspace(int number)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!active_output || !state.active_window)
         return false;
 
-    workspace_manager.move_active_to_workspace(active_output, number);
+    auto& info = window_controller.info_for(state.active_window);
+    if (window_helpers::is_window_fullscreen(info.state()))
+        return false;
+
+    auto metadata = window_controller.get_metadata(state.active_window);
+    auto window_to_move = state.active_window;
+    active_output->advise_delete_window(metadata);
+    state.active_window = Window();
+
+    auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);
+    screen_to_move_to->add_immediately(window_to_move, WindowType::tiled);
+
     return true;
 }
 

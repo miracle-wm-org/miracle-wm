@@ -16,10 +16,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "tiling_window_tree.h"
+#include "compositor_state.h"
 #include "window_controller.h"
 #include "leaf_container.h"
 #include "window_metadata.h"
 #include "stub_configuration.h"
+#include "stub_session.h"
+#include "stub_surface.h"
 #include <gtest/gtest.h>
 #include <miral/window_management_options.h>
 
@@ -104,6 +107,7 @@ public:
         : tree(
             std::make_unique<SimpleTilingWindowTreeInterface>(),
             window_controller,
+            state,
             std::make_shared<test::StubConfiguration>()
         )
     {
@@ -114,7 +118,12 @@ public:
         miral::WindowSpecification spec;
         spec = tree.allocate_position(spec);
 
-        miral::Window window(nullptr, nullptr);
+        auto session = std::make_shared<test::StubSession>();
+        sessions.push_back(session);
+        auto surface = std::make_shared<test::StubSurface>();
+        surfaces.push_back(surface);
+        
+        miral::Window window(session, surface);
         miral::WindowInfo info(window, spec);
         auto metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window);
         pairs.push_back({window, metadata});
@@ -122,10 +131,15 @@ public:
 
         auto leaf = tree.advise_new_window(info);
         metadata->associate_to_node(leaf);
+
+        state.active_window = window;
         tree.advise_focus_gained(info.window());
         return leaf;
     }
 
+    CompositorState state;
+    std::vector<std::shared_ptr<test::StubSession>> sessions;
+    std::vector<std::shared_ptr<test::StubSurface>> surfaces;
     std::vector<std::pair<miral::Window, std::shared_ptr<WindowMetadata>>> pairs;
     StubWindowController window_controller{pairs};
     TilingWindowTree tree;

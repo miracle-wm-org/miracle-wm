@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_COMPOSITOR_STATE_H
 
 #include <mir/geometry/point.h>
+#include <miral/window.h>
 
 namespace miracle
 {
@@ -36,6 +37,7 @@ struct CompositorState
 {
     mir::geometry::Point cursor_position;
     WindowManagerMode mode = WindowManagerMode::normal;
+    miral::Window active_window;
 };
 }
 

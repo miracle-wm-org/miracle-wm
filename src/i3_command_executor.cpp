@@ -341,7 +341,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            auto active_window = active_output->get_active_window();
+            auto active_window = policy.get_state().active_window;
             auto area = active_output->get_area();
             float x = (float)area.size.width.as_int() / 2.f - (float)active_window.size().width.as_int() / 2.f;
             float y = (float)area.size.height.as_int() / 2.f - (float)active_window.size().height.as_int() / 2.f;
@@ -401,7 +401,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
                 y = end_y;
         }
 
-        auto active_window = active_output->get_active_window();
+        auto active_window = policy.get_state().active_window;
         float x_pos = x / 2.f - (float)active_window.size().width.as_int() / 2.f;
         float y_pos = y / 2.f - (float)active_window.size().height.as_int() / 2.f;
         active_output->move_active_window_to((int)x_pos, (int)y_pos);

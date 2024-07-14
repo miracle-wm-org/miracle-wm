@@ -60,6 +60,7 @@ WorkspaceContent::WorkspaceContent(
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
     WindowController& node_interface,
+    CompositorState& state,
     miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
@@ -69,7 +70,7 @@ WorkspaceContent::WorkspaceContent(
     floating_window_manager { floating_window_manager },
     tree(std::make_shared<TilingWindowTree>(
     std::make_unique<OutputTilingWindowTreeInterface>(output),
-    node_interface, config))
+    node_interface, state, config))
 {
 }
 
