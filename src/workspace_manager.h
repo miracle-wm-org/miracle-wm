@@ -34,9 +34,8 @@ using miral::Window;
 using miral::WindowInfo;
 using miral::WindowManagerTools;
 using miral::WindowSpecification;
-using miral::Workspace;
 
-class OutputContent;
+class Output;
 
 class WorkspaceManager
 {
@@ -44,29 +43,29 @@ public:
     explicit WorkspaceManager(
         WindowManagerTools const& tools,
         WorkspaceObserverRegistrar& registry,
-        std::function<std::shared_ptr<OutputContent> const()> const& get_active_screen);
+        std::function<std::shared_ptr<Output> const()> const& get_active_screen);
     virtual ~WorkspaceManager() = default;
 
     /// Request the workspace. If it does not yet exist, then one
     /// is created on the current Screen. If it does exist, we navigate
     /// to the screen containing that workspace and show it if it
     /// isn't already shown.
-    std::shared_ptr<OutputContent> request_workspace(std::shared_ptr<OutputContent> screen, int workspace);
+    std::shared_ptr<Output> request_workspace(std::shared_ptr<Output> screen, int workspace);
 
-    bool request_first_available_workspace(std::shared_ptr<OutputContent> screen);
+    bool request_first_available_workspace(std::shared_ptr<Output> screen);
 
     bool delete_workspace(int workspace);
 
     void request_focus(int workspace);
 
     static int constexpr NUM_WORKSPACES = 10;
-    std::array<std::shared_ptr<OutputContent>, NUM_WORKSPACES> const& get_workspaces() { return workspaces; }
+    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> const& get_workspaces() { return workspaces; }
 
 private:
     WindowManagerTools tools_;
     WorkspaceObserverRegistrar& registry;
-    std::function<std::shared_ptr<OutputContent> const()> get_active_screen;
-    std::array<std::shared_ptr<OutputContent>, NUM_WORKSPACES> workspaces;
+    std::function<std::shared_ptr<Output> const()> get_active_screen;
+    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> workspaces;
 };
 }
 

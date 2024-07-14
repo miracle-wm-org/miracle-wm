@@ -117,7 +117,7 @@ public:
     std::shared_ptr<LeafContainer> create_leaf()
     {
         miral::WindowSpecification spec;
-        spec = tree.allocate_position(spec);
+        spec = tree.place_new_window(spec);
 
         auto session = std::make_shared<test::StubSession>();
         sessions.push_back(session);

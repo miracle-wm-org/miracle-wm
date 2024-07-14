@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_VECTOR_HELPERS_H
 #define MIRACLE_WM_VECTOR_HELPERS_H
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 namespace miracle
 {
@@ -33,4 +33,4 @@ insert_sorted(std::vector<T>& vec, T const& item, Pred pred)
 }
 }
 
-#endif //MIRACLE_WM_VECTOR_HELPERS_H
+#endif // MIRACLE_WM_VECTOR_HELPERS_H

@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
 #include "animator.h"
-#include "window_metadata.h"
 #include "direction.h"
+#include "window_metadata.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <miral/minimal_window_manager.h>
@@ -28,17 +28,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class OutputContent;
+class Output;
 class MiracleConfig;
 class TilingWindowTree;
 class WindowController;
 class CompositorState;
 
-class WorkspaceContent
+class Workspace
 {
 public:
-    WorkspaceContent(
-        OutputContent* output,
+    Workspace(
+        Output* output,
         miral::WindowManagerTools const& tools,
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
@@ -82,7 +82,7 @@ public:
     bool move_active_window_to(int x, int y);
     void show();
     void hide();
-    void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
+    void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);
     void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
     bool select_window_from_point(int x, int y);
     bool resize_active_window(miracle::Direction);
@@ -97,13 +97,13 @@ public:
     void add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
     [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
-    OutputContent* get_output();
+    Output* get_output();
     void trigger_rerender();
     [[nodiscard]] bool is_empty() const;
     static int workspace_to_number(int workspace);
 
 private:
-    OutputContent* output;
+    Output* output;
     miral::WindowManagerTools tools;
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;

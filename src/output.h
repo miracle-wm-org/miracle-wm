@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miral/window.h"
 #include "tiling_window_tree.h"
 #include "window_metadata.h"
-#include "workspace_content.h"
+#include "workspace.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/output.h>
@@ -36,10 +36,10 @@ class WindowManagerToolsWindowController;
 class CompositorState;
 class Animator;
 
-class OutputContent
+class Output
 {
 public:
-    OutputContent(
+    Output(
         miral::Output const& output,
         WorkspaceManager& workspace_manager,
         geom::Rectangle const& area,
@@ -49,11 +49,10 @@ public:
         std::shared_ptr<MiracleConfig> const& options,
         WindowController&,
         Animator&);
-    ~OutputContent() = default;
+    ~Output() = default;
 
-    [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
+    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
     [[nodiscard]] std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
@@ -80,7 +79,7 @@ public:
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<std::shared_ptr<WorkspaceContent>> const& get_workspaces() const { return workspaces; }
+    std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
@@ -134,7 +133,7 @@ private:
     WindowController& window_controller;
     Animator& animator;
     int active_workspace = -1;
-    std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
+    std::vector<std::shared_ptr<Workspace>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     AnimationHandle handle;

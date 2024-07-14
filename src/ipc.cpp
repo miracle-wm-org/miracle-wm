@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc.h"
 #include "i3_command_executor.h"
 #include "miracle_config.h"
-#include "output_content.h"
+#include "output.h"
 #include "policy.h"
 #include "version.h"
 
@@ -70,30 +70,30 @@ struct sockaddr_un* ipc_user_sockaddr()
     return ipc_sockaddr;
 }
 
-json workspace_to_json(std::shared_ptr<OutputContent> const& screen, int key)
+json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
 {
     bool is_focused = screen->get_active_workspace_num() == key;
     auto area = screen->get_workspace_rectangle(key);
 
     return {
-        { "num",     WorkspaceContent::workspace_to_number(key) },
-        { "id",      key                                        },
-        { "type",    "workspace"                                },
-        { "name",    std::to_string(key)                        },
-        { "visible", screen->is_active() && is_focused          },
-        { "focused", screen->is_active() && is_focused          },
-        { "urgent",  false                                      },
-        { "output",  screen->get_output().name()                },
+        { "num",     Workspace::workspace_to_number(key) },
+        { "id",      key                                 },
+        { "type",    "workspace"                         },
+        { "name",    std::to_string(key)                 },
+        { "visible", screen->is_active() && is_focused   },
+        { "focused", screen->is_active() && is_focused   },
+        { "urgent",  false                               },
+        { "output",  screen->get_output().name()         },
         { "rect",    {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                            }
+                  }                     }
     };
 }
 
-json output_to_json(std::shared_ptr<OutputContent> const& output)
+json output_to_json(std::shared_ptr<Output> const& output)
 {
     auto area = output->get_area();
     auto miral_output = output->get_output();
@@ -110,7 +110,7 @@ json output_to_json(std::shared_ptr<OutputContent> const& output)
     };
 }
 
-json outputs_to_json(std::vector<std::shared_ptr<OutputContent>> const& outputs)
+json outputs_to_json(std::vector<std::shared_ptr<Output>> const& outputs)
 {
     json outputs_json;
     for (auto const& output : outputs)
@@ -313,7 +313,7 @@ Ipc::Ipc(miral::MirRunner& runner,
     });
 }
 
-void Ipc::on_created(std::shared_ptr<OutputContent> const& info, int key)
+void Ipc::on_created(std::shared_ptr<Output> const& info, int key)
 {
     json j = {
         { "change", "init" },
@@ -333,7 +333,7 @@ void Ipc::on_created(std::shared_ptr<OutputContent> const& info, int key)
     }
 }
 
-void Ipc::on_removed(std::shared_ptr<OutputContent> const& screen, int key)
+void Ipc::on_removed(std::shared_ptr<Output> const& screen, int key)
 {
     json j = {
         { "change", "empty" },
@@ -353,9 +353,9 @@ void Ipc::on_removed(std::shared_ptr<OutputContent> const& screen, int key)
 }
 
 void Ipc::on_focused(
-    std::shared_ptr<OutputContent> const& previous,
+    std::shared_ptr<Output> const& previous,
     int previous_key,
-    std::shared_ptr<OutputContent> const& current,
+    std::shared_ptr<Output> const& current,
     int current_key)
 {
     json j = {

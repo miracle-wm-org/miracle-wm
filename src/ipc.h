@@ -88,9 +88,9 @@ public:
         I3CommandExecutor&,
         std::shared_ptr<MiracleConfig> const&);
 
-    void on_created(std::shared_ptr<OutputContent> const& info, int key) override;
-    void on_removed(std::shared_ptr<OutputContent> const& info, int key) override;
-    void on_focused(std::shared_ptr<OutputContent> const& previous, int, std::shared_ptr<OutputContent> const& current, int) override;
+    void on_created(std::shared_ptr<Output> const& info, int key) override;
+    void on_removed(std::shared_ptr<Output> const& info, int key) override;
+    void on_focused(std::shared_ptr<Output> const& previous, int, std::shared_ptr<Output> const& current, int) override;
     void on_changed(WindowManagerMode mode) override;
 
 private:

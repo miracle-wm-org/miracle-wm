@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
-#include "output_content.h"
+#include "output.h"
 #include "parent_container.h"
 #include "window_helpers.h"
 

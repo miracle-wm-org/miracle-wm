@@ -43,16 +43,16 @@ add_library(miracle-wm-implementation
     src/window_helpers.cpp
     src/miracle_config.cpp
     src/miracle_config.h
-    src/output_content.cpp
+    src/output.cpp
     src/workspace_manager.cpp
     src/ipc.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_observer.cpp
     src/window_metadata.cpp
-    src/workspace_content.cpp
+    src/workspace.cpp
     src/leaf_container.cpp
     src/parent_container.cpp
-        src/window_manager_tools_window_controller.cpp
+    src/window_manager_tools_window_controller.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
     src/miracle_gl_config.cpp
