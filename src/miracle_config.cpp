@@ -250,9 +250,9 @@ void FilesystemConfiguration::_load()
             DefaultKeyCommand key_command;
             if (name == "terminal")
                 key_command = DefaultKeyCommand::Terminal;
-            else if (name == "request_vertical")
+            else if (name == "request_vertical_layout")
                 key_command = DefaultKeyCommand::RequestVertical;
-            else if (name == "request_horizontal")
+            else if (name == "request_horizontal_layout")
                 key_command = DefaultKeyCommand::RequestHorizontal;
             else if (name == "toggle_resize")
                 key_command = DefaultKeyCommand::ToggleResize;

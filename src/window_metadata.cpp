@@ -43,7 +43,7 @@ WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window) :
 WindowMetadata::WindowMetadata(
     miracle::WindowType type,
     miral::Window const& window,
-    std::shared_ptr<WorkspaceContent> const& workspace) :
+    WorkspaceContent* workspace) :
     type { type },
     window { window },
     workspace { workspace }
@@ -91,12 +91,7 @@ bool WindowMetadata::is_focused() const
     return output->get_state().active_window == window;
 }
 
-void WindowMetadata::set_workspace(std::shared_ptr<WorkspaceContent> const& in_workspace)
-{
-    workspace = in_workspace;
-}
-
-std::shared_ptr<WorkspaceContent> const& WindowMetadata::get_workspace() const
+WorkspaceContent* WindowMetadata::get_workspace() const
 {
     return workspace;
 }

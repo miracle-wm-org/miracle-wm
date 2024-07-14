@@ -40,12 +40,11 @@ enum class WindowType
 
 WindowType window_type_from_string(std::string const&);
 
-/// Applied to WindowInfo to enable
 class WindowMetadata
 {
 public:
     WindowMetadata(WindowType type, miral::Window const& window);
-    WindowMetadata(WindowType type, miral::Window const& window, std::shared_ptr<WorkspaceContent> const& workspace);
+    WindowMetadata(WindowType type, miral::Window const& window, WorkspaceContent* workspace);
     void associate_to_node(std::shared_ptr<LeafContainer> const&);
     miral::Window& get_window() { return window; }
     std::shared_ptr<LeafContainer> get_tiling_node() const;
@@ -56,8 +55,7 @@ public:
     void toggle_pin_to_desktop();
     void set_is_pinned(bool is_pinned);
     [[nodiscard]] bool is_focused() const;
-    void set_workspace(std::shared_ptr<WorkspaceContent> const& workspace);
-    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_workspace() const;
+    [[nodiscard]] WorkspaceContent* get_workspace() const;
     [[nodiscard]] uint32_t get_animation_handle() const;
     void set_animation_handle(uint32_t);
     [[nodiscard]] OutputContent* get_output() const;
@@ -69,7 +67,7 @@ public:
 private:
     WindowType type;
     miral::Window window;
-    std::shared_ptr<WorkspaceContent> workspace;
+    WorkspaceContent* workspace;
     std::shared_ptr<LeafContainer> tiling_node;
     std::optional<MirWindowState> restore_state;
     bool is_pinned = false;

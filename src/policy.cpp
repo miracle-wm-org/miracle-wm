@@ -599,7 +599,7 @@ bool Policy::try_request_vertical()
     if (!active_output)
         return false;
 
-    active_output->request_vertical();
+    active_output->request_vertical_layout();
     return true;
 }
 
@@ -611,7 +611,7 @@ bool Policy::try_request_horizontal()
     if (!active_output)
         return false;
 
-    active_output->request_horizontal();
+    active_output->request_horizontal_layout();
     return true;
 }
 

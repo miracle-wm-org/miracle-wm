@@ -169,7 +169,7 @@ TEST_F(TilingWindowTreeTest, can_add_two_windows_vertically_without_border_and_g
 {
     auto leaf1 = create_leaf();
 
-    tree.request_vertical();
+    tree.request_vertical_layout();
 
     auto leaf2 = create_leaf();
     ASSERT_EQ(leaf1->get_logical_area().size, geom::Size(1280, 720 / 2.f));

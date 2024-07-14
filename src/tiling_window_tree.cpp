@@ -243,12 +243,12 @@ bool TilingWindowTree::try_move_active_window(miracle::Direction direction)
     return true;
 }
 
-void TilingWindowTree::request_vertical()
+void TilingWindowTree::request_vertical_layout()
 {
     handle_direction_change(NodeLayoutDirection::vertical);
 }
 
-void TilingWindowTree::request_horizontal()
+void TilingWindowTree::request_horizontal_layout()
 {
     handle_direction_change(NodeLayoutDirection::horizontal);
 }

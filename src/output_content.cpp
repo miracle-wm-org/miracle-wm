@@ -109,58 +109,10 @@ WindowType OutputContent::allocate_position(
     return get_active_workspace()->allocate_position(app_info, requested_specification, ideal_type);
 }
 
-std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(miral::WindowInfo const& window_info, WindowType type)
+std::shared_ptr<WindowMetadata> OutputContent::advise_new_window(
+    miral::WindowInfo const& window_info, WindowType type) const
 {
-    std::shared_ptr<WindowMetadata> metadata = nullptr;
-    switch (type)
-    {
-    case WindowType::tiled:
-    {
-        auto const& tree = get_active_tree();
-        auto node = tree->advise_new_window(window_info);
-        metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), get_active_workspace());
-        metadata->associate_to_node(node);
-        break;
-    }
-    case WindowType::floating:
-    {
-        floating_window_manager.advise_new_window(window_info);
-        metadata = std::make_shared<WindowMetadata>(WindowType::floating, window_info.window(), get_active_workspace());
-        get_active_workspace()->add_floating_window(window_info.window());
-        break;
-    }
-    case WindowType::other:
-        if (window_info.state() == MirWindowState::mir_window_state_attached)
-        {
-            window_controller.select_active_window(window_info.window());
-        }
-        metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
-        break;
-    default:
-        mir::log_error("Unsupported window type: %d", (int)type);
-        break;
-    }
-
-    if (metadata)
-    {
-        miral::WindowSpecification spec;
-        spec.userdata() = metadata;
-        spec.min_width() = mir::geometry::Width(0);
-        spec.min_height() = mir::geometry::Height(0);
-        window_controller.modify(window_info.window(), spec);
-
-        // Warning: We need to advise fullscreen only after we've associated the userdata() appropriately
-        if (type == WindowType::tiled && window_helpers::is_window_fullscreen(window_info.state()))
-        {
-            get_active_tree()->advise_fullscreen_window(window_info.window());
-        }
-        return metadata;
-    }
-    else
-    {
-        mir::log_error("Window failed to set metadata");
-        return nullptr;
-    }
+    return get_active_workspace()->advise_new_window(window_info, type);
 }
 
 void OutputContent::handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata)
@@ -573,14 +525,14 @@ void OutputContent::close_active_window()
     window_controller.close(state.active_window);
 }
 
-bool OutputContent::resize_active_window(miracle::Direction direction)
+bool OutputContent::resize_active_window(miracle::Direction direction) const
 {
-    return get_active_tree()->try_resize_active_window(direction);
+    return get_active_workspace()->resize_active_window(direction);
 }
 
-bool OutputContent::select(miracle::Direction direction)
+bool OutputContent::select(miracle::Direction direction) const
 {
-    return get_active_tree()->try_select_next(direction);
+    return get_active_workspace()->select(direction);
 }
 
 bool OutputContent::move_active_window(miracle::Direction direction)
@@ -668,24 +620,24 @@ bool OutputContent::move_active_window_to(int x, int y)
     return true;
 }
 
-void OutputContent::request_vertical()
+void OutputContent::request_vertical_layout() const
 {
-    get_active_tree()->request_vertical();
+    get_active_workspace()->request_vertical_layout();
 }
 
-void OutputContent::request_horizontal()
+void OutputContent::request_horizontal_layout() const
 {
-    get_active_tree()->request_horizontal();
+    get_active_workspace()->request_horizontal_layout();
 }
 
-void OutputContent::toggle_layout()
+void OutputContent::toggle_layout() const
 {
-    get_active_tree()->toggle_layout();
+    get_active_workspace()->toggle_layout();
 }
 
-void OutputContent::toggle_fullscreen()
+bool OutputContent::toggle_fullscreen() const
 {
-    get_active_tree()->try_toggle_active_fullscreen();
+    return get_active_workspace()->try_toggle_active_fullscreen();
 }
 
 void OutputContent::toggle_pinned_to_workspace()
@@ -775,7 +727,7 @@ void OutputContent::request_toggle_active_float()
         WindowSpecification spec = floating_window_manager.place_new_window(
             tools.info_for(state.active_window.application()),
             prev_spec);
-        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, state.active_window, get_active_workspace());
+        spec.userdata() = std::make_shared<WindowMetadata>(WindowType::floating, state.active_window, get_active_workspace().get());
         spec.top_left() = geom::Point { state.active_window.top_left().x.as_int() + 20, state.active_window.top_left().y.as_int() + 20 };
         tools.modify_window(state.active_window, spec);
 

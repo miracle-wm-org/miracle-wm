@@ -33,7 +33,7 @@ using namespace miracle;
 
 namespace
 {
-class wOutputTilingWindowTreeInterface : public TilingWindowTreeInterface
+class OutputTilingWindowTreeInterface : public TilingWindowTreeInterface
 {
 public:
     explicit OutputTilingWindowTreeInterface(miracle::OutputContent* screen) :
@@ -58,23 +58,23 @@ private:
 }
 
 WorkspaceContent::WorkspaceContent(
-    miracle::OutputContent* screen,
+    miracle::OutputContent* output,
     miral::WindowManagerTools const& tools,
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
-    WindowController& node_interface,
+    WindowController& window_controller,
     CompositorState const& state,
     miral::MinimalWindowManager& floating_window_manager) :
-    output { screen },
+    output {output },
     tools { tools },
     workspace { workspace },
-    node_interface { node_interface },
+    window_controller {window_controller },
     state { state },
     config { config },
     floating_window_manager { floating_window_manager },
     tree(std::make_shared<TilingWindowTree>(
-        std::make_unique<OutputTilingWindowTreeInterface>(output),
-        node_interface, state, config))
+    std::make_unique<OutputTilingWindowTreeInterface>(output),
+    window_controller, state, config))
 {
 }
 
@@ -115,6 +115,60 @@ WindowType WorkspaceContent::allocate_position(
     }
 }
 
+std::shared_ptr<WindowMetadata> WorkspaceContent::advise_new_window(
+    miral::WindowInfo const& window_info, WindowType type)
+{
+    std::shared_ptr<WindowMetadata> metadata = nullptr;
+    switch (type)
+    {
+        case WindowType::tiled:
+        {
+            auto node = tree->advise_new_window(window_info);
+            metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
+            metadata->associate_to_node(node);
+            break;
+        }
+        case WindowType::floating:
+        {
+            floating_window_manager.advise_new_window(window_info);
+            metadata = std::make_shared<WindowMetadata>(WindowType::floating, window_info.window(), this);
+            add_floating_window(window_info.window());
+            break;
+        }
+        case WindowType::other:
+            if (window_info.state() == MirWindowState::mir_window_state_attached)
+            {
+                window_controller.select_active_window(window_info.window());
+            }
+            metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
+            break;
+        default:
+            mir::log_error("Unsupported window type: %d", (int)type);
+            break;
+    }
+
+    if (metadata)
+    {
+        miral::WindowSpecification spec;
+        spec.userdata() = metadata;
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+        window_controller.modify(window_info.window(), spec);
+
+        // Warning: We need to advise fullscreen only after we've associated the userdata() appropriately
+        if (type == WindowType::tiled && window_helpers::is_window_fullscreen(window_info.state()))
+        {
+            tree->advise_fullscreen_window(window_info.window());
+        }
+        return metadata;
+    }
+    else
+    {
+        mir::log_error("Window failed to set metadata");
+        return nullptr;
+    }
+}
+
 void WorkspaceContent::show()
 {
     auto fullscreen_node = tree->show();
@@ -146,8 +200,8 @@ void WorkspaceContent::show()
     // TODO: ugh that's ugly. Fullscreen nodes should show above floating nodes
     if (fullscreen_node)
     {
-        node_interface.select_active_window(fullscreen_node->get_window());
-        node_interface.raise(fullscreen_node->get_window());
+        window_controller.select_active_window(fullscreen_node->get_window());
+        window_controller.raise(fullscreen_node->get_window());
     }
 }
 
@@ -183,7 +237,7 @@ bool WorkspaceContent::select_window_from_point(int x, int y)
             return false;
         else if (window_area.contains(geom::Point(x, y)))
         {
-            node_interface.select_active_window(window);
+            window_controller.select_active_window(window);
             return true;
         }
     }
@@ -191,11 +245,41 @@ bool WorkspaceContent::select_window_from_point(int x, int y)
     auto node = tree->select_window_from_point(x, y);
     if (node && node->get_window() != state.active_window)
     {
-        node_interface.select_active_window(node->get_window());
+        window_controller.select_active_window(node->get_window());
         return true;
     }
 
     return false;
+}
+
+bool WorkspaceContent::resize_active_window(miracle::Direction direction)
+{
+    return tree->try_resize_active_window(direction);
+}
+
+bool WorkspaceContent::select(miracle::Direction direction)
+{
+    return tree->try_select_next(direction);
+}
+
+void WorkspaceContent::request_horizontal_layout()
+{
+    tree->request_horizontal_layout();
+}
+
+void WorkspaceContent::request_vertical_layout()
+{
+    tree->request_vertical_layout();
+}
+
+void WorkspaceContent::toggle_layout()
+{
+    tree->toggle_layout();
+}
+
+bool WorkspaceContent::try_toggle_active_fullscreen()
+{
+    return tree->try_toggle_active_fullscreen();
 }
 
 void WorkspaceContent::hide()
@@ -215,7 +299,7 @@ void WorkspaceContent::hide()
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_hidden;
         tools.modify_window(window, spec);
-        node_interface.send_to_back(window);
+        window_controller.send_to_back(window);
     }
 }
 

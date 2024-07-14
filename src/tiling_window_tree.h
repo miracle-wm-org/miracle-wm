@@ -77,10 +77,10 @@ public:
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
-    void request_vertical();
+    void request_vertical_layout();
 
     // Request a change to horizontal window placement
-    void request_horizontal();
+    void request_horizontal_layout();
 
     // Request a change from the current layout scheme to another layout scheme
     void toggle_layout();

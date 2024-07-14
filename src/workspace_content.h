@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animator.h"
 #include "window_metadata.h"
+#include "direction.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <miral/minimal_window_manager.h>
@@ -51,11 +52,19 @@ public:
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
         WindowType hint);
+    std::shared_ptr<WindowMetadata> advise_new_window(
+        miral::WindowInfo const& window_info, WindowType type);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
     void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
     bool select_window_from_point(int x, int y);
+    bool resize_active_window(miracle::Direction);
+    bool select(miracle::Direction);
+    void request_horizontal_layout();
+    void request_vertical_layout();
+    void toggle_layout();
+    bool try_toggle_active_fullscreen();
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
@@ -72,7 +81,7 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<miral::Window> floating_windows;
-    WindowController& node_interface;
+    WindowController& window_controller;
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
     miral::MinimalWindowManager& floating_window_manager;
