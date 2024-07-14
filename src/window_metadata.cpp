@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "window_metadata.h"
-#include "output_content.h"
 #include "compositor_state.h"
+#include "output.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
@@ -43,7 +43,7 @@ WindowMetadata::WindowMetadata(WindowType type, miral::Window const& window) :
 WindowMetadata::WindowMetadata(
     miracle::WindowType type,
     miral::Window const& window,
-    std::shared_ptr<WorkspaceContent> const& workspace) :
+    Workspace* workspace) :
     type { type },
     window { window },
     workspace { workspace }
@@ -91,12 +91,7 @@ bool WindowMetadata::is_focused() const
     return output->get_state().active_window == window;
 }
 
-void WindowMetadata::set_workspace(std::shared_ptr<WorkspaceContent> const& in_workspace)
-{
-    workspace = in_workspace;
-}
-
-std::shared_ptr<WorkspaceContent> const& WindowMetadata::get_workspace() const
+Workspace* WindowMetadata::get_workspace() const
 {
     return workspace;
 }
@@ -118,7 +113,7 @@ void WindowMetadata::set_animation_handle(uint32_t handle)
     animation_handle = handle;
 }
 
-OutputContent* WindowMetadata::get_output() const
+Output* WindowMetadata::get_output() const
 {
     if (!workspace)
         return nullptr;

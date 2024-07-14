@@ -24,103 +24,103 @@ namespace miracle
 {
 namespace test
 {
-class StubConfiguration : public miracle::MiracleConfig
-{
-    [[nodiscard]] std::string const& get_filename() const override { return ""; }
-    [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
-    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override
+    class StubConfiguration : public miracle::MiracleConfig
     {
-        return nullptr;
-    }
+        [[nodiscard]] std::string const& get_filename() const override { return ""; }
+        [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
+        [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override
+        {
+            return nullptr;
+        }
 
-    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override
-    {
-        return false;
-    }
+        bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override
+        {
+            return false;
+        }
 
-    [[nodiscard]] int get_inner_gaps_x() const override
-    {
-        return 0;
-    }
+        [[nodiscard]] int get_inner_gaps_x() const override
+        {
+            return 0;
+        }
 
-    [[nodiscard]] int get_inner_gaps_y() const override
-    {
-        return 0;
-    }
+        [[nodiscard]] int get_inner_gaps_y() const override
+        {
+            return 0;
+        }
 
-    [[nodiscard]] int get_outer_gaps_x() const override
-    {
-        return 0;
-    }
+        [[nodiscard]] int get_outer_gaps_x() const override
+        {
+            return 0;
+        }
 
-    [[nodiscard]] int get_outer_gaps_y() const override
-    {
-        return 0;
-    }
+        [[nodiscard]] int get_outer_gaps_y() const override
+        {
+            return 0;
+        }
 
-    [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const override
-    {
-        return {};
-    }
+        [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const override
+        {
+            return {};
+        }
 
-    [[nodiscard]] std::optional<std::string> const& get_terminal_command() const override
-    {
-        return std::nullopt;
-    }
+        [[nodiscard]] std::optional<std::string> const& get_terminal_command() const override
+        {
+            return std::nullopt;
+        }
 
-    [[nodiscard]] int get_resize_jump() const override
-    {
-        return 0;
-    }
+        [[nodiscard]] int get_resize_jump() const override
+        {
+            return 0;
+        }
 
-    [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const override
-    {
-        return {};
-    }
+        [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const override
+        {
+            return {};
+        }
 
-    [[nodiscard]] BorderConfig const& get_border_config() const override
-    {
-        return border_config;
-    }
+        [[nodiscard]] BorderConfig const& get_border_config() const override
+        {
+            return border_config;
+        }
 
-    [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const override
-    {
-        return animations;
-    }
+        [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const override
+        {
+            return animations;
+        }
 
-    [[nodiscard]] bool are_animations_enabled() const override
-    {
-        return false;
-    }
+        [[nodiscard]] bool are_animations_enabled() const override
+        {
+            return false;
+        }
 
-    [[nodiscard]] WorkspaceConfig get_workspace_config(int key) const  override
-    {
-        return WorkspaceConfig(key);
-    }
+        [[nodiscard]] WorkspaceConfig get_workspace_config(int key) const override
+        {
+            return WorkspaceConfig(key);
+        }
 
-    int register_listener(std::function<void(miracle::MiracleConfig&)> const&) override
-    {
-        return -1;
-    }
+        int register_listener(std::function<void(miracle::MiracleConfig&)> const&) override
+        {
+            return -1;
+        }
 
-    /// Register a listener on configuration change. A lower "priority" number signifies that the
-    /// listener should be triggered earlier. A higher priority means later
-    int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) override
-    {
-        return -1;
-    }
+        /// Register a listener on configuration change. A lower "priority" number signifies that the
+        /// listener should be triggered earlier. A higher priority means later
+        int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) override
+        {
+            return -1;
+        }
 
-    void unregister_listener(int handle) override
-    {
-    }
+        void unregister_listener(int handle) override
+        {
+        }
 
-    void try_process_change() override {}
+        void try_process_change() override { }
 
-private:
-    miracle::BorderConfig border_config;
-    std::array<AnimationDefinition, (int)AnimateableEvent::max> animations;
-};
+    private:
+        miracle::BorderConfig border_config;
+        std::array<AnimationDefinition, (int)AnimateableEvent::max> animations;
+    };
 }
 }
 
-#endif //MIRACLE_WM_STUB_CONFIGURATION_H
+#endif // MIRACLE_WM_STUB_CONFIGURATION_H

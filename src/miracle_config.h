@@ -149,7 +149,7 @@ public:
     [[nodiscard]] virtual BorderConfig const& get_border_config() const = 0;
     [[nodiscard]] virtual std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const = 0;
     [[nodiscard]] virtual bool are_animations_enabled() const = 0;
-    [[nodiscard]] virtual WorkspaceConfig get_workspace_config(int key) const  = 0;
+    [[nodiscard]] virtual WorkspaceConfig get_workspace_config(int key) const = 0;
 
     virtual int register_listener(std::function<void(miracle::MiracleConfig&)> const&) = 0;
     /// Register a listener on configuration change. A lower "priority" number signifies that the

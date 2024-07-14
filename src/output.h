@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miral/window.h"
 #include "tiling_window_tree.h"
 #include "window_metadata.h"
-#include "workspace_content.h"
+#include "workspace.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/output.h>
@@ -36,10 +36,10 @@ class WindowManagerToolsWindowController;
 class CompositorState;
 class Animator;
 
-class OutputContent
+class Output
 {
 public:
-    OutputContent(
+    Output(
         miral::Output const& output,
         WorkspaceManager& workspace_manager,
         geom::Rectangle const& area,
@@ -49,15 +49,16 @@ public:
         std::shared_ptr<MiracleConfig> const& options,
         WindowController&,
         Animator&);
-    ~OutputContent() = default;
+    ~Output() = default;
 
-    [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_active_tree() const;
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
+    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
-    std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type);
-    void handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    [[nodiscard]] std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
+    void handle_window_ready(
+        miral::WindowInfo& window_info,
+        std::shared_ptr<miracle::WindowMetadata> const& metadata) const;
     void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
@@ -73,26 +74,26 @@ public:
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
         MirWindowState new_state,
         const mir::geometry::Rectangle& new_placement);
-    bool select_window_from_point(int x, int y);
+    bool select_window_from_point(int x, int y) const;
     void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<std::shared_ptr<WorkspaceContent>> const& get_workspaces() const { return workspaces; }
+    std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
     bool point_is_in_output(int x, int y);
     void close_active_window();
-    bool resize_active_window(Direction direction);
-    bool select(Direction direction);
+    bool resize_active_window(Direction direction) const;
+    bool select(Direction direction) const;
     bool move_active_window(Direction direction);
     bool move_active_window_by_amount(Direction direction, int pixels);
     bool move_active_window_to(int x, int y);
-    void request_vertical();
-    void request_horizontal();
-    void toggle_layout();
-    void toggle_fullscreen();
+    void request_vertical_layout() const;
+    void request_horizontal_layout() const;
+    void toggle_layout() const;
+    bool toggle_fullscreen() const;
     void toggle_pinned_to_workspace();
     void set_is_pinned(bool is_pinned);
     void update_area(geom::Rectangle const& area);
@@ -105,7 +106,7 @@ public:
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
-    /// window-adding flow where you first call 'allocate_position' followed
+    /// window-adding flow where you first call 'place_new_window' followed
     /// by 'advise_new_window'.
     void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
 
@@ -132,7 +133,7 @@ private:
     WindowController& window_controller;
     Animator& animator;
     int active_workspace = -1;
-    std::vector<std::shared_ptr<WorkspaceContent>> workspaces;
+    std::vector<std::shared_ptr<Workspace>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     AnimationHandle handle;

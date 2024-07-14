@@ -131,11 +131,11 @@ void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle
 
     if (command.arguments.front() == "vertical")
     {
-        active_output->request_vertical();
+        active_output->request_vertical_layout();
     }
     else if (command.arguments.front() == "horizontal")
     {
-        active_output->request_horizontal();
+        active_output->request_horizontal_layout();
     }
     else if (command.arguments.front() == "toggle")
     {

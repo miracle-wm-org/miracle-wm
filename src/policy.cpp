@@ -360,7 +360,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 
 void Policy::advise_output_create(miral::Output const& output)
 {
-    auto output_content = std::make_shared<OutputContent>(
+    auto output_content = std::make_shared<Output>(
         output, workspace_manager, output.extents(), window_manager_tools,
         floating_window_manager, state, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
@@ -599,7 +599,7 @@ bool Policy::try_request_vertical()
     if (!active_output)
         return false;
 
-    active_output->request_vertical();
+    active_output->request_vertical_layout();
     return true;
 }
 
@@ -611,7 +611,7 @@ bool Policy::try_request_horizontal()
     if (!active_output)
         return false;
 
-    active_output->request_horizontal();
+    active_output->request_horizontal_layout();
     return true;
 }
 

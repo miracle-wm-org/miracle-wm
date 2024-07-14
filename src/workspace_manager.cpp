@@ -17,25 +17,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "workspace_manager"
 #include "workspace_manager.h"
-#include "output_content.h"
+#include "output.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 
 using namespace mir::geometry;
-using namespace miral;
 using namespace miracle;
 
 WorkspaceManager::WorkspaceManager(
     WindowManagerTools const& tools,
     WorkspaceObserverRegistrar& registry,
-    std::function<std::shared_ptr<OutputContent> const()> const& get_active_screen) :
+    std::function<std::shared_ptr<Output> const()> const& get_active_screen) :
     tools_ { tools },
     registry { registry },
     get_active_screen { get_active_screen }
 {
 }
 
-std::shared_ptr<OutputContent> WorkspaceManager::request_workspace(std::shared_ptr<OutputContent> screen, int key)
+std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Output> screen, int key)
 {
     if (workspaces[key] != nullptr)
     {
@@ -59,7 +58,7 @@ std::shared_ptr<OutputContent> WorkspaceManager::request_workspace(std::shared_p
     return screen;
 }
 
-bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<OutputContent> screen)
+bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output> screen)
 {
     for (int i = 1; i < NUM_WORKSPACES; i++)
     {

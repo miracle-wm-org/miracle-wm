@@ -52,13 +52,13 @@ public:
     TilingWindowTree(
         std::unique_ptr<TilingWindowTreeInterface> tree_interface,
         WindowController&,
-        CompositorState&,
+        CompositorState const&,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
     /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
     /// position is the position WITH gaps.
-    miral::WindowSpecification allocate_position(const miral::WindowSpecification& requested_specification);
+    miral::WindowSpecification place_new_window(const miral::WindowSpecification& requested_specification);
 
     std::shared_ptr<LeafContainer> advise_new_window(miral::WindowInfo const&);
 
@@ -77,10 +77,10 @@ public:
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
-    void request_vertical();
+    void request_vertical_layout();
 
     // Request a change to horizontal window placement
-    void request_horizontal();
+    void request_horizontal_layout();
 
     // Request a change from the current layout scheme to another layout scheme
     void toggle_layout();
@@ -136,7 +136,7 @@ private:
     };
 
     WindowController& window_controller;
-    CompositorState& state;
+    CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentContainer> root_lane;
     std::unique_ptr<TilingWindowTreeInterface> tree_interface;

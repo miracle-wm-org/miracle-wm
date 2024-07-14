@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc.h"
 #include "miracle_config.h"
 #include "mode_observer.h"
-#include "output_content.h"
+#include "output.h"
 #include "surface_tracker.h"
 #include "window_manager_tools_window_controller.h"
 #include "window_metadata.h"
@@ -114,15 +114,15 @@ public:
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
 
-    std::shared_ptr<OutputContent> const& get_active_output() { return active_output; }
-    std::vector<std::shared_ptr<OutputContent>> const& get_output_list() { return output_list; }
+    std::shared_ptr<Output> const& get_active_output() { return active_output; }
+    std::vector<std::shared_ptr<Output>> const& get_output_list() { return output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
-    std::shared_ptr<OutputContent> active_output;
-    std::vector<std::shared_ptr<OutputContent>> output_list;
-    std::weak_ptr<OutputContent> pending_output;
+    std::shared_ptr<Output> active_output;
+    std::vector<std::shared_ptr<Output>> output_list;
+    std::weak_ptr<Output> pending_output;
     WindowType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;

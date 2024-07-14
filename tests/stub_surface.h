@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifndef MIRACLE_WM_STUB_SURFACE_H
 #define MIRACLE_WM_STUB_SURFACE_H
 
@@ -35,12 +34,12 @@ public:
         return std::shared_ptr<mir::frontend::BufferStream>();
     }
 
-    auto wayland_surface() -> mir::wayland::Weak<mir::frontend::WlSurface> const & override
+    auto wayland_surface() -> mir::wayland::Weak<mir::frontend::WlSurface> const& override
     {
         throw std::logic_error("Unimplemented");
     }
 
-    bool input_area_contains(mir::geometry::Point const &point) const override
+    bool input_area_contains(mir::geometry::Point const& point) const override
     {
         return false;
     }
@@ -50,9 +49,8 @@ public:
         return mir::input::InputReceptionMode::normal;
     }
 
-    void consume(std::shared_ptr<MirEvent const> const &event) override
+    void consume(std::shared_ptr<MirEvent const> const& event) override
     {
-
     }
 
     auto visible_on_lock_screen() const -> bool override
@@ -60,25 +58,21 @@ public:
         return false;
     }
 
-    void register_interest(std::weak_ptr<mir::scene::SurfaceObserver> const &observer) override
+    void register_interest(std::weak_ptr<mir::scene::SurfaceObserver> const& observer) override
     {
-
     }
 
-    void register_interest(std::weak_ptr<mir::scene::SurfaceObserver> const &observer, mir::Executor &executor) override
+    void register_interest(std::weak_ptr<mir::scene::SurfaceObserver> const& observer, mir::Executor& executor) override
     {
-
     }
 
-    void register_early_observer(std::weak_ptr<mir::scene::SurfaceObserver> const &observer,
-                                 mir::Executor &executor) override
+    void register_early_observer(std::weak_ptr<mir::scene::SurfaceObserver> const& observer,
+        mir::Executor& executor) override
     {
-
     }
 
-    void unregister_interest(mir::scene::SurfaceObserver const &observer) override
+    void unregister_interest(mir::scene::SurfaceObserver const& observer) override
     {
-
     }
 
     std::string name() const override
@@ -128,12 +122,10 @@ public:
 
     void hide() override
     {
-
     }
 
     void show() override
     {
-
     }
 
     bool visible() const override
@@ -141,14 +133,12 @@ public:
         return false;
     }
 
-    void move_to(mir::geometry::Point const &top_left) override
+    void move_to(mir::geometry::Point const& top_left) override
     {
-
     }
 
-    void set_input_region(std::vector<mir::geometry::Rectangle> const &region) override
+    void set_input_region(std::vector<mir::geometry::Rectangle> const& region) override
     {
-
     }
 
     std::vector<mir::geometry::Rectangle> get_input_region() const override
@@ -156,29 +146,24 @@ public:
         return std::vector<mir::geometry::Rectangle>();
     }
 
-    void resize(mir::geometry::Size const &window_size) override
+    void resize(mir::geometry::Size const& window_size) override
     {
-
     }
 
-    void set_transformation(glm::mat4 const &t) override
+    void set_transformation(glm::mat4 const& t) override
     {
-
     }
 
     void set_alpha(float alpha) override
     {
-
     }
 
     void set_orientation(MirOrientation orientation) override
     {
-
     }
 
-    void set_cursor_image(std::shared_ptr<mir::graphics::CursorImage> const &image) override
+    void set_cursor_image(std::shared_ptr<mir::graphics::CursorImage> const& image) override
     {
-
     }
 
     std::shared_ptr<mir::graphics::CursorImage> cursor_image() const override
@@ -188,12 +173,10 @@ public:
 
     void set_reception_mode(mir::input::InputReceptionMode mode) override
     {
-
     }
 
     void request_client_surface_close() override
     {
-
     }
 
     std::shared_ptr<Surface> parent() const override
@@ -211,19 +194,16 @@ public:
         return 0;
     }
 
-    void rename(std::string const &title) override
+    void rename(std::string const& title) override
     {
-
     }
 
-    void set_streams(std::list<mir::scene::StreamInfo> const &streams) override
+    void set_streams(std::list<mir::scene::StreamInfo> const& streams) override
     {
-
     }
 
     void set_confine_pointer_state(MirPointerConfinementState state) override
     {
-
     }
 
     MirPointerConfinementState confine_pointer_state() const override
@@ -231,9 +211,8 @@ public:
         return mir_pointer_unconfined;
     }
 
-    void placed_relative(mir::geometry::Rectangle const &placement) override
+    void placed_relative(mir::geometry::Rectangle const& placement) override
     {
-
     }
 
     auto depth_layer() const -> MirDepthLayer override
@@ -243,12 +222,10 @@ public:
 
     void set_depth_layer(MirDepthLayer depth_layer) override
     {
-
     }
 
     void set_visible_on_lock_screen(bool visible) override
     {
-
     }
 
     std::optional<mir::geometry::Rectangle> clip_area() const override
@@ -256,9 +233,8 @@ public:
         return std::optional<mir::geometry::Rectangle>();
     }
 
-    void set_clip_area(std::optional<mir::geometry::Rectangle> const &area) override
+    void set_clip_area(std::optional<mir::geometry::Rectangle> const& area) override
     {
-
     }
 
     auto focus_state() const -> MirWindowFocusState override
@@ -268,7 +244,6 @@ public:
 
     void set_focus_state(MirWindowFocusState focus_state) override
     {
-
     }
 
     auto application_id() const -> std::string override
@@ -276,9 +251,8 @@ public:
         return std::string();
     }
 
-    void set_application_id(std::string const &application_id) override
+    void set_application_id(std::string const& application_id) override
     {
-
     }
 
     auto session() const -> std::weak_ptr<mir::scene::Session> override
@@ -287,9 +261,8 @@ public:
     }
 
     void set_window_margins(mir::geometry::DeltaY top, mir::geometry::DeltaX left, mir::geometry::DeltaY bottom,
-                            mir::geometry::DeltaX right) override
+        mir::geometry::DeltaX right) override
     {
-
     }
 
     auto focus_mode() const -> MirFocusMode override
@@ -299,9 +272,8 @@ public:
 
     void set_focus_mode(MirFocusMode focus_mode) override
     {
-
     }
 };
 }
 
-#endif //MIRACLE_WM_STUB_SURFACE_H
+#endif // MIRACLE_WM_STUB_SURFACE_H

@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tessellation_helpers.h"
 #include "window_metadata.h"
 #include "window_tools_accessor.h"
-#include "workspace_content.h"
+#include "workspace.h"
 #include <GLES2/gl2.h>
 
 #include <EGL/egl.h>
