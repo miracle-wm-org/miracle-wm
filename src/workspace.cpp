@@ -83,14 +83,14 @@ int Workspace::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<TilingWindowTree> const& Workspace::get_tree() const
-{
-    return tree;
-}
-
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
     tree->set_output_area(area);
+}
+
+void Workspace::recalculate_area()
+{
+    tree->recalculate_root_node_area();
 }
 
 WindowType Workspace::allocate_position(

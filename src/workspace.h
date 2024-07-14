@@ -47,8 +47,8 @@ public:
         miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
-    [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
     void set_area(mir::geometry::Rectangle const&);
+    void recalculate_area();
 
     WindowType allocate_position(
         miral::ApplicationInfo const& app_info,

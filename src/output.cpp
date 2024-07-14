@@ -319,7 +319,7 @@ void Output::advise_application_zone_create(miral::Zone const& application_zone)
     {
         application_zone_list.push_back(application_zone);
         for (auto& workspace : workspaces)
-            workspace->get_tree()->recalculate_root_node_area();
+            workspace->recalculate_area();
     }
 }
 
@@ -330,17 +330,22 @@ void Output::advise_application_zone_update(miral::Zone const& updated, miral::Z
         {
             zone = updated;
             for (auto& workspace : workspaces)
-                workspace->get_tree()->recalculate_root_node_area();
+                workspace->recalculate_area();
             break;
         }
 }
 
 void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 {
-    if (std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone) != application_zone_list.end())
+    auto const original_size = application_zone_list.size();
+    application_zone_list.erase(
+        std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone),
+        application_zone_list.end());
+
+    if (application_zone_list.size() != original_size)
     {
         for (auto& workspace : workspaces)
-            workspace->get_tree()->recalculate_root_node_area();
+            workspace->recalculate_area();
     }
 }
 
