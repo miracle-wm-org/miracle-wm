@@ -56,8 +56,10 @@ public:
     [[nodiscard]] std::shared_ptr<WorkspaceContent> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
-    std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
-    void handle_window_ready(miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    [[nodiscard]] std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
+    void handle_window_ready(
+        miral::WindowInfo& window_info,
+        std::shared_ptr<miracle::WindowMetadata> const& metadata) const;
     void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
     void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
@@ -105,7 +107,7 @@ public:
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
-    /// window-adding flow where you first call 'allocate_position' followed
+    /// window-adding flow where you first call 'place_new_window' followed
     /// by 'advise_new_window'.
     void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
 

@@ -60,7 +60,7 @@ TilingWindowTree::~TilingWindowTree()
     config->unregister_listener(config_handle);
 }
 
-miral::WindowSpecification TilingWindowTree::allocate_position(const miral::WindowSpecification& requested_specification)
+miral::WindowSpecification TilingWindowTree::place_new_window(const miral::WindowSpecification& requested_specification)
 {
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;

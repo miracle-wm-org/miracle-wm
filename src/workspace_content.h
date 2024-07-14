@@ -48,12 +48,38 @@ public:
 
     [[nodiscard]] int get_workspace() const;
     [[nodiscard]] std::shared_ptr<TilingWindowTree> const& get_tree() const;
+    void set_area(mir::geometry::Rectangle const&);
+
     WindowType allocate_position(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
         WindowType hint);
     std::shared_ptr<WindowMetadata> advise_new_window(
         miral::WindowInfo const& window_info, WindowType type);
+    mir::geometry::Rectangle confirm_placement_on_display(
+        std::shared_ptr<miracle::WindowMetadata> const& metadata,
+        MirWindowState new_state,
+        mir::geometry::Rectangle const& new_placement);
+    void handle_window_ready(
+        miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void advise_delete_window(const std::shared_ptr<miracle::WindowMetadata>& metadata);
+    void advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, mir::geometry::Point const& top_left);
+    void handle_request_move(
+        const std::shared_ptr<miracle::WindowMetadata>& metadata,
+        const MirInputEvent* input_event);
+    void handle_request_resize(
+        const std::shared_ptr<miracle::WindowMetadata>& metadata,
+        const MirInputEvent* input_event,
+        MirResizeEdge edge);
+    void handle_modify_window(
+        const std::shared_ptr<miracle::WindowMetadata>& metadata,
+        const miral::WindowSpecification& modifications);
+    void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    bool move_active_window(Direction direction);
+    bool move_active_window_by_amount(Direction direction, int pixels);
+    bool move_active_window_to(int x, int y);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
@@ -65,6 +91,7 @@ public:
     void request_vertical_layout();
     void toggle_layout();
     bool try_toggle_active_fullscreen();
+    void toggle_floating(std::shared_ptr<WindowMetadata> const&);
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
