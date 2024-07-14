@@ -18,20 +18,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "output_content"
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include "output_content.h"
+#include "animator.h"
+#include "compositor_state.h"
+#include "leaf_container.h"
+#include "window_helpers.h"
 #include "window_metadata.h"
 #include "workspace_content.h"
-#include "animator.h"
-#include "leaf_container.h"
-#include "output_content.h"
-#include "window_helpers.h"
 #include "workspace_manager.h"
-#include "compositor_state.h"
 #include <glm/gtx/transform.hpp>
+#include <memory>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_info.h>
-#include <memory>
 
 using namespace miracle;
 
@@ -389,37 +389,9 @@ OutputContent::confirm_placement_on_display(
     return modified_placement;
 }
 
-bool OutputContent::select_window_from_point(int x, int y)
+bool OutputContent::select_window_from_point(int x, int y) const
 {
-    auto const& workspace = get_active_workspace();
-    if (workspace->get_tree()->has_fullscreen_window())
-        return false;
-
-    auto const& floating = workspace->get_floating_windows();
-    int floating_index = -1;
-    for (int i = 0; i < floating.size(); i++)
-    {
-        geom::Rectangle window_area(floating[i].top_left(), floating[i].size());
-        if (floating[i] == state.active_window && window_area.contains(geom::Point(x, y)))
-            return false;
-        else if (window_area.contains(geom::Point(x, y)))
-            floating_index = i;
-    }
-
-    if (floating_index >= 0)
-    {
-        window_controller.select_active_window(floating[floating_index]);
-        return true;
-    }
-
-    auto node = workspace->get_tree()->select_window_from_point(x, y);
-    if (node && node->get_window() != state.active_window)
-    {
-        window_controller.select_active_window(node->get_window());
-        return true;
-    }
-
-    return false;
+    return get_active_workspace()->select_window_from_point(x, y);
 }
 
 void OutputContent::select_window(miral::Window const& window)

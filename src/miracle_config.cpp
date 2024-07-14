@@ -1072,7 +1072,6 @@ const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const
     return startup_apps;
 }
 
-
 int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func)
 {
     return register_listener(func, 5);

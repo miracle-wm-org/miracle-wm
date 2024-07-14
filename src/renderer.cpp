@@ -87,6 +87,11 @@ public:
         return get_rectangle(clip_area_rect.value());
     }
 
+    geom::RectangleD src_bounds() const override
+    {
+        return {};
+    }
+
     [[nodiscard]] float alpha() const override
     {
         return _alpha;

@@ -42,7 +42,7 @@ public:
         int workspace,
         std::shared_ptr<MiracleConfig> const& config,
         WindowController& window_controller,
-        CompositorState& state,
+        CompositorState const& state,
         miral::MinimalWindowManager& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
@@ -55,6 +55,7 @@ public:
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceContent> const& other);
     void for_each_window(std::function<void(std::shared_ptr<WindowMetadata>)> const&);
+    bool select_window_from_point(int x, int y);
 
     bool has_floating_window(miral::Window const&);
     void add_floating_window(miral::Window const&);
@@ -72,6 +73,7 @@ private:
     int workspace;
     std::vector<miral::Window> floating_windows;
     WindowController& node_interface;
+    CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
     miral::MinimalWindowManager& floating_window_manager;
 };

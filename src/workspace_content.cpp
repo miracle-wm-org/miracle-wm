@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "workspace_content"
 
 #include "workspace_content.h"
+#include "compositor_state.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
 #include "output_content.h"
@@ -32,11 +33,13 @@ using namespace miracle;
 
 namespace
 {
-class OutputTilingWindowTreeInterface: public TilingWindowTreeInterface
+class wOutputTilingWindowTreeInterface : public TilingWindowTreeInterface
 {
 public:
-    explicit OutputTilingWindowTreeInterface(miracle::OutputContent* screen)
-        : screen{screen} {}
+    explicit OutputTilingWindowTreeInterface(miracle::OutputContent* screen) :
+        screen { screen }
+    {
+    }
 
     geom::Rectangle const& get_area() override
     {
@@ -60,17 +63,18 @@ WorkspaceContent::WorkspaceContent(
     int workspace,
     std::shared_ptr<MiracleConfig> const& config,
     WindowController& node_interface,
-    CompositorState& state,
+    CompositorState const& state,
     miral::MinimalWindowManager& floating_window_manager) :
     output { screen },
     tools { tools },
     workspace { workspace },
     node_interface { node_interface },
+    state { state },
     config { config },
     floating_window_manager { floating_window_manager },
     tree(std::make_shared<TilingWindowTree>(
-    std::make_unique<OutputTilingWindowTreeInterface>(output),
-    node_interface, state, config))
+        std::make_unique<OutputTilingWindowTreeInterface>(output),
+        node_interface, state, config))
 {
 }
 
@@ -165,6 +169,33 @@ void WorkspaceContent::for_each_window(std::function<void(std::shared_ptr<Window
                 f(metadata);
         }
     });
+}
+
+bool WorkspaceContent::select_window_from_point(int x, int y)
+{
+    if (tree->has_fullscreen_window())
+        return false;
+
+    for (auto const& window : floating_windows)
+    {
+        geom::Rectangle window_area(window.top_left(), window.size());
+        if (window == state.active_window && window_area.contains(geom::Point(x, y)))
+            return false;
+        else if (window_area.contains(geom::Point(x, y)))
+        {
+            node_interface.select_active_window(window);
+            return true;
+        }
+    }
+
+    auto node = tree->select_window_from_point(x, y);
+    if (node && node->get_window() != state.active_window)
+    {
+        node_interface.select_active_window(node->get_window());
+        return true;
+    }
+
+    return false;
 }
 
 void WorkspaceContent::hide()

@@ -18,12 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "window_tree"
 
 #include "tiling_window_tree.h"
+#include "compositor_state.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
 #include "output_content.h"
 #include "parent_container.h"
 #include "window_helpers.h"
-#include "compositor_state.h"
 
 #include <cmath>
 #include <iostream>
@@ -35,7 +35,7 @@ using namespace miracle;
 TilingWindowTree::TilingWindowTree(
     std::unique_ptr<TilingWindowTreeInterface> tree_interface,
     WindowController& window_controller,
-    CompositorState& state,
+    CompositorState const& state,
     std::shared_ptr<MiracleConfig> const& config) :
     root_lane { std::make_shared<ParentContainer>(
         window_controller,
@@ -46,7 +46,7 @@ TilingWindowTree::TilingWindowTree(
     config { config },
     window_controller { window_controller },
     state { state },
-    tree_interface{std::move(tree_interface)}
+    tree_interface { std::move(tree_interface) }
 {
     recalculate_root_node_area();
     config_handle = config->register_listener([&](auto&)
@@ -820,7 +820,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
 {
     if (!state.active_window)
         return nullptr;
-    
+
     auto metadata = window_controller.get_metadata(state.active_window);
     if (!metadata)
         return nullptr;

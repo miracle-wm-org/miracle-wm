@@ -52,7 +52,7 @@ public:
     TilingWindowTree(
         std::unique_ptr<TilingWindowTreeInterface> tree_interface,
         WindowController&,
-        CompositorState&,
+        CompositorState const&,
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
@@ -136,7 +136,7 @@ private:
     };
 
     WindowController& window_controller;
-    CompositorState& state;
+    CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
     std::shared_ptr<ParentContainer> root_lane;
     std::unique_ptr<TilingWindowTreeInterface> tree_interface;

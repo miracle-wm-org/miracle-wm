@@ -73,7 +73,7 @@ public:
         std::shared_ptr<miracle::WindowMetadata> const& metadata,
         MirWindowState new_state,
         const mir::geometry::Rectangle& new_placement);
-    bool select_window_from_point(int x, int y);
+    bool select_window_from_point(int x, int y) const;
     void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
