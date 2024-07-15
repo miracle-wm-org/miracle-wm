@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <vector>
+#include <glm/glm.hpp>
 
 namespace geom = mir::geometry;
 
@@ -35,7 +36,17 @@ class TilingWindowTree;
 class LeafContainer;
 class ParentContainer;
 
-/// A node in the tree is either a single window or a lane.
+enum class ContainerType
+{
+    none,
+    tiled,
+    floating,
+    other
+};
+
+
+/// A container on the desktop. This could represent a window in the tiling
+/// grid, a floating window, or a collection of windows.
 class Container : public std::enable_shared_from_this<Container>
 {
 public:
@@ -53,9 +64,15 @@ public:
     virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
+
     bool is_leaf();
     bool is_lane();
     [[nodiscard]] std::weak_ptr<ParentContainer> get_parent() const;
+    bool get_is_pinned() const;
+    void set_is_pinned(bool is_pinned);
+    void toggle_pinned();
+    [[nodiscard]] uint32_t get_animation_handle() const;
+    void set_animation_handle(uint32_t);
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_lane(std::shared_ptr<Container> const&);
@@ -63,6 +80,9 @@ public:
 protected:
     std::weak_ptr<ParentContainer> parent;
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
+    bool is_pinned = false;
+    uint32_t animation_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
 };
 }
 

@@ -54,6 +54,31 @@ std::weak_ptr<ParentContainer> Container::get_parent() const
     return parent;
 }
 
+bool Container::get_is_pinned() const
+{
+    return is_pinned;
+}
+
+void Container::set_is_pinned(bool is_pinned_)
+{
+    is_pinned = is_pinned_;
+}
+
+void Container::toggle_pinned()
+{
+    is_pinned = !is_pinned;
+}
+
+uint32_t Container::get_animation_handle() const
+{
+    return animation_handle;
+}
+
+void Container::set_animation_handle(uint32_t handle)
+{
+    animation_handle = handle;
+}
+
 namespace
 {
 bool has_neighbor(Container const* node, NodeLayoutDirection direction, size_t cannot_be_index)

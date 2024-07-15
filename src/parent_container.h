@@ -32,9 +32,7 @@ class LeafContainer;
 class MiracleConfig;
 class TilingWindowTree;
 
-/**
- * A parent container defines the layout of containers beneath it.
- */
+/// A parent container defines the layout of containers beneath it.
 class ParentContainer : public Container
 {
 public:
