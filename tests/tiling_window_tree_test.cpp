@@ -131,7 +131,7 @@ public:
         info.userdata(metadata);
 
         auto leaf = tree.advise_new_window(info);
-        metadata->associate_to_node(leaf);
+        metadata->associate_container(leaf);
 
         state.active_window = window;
         tree.advise_focus_gained(info.window());

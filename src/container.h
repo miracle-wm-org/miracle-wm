@@ -49,6 +49,7 @@ public:
 
     [[nodiscard]] virtual geom::Rectangle get_logical_area() const = 0;
     virtual void set_logical_area(geom::Rectangle const&) = 0;
+    [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
     virtual void constrain() = 0;
     virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
     virtual size_t get_min_height() const = 0;

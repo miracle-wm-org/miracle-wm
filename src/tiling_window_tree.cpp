@@ -86,7 +86,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::advise_new_window(miral::Window
     return get_active_lane()->confirm_window(window_info.window());
 }
 
-bool TilingWindowTree::try_resize_active_window(miracle::Direction direction)
+bool TilingWindowTree::resize_container(miracle::Direction direction, std::shared_ptr<Container> const& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -94,29 +94,16 @@ bool TilingWindowTree::try_resize_active_window(miracle::Direction direction)
         return false;
     }
 
-    auto container = active_container();
-    if (!container)
-    {
-        mir::log_warning("Unable to resize the active window: active window is not set");
-        return false;
-    }
-
     handle_resize(container, direction, config->get_resize_jump());
     return true;
 }
 
-bool TilingWindowTree::try_select_next(miracle::Direction direction)
+bool TilingWindowTree::select_next(
+    miracle::Direction direction, std::shared_ptr<Container> const& container)
 {
     if (is_active_window_fullscreen)
     {
         mir::log_warning("Unable to select the next window: fullscreened");
-        return false;
-    }
-
-    auto container = active_container();
-    if (!container)
-    {
-        mir::log_warning("Unable to select the next window: active window not set");
         return false;
     }
 
@@ -131,25 +118,18 @@ bool TilingWindowTree::try_select_next(miracle::Direction direction)
     return true;
 }
 
-bool TilingWindowTree::try_toggle_active_fullscreen()
+bool TilingWindowTree::toggle_fullscreen(std::shared_ptr<LeafContainer> const& container)
 {
-    auto container = active_container();
-    if (!container)
-    {
-        mir::log_warning("Active window is null while trying to toggle fullscreen");
-        return false;
-    }
-
     container->toggle_fullscreen();
     container->commit_changes();
     if (is_active_window_fullscreen)
-        advise_restored_window(container->get_window());
+        advise_restored_container(container);
     else
-        advise_fullscreen_window(container->get_window());
+        advise_fullscreen_container(container);
     return true;
 }
 
-void TilingWindowTree::set_output_area(geom::Rectangle const& new_area)
+void TilingWindowTree::set_area(geom::Rectangle const& new_area)
 {
     root_lane->set_logical_area(new_area);
     root_lane->commit_changes();
@@ -168,18 +148,11 @@ std::shared_ptr<LeafContainer> TilingWindowTree::select_window_from_point(int x,
     return Container::as_leaf(node);
 }
 
-bool TilingWindowTree::try_move_active_window(miracle::Direction direction)
+bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_ptr<Container> const& container)
 {
     if (is_active_window_fullscreen)
     {
         mir::log_warning("Unable to move active window: fullscreen");
-        return false;
-    }
-
-    auto container = active_container();
-    if (!container)
-    {
-        mir::log_warning("Unable to move active window: active window not set");
         return false;
     }
 
@@ -243,29 +216,29 @@ bool TilingWindowTree::try_move_active_window(miracle::Direction direction)
     return true;
 }
 
-void TilingWindowTree::request_vertical_layout()
+void TilingWindowTree::request_vertical_layout(std::shared_ptr<Container> const& container)
 {
-    handle_direction_change(NodeLayoutDirection::vertical);
+    handle_direction_change(NodeLayoutDirection::vertical, container);
 }
 
-void TilingWindowTree::request_horizontal_layout()
+void TilingWindowTree::request_horizontal_layout(std::shared_ptr<Container> const& container)
 {
-    handle_direction_change(NodeLayoutDirection::horizontal);
+    handle_direction_change(NodeLayoutDirection::horizontal, container);
 }
 
-void TilingWindowTree::toggle_layout()
+void TilingWindowTree::toggle_layout(std::shared_ptr<Container> const& container)
 {
-    auto const& lane = get_active_lane();
-    if (!lane)
+    auto parent = container->get_parent().lock();
+    if (!parent)
         return;
 
-    if (lane->get_direction() == NodeLayoutDirection::horizontal)
-        handle_direction_change(NodeLayoutDirection::vertical);
+    if (parent->get_direction() == NodeLayoutDirection::horizontal)
+        handle_direction_change(NodeLayoutDirection::vertical, container);
     else
-        handle_direction_change(NodeLayoutDirection::horizontal);
+        handle_direction_change(NodeLayoutDirection::horizontal, container);
 }
 
-void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
+void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -273,44 +246,36 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction)
         return;
     }
 
-    auto container = active_container();
-    if (!container)
+    auto parent = container->get_parent().lock();
+    if (parent->num_nodes() != 1)
+        parent = parent->convert_to_parent(container);
+
+    if (!parent)
     {
-        mir::log_warning("Unable to handle direction request: active window not set");
+        mir::log_warning("handle_direction_change: parent is not set");
         return;
     }
 
-    if (container->get_parent().lock()->num_nodes() != 1)
-        get_active_lane()->convert_to_parent(container);
-
-    get_active_lane()->set_direction(direction);
+    parent->set_direction(direction);
 }
 
-void TilingWindowTree::advise_focus_gained(miral::Window& window)
+void TilingWindowTree::advise_focus_gained(std::shared_ptr<Container> const& container)
 {
-    auto container = active_container();
+    // TODO: Support raising any container, not just a leaf
     if (container && is_active_window_fullscreen)
-        window_controller.raise(window);
+        window_controller.raise(Container::as_leaf(container)->get_window());
 }
 
-void TilingWindowTree::advise_delete_window(miral::Window& window)
+void TilingWindowTree::advise_delete_window(std::shared_ptr<Container> const& container)
 {
-    auto metadata = window_controller.get_metadata(window, this);
-    if (!metadata)
-    {
-        mir::log_warning("Unable to delete window: cannot find node");
-        return;
-    }
-
-    auto container = active_container();
-    auto window_node = metadata->get_tiling_node();
-    if (window_node == container)
+    auto active = active_container();
+    if (active == container)
     {
         if (is_active_window_fullscreen)
             is_active_window_fullscreen = false;
     }
 
-    auto parent = handle_remove(window_node);
+    auto parent = handle_remove(container);
     parent->commit_changes();
 }
 
@@ -615,7 +580,8 @@ std::shared_ptr<ParentContainer> TilingWindowTree::handle_remove(std::shared_ptr
     return parent;
 }
 
-std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> TilingWindowTree::transfer_node(std::shared_ptr<LeafContainer> const& node, std::shared_ptr<Container> const& to)
+std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> TilingWindowTree::transfer_node(
+    std::shared_ptr<Container> const& node, std::shared_ptr<Container> const& to)
 {
     // We are moving the active window to a new lane
     auto to_update = handle_remove(node);
@@ -639,26 +605,19 @@ void TilingWindowTree::recalculate_root_node_area()
     }
 }
 
-bool TilingWindowTree::advise_fullscreen_window(miral::Window& window)
+bool TilingWindowTree::advise_fullscreen_container(std::shared_ptr<LeafContainer> const& container)
 {
-    auto node = window_controller.get_metadata(window, this);
-    if (!node)
-        return false;
-
-    window_controller.select_active_window(node->get_window());
-    window_controller.raise(node->get_window());
+    auto window = container->get_window();
+    window_controller.select_active_window(window);
+    window_controller.raise(window);
     is_active_window_fullscreen = true;
     return true;
 }
 
-bool TilingWindowTree::advise_restored_window(miral::Window& window)
+bool TilingWindowTree::advise_restored_container(std::shared_ptr<LeafContainer> const& container)
 {
-    auto metadata = window_controller.get_metadata(window, this);
-    if (!metadata)
-        return false;
-
-    auto container = active_container();
-    if (metadata->get_tiling_node() == container && is_active_window_fullscreen)
+    auto active = active_container();
+    if (active == container && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
         container->set_logical_area(container->get_logical_area());
@@ -668,38 +627,30 @@ bool TilingWindowTree::advise_restored_window(miral::Window& window)
     return true;
 }
 
-bool TilingWindowTree::handle_window_ready(miral::WindowInfo& window_info)
+bool TilingWindowTree::handle_container_ready(std::shared_ptr<LeafContainer> const& container)
 {
-    auto metadata = window_controller.get_metadata(window_info.window(), this);
-    if (!metadata)
-        return false;
-
-    constrain(window_info.window());
-
+    constrain(container);
     if (is_active_window_fullscreen)
         return true;
 
-    if (window_info.can_be_active())
-        window_controller.select_active_window(window_info.window());
+    auto window = container->get_window();
+    auto& info = window_controller.info_for(window);
+    if (info.can_be_active())
+        window_controller.select_active_window(window);
 
     return true;
 }
 
 bool TilingWindowTree::confirm_placement_on_display(
-    miral::Window const& window,
+    std::shared_ptr<Container> const& container,
     MirWindowState new_state,
     mir::geometry::Rectangle& new_placement)
 {
-    auto metadata = window_controller.get_metadata(window, this);
-    if (!metadata)
-        return false;
-
-    auto node = metadata->get_tiling_node();
-    auto node_rectangle = node->get_visible_area();
+    auto rect = container->get_visible_area();
     switch (new_state)
     {
     case mir_window_state_restored:
-        new_placement = node_rectangle;
+        new_placement = rect;
         break;
     default:
         break;
@@ -708,23 +659,18 @@ bool TilingWindowTree::confirm_placement_on_display(
     return true;
 }
 
-bool TilingWindowTree::constrain(miral::Window& window)
+bool TilingWindowTree::constrain(std::shared_ptr<Container> const& container)
 {
-    auto metadata = window_controller.get_metadata(window, this);
-    if (!metadata)
-        return false;
-
     if (is_hidden)
         return false;
 
-    auto node = metadata->get_tiling_node();
-    if (node->get_parent().expired())
+    if (container->get_parent().expired())
     {
         mir::log_error("Unable to constrain node without parent");
         return true;
     }
 
-    node->get_parent().lock()->constrain();
+    container->get_parent().lock()->constrain();
     return true;
 }
 
@@ -825,5 +771,5 @@ std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
     if (!metadata)
         return nullptr;
 
-    return metadata->get_tiling_node();
+    return metadata->get_container();
 }
