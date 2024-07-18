@@ -56,67 +56,66 @@ public:
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
-    /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
-    /// position is the position WITH gaps.
-    miral::WindowSpecification place_new_window(const miral::WindowSpecification& requested_specification);
+    /// Place a window in the specified container if one is provided.
+    /// Otherwise, the container is placed at the root node.
+    miral::WindowSpecification place_new_window(
+        const miral::WindowSpecification& requested_specification,
+        std::shared_ptr<ParentContainer> const& container);
 
-    std::shared_ptr<LeafContainer> advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<LeafContainer> confirm_window(
+        miral::WindowInfo const&,
+        std::shared_ptr<ParentContainer> const& container);
 
     /// Try to resize the current active window in the provided direction
-    bool try_resize_active_window(Direction direction);
+    bool resize_container(Direction direction, std::shared_ptr<Container> const&);
 
     /// Move the active window in the provided direction
-    bool try_move_active_window(Direction direction);
+    bool move_container(Direction direction, std::shared_ptr<Container> const&);
 
     /// Select the next window in the provided direction
-    bool try_select_next(Direction direction);
+    bool select_next(Direction direction, std::shared_ptr<Container> const&);
 
     /// Toggle the active window between fullscreen and not fullscreen
-    bool try_toggle_active_fullscreen();
+    bool toggle_fullscreen(std::shared_ptr<LeafContainer> const&);
 
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
-    void request_vertical_layout();
+    void request_vertical_layout(std::shared_ptr<Container> const&);
 
     // Request a change to horizontal window placement
-    void request_horizontal_layout();
+    void request_horizontal_layout(std::shared_ptr<Container> const&);
 
     // Request a change from the current layout scheme to another layout scheme
-    void toggle_layout();
+    void toggle_layout(std::shared_ptr<Container> const&);
 
-    /// Advises us to focus the provided window.
-    void advise_focus_gained(miral::Window&);
+    /// Advises us to focus the provided container.
+    void advise_focus_gained(std::shared_ptr<Container> const&);
 
-    /// Called when the window was deleted.
-    void advise_delete_window(miral::Window&);
+    /// Called when the container was deleted.
+    void advise_delete_window(std::shared_ptr<Container> const&);
 
     /// Called when the physical display is resized.
-    void set_output_area(geom::Rectangle const& new_area);
+    void set_area(geom::Rectangle const& new_area);
 
     std::shared_ptr<LeafContainer> select_window_from_point(int x, int y);
 
-    bool advise_fullscreen_window(miral::Window&);
-    bool advise_restored_window(miral::Window&);
-    bool handle_window_ready(miral::WindowInfo& window_info);
+    bool advise_fullscreen_container(std::shared_ptr<LeafContainer> const&);
+    bool advise_restored_container(std::shared_ptr<LeafContainer> const&);
+    bool handle_container_ready(std::shared_ptr<LeafContainer> const&);
 
     bool confirm_placement_on_display(
-        miral::Window const& window,
+        std::shared_ptr<Container> const& container,
         MirWindowState new_state,
         mir::geometry::Rectangle& new_placement);
 
-    /// Constrains the window to its tile if it is in this tree.
-    bool constrain(miral::Window& window);
-
     void foreach_node(std::function<void(std::shared_ptr<Container>)> const&);
 
-    std::shared_ptr<Container> find_node(std::function<bool(std::shared_ptr<Container> const&)> const&);
-
-    /// Hides the entire tree
-    void hide();
-
-    /// Shows the tree and returns a fullscreen node
+    /// Shows the containers in this tree and returns a fullscreen container, if any
     std::shared_ptr<LeafContainer> show();
+
+    /// Hides the containers in this tree
+    void hide();
 
     void recalculate_root_node_area();
     bool is_empty();
@@ -145,9 +144,11 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    std::shared_ptr<ParentContainer> get_active_lane();
-    void handle_direction_change(NodeLayoutDirection direction);
+    void handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const&);
     void handle_resize(std::shared_ptr<Container> const& node, Direction direction, int amount);
+
+    /// Constrains the container to its tile in the tree
+    bool constrain(std::shared_ptr<Container> const&);
 
     /// Removes the node from the tree
     /// @returns The parent that will need to have its changes committed
@@ -157,7 +158,7 @@ private:
     /// in a position right after 'to'.
     /// @returns The two parents who will need to have their changes committed
     std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> transfer_node(
-        std::shared_ptr<LeafContainer> const& node,
+        std::shared_ptr<Container> const& node,
         std::shared_ptr<Container> const& to);
 
     /// From the provided node, find the next node in the provided direction.

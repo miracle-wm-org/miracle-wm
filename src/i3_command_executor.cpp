@@ -215,7 +215,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
             return;
         }
 
-        auto node = metadata->get_tiling_node();
+        auto node = metadata->get_container();
         auto parent = node->get_parent().lock();
         auto index = parent->get_index_of_node(node);
         if (index != 0)
@@ -240,7 +240,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
             return;
         }
 
-        auto node = metadata->get_tiling_node();
+        auto node = metadata->get_container();
         auto parent = node->get_parent().lock();
         auto index = parent->get_index_of_node(node);
         if (index != parent->num_nodes() - 1)

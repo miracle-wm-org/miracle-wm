@@ -85,7 +85,7 @@ int Workspace::get_workspace() const
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
-    tree->set_output_area(area);
+    tree->set_area(area);
 }
 
 void Workspace::recalculate_area()
@@ -106,7 +106,7 @@ WindowType Workspace::allocate_position(
     {
     case WindowType::tiled:
     {
-        requested_specification = tree->place_new_window(requested_specification);
+        requested_specification = tree->place_new_window(requested_specification, get_layout_container());
         return WindowType::tiled;
     }
     case WindowType::floating:
@@ -128,9 +128,9 @@ std::shared_ptr<WindowMetadata> Workspace::advise_new_window(
     {
     case WindowType::tiled:
     {
-        auto node = tree->advise_new_window(window_info);
+        auto container = tree->confirm_window(window_info, get_layout_container());
         metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
-        metadata->associate_to_node(node);
+        metadata->associate_container(container);
         break;
     }
     case WindowType::floating:
@@ -163,7 +163,7 @@ std::shared_ptr<WindowMetadata> Workspace::advise_new_window(
         // Warning: We need to advise fullscreen only after we've associated the userdata() appropriately
         if (type == WindowType::tiled && window_helpers::is_window_fullscreen(window_info.state()))
         {
-            tree->advise_fullscreen_window(window_info.window());
+            tree->advise_fullscreen_container(metadata->get_container());
         }
         return metadata;
     }
@@ -185,7 +185,7 @@ mir::geometry::Rectangle Workspace::confirm_placement_on_display(
     case WindowType::tiled:
     {
         tree->confirm_placement_on_display(
-            metadata->get_window(), new_state, modified_placement);
+            metadata->get_container(), new_state, modified_placement);
         break;
     }
     case WindowType::floating:
@@ -205,7 +205,7 @@ void Workspace::handle_window_ready(
     {
     case WindowType::tiled:
     {
-        tree->handle_window_ready(window_info);
+        tree->handle_container_ready(metadata->get_container());
 
         // Note: By default, new windows are raised. To properly maintain the ordering, we must
         // raise floating windows and then raise fullscreen windows.
@@ -231,7 +231,7 @@ void Workspace::advise_focus_gained(const std::shared_ptr<miracle::WindowMetadat
     {
     case WindowType::tiled:
     {
-        tree->advise_focus_gained(metadata->get_window());
+        tree->advise_focus_gained(metadata->get_container());
         break;
     }
     case WindowType::floating:
@@ -264,7 +264,7 @@ void Workspace::advise_delete_window(std::shared_ptr<miracle::WindowMetadata> co
     {
     case WindowType::tiled:
     {
-        metadata->get_tiling_node()->get_tree()->advise_delete_window(metadata->get_window());
+        metadata->get_container()->get_tree()->advise_delete_window(metadata->get_container());
         break;
     }
     case WindowType::floating:
@@ -313,7 +313,7 @@ void Workspace::handle_modify_window(
     case WindowType::tiled:
     {
         auto& window = metadata->get_window();
-        auto node = metadata->get_tiling_node();
+        auto node = metadata->get_container();
         auto const& info = window_controller.info_for(window);
         if (tree.get() != node->get_tree())
             break;
@@ -325,9 +325,9 @@ void Workspace::handle_modify_window(
             node->commit_changes();
 
             if (window_helpers::is_window_fullscreen(mods.state().value()))
-                tree->advise_fullscreen_window(window);
+                tree->advise_fullscreen_container(node);
             else if (mods.state().value() == mir_window_state_restored)
-                tree->advise_restored_window(window);
+                tree->advise_restored_container(node);
         }
 
         // If we are trying to set the window size to something that we don't want it
@@ -381,7 +381,7 @@ bool Workspace::move_active_window(Direction direction)
     case WindowType::floating:
         return move_active_window_by_amount(direction, 10);
     case WindowType::tiled:
-        return tree->try_move_active_window(direction);
+        return tree->move_container(direction, metadata->get_container());
     default:
         mir::log_error("move_active_window is not defined for window of type %d", (int)metadata->get_type());
         return false;
@@ -537,32 +537,56 @@ bool Workspace::select_window_from_point(int x, int y)
 
 bool Workspace::resize_active_window(miracle::Direction direction)
 {
-    return tree->try_resize_active_window(direction);
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return false;
+
+    return tree->resize_container(direction, metadata->get_container());
 }
 
 bool Workspace::select(miracle::Direction direction)
 {
-    return tree->try_select_next(direction);
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return false;
+
+    return tree->select_next(direction, metadata->get_container());
 }
 
 void Workspace::request_horizontal_layout()
 {
-    tree->request_horizontal_layout();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return;
+
+    tree->request_horizontal_layout(metadata->get_container());
 }
 
 void Workspace::request_vertical_layout()
 {
-    tree->request_vertical_layout();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return;
+
+    tree->request_vertical_layout(metadata->get_container());
 }
 
 void Workspace::toggle_layout()
 {
-    tree->toggle_layout();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return;
+
+    tree->toggle_layout(metadata->get_container());
 }
 
 bool Workspace::try_toggle_active_fullscreen()
 {
-    return tree->try_toggle_active_fullscreen();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return false;
+
+    return tree->toggle_fullscreen(metadata->get_container());
 }
 
 void Workspace::toggle_floating(std::shared_ptr<WindowMetadata> const& metadata)
@@ -600,10 +624,10 @@ void Workspace::toggle_floating(std::shared_ptr<WindowMetadata> const& metadata)
         // First, remove the floating window
         advise_delete_window(window_helpers::get_metadata(window, tools));
 
-        // Next, as the tiling tree to place the new window
+        // Next, ask the tiling tree to place the new window
         auto& prev_info = window_controller.info_for(window);
         miral::WindowSpecification spec = window_helpers::copy_from(prev_info);
-        auto new_spec = tree->place_new_window(spec);
+        auto new_spec = tree->place_new_window(spec, nullptr);
         tools.modify_window(window, new_spec);
 
         new_type = WindowType::tiled;
@@ -718,4 +742,20 @@ int Workspace::workspace_to_number(int workspace)
         return 10;
 
     return workspace - 1;
+}
+
+std::shared_ptr<ParentContainer> Workspace::get_layout_container()
+{
+    if (!state.active_window)
+        return nullptr;
+
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return nullptr;
+
+    auto container = metadata->get_container();
+    if (!container)
+        return nullptr;
+
+    return container->get_parent().lock();
 }

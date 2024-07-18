@@ -110,6 +110,11 @@ geom::Rectangle ParentContainer::get_logical_area() const
     return logical_area;
 }
 
+geom::Rectangle ParentContainer::get_visible_area() const
+{
+    return get_logical_area();
+}
+
 size_t ParentContainer::num_nodes() const
 {
     return sub_nodes.size();
@@ -225,24 +230,25 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
     constrain();
 }
 
-void ParentContainer::convert_to_parent(std::shared_ptr<LeafContainer> const& node)
+std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_ptr<Container> const& container)
 {
-    auto index = get_index_of_node(node);
+    auto index = get_index_of_node(container);
     if (index < 0)
     {
         mir::fatal_error("Attempting to convert a node to lane with an incorrect parent");
-        return;
+        return nullptr;
     }
 
     auto new_parent_node = std::make_shared<ParentContainer>(
-        node_interface,
-        node->get_logical_area(),
-        config,
-        tree,
-        as_lane(shared_from_this()));
-    new_parent_node->sub_nodes.push_back(node);
-    node->set_parent(new_parent_node);
+    node_interface,
+    container->get_logical_area(),
+    config,
+    tree,
+    as_lane(shared_from_this()));
+    new_parent_node->sub_nodes.push_back(container);
+    container->set_parent(new_parent_node);
     sub_nodes[index] = new_parent_node;
+    return new_parent_node;
 }
 
 void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)

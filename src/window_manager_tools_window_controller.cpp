@@ -131,7 +131,7 @@ std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata
     miral::Window const& window, TilingWindowTree const* tree)
 {
     auto node = get_metadata(window);
-    if (auto tiling_node = node->get_tiling_node())
+    if (auto tiling_node = node->get_container())
     {
         if (tiling_node->get_tree() == tree)
             return node;
@@ -160,7 +160,7 @@ void WindowManagerToolsWindowController::on_animation(
 
     bool needs_modify = false;
     miral::WindowSpecification spec;
-    if (auto node = metadata->get_tiling_node())
+    if (auto node = metadata->get_container())
     {
         spec.top_left() = node->get_visible_area().top_left;
         spec.size() = node->get_visible_area().size;

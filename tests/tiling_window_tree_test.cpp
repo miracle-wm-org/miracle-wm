@@ -117,7 +117,7 @@ public:
     std::shared_ptr<LeafContainer> create_leaf()
     {
         miral::WindowSpecification spec;
-        spec = tree.place_new_window(spec);
+        spec = tree.place_new_window(spec, nullptr);
 
         auto session = std::make_shared<test::StubSession>();
         sessions.push_back(session);
@@ -130,11 +130,11 @@ public:
         pairs.push_back({ window, metadata });
         info.userdata(metadata);
 
-        auto leaf = tree.advise_new_window(info);
-        metadata->associate_to_node(leaf);
+        auto leaf = tree.confirm_window(info, nullptr);
+        metadata->associate_container(leaf);
 
         state.active_window = window;
-        tree.advise_focus_gained(info.window());
+        tree.advise_focus_gained(leaf);
         return leaf;
     }
 
@@ -169,7 +169,7 @@ TEST_F(TilingWindowTreeTest, can_add_two_windows_vertically_without_border_and_g
 {
     auto leaf1 = create_leaf();
 
-    tree.request_vertical_layout();
+    tree.request_vertical_layout(leaf1);
 
     auto leaf2 = create_leaf();
     ASSERT_EQ(leaf1->get_logical_area().size, geom::Size(1280, 720 / 2.f));
