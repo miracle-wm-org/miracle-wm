@@ -60,16 +60,19 @@ TilingWindowTree::~TilingWindowTree()
     config->unregister_listener(config_handle);
 }
 
-miral::WindowSpecification TilingWindowTree::place_new_window(const miral::WindowSpecification& requested_specification)
+miral::WindowSpecification TilingWindowTree::place_new_window(
+    const miral::WindowSpecification& requested_specification,
+    std::shared_ptr<ParentContainer> const& parent_)
 {
+    auto parent = parent_ ? parent_ : root_lane;
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width { 0 };
     new_spec.max_width() = geom::Width { std::numeric_limits<int>::max() };
     new_spec.min_height() = geom::Height { 0 };
     new_spec.max_height() = geom::Height { std::numeric_limits<int>::max() };
-    auto node = get_active_lane()->create_space_for_window();
-    auto rect = node->get_visible_area();
+    auto container = parent->create_space_for_window();
+    auto rect = container->get_visible_area();
 
     if (!new_spec.state().is_set() || !window_helpers::is_window_fullscreen(new_spec.state().value()))
     {
@@ -81,9 +84,12 @@ miral::WindowSpecification TilingWindowTree::place_new_window(const miral::Windo
     return new_spec;
 }
 
-std::shared_ptr<LeafContainer> TilingWindowTree::advise_new_window(miral::WindowInfo const& window_info)
+std::shared_ptr<LeafContainer> TilingWindowTree::confirm_window(
+    miral::WindowInfo const& window_info,
+    std::shared_ptr<ParentContainer> const& container)
 {
-    return get_active_lane()->confirm_window(window_info.window());
+    auto parent = container ? container : root_lane;
+    return parent->confirm_window(window_info.window());
 }
 
 bool TilingWindowTree::resize_container(miracle::Direction direction, std::shared_ptr<Container> const& container)
@@ -440,19 +446,6 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Conta
         };
 }
 
-std::shared_ptr<ParentContainer> TilingWindowTree::get_active_lane()
-{
-    auto container = active_container();
-    if (!container)
-        return root_lane;
-
-    if (auto parent = container->get_parent().lock())
-        return parent;
-
-    mir::log_error("get_active_lane: parent not found?");
-    return root_lane;
-}
-
 void TilingWindowTree::handle_resize(
     std::shared_ptr<Container> const& node,
     Direction direction,
@@ -702,11 +695,6 @@ void TilingWindowTree::foreach_node(std::function<void(std::shared_ptr<Container
         [&](auto const& node)
     { f(node); return false; },
         root_lane);
-}
-
-std::shared_ptr<Container> TilingWindowTree::find_node(std::function<bool(std::shared_ptr<Container> const&)> const& f)
-{
-    return foreach_node_internal(f, root_lane);
 }
 
 void TilingWindowTree::hide()

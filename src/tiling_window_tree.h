@@ -56,11 +56,15 @@ public:
         std::shared_ptr<MiracleConfig> const& options);
     ~TilingWindowTree();
 
-    /// Makes space for the new window and returns its specified spot in the grid. Note that the returned
-    /// position is the position WITH gaps.
-    miral::WindowSpecification place_new_window(const miral::WindowSpecification& requested_specification);
+    /// Place a window in the specified container if one is provided.
+    /// Otherwise, the container is placed at the root node.
+    miral::WindowSpecification place_new_window(
+        const miral::WindowSpecification& requested_specification,
+        std::shared_ptr<ParentContainer> const& container);
 
-    std::shared_ptr<LeafContainer> advise_new_window(miral::WindowInfo const&);
+    std::shared_ptr<LeafContainer> confirm_window(
+        miral::WindowInfo const&,
+        std::shared_ptr<ParentContainer> const& container);
 
     /// Try to resize the current active window in the provided direction
     bool resize_container(Direction direction, std::shared_ptr<Container> const&);
@@ -107,8 +111,6 @@ public:
 
     void foreach_node(std::function<void(std::shared_ptr<Container>)> const&);
 
-    std::shared_ptr<Container> find_node(std::function<bool(std::shared_ptr<Container> const&)> const&);
-
     /// Shows the containers in this tree and returns a fullscreen container, if any
     std::shared_ptr<LeafContainer> show();
 
@@ -142,7 +144,6 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    std::shared_ptr<ParentContainer> get_active_lane();
     void handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const&);
     void handle_resize(std::shared_ptr<Container> const& node, Direction direction, int amount);
 

@@ -106,7 +106,7 @@ WindowType Workspace::allocate_position(
     {
     case WindowType::tiled:
     {
-        requested_specification = tree->place_new_window(requested_specification);
+        requested_specification = tree->place_new_window(requested_specification, get_layout_container());
         return WindowType::tiled;
     }
     case WindowType::floating:
@@ -128,7 +128,7 @@ std::shared_ptr<WindowMetadata> Workspace::advise_new_window(
     {
     case WindowType::tiled:
     {
-        auto container = tree->advise_new_window(window_info);
+        auto container = tree->confirm_window(window_info, get_layout_container());
         metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window_info.window(), this);
         metadata->associate_container(container);
         break;
@@ -624,10 +624,10 @@ void Workspace::toggle_floating(std::shared_ptr<WindowMetadata> const& metadata)
         // First, remove the floating window
         advise_delete_window(window_helpers::get_metadata(window, tools));
 
-        // Next, as the tiling tree to place the new window
+        // Next, ask the tiling tree to place the new window
         auto& prev_info = window_controller.info_for(window);
         miral::WindowSpecification spec = window_helpers::copy_from(prev_info);
-        auto new_spec = tree->place_new_window(spec);
+        auto new_spec = tree->place_new_window(spec, nullptr);
         tools.modify_window(window, new_spec);
 
         new_type = WindowType::tiled;
@@ -742,4 +742,20 @@ int Workspace::workspace_to_number(int workspace)
         return 10;
 
     return workspace - 1;
+}
+
+std::shared_ptr<ParentContainer> Workspace::get_layout_container()
+{
+    if (!state.active_window)
+        return nullptr;
+
+    auto metadata = window_controller.get_metadata(state.active_window);
+    if (!metadata)
+        return nullptr;
+
+    auto container = metadata->get_container();
+    if (!container)
+        return nullptr;
+
+    return container->get_parent().lock();
 }

@@ -33,6 +33,7 @@ class MiracleConfig;
 class TilingWindowTree;
 class WindowController;
 class CompositorState;
+class ParentContainer;
 
 class Workspace
 {
@@ -112,6 +113,9 @@ private:
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
     miral::MinimalWindowManager& floating_window_manager;
+
+    /// Retrieves the container that is currently being used for layout
+    std::shared_ptr<ParentContainer> get_layout_container();
 };
 
 } // miracle
