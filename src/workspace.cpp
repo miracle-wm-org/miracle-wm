@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
+#include "floating_container.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/zone.h>
@@ -137,7 +138,7 @@ std::shared_ptr<WindowMetadata> Workspace::advise_new_window(
     {
         floating_window_manager.advise_new_window(window_info);
         metadata = std::make_shared<WindowMetadata>(WindowType::floating, window_info.window(), this);
-        add_floating_window(window_info.window());
+        metadata->associate_container(add_floating_window(window_info.window()));
         break;
     }
     case WindowType::other:
@@ -210,7 +211,7 @@ void Workspace::handle_window_ready(
         // Note: By default, new windows are raised. To properly maintain the ordering, we must
         // raise floating windows and then raise fullscreen windows.
         for (auto const& window : floating_windows)
-            window_controller.raise(window);
+            window_controller.raise(window->window());
 
         if (tree->has_fullscreen_window())
             window_controller.raise(window_info.window());
@@ -455,19 +456,19 @@ bool Workspace::move_active_window_to(int x, int y)
 void Workspace::show()
 {
     auto fullscreen_node = tree->show();
-    for (auto const& window : floating_windows)
+    for (auto const& floating : floating_windows)
     {
-        auto metadata = window_helpers::get_metadata(window, tools);
-        if (!metadata)
+        // Pinned windows don't require restoration
+        if (floating->pinned())
         {
-            mir::log_error("show: floating window lacks metadata");
+            tools.raise_tree(floating->window());
             continue;
         }
 
-        // Pinned windows don't require restoration
-        if (metadata->get_is_pinned())
+        auto metadata = window_helpers::get_metadata(floating->window(), tools);
+        if (!metadata)
         {
-            tools.raise_tree(window);
+            mir::log_error("show: floating window lacks metadata");
             continue;
         }
 
@@ -475,8 +476,8 @@ void Workspace::show()
         {
             miral::WindowSpecification spec;
             spec.state() = state.value();
-            tools.modify_window(window, spec);
-            tools.raise_tree(window);
+            tools.modify_window(floating->window(), spec);
+            tools.raise_tree(floating->window());
         }
     }
 
@@ -492,7 +493,7 @@ void Workspace::for_each_window(std::function<void(std::shared_ptr<WindowMetadat
 {
     for (auto const& window : floating_windows)
     {
-        auto metadata = window_helpers::get_metadata(window, tools);
+        auto metadata = window_helpers::get_metadata(window->window(), tools);
         if (metadata)
             f(metadata);
     }
@@ -513,8 +514,9 @@ bool Workspace::select_window_from_point(int x, int y)
     if (tree->has_fullscreen_window())
         return false;
 
-    for (auto const& window : floating_windows)
+    for (auto const& floating : floating_windows)
     {
+        auto window = floating->window();
         geom::Rectangle window_area(window.top_left(), window.size());
         if (window == state.active_window && window_area.contains(geom::Point(x, y)))
             return false;
@@ -649,8 +651,9 @@ void Workspace::hide()
 {
     tree->hide();
 
-    for (auto const& window : floating_windows)
+    for (auto const& floating : floating_windows)
     {
+        auto window = floating->window();
         auto metadata = window_helpers::get_metadata(window, tools);
         if (!metadata)
         {
@@ -670,7 +673,7 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<Workspace> const& oth
 {
     for (auto it = floating_windows.begin(); it != floating_windows.end();)
     {
-        auto metadata = window_helpers::get_metadata(*it, tools);
+        auto metadata = window_helpers::get_metadata(it->get()->window(), tools);
         if (!metadata)
         {
             mir::log_error("transfer_pinned_windows_to: floating window lacks metadata");
@@ -678,9 +681,9 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<Workspace> const& oth
             continue;
         }
 
-        if (metadata->get_is_pinned())
+        if (it->get()->pinned())
         {
-            other->add_floating_window(*it);
+            metadata->associate_container(other->add_floating_window(it->get()->window()));
             it = floating_windows.erase(it);
         }
         else
@@ -692,26 +695,34 @@ bool Workspace::has_floating_window(miral::Window const& window)
 {
     for (auto const& other : floating_windows)
     {
-        if (other == window)
+        if (other->window() == window)
             return true;
     }
 
     return false;
 }
 
-void Workspace::add_floating_window(miral::Window const& window)
+std::shared_ptr<LeafContainer> Workspace::add_floating_window(miral::Window const& window)
 {
-    floating_windows.push_back(window);
+    auto floating = std::make_shared<FloatingContainer>();
+    auto leaf = std::make_shared<LeafContainer>(
+        window_controller,
+        geom::Rectangle{window.top_left(), window.size()},
+        config,
+        nullptr,
+        floating
+    );
+    floating->add_leaf(leaf);
+    floating_windows.push_back(floating);
+    return leaf;
 }
 
 void Workspace::remove_floating_window(miral::Window const& window)
 {
-    floating_windows.erase(std::remove(floating_windows.begin(), floating_windows.end(), window));
-}
-
-std::vector<miral::Window> const& Workspace::get_floating_windows() const
-{
-    return floating_windows;
+    floating_windows.erase(std::remove_if(floating_windows.begin(), floating_windows.end(), [&window](std::shared_ptr<FloatingContainer> const& floating)
+    {
+        return floating->window() == window;
+    }));
 }
 
 Output* Workspace::get_output()
@@ -757,5 +768,9 @@ std::shared_ptr<ParentContainer> Workspace::get_layout_container()
     if (!container)
         return nullptr;
 
-    return container->get_parent().lock();
+    auto parent = container->get_parent().lock();
+    if (!parent)
+        return nullptr;
+
+    return Container::as_parent(parent);
 }

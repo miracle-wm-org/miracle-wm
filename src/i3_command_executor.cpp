@@ -216,12 +216,14 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         }
 
         auto node = metadata->get_container();
-        auto parent = node->get_parent().lock();
-        auto index = parent->get_index_of_node(node);
-        if (index != 0)
+        if (auto parent = Container::as_parent(node->get_parent().lock()))
         {
-            auto node_to_select = parent->get_nth_window(index - 1);
-            active_output->select_window(node_to_select->get_window());
+            auto index = parent->get_index_of_node(node);
+            if (index != 0)
+            {
+                auto node_to_select = parent->get_nth_window(index - 1);
+                active_output->select_window(node_to_select->get_window());
+            }
         }
     }
     else if (arg == "next")
@@ -241,12 +243,14 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         }
 
         auto node = metadata->get_container();
-        auto parent = node->get_parent().lock();
-        auto index = parent->get_index_of_node(node);
-        if (index != parent->num_nodes() - 1)
+        if (auto parent = Container::as_parent(node->get_parent().lock()))
         {
-            auto node_to_select = parent->get_nth_window(index + 1);
-            active_output->select_window(node_to_select->get_window());
+            auto index = parent->get_index_of_node(node);
+            if (index != parent->num_nodes() - 1)
+            {
+                auto node_to_select = parent->get_nth_window(index + 1);
+                active_output->select_window(node_to_select->get_window());
+            }
         }
     }
     else if (arg == "floating")

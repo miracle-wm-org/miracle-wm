@@ -32,9 +32,7 @@ class LeafContainer;
 class MiracleConfig;
 class TilingWindowTree;
 
-/**
- * A parent container defines the layout of containers beneath it.
- */
+/// A parent container defines the layout of containers beneath it.
 class ParentContainer : public Container
 {
 public:
@@ -65,7 +63,7 @@ public:
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
-    void set_parent(std::shared_ptr<ParentContainer> const&) override;
+    void set_parent(std::shared_ptr<Container> const&) override;
 
 private:
     WindowController& node_interface;

@@ -34,6 +34,7 @@ class TilingWindowTree;
 class WindowController;
 class CompositorState;
 class ParentContainer;
+class FloatingContainer;
 
 class Workspace
 {
@@ -95,9 +96,8 @@ public:
     void toggle_floating(std::shared_ptr<WindowMetadata> const&);
 
     bool has_floating_window(miral::Window const&);
-    void add_floating_window(miral::Window const&);
+    std::shared_ptr<LeafContainer> add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
-    [[nodiscard]] std::vector<miral::Window> const& get_floating_windows() const;
     Output* get_output();
     void trigger_rerender();
     [[nodiscard]] bool is_empty() const;
@@ -108,7 +108,7 @@ private:
     miral::WindowManagerTools tools;
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
-    std::vector<miral::Window> floating_windows;
+    std::vector<std::shared_ptr<FloatingContainer>> floating_windows;
     WindowController& window_controller;
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;

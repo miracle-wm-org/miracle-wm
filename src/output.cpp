@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "leaf_container.h"
+#include "floating_container.h"
 #include "vector_helpers.h"
 #include "window_helpers.h"
 #include "window_metadata.h"
@@ -413,7 +414,13 @@ void Output::toggle_pinned_to_workspace()
         return;
     }
 
-    metadata->toggle_pin_to_desktop();
+    auto container = metadata->get_container();
+    auto parent = container->get_parent().lock();
+    if (!parent)
+        return;
+
+    if (auto floating = Container::as_floating(parent))
+        floating->pinned(!floating->pinned());
 }
 
 void Output::set_is_pinned(bool is_pinned)
@@ -425,7 +432,13 @@ void Output::set_is_pinned(bool is_pinned)
         return;
     }
 
-    metadata->set_is_pinned(is_pinned);
+    auto container = metadata->get_container();
+    auto parent = container->get_parent().lock();
+    if (!parent)
+        return;
+
+    if (auto floating = Container::as_floating(parent))
+        floating->pinned(is_pinned);
 }
 
 void Output::update_area(geom::Rectangle const& new_area)

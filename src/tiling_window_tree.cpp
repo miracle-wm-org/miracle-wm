@@ -181,7 +181,7 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
             return false;
         }
 
-        auto active_parent = container->get_parent().lock();
+        auto active_parent = Container::as_parent(container->get_parent().lock());
         if (active_parent == target_parent)
         {
             active_parent->swap_nodes(container, target_node);
@@ -196,7 +196,7 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
     }
     case MoveResult::traversal_type_append:
     {
-        auto lane_node = Container::as_lane(traversal_result.node);
+        auto lane_node = Container::as_parent(traversal_result.node);
         auto moving_node = container;
         handle_remove(moving_node);
         lane_node->graft_existing(moving_node, lane_node->num_nodes());
@@ -205,7 +205,7 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
     }
     case MoveResult::traversal_type_prepend:
     {
-        auto lane_node = Container::as_lane(traversal_result.node);
+        auto lane_node = Container::as_parent(traversal_result.node);
         auto moving_node = container;
         handle_remove(moving_node);
         lane_node->graft_existing(moving_node, 0);
@@ -234,7 +234,7 @@ void TilingWindowTree::request_horizontal_layout(std::shared_ptr<Container> cons
 
 void TilingWindowTree::toggle_layout(std::shared_ptr<Container> const& container)
 {
-    auto parent = container->get_parent().lock();
+    auto parent = Container::as_parent(container->get_parent().lock());
     if (!parent)
         return;
 
@@ -252,7 +252,7 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, st
         return;
     }
 
-    auto parent = container->get_parent().lock();
+    auto parent = Container::as_parent(container->get_parent().lock());
     if (parent->num_nodes() != 1)
         parent = parent->convert_to_parent(container);
 
@@ -327,7 +327,7 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
 
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
-    auto lane_node = Container::as_lane(node);
+    auto lane_node = Container::as_parent(node);
     if (is_vertical && lane_node->get_direction() == NodeLayoutDirection::vertical
         || !is_vertical && lane_node->get_direction() == NodeLayoutDirection::horizontal)
     {
@@ -366,7 +366,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
     auto current_node = from;
-    auto parent = current_node->get_parent().lock();
+    auto parent = Container::as_parent(current_node->get_parent().lock());
     if (!parent)
     {
         mir::log_warning("Cannot handle_select the root node");
@@ -393,7 +393,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
         }
 
         current_node = parent;
-        parent = parent->get_parent().lock();
+        parent = Container::as_parent(parent->get_parent().lock());
     } while (parent != nullptr);
 
     return nullptr;
@@ -451,7 +451,7 @@ void TilingWindowTree::handle_resize(
     Direction direction,
     int amount)
 {
-    auto parent = node->get_parent().lock();
+    auto parent = Container::as_parent(node->get_parent().lock());
     if (parent == nullptr)
     {
         // Can't resize, most likely the root
@@ -554,7 +554,7 @@ void TilingWindowTree::handle_resize(
 
 std::shared_ptr<ParentContainer> TilingWindowTree::handle_remove(std::shared_ptr<Container> const& node)
 {
-    auto parent = node->get_parent().lock();
+    auto parent = Container::as_parent(node->get_parent().lock());
     if (parent == nullptr)
         return nullptr;
 
@@ -562,7 +562,7 @@ std::shared_ptr<ParentContainer> TilingWindowTree::handle_remove(std::shared_ptr
     {
         // Remove the entire lane if this lane is now empty
         auto prev_active = parent;
-        parent = parent->get_parent().lock();
+        parent = Container::as_parent(parent->get_parent().lock());
         parent->remove(prev_active);
     }
     else
@@ -581,7 +581,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> T
 
     // Note: When we remove moving_node from its initial position, there's a chance
     // that the target_lane was melted into another lane. Hence, we need to run it
-    auto target_parent = to->get_parent().lock();
+    auto target_parent = Container::as_parent(to->get_parent().lock());
     auto index = target_parent->get_index_of_node(to);
     target_parent->graft_existing(node, index + 1);
 
@@ -679,7 +679,7 @@ std::shared_ptr<Container> foreach_node_internal(
     if (parent->is_leaf())
         return nullptr;
 
-    for (auto& node : Container::as_lane(parent)->get_sub_nodes())
+    for (auto& node : Container::as_parent(parent)->get_sub_nodes())
     {
         if (auto result = foreach_node_internal(f, node))
             return result;

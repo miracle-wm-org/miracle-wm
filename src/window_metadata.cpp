@@ -67,18 +67,6 @@ std::optional<MirWindowState> WindowMetadata::consume_restore_state()
     return state;
 }
 
-void WindowMetadata::toggle_pin_to_desktop()
-{
-    if (type == WindowType::floating)
-        is_pinned = !is_pinned;
-}
-
-void WindowMetadata::set_is_pinned(bool in_is_pinned)
-{
-    if (type == WindowType::floating)
-        is_pinned = in_is_pinned;
-}
-
 bool WindowMetadata::is_focused() const
 {
     if (!workspace)
@@ -123,9 +111,6 @@ Output* WindowMetadata::get_output() const
 
 glm::mat4 WindowMetadata::get_workspace_transform() const
 {
-    if (is_pinned)
-        return glm::mat4(1.f);
-
     auto output = get_output();
     if (!output)
         return glm::mat4(1.f);
@@ -137,9 +122,6 @@ glm::mat4 WindowMetadata::get_workspace_transform() const
 
 glm::mat4 WindowMetadata::get_output_transform() const
 {
-    if (is_pinned)
-        return glm::mat4(1.f);
-
     auto output = get_output();
     if (!output)
         return glm::mat4(1.f);

@@ -65,6 +65,7 @@ add_library(miracle-wm-implementation
     src/program_factory.cpp
     src/mode_observer.cpp
     src/debug_helper.h
+    src/floating_container.cpp
 )
 
 add_executable(miracle-wm

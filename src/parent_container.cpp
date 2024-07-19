@@ -200,7 +200,7 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pend
         create_space(pending_index),
         config,
         tree,
-        as_lane(shared_from_this()));
+        as_parent(shared_from_this()));
     sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
     return pending_node;
 }
@@ -223,7 +223,7 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
 void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int index)
 {
     auto rectangle = create_space(index);
-    node->set_parent(as_lane(shared_from_this()));
+    node->set_parent(as_parent(shared_from_this()));
     node->set_logical_area(rectangle);
     sub_nodes.insert(sub_nodes.begin() + index, node);
     relayout();
@@ -244,7 +244,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     container->get_logical_area(),
     config,
     tree,
-    as_lane(shared_from_this()));
+    as_parent(shared_from_this()));
     new_parent_node->sub_nodes.push_back(container);
     container->set_parent(new_parent_node);
     sub_nodes[index] = new_parent_node;
@@ -374,7 +374,7 @@ std::shared_ptr<LeafContainer> ParentContainer::get_nth_window(size_t i) const
         return as_leaf(sub_nodes[i]);
 
     // The lane is correct, so let's get the first window in that lane.
-    return as_lane(sub_nodes[i])->get_nth_window(0);
+    return as_parent(sub_nodes[i])->get_nth_window(0);
 }
 
 std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const
@@ -387,7 +387,7 @@ std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::s
     {
         if (node->is_lane())
         {
-            if (auto retval = as_lane(node)->find_where(func))
+            if (auto retval = as_parent(node)->find_where(func))
                 return retval;
         }
     }
@@ -429,12 +429,12 @@ void ParentContainer::remove(const std::shared_ptr<Container>& node)
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
     if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
     {
-        auto dying_lane = as_lane(sub_nodes[0]);
+        auto dying_lane = as_parent(sub_nodes[0]);
         sub_nodes.clear();
         for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
             sub_nodes.push_back(sub_node);
-            sub_node->set_parent(as_lane(shared_from_this()));
+            sub_node->set_parent(as_parent(shared_from_this()));
         }
         set_direction(dying_lane->get_direction());
     }
@@ -478,7 +478,7 @@ size_t ParentContainer::get_min_height() const
     return size;
 }
 
-void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
+void ParentContainer::set_parent(std::shared_ptr<Container> const& in_parent)
 {
     parent = in_parent;
 }

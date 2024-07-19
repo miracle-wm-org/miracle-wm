@@ -28,7 +28,7 @@ LeafContainer::LeafContainer(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentContainer> const& parent) :
+    std::shared_ptr<Container> const& parent) :
     Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
@@ -52,7 +52,7 @@ void LeafContainer::set_logical_area(geom::Rectangle const& target_rect)
     next_logical_area = target_rect;
 }
 
-void LeafContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
+void LeafContainer::set_parent(std::shared_ptr<Container> const& in_parent)
 {
     parent = in_parent;
 }
