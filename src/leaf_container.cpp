@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mir_toolkit/common.h"
 #include "miracle_config.h"
 #include "parent_container.h"
+#include "tiling_window_tree.h"
+#include "window_helpers.h"
 #include <cmath>
 
 using namespace miracle;
@@ -115,6 +117,46 @@ size_t LeafContainer::get_min_height() const
     return 50;
 }
 
+void LeafContainer::handle_ready() const
+{
+    tree->handle_container_ready(*this);
+}
+
+void LeafContainer::handle_modify(miral::WindowSpecification const& modifications)
+{
+    auto const& info = node_interface.info_for(window);
+
+    // TODO: Check if the current workspace is active. If not, return early.
+
+    auto mods = modifications;
+    if (mods.state().is_set() && mods.state().value() != info.state())
+    {
+        set_state(mods.state().value());
+        commit_changes();
+
+        if (window_helpers::is_window_fullscreen(mods.state().value()))
+            tree->advise_fullscreen_container(*this);
+        else if (mods.state().value() == mir_window_state_restored)
+            tree->advise_restored_container(*this);
+    }
+
+    // If we are trying to set the window size to something that we don't want it
+    // to be, then let's consume it.
+    if (!is_fullscreen()
+        && mods.size().is_set()
+        && get_visible_area().size != mods.size().value())
+    {
+        mods.size().consume();
+    }
+
+    node_interface.modify(window, mods);
+}
+
+bool LeafContainer::resize(miracle::Direction direction)
+{
+    return tree->resize_container(direction, *this);
+}
+
 void LeafContainer::show()
 {
     next_state = before_shown_state;
@@ -127,12 +169,22 @@ void LeafContainer::hide()
     next_state = mir_window_state_hidden;
 }
 
-void LeafContainer::toggle_fullscreen()
+bool LeafContainer::toggle_fullscreen()
 {
     if (node_interface.is_fullscreen(window))
         next_state = mir_window_state_restored;
     else
         next_state = mir_window_state_fullscreen;
+
+    commit_changes();
+    return tree->toggle_fullscreen(*this);
+}
+
+mir::geometry::Rectangle LeafContainer::confirm_placement(
+    MirWindowState state, mir::geometry::Rectangle const& placement)
+{
+    auto new_placement = placement;
+    tree->confirm_placement_on_display(*this, state, new_`placement);
 }
 
 bool LeafContainer::is_fullscreen() const

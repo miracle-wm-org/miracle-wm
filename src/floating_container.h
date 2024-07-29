@@ -19,17 +19,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_FLOATING_CONTAINER_H
 
 #include "container.h"
+#include <miral/minimal_window_manager.h>
+#include <miral/window.h>
 
 namespace miracle
 {
+class WindowController;
 
 /// Contains a single float window
 /// TODO: Allow access to an entire TilingWindowTree here
 class FloatingContainer : public Container
 {
 public:
-    explicit FloatingContainer();
-    void add_leaf(std::shared_ptr<LeafContainer> const&);
+    explicit FloatingContainer(
+        miral::Window const&,
+        miral::MinimalWindowManager& wm,
+        WindowController& window_controller);
     [[nodiscard]] mir::geometry::Rectangle get_logical_area() const override;
     void set_logical_area(mir::geometry::Rectangle const&) override;
     void commit_changes() override;
@@ -38,12 +43,17 @@ public:
     void set_parent(std::shared_ptr<Container> const& ptr) override;
     size_t get_min_height() const override;
     size_t get_min_width() const override;
+    void handle_ready() const override;
+    void handle_modify(miral::WindowSpecification const&) override;
+
     bool pinned() const;
     void pinned(bool);
     [[nodiscard]] miral::Window const& window() const;
 
 private:
-    std::shared_ptr<LeafContainer> container;
+    miral::Window window_;
+    miral::MinimalWindowManager& wm;
+    WindowController& window_controller;
     bool is_pinned = false;
 };
 

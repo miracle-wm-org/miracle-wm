@@ -50,9 +50,9 @@ WindowMetadata::WindowMetadata(
 {
 }
 
-void WindowMetadata::associate_container(std::shared_ptr<LeafContainer> const& node)
+void WindowMetadata::associate_container(std::shared_ptr<Container> const& node)
 {
-    tiling_node = node;
+    container = node;
 }
 
 void WindowMetadata::set_restore_state(MirWindowState state)
@@ -84,11 +84,9 @@ Workspace* WindowMetadata::get_workspace() const
     return workspace;
 }
 
-std::shared_ptr<LeafContainer> WindowMetadata::get_container() const
+std::shared_ptr<Container> WindowMetadata::get_container() const
 {
-    if (type == WindowType::tiled)
-        return tiling_node;
-    return nullptr;
+    return container;
 }
 
 uint32_t WindowMetadata::get_animation_handle() const

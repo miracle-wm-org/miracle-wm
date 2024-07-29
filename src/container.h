@@ -55,6 +55,18 @@ public:
     virtual void set_parent(std::shared_ptr<Container> const&) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
+    virtual void handle_ready() const = 0;
+    virtual void handle_modify(miral::WindowSpecification const&) = 0;
+    virtual bool resize(Direction direction) = 0;
+    virtual bool toggle_fullscreen() = 0;
+    virtual void request_horizontal_layout() = 0;
+    virtual void request_vertical_layout() = 0;
+    virtual void toggle_layout() = 0;
+    virtual void on_focus_gained() = 0;
+    virtual void on_focus_lost() = 0;
+    virtual mir::geometry::Rectangle confirm_placement(
+        MirWindowState, mir::geometry::Rectangle const&) = 0;
+
     bool is_leaf();
     bool is_lane();
     [[nodiscard]] std::weak_ptr<Container> get_parent() const;

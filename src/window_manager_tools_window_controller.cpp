@@ -127,19 +127,6 @@ std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata
     return nullptr;
 }
 
-std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(
-    miral::Window const& window, TilingWindowTree const* tree)
-{
-    auto node = get_metadata(window);
-    if (auto tiling_node = node->get_container())
-    {
-        if (tiling_node->get_tree() == tree)
-            return node;
-    }
-
-    return nullptr;
-}
-
 void WindowManagerToolsWindowController::raise(miral::Window const& window)
 {
     tools.raise_tree(window);

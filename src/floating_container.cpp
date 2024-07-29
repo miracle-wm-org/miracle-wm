@@ -21,14 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-FloatingContainer::FloatingContainer()
-    : Container(nullptr)
+FloatingContainer::FloatingContainer(
+    miral::Window const& window,
+    miral::MinimalWindowManager& wm,
+    WindowController& window_controller)
+    : Container(nullptr),
+      window_{window},
+      wm{wm},
+      window_controller{window_controller}
 {
-}
-
-void FloatingContainer::add_leaf(std::shared_ptr<LeafContainer> const& leaf)
-{
-    container = leaf;
 }
 
 void FloatingContainer::commit_changes()
@@ -68,6 +69,18 @@ size_t FloatingContainer::get_min_width() const
     return 1;
 }
 
+void FloatingContainer::handle_ready() const
+{
+    auto& info = window_controller.info_for(window_);
+    wm.handle_window_ready(info);
+}
+
+void FloatingContainer::handle_modify(miral::WindowSpecification const& modifications)
+{
+    auto& info = window_controller.info_for(window_);
+    wm.handle_modify_window(info, modifications);
+}
+
 bool FloatingContainer::pinned() const
 {
     return is_pinned;
@@ -80,5 +93,5 @@ void FloatingContainer::pinned(bool in)
 
 const miral::Window &FloatingContainer::window() const
 {
-    return container->get_window();
+    return window_;
 }

@@ -55,7 +55,7 @@ std::shared_ptr<miracle::LeafContainer> miracle::window_helpers::get_node_for_wi
 {
     auto metadata = get_metadata(window, tools);
     if (metadata)
-        return metadata->get_container();
+        return Container::as_leaf(metadata->get_container());
 
     return nullptr;
 }

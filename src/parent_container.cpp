@@ -456,6 +456,11 @@ int ParentContainer::get_index_of_node(std::shared_ptr<Container> const& node) c
     return get_index_of_node(node.get());
 }
 
+int ParentContainer::get_index_of_node(Container const& node) const
+{
+    return get_index_of_node(node.shared_from_this().get());
+}
+
 void ParentContainer::constrain()
 {
     for (auto& node : sub_nodes)

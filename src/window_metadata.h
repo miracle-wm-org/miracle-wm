@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class Workspace;
-class LeafContainer;
+class Container;
 class TilingWindowTree;
 class Output;
 
@@ -45,9 +45,9 @@ class WindowMetadata
 public:
     WindowMetadata(WindowType type, miral::Window const& window);
     WindowMetadata(WindowType type, miral::Window const& window, Workspace* workspace);
-    void associate_container(std::shared_ptr<LeafContainer> const&);
+    void associate_container(std::shared_ptr<Container> const&);
     miral::Window& get_window() { return window; }
-    [[nodiscard]] std::shared_ptr<LeafContainer> get_container() const;
+    [[nodiscard]] std::shared_ptr<Container> get_container() const;
     [[nodiscard]] WindowType get_type() const { return type; }
     void set_restore_state(MirWindowState state);
     std::optional<MirWindowState> consume_restore_state();
@@ -65,7 +65,7 @@ private:
     WindowType type;
     miral::Window window;
     Workspace* workspace;
-    std::shared_ptr<LeafContainer> tiling_node;
+    std::shared_ptr<Container> container;
     std::optional<MirWindowState> restore_state;
     uint32_t animation_handle = 0;
     glm::mat4 transform = glm::mat4(1.f);

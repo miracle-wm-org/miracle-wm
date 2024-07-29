@@ -96,7 +96,7 @@ public:
     void toggle_floating(std::shared_ptr<WindowMetadata> const&);
 
     bool has_floating_window(miral::Window const&);
-    std::shared_ptr<LeafContainer> add_floating_window(miral::Window const&);
+    std::shared_ptr<FloatingContainer> add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);
     Output* get_output();
     void trigger_rerender();

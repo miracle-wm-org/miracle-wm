@@ -415,11 +415,7 @@ void Output::toggle_pinned_to_workspace()
     }
 
     auto container = metadata->get_container();
-    auto parent = container->get_parent().lock();
-    if (!parent)
-        return;
-
-    if (auto floating = Container::as_floating(parent))
+    if (auto floating = Container::as_floating(container))
         floating->pinned(!floating->pinned());
 }
 
@@ -433,11 +429,7 @@ void Output::set_is_pinned(bool is_pinned)
     }
 
     auto container = metadata->get_container();
-    auto parent = container->get_parent().lock();
-    if (!parent)
-        return;
-
-    if (auto floating = Container::as_floating(parent))
+    if (auto floating = Container::as_floating(container))
         floating->pinned(is_pinned);
 }
 

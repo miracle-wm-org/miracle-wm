@@ -53,11 +53,17 @@ public:
     void set_state(MirWindowState state);
     void show();
     void hide();
-    void toggle_fullscreen();
     bool is_fullscreen() const;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
+    void handle_ready() const override;
+    void handle_modify(miral::WindowSpecification const&) override;
+    bool resize(Direction direction) override;
+    bool toggle_fullscreen() override;
+    mir::geometry::Rectangle confirm_placement(
+        MirWindowState, mir::geometry::Rectangle const&) override;
+
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
     [[nodiscard]] miral::Window& get_window() { return window; }
     void commit_changes() override;

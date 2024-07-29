@@ -67,27 +67,27 @@ public:
         std::shared_ptr<ParentContainer> const& container);
 
     /// Try to resize the current active window in the provided direction
-    bool resize_container(Direction direction, std::shared_ptr<Container> const&);
+    bool resize_container(Direction direction, Container&);
 
     /// Move the active window in the provided direction
-    bool move_container(Direction direction, std::shared_ptr<Container> const&);
+    bool move_container(Direction direction, Container&);
 
     /// Select the next window in the provided direction
-    bool select_next(Direction direction, std::shared_ptr<Container> const&);
+    bool select_next(Direction direction, Container&);
 
     /// Toggle the active window between fullscreen and not fullscreen
-    bool toggle_fullscreen(std::shared_ptr<LeafContainer> const&);
+    bool toggle_fullscreen(LeafContainer&);
 
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
     // Request a change to vertical window placement
-    void request_vertical_layout(std::shared_ptr<Container> const&);
+    void request_vertical_layout(Container&);
 
     // Request a change to horizontal window placement
-    void request_horizontal_layout(std::shared_ptr<Container> const&);
+    void request_horizontal_layout(Container&);
 
     // Request a change from the current layout scheme to another layout scheme
-    void toggle_layout(std::shared_ptr<Container> const&);
+    void toggle_layout(Container&);
 
     /// Advises us to focus the provided container.
     void advise_focus_gained(std::shared_ptr<Container> const&);
@@ -100,9 +100,9 @@ public:
 
     std::shared_ptr<LeafContainer> select_window_from_point(int x, int y);
 
-    bool advise_fullscreen_container(std::shared_ptr<LeafContainer> const&);
-    bool advise_restored_container(std::shared_ptr<LeafContainer> const&);
-    bool handle_container_ready(std::shared_ptr<LeafContainer> const&);
+    bool advise_fullscreen_container(LeafContainer&);
+    bool advise_restored_container(LeafContainer&);
+    bool handle_container_ready(LeafContainer&);
 
     bool confirm_placement_on_display(
         std::shared_ptr<Container> const& container,
@@ -145,10 +145,10 @@ private:
     int config_handle = 0;
 
     void handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const&);
-    void handle_resize(std::shared_ptr<Container> const& node, Direction direction, int amount);
+    void handle_resize(Container& node, Direction direction, int amount);
 
     /// Constrains the container to its tile in the tree
-    bool constrain(std::shared_ptr<Container> const&);
+    bool constrain(Container&);
 
     /// Removes the node from the tree
     /// @returns The parent that will need to have its changes committed
@@ -163,11 +163,11 @@ private:
 
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
-    MoveResult handle_move(std::shared_ptr<Container> const& from, Direction direction);
+    MoveResult handle_move(Container& from, Direction direction);
 
     /// Selects the next node in the provided direction
     /// @returns The next selectable window or nullptr if none is found
-    static std::shared_ptr<LeafContainer> handle_select(std::shared_ptr<Container> const& from, Direction direction);
+    static std::shared_ptr<LeafContainer> handle_select(Container& from, Direction direction);
 
     std::shared_ptr<LeafContainer> active_container() const;
 };

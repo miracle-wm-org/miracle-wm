@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <miral/zone.h>
+#include <mir/server.h>
 
 using namespace miracle;
 
