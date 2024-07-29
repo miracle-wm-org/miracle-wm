@@ -64,7 +64,23 @@ public:
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
-    void set_parent(std::shared_ptr<Container> const&) override;
+    void set_parent(std::shared_ptr<ParentContainer> const&) override;
+
+    void handle_ready() override;
+    void handle_modify(miral::WindowSpecification const &specification) override;
+    void handle_request_move(MirInputEvent const *input_event) override;
+    void handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge) override;
+    void handle_raise() override;
+    bool resize(Direction direction) override;
+    bool toggle_fullscreen() override;
+    void request_horizontal_layout() override;
+    void request_vertical_layout() override;
+    void toggle_layout() override;
+    void on_focus_gained() override;
+    void on_focus_lost() override;
+    void on_move_to(mir::geometry::Point const &top_left) override;
+    mir::geometry::Rectangle
+        confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle) override;
 
 private:
     WindowController& node_interface;

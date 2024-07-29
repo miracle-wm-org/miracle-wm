@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "direction.h"
 #include "miral/window.h"
 #include "tiling_window_tree.h"
-#include "window_metadata.h"
+
 #include "workspace.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
@@ -54,24 +54,24 @@ public:
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
     [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
-    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
-    [[nodiscard]] std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
+    ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
+    [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
     void handle_window_ready(
         miral::WindowInfo& window_info,
-        std::shared_ptr<miracle::WindowMetadata> const& metadata) const;
-    void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left);
-    void handle_request_move(std::shared_ptr<miracle::WindowMetadata> const& metadata, const MirInputEvent* input_event);
+        std::shared_ptr<miracle::Container> const& metadata) const;
+    void advise_focus_gained(std::shared_ptr<miracle::Container> const& metadata);
+    void advise_focus_lost(std::shared_ptr<miracle::Container> const& metadata);
+    void advise_delete_window(std::shared_ptr<miracle::Container> const& metadata);
+    void advise_move_to(std::shared_ptr<miracle::Container> const& metadata, geom::Point top_left);
+    void handle_request_move(std::shared_ptr<miracle::Container> const& metadata, const MirInputEvent* input_event);
     void handle_request_resize(
-        std::shared_ptr<miracle::WindowMetadata> const& metadata,
+        std::shared_ptr<miracle::Container> const& metadata,
         const MirInputEvent* input_event,
         MirResizeEdge edge);
-    void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification& modifications);
-    void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
+    void handle_modify_window(std::shared_ptr<miracle::Container> const& metadata, const miral::WindowSpecification& modifications);
+    void handle_raise_window(std::shared_ptr<miracle::Container> const& metadata);
     mir::geometry::Rectangle confirm_placement_on_display(
-        std::shared_ptr<miracle::WindowMetadata> const& metadata,
+        std::shared_ptr<miracle::Container> const& metadata,
         MirWindowState new_state,
         const mir::geometry::Rectangle& new_placement);
     bool select_window_from_point(int x, int y) const;
@@ -108,7 +108,7 @@ public:
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'place_new_window' followed
     /// by 'advise_new_window'.
-    void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
+    void add_immediately(miral::Window& window, ContainerType hint = ContainerType::none);
 
     geom::Rectangle const& get_area() { return area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }

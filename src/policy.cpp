@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "miracle_config.h"
 #include "window_helpers.h"
-#include "window_metadata.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
 #include <iostream>
@@ -257,22 +256,17 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             // we have more data on them.
             orphaned_window_list.push_back(window);
             surface_tracker.add(window);
-            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
-            window_controller.set_user_data(window, metadata);
         }
 
         return;
     }
 
-    auto metadata = shared_output->advise_new_window(window_info, pending_type);
+    auto container = shared_output->advise_new_window(window_info, pending_type);
 
-    // Associate to an animation handle
-    metadata->set_animation_handle(animator.register_animateable());
+    container->animation_handle(animator.register_animateable());
+    container->on_open();
 
-    if (metadata->get_type() != WindowType::other)
-        window_controller.open(window_info.window());
-
-    pending_type = WindowType::none;
+    pending_type = ContainerType::none;
     pending_output.reset();
 
     surface_tracker.add(window_info.window());
@@ -280,21 +274,21 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_metadata(window_info.window());
+    if (!container)
     {
         mir::log_error("handle_window_ready: metadata is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_window_ready(window_info, metadata);
+    if (container->get_output())
+        container->get_output()->handle_window_ready(window_info, container);
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     state.active_window = window_info.window();
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("advise_focus_gained: metadata is not provided");
@@ -307,7 +301,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     state.active_window = Window();
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("advise_focus_lost: metadata is not provided");
@@ -330,7 +324,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         }
     }
 
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("advise_delete_window: metadata is not provided");
@@ -348,7 +342,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("advise_move_to: metadata is not provided: %s", window_info.application_id().c_str());
@@ -446,7 +440,7 @@ void Policy::handle_modify_window(
     miral::WindowInfo& window_info,
     const miral::WindowSpecification& modifications)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("handle_modify_window: metadata is not provided");
@@ -455,13 +449,11 @@ void Policy::handle_modify_window(
 
     if (metadata->get_output())
         metadata->get_output()->handle_modify_window(metadata, modifications);
-    else
-        window_manager_tools.modify_window(metadata->get_window(), modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("handle_raise_window: metadata is not provided");
@@ -478,7 +470,7 @@ Policy::confirm_placement_on_display(
     MirWindowState new_state,
     const mir::geometry::Rectangle& new_placement)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_warning("confirm_placement_on_display: window lacks metadata");
@@ -498,7 +490,7 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("handle_request_move: window lacks metadata");
@@ -514,7 +506,7 @@ void Policy::handle_request_resize(
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
+    auto metadata = window_controller.get_metadata(window_info.window());
     if (!metadata)
     {
         mir::log_error("handle_request_resize: window lacks metadata");
@@ -571,14 +563,14 @@ void Policy::try_toggle_resize_mode()
         return;
     }
 
-    auto metadata = window_helpers::get_metadata(window, window_manager_tools);
+    auto metadata = window_controller.get_metadata(window);
     if (!metadata)
     {
         state.mode = WindowManagerMode::normal;
         return;
     }
 
-    if (metadata->get_type() != WindowType::tiled)
+    if (metadata->get_type() != ContainerType::tiled)
     {
         state.mode = WindowManagerMode::normal;
         return;
@@ -706,7 +698,7 @@ bool Policy::move_active_to_workspace(int number)
     state.active_window = Window();
 
     auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);
-    screen_to_move_to->add_immediately(window_to_move, WindowType::tiled);
+    screen_to_move_to->add_immediately(window_to_move, ContainerType::tiled);
 
     return true;
 }

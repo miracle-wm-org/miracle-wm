@@ -408,9 +408,7 @@ void ParentContainer::set_direction(miracle::NodeLayoutDirection new_direction)
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
     auto first_index = get_index_of_node(first);
-    auto first_area = first->get_logical_area();
     auto second_index = get_index_of_node(second);
-    auto second_area = second->get_logical_area();
     sub_nodes[second_index] = first;
     sub_nodes[first_index] = second;
     relayout();
@@ -483,7 +481,7 @@ size_t ParentContainer::get_min_height() const
     return size;
 }
 
-void ParentContainer::set_parent(std::shared_ptr<Container> const& in_parent)
+void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
 {
     parent = in_parent;
 }
@@ -530,4 +528,75 @@ void ParentContainer::relayout()
 
     // Note that it is important to use the logical_area here instead of the placement area
     set_logical_area(logical_area);
+}
+
+void ParentContainer::handle_ready()
+{
+
+}
+
+void ParentContainer::handle_modify(miral::WindowSpecification const &specification)
+{
+
+}
+
+void ParentContainer::handle_request_move(MirInputEvent const *input_event)
+{
+
+}
+
+void ParentContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+{
+
+}
+
+void ParentContainer::handle_raise()
+{
+
+}
+
+bool ParentContainer::resize(Direction direction)
+{
+    return false;
+}
+
+bool ParentContainer::toggle_fullscreen()
+{
+    return false;
+}
+
+void ParentContainer::request_horizontal_layout()
+{
+
+}
+
+void ParentContainer::request_vertical_layout()
+{
+
+}
+
+void ParentContainer::toggle_layout()
+{
+
+}
+
+void ParentContainer::on_focus_gained()
+{
+
+}
+
+void ParentContainer::on_focus_lost()
+{
+
+}
+
+void ParentContainer::on_move_to(mir::geometry::Point const &top_left)
+{
+
+}
+
+mir::geometry::Rectangle
+ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+{
+    return mir::geometry::Rectangle();
 }

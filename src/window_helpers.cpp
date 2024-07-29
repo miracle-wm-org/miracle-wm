@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_helpers.h"
 #include "container.h"
 #include "leaf_container.h"
-#include "window_metadata.h"
+
 #include <mir/log.h>
 
 bool miracle::window_helpers::is_window_fullscreen(MirWindowState state)
@@ -29,47 +29,6 @@ bool miracle::window_helpers::is_window_fullscreen(MirWindowState state)
         || state == mir_window_state_maximized
         || state == mir_window_state_horizmaximized
         || state == mir_window_state_vertmaximized;
-}
-
-std::shared_ptr<miracle::WindowMetadata> miracle::window_helpers::get_metadata(const miral::WindowInfo& info)
-{
-    if (info.userdata())
-        return static_pointer_cast<WindowMetadata>(info.userdata());
-
-    return nullptr;
-}
-
-std::shared_ptr<miracle::WindowMetadata>
-miracle::window_helpers::get_metadata(const miral::Window& window, const miral::WindowManagerTools& tools)
-{
-    auto& info = tools.info_for(window);
-    if (info.userdata())
-        return static_pointer_cast<WindowMetadata>(info.userdata());
-
-    return nullptr;
-}
-
-std::shared_ptr<miracle::LeafContainer> miracle::window_helpers::get_node_for_window(
-    miral::Window const& window,
-    miral::WindowManagerTools const& tools)
-{
-    auto metadata = get_metadata(window, tools);
-    if (metadata)
-        return Container::as_leaf(metadata->get_container());
-
-    return nullptr;
-}
-
-std::shared_ptr<miracle::LeafContainer> miracle::window_helpers::get_node_for_window_by_tree(
-    const miral::Window& window,
-    const miral::WindowManagerTools& tools,
-    const miracle::TilingWindowTree* tree)
-{
-    auto node = get_node_for_window(window, tools);
-    if (node && node->get_tree() == tree)
-        return node;
-
-    return nullptr;
 }
 
 miral::WindowSpecification miracle::window_helpers::copy_from(miral::WindowInfo const& info)

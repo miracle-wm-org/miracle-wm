@@ -22,12 +22,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "node_common.h"
 #include "parent_container.h"
 #include "floating_container.h"
+#include "output.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
-Container::Container(std::shared_ptr<Container> const& parent) :
+Container::Container(std::shared_ptr<ParentContainer> const& parent) :
     parent { parent }
 {
+}
+
+glm::mat4 Container::get_workspace_transform() const
+{
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    auto const workspace_rect = output->get_workspace_rectangle(get_workspace()->get_workspace());
+    return glm::translate(
+        glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
+}
+
+glm::mat4 Container::get_output_transform() const
+{
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    return output->get_transform();
 }
 
 std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> const& container)

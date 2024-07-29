@@ -21,6 +21,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
+#include "output.h"
+#include "workspace.h"
+#include "compositor_state.h"
 #include <cmath>
 
 using namespace miracle;
@@ -30,7 +33,7 @@ LeafContainer::LeafContainer(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<Container> const& parent) :
+    std::shared_ptr<ParentContainer> const& parent) :
     Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
@@ -54,7 +57,7 @@ void LeafContainer::set_logical_area(geom::Rectangle const& target_rect)
     next_logical_area = target_rect;
 }
 
-void LeafContainer::set_parent(std::shared_ptr<Container> const& in_parent)
+void LeafContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
 {
     parent = in_parent;
 }
@@ -117,7 +120,7 @@ size_t LeafContainer::get_min_height() const
     return 50;
 }
 
-void LeafContainer::handle_ready() const
+void LeafContainer::handle_ready()
 {
     tree->handle_container_ready(*this);
 }
@@ -152,6 +155,11 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     node_interface.modify(window, mods);
 }
 
+void LeafContainer::handle_raise()
+{
+    node_interface.select_active_window(window);
+}
+
 bool LeafContainer::resize(miracle::Direction direction)
 {
     return tree->resize_container(direction, *this);
@@ -184,7 +192,27 @@ mir::geometry::Rectangle LeafContainer::confirm_placement(
     MirWindowState state, mir::geometry::Rectangle const& placement)
 {
     auto new_placement = placement;
-    tree->confirm_placement_on_display(*this, state, new_`placement);
+    tree->confirm_placement_on_display(*this, state, new_placement);
+    return new_placement;
+}
+
+void LeafContainer::on_open()
+{
+    node_interface.open(window);
+}
+
+void LeafContainer::on_focus_gained()
+{
+    tree->advise_focus_gained(*this);
+}
+
+void LeafContainer::on_focus_lost()
+{
+
+}
+
+void LeafContainer::on_move_to(geom::Point const&)
+{
 }
 
 bool LeafContainer::is_fullscreen() const
@@ -212,4 +240,76 @@ void LeafContainer::commit_changes()
             constrain();
         }
     }
+}
+
+void LeafContainer::handle_request_move(MirInputEvent const *input_event)
+{
+
+}
+
+void LeafContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+{
+
+}
+
+void LeafContainer::request_horizontal_layout()
+{
+
+}
+
+void LeafContainer::request_vertical_layout()
+{
+
+}
+
+void LeafContainer::toggle_layout()
+{
+
+}
+
+void LeafContainer::restore_state(MirWindowState state)
+{
+    restore_state_ = state;
+}
+
+std::optional<MirWindowState> LeafContainer::restore_state()
+{
+    auto state = restore_state_;
+    restore_state_.reset();
+    return state;
+}
+
+Workspace *LeafContainer::get_workspace() const
+{
+    return tree->get_workspace();
+}
+
+Output *LeafContainer::get_output() const
+{
+    return get_workspace()->get_output();
+}
+
+glm::mat4 LeafContainer::get_transform() const
+{
+    return transform;
+}
+
+void LeafContainer::set_transform(glm::mat4 transform_)
+{
+    transform = transform_;
+}
+
+uint32_t LeafContainer::animation_handle() const
+{
+    return animation_handle_;
+}
+
+void LeafContainer::animation_handle(uint32_t handle)
+{
+    animation_handle_ = handle;
+}
+
+bool LeafContainer::is_focused() const
+{
+    return get_output()->get_state().active_window == window;
 }

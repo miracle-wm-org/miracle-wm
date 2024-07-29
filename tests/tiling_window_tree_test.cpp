@@ -79,15 +79,6 @@ public:
         }
         return nullptr;
     }
-    std::shared_ptr<WindowMetadata> get_metadata(miral::Window const& window, TilingWindowTree const*) override
-    {
-        for (auto const& p : pairs)
-        {
-            if (p.first == window)
-                return p.second;
-        }
-        return nullptr;
-    }
 
     void raise(miral::Window const&) override { }
     void send_to_back(miral::Window const&) override { }
@@ -134,7 +125,7 @@ public:
         metadata->associate_container(leaf);
 
         state.active_window = window;
-        tree.advise_focus_gained(leaf);
+        tree.advise_focus_gained(*leaf);
         return leaf;
     }
 
@@ -169,7 +160,7 @@ TEST_F(TilingWindowTreeTest, can_add_two_windows_vertically_without_border_and_g
 {
     auto leaf1 = create_leaf();
 
-    tree.request_vertical_layout(leaf1);
+    tree.request_vertical_layout(*leaf1);
 
     auto leaf2 = create_leaf();
     ASSERT_EQ(leaf1->get_logical_area().size, geom::Size(1280, 720 / 2.f));

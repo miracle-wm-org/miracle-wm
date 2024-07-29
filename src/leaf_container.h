@@ -43,13 +43,13 @@ public:
         geom::Rectangle area,
         std::shared_ptr<MiracleConfig> const& config,
         TilingWindowTree* tree,
-        std::shared_ptr<Container> const& parent);
+        std::shared_ptr<ParentContainer> const& parent);
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
     [[nodiscard]] geom::Rectangle get_visible_area() const override;
     void set_logical_area(geom::Rectangle const& target_rect) override;
-    void set_parent(std::shared_ptr<Container> const&) override;
+    void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void set_state(MirWindowState state);
     void show();
     void hide();
@@ -57,16 +57,38 @@ public:
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
-    void handle_ready() const override;
+    void handle_ready() override;
     void handle_modify(miral::WindowSpecification const&) override;
+    void handle_raise() override;
     bool resize(Direction direction) override;
     bool toggle_fullscreen() override;
     mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&) override;
+    void on_open() override;
+    void on_focus_gained() override;
+    void on_focus_lost() override;
+    void on_move_to(geom::Point const&) override;
+    void handle_request_move(MirInputEvent const *input_event) override;
+    void handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge) override;
+    void request_horizontal_layout() override;
+    void request_vertical_layout() override;
+    void toggle_layout() override;
 
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
     [[nodiscard]] miral::Window& get_window() { return window; }
     void commit_changes() override;
+
+    void restore_state(MirWindowState state) override;
+    std::optional<MirWindowState> restore_state() override;
+    Workspace *get_workspace() const override;
+    Output *get_output() const override;
+    glm::mat4 get_transform() const override;
+    void set_transform(glm::mat4 transform) override;
+    glm::mat4 get_workspace_transform() const override;
+    glm::mat4 get_output_transform() const override;
+    uint32_t animation_handle() const override;
+    void animation_handle(uint32_t uint_32) override;
+    bool is_focused() const override;
 
 private:
     WindowController& node_interface;
@@ -78,6 +100,9 @@ private:
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
+    std::optional<MirWindowState> restore_state_;
+    glm::mat4 transform = glm::mat4(1.f);
+    uint32_t animation_handle_ = 0;
 };
 
 } // miracle

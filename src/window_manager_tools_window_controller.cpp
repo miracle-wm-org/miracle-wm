@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "window_helpers.h"
-#include "window_metadata.h"
+
 #include <mir/scene/surface.h>
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
@@ -118,11 +118,11 @@ void WindowManagerToolsWindowController::select_active_window(miral::Window cons
     tools.select_active_window(window);
 }
 
-std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(miral::Window const& window)
+std::shared_ptr<Container> WindowManagerToolsWindowController::get_metadata(miral::Window const& window)
 {
     auto& info = tools.info_for(window);
     if (info.userdata())
-        return static_pointer_cast<WindowMetadata>(info.userdata());
+        return static_pointer_cast<Container>(info.userdata());
 
     return nullptr;
 }
@@ -138,7 +138,7 @@ void WindowManagerToolsWindowController::send_to_back(miral::Window const& windo
 }
 
 void WindowManagerToolsWindowController::on_animation(
-    miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const& metadata)
+    miracle::AnimationStepResult const& result, std::shared_ptr<Container> const& metadata)
 {
     auto window = metadata->get_window();
     auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
@@ -147,16 +147,8 @@ void WindowManagerToolsWindowController::on_animation(
 
     bool needs_modify = false;
     miral::WindowSpecification spec;
-    if (auto node = metadata->get_container())
-    {
-        spec.top_left() = node->get_visible_area().top_left;
-        spec.size() = node->get_visible_area().size;
-    }
-    else
-    {
-        spec.top_left() = window.top_left();
-        spec.size() = window.size();
-    }
+    spec.top_left() = metadata->get_visible_area().top_left;
+    spec.size() = metadata->get_visible_area().size;
 
     spec.min_width() = mir::geometry::Width(0);
     spec.min_height() = mir::geometry::Height(0);

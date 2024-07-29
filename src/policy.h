@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "surface_tracker.h"
 #include "window_manager_tools_window_controller.h"
-#include "window_metadata.h"
+
 #include "workspace_manager.h"
 
 #include <memory>

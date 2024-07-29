@@ -38,12 +38,14 @@ class CompositorState;
 class MiracleConfig;
 class WindowController;
 class LeafContainer;
+class Workspace;
 
 class TilingWindowTreeInterface
 {
 public:
     virtual geom::Rectangle const& get_area() = 0;
     virtual std::vector<miral::Zone> const& get_zones() = 0;
+    virtual Workspace* get_workspace() const = 0;
 };
 
 class TilingWindowTree
@@ -90,7 +92,7 @@ public:
     void toggle_layout(Container&);
 
     /// Advises us to focus the provided container.
-    void advise_focus_gained(std::shared_ptr<Container> const&);
+    void advise_focus_gained(LeafContainer&);
 
     /// Called when the container was deleted.
     void advise_delete_window(std::shared_ptr<Container> const&);
@@ -105,7 +107,7 @@ public:
     bool handle_container_ready(LeafContainer&);
 
     bool confirm_placement_on_display(
-        std::shared_ptr<Container> const& container,
+        Container& container,
         MirWindowState new_state,
         mir::geometry::Rectangle& new_placement);
 
@@ -119,6 +121,8 @@ public:
 
     void recalculate_root_node_area();
     bool is_empty();
+
+    Workspace* get_workspace() const;
 
 private:
     struct MoveResult
@@ -144,7 +148,7 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    void handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const&);
+    void handle_direction_change(NodeLayoutDirection direction, Container&);
     void handle_resize(Container& node, Direction direction, int amount);
 
     /// Constrains the container to its tile in the tree

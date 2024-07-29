@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_MIRACLE_CONFIG_H
 
 #include "animation_defintion.h"
-#include "window_metadata.h"
+
 #include <atomic>
 #include <functional>
 #include <glm/glm.hpp>

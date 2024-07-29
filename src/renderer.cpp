@@ -22,11 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
-#include "window_metadata.h"
+
 #include "window_tools_accessor.h"
 #include "workspace.h"
-#include <GLES2/gl2.h>
+#include "container.h"
 
+#include <GLES2/gl2.h>
 #include <EGL/egl.h>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
@@ -226,8 +227,8 @@ Renderer::DrawData Renderer::get_draw_data(mir::graphics::Renderable const& rend
             auto userdata = static_pointer_cast<WindowMetadata>(info.userdata());
             data.needs_outline = (userdata->get_type() == WindowType::tiled || userdata->get_type() == WindowType::floating)
                 && !info.parent();
-            data.workspace_transform = userdata->get_output_transform() * userdata->get_workspace_transform();
-            data.is_focused = userdata->is_focused();
+            data.workspace_transform = userdata->get_container()->get_output_transform() * userdata->get_container()->get_workspace_transform();
+            data.is_focused = userdata->get_container()->is_focused();
         }
     }
 

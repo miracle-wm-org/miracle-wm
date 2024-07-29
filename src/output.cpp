@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "floating_container.h"
 #include "vector_helpers.h"
 #include "window_helpers.h"
-#include "window_metadata.h"
+
 #include "workspace.h"
 #include "workspace_manager.h"
 #include <glm/gtx/transform.hpp>
@@ -94,55 +94,55 @@ bool Output::handle_pointer_event(const MirPointerEvent* event)
     return false;
 }
 
-WindowType Output::allocate_position(
+ContainerType Output::allocate_position(
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification& requested_specification,
-    WindowType hint)
+    ContainerType hint)
 {
-    auto ideal_type = hint == WindowType::none ? window_helpers::get_ideal_type(requested_specification) : hint;
-    if (ideal_type == WindowType::other)
-        return WindowType::other;
+    auto ideal_type = hint == ContainerType::none ? window_helpers::get_ideal_type(requested_specification) : hint;
+    if (ideal_type == ContainerType::shell)
+        return ContainerType::shell;
 
     return get_active_workspace()->allocate_position(app_info, requested_specification, ideal_type);
 }
 
-std::shared_ptr<WindowMetadata> Output::advise_new_window(
-    miral::WindowInfo const& window_info, WindowType type) const
+std::shared_ptr<Container> Output::advise_new_window(
+    miral::WindowInfo const& window_info, ContainerType type) const
 {
     return get_active_workspace()->advise_new_window(window_info, type);
 }
 
 void Output::handle_window_ready(
-    miral::WindowInfo& window_info, std::shared_ptr<miracle::WindowMetadata> const& metadata) const
+    miral::WindowInfo& window_info, std::shared_ptr<miracle::Container> const& metadata) const
 {
     get_active_workspace()->handle_window_ready(window_info, metadata);
 }
 
-void Output::advise_focus_gained(const std::shared_ptr<miracle::WindowMetadata>& metadata)
+void Output::advise_focus_gained(const std::shared_ptr<miracle::Container>& metadata)
 {
     auto workspace = metadata->get_workspace();
     workspace->advise_focus_gained(metadata);
 }
 
-void Output::advise_focus_lost(const std::shared_ptr<miracle::WindowMetadata>& metadata)
+void Output::advise_focus_lost(const std::shared_ptr<miracle::Container>& metadata)
 {
     auto workspace = metadata->get_workspace();
     workspace->advise_focus_lost(metadata);
 }
 
-void Output::advise_delete_window(const std::shared_ptr<miracle::WindowMetadata>& metadata)
+void Output::advise_delete_window(const std::shared_ptr<miracle::Container>& metadata)
 {
     auto workspace = metadata->get_workspace();
     workspace->advise_delete_window(metadata);
 }
 
-void Output::advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left)
+void Output::advise_move_to(std::shared_ptr<miracle::Container> const& metadata, geom::Point top_left)
 {
     auto workspace = metadata->get_workspace();
     workspace->advise_move_to(metadata, top_left);
 }
 
-void Output::handle_request_move(const std::shared_ptr<miracle::WindowMetadata>& metadata,
+void Output::handle_request_move(const std::shared_ptr<miracle::Container>& metadata,
     const MirInputEvent* input_event)
 {
     auto workspace = metadata->get_workspace();
@@ -150,7 +150,7 @@ void Output::handle_request_move(const std::shared_ptr<miracle::WindowMetadata>&
 }
 
 void Output::handle_request_resize(
-    const std::shared_ptr<miracle::WindowMetadata>& metadata,
+    const std::shared_ptr<miracle::Container>& metadata,
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
@@ -159,14 +159,14 @@ void Output::handle_request_resize(
 }
 
 void Output::handle_modify_window(
-    const std::shared_ptr<miracle::WindowMetadata>& metadata,
+    const std::shared_ptr<miracle::Container>& metadata,
     const miral::WindowSpecification& modifications)
 {
     auto workspace = metadata->get_workspace();
     workspace->handle_modify_window(metadata, modifications);
 }
 
-void Output::handle_raise_window(const std::shared_ptr<miracle::WindowMetadata>& metadata)
+void Output::handle_raise_window(const std::shared_ptr<miracle::Container>& metadata)
 {
     auto workspace = metadata->get_workspace();
     workspace->handle_raise_window(metadata);
@@ -174,7 +174,7 @@ void Output::handle_raise_window(const std::shared_ptr<miracle::WindowMetadata>&
 
 mir::geometry::Rectangle
 Output::confirm_placement_on_display(
-    const std::shared_ptr<miracle::WindowMetadata>& metadata,
+    const std::shared_ptr<miracle::Container>& metadata,
     MirWindowState new_state,
     const mir::geometry::Rectangle& new_placement)
 {
@@ -407,29 +407,27 @@ bool Output::toggle_fullscreen() const
 
 void Output::toggle_pinned_to_workspace()
 {
-    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    auto metadata = window_controller.get_metadata(state.active_window);
     if (!metadata)
     {
         mir::log_error("toggle_pinned_to_workspace: metadata not found");
         return;
     }
 
-    auto container = metadata->get_container();
-    if (auto floating = Container::as_floating(container))
+    if (auto floating = Container::as_floating(metadata))
         floating->pinned(!floating->pinned());
 }
 
 void Output::set_is_pinned(bool is_pinned)
 {
-    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    auto metadata = window_controller.get_metadata(state.active_window);
     if (!metadata)
     {
         mir::log_error("set_is_pinned: metadata not found");
         return;
     }
 
-    auto container = metadata->get_container();
-    if (auto floating = Container::as_floating(container))
+    if (auto floating = Container::as_floating(metadata))
         floating->pinned(is_pinned);
 }
 
@@ -445,9 +443,10 @@ std::vector<miral::Window> Output::collect_all_windows() const
     std::vector<miral::Window> windows;
     for (auto& workspace : get_workspaces())
     {
-        workspace->for_each_window([&](std::shared_ptr<WindowMetadata> const& window)
+        workspace->for_each_window([&](std::shared_ptr<Container> const& container)
         {
-            windows.push_back(window->get_window());
+            if (auto window = container->window())
+                windows.push_back(*window);
         });
     }
 
@@ -462,7 +461,7 @@ void Output::request_toggle_active_float()
         return;
     }
 
-    auto metadata = window_helpers::get_metadata(tools.active_window(), tools);
+    auto metadata = window_controller.get_metadata(state.active_window);
     if (!metadata)
     {
         mir::log_error("request_toggle_active_float: metadata not found");
@@ -472,7 +471,7 @@ void Output::request_toggle_active_float()
     metadata->get_workspace()->toggle_floating(metadata);
 }
 
-void Output::add_immediately(miral::Window& window, WindowType hint)
+void Output::add_immediately(miral::Window& window, ContainerType hint)
 {
     auto& prev_info = window_controller.info_for(window);
     WindowSpecification spec = window_helpers::copy_from(prev_info);
@@ -481,7 +480,7 @@ void Output::add_immediately(miral::Window& window, WindowType hint)
     if (spec.state() == mir_window_state_hidden)
         spec.state() = mir_window_state_restored;
 
-    WindowType type = allocate_position(tools.info_for(window.application()), spec, hint);
+    ContainerType type = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
     auto metadata = advise_new_window(window_controller.info_for(window), type);
     handle_window_ready(window_controller.info_for(window), metadata);
