@@ -61,6 +61,8 @@ public:
         mir::Server const&);
     ~Policy() override;
 
+    // Interactions with the engine
+
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
     bool handle_pointer_event(MirPointerEvent const* event) override;
     auto place_new_window(
@@ -94,12 +96,16 @@ public:
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
 
+    // Requests
+
     bool try_request_horizontal();
     bool try_request_vertical();
     bool try_toggle_layout();
     void try_toggle_resize_mode();
     bool try_resize(Direction direction);
     bool try_move(Direction direction);
+    bool try_move_by(Direction direction, int pixels);
+    bool try_move_to(int x, int y);
     bool try_select(Direction direction);
     bool try_close_window();
     bool quit();
@@ -108,6 +114,9 @@ public:
     bool move_active_to_workspace(int number);
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
+    bool set_is_pinned(bool);
+
+    // Getters
 
     std::shared_ptr<Output> const& get_active_output() { return active_output; }
     std::vector<std::shared_ptr<Output>> const& get_output_list() { return output_list; }

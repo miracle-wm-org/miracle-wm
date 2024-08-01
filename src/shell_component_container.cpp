@@ -213,4 +213,35 @@ std::optional<miral::Window> ShellComponentContainer::window() const
 {
     return window_;
 }
+
+bool ShellComponentContainer::select_next(miracle::Direction)
+{
+    return false;
+}
+
+bool ShellComponentContainer::pinned(bool)
+{
+    return false;
+}
+
+bool ShellComponentContainer::pinned() const
+{
+    return true;
+}
+
+bool ShellComponentContainer::move(Direction direction)
+{
+    return false;
+}
+
+bool ShellComponentContainer::move_by(Direction direction, int pixels)
+{
+    return false;
+}
+
+bool ShellComponentContainer::move_to(int x, int y)
+{
+    return false;
+}
+
 } // miracle

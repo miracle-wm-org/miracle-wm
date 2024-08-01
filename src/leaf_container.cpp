@@ -319,3 +319,33 @@ ContainerType LeafContainer::get_type() const
 {
     return ContainerType::tiled;
 }
+
+bool LeafContainer::select_next(miracle::Direction direction)
+{
+    return tree->select_next(direction, *this);
+}
+
+bool LeafContainer::pinned(bool)
+{
+    return false;
+}
+
+bool LeafContainer::pinned() const
+{
+    return false;
+}
+
+bool LeafContainer::move(miracle::Direction direction)
+{
+    return tree->move_container(direction, *this);
+}
+
+bool LeafContainer::move_by(Direction, int)
+{
+    return false;
+}
+
+bool LeafContainer::move_to(int, int)
+{
+    return false;
+}

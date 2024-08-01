@@ -672,3 +672,33 @@ std::optional<miral::Window> ParentContainer::window() const
 {
     return std::optional<miral::Window>();
 }
+
+bool ParentContainer::select_next(miracle::Direction)
+{
+    return false;
+}
+
+bool ParentContainer::pinned(bool)
+{
+    return false;
+}
+
+bool ParentContainer::pinned() const
+{
+    return false;
+}
+
+bool ParentContainer::move(Direction direction)
+{
+    return false;
+}
+
+bool ParentContainer::move_by(Direction direction, int pixels)
+{
+    return false;
+}
+
+bool ParentContainer::move_to(int x, int y)
+{
+    return false;
+}

@@ -68,6 +68,12 @@ public:
     ContainerType get_type() const override;
     void on_open() override;
     std::optional<miral::Window> window() const override;
+    bool select_next(Direction) override;
+    bool pinned(bool) override;
+    bool pinned() const override;
+    bool move(Direction direction) override;
+    bool move_by(Direction direction, int pixels) override;
+    bool move_to(int x, int y) override;
 
 private:
     miral::Window window_;

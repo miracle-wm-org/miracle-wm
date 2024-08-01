@@ -123,11 +123,6 @@ bool Output::select_window_from_point(int x, int y) const
     return get_active_workspace()->select_window_from_point(x, y);
 }
 
-void Output::select_window(miral::Window const& window)
-{
-    window_controller.select_active_window(window);
-}
-
 void Output::advise_new_workspace(int workspace)
 {
     // Workspaces are always kept in sorted order
@@ -290,57 +285,6 @@ bool Output::point_is_in_output(int x, int y)
     return area.contains(geom::Point(x, y));
 }
 
-void Output::close_active_window()
-{
-    window_controller.close(state.active_window);
-}
-
-bool Output::select(miracle::Direction direction) const
-{
-    return get_active_workspace()->select(direction);
-}
-
-bool Output::move_active_window(miracle::Direction direction)
-{
-    return get_active_workspace()->move_active_window(direction);
-}
-
-bool Output::move_active_window_by_amount(Direction direction, int pixels)
-{
-    return get_active_workspace()->move_active_window_by_amount(direction, pixels);
-}
-
-bool Output::move_active_window_to(int x, int y)
-{
-    return get_active_workspace()->move_active_window_to(x, y);
-}
-
-void Output::toggle_pinned_to_workspace()
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-    {
-        mir::log_error("toggle_pinned_to_workspace: container not found");
-        return;
-    }
-
-    if (auto floating = Container::as_floating(container))
-        floating->pinned(!floating->pinned());
-}
-
-void Output::set_is_pinned(bool is_pinned)
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-    {
-        mir::log_error("set_is_pinned: container not found");
-        return;
-    }
-
-    if (auto floating = Container::as_floating(container))
-        floating->pinned(is_pinned);
-}
-
 void Output::update_area(geom::Rectangle const& new_area)
 {
     area = new_area;
@@ -421,9 +365,4 @@ void Output::set_position(glm::vec2 const& v)
 {
     position_offset = v;
     final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
-}
-
-glm::vec2 const& Output::get_position() const
-{
-    return position_offset;
 }

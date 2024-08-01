@@ -620,7 +620,7 @@ bool Policy::try_resize(miracle::Direction direction)
     if (state.mode != WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
     auto container = window_controller.get_container(state.active_window);
@@ -632,21 +632,48 @@ bool Policy::try_move(miracle::Direction direction)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    return active_output->move_active_window(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->move(direction);
 }
+
+bool Policy::try_move_by(miracle::Direction direction, int pixels)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->move_by(direction, pixels);
+}
+
+bool Policy::try_move_to(int x, int y)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->move_to(x, y);
+}
+
 
 bool Policy::try_select(miracle::Direction direction)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    return active_output->select(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->select_next(direction);
 }
 
 bool Policy::try_close_window()
@@ -654,7 +681,7 @@ bool Policy::try_close_window()
     if (!active_output)
         return false;
 
-    active_output->close_active_window();
+    window_controller.close(state.active_window);
     return true;
 }
 
@@ -728,9 +755,21 @@ bool Policy::toggle_pinned_to_workspace()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->toggle_pinned_to_workspace();
-    return true;
+    auto container = window_controller.get_container(state.active_window);
+    return container->pinned(!container->pinned());
+}
+
+bool Policy::set_is_pinned(bool pinned)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->pinned(pinned);
 }

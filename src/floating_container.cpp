@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "floating_container"
 
 #include "floating_container.h"
 #include "leaf_container.h"
@@ -23,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -144,9 +146,10 @@ bool FloatingContainer::pinned() const
     return is_pinned;
 }
 
-void FloatingContainer::pinned(bool in)
+bool FloatingContainer::pinned(bool in)
 {
     is_pinned = in;
+    return true;
 }
 
 std::optional<miral::Window> FloatingContainer::window() const
@@ -246,4 +249,58 @@ glm::mat4 FloatingContainer::get_output_transform() const
         return glm::mat4(1.f);
 
     return get_output()->get_transform();
+}
+
+bool FloatingContainer::select_next(Direction)
+{
+    return false;
+}
+
+bool FloatingContainer::move(Direction direction)
+{
+    return move_by(direction, 10);
+}
+
+bool FloatingContainer::move_by(Direction direction, int pixels)
+{
+    auto& info = window_controller.info_for(window_);
+    auto prev_pos = window_.top_left();
+    miral::WindowSpecification spec;
+    switch (direction)
+    {
+    case Direction::down:
+        spec.top_left() = {
+        prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
+        };
+        break;
+    case Direction::up:
+        spec.top_left() = {
+        prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
+        };
+        break;
+    case Direction::left:
+        spec.top_left() = {
+        prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
+        };
+        break;
+    case Direction::right:
+        spec.top_left() = {
+        prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
+        };
+        break;
+    default:
+        mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
+        return false;
+    }
+
+    window_controller.modify(info.window(), spec);
+    return true;
+}
+
+bool FloatingContainer::move_to(int x, int y)
+{
+    miral::WindowSpecification spec;
+    spec.top_left() = { x, y };
+    window_controller.modify(window_, spec);
+    return true;
 }

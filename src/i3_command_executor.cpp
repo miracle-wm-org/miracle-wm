@@ -146,13 +146,6 @@ void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle
 
 void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandList const& command_list)
 {
-    auto active_output = policy.get_active_output();
-    if (!active_output)
-    {
-        mir::log_warning("Trying to process I3 focus command, but output is not set");
-        return;
-    }
-
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
     {
@@ -164,7 +157,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
 
         auto window = get_window_meeting_criteria(command_list);
         if (window)
-            active_output->select_window(window);
+            window_controller.select_active_window(window);
 
         return;
     }
@@ -184,13 +177,13 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
             workspace_manager.request_focus(container->get_workspace()->get_workspace());
     }
     else if (arg == "left")
-        active_output->select(Direction::left);
+        policy.try_select(Direction::left);
     else if (arg == "right")
-        active_output->select(Direction::right);
+        policy.try_select(Direction::right);
     else if (arg == "up")
-        active_output->select(Direction::up);
+        policy.try_select(Direction::up);
     else if (arg == "down")
-        active_output->select(Direction::down);
+        policy.try_select(Direction::down);
     else if (arg == "parent")
         mir::log_warning("'focus parent' is not supported, see https://github.com/mattkae/miracle-wm/issues/117"); // TODO
     else if (arg == "child")
@@ -217,7 +210,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
             if (index != 0)
             {
                 auto node_to_select = parent->get_nth_window(index - 1);
-                active_output->select_window(node_to_select->window().value());
+                window_controller.select_active_window(node_to_select->window().value());
             }
         }
     }
@@ -243,7 +236,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
             if (index != parent->num_nodes() - 1)
             {
                 auto node_to_select = parent->get_nth_window(index + 1);
-                active_output->select_window(node_to_select->window().value());
+                window_controller.select_active_window(node_to_select->window().value());
             }
         }
     }
@@ -343,12 +336,12 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
             auto area = active_output->get_area();
             float x = (float)area.size.width.as_int() / 2.f - (float)active_window.size().width.as_int() / 2.f;
             float y = (float)area.size.height.as_int() / 2.f - (float)active_window.size().height.as_int() / 2.f;
-            active_output->move_active_window_to((int)x, (int)y);
+            policy.try_move_to((int)x, (int)y);
         }
         else if (arg1 == "mouse")
         {
             auto const& position = policy.get_cursor_position();
-            active_output->move_active_window_to((int)position.x.as_int(), (int)position.y.as_int());
+            policy.try_move_to((int)position.x.as_int(), (int)position.y.as_int());
         }
         else
         {
@@ -367,7 +360,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
                 return;
             }
 
-            active_output->move_active_window_to(move_distance_x, move_distance_y);
+            policy.try_move_to(move_distance_x, move_distance_y);
         }
         return;
     }
@@ -402,7 +395,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         auto active_window = policy.get_state().active_window;
         float x_pos = x / 2.f - (float)active_window.size().width.as_int() / 2.f;
         float y_pos = y / 2.f - (float)active_window.size().height.as_int() / 2.f;
-        active_output->move_active_window_to((int)x_pos, (int)y_pos);
+        policy.try_move_to((int)x_pos, (int)y_pos);
         return;
     }
 
@@ -410,21 +403,14 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
     {
         int move_distance;
         if (parse_move_distance(command.arguments, index, total_size, move_distance))
-            active_output->move_active_window_by_amount(direction, move_distance);
+            policy.try_move_by(direction, move_distance);
         else
-            active_output->move_active_window(direction);
+            policy.try_move(direction);
     }
 }
 
 void I3CommandExecutor::process_sticky(I3Command const& command, I3ScopedCommandList const& command_list)
 {
-    auto active_output = policy.get_active_output();
-    if (!active_output)
-    {
-        mir::log_warning("process_sticky: output is not set");
-        return;
-    }
-
     if (command.arguments.empty())
     {
         mir::log_warning("process_sticky: expects arguments");
@@ -433,11 +419,11 @@ void I3CommandExecutor::process_sticky(I3Command const& command, I3ScopedCommand
 
     auto const& arg0 = command.arguments[0];
     if (arg0 == "enable")
-        active_output->set_is_pinned(true);
+        policy.set_is_pinned(true);
     else if (arg0 == "disable")
-        active_output->set_is_pinned(false);
+        policy.set_is_pinned(false);
     else if (arg0 == "toggle")
-        active_output->toggle_pinned_to_workspace();
+        policy.toggle_pinned_to_workspace();
     else
         mir::log_warning("process_sticky: unknown arguments: %s", arg0.c_str());
 }

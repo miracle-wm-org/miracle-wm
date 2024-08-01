@@ -61,17 +61,12 @@ public:
         miral::WindowInfo const& window_info, ContainerType type);
     void handle_ready_hack(LeafContainer& container);
     void advise_delete_window(const std::shared_ptr<Container>& container);
-    bool move_active_window(Direction direction);
-    bool move_active_window_by_amount(Direction direction, int pixels);
-    bool move_active_window_to(int x, int y);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);
     void for_each_window(std::function<void(std::shared_ptr<Container>)> const&);
     bool select_window_from_point(int x, int y);
-    bool select(miracle::Direction);
     void toggle_floating(std::shared_ptr<Container> const&);
-
     bool has_floating_window(miral::Window const&);
     std::shared_ptr<FloatingContainer> add_floating_window(miral::Window const&);
     void remove_floating_window(miral::Window const&);

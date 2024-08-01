@@ -51,54 +51,46 @@ public:
         Animator&);
     ~Output() = default;
 
-    [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
     ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
     [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
     void advise_delete_window(std::shared_ptr<miracle::Container> const& container);
     [[nodiscard]] bool select_window_from_point(int x, int y) const;
-    void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    [[nodiscard]] std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
     bool point_is_in_output(int x, int y);
-    void close_active_window();
-    bool select(Direction direction) const;
-    bool move_active_window(Direction direction);
-    bool move_active_window_by_amount(Direction direction, int pixels);
-    bool move_active_window_to(int x, int y);
-    void toggle_pinned_to_workspace();
-    void set_is_pinned(bool is_pinned);
     void update_area(geom::Rectangle const& area);
-    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const;
-    void request_toggle_active_float();
 
-    /// Gets the relative position of the current rectangle (e.g. the active
-    /// rectangle with be at position (0, 0))
-    [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
+    void request_toggle_active_float();
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'place_new_window' followed
     /// by 'advise_new_window'.
     void add_immediately(miral::Window& window, ContainerType hint = ContainerType::none);
-
-    geom::Rectangle const& get_area() { return area; }
-    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
-    miral::Output const& get_output() { return output; }
-    [[nodiscard]] bool is_active() const { return is_active_; }
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
-    [[nodiscard]] CompositorState const& get_state() const { return state; }
-
-    [[nodiscard]] glm::mat4 get_transform() const;
     void set_transform(glm::mat4 const& in);
     void set_position(glm::vec2 const&);
-    [[nodiscard]] glm::vec2 const& get_position() const;
+
+    // Getters
+
+    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const;
+    [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
+    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
+    [[nodiscard]] std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
+    [[nodiscard]]geom::Rectangle const& get_area() { return area; }
+    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
+    [[nodiscard]]miral::Output const& get_output() { return output; }
+    [[nodiscard]] bool is_active() const { return is_active_; }
+    [[nodiscard]] CompositorState const& get_state() const { return state; }
+    [[nodiscard]] glm::mat4 get_transform() const;
+    /// Gets the relative position of the current rectangle (e.g. the active
+    /// rectangle with be at position (0, 0))
+    [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
 
 private:
     miral::Output output;

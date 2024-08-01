@@ -65,7 +65,6 @@ public:
     size_t get_min_width() const override;
     size_t get_min_height() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
-
     void handle_ready() override;
     void handle_modify(miral::WindowSpecification const &specification) override;
     void handle_request_move(MirInputEvent const *input_event) override;
@@ -81,34 +80,26 @@ public:
     void on_move_to(mir::geometry::Point const &top_left) override;
     mir::geometry::Rectangle
         confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle) override;
-
     ContainerType get_type() const override;
-
     void restore_state(MirWindowState state) override;
-
     std::optional<MirWindowState> restore_state() override;
-
     void on_open() override;
-
     Workspace *get_workspace() const override;
-
     Output *get_output() const override;
-
     glm::mat4 get_transform() const override;
-
     void set_transform(glm::mat4 transform) override;
-
     glm::mat4 get_workspace_transform() const override;
-
     glm::mat4 get_output_transform() const override;
-
     uint32_t animation_handle() const override;
-
     void animation_handle(uint32_t uint_32) override;
-
     bool is_focused() const override;
-
     std::optional<miral::Window> window() const override;
+    bool select_next(Direction) override;
+    bool pinned(bool) override;
+    bool pinned() const override;
+    bool move(Direction direction) override;
+    bool move_by(Direction direction, int pixels) override;
+    bool move_to(int x, int y) override;
 
 private:
     WindowController& node_interface;

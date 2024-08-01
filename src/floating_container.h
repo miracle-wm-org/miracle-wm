@@ -59,11 +59,9 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout() override;
-
-    bool pinned() const;
-    void pinned(bool);
+    bool pinned() const override;
+    bool pinned(bool) override;
     [[nodiscard]] std::optional<miral::Window> window() const override;
-
     void restore_state(MirWindowState state) override;
     std::optional<MirWindowState> restore_state() override;
     Workspace *get_workspace() const override;
@@ -73,12 +71,13 @@ public:
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
-
     ContainerType get_type() const override;
-
     glm::mat4 get_workspace_transform() const override;
-
     glm::mat4 get_output_transform() const override;
+    bool select_next(Direction) override;
+    bool move(Direction) override;
+    bool move_by(Direction, int) override;
+    bool move_to(int, int) override;
 
 private:
     miral::Window window_;

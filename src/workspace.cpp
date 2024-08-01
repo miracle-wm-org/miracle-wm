@@ -208,88 +208,6 @@ void Workspace::advise_delete_window(std::shared_ptr<Container> const& container
     }
 }
 
-bool Workspace::move_active_window(Direction direction)
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-        return false;
-
-    switch (container->get_type())
-    {
-    case ContainerType::floating:
-        return move_active_window_by_amount(direction, 10);
-    case ContainerType::tiled:
-        return tree->move_container(direction, *container);
-    default:
-        mir::log_error("move_active_window is not defined for window of type %d", (int)container->get_type());
-        return false;
-    }
-}
-
-bool Workspace::move_active_window_by_amount(Direction direction, int pixels)
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-        return false;
-
-    if (container->get_type() != ContainerType::floating)
-    {
-        mir::log_warning("Cannot move a non-floating window by an amount, type=%d", (int)container->get_type());
-        return false;
-    }
-
-    auto& info = window_controller.info_for(state.active_window);
-    auto prev_pos = state.active_window.top_left();
-    miral::WindowSpecification spec;
-    switch (direction)
-    {
-    case Direction::down:
-        spec.top_left() = {
-            prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
-        };
-        break;
-    case Direction::up:
-        spec.top_left() = {
-            prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
-        };
-        break;
-    case Direction::left:
-        spec.top_left() = {
-            prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
-        };
-        break;
-    case Direction::right:
-        spec.top_left() = {
-            prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
-        };
-        break;
-    default:
-        mir::log_warning("Unknown direction to move_active_window_by_amount: %d\n", (int)direction);
-        return false;
-    }
-
-    window_controller.modify(info.window(), spec);
-    return true;
-}
-
-bool Workspace::move_active_window_to(int x, int y)
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-        return false;
-
-    if (container->get_type() != ContainerType::floating)
-    {
-        mir::log_warning("Cannot move a non-floating window to a position, type=%d", (int)container->get_type());
-        return false;
-    }
-
-    miral::WindowSpecification spec;
-    spec.top_left() = { x, y };
-    window_controller.modify(state.active_window, spec);
-    return true;
-}
-
 void Workspace::show()
 {
     auto fullscreen_node = tree->show();
@@ -374,15 +292,6 @@ bool Workspace::select_window_from_point(int x, int y)
     return false;
 }
 
-bool Workspace::select(miracle::Direction direction)
-{
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-        return false;
-
-    return tree->select_next(direction, *container);
-}
-
 void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
 {
     ContainerType new_type = ContainerType::none;
@@ -437,8 +346,8 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
 
     // In all cases, advise a new window and pretend like it is ready again
     auto& info = window_controller.info_for(*window);
-    auto new_metadata = advise_new_window(info, new_type);
-    new_metadata->handle_ready();
+    auto new_container = advise_new_window(info, new_type);
+    new_container->handle_ready();
     window_controller.select_active_window(state.active_window);
 }
 
