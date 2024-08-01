@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "policy.h"
 #include "window_helpers.h"
+#include "window_controller.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <mir/log.h>
@@ -34,11 +35,13 @@ I3CommandExecutor::I3CommandExecutor(
     miracle::Policy& policy,
     WorkspaceManager& workspace_manager,
     miral::WindowManagerTools const& tools,
-    AutoRestartingLauncher& launcher) :
+    AutoRestartingLauncher& launcher,
+    WindowController& window_controller) :
     policy { policy },
     workspace_manager { workspace_manager },
     tools { tools },
-    launcher { launcher }
+    launcher { launcher },
+    window_controller { window_controller }
 {
 }
 
@@ -76,7 +79,7 @@ miral::Window I3CommandExecutor::get_window_meeting_criteria(I3ScopedCommandList
     {
         for (auto const& window : info.windows())
         {
-            if (command_list.meets_criteria(window, tools))
+            if (command_list.meets_criteria(window, window_controller))
             {
                 result = window;
                 return true;
@@ -116,13 +119,6 @@ void I3CommandExecutor::process_exec(miracle::I3Command const& command, miracle:
 
 void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle::I3ScopedCommandList const& command_list)
 {
-    auto active_output = policy.get_active_output();
-    if (!active_output)
-    {
-        mir::log_warning("process_split: output is null");
-        return;
-    }
-
     if (command.arguments.empty())
     {
         mir::log_warning("process_split: no arguments were supplied");
@@ -131,15 +127,15 @@ void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle
 
     if (command.arguments.front() == "vertical")
     {
-        active_output->request_vertical_layout();
+        policy.try_request_vertical();
     }
     else if (command.arguments.front() == "horizontal")
     {
-        active_output->request_horizontal_layout();
+        policy.try_request_horizontal();
     }
     else if (command.arguments.front() == "toggle")
     {
-        active_output->toggle_layout();
+        policy.try_toggle_layout();
     }
     else
     {
@@ -183,7 +179,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         }
 
         auto window = get_window_meeting_criteria(command_list);
-        auto metadata = window_helpers::get_metadata(window, tools);
+        auto metadata = window_controller.get_metadata(window);
         if (metadata)
             workspace_manager.request_focus(metadata->get_workspace()->get_workspace());
     }
@@ -205,24 +201,23 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!active_window)
             return;
 
-        auto metadata = window_helpers::get_metadata(active_window, tools);
+        auto metadata = window_controller.get_metadata(active_window);
         if (!metadata)
             return;
 
-        if (metadata->get_type() != WindowType::tiled)
+        if (metadata->get_type() != ContainerType::tiled)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
         }
 
-        auto node = metadata->get_container();
-        if (auto parent = Container::as_parent(node->get_parent().lock()))
+        if (auto parent = Container::as_parent(metadata->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(node);
+            auto index = parent->get_index_of_node(metadata);
             if (index != 0)
             {
                 auto node_to_select = parent->get_nth_window(index - 1);
-                active_output->select_window(node_to_select->get_window());
+                active_output->select_window(node_to_select->window().value());
             }
         }
     }
@@ -232,24 +227,23 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!active_window)
             return;
 
-        auto metadata = window_helpers::get_metadata(active_window, tools);
+        auto metadata = window_controller.get_metadata(active_window);
         if (!metadata)
             return;
 
-        if (metadata->get_type() != WindowType::tiled)
+        if (metadata->get_type() != ContainerType::tiled)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
         }
 
-        auto node = metadata->get_container();
-        if (auto parent = Container::as_parent(node->get_parent().lock()))
+        if (auto parent = Container::as_parent(metadata->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(node);
+            auto index = parent->get_index_of_node(metadata);
             if (index != parent->num_nodes() - 1)
             {
                 auto node_to_select = parent->get_nth_window(index + 1);
-                active_output->select_window(node_to_select->get_window());
+                active_output->select_window(node_to_select->window().value());
             }
         }
     }

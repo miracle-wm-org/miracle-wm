@@ -28,6 +28,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+ContainerType miracle::container_type_from_string(std::string const& str)
+{
+    if (str == "tiled")
+        return ContainerType::tiled;
+    else if (str == "floating")
+        return ContainerType::floating;
+    else if (str == "shell")
+        return ContainerType::shell;
+    else
+        return ContainerType::none;
+}
+
 Container::Container(std::shared_ptr<ParentContainer> const& parent) :
     parent { parent }
 {

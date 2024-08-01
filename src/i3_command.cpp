@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "i3_command.h"
 #include "jpcre2.h"
 #include "window_helpers.h"
+#include "window_controller.h"
+
 #include <cstring>
 #include <ranges>
 #define MIR_LOG_COMPONENT "miracle::i3_command"
@@ -156,11 +158,10 @@ std::vector<I3Scope> I3Scope::parse(std::string_view const& view, int& ptr)
     return result;
 }
 
-bool I3ScopedCommandList::meets_criteria(miral::Window const& window, miral::WindowManagerTools& window_manager_tools) const
+bool I3ScopedCommandList::meets_criteria(miral::Window const& window, WindowController& window_controller) const
 {
     typedef jpcre2::select<char> jp;
-    auto const& window_info = window_manager_tools.info_for(window);
-    auto metadata = window_helpers::get_metadata(window, window_manager_tools);
+    auto metadata = window_controller.get_metadata(window);
     if (!metadata)
         return false;
 
@@ -172,8 +173,9 @@ bool I3ScopedCommandList::meets_criteria(miral::Window const& window, miral::Win
             break;
         case I3ScopeType::title:
         {
+            auto& info = window_controller.info_for(window);
             jp::Regex re(criteria.regex.value());
-            auto const& name = window_info.name();
+            auto const& name = info.name();
             return re.match(name);
         }
         default:

@@ -82,6 +82,34 @@ public:
     mir::geometry::Rectangle
         confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle) override;
 
+    ContainerType get_type() const override;
+
+    void restore_state(MirWindowState state) override;
+
+    std::optional<MirWindowState> restore_state() override;
+
+    void on_open() override;
+
+    Workspace *get_workspace() const override;
+
+    Output *get_output() const override;
+
+    glm::mat4 get_transform() const override;
+
+    void set_transform(glm::mat4 transform) override;
+
+    glm::mat4 get_workspace_transform() const override;
+
+    glm::mat4 get_output_transform() const override;
+
+    uint32_t animation_handle() const override;
+
+    void animation_handle(uint32_t uint_32) override;
+
+    bool is_focused() const override;
+
+    std::optional<miral::Window> window() const override;
+
 private:
     WindowController& node_interface;
     geom::Rectangle logical_area;

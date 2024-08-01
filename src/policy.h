@@ -76,32 +76,27 @@ public:
     void advise_output_update(miral::Output const& updated, miral::Output const& original) override;
     void advise_output_delete(miral::Output const& output) override;
     void handle_modify_window(miral::WindowInfo& window_info, const miral::WindowSpecification& modifications) override;
-
     void handle_raise_window(miral::WindowInfo& window_info) override;
-
     auto confirm_placement_on_display(
         const miral::WindowInfo& window_info,
         MirWindowState new_state,
         const mir::geometry::Rectangle& new_placement) -> mir::geometry::Rectangle override;
-
     bool handle_touch_event(const MirTouchEvent* event) override;
-
     void handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event) override;
-
     void handle_request_resize(
         miral::WindowInfo& window_info,
         const MirInputEvent* input_event,
         MirResizeEdge edge) override;
-
     auto confirm_inherited_move(
         const miral::WindowInfo& window_info,
         mir::geometry::Displacement movement) -> mir::geometry::Rectangle override;
-
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
+
     bool try_request_horizontal();
     bool try_request_vertical();
+    bool try_toggle_layout();
     void try_toggle_resize_mode();
     bool try_resize(Direction direction);
     bool try_move(Direction direction);
@@ -123,7 +118,7 @@ private:
     std::shared_ptr<Output> active_output;
     std::vector<std::shared_ptr<Output>> output_list;
     std::weak_ptr<Output> pending_output;
-    WindowType pending_type;
+    ContainerType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     miral::MinimalWindowManager floating_window_manager;

@@ -33,8 +33,7 @@ namespace miracle
 class MiracleConfig;
 class TilingWindowTree;
 
-/// A leaf container contains one or many windows
-/// (in the event that windows are stacked or tabbed)
+/// A [LeafContainer] contains one or many windows (in the event that windows are stacked or tabbed).
 class LeafContainer : public Container
 {
 public:
@@ -75,7 +74,7 @@ public:
     void toggle_layout() override;
 
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
-    [[nodiscard]] miral::Window& get_window() { return window; }
+    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
     void commit_changes() override;
 
     void restore_state(MirWindowState state) override;
@@ -84,11 +83,11 @@ public:
     Output *get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
-    glm::mat4 get_workspace_transform() const override;
-    glm::mat4 get_output_transform() const override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
+
+    ContainerType get_type() const override;
 
 private:
     WindowController& node_interface;
@@ -96,7 +95,7 @@ private:
     std::optional<geom::Rectangle> next_logical_area;
     std::shared_ptr<MiracleConfig> config;
     TilingWindowTree* tree;
-    miral::Window window;
+    miral::Window window_;
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;

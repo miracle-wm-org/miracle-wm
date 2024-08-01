@@ -195,4 +195,19 @@ bool ShellComponentContainer::is_focused() const
 {
     return false;
 }
+
+ContainerType ShellComponentContainer::get_type() const
+{
+    return ContainerType::shell;
+}
+
+void ShellComponentContainer::on_open()
+{
+
+}
+
+std::optional<miral::Window> ShellComponentContainer::window() const
+{
+    return window_;
+}
 } // miracle

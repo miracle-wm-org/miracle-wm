@@ -62,7 +62,7 @@ public:
 
     bool pinned() const;
     void pinned(bool);
-    [[nodiscard]] miral::Window const& window() const;
+    [[nodiscard]] std::optional<miral::Window> window() const override;
 
     void restore_state(MirWindowState state) override;
     std::optional<MirWindowState> restore_state() override;
@@ -73,6 +73,12 @@ public:
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
+
+    ContainerType get_type() const override;
+
+    glm::mat4 get_workspace_transform() const override;
+
+    glm::mat4 get_output_transform() const override;
 
 private:
     miral::Window window_;

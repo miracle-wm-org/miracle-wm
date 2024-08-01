@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace.h"
 #include "output.h"
 #include "compositor_state.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
@@ -44,12 +46,12 @@ void FloatingContainer::commit_changes()
 
 mir::geometry::Rectangle FloatingContainer::get_logical_area() const
 {
-
+    return get_visible_area();
 }
 
 void FloatingContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
 {
-
+    window_controller.set_rectangle(window_, get_visible_area(), rectangle);
 }
 
 mir::geometry::Rectangle FloatingContainer::get_visible_area() const
@@ -147,7 +149,7 @@ void FloatingContainer::pinned(bool in)
     is_pinned = in;
 }
 
-const miral::Window &FloatingContainer::window() const
+std::optional<miral::Window> FloatingContainer::window() const
 {
     return window_;
 }
@@ -219,4 +221,29 @@ void FloatingContainer::animation_handle(uint32_t handle)
 bool FloatingContainer::is_focused() const
 {
     return get_output()->get_state().active_window == window_;
+}
+
+ContainerType FloatingContainer::get_type() const
+{
+    return ContainerType::floating;
+}
+
+glm::mat4 FloatingContainer::get_workspace_transform() const
+{
+    if (is_pinned)
+        return glm::mat4(1.f);
+
+    auto output = get_output();
+    auto workspace = get_workspace();
+    auto const workspace_rect = output->get_workspace_rectangle(workspace->get_workspace());
+    return glm::translate(
+        glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
+}
+
+glm::mat4 FloatingContainer::get_output_transform() const
+{
+    if (is_pinned)
+        return glm::mat4(1.f);
+
+    return get_output()->get_transform();
 }

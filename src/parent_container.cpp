@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
+#include "tiling_window_tree.h"
+#include "workspace.h"
 #include <cmath>
 
 using namespace miracle;
@@ -596,7 +598,77 @@ void ParentContainer::on_move_to(mir::geometry::Point const &top_left)
 }
 
 mir::geometry::Rectangle
-ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+    ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
 {
     return mir::geometry::Rectangle();
+}
+
+ContainerType ParentContainer::get_type() const
+{
+    return ContainerType::parent;
+}
+
+void ParentContainer::restore_state(MirWindowState state)
+{
+
+}
+
+std::optional<MirWindowState> ParentContainer::restore_state()
+{
+    return std::nullopt;
+}
+
+void ParentContainer::on_open()
+{
+
+}
+
+Workspace *ParentContainer::get_workspace() const
+{
+    return tree->get_workspace();
+}
+
+Output *ParentContainer::get_output() const
+{
+    return tree->get_workspace()->get_output();
+}
+
+glm::mat4 ParentContainer::get_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+void ParentContainer::set_transform(glm::mat4 transform)
+{
+
+}
+
+glm::mat4 ParentContainer::get_workspace_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+glm::mat4 ParentContainer::get_output_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+uint32_t ParentContainer::animation_handle() const
+{
+    return 0;
+}
+
+void ParentContainer::animation_handle(uint32_t uint_32)
+{
+
+}
+
+bool ParentContainer::is_focused() const
+{
+    return false;
+}
+
+std::optional<miral::Window> ParentContainer::window() const
+{
+    return std::optional<miral::Window>();
 }

@@ -174,46 +174,16 @@ std::shared_ptr<Container> Workspace::advise_new_window(
     return container;
 }
 
-mir::geometry::Rectangle Workspace::confirm_placement_on_display(
-    std::shared_ptr<Container> const& metadata,
-    MirWindowState new_state,
-    mir::geometry::Rectangle const& new_placement)
+void Workspace::handle_ready_hack(LeafContainer& metadata)
 {
-    return metadata->confirm_placement(new_state, new_placement);
-}
+    // TODO: Hack
+    //  By default, new windows are raised. To properly maintain the ordering, we must
+    //  raise floating windows and then raise fullscreen windows.
+    for (auto const& window : floating_windows)
+        window_controller.raise(window->window().value());
 
-void Workspace::handle_window_ready(
-    miral::WindowInfo& window_info, std::shared_ptr<Container> const& metadata)
-{
-    metadata->handle_ready();
-
-    switch (metadata->get_type())
-    {
-    case ContainerType::tiled:
-    {
-        // TODO: Hack
-        //  By default, new windows are raised. To properly maintain the ordering, we must
-        //  raise floating windows and then raise fullscreen windows.
-        for (auto const& window : floating_windows)
-            window_controller.raise(window->window());
-
-        if (tree->has_fullscreen_window())
-            window_controller.raise(window_info.window());
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-void Workspace::advise_focus_gained(const std::shared_ptr<Container>& metadata)
-{
-    metadata->on_focus_gained();
-}
-
-void Workspace::advise_focus_lost(const std::shared_ptr<Container>& metadata)
-{
-    metadata->on_focus_lost();
+    if (tree->has_fullscreen_window())
+        window_controller.raise(state.active_window);
 }
 
 void Workspace::advise_delete_window(std::shared_ptr<Container> const& metadata)
@@ -227,7 +197,7 @@ void Workspace::advise_delete_window(std::shared_ptr<Container> const& metadata)
     }
     case ContainerType::floating:
     {
-        auto window = Container::as_floating(metadata)->window();
+        auto window = Container::as_floating(metadata)->window().value();
         floating_window_manager.advise_delete_window(window_controller.info_for(window));
         remove_floating_window(window);
         break;
@@ -236,40 +206,6 @@ void Workspace::advise_delete_window(std::shared_ptr<Container> const& metadata)
         mir::log_error("Unsupported window type: %d", (int)metadata->get_type());
         return;
     }
-}
-
-void Workspace::advise_move_to(
-    std::shared_ptr<Container> const& metadata,
-    geom::Point const& top_left)
-{
-    metadata->on_move_to(top_left);
-}
-
-void Workspace::handle_request_move(
-    std::shared_ptr<Container> const& metadata,
-    MirInputEvent const* input_event)
-{
-    metadata->handle_request_move(input_event);
-}
-
-void Workspace::handle_request_resize(
-    const std::shared_ptr<Container>& metadata,
-    const MirInputEvent* input_event,
-    MirResizeEdge edge)
-{
-    metadata->handle_request_resize(input_event, edge);
-}
-
-void Workspace::handle_modify_window(
-    const std::shared_ptr<Container>& metadata,
-    const miral::WindowSpecification& modifications)
-{
-    metadata->handle_modify(modifications);
-}
-
-void Workspace::handle_raise_window(std::shared_ptr<Container> const& metadata)
-{
-    metadata->handle_raise();
 }
 
 bool Workspace::move_active_window(Direction direction)
@@ -362,11 +298,11 @@ void Workspace::show()
         // Pinned windows don't require restoration
         if (floating->pinned())
         {
-            tools.raise_tree(floating->window());
+            tools.raise_tree(floating->window().value());
             continue;
         }
 
-        auto metadata = window_controller.get_metadata(floating->window());
+        auto metadata = window_controller.get_metadata(floating->window().value());
         if (!metadata)
         {
             mir::log_error("show: floating window lacks metadata");
@@ -377,16 +313,16 @@ void Workspace::show()
         {
             miral::WindowSpecification spec;
             spec.state() = restore_state.value();
-            tools.modify_window(floating->window(), spec);
-            tools.raise_tree(floating->window());
+            tools.modify_window(floating->window().value(), spec);
+            tools.raise_tree(floating->window().value());
         }
     }
 
     // TODO: ugh that's ugly. Fullscreen nodes should show above floating nodes
     if (fullscreen_node)
     {
-        window_controller.select_active_window(fullscreen_node->get_window());
-        window_controller.raise(fullscreen_node->get_window());
+        window_controller.select_active_window(fullscreen_node->window().value());
+        window_controller.raise(fullscreen_node->window().value());
     }
 }
 
@@ -394,7 +330,7 @@ void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> 
 {
     for (auto const& window : floating_windows)
     {
-        auto metadata = window_controller.get_metadata(window->window());
+        auto metadata = window_controller.get_metadata(window->window().value());
         if (metadata)
             f(metadata);
     }
@@ -403,7 +339,7 @@ void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> 
     {
         if (auto leaf = Container::as_leaf(node))
         {
-            auto metadata = window_controller.get_metadata(leaf->get_window());
+            auto metadata = window_controller.get_metadata(leaf->window().value());
             if (metadata)
                 f(metadata);
         }
@@ -417,7 +353,7 @@ bool Workspace::select_window_from_point(int x, int y)
 
     for (auto const& floating : floating_windows)
     {
-        auto window = floating->window();
+        auto window = floating->window().value();
         geom::Rectangle window_area(window.top_left(), window.size());
         if (window == state.active_window && window_area.contains(geom::Point(x, y)))
             return false;
@@ -429,22 +365,13 @@ bool Workspace::select_window_from_point(int x, int y)
     }
 
     auto node = tree->select_window_from_point(x, y);
-    if (node && node->get_window() != state.active_window)
+    if (node && node->window().value() != state.active_window)
     {
-        window_controller.select_active_window(node->get_window());
+        window_controller.select_active_window(node->window().value());
         return true;
     }
 
     return false;
-}
-
-bool Workspace::resize_active_window(miracle::Direction direction)
-{
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
-        return false;
-
-    return metadata->resize(direction);
 }
 
 bool Workspace::select(miracle::Direction direction)
@@ -454,42 +381,6 @@ bool Workspace::select(miracle::Direction direction)
         return false;
 
     return tree->select_next(direction, *metadata);
-}
-
-void Workspace::request_horizontal_layout()
-{
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
-        return;
-
-    metadata->request_horizontal_layout();
-}
-
-void Workspace::request_vertical_layout()
-{
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
-        return;
-
-    metadata->request_vertical_layout();
-}
-
-void Workspace::toggle_layout()
-{
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
-        return;
-
-    metadata->toggle_layout();
-}
-
-bool Workspace::try_toggle_active_fullscreen()
-{
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
-        return false;
-
-    return metadata->toggle_fullscreen();
 }
 
 void Workspace::toggle_floating(std::shared_ptr<Container> const& metadata)
@@ -547,7 +438,7 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& metadata)
     // In all cases, advise a new window and pretend like it is ready again
     auto& info = window_controller.info_for(*window);
     auto new_metadata = advise_new_window(info, new_type);
-    handle_window_ready(info, new_metadata);
+    new_metadata->handle_ready();
     window_controller.select_active_window(state.active_window);
 }
 
@@ -557,7 +448,7 @@ void Workspace::hide()
 
     for (auto const& floating : floating_windows)
     {
-        auto window = floating->window();
+        auto window = floating->window().value();
         auto metadata = window_controller.get_metadata(window);
         if (!metadata)
         {
@@ -577,7 +468,7 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<Workspace> const& oth
 {
     for (auto it = floating_windows.begin(); it != floating_windows.end();)
     {
-        auto metadata = window_controller.get_metadata(it->get()->window());
+        auto metadata = window_controller.get_metadata(it->get()->window().value());
         if (!metadata)
         {
             mir::log_error("transfer_pinned_windows_to: floating window lacks metadata");
@@ -585,9 +476,10 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<Workspace> const& oth
             continue;
         }
 
-        if (it->get()->pinned())
+        auto floating = Container::as_floating(metadata);
+        if (floating&& floating->pinned())
         {
-            metadata->associate_container(other->add_floating_window(it->get()->window()));
+            other->floating_windows.push_back(floating);
             it = floating_windows.erase(it);
         }
         else
@@ -609,7 +501,7 @@ bool Workspace::has_floating_window(miral::Window const& window)
 std::shared_ptr<FloatingContainer> Workspace::add_floating_window(miral::Window const& window)
 {
     auto floating = std::make_shared<FloatingContainer>(
-        window, floating_window_manager, window_controller);
+        window, floating_window_manager, window_controller, this);
     floating_windows.push_back(floating);
     return floating;
 }

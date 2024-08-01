@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_helpers.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
+#include "shell_component_container.h"
+
 #include <iostream>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
@@ -58,11 +60,11 @@ Policy::Policy(
         workspace_observer_registrar,
         [&]()
 { return get_active_output(); }) },
-    i3_command_executor(*this, workspace_manager, tools, external_client_launcher),
-    surface_tracker { surface_tracker },
-    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) },
     animator(server.the_main_loop(), config),
-    window_controller(tools, animator, state)
+    window_controller(tools, animator, state),
+    i3_command_executor(*this, workspace_manager, tools, external_client_launcher, window_controller),
+    surface_tracker { surface_tracker },
+    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) }
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
@@ -281,8 +283,7 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
         return;
     }
 
-    if (container->get_output())
-        container->get_output()->handle_window_ready(window_info, container);
+    container->handle_ready();
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
@@ -295,7 +296,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         return;
     }
 
-    metadata->get_output()->advise_focus_gained(metadata);
+    metadata->on_focus_gained();
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
@@ -308,8 +309,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_focus_lost(metadata);
+    metadata->on_focus_lost();
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
@@ -349,8 +349,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_move_to(metadata, top_left);
+    metadata->on_move_to(top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
@@ -413,7 +412,7 @@ void Policy::advise_output_delete(miral::Output const& output)
                 for (auto& window : other_output->collect_all_windows())
                 {
                     orphaned_window_list.push_back(window);
-                    window_controller.set_user_data(window, std::make_shared<WindowMetadata>(WindowType::other, window));
+                    window_controller.set_user_data(window, std::make_shared<ShellComponentContainer>(window, window_controller));
                 }
 
                 remove_workspaces();
@@ -447,8 +446,7 @@ void Policy::handle_modify_window(
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_modify_window(metadata, modifications);
+    metadata->handle_modify(modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
@@ -460,8 +458,7 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_raise_window(metadata);
+    metadata->handle_raise();
 }
 
 mir::geometry::Rectangle
@@ -477,10 +474,7 @@ Policy::confirm_placement_on_display(
         return new_placement;
     }
 
-    mir::geometry::Rectangle modified_placement = metadata->get_output()
-        ? metadata->get_output()->confirm_placement_on_display(metadata, new_state, new_placement)
-        : new_placement;
-    return modified_placement;
+    return metadata->confirm_placement(new_state, new_placement);
 }
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
@@ -497,8 +491,7 @@ void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputE
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_request_move(metadata, input_event);
+    metadata->handle_request_move(input_event);
 }
 
 void Policy::handle_request_resize(
@@ -513,8 +506,7 @@ void Policy::handle_request_resize(
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_request_resize(metadata, input_event, edge);
+    metadata->handle_request_resize(input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(
@@ -589,10 +581,24 @@ bool Policy::try_request_vertical()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->request_vertical_layout();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    metadata->request_vertical_layout();
+    return true;
+}
+
+bool Policy::try_toggle_layout()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto metadata = window_controller.get_metadata(state.active_window);
+    metadata->toggle_layout();
     return true;
 }
 
@@ -601,10 +607,11 @@ bool Policy::try_request_horizontal()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->request_horizontal_layout();
+    auto metadata = window_controller.get_metadata(state.active_window);
+    metadata->request_horizontal_layout();
     return true;
 }
 
@@ -616,7 +623,8 @@ bool Policy::try_resize(miracle::Direction direction)
     if (!active_output)
         return false;
 
-    return active_output->resize_active_window(direction);
+    auto metadata = window_controller.get_metadata(state.active_window);
+    return metadata->resize(direction);
 }
 
 bool Policy::try_move(miracle::Direction direction)
@@ -661,11 +669,11 @@ bool Policy::try_toggle_fullscreen()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->toggle_fullscreen();
-    return true;
+    auto metadata = window_controller.get_metadata(state.active_window);
+    return metadata->toggle_fullscreen();
 }
 
 bool Policy::select_workspace(int number)

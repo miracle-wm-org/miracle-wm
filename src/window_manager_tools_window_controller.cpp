@@ -49,7 +49,7 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
     }
 
     animator.window_open(
-        metadata->get_animation_handle(),
+        metadata->animation_handle(),
         [this, metadata = metadata](miracle::AnimationStepResult const& result)
     {
         on_animation(result, metadata);
@@ -73,7 +73,7 @@ void WindowManagerToolsWindowController::set_rectangle(
     }
 
     animator.window_move(
-        metadata->get_animation_handle(),
+        metadata->animation_handle(),
         from,
         to,
         geom::Rectangle { window.top_left(), window.size() },
@@ -140,7 +140,7 @@ void WindowManagerToolsWindowController::send_to_back(miral::Window const& windo
 void WindowManagerToolsWindowController::on_animation(
     miracle::AnimationStepResult const& result, std::shared_ptr<Container> const& metadata)
 {
-    auto window = metadata->get_window();
+    auto window = metadata->window().value();
     auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
     if (!surface)
         return;
@@ -194,7 +194,7 @@ void WindowManagerToolsWindowController::on_animation(
         { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
         { scale.x, scale.y });
 
-    if (metadata->get_type() == WindowType::tiled)
+    if (metadata->get_type() == ContainerType::tiled)
         clip(window, new_rectangle);
     else
         noclip(window);

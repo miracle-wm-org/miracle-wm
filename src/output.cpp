@@ -112,75 +112,10 @@ std::shared_ptr<Container> Output::advise_new_window(
     return get_active_workspace()->advise_new_window(window_info, type);
 }
 
-void Output::handle_window_ready(
-    miral::WindowInfo& window_info, std::shared_ptr<miracle::Container> const& metadata) const
-{
-    get_active_workspace()->handle_window_ready(window_info, metadata);
-}
-
-void Output::advise_focus_gained(const std::shared_ptr<miracle::Container>& metadata)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->advise_focus_gained(metadata);
-}
-
-void Output::advise_focus_lost(const std::shared_ptr<miracle::Container>& metadata)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->advise_focus_lost(metadata);
-}
-
 void Output::advise_delete_window(const std::shared_ptr<miracle::Container>& metadata)
 {
     auto workspace = metadata->get_workspace();
     workspace->advise_delete_window(metadata);
-}
-
-void Output::advise_move_to(std::shared_ptr<miracle::Container> const& metadata, geom::Point top_left)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->advise_move_to(metadata, top_left);
-}
-
-void Output::handle_request_move(const std::shared_ptr<miracle::Container>& metadata,
-    const MirInputEvent* input_event)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->handle_request_move(metadata, input_event);
-}
-
-void Output::handle_request_resize(
-    const std::shared_ptr<miracle::Container>& metadata,
-    const MirInputEvent* input_event,
-    MirResizeEdge edge)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->handle_request_resize(metadata, input_event, edge);
-}
-
-void Output::handle_modify_window(
-    const std::shared_ptr<miracle::Container>& metadata,
-    const miral::WindowSpecification& modifications)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->handle_modify_window(metadata, modifications);
-}
-
-void Output::handle_raise_window(const std::shared_ptr<miracle::Container>& metadata)
-{
-    auto workspace = metadata->get_workspace();
-    workspace->handle_raise_window(metadata);
-}
-
-mir::geometry::Rectangle
-Output::confirm_placement_on_display(
-    const std::shared_ptr<miracle::Container>& metadata,
-    MirWindowState new_state,
-    const mir::geometry::Rectangle& new_placement)
-{
-    auto workspace = metadata->get_workspace();
-    return workspace->confirm_placement_on_display(
-        metadata, new_state, new_placement);
 }
 
 bool Output::select_window_from_point(int x, int y) const
@@ -360,11 +295,6 @@ void Output::close_active_window()
     window_controller.close(state.active_window);
 }
 
-bool Output::resize_active_window(miracle::Direction direction) const
-{
-    return get_active_workspace()->resize_active_window(direction);
-}
-
 bool Output::select(miracle::Direction direction) const
 {
     return get_active_workspace()->select(direction);
@@ -383,26 +313,6 @@ bool Output::move_active_window_by_amount(Direction direction, int pixels)
 bool Output::move_active_window_to(int x, int y)
 {
     return get_active_workspace()->move_active_window_to(x, y);
-}
-
-void Output::request_vertical_layout() const
-{
-    get_active_workspace()->request_vertical_layout();
-}
-
-void Output::request_horizontal_layout() const
-{
-    get_active_workspace()->request_horizontal_layout();
-}
-
-void Output::toggle_layout() const
-{
-    get_active_workspace()->toggle_layout();
-}
-
-bool Output::toggle_fullscreen() const
-{
-    return get_active_workspace()->try_toggle_active_fullscreen();
 }
 
 void Output::toggle_pinned_to_workspace()
@@ -483,7 +393,7 @@ void Output::add_immediately(miral::Window& window, ContainerType hint)
     ContainerType type = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
     auto metadata = advise_new_window(window_controller.info_for(window), type);
-    handle_window_ready(window_controller.info_for(window), metadata);
+    metadata->handle_ready();
 }
 
 geom::Rectangle Output::get_workspace_rectangle(int workspace) const

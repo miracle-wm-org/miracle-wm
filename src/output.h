@@ -56,44 +56,22 @@ public:
     bool handle_pointer_event(MirPointerEvent const* event);
     ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
     [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
-    void handle_window_ready(
-        miral::WindowInfo& window_info,
-        std::shared_ptr<miracle::Container> const& metadata) const;
-    void advise_focus_gained(std::shared_ptr<miracle::Container> const& metadata);
-    void advise_focus_lost(std::shared_ptr<miracle::Container> const& metadata);
     void advise_delete_window(std::shared_ptr<miracle::Container> const& metadata);
-    void advise_move_to(std::shared_ptr<miracle::Container> const& metadata, geom::Point top_left);
-    void handle_request_move(std::shared_ptr<miracle::Container> const& metadata, const MirInputEvent* input_event);
-    void handle_request_resize(
-        std::shared_ptr<miracle::Container> const& metadata,
-        const MirInputEvent* input_event,
-        MirResizeEdge edge);
-    void handle_modify_window(std::shared_ptr<miracle::Container> const& metadata, const miral::WindowSpecification& modifications);
-    void handle_raise_window(std::shared_ptr<miracle::Container> const& metadata);
-    mir::geometry::Rectangle confirm_placement_on_display(
-        std::shared_ptr<miracle::Container> const& metadata,
-        MirWindowState new_state,
-        const mir::geometry::Rectangle& new_placement);
-    bool select_window_from_point(int x, int y) const;
+    [[nodiscard]] bool select_window_from_point(int x, int y) const;
     void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
+    [[nodiscard]] std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
     bool point_is_in_output(int x, int y);
     void close_active_window();
-    bool resize_active_window(Direction direction) const;
     bool select(Direction direction) const;
     bool move_active_window(Direction direction);
     bool move_active_window_by_amount(Direction direction, int pixels);
     bool move_active_window_to(int x, int y);
-    void request_vertical_layout() const;
-    void request_horizontal_layout() const;
-    void toggle_layout() const;
-    bool toggle_fullscreen() const;
     void toggle_pinned_to_workspace();
     void set_is_pinned(bool is_pinned);
     void update_area(geom::Rectangle const& area);

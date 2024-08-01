@@ -120,7 +120,7 @@ bool TilingWindowTree::select_next(
         return false;
     }
 
-    window_controller.select_active_window(node->get_window());
+    window_controller.select_active_window(node->window().value());
     return true;
 }
 
@@ -266,7 +266,7 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, Co
 void TilingWindowTree::advise_focus_gained(LeafContainer& container)
 {
     if (is_active_window_fullscreen)
-        window_controller.raise(container.get_window());
+        window_controller.raise(container.window().value());
 }
 
 void TilingWindowTree::advise_delete_window(std::shared_ptr<Container> const& container)
@@ -597,7 +597,7 @@ void TilingWindowTree::recalculate_root_node_area()
 
 bool TilingWindowTree::advise_fullscreen_container(LeafContainer& container)
 {
-    auto window = container.get_window();
+    auto window = container.window().value();
     window_controller.select_active_window(window);
     window_controller.raise(window);
     is_active_window_fullscreen = true;
@@ -607,7 +607,7 @@ bool TilingWindowTree::advise_fullscreen_container(LeafContainer& container)
 bool TilingWindowTree::advise_restored_container(LeafContainer& container)
 {
     auto active = active_container();
-    if (active->get_window() == container.get_window() && is_active_window_fullscreen)
+    if (active->window() == container.window().value() && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
         container.set_logical_area(container.get_logical_area());
@@ -623,7 +623,7 @@ bool TilingWindowTree::handle_container_ready(LeafContainer& container)
     if (is_active_window_fullscreen)
         return true;
 
-    auto window = container.get_window();
+    auto window = container.window().value();
     auto& info = window_controller.info_for(window);
     if (info.can_be_active())
         window_controller.select_active_window(window);
@@ -735,7 +735,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::show()
             if (leaf_node->is_fullscreen())
                 fullscreen_node = leaf_node;
             else
-                window_controller.raise(leaf_node->get_window());
+                window_controller.raise(leaf_node->window().value());
         }
     });
 
@@ -761,5 +761,5 @@ std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
     if (!metadata)
         return nullptr;
 
-    return Container::as_leaf(metadata->get_container());
+    return Container::as_leaf(metadata);
 }

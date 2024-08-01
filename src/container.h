@@ -45,8 +45,11 @@ enum class ContainerType
     none,
     tiled,
     floating,
-    shell
+    shell,
+    parent
 };
+
+ContainerType container_type_from_string(std::string const& str);
 
 /// Aligns with i3's concept of containers. A [Container] may map to
 /// an individual [miral::Window] or it may not. You can think of a [Container]

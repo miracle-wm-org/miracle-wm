@@ -59,27 +59,8 @@ public:
         ContainerType hint);
     std::shared_ptr<Container> advise_new_window(
         miral::WindowInfo const& window_info, ContainerType type);
-    mir::geometry::Rectangle confirm_placement_on_display(
-        std::shared_ptr<Container> const& metadata,
-        MirWindowState new_state,
-        mir::geometry::Rectangle const& new_placement);
-    void handle_window_ready(
-        miral::WindowInfo& window_info, std::shared_ptr<Container> const& metadata);
-    void advise_focus_gained(std::shared_ptr<Container> const& metadata);
-    void advise_focus_lost(std::shared_ptr<Container> const& metadata);
+    void handle_ready_hack(LeafContainer& metadata);
     void advise_delete_window(const std::shared_ptr<Container>& metadata);
-    void advise_move_to(std::shared_ptr<Container> const& metadata, mir::geometry::Point const& top_left);
-    void handle_request_move(
-        const std::shared_ptr<Container>& metadata,
-        const MirInputEvent* input_event);
-    void handle_request_resize(
-        const std::shared_ptr<Container>& metadata,
-        const MirInputEvent* input_event,
-        MirResizeEdge edge);
-    void handle_modify_window(
-        const std::shared_ptr<Container>& metadata,
-        const miral::WindowSpecification& modifications);
-    void handle_raise_window(std::shared_ptr<Container> const& metadata);
     bool move_active_window(Direction direction);
     bool move_active_window_by_amount(Direction direction, int pixels);
     bool move_active_window_to(int x, int y);
@@ -88,12 +69,7 @@ public:
     void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);
     void for_each_window(std::function<void(std::shared_ptr<Container>)> const&);
     bool select_window_from_point(int x, int y);
-    bool resize_active_window(miracle::Direction);
     bool select(miracle::Direction);
-    void request_horizontal_layout();
-    void request_vertical_layout();
-    void toggle_layout();
-    bool try_toggle_active_fullscreen();
     void toggle_floating(std::shared_ptr<Container> const&);
 
     bool has_floating_window(miral::Window const&);

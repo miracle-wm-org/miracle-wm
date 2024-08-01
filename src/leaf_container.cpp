@@ -44,7 +44,7 @@ LeafContainer::LeafContainer(
 
 void LeafContainer::associate_to_window(miral::Window const& in_window)
 {
-    window = in_window;
+    window_ = in_window;
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
@@ -104,10 +104,10 @@ geom::Rectangle LeafContainer::get_visible_area() const
 
 void LeafContainer::constrain()
 {
-    if (node_interface.is_fullscreen(window))
-        node_interface.noclip(window);
+    if (node_interface.is_fullscreen(window_))
+        node_interface.noclip(window_);
     else
-        node_interface.clip(window, get_visible_area());
+        node_interface.clip(window_, get_visible_area());
 }
 
 size_t LeafContainer::get_min_width() const
@@ -123,11 +123,12 @@ size_t LeafContainer::get_min_height() const
 void LeafContainer::handle_ready()
 {
     tree->handle_container_ready(*this);
+    get_workspace()->handle_ready_hack(*this);
 }
 
 void LeafContainer::handle_modify(miral::WindowSpecification const& modifications)
 {
-    auto const& info = node_interface.info_for(window);
+    auto const& info = node_interface.info_for(window_);
 
     // TODO: Check if the current workspace is active. If not, return early.
 
@@ -152,12 +153,12 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
         mods.size().consume();
     }
 
-    node_interface.modify(window, mods);
+    node_interface.modify(window_, mods);
 }
 
 void LeafContainer::handle_raise()
 {
-    node_interface.select_active_window(window);
+    node_interface.select_active_window(window_);
 }
 
 bool LeafContainer::resize(miracle::Direction direction)
@@ -173,13 +174,13 @@ void LeafContainer::show()
 
 void LeafContainer::hide()
 {
-    before_shown_state = node_interface.get_state(window);
+    before_shown_state = node_interface.get_state(window_);
     next_state = mir_window_state_hidden;
 }
 
 bool LeafContainer::toggle_fullscreen()
 {
-    if (node_interface.is_fullscreen(window))
+    if (node_interface.is_fullscreen(window_))
         next_state = mir_window_state_restored;
     else
         next_state = mir_window_state_fullscreen;
@@ -198,7 +199,7 @@ mir::geometry::Rectangle LeafContainer::confirm_placement(
 
 void LeafContainer::on_open()
 {
-    node_interface.open(window);
+    node_interface.open(window_);
 }
 
 void LeafContainer::on_focus_gained()
@@ -217,14 +218,14 @@ void LeafContainer::on_move_to(geom::Point const&)
 
 bool LeafContainer::is_fullscreen() const
 {
-    return node_interface.is_fullscreen(window);
+    return node_interface.is_fullscreen(window_);
 }
 
 void LeafContainer::commit_changes()
 {
     if (next_state)
     {
-        node_interface.change_state(window, next_state.value());
+        node_interface.change_state(window_, next_state.value());
         constrain();
         next_state.reset();
     }
@@ -234,9 +235,9 @@ void LeafContainer::commit_changes()
         auto previous = get_visible_area();
         logical_area = next_logical_area.value();
         next_logical_area.reset();
-        if (!node_interface.is_fullscreen(window))
+        if (!node_interface.is_fullscreen(window_))
         {
-            node_interface.set_rectangle(window, previous, get_visible_area());
+            node_interface.set_rectangle(window_, previous, get_visible_area());
             constrain();
         }
     }
@@ -311,5 +312,10 @@ void LeafContainer::animation_handle(uint32_t handle)
 
 bool LeafContainer::is_focused() const
 {
-    return get_output()->get_state().active_window == window;
+    return get_output()->get_state().active_window == window_;
+}
+
+ContainerType LeafContainer::get_type() const
+{
+    return ContainerType::tiled;
 }

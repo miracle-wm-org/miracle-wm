@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_surface.h"
 #include "tiling_window_tree.h"
 #include "window_controller.h"
-#include "window_metadata.h"
 #include <gtest/gtest.h>
 #include <miral/window_management_options.h>
 
@@ -41,6 +40,11 @@ public:
         return zones;
     }
 
+    Workspace* get_workspace() const override
+    {
+        return nullptr;
+    }
+
 private:
     geom::Rectangle r {
         geom::Point(0, 0),
@@ -52,7 +56,7 @@ private:
 class StubWindowController : public miracle::WindowController
 {
 public:
-    StubWindowController(std::vector<std::pair<miral::Window, std::shared_ptr<WindowMetadata>>>& pairs) :
+    StubWindowController(std::vector<std::pair<miral::Window, std::shared_ptr<Container>>>& pairs) :
         pairs { pairs }
     {
     }
@@ -70,7 +74,7 @@ public:
     void clip(miral::Window const&, geom::Rectangle const&) override { }
     void noclip(miral::Window const&) override { }
     void select_active_window(miral::Window const&) override { }
-    std::shared_ptr<WindowMetadata> get_metadata(miral::Window const& window) override
+    std::shared_ptr<Container> get_metadata(miral::Window const& window) override
     {
         for (auto const& p : pairs)
         {
@@ -84,13 +88,13 @@ public:
     void send_to_back(miral::Window const&) override { }
     void open(miral::Window const&) override { }
     void close(miral::Window const&) override { }
-    void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const&) override { }
+    void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<Container> const&) override { }
     void set_user_data(miral::Window const&, std::shared_ptr<void> const&) override { }
     void modify(miral::Window const&, miral::WindowSpecification const&) override { }
     miral::WindowInfo& info_for(miral::Window const&) override { }
 
 private:
-    std::vector<std::pair<miral::Window, std::shared_ptr<WindowMetadata>>>& pairs;
+    std::vector<std::pair<miral::Window, std::shared_ptr<Container>>>& pairs;
 };
 
 class TilingWindowTreeTest : public testing::Test
@@ -117,12 +121,9 @@ public:
 
         miral::Window window(session, surface);
         miral::WindowInfo info(window, spec);
-        auto metadata = std::make_shared<WindowMetadata>(WindowType::tiled, window);
-        pairs.push_back({ window, metadata });
-        info.userdata(metadata);
 
         auto leaf = tree.confirm_window(info, nullptr);
-        metadata->associate_container(leaf);
+        pairs.push_back({ window, leaf });
 
         state.active_window = window;
         tree.advise_focus_gained(*leaf);
@@ -132,7 +133,7 @@ public:
     CompositorState state;
     std::vector<std::shared_ptr<test::StubSession>> sessions;
     std::vector<std::shared_ptr<test::StubSurface>> surfaces;
-    std::vector<std::pair<miral::Window, std::shared_ptr<WindowMetadata>>> pairs;
+    std::vector<std::pair<miral::Window, std::shared_ptr<Container>>> pairs;
     StubWindowController window_controller { pairs };
     TilingWindowTree tree;
 };

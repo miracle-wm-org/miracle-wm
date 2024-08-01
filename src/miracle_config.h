@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_MIRACLE_CONFIG_H
 
 #include "animation_defintion.h"
+#include "container.h"
 
 #include <atomic>
 #include <functional>
@@ -128,7 +129,7 @@ struct BorderConfig
 struct WorkspaceConfig
 {
     int num = -1;
-    WindowType layout = WindowType::tiled;
+    ContainerType layout = ContainerType::tiled;
 };
 
 class MiracleConfig
