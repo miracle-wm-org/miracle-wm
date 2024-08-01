@@ -43,7 +43,7 @@ public:
     virtual void clip(miral::Window const&, geom::Rectangle const&) = 0;
     virtual void noclip(miral::Window const&) = 0;
     virtual void select_active_window(miral::Window const&) = 0;
-    virtual std::shared_ptr<Container> get_metadata(miral::Window const&) = 0;
+    virtual std::shared_ptr<Container> get_container(miral::Window const&) = 0;
     virtual void raise(miral::Window const&) = 0;
     virtual void send_to_back(miral::Window const&) = 0;
     virtual void open(miral::Window const&) = 0;

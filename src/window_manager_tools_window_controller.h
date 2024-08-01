@@ -41,7 +41,7 @@ public:
     void clip(miral::Window const&, geom::Rectangle const&) override;
     void noclip(miral::Window const&) override;
     void select_active_window(miral::Window const&) override;
-    std::shared_ptr<Container> get_metadata(miral::Window const&) override;
+    std::shared_ptr<Container> get_container(miral::Window const&) override;
     void raise(miral::Window const&) override;
     void send_to_back(miral::Window const&) override;
     void on_animation(miracle::AnimationStepResult const& result, std::shared_ptr<Container> const&) override;

@@ -59,8 +59,8 @@ public:
         ContainerType hint);
     std::shared_ptr<Container> advise_new_window(
         miral::WindowInfo const& window_info, ContainerType type);
-    void handle_ready_hack(LeafContainer& metadata);
-    void advise_delete_window(const std::shared_ptr<Container>& metadata);
+    void handle_ready_hack(LeafContainer& container);
+    void advise_delete_window(const std::shared_ptr<Container>& container);
     bool move_active_window(Direction direction);
     bool move_active_window_by_amount(Direction direction, int pixels);
     bool move_active_window_to(int x, int y);

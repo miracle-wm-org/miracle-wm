@@ -74,7 +74,7 @@ public:
     void clip(miral::Window const&, geom::Rectangle const&) override { }
     void noclip(miral::Window const&) override { }
     void select_active_window(miral::Window const&) override { }
-    std::shared_ptr<Container> get_metadata(miral::Window const& window) override
+    std::shared_ptr<Container> get_container(miral::Window const& window) override
     {
         for (auto const& p : pairs)
         {

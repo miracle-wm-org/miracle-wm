@@ -37,7 +37,7 @@ void ShellComponentContainer::restore_state(MirWindowState state)
 
 std::optional<MirWindowState> ShellComponentContainer::restore_state()
 {
-    return std::optional<MirWindowState>();
+    return std::nullopt;
 }
 
 void ShellComponentContainer::commit_changes()
@@ -47,7 +47,10 @@ void ShellComponentContainer::commit_changes()
 
 mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 {
-    return mir::geometry::Rectangle();
+    return {
+        window_.top_left(),
+        window_.size()
+    };
 }
 
 void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const &rectangle)
@@ -57,7 +60,7 @@ void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const &r
 
 mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
 {
-    return mir::geometry::Rectangle();
+    return get_logical_area();
 }
 
 void ShellComponentContainer::constrain()
@@ -148,7 +151,7 @@ void ShellComponentContainer::on_move_to(mir::geometry::Point const &top_left)
 mir::geometry::Rectangle
 ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
 {
-    return mir::geometry::Rectangle();
+    return rectangle;
 }
 
 Workspace *ShellComponentContainer::get_workspace() const
@@ -163,7 +166,7 @@ Output *ShellComponentContainer::get_output() const
 
 glm::mat4 ShellComponentContainer::get_transform() const
 {
-    return glm::mat4();
+    return glm::mat4(1.f);
 }
 
 void ShellComponentContainer::set_transform(glm::mat4 transform)
@@ -173,12 +176,12 @@ void ShellComponentContainer::set_transform(glm::mat4 transform)
 
 glm::mat4 ShellComponentContainer::get_workspace_transform() const
 {
-    return glm::mat4();
+    return glm::mat4(1.f);
 }
 
 glm::mat4 ShellComponentContainer::get_output_transform() const
 {
-    return glm::mat4();
+    return glm::mat4(1.f);
 }
 
 uint32_t ShellComponentContainer::animation_handle() const

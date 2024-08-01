@@ -161,8 +161,8 @@ std::vector<I3Scope> I3Scope::parse(std::string_view const& view, int& ptr)
 bool I3ScopedCommandList::meets_criteria(miral::Window const& window, WindowController& window_controller) const
 {
     typedef jpcre2::select<char> jp;
-    auto metadata = window_controller.get_metadata(window);
-    if (!metadata)
+    auto container = window_controller.get_container(window);
+    if (!container)
         return false;
 
     for (auto const& criteria : scope)

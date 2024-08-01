@@ -471,7 +471,7 @@ miracle::Renderer::DrawData Renderer::draw(
         glDisable(GL_SCISSOR_TEST);
     }
 
-    // Next, draw the outline if we have metadata to facilitate it
+    // Next, draw the outline if we have container to facilitate it
     if (data.needs_outline)
     {
         auto border_config = config->get_border_config();

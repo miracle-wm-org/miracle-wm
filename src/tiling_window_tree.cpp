@@ -757,9 +757,9 @@ std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
     if (!state.active_window)
         return nullptr;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
+    auto container = window_controller.get_container(state.active_window);
+    if (!container)
         return nullptr;
 
-    return Container::as_leaf(metadata);
+    return Container::as_leaf(container);
 }

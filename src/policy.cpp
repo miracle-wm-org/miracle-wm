@@ -276,10 +276,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    auto container = window_controller.get_metadata(window_info.window());
+    auto container = window_controller.get_container(window_info.window());
     if (!container)
     {
-        mir::log_error("handle_window_ready: metadata is not provided");
+        mir::log_error("handle_window_ready: container is not provided");
         return;
     }
 
@@ -289,27 +289,27 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     state.active_window = window_info.window();
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_focus_gained: metadata is not provided");
+        mir::log_error("advise_focus_gained: container is not provided");
         return;
     }
 
-    metadata->on_focus_gained();
+    container->on_focus_gained();
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     state.active_window = Window();
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_focus_lost: metadata is not provided");
+        mir::log_error("advise_focus_lost: container is not provided");
         return;
     }
 
-    metadata->on_focus_lost();
+    container->on_focus_lost();
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
@@ -324,15 +324,15 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         }
     }
 
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_delete_window: metadata is not provided");
+        mir::log_error("advise_delete_window: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_delete_window(metadata);
+    if (container->get_output())
+        container->get_output()->advise_delete_window(container);
 
     surface_tracker.remove(window_info.window());
 
@@ -342,14 +342,14 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_move_to: metadata is not provided: %s", window_info.application_id().c_str());
+        mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
         return;
     }
 
-    metadata->on_move_to(top_left);
+    container->on_move_to(top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
@@ -439,26 +439,26 @@ void Policy::handle_modify_window(
     miral::WindowInfo& window_info,
     const miral::WindowSpecification& modifications)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_modify_window: metadata is not provided");
+        mir::log_error("handle_modify_window: container is not provided");
         return;
     }
 
-    metadata->handle_modify(modifications);
+    container->handle_modify(modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_raise_window: metadata is not provided");
+        mir::log_error("handle_raise_window: container is not provided");
         return;
     }
 
-    metadata->handle_raise();
+    container->handle_raise();
 }
 
 mir::geometry::Rectangle
@@ -467,14 +467,14 @@ Policy::confirm_placement_on_display(
     MirWindowState new_state,
     const mir::geometry::Rectangle& new_placement)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_warning("confirm_placement_on_display: window lacks metadata");
+        mir::log_warning("confirm_placement_on_display: window lacks container");
         return new_placement;
     }
 
-    return metadata->confirm_placement(new_state, new_placement);
+    return container->confirm_placement(new_state, new_placement);
 }
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
@@ -484,14 +484,14 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_request_move: window lacks metadata");
+        mir::log_error("handle_request_move: window lacks container");
         return;
     }
 
-    metadata->handle_request_move(input_event);
+    container->handle_request_move(input_event);
 }
 
 void Policy::handle_request_resize(
@@ -499,14 +499,14 @@ void Policy::handle_request_resize(
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
-    auto metadata = window_controller.get_metadata(window_info.window());
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_request_resize: window lacks metadata");
+        mir::log_error("handle_request_resize: window lacks container");
         return;
     }
 
-    metadata->handle_request_resize(input_event, edge);
+    container->handle_request_resize(input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(
@@ -555,14 +555,14 @@ void Policy::try_toggle_resize_mode()
         return;
     }
 
-    auto metadata = window_controller.get_metadata(window);
-    if (!metadata)
+    auto container = window_controller.get_container(window);
+    if (!container)
     {
         state.mode = WindowManagerMode::normal;
         return;
     }
 
-    if (metadata->get_type() != ContainerType::tiled)
+    if (container->get_type() != ContainerType::tiled)
     {
         state.mode = WindowManagerMode::normal;
         return;
@@ -584,8 +584,8 @@ bool Policy::try_request_vertical()
     if (!state.active_window)
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    metadata->request_vertical_layout();
+    auto container = window_controller.get_container(state.active_window);
+    container->request_vertical_layout();
     return true;
 }
 
@@ -597,8 +597,8 @@ bool Policy::try_toggle_layout()
     if (!state.active_window)
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    metadata->toggle_layout();
+    auto container = window_controller.get_container(state.active_window);
+    container->toggle_layout();
     return true;
 }
 
@@ -610,8 +610,8 @@ bool Policy::try_request_horizontal()
     if (!state.active_window)
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    metadata->request_horizontal_layout();
+    auto container = window_controller.get_container(state.active_window);
+    container->request_horizontal_layout();
     return true;
 }
 
@@ -623,8 +623,8 @@ bool Policy::try_resize(miracle::Direction direction)
     if (!active_output)
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    return metadata->resize(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->resize(direction);
 }
 
 bool Policy::try_move(miracle::Direction direction)
@@ -672,8 +672,8 @@ bool Policy::try_toggle_fullscreen()
     if (!state.active_window)
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    return metadata->toggle_fullscreen();
+    auto container = window_controller.get_container(state.active_window);
+    return container->toggle_fullscreen();
 }
 
 bool Policy::select_workspace(int number)
@@ -700,9 +700,9 @@ bool Policy::move_active_to_workspace(int number)
     if (window_helpers::is_window_fullscreen(info.state()))
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
+    auto container = window_controller.get_container(state.active_window);
     auto window_to_move = state.active_window;
-    active_output->advise_delete_window(metadata);
+    active_output->advise_delete_window(container);
     state.active_window = Window();
 
     auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);

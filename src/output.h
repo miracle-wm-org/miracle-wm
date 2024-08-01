@@ -56,7 +56,7 @@ public:
     bool handle_pointer_event(MirPointerEvent const* event);
     ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
     [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
-    void advise_delete_window(std::shared_ptr<miracle::Container> const& metadata);
+    void advise_delete_window(std::shared_ptr<miracle::Container> const& container);
     [[nodiscard]] bool select_window_from_point(int x, int y) const;
     void select_window(miral::Window const&);
     void advise_new_workspace(int workspace);

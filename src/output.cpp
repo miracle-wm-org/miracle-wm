@@ -112,10 +112,10 @@ std::shared_ptr<Container> Output::advise_new_window(
     return get_active_workspace()->advise_new_window(window_info, type);
 }
 
-void Output::advise_delete_window(const std::shared_ptr<miracle::Container>& metadata)
+void Output::advise_delete_window(const std::shared_ptr<miracle::Container>& container)
 {
-    auto workspace = metadata->get_workspace();
-    workspace->advise_delete_window(metadata);
+    auto workspace = container->get_workspace();
+    workspace->advise_delete_window(container);
 }
 
 bool Output::select_window_from_point(int x, int y) const
@@ -317,27 +317,27 @@ bool Output::move_active_window_to(int x, int y)
 
 void Output::toggle_pinned_to_workspace()
 {
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
+    auto container = window_controller.get_container(state.active_window);
+    if (!container)
     {
-        mir::log_error("toggle_pinned_to_workspace: metadata not found");
+        mir::log_error("toggle_pinned_to_workspace: container not found");
         return;
     }
 
-    if (auto floating = Container::as_floating(metadata))
+    if (auto floating = Container::as_floating(container))
         floating->pinned(!floating->pinned());
 }
 
 void Output::set_is_pinned(bool is_pinned)
 {
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
+    auto container = window_controller.get_container(state.active_window);
+    if (!container)
     {
-        mir::log_error("set_is_pinned: metadata not found");
+        mir::log_error("set_is_pinned: container not found");
         return;
     }
 
-    if (auto floating = Container::as_floating(metadata))
+    if (auto floating = Container::as_floating(container))
         floating->pinned(is_pinned);
 }
 
@@ -371,14 +371,14 @@ void Output::request_toggle_active_float()
         return;
     }
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
+    auto container = window_controller.get_container(state.active_window);
+    if (!container)
     {
-        mir::log_error("request_toggle_active_float: metadata not found");
+        mir::log_error("request_toggle_active_float: container not found");
         return;
     }
 
-    metadata->get_workspace()->toggle_floating(metadata);
+    container->get_workspace()->toggle_floating(container);
 }
 
 void Output::add_immediately(miral::Window& window, ContainerType hint)
@@ -392,8 +392,8 @@ void Output::add_immediately(miral::Window& window, ContainerType hint)
 
     ContainerType type = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
-    auto metadata = advise_new_window(window_controller.info_for(window), type);
-    metadata->handle_ready();
+    auto container = advise_new_window(window_controller.info_for(window), type);
+    container->handle_ready();
 }
 
 geom::Rectangle Output::get_workspace_rectangle(int workspace) const

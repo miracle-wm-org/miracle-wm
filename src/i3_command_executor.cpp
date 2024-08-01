@@ -179,9 +179,9 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         }
 
         auto window = get_window_meeting_criteria(command_list);
-        auto metadata = window_controller.get_metadata(window);
-        if (metadata)
-            workspace_manager.request_focus(metadata->get_workspace()->get_workspace());
+        auto container = window_controller.get_container(window);
+        if (container)
+            workspace_manager.request_focus(container->get_workspace()->get_workspace());
     }
     else if (arg == "left")
         active_output->select(Direction::left);
@@ -201,19 +201,19 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!active_window)
             return;
 
-        auto metadata = window_controller.get_metadata(active_window);
-        if (!metadata)
+        auto container = window_controller.get_container(active_window);
+        if (!container)
             return;
 
-        if (metadata->get_type() != ContainerType::tiled)
+        if (container->get_type() != ContainerType::tiled)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
         }
 
-        if (auto parent = Container::as_parent(metadata->get_parent().lock()))
+        if (auto parent = Container::as_parent(container->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(metadata);
+            auto index = parent->get_index_of_node(container);
             if (index != 0)
             {
                 auto node_to_select = parent->get_nth_window(index - 1);
@@ -227,19 +227,19 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!active_window)
             return;
 
-        auto metadata = window_controller.get_metadata(active_window);
-        if (!metadata)
+        auto container = window_controller.get_container(active_window);
+        if (!container)
             return;
 
-        if (metadata->get_type() != ContainerType::tiled)
+        if (container->get_type() != ContainerType::tiled)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
         }
 
-        if (auto parent = Container::as_parent(metadata->get_parent().lock()))
+        if (auto parent = Container::as_parent(container->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(metadata);
+            auto index = parent->get_index_of_node(container);
             if (index != parent->num_nodes() - 1)
             {
                 auto node_to_select = parent->get_nth_window(index + 1);
