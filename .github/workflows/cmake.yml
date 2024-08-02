@@ -30,7 +30,7 @@ jobs:
       run: |
         sudo apt install gcc-13  g++-13
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
-        sudo apt install libmiral-dev libmircore-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
+        sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
           libmiroil-dev libmirrenderer-dev libgles2-mesa-dev
 
