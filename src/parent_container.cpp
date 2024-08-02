@@ -219,6 +219,7 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
     pending_node->associate_to_window(window);
     pending_node->set_parent(Container::as_parent(shared_from_this()));
     pending_node = nullptr;
+    commit_changes();
     return retval;
 }
 
