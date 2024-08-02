@@ -469,5 +469,5 @@ std::shared_ptr<ParentContainer> Workspace::get_layout_container()
     if (!parent)
         return nullptr;
 
-    return Container::as_parent(parent);
+    return parent;
 }

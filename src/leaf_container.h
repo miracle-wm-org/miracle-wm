@@ -48,6 +48,7 @@ public:
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
     [[nodiscard]] geom::Rectangle get_visible_area() const override;
     void set_logical_area(geom::Rectangle const& target_rect) override;
+    std::weak_ptr<ParentContainer> get_parent() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void set_state(MirWindowState state);
     void show();
@@ -100,6 +101,7 @@ private:
     std::shared_ptr<MiracleConfig> config;
     TilingWindowTree* tree;
     miral::Window window_;
+    std::weak_ptr<ParentContainer> parent;
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;

@@ -25,8 +25,7 @@ ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
     miracle::WindowController& window_controller)
     : window_{window_},
-      window_controller{window_controller},
-      Container(nullptr)
+      window_controller{window_controller}
 {
 }
 
@@ -66,6 +65,11 @@ mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
 void ShellComponentContainer::constrain()
 {
 
+}
+
+std::weak_ptr<ParentContainer> ShellComponentContainer::get_parent() const
+{
+    return std::weak_ptr<ParentContainer>();
 }
 
 void ShellComponentContainer::set_parent(std::shared_ptr<ParentContainer> const &ptr)

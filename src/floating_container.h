@@ -79,6 +79,8 @@ public:
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
 
+    std::weak_ptr<ParentContainer> get_parent() const override;
+
 private:
     miral::Window window_;
     miral::MinimalWindowManager& wm;

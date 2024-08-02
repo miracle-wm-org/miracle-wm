@@ -31,6 +31,8 @@ public:
         miral::Window const&,
         WindowController& window_controller);
 
+    std::weak_ptr<ParentContainer> get_parent() const override;
+
     void restore_state(MirWindowState state) override;
     std::optional<MirWindowState> restore_state() override;
     void commit_changes() override;

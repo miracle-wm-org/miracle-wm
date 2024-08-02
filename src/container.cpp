@@ -40,11 +40,6 @@ ContainerType miracle::container_type_from_string(std::string const& str)
         return ContainerType::none;
 }
 
-Container::Container(std::shared_ptr<ParentContainer> const& parent) :
-    parent { parent }
-{
-}
-
 glm::mat4 Container::get_workspace_transform() const
 {
     auto output = get_output();
@@ -88,11 +83,6 @@ bool Container::is_leaf()
 bool Container::is_lane()
 {
     return as_parent(shared_from_this()) != nullptr;
-}
-
-std::weak_ptr<Container> Container::get_parent() const
-{
-    return parent;
 }
 
 namespace

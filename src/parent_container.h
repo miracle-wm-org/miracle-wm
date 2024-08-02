@@ -64,6 +64,7 @@ public:
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
+    std::weak_ptr<ParentContainer> get_parent() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void handle_ready() override;
     void handle_modify(miral::WindowSpecification const &specification) override;
@@ -106,6 +107,7 @@ private:
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
+    std::weak_ptr<ParentContainer> parent;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     std::vector<std::shared_ptr<Container>> sub_nodes;
     std::shared_ptr<LeafContainer> pending_node;

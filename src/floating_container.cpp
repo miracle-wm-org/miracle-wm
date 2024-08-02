@@ -33,8 +33,7 @@ FloatingContainer::FloatingContainer(
     miral::MinimalWindowManager& wm,
     WindowController& window_controller,
     Workspace* workspace)
-    : Container(nullptr),
-      window_{window},
+    : window_{window},
       wm{wm},
       window_controller{window_controller},
       workspace_{workspace}
@@ -303,4 +302,9 @@ bool FloatingContainer::move_to(int x, int y)
     spec.top_left() = { x, y };
     window_controller.modify(window_, spec);
     return true;
+}
+
+std::weak_ptr<ParentContainer> FloatingContainer::get_parent() const
+{
+    return std::weak_ptr<ParentContainer>();
 }

@@ -59,8 +59,6 @@ ContainerType container_type_from_string(std::string const& str);
 class Container : public std::enable_shared_from_this<Container>
 {
 public:
-    explicit Container(std::shared_ptr<ParentContainer> const& parent);
-
     virtual ContainerType get_type() const = 0;
 
     virtual void restore_state(MirWindowState) = 0;
@@ -76,6 +74,7 @@ public:
     virtual void set_logical_area(geom::Rectangle const&) = 0;
     [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
     virtual void constrain() = 0;
+    virtual std::weak_ptr<ParentContainer> get_parent() const = 0;
     virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
@@ -114,14 +113,12 @@ public:
 
     bool is_leaf();
     bool is_lane();
-    [[nodiscard]] std::weak_ptr<Container> get_parent() const;
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
     static std::shared_ptr<FloatingContainer> as_floating(std::shared_ptr<Container> const&);
 
 protected:
-    std::weak_ptr<ParentContainer> parent;
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
 };
 }

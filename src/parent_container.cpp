@@ -87,11 +87,11 @@ ParentContainer::ParentContainer(
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
     std::shared_ptr<ParentContainer> const& parent) :
-    Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
     tree { tree },
-    config { config }
+    config { config },
+    parent { parent }
 {
 }
 
@@ -217,7 +217,7 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
 
     auto retval = pending_node;
     pending_node->associate_to_window(window);
-    commit_changes();
+    pending_node->set_parent(Container::as_parent(shared_from_this()));
     pending_node = nullptr;
     return retval;
 }
@@ -242,11 +242,11 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     }
 
     auto new_parent_node = std::make_shared<ParentContainer>(
-    node_interface,
-    container->get_logical_area(),
-    config,
-    tree,
-    as_parent(shared_from_this()));
+        node_interface,
+        container->get_logical_area(),
+        config,
+        tree,
+        Container::as_parent(shared_from_this()));
     new_parent_node->sub_nodes.push_back(container);
     container->set_parent(new_parent_node);
     sub_nodes[index] = new_parent_node;
@@ -481,6 +481,11 @@ size_t ParentContainer::get_min_height() const
     for (auto const& node : sub_nodes)
         size += node->get_min_height();
     return size;
+}
+
+std::weak_ptr<ParentContainer> ParentContainer::get_parent() const
+{
+    return parent;
 }
 
 void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
