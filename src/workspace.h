@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
 #include "animator.h"
-#include "direction.h"
 #include "container.h"
+#include "direction.h"
 
 #include <glm/glm.hpp>
 #include <memory>

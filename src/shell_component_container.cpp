@@ -23,15 +23,14 @@ namespace miracle
 
 ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
-    miracle::WindowController& window_controller)
-    : window_{window_},
-      window_controller{window_controller}
+    miracle::WindowController& window_controller) :
+    window_ { window_ },
+    window_controller { window_controller }
 {
 }
 
 void ShellComponentContainer::restore_state(MirWindowState state)
 {
-
 }
 
 std::optional<MirWindowState> ShellComponentContainer::restore_state()
@@ -41,7 +40,6 @@ std::optional<MirWindowState> ShellComponentContainer::restore_state()
 
 void ShellComponentContainer::commit_changes()
 {
-
 }
 
 mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
@@ -52,9 +50,8 @@ mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
     };
 }
 
-void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const &rectangle)
+void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
 {
-
 }
 
 mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
@@ -64,7 +61,6 @@ mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
 
 void ShellComponentContainer::constrain()
 {
-
 }
 
 std::weak_ptr<ParentContainer> ShellComponentContainer::get_parent() const
@@ -72,9 +68,8 @@ std::weak_ptr<ParentContainer> ShellComponentContainer::get_parent() const
     return std::weak_ptr<ParentContainer>();
 }
 
-void ShellComponentContainer::set_parent(std::shared_ptr<ParentContainer> const &ptr)
+void ShellComponentContainer::set_parent(std::shared_ptr<ParentContainer> const& ptr)
 {
-
 }
 
 size_t ShellComponentContainer::get_min_height() const
@@ -89,7 +84,6 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
-
 }
 
 void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)
@@ -97,19 +91,16 @@ void ShellComponentContainer::handle_modify(miral::WindowSpecification const& sp
     window_controller.modify(window_, specification);
 }
 
-void ShellComponentContainer::handle_request_move(MirInputEvent const *input_event)
+void ShellComponentContainer::handle_request_move(MirInputEvent const* input_event)
 {
-
 }
 
-void ShellComponentContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+void ShellComponentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
 {
-
 }
 
 void ShellComponentContainer::handle_raise()
 {
-
 }
 
 bool ShellComponentContainer::resize(Direction direction)
@@ -124,46 +115,40 @@ bool ShellComponentContainer::toggle_fullscreen()
 
 void ShellComponentContainer::request_horizontal_layout()
 {
-
 }
 
 void ShellComponentContainer::request_vertical_layout()
 {
-
 }
 
 void ShellComponentContainer::toggle_layout()
 {
-
 }
 
 void ShellComponentContainer::on_focus_gained()
 {
-
 }
 
 void ShellComponentContainer::on_focus_lost()
 {
-
 }
 
-void ShellComponentContainer::on_move_to(mir::geometry::Point const &top_left)
+void ShellComponentContainer::on_move_to(mir::geometry::Point const& top_left)
 {
-
 }
 
 mir::geometry::Rectangle
-ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {
     return rectangle;
 }
 
-Workspace *ShellComponentContainer::get_workspace() const
+Workspace* ShellComponentContainer::get_workspace() const
 {
     return nullptr;
 }
 
-Output *ShellComponentContainer::get_output() const
+Output* ShellComponentContainer::get_output() const
 {
     return nullptr;
 }
@@ -175,7 +160,6 @@ glm::mat4 ShellComponentContainer::get_transform() const
 
 void ShellComponentContainer::set_transform(glm::mat4 transform)
 {
-
 }
 
 glm::mat4 ShellComponentContainer::get_workspace_transform() const
@@ -195,7 +179,6 @@ uint32_t ShellComponentContainer::animation_handle() const
 
 void ShellComponentContainer::animation_handle(uint32_t uint_32)
 {
-
 }
 
 bool ShellComponentContainer::is_focused() const
@@ -210,7 +193,6 @@ ContainerType ShellComponentContainer::get_type() const
 
 void ShellComponentContainer::on_open()
 {
-
 }
 
 std::optional<miral::Window> ShellComponentContainer::window() const

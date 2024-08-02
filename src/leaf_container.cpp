@@ -16,14 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "leaf_container.h"
+#include "compositor_state.h"
 #include "mir_toolkit/common.h"
 #include "miracle_config.h"
+#include "output.h"
 #include "parent_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
-#include "output.h"
 #include "workspace.h"
-#include "compositor_state.h"
 #include <cmath>
 
 using namespace miracle;
@@ -214,7 +214,6 @@ void LeafContainer::on_focus_gained()
 
 void LeafContainer::on_focus_lost()
 {
-
 }
 
 void LeafContainer::on_move_to(geom::Point const&)
@@ -248,14 +247,12 @@ void LeafContainer::commit_changes()
     }
 }
 
-void LeafContainer::handle_request_move(MirInputEvent const *input_event)
+void LeafContainer::handle_request_move(MirInputEvent const* input_event)
 {
-
 }
 
-void LeafContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+void LeafContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
 {
-
 }
 
 void LeafContainer::request_horizontal_layout()
@@ -285,12 +282,12 @@ std::optional<MirWindowState> LeafContainer::restore_state()
     return state;
 }
 
-Workspace *LeafContainer::get_workspace() const
+Workspace* LeafContainer::get_workspace() const
 {
     return tree->get_workspace();
 }
 
-Output *LeafContainer::get_output() const
+Output* LeafContainer::get_output() const
 {
     return get_workspace()->get_output();
 }

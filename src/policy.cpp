@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "policy.h"
 #include "miracle_config.h"
+#include "shell_component_container.h"
 #include "window_helpers.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
-#include "shell_component_container.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -34,7 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <miral/zone.h>
-#include <mir/server.h>
 
 using namespace miracle;
 
@@ -662,7 +661,6 @@ bool Policy::try_move_to(int x, int y)
     auto container = window_controller.get_container(state.active_window);
     return container->move_to(x, y);
 }
-
 
 bool Policy::try_select(miracle::Direction direction)
 {

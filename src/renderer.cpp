@@ -23,12 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "program_factory.h"
 #include "tessellation_helpers.h"
 
+#include "container.h"
 #include "window_tools_accessor.h"
 #include "workspace.h"
-#include "container.h"
 
-#include <GLES2/gl2.h>
 #include <EGL/egl.h>
+#include <GLES2/gl2.h>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

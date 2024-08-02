@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "floating_container"
 
 #include "floating_container.h"
-#include "leaf_container.h"
-#include "workspace.h"
-#include "output.h"
 #include "compositor_state.h"
+#include "leaf_container.h"
+#include "output.h"
+#include "workspace.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -32,17 +32,16 @@ FloatingContainer::FloatingContainer(
     miral::Window const& window,
     miral::MinimalWindowManager& wm,
     WindowController& window_controller,
-    Workspace* workspace)
-    : window_{window},
-      wm{wm},
-      window_controller{window_controller},
-      workspace_{workspace}
+    Workspace* workspace) :
+    window_ { window },
+    wm { wm },
+    window_controller { window_controller },
+    workspace_ { workspace }
 {
 }
 
 void FloatingContainer::commit_changes()
 {
-
 }
 
 mir::geometry::Rectangle FloatingContainer::get_logical_area() const
@@ -63,7 +62,7 @@ mir::geometry::Rectangle FloatingContainer::get_visible_area() const
     };
 }
 
-void FloatingContainer::constrain() {}
+void FloatingContainer::constrain() { }
 
 void FloatingContainer::set_parent(std::shared_ptr<ParentContainer> const& parent)
 {
@@ -136,8 +135,7 @@ mir::geometry::Rectangle FloatingContainer::confirm_placement(
     return wm.confirm_placement_on_display(
         window_controller.info_for(window_),
         state,
-        placement
-    );
+        placement);
 }
 
 bool FloatingContainer::pinned() const
@@ -190,12 +188,12 @@ std::optional<MirWindowState> FloatingContainer::restore_state()
     return state;
 }
 
-Workspace *FloatingContainer::get_workspace() const
+Workspace* FloatingContainer::get_workspace() const
 {
     return workspace_;
 }
 
-Output *FloatingContainer::get_output() const
+Output* FloatingContainer::get_output() const
 {
     return workspace_->get_output();
 }
@@ -269,22 +267,22 @@ bool FloatingContainer::move_by(Direction direction, int pixels)
     {
     case Direction::down:
         spec.top_left() = {
-        prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
+            prev_pos.x.as_int(), prev_pos.y.as_int() + pixels
         };
         break;
     case Direction::up:
         spec.top_left() = {
-        prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
+            prev_pos.x.as_int(), prev_pos.y.as_int() - pixels
         };
         break;
     case Direction::left:
         spec.top_left() = {
-        prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
+            prev_pos.x.as_int() - pixels, prev_pos.y.as_int()
         };
         break;
     case Direction::right:
         spec.top_left() = {
-        prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
+            prev_pos.x.as_int() + pixels, prev_pos.y.as_int()
         };
         break;
     default:

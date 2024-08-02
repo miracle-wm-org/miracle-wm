@@ -539,27 +539,22 @@ void ParentContainer::relayout()
 
 void ParentContainer::handle_ready()
 {
-
 }
 
-void ParentContainer::handle_modify(miral::WindowSpecification const &specification)
+void ParentContainer::handle_modify(miral::WindowSpecification const& specification)
 {
-
 }
 
-void ParentContainer::handle_request_move(MirInputEvent const *input_event)
+void ParentContainer::handle_request_move(MirInputEvent const* input_event)
 {
-
 }
 
-void ParentContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+void ParentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
 {
-
 }
 
 void ParentContainer::handle_raise()
 {
-
 }
 
 bool ParentContainer::resize(Direction direction)
@@ -574,36 +569,30 @@ bool ParentContainer::toggle_fullscreen()
 
 void ParentContainer::request_horizontal_layout()
 {
-
 }
 
 void ParentContainer::request_vertical_layout()
 {
-
 }
 
 void ParentContainer::toggle_layout()
 {
-
 }
 
 void ParentContainer::on_focus_gained()
 {
-
 }
 
 void ParentContainer::on_focus_lost()
 {
-
 }
 
-void ParentContainer::on_move_to(mir::geometry::Point const &top_left)
+void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
 {
-
 }
 
 mir::geometry::Rectangle
-    ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {
     return mir::geometry::Rectangle();
 }
@@ -615,7 +604,6 @@ ContainerType ParentContainer::get_type() const
 
 void ParentContainer::restore_state(MirWindowState state)
 {
-
 }
 
 std::optional<MirWindowState> ParentContainer::restore_state()
@@ -625,15 +613,14 @@ std::optional<MirWindowState> ParentContainer::restore_state()
 
 void ParentContainer::on_open()
 {
-
 }
 
-Workspace *ParentContainer::get_workspace() const
+Workspace* ParentContainer::get_workspace() const
 {
     return tree->get_workspace();
 }
 
-Output *ParentContainer::get_output() const
+Output* ParentContainer::get_output() const
 {
     return tree->get_workspace()->get_output();
 }
@@ -645,7 +632,6 @@ glm::mat4 ParentContainer::get_transform() const
 
 void ParentContainer::set_transform(glm::mat4 transform)
 {
-
 }
 
 glm::mat4 ParentContainer::get_workspace_transform() const
@@ -665,7 +651,6 @@ uint32_t ParentContainer::animation_handle() const
 
 void ParentContainer::animation_handle(uint32_t uint_32)
 {
-
 }
 
 bool ParentContainer::is_focused() const

@@ -20,13 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "direction.h"
 #include <functional>
+#include <glm/glm.hpp>
 #include <memory>
 #include <mir/geometry/rectangle.h>
+#include <mir_toolkit/event.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
-#include <mir_toolkit/event.h>
 #include <vector>
-#include <glm/glm.hpp>
 
 namespace geom = mir::geometry;
 
@@ -93,7 +93,8 @@ public:
     virtual void on_focus_lost() = 0;
     virtual void on_move_to(geom::Point const& top_left) = 0;
     virtual mir::geometry::Rectangle confirm_placement(
-        MirWindowState, mir::geometry::Rectangle const&) = 0;
+        MirWindowState, mir::geometry::Rectangle const&)
+        = 0;
     virtual Workspace* get_workspace() const = 0;
     virtual Output* get_output() const = 0;
     virtual glm::mat4 get_transform() const = 0;

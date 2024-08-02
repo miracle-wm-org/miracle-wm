@@ -68,8 +68,8 @@ public:
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(geom::Point const&) override;
-    void handle_request_move(MirInputEvent const *input_event) override;
-    void handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge) override;
+    void handle_request_move(MirInputEvent const* input_event) override;
+    void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout() override;
@@ -79,8 +79,8 @@ public:
     void commit_changes() override;
     void restore_state(MirWindowState state) override;
     std::optional<MirWindowState> restore_state() override;
-    Workspace *get_workspace() const override;
-    Output *get_output() const override;
+    Workspace* get_workspace() const override;
+    Output* get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     uint32_t animation_handle() const override;

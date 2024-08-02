@@ -64,8 +64,8 @@ public:
     [[nodiscard]] std::optional<miral::Window> window() const override;
     void restore_state(MirWindowState state) override;
     std::optional<MirWindowState> restore_state() override;
-    Workspace *get_workspace() const override;
-    Output *get_output() const override;
+    Workspace* get_workspace() const override;
+    Output* get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     uint32_t animation_handle() const override;
@@ -94,4 +94,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLE_WM_FLOATING_CONTAINER_H
+#endif // MIRACLE_WM_FLOATING_CONTAINER_H

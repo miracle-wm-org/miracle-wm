@@ -18,11 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "container"
 
 #include "container.h"
+#include "floating_container.h"
 #include "leaf_container.h"
 #include "node_common.h"
-#include "parent_container.h"
-#include "floating_container.h"
 #include "output.h"
+#include "parent_container.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 

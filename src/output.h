@@ -82,9 +82,9 @@ public:
     [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
     [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     [[nodiscard]] std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
-    [[nodiscard]]geom::Rectangle const& get_area() { return area; }
+    [[nodiscard]] geom::Rectangle const& get_area() { return area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
-    [[nodiscard]]miral::Output const& get_output() { return output; }
+    [[nodiscard]] miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }
     [[nodiscard]] glm::mat4 get_transform() const;

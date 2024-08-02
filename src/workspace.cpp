@@ -386,7 +386,7 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<Workspace> const& oth
         }
 
         auto floating = Container::as_floating(container);
-        if (floating&& floating->pinned())
+        if (floating && floating->pinned())
         {
             other->floating_windows.push_back(floating);
             it = floating_windows.erase(it);

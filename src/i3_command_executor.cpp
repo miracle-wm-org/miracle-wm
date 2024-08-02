@@ -22,8 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "parent_container.h"
 #include "policy.h"
-#include "window_helpers.h"
 #include "window_controller.h"
+#include "window_helpers.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <mir/log.h>

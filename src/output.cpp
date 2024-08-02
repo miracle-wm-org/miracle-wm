@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "animator.h"
 #include "compositor_state.h"
-#include "leaf_container.h"
 #include "floating_container.h"
+#include "leaf_container.h"
 #include "vector_helpers.h"
 #include "window_helpers.h"
 
