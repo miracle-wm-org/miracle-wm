@@ -19,10 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "policy.h"
 #include "miracle_config.h"
+#include "shell_component_container.h"
 #include "window_helpers.h"
-#include "window_metadata.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
+
 #include <iostream>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
@@ -58,11 +59,11 @@ Policy::Policy(
         workspace_observer_registrar,
         [&]()
 { return get_active_output(); }) },
-    i3_command_executor(*this, workspace_manager, tools, external_client_launcher),
-    surface_tracker { surface_tracker },
-    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) },
     animator(server.the_main_loop(), config),
-    window_controller(tools, animator, state)
+    window_controller(tools, animator, state),
+    i3_command_executor(*this, workspace_manager, tools, external_client_launcher, window_controller),
+    surface_tracker { surface_tracker },
+    ipc { std::make_shared<Ipc>(runner, workspace_manager, *this, server.the_main_loop(), i3_command_executor, config) }
 {
     animator.start();
     workspace_observer_registrar.register_interest(ipc);
@@ -256,22 +257,17 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             // we have more data on them.
             orphaned_window_list.push_back(window);
             surface_tracker.add(window);
-            auto metadata = std::make_shared<WindowMetadata>(WindowType::other, window_info.window());
-            window_controller.set_user_data(window, metadata);
         }
 
         return;
     }
 
-    auto metadata = shared_output->advise_new_window(window_info, pending_type);
+    auto container = shared_output->advise_new_window(window_info, pending_type);
 
-    // Associate to an animation handle
-    metadata->set_animation_handle(animator.register_animateable());
+    container->animation_handle(animator.register_animateable());
+    container->on_open();
 
-    if (metadata->get_type() != WindowType::other)
-        window_controller.open(window_info.window());
-
-    pending_type = WindowType::none;
+    pending_type = ContainerType::none;
     pending_output.reset();
 
     surface_tracker.add(window_info.window());
@@ -279,42 +275,40 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_window_ready: metadata is not provided");
+        mir::log_error("handle_window_ready: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_window_ready(window_info, metadata);
+    container->handle_ready();
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     state.active_window = window_info.window();
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_focus_gained: metadata is not provided");
+        mir::log_error("advise_focus_gained: container is not provided");
         return;
     }
 
-    metadata->get_output()->advise_focus_gained(metadata);
+    container->on_focus_gained();
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     state.active_window = Window();
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_focus_lost: metadata is not provided");
+        mir::log_error("advise_focus_lost: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_focus_lost(metadata);
+    container->on_focus_lost();
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
@@ -329,15 +323,15 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         }
     }
 
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_delete_window: metadata is not provided");
+        mir::log_error("advise_delete_window: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_delete_window(metadata);
+    if (container->get_output())
+        container->get_output()->advise_delete_window(container);
 
     surface_tracker.remove(window_info.window());
 
@@ -347,15 +341,14 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("advise_move_to: metadata is not provided: %s", window_info.application_id().c_str());
+        mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->advise_move_to(metadata, top_left);
+    container->on_move_to(top_left);
 }
 
 void Policy::advise_output_create(miral::Output const& output)
@@ -418,7 +411,7 @@ void Policy::advise_output_delete(miral::Output const& output)
                 for (auto& window : other_output->collect_all_windows())
                 {
                     orphaned_window_list.push_back(window);
-                    window_controller.set_user_data(window, std::make_shared<WindowMetadata>(WindowType::other, window));
+                    window_controller.set_user_data(window, std::make_shared<ShellComponentContainer>(window, window_controller));
                 }
 
                 remove_workspaces();
@@ -445,30 +438,26 @@ void Policy::handle_modify_window(
     miral::WindowInfo& window_info,
     const miral::WindowSpecification& modifications)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_modify_window: metadata is not provided");
+        mir::log_error("handle_modify_window: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_modify_window(metadata, modifications);
-    else
-        window_manager_tools.modify_window(metadata->get_window(), modifications);
+    container->handle_modify(modifications);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_raise_window: metadata is not provided");
+        mir::log_error("handle_raise_window: container is not provided");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_raise_window(metadata);
+    container->handle_raise();
 }
 
 mir::geometry::Rectangle
@@ -477,17 +466,14 @@ Policy::confirm_placement_on_display(
     MirWindowState new_state,
     const mir::geometry::Rectangle& new_placement)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_warning("confirm_placement_on_display: window lacks metadata");
+        mir::log_warning("confirm_placement_on_display: window lacks container");
         return new_placement;
     }
 
-    mir::geometry::Rectangle modified_placement = metadata->get_output()
-        ? metadata->get_output()->confirm_placement_on_display(metadata, new_state, new_placement)
-        : new_placement;
-    return modified_placement;
+    return container->confirm_placement(new_state, new_placement);
 }
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
@@ -497,15 +483,14 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_request_move: window lacks metadata");
+        mir::log_error("handle_request_move: window lacks container");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_request_move(metadata, input_event);
+    container->handle_request_move(input_event);
 }
 
 void Policy::handle_request_resize(
@@ -513,15 +498,14 @@ void Policy::handle_request_resize(
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
-    auto metadata = window_helpers::get_metadata(window_info);
-    if (!metadata)
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
     {
-        mir::log_error("handle_request_resize: window lacks metadata");
+        mir::log_error("handle_request_resize: window lacks container");
         return;
     }
 
-    if (metadata->get_output())
-        metadata->get_output()->handle_request_resize(metadata, input_event, edge);
+    container->handle_request_resize(input_event, edge);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(
@@ -570,14 +554,14 @@ void Policy::try_toggle_resize_mode()
         return;
     }
 
-    auto metadata = window_helpers::get_metadata(window, window_manager_tools);
-    if (!metadata)
+    auto container = window_controller.get_container(window);
+    if (!container)
     {
         state.mode = WindowManagerMode::normal;
         return;
     }
 
-    if (metadata->get_type() != WindowType::tiled)
+    if (container->get_type() != ContainerType::tiled)
     {
         state.mode = WindowManagerMode::normal;
         return;
@@ -596,10 +580,24 @@ bool Policy::try_request_vertical()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->request_vertical_layout();
+    auto container = window_controller.get_container(state.active_window);
+    container->request_vertical_layout();
+    return true;
+}
+
+bool Policy::try_toggle_layout()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    container->toggle_layout();
     return true;
 }
 
@@ -608,10 +606,11 @@ bool Policy::try_request_horizontal()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->request_horizontal_layout();
+    auto container = window_controller.get_container(state.active_window);
+    container->request_horizontal_layout();
     return true;
 }
 
@@ -620,10 +619,11 @@ bool Policy::try_resize(miracle::Direction direction)
     if (state.mode != WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    return active_output->resize_active_window(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->resize(direction);
 }
 
 bool Policy::try_move(miracle::Direction direction)
@@ -631,10 +631,35 @@ bool Policy::try_move(miracle::Direction direction)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    return active_output->move_active_window(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->move(direction);
+}
+
+bool Policy::try_move_by(miracle::Direction direction, int pixels)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->move_by(direction, pixels);
+}
+
+bool Policy::try_move_to(int x, int y)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->move_to(x, y);
 }
 
 bool Policy::try_select(miracle::Direction direction)
@@ -642,10 +667,11 @@ bool Policy::try_select(miracle::Direction direction)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    return active_output->select(direction);
+    auto container = window_controller.get_container(state.active_window);
+    return container->select_next(direction);
 }
 
 bool Policy::try_close_window()
@@ -653,7 +679,7 @@ bool Policy::try_close_window()
     if (!active_output)
         return false;
 
-    active_output->close_active_window();
+    window_controller.close(state.active_window);
     return true;
 }
 
@@ -668,11 +694,11 @@ bool Policy::try_toggle_fullscreen()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->toggle_fullscreen();
-    return true;
+    auto container = window_controller.get_container(state.active_window);
+    return container->toggle_fullscreen();
 }
 
 bool Policy::select_workspace(int number)
@@ -699,13 +725,13 @@ bool Policy::move_active_to_workspace(int number)
     if (window_helpers::is_window_fullscreen(info.state()))
         return false;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
+    auto container = window_controller.get_container(state.active_window);
     auto window_to_move = state.active_window;
-    active_output->advise_delete_window(metadata);
+    active_output->advise_delete_window(container);
     state.active_window = Window();
 
     auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);
-    screen_to_move_to->add_immediately(window_to_move, WindowType::tiled);
+    screen_to_move_to->add_immediately(window_to_move, ContainerType::tiled);
 
     return true;
 }
@@ -727,9 +753,21 @@ bool Policy::toggle_pinned_to_workspace()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_window)
         return false;
 
-    active_output->toggle_pinned_to_workspace();
-    return true;
+    auto container = window_controller.get_container(state.active_window);
+    return container->pinned(!container->pinned());
+}
+
+bool Policy::set_is_pinned(bool pinned)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active_window)
+        return false;
+
+    auto container = window_controller.get_container(state.active_window);
+    return container->pinned(pinned);
 }

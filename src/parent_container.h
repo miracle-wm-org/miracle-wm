@@ -32,9 +32,7 @@ class LeafContainer;
 class MiracleConfig;
 class TilingWindowTree;
 
-/**
- * A parent container defines the layout of containers beneath it.
- */
+/// A parent container defines the layout of containers beneath it.
 class ParentContainer : public Container
 {
 public:
@@ -60,18 +58,56 @@ public:
     std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
     NodeLayoutDirection get_direction() { return direction; }
     std::vector<std::shared_ptr<Container>> const& get_sub_nodes() const;
-    int get_index_of_node(Container const* node) const;
+    [[nodiscard]] int get_index_of_node(Container const* node) const;
     [[nodiscard]] int get_index_of_node(std::shared_ptr<Container> const& node) const;
+    [[nodiscard]] int get_index_of_node(Container const&) const;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
+    std::weak_ptr<ParentContainer> get_parent() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
+    void handle_ready() override;
+    void handle_modify(miral::WindowSpecification const& specification) override;
+    void handle_request_move(MirInputEvent const* input_event) override;
+    void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
+    void handle_raise() override;
+    bool resize(Direction direction) override;
+    bool toggle_fullscreen() override;
+    void request_horizontal_layout() override;
+    void request_vertical_layout() override;
+    void toggle_layout() override;
+    void on_focus_gained() override;
+    void on_focus_lost() override;
+    void on_move_to(mir::geometry::Point const& top_left) override;
+    mir::geometry::Rectangle
+    confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
+    ContainerType get_type() const override;
+    void restore_state(MirWindowState state) override;
+    std::optional<MirWindowState> restore_state() override;
+    void on_open() override;
+    Workspace* get_workspace() const override;
+    Output* get_output() const override;
+    glm::mat4 get_transform() const override;
+    void set_transform(glm::mat4 transform) override;
+    glm::mat4 get_workspace_transform() const override;
+    glm::mat4 get_output_transform() const override;
+    uint32_t animation_handle() const override;
+    void animation_handle(uint32_t uint_32) override;
+    bool is_focused() const override;
+    std::optional<miral::Window> window() const override;
+    bool select_next(Direction) override;
+    bool pinned(bool) override;
+    bool pinned() const override;
+    bool move(Direction direction) override;
+    bool move_by(Direction direction, int pixels) override;
+    bool move_to(int x, int y) override;
 
 private:
     WindowController& node_interface;
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
+    std::weak_ptr<ParentContainer> parent;
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     std::vector<std::shared_ptr<Container>> sub_nodes;
     std::shared_ptr<LeafContainer> pending_node;

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "window_helpers.h"
-#include "window_metadata.h"
+
 #include <mir/scene/surface.h>
 
 #define MIR_LOG_COMPONENT "window_manager_tools_tiling_interface"
@@ -41,18 +41,18 @@ WindowManagerToolsWindowController::WindowManagerToolsWindowController(
 
 void WindowManagerToolsWindowController::open(miral::Window const& window)
 {
-    auto metadata = get_metadata(window);
-    if (!metadata)
+    auto container = get_container(window);
+    if (!container)
     {
-        mir::log_error("Cannot set rectangle of window that lacks metadata");
+        mir::log_error("Cannot set rectangle of window that lacks container");
         return;
     }
 
     animator.window_open(
-        metadata->get_animation_handle(),
-        [this, metadata = metadata](miracle::AnimationStepResult const& result)
+        container->animation_handle(),
+        [this, container = container](miracle::AnimationStepResult const& result)
     {
-        on_animation(result, metadata);
+        on_animation(result, container);
     });
 }
 
@@ -65,21 +65,21 @@ bool WindowManagerToolsWindowController::is_fullscreen(miral::Window const& wind
 void WindowManagerToolsWindowController::set_rectangle(
     miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to)
 {
-    auto metadata = get_metadata(window);
-    if (!metadata)
+    auto container = get_container(window);
+    if (!container)
     {
-        mir::log_error("Cannot set rectangle of window that lacks metadata");
+        mir::log_error("Cannot set rectangle of window that lacks container");
         return;
     }
 
     animator.window_move(
-        metadata->get_animation_handle(),
+        container->animation_handle(),
         from,
         to,
         geom::Rectangle { window.top_left(), window.size() },
-        [this, metadata = metadata](miracle::AnimationStepResult const& result)
+        [this, container = container](miracle::AnimationStepResult const& result)
     {
-        on_animation(result, metadata);
+        on_animation(result, container);
     });
 }
 
@@ -118,24 +118,11 @@ void WindowManagerToolsWindowController::select_active_window(miral::Window cons
     tools.select_active_window(window);
 }
 
-std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(miral::Window const& window)
+std::shared_ptr<Container> WindowManagerToolsWindowController::get_container(miral::Window const& window)
 {
     auto& info = tools.info_for(window);
     if (info.userdata())
-        return static_pointer_cast<WindowMetadata>(info.userdata());
-
-    return nullptr;
-}
-
-std::shared_ptr<WindowMetadata> WindowManagerToolsWindowController::get_metadata(
-    miral::Window const& window, TilingWindowTree const* tree)
-{
-    auto node = get_metadata(window);
-    if (auto tiling_node = node->get_container())
-    {
-        if (tiling_node->get_tree() == tree)
-            return node;
-    }
+        return static_pointer_cast<Container>(info.userdata());
 
     return nullptr;
 }
@@ -151,25 +138,17 @@ void WindowManagerToolsWindowController::send_to_back(miral::Window const& windo
 }
 
 void WindowManagerToolsWindowController::on_animation(
-    miracle::AnimationStepResult const& result, std::shared_ptr<WindowMetadata> const& metadata)
+    miracle::AnimationStepResult const& result, std::shared_ptr<Container> const& container)
 {
-    auto window = metadata->get_window();
+    auto window = container->window().value();
     auto surface = window.operator std::shared_ptr<mir::scene::Surface>();
     if (!surface)
         return;
 
     bool needs_modify = false;
     miral::WindowSpecification spec;
-    if (auto node = metadata->get_container())
-    {
-        spec.top_left() = node->get_visible_area().top_left;
-        spec.size() = node->get_visible_area().size;
-    }
-    else
-    {
-        spec.top_left() = window.top_left();
-        spec.size() = window.size();
-    }
+    spec.top_left() = container->get_visible_area().top_left;
+    spec.size() = container->get_visible_area().size;
 
     spec.min_width() = mir::geometry::Width(0);
     spec.min_height() = mir::geometry::Height(0);
@@ -193,9 +172,9 @@ void WindowManagerToolsWindowController::on_animation(
     if (needs_modify)
         tools.modify_window(window, spec);
 
-    if (result.transform && result.transform.value() != metadata->get_transform())
+    if (result.transform && result.transform.value() != container->get_transform())
     {
-        metadata->set_transform(result.transform.value());
+        container->set_transform(result.transform.value());
         surface->set_transformation(result.transform.value());
     }
 
@@ -205,7 +184,7 @@ void WindowManagerToolsWindowController::on_animation(
     // TODO: When we have rotation in our transforms, then we need to handle rotations.
     //  At that point, the top_left corner will change. We will need to find an AABB
     //  to represent the clip area.
-    auto transform = metadata->get_transform();
+    auto transform = container->get_transform();
     auto width = spec.size().value().width.as_int();
     auto height = spec.size().value().height.as_int();
 
@@ -215,7 +194,7 @@ void WindowManagerToolsWindowController::on_animation(
         { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
         { scale.x, scale.y });
 
-    if (metadata->get_type() == WindowType::tiled)
+    if (container->get_type() == ContainerType::tiled)
         clip(window, new_rectangle);
     else
         noclip(window);

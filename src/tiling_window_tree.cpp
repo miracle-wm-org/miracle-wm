@@ -92,7 +92,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::confirm_window(
     return parent->confirm_window(window_info.window());
 }
 
-bool TilingWindowTree::resize_container(miracle::Direction direction, std::shared_ptr<Container> const& container)
+bool TilingWindowTree::resize_container(miracle::Direction direction, Container& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -105,7 +105,7 @@ bool TilingWindowTree::resize_container(miracle::Direction direction, std::share
 }
 
 bool TilingWindowTree::select_next(
-    miracle::Direction direction, std::shared_ptr<Container> const& container)
+    miracle::Direction direction, Container& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -120,14 +120,12 @@ bool TilingWindowTree::select_next(
         return false;
     }
 
-    window_controller.select_active_window(node->get_window());
+    window_controller.select_active_window(node->window().value());
     return true;
 }
 
-bool TilingWindowTree::toggle_fullscreen(std::shared_ptr<LeafContainer> const& container)
+bool TilingWindowTree::toggle_fullscreen(LeafContainer& container)
 {
-    container->toggle_fullscreen();
-    container->commit_changes();
     if (is_active_window_fullscreen)
         advise_restored_container(container);
     else
@@ -154,7 +152,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::select_window_from_point(int x,
     return Container::as_leaf(node);
 }
 
-bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_ptr<Container> const& container)
+bool TilingWindowTree::move_container(miracle::Direction direction, Container& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -181,23 +179,23 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
             return false;
         }
 
-        auto active_parent = container->get_parent().lock();
+        auto active_parent = Container::as_parent(container.get_parent().lock());
         if (active_parent == target_parent)
         {
-            active_parent->swap_nodes(container, target_node);
+            active_parent->swap_nodes(container.shared_from_this(), target_node);
             active_parent->commit_changes();
             break;
         }
 
-        auto [first, second] = transfer_node(container, target_node);
+        auto [first, second] = transfer_node(container.shared_from_this(), target_node);
         first->commit_changes();
         second->commit_changes();
         break;
     }
     case MoveResult::traversal_type_append:
     {
-        auto lane_node = Container::as_lane(traversal_result.node);
-        auto moving_node = container;
+        auto lane_node = Container::as_parent(traversal_result.node);
+        auto moving_node = container.shared_from_this();
         handle_remove(moving_node);
         lane_node->graft_existing(moving_node, lane_node->num_nodes());
         lane_node->commit_changes();
@@ -205,8 +203,8 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
     }
     case MoveResult::traversal_type_prepend:
     {
-        auto lane_node = Container::as_lane(traversal_result.node);
-        auto moving_node = container;
+        auto lane_node = Container::as_parent(traversal_result.node);
+        auto moving_node = container.shared_from_this();
         handle_remove(moving_node);
         lane_node->graft_existing(moving_node, 0);
         lane_node->commit_changes();
@@ -222,19 +220,19 @@ bool TilingWindowTree::move_container(miracle::Direction direction, std::shared_
     return true;
 }
 
-void TilingWindowTree::request_vertical_layout(std::shared_ptr<Container> const& container)
+void TilingWindowTree::request_vertical_layout(Container& container)
 {
     handle_direction_change(NodeLayoutDirection::vertical, container);
 }
 
-void TilingWindowTree::request_horizontal_layout(std::shared_ptr<Container> const& container)
+void TilingWindowTree::request_horizontal_layout(Container& container)
 {
     handle_direction_change(NodeLayoutDirection::horizontal, container);
 }
 
-void TilingWindowTree::toggle_layout(std::shared_ptr<Container> const& container)
+void TilingWindowTree::toggle_layout(Container& container)
 {
-    auto parent = container->get_parent().lock();
+    auto parent = Container::as_parent(container.get_parent().lock());
     if (!parent)
         return;
 
@@ -244,7 +242,7 @@ void TilingWindowTree::toggle_layout(std::shared_ptr<Container> const& container
         handle_direction_change(NodeLayoutDirection::horizontal, container);
 }
 
-void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, std::shared_ptr<Container> const& container)
+void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, Container& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -252,9 +250,9 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, st
         return;
     }
 
-    auto parent = container->get_parent().lock();
+    auto parent = Container::as_parent(container.get_parent().lock());
     if (parent->num_nodes() != 1)
-        parent = parent->convert_to_parent(container);
+        parent = parent->convert_to_parent(container.shared_from_this());
 
     if (!parent)
     {
@@ -265,11 +263,10 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, st
     parent->set_direction(direction);
 }
 
-void TilingWindowTree::advise_focus_gained(std::shared_ptr<Container> const& container)
+void TilingWindowTree::advise_focus_gained(LeafContainer& container)
 {
-    // TODO: Support raising any container, not just a leaf
-    if (container && is_active_window_fullscreen)
-        window_controller.raise(Container::as_leaf(container)->get_window());
+    if (is_active_window_fullscreen)
+        window_controller.raise(container.window().value());
 }
 
 void TilingWindowTree::advise_delete_window(std::shared_ptr<Container> const& container)
@@ -327,7 +324,7 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
 
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
-    auto lane_node = Container::as_lane(node);
+    auto lane_node = Container::as_parent(node);
     if (is_vertical && lane_node->get_direction() == NodeLayoutDirection::vertical
         || !is_vertical && lane_node->get_direction() == NodeLayoutDirection::horizontal)
     {
@@ -353,7 +350,7 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
 }
 
 std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
-    std::shared_ptr<Container> const& from,
+    Container& from,
     Direction direction)
 {
     // Algorithm:
@@ -365,8 +362,8 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     //  4. If none match, we return nullptr
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
-    auto current_node = from;
-    auto parent = current_node->get_parent().lock();
+    auto& current_node = from;
+    auto parent = Container::as_parent(current_node.get_parent().lock());
     if (!parent)
     {
         mir::log_warning("Cannot handle_select the root node");
@@ -392,14 +389,14 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
             }
         }
 
-        current_node = parent;
-        parent = parent->get_parent().lock();
+        current_node = *parent;
+        parent = Container::as_parent(parent->get_parent().lock());
     } while (parent != nullptr);
 
     return nullptr;
 }
 
-TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Container> const& from, Direction direction)
+TilingWindowTree::MoveResult TilingWindowTree::handle_move(Container& from, Direction direction)
 {
     // Algorithm:
     //  1. Perform the _select algorithm. If that passes, then we want to be where the selected node
@@ -414,7 +411,7 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Conta
         };
     }
 
-    auto parent = from->get_parent().lock();
+    auto parent = from.get_parent().lock();
     if (root_lane == parent)
     {
         auto new_layout_direction = from_direction(direction);
@@ -447,11 +444,11 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(std::shared_ptr<Conta
 }
 
 void TilingWindowTree::handle_resize(
-    std::shared_ptr<Container> const& node,
+    Container& node,
     Direction direction,
     int amount)
 {
-    auto parent = node->get_parent().lock();
+    auto parent = Container::as_parent(node.get_parent().lock());
     if (parent == nullptr)
     {
         // Can't resize, most likely the root
@@ -470,7 +467,7 @@ void TilingWindowTree::handle_resize(
 
     if (!is_main_axis_movement)
     {
-        handle_resize(parent, direction, amount);
+        handle_resize(*parent, direction, amount);
         return;
     }
 
@@ -486,7 +483,7 @@ void TilingWindowTree::handle_resize(
         {
             auto other_node = nodes[i];
             auto other_rect = other_node->get_logical_area();
-            if (node == other_node)
+            if (node.shared_from_this() == other_node)
                 other_rect.size.height = geom::Height { other_rect.size.height.as_int() + resize_amount };
             else
                 other_rect.size.height = geom::Height { other_rect.size.height.as_int() + height_for_others };
@@ -519,7 +516,7 @@ void TilingWindowTree::handle_resize(
         {
             auto other_node = nodes[i];
             auto other_rect = other_node->get_logical_area();
-            if (node == other_node)
+            if (node.shared_from_this() == other_node)
                 other_rect.size.width = geom::Width { other_rect.size.width.as_int() + resize_amount };
             else
                 other_rect.size.width = geom::Width { other_rect.size.width.as_int() + width_for_others };
@@ -554,7 +551,7 @@ void TilingWindowTree::handle_resize(
 
 std::shared_ptr<ParentContainer> TilingWindowTree::handle_remove(std::shared_ptr<Container> const& node)
 {
-    auto parent = node->get_parent().lock();
+    auto parent = Container::as_parent(node->get_parent().lock());
     if (parent == nullptr)
         return nullptr;
 
@@ -562,7 +559,7 @@ std::shared_ptr<ParentContainer> TilingWindowTree::handle_remove(std::shared_ptr
     {
         // Remove the entire lane if this lane is now empty
         auto prev_active = parent;
-        parent = parent->get_parent().lock();
+        parent = Container::as_parent(parent->get_parent().lock());
         parent->remove(prev_active);
     }
     else
@@ -581,7 +578,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> T
 
     // Note: When we remove moving_node from its initial position, there's a chance
     // that the target_lane was melted into another lane. Hence, we need to run it
-    auto target_parent = to->get_parent().lock();
+    auto target_parent = Container::as_parent(to->get_parent().lock());
     auto index = target_parent->get_index_of_node(to);
     target_parent->graft_existing(node, index + 1);
 
@@ -598,35 +595,35 @@ void TilingWindowTree::recalculate_root_node_area()
     }
 }
 
-bool TilingWindowTree::advise_fullscreen_container(std::shared_ptr<LeafContainer> const& container)
+bool TilingWindowTree::advise_fullscreen_container(LeafContainer& container)
 {
-    auto window = container->get_window();
+    auto window = container.window().value();
     window_controller.select_active_window(window);
     window_controller.raise(window);
     is_active_window_fullscreen = true;
     return true;
 }
 
-bool TilingWindowTree::advise_restored_container(std::shared_ptr<LeafContainer> const& container)
+bool TilingWindowTree::advise_restored_container(LeafContainer& container)
 {
     auto active = active_container();
-    if (active == container && is_active_window_fullscreen)
+    if (active->window() == container.window().value() && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
-        container->set_logical_area(container->get_logical_area());
-        container->commit_changes();
+        container.set_logical_area(container.get_logical_area());
+        container.commit_changes();
     }
 
     return true;
 }
 
-bool TilingWindowTree::handle_container_ready(std::shared_ptr<LeafContainer> const& container)
+bool TilingWindowTree::handle_container_ready(LeafContainer& container)
 {
     constrain(container);
     if (is_active_window_fullscreen)
         return true;
 
-    auto window = container->get_window();
+    auto window = container.window().value();
     auto& info = window_controller.info_for(window);
     if (info.can_be_active())
         window_controller.select_active_window(window);
@@ -635,11 +632,11 @@ bool TilingWindowTree::handle_container_ready(std::shared_ptr<LeafContainer> con
 }
 
 bool TilingWindowTree::confirm_placement_on_display(
-    std::shared_ptr<Container> const& container,
+    Container& container,
     MirWindowState new_state,
     mir::geometry::Rectangle& new_placement)
 {
-    auto rect = container->get_visible_area();
+    auto rect = container.get_visible_area();
     switch (new_state)
     {
     case mir_window_state_restored:
@@ -652,18 +649,18 @@ bool TilingWindowTree::confirm_placement_on_display(
     return true;
 }
 
-bool TilingWindowTree::constrain(std::shared_ptr<Container> const& container)
+bool TilingWindowTree::constrain(Container& container)
 {
     if (is_hidden)
         return false;
 
-    if (container->get_parent().expired())
+    if (container.get_parent().expired())
     {
         mir::log_error("Unable to constrain node without parent");
         return true;
     }
 
-    container->get_parent().lock()->constrain();
+    container.get_parent().lock()->constrain();
     return true;
 }
 
@@ -679,7 +676,7 @@ std::shared_ptr<Container> foreach_node_internal(
     if (parent->is_leaf())
         return nullptr;
 
-    for (auto& node : Container::as_lane(parent)->get_sub_nodes())
+    for (auto& node : Container::as_parent(parent)->get_sub_nodes())
     {
         if (auto result = foreach_node_internal(f, node))
             return result;
@@ -738,7 +735,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::show()
             if (leaf_node->is_fullscreen())
                 fullscreen_node = leaf_node;
             else
-                window_controller.raise(leaf_node->get_window());
+                window_controller.raise(leaf_node->window().value());
         }
     });
 
@@ -750,14 +747,19 @@ bool TilingWindowTree::is_empty()
     return root_lane->num_nodes() == 0;
 }
 
+Workspace* TilingWindowTree::get_workspace() const
+{
+    return tree_interface->get_workspace();
+}
+
 std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
 {
     if (!state.active_window)
         return nullptr;
 
-    auto metadata = window_controller.get_metadata(state.active_window);
-    if (!metadata)
+    auto container = window_controller.get_container(state.active_window);
+    if (!container)
         return nullptr;
 
-    return metadata->get_container();
+    return Container::as_leaf(container);
 }

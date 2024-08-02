@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "direction.h"
 #include "miral/window.h"
 #include "tiling_window_tree.h"
-#include "window_metadata.h"
+
 #include "workspace.h"
 #include <memory>
 #include <miral/minimal_window_manager.h>
@@ -51,76 +51,46 @@ public:
         Animator&);
     ~Output() = default;
 
-    [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
-    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
     bool handle_pointer_event(MirPointerEvent const* event);
-    WindowType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, WindowType hint = WindowType::none);
-    [[nodiscard]] std::shared_ptr<WindowMetadata> advise_new_window(miral::WindowInfo const& window_info, WindowType type) const;
-    void handle_window_ready(
-        miral::WindowInfo& window_info,
-        std::shared_ptr<miracle::WindowMetadata> const& metadata) const;
-    void advise_focus_gained(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_focus_lost(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_delete_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    void advise_move_to(std::shared_ptr<miracle::WindowMetadata> const& metadata, geom::Point top_left);
-    void handle_request_move(std::shared_ptr<miracle::WindowMetadata> const& metadata, const MirInputEvent* input_event);
-    void handle_request_resize(
-        std::shared_ptr<miracle::WindowMetadata> const& metadata,
-        const MirInputEvent* input_event,
-        MirResizeEdge edge);
-    void handle_modify_window(std::shared_ptr<miracle::WindowMetadata> const& metadata, const miral::WindowSpecification& modifications);
-    void handle_raise_window(std::shared_ptr<miracle::WindowMetadata> const& metadata);
-    mir::geometry::Rectangle confirm_placement_on_display(
-        std::shared_ptr<miracle::WindowMetadata> const& metadata,
-        MirWindowState new_state,
-        const mir::geometry::Rectangle& new_placement);
-    bool select_window_from_point(int x, int y) const;
-    void select_window(miral::Window const&);
+    ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
+    [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
+    void advise_delete_window(std::shared_ptr<miracle::Container> const& container);
+    [[nodiscard]] bool select_window_from_point(int x, int y) const;
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
-    std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
     void advise_application_zone_create(miral::Zone const& application_zone);
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original);
     void advise_application_zone_delete(miral::Zone const& application_zone);
     bool point_is_in_output(int x, int y);
-    void close_active_window();
-    bool resize_active_window(Direction direction) const;
-    bool select(Direction direction) const;
-    bool move_active_window(Direction direction);
-    bool move_active_window_by_amount(Direction direction, int pixels);
-    bool move_active_window_to(int x, int y);
-    void request_vertical_layout() const;
-    void request_horizontal_layout() const;
-    void toggle_layout() const;
-    bool toggle_fullscreen() const;
-    void toggle_pinned_to_workspace();
-    void set_is_pinned(bool is_pinned);
     void update_area(geom::Rectangle const& area);
-    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const;
-    void request_toggle_active_float();
 
-    /// Gets the relative position of the current rectangle (e.g. the active
-    /// rectangle with be at position (0, 0))
-    [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
+    void request_toggle_active_float();
 
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'place_new_window' followed
     /// by 'advise_new_window'.
-    void add_immediately(miral::Window& window, WindowType hint = WindowType::none);
-
-    geom::Rectangle const& get_area() { return area; }
-    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
-    miral::Output const& get_output() { return output; }
-    [[nodiscard]] bool is_active() const { return is_active_; }
+    void add_immediately(miral::Window& window, ContainerType hint = ContainerType::none);
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
-    [[nodiscard]] CompositorState const& get_state() const { return state; }
-
-    [[nodiscard]] glm::mat4 get_transform() const;
     void set_transform(glm::mat4 const& in);
     void set_position(glm::vec2 const&);
-    [[nodiscard]] glm::vec2 const& get_position() const;
+
+    // Getters
+
+    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const;
+    [[nodiscard]] int get_active_workspace_num() const { return active_workspace; }
+    [[nodiscard]] std::shared_ptr<Workspace> const& get_active_workspace() const;
+    [[nodiscard]] std::vector<std::shared_ptr<Workspace>> const& get_workspaces() const { return workspaces; }
+    [[nodiscard]] geom::Rectangle const& get_area() { return area; }
+    [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
+    [[nodiscard]] miral::Output const& get_output() { return output; }
+    [[nodiscard]] bool is_active() const { return is_active_; }
+    [[nodiscard]] CompositorState const& get_state() const { return state; }
+    [[nodiscard]] glm::mat4 get_transform() const;
+    /// Gets the relative position of the current rectangle (e.g. the active
+    /// rectangle with be at position (0, 0))
+    [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
 
 private:
     miral::Output output;

@@ -26,6 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class WindowController;
+
 enum class I3CommandType
 {
     none,
@@ -99,7 +101,7 @@ struct I3ScopedCommandList
     std::vector<I3Command> commands;
     std::vector<I3Scope> scope;
 
-    bool meets_criteria(miral::Window const&, miral::WindowManagerTools&) const;
+    bool meets_criteria(miral::Window const&, WindowController&) const;
 
     static std::vector<I3ScopedCommandList> parse(std::string_view const&);
 };

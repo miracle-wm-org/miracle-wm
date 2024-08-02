@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
+#include "tiling_window_tree.h"
+#include "workspace.h"
 #include <cmath>
 
 using namespace miracle;
@@ -85,11 +87,11 @@ ParentContainer::ParentContainer(
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
     std::shared_ptr<ParentContainer> const& parent) :
-    Container(parent),
     node_interface { node_interface },
     logical_area { std::move(area) },
     tree { tree },
-    config { config }
+    config { config },
+    parent { parent }
 {
 }
 
@@ -200,7 +202,7 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pend
         create_space(pending_index),
         config,
         tree,
-        as_lane(shared_from_this()));
+        as_parent(shared_from_this()));
     sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
     return pending_node;
 }
@@ -215,15 +217,16 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
 
     auto retval = pending_node;
     pending_node->associate_to_window(window);
-    commit_changes();
+    pending_node->set_parent(Container::as_parent(shared_from_this()));
     pending_node = nullptr;
+    commit_changes();
     return retval;
 }
 
 void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int index)
 {
     auto rectangle = create_space(index);
-    node->set_parent(as_lane(shared_from_this()));
+    node->set_parent(as_parent(shared_from_this()));
     node->set_logical_area(rectangle);
     sub_nodes.insert(sub_nodes.begin() + index, node);
     relayout();
@@ -240,11 +243,11 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     }
 
     auto new_parent_node = std::make_shared<ParentContainer>(
-    node_interface,
-    container->get_logical_area(),
-    config,
-    tree,
-    as_lane(shared_from_this()));
+        node_interface,
+        container->get_logical_area(),
+        config,
+        tree,
+        Container::as_parent(shared_from_this()));
     new_parent_node->sub_nodes.push_back(container);
     container->set_parent(new_parent_node);
     sub_nodes[index] = new_parent_node;
@@ -374,7 +377,7 @@ std::shared_ptr<LeafContainer> ParentContainer::get_nth_window(size_t i) const
         return as_leaf(sub_nodes[i]);
 
     // The lane is correct, so let's get the first window in that lane.
-    return as_lane(sub_nodes[i])->get_nth_window(0);
+    return as_parent(sub_nodes[i])->get_nth_window(0);
 }
 
 std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const
@@ -387,7 +390,7 @@ std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::s
     {
         if (node->is_lane())
         {
-            if (auto retval = as_lane(node)->find_where(func))
+            if (auto retval = as_parent(node)->find_where(func))
                 return retval;
         }
     }
@@ -408,9 +411,7 @@ void ParentContainer::set_direction(miracle::NodeLayoutDirection new_direction)
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
     auto first_index = get_index_of_node(first);
-    auto first_area = first->get_logical_area();
     auto second_index = get_index_of_node(second);
-    auto second_area = second->get_logical_area();
     sub_nodes[second_index] = first;
     sub_nodes[first_index] = second;
     relayout();
@@ -429,12 +430,12 @@ void ParentContainer::remove(const std::shared_ptr<Container>& node)
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
     if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
     {
-        auto dying_lane = as_lane(sub_nodes[0]);
+        auto dying_lane = as_parent(sub_nodes[0]);
         sub_nodes.clear();
         for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
             sub_nodes.push_back(sub_node);
-            sub_node->set_parent(as_lane(shared_from_this()));
+            sub_node->set_parent(as_parent(shared_from_this()));
         }
         set_direction(dying_lane->get_direction());
     }
@@ -454,6 +455,11 @@ int ParentContainer::get_index_of_node(miracle::Container const* node) const
 int ParentContainer::get_index_of_node(std::shared_ptr<Container> const& node) const
 {
     return get_index_of_node(node.get());
+}
+
+int ParentContainer::get_index_of_node(Container const& node) const
+{
+    return get_index_of_node(node.shared_from_this().get());
 }
 
 void ParentContainer::constrain()
@@ -476,6 +482,11 @@ size_t ParentContainer::get_min_height() const
     for (auto const& node : sub_nodes)
         size += node->get_min_height();
     return size;
+}
+
+std::weak_ptr<ParentContainer> ParentContainer::get_parent() const
+{
+    return parent;
 }
 
 void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
@@ -525,4 +536,160 @@ void ParentContainer::relayout()
 
     // Note that it is important to use the logical_area here instead of the placement area
     set_logical_area(logical_area);
+}
+
+void ParentContainer::handle_ready()
+{
+}
+
+void ParentContainer::handle_modify(miral::WindowSpecification const& specification)
+{
+}
+
+void ParentContainer::handle_request_move(MirInputEvent const* input_event)
+{
+}
+
+void ParentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
+{
+}
+
+void ParentContainer::handle_raise()
+{
+}
+
+bool ParentContainer::resize(Direction direction)
+{
+    return false;
+}
+
+bool ParentContainer::toggle_fullscreen()
+{
+    return false;
+}
+
+void ParentContainer::request_horizontal_layout()
+{
+}
+
+void ParentContainer::request_vertical_layout()
+{
+}
+
+void ParentContainer::toggle_layout()
+{
+}
+
+void ParentContainer::on_focus_gained()
+{
+}
+
+void ParentContainer::on_focus_lost()
+{
+}
+
+void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
+{
+}
+
+mir::geometry::Rectangle
+ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
+{
+    return mir::geometry::Rectangle();
+}
+
+ContainerType ParentContainer::get_type() const
+{
+    return ContainerType::parent;
+}
+
+void ParentContainer::restore_state(MirWindowState state)
+{
+}
+
+std::optional<MirWindowState> ParentContainer::restore_state()
+{
+    return std::nullopt;
+}
+
+void ParentContainer::on_open()
+{
+}
+
+Workspace* ParentContainer::get_workspace() const
+{
+    return tree->get_workspace();
+}
+
+Output* ParentContainer::get_output() const
+{
+    return tree->get_workspace()->get_output();
+}
+
+glm::mat4 ParentContainer::get_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+void ParentContainer::set_transform(glm::mat4 transform)
+{
+}
+
+glm::mat4 ParentContainer::get_workspace_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+glm::mat4 ParentContainer::get_output_transform() const
+{
+    return glm::mat4(1.f);
+}
+
+uint32_t ParentContainer::animation_handle() const
+{
+    return 0;
+}
+
+void ParentContainer::animation_handle(uint32_t uint_32)
+{
+}
+
+bool ParentContainer::is_focused() const
+{
+    return false;
+}
+
+std::optional<miral::Window> ParentContainer::window() const
+{
+    return std::optional<miral::Window>();
+}
+
+bool ParentContainer::select_next(miracle::Direction)
+{
+    return false;
+}
+
+bool ParentContainer::pinned(bool)
+{
+    return false;
+}
+
+bool ParentContainer::pinned() const
+{
+    return false;
+}
+
+bool ParentContainer::move(Direction direction)
+{
+    return false;
+}
+
+bool ParentContainer::move_by(Direction direction, int pixels)
+{
+    return false;
+}
+
+bool ParentContainer::move_to(int x, int y)
+{
+    return false;
 }

@@ -22,12 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
-#include "window_metadata.h"
+
+#include "container.h"
 #include "window_tools_accessor.h"
 #include "workspace.h"
-#include <GLES2/gl2.h>
 
 #include <EGL/egl.h>
+#include <GLES2/gl2.h>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -100,6 +101,11 @@ public:
     [[nodiscard]] bool shaped() const override
     {
         return renderable.shaped();
+    }
+
+    mir::geometry::RectangleD src_bounds() const override
+    {
+        return {};
     }
 
     [[nodiscard]] std::optional<mir::scene::Surface const*> surface_if_any() const override
@@ -218,8 +224,8 @@ Renderer::DrawData Renderer::get_draw_data(mir::graphics::Renderable const& rend
         {
             auto tools = WindowToolsAccessor::get_instance().get_tools();
             auto& info = tools.info_for(window);
-            auto userdata = static_pointer_cast<WindowMetadata>(info.userdata());
-            data.needs_outline = (userdata->get_type() == WindowType::tiled || userdata->get_type() == WindowType::floating)
+            auto userdata = static_pointer_cast<Container>(info.userdata());
+            data.needs_outline = (userdata->get_type() == ContainerType::tiled || userdata->get_type() == ContainerType::floating)
                 && !info.parent();
             data.workspace_transform = userdata->get_output_transform() * userdata->get_workspace_transform();
             data.is_focused = userdata->is_focused();
@@ -465,7 +471,7 @@ miracle::Renderer::DrawData Renderer::draw(
         glDisable(GL_SCISSOR_TEST);
     }
 
-    // Next, draw the outline if we have metadata to facilitate it
+    // Next, draw the outline if we have container to facilitate it
     if (data.needs_outline)
     {
         auto border_config = config->get_border_config();

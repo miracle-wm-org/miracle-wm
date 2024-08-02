@@ -48,7 +48,6 @@ add_library(miracle-wm-implementation
     src/ipc.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_observer.cpp
-    src/window_metadata.cpp
     src/workspace.cpp
     src/leaf_container.cpp
     src/parent_container.cpp
@@ -65,6 +64,8 @@ add_library(miracle-wm-implementation
     src/program_factory.cpp
     src/mode_observer.cpp
     src/debug_helper.h
+    src/floating_container.cpp
+    src/shell_component_container.cpp
 )
 
 add_executable(miracle-wm

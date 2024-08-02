@@ -15,28 +15,64 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#define MIR_LOG_COMPONENT "node"
+#define MIR_LOG_COMPONENT "container"
 
 #include "container.h"
+#include "floating_container.h"
 #include "leaf_container.h"
 #include "node_common.h"
+#include "output.h"
 #include "parent_container.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 
 using namespace miracle;
 
-Container::Container(std::shared_ptr<ParentContainer> const& parent) :
-    parent { parent }
+ContainerType miracle::container_type_from_string(std::string const& str)
 {
+    if (str == "tiled")
+        return ContainerType::tiled;
+    else if (str == "floating")
+        return ContainerType::floating;
+    else if (str == "shell")
+        return ContainerType::shell;
+    else
+        return ContainerType::none;
 }
 
-std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> const& node)
+glm::mat4 Container::get_workspace_transform() const
 {
-    return std::dynamic_pointer_cast<LeafContainer>(node);
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    auto const workspace_rect = output->get_workspace_rectangle(get_workspace()->get_workspace());
+    return glm::translate(
+        glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
 }
 
-std::shared_ptr<ParentContainer> Container::as_lane(std::shared_ptr<Container> const& node)
+glm::mat4 Container::get_output_transform() const
 {
-    return std::dynamic_pointer_cast<ParentContainer>(node);
+    auto output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    return output->get_transform();
+}
+
+std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> const& container)
+{
+    return std::dynamic_pointer_cast<LeafContainer>(container);
+}
+
+std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container> const& container)
+{
+    return std::dynamic_pointer_cast<ParentContainer>(container);
+}
+
+std::shared_ptr<FloatingContainer> Container::as_floating(std::shared_ptr<Container> const& container)
+{
+    return std::dynamic_pointer_cast<FloatingContainer>(container);
 }
 
 bool Container::is_leaf()
@@ -46,60 +82,69 @@ bool Container::is_leaf()
 
 bool Container::is_lane()
 {
-    return as_lane(shared_from_this()) != nullptr;
-}
-
-std::weak_ptr<ParentContainer> Container::get_parent() const
-{
-    return parent;
+    return as_parent(shared_from_this()) != nullptr;
 }
 
 namespace
 {
-bool has_neighbor(Container const* node, NodeLayoutDirection direction, size_t cannot_be_index)
+bool has_neighbor(Container const* container, NodeLayoutDirection direction, size_t cannot_be_index)
 {
-    auto shared_parent = node->get_parent().lock();
-    if (!shared_parent)
+    auto parent = container->get_parent().lock();
+    if (!parent)
         return false;
 
-    if (shared_parent->get_direction() != direction)
-        return has_neighbor(shared_parent.get(), direction, cannot_be_index);
+    auto parent_container = Container::as_parent(parent);
+    if (!parent_container)
+        return false;
 
-    auto index = shared_parent->get_index_of_node(node);
-    return (shared_parent->num_nodes() > 1 && index != cannot_be_index)
-        || has_neighbor(shared_parent.get(), direction, cannot_be_index);
+    if (parent_container->get_direction() != direction)
+        return has_neighbor(parent_container.get(), direction, cannot_be_index);
+
+    auto index = parent_container->get_index_of_node(container);
+    return (parent_container->num_nodes() > 1 && index != cannot_be_index)
+        || has_neighbor(parent_container.get(), direction, cannot_be_index);
 }
 
-bool has_right_neighbor(Container const* node)
+bool has_right_neighbor(Container const* container)
 {
-    auto shared_parent = node->get_parent().lock();
+    auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(node, NodeLayoutDirection::horizontal, shared_parent->num_nodes() - 1);
+
+    auto parent_container = Container::as_parent(shared_parent);
+    if (!parent_container)
+        return false;
+
+    return has_neighbor(container, NodeLayoutDirection::horizontal, parent_container->num_nodes() - 1);
 }
 
-bool has_bottom_neighbor(Container const* node)
+bool has_bottom_neighbor(Container const* container)
 {
-    auto shared_parent = node->get_parent().lock();
+    auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(node, NodeLayoutDirection::vertical, shared_parent->num_nodes() - 1);
+
+    auto parent_container = Container::as_parent(shared_parent);
+    if (!parent_container)
+        return false;
+
+    return has_neighbor(container, NodeLayoutDirection::vertical, parent_container->num_nodes() - 1);
 }
 
-bool has_left_neighbor(Container const* node)
+bool has_left_neighbor(Container const* container)
 {
-    auto shared_parent = node->get_parent().lock();
+    auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(node, NodeLayoutDirection::horizontal, 0);
+    return has_neighbor(container, NodeLayoutDirection::horizontal, 0);
 }
 
-bool has_top_neighbor(Container const* node)
+bool has_top_neighbor(Container const* container)
 {
-    auto shared_parent = node->get_parent().lock();
+    auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(node, NodeLayoutDirection::vertical, 0);
+    return has_neighbor(container, NodeLayoutDirection::vertical, 0);
 }
 }
 
