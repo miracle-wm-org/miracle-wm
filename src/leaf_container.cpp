@@ -255,17 +255,17 @@ void LeafContainer::handle_request_resize(MirInputEvent const *input_event, MirR
 
 void LeafContainer::request_horizontal_layout()
 {
-
+    tree->request_horizontal_layout(*this);
 }
 
 void LeafContainer::request_vertical_layout()
 {
-
+    tree->request_vertical_layout(*this);
 }
 
 void LeafContainer::toggle_layout()
 {
-
+    tree->toggle_layout(*this);
 }
 
 void LeafContainer::restore_state(MirWindowState state)
