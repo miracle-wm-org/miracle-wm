@@ -31,6 +31,7 @@ namespace miracle
 class LeafContainer;
 class MiracleConfig;
 class TilingWindowTree;
+class CompositorState;
 
 /// A parent container defines the layout of containers beneath it.
 class ParentContainer : public Container
@@ -40,7 +41,8 @@ public:
         geom::Rectangle,
         std::shared_ptr<MiracleConfig> const&,
         TilingWindowTree* tree,
-        std::shared_ptr<ParentContainer> const& parent);
+        std::shared_ptr<ParentContainer> const& parent,
+        CompositorState const& state);
     geom::Rectangle get_logical_area() const override;
     geom::Rectangle get_visible_area() const override;
     size_t num_nodes() const;
@@ -108,6 +110,8 @@ private:
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
     std::weak_ptr<ParentContainer> parent;
+    CompositorState const& state;
+
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     std::vector<std::shared_ptr<Container>> sub_nodes;
     std::shared_ptr<LeafContainer> pending_node;

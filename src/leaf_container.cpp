@@ -33,12 +33,14 @@ LeafContainer::LeafContainer(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentContainer> const& parent) :
+    std::shared_ptr<ParentContainer> const& parent,
+    CompositorState const& state) :
     node_interface { node_interface },
     logical_area { std::move(area) },
     config { config },
     tree { tree },
-    parent { parent }
+    parent { parent },
+    state { state }
 {
 }
 
@@ -314,7 +316,7 @@ void LeafContainer::animation_handle(uint32_t handle)
 
 bool LeafContainer::is_focused() const
 {
-    return get_output()->get_state().active_window == window_;
+    return state.active_window == window_;
 }
 
 ContainerType LeafContainer::get_type() const

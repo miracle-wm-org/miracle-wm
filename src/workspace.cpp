@@ -410,7 +410,7 @@ bool Workspace::has_floating_window(miral::Window const& window)
 std::shared_ptr<FloatingContainer> Workspace::add_floating_window(miral::Window const& window)
 {
     auto floating = std::make_shared<FloatingContainer>(
-        window, floating_window_manager, window_controller, this);
+        window, floating_window_manager, window_controller, this, state);
     floating_windows.push_back(floating);
     return floating;
 }

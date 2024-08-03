@@ -32,6 +32,7 @@ namespace miracle
 
 class MiracleConfig;
 class TilingWindowTree;
+class CompositorState;
 
 /// A [LeafContainer] contains one or many windows (in the event that windows are stacked or tabbed).
 class LeafContainer : public Container
@@ -42,7 +43,8 @@ public:
         geom::Rectangle area,
         std::shared_ptr<MiracleConfig> const& config,
         TilingWindowTree* tree,
-        std::shared_ptr<ParentContainer> const& parent);
+        std::shared_ptr<ParentContainer> const& parent,
+        CompositorState const& state);
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
@@ -102,6 +104,8 @@ private:
     TilingWindowTree* tree;
     miral::Window window_;
     std::weak_ptr<ParentContainer> parent;
+    CompositorState const& state;
+
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;

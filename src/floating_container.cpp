@@ -32,11 +32,13 @@ FloatingContainer::FloatingContainer(
     miral::Window const& window,
     miral::MinimalWindowManager& wm,
     WindowController& window_controller,
-    Workspace* workspace) :
+    Workspace* workspace,
+    CompositorState const& state) :
     window_ { window },
     wm { wm },
     window_controller { window_controller },
-    workspace_ { workspace }
+    workspace_ { workspace },
+    state { state }
 {
 }
 
@@ -220,7 +222,7 @@ void FloatingContainer::animation_handle(uint32_t handle)
 
 bool FloatingContainer::is_focused() const
 {
-    return get_output()->get_state().active_window == window_;
+    return state.active_window == window_;
 }
 
 ContainerType FloatingContainer::get_type() const

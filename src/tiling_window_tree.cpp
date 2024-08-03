@@ -42,7 +42,8 @@ TilingWindowTree::TilingWindowTree(
         tree_interface->get_area(),
         config,
         this,
-        nullptr) },
+        nullptr,
+        state) },
     config { config },
     window_controller { window_controller },
     state { state },
@@ -423,7 +424,8 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(Container& from, Dire
             root_lane->get_logical_area(),
             config,
             this,
-            nullptr);
+            nullptr,
+            state);
         after_root_lane->set_direction(new_layout_direction);
         after_root_lane->graft_existing(root_lane, 0);
         root_lane = after_root_lane;
