@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class WindowController;
+class CompositorState;
 
 /// Contains a single floating window
 class FloatingContainer : public Container
@@ -34,7 +35,8 @@ public:
         miral::Window const&,
         miral::MinimalWindowManager& wm,
         WindowController& window_controller,
-        Workspace* workspace);
+        Workspace* workspace,
+        CompositorState const& state);
     [[nodiscard]] mir::geometry::Rectangle get_logical_area() const override;
     void set_logical_area(mir::geometry::Rectangle const&) override;
     void commit_changes() override;
@@ -85,6 +87,8 @@ private:
     miral::Window window_;
     miral::MinimalWindowManager& wm;
     WindowController& window_controller;
+    CompositorState const& state;
+
     bool is_pinned = false;
     std::optional<MirWindowState> restore_state_;
     Workspace* workspace_;

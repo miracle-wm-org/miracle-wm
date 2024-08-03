@@ -86,12 +86,14 @@ ParentContainer::ParentContainer(
     geom::Rectangle area,
     std::shared_ptr<MiracleConfig> const& config,
     TilingWindowTree* tree,
-    std::shared_ptr<ParentContainer> const& parent) :
+    std::shared_ptr<ParentContainer> const& parent,
+    CompositorState const& state) :
     node_interface { node_interface },
     logical_area { std::move(area) },
     tree { tree },
     config { config },
-    parent { parent }
+    parent { parent },
+    state { state }
 {
 }
 
@@ -202,7 +204,8 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pend
         create_space(pending_index),
         config,
         tree,
-        as_parent(shared_from_this()));
+        as_parent(shared_from_this()),
+        state);
     sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
     return pending_node;
 }
@@ -247,7 +250,8 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
         container->get_logical_area(),
         config,
         tree,
-        Container::as_parent(shared_from_this()));
+        Container::as_parent(shared_from_this()),
+        state);
     new_parent_node->sub_nodes.push_back(container);
     container->set_parent(new_parent_node);
     sub_nodes[index] = new_parent_node;

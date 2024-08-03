@@ -86,7 +86,6 @@ public:
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
     [[nodiscard]] miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
-    [[nodiscard]] CompositorState const& get_state() const { return state; }
     [[nodiscard]] glm::mat4 get_transform() const;
     /// Gets the relative position of the current rectangle (e.g. the active
     /// rectangle with be at position (0, 0))
