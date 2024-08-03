@@ -78,6 +78,7 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout() override;
+    void set_tree(TilingWindowTree*);
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(mir::geometry::Point const& top_left) override;
@@ -103,6 +104,8 @@ public:
     bool move(Direction direction) override;
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
+
+    bool is_fullscreen() const override;
 
 private:
     WindowController& node_interface;

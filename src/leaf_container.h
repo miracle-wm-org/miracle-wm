@@ -55,7 +55,7 @@ public:
     void set_state(MirWindowState state);
     void show();
     void hide();
-    bool is_fullscreen() const;
+    bool is_fullscreen() const override;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
@@ -75,6 +75,7 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout() override;
+    void set_tree(TilingWindowTree* tree);
 
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
     [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
@@ -97,7 +98,7 @@ public:
     bool move_to(int, int) override;
 
 private:
-    WindowController& node_interface;
+    WindowController& window_controller;
     geom::Rectangle logical_area;
     std::optional<geom::Rectangle> next_logical_area;
     std::shared_ptr<MiracleConfig> config;

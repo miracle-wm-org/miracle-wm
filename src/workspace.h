@@ -47,7 +47,7 @@ public:
         std::shared_ptr<MiracleConfig> const& config,
         WindowController& window_controller,
         CompositorState const& state,
-        miral::MinimalWindowManager& floating_window_manager);
+        std::shared_ptr<miral::MinimalWindowManager> const& floating_window_manager);
 
     [[nodiscard]] int get_workspace() const;
     void set_area(mir::geometry::Rectangle const&);
@@ -57,22 +57,22 @@ public:
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
         ContainerType hint);
-    std::shared_ptr<Container> advise_new_window(
+    std::shared_ptr<Container> create_container(
         miral::WindowInfo const& window_info, ContainerType type);
     void handle_ready_hack(LeafContainer& container);
-    void advise_delete_window(const std::shared_ptr<Container>& container);
+    void delete_container(std::shared_ptr<Container> const &container);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);
     void for_each_window(std::function<void(std::shared_ptr<Container>)> const&);
     bool select_window_from_point(int x, int y);
     void toggle_floating(std::shared_ptr<Container> const&);
-    bool has_floating_window(miral::Window const&);
+    bool has_floating_window(std::shared_ptr<Container> const&);
     std::shared_ptr<FloatingContainer> add_floating_window(miral::Window const&);
-    void remove_floating_window(miral::Window const&);
     Output* get_output();
     void trigger_rerender();
     [[nodiscard]] bool is_empty() const;
+    void graft(std::shared_ptr<Container> const&);
     static int workspace_to_number(int workspace);
 
 private:
@@ -84,7 +84,7 @@ private:
     WindowController& window_controller;
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;
-    miral::MinimalWindowManager& floating_window_manager;
+    std::shared_ptr<miral::MinimalWindowManager> floating_window_manager;
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

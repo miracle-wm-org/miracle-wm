@@ -811,7 +811,7 @@ void FilesystemConfiguration::_load()
                 {
                     auto num = workspace["number"].as<int>();
                     auto type = container_type_from_string(workspace["layout"].as<std::string>());
-                    if (type != ContainerType::tiled && type != ContainerType::floating)
+                    if (type != ContainerType::leaf && type != ContainerType::floating)
                     {
                         mir::log_error("layout should be 'tiled' or 'floating': L%d:%d", workspace["layout"].Mark().line, workspace["layout"].Mark().column);
                         continue;
@@ -1155,5 +1155,5 @@ WorkspaceConfig FilesystemConfiguration::get_workspace_config(int key) const
             return config;
     }
 
-    return { key, ContainerType::tiled };
+    return { key, ContainerType::leaf };
 }

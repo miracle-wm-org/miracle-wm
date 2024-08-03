@@ -230,4 +230,9 @@ bool ShellComponentContainer::move_to(int x, int y)
     return false;
 }
 
+bool ShellComponentContainer::is_fullscreen() const
+{
+    return false;
+}
+
 } // miracle

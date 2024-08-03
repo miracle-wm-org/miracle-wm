@@ -42,7 +42,7 @@ Output::Output(
     WorkspaceManager& workspace_manager,
     geom::Rectangle const& area,
     miral::WindowManagerTools const& tools,
-    miral::MinimalWindowManager& floating_window_manager,
+    std::shared_ptr<miral::MinimalWindowManager> const& floating_window_manager,
     CompositorState& state,
     std::shared_ptr<MiracleConfig> const& config,
     WindowController& node_interface,
@@ -82,13 +82,13 @@ bool Output::handle_pointer_event(const MirPointerEvent* event)
         return true;
 
     auto const action = mir_pointer_event_action(event);
-    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(state.active_window))
+    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(state.active))
     {
         if (action == mir_pointer_action_button_down)
             has_clicked_floating_window = true;
         else if (action == mir_pointer_action_button_up)
             has_clicked_floating_window = false;
-        return floating_window_manager.handle_pointer_event(event);
+        return floating_window_manager->handle_pointer_event(event);
     }
 
     return false;
@@ -106,16 +106,16 @@ ContainerType Output::allocate_position(
     return get_active_workspace()->allocate_position(app_info, requested_specification, ideal_type);
 }
 
-std::shared_ptr<Container> Output::advise_new_window(
+std::shared_ptr<Container> Output::create_container(
     miral::WindowInfo const& window_info, ContainerType type) const
 {
-    return get_active_workspace()->advise_new_window(window_info, type);
+    return get_active_workspace()->create_container(window_info, type);
 }
 
-void Output::advise_delete_window(const std::shared_ptr<miracle::Container>& container)
+void Output::delete_container(std::shared_ptr<miracle::Container> const &container)
 {
     auto workspace = container->get_workspace();
-    workspace->advise_delete_window(container);
+    workspace->delete_container(container);
 }
 
 bool Output::select_window_from_point(int x, int y) const
@@ -309,20 +309,13 @@ std::vector<miral::Window> Output::collect_all_windows() const
 
 void Output::request_toggle_active_float()
 {
-    if (tools.active_window() == Window())
+    if (!state.active)
     {
-        mir::log_warning("request_toggle_active_float: active window unset");
+        mir::log_warning("request_toggle_active_float: active unset");
         return;
     }
 
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-    {
-        mir::log_error("request_toggle_active_float: container not found");
-        return;
-    }
-
-    container->get_workspace()->toggle_floating(container);
+    state.active->get_workspace()->toggle_floating(state.active);
 }
 
 void Output::add_immediately(miral::Window& window, ContainerType hint)
@@ -336,8 +329,13 @@ void Output::add_immediately(miral::Window& window, ContainerType hint)
 
     ContainerType type = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
-    auto container = advise_new_window(window_controller.info_for(window), type);
+    auto container = create_container(window_controller.info_for(window), type);
     container->handle_ready();
+}
+
+void Output::graft(std::shared_ptr<Container> const& container)
+{
+    get_active_workspace()->graft(container);
 }
 
 geom::Rectangle Output::get_workspace_rectangle(int workspace) const

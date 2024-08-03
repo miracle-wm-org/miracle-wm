@@ -93,6 +93,20 @@ std::shared_ptr<LeafContainer> TilingWindowTree::confirm_window(
     return parent->confirm_window(window_info.window());
 }
 
+void TilingWindowTree::graft(std::shared_ptr<ParentContainer> const& parent)
+{
+    parent->set_tree(this);
+    root_lane->graft_existing(parent, root_lane->num_nodes());
+    root_lane->commit_changes();
+}
+
+void TilingWindowTree::graft(std::shared_ptr<LeafContainer> const& leaf)
+{
+    leaf->set_tree(this);
+    root_lane->graft_existing(leaf, root_lane->num_nodes());
+    root_lane->commit_changes();
+}
+
 bool TilingWindowTree::resize_container(miracle::Direction direction, Container& container)
 {
     if (is_active_window_fullscreen)
@@ -363,8 +377,8 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     //  4. If none match, we return nullptr
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
-    auto& current_node = from;
-    auto parent = Container::as_parent(current_node.get_parent().lock());
+    auto current_node = from.shared_from_this();
+    auto parent = Container::as_parent(current_node->get_parent().lock());
     if (!parent)
     {
         mir::log_warning("Cannot handle_select the root node");
@@ -390,7 +404,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
             }
         }
 
-        current_node = *parent;
+        current_node = parent;
         parent = Container::as_parent(parent->get_parent().lock());
     } while (parent != nullptr);
 
@@ -609,7 +623,7 @@ bool TilingWindowTree::advise_fullscreen_container(LeafContainer& container)
 bool TilingWindowTree::advise_restored_container(LeafContainer& container)
 {
     auto active = active_container();
-    if (active->window() == container.window().value() && is_active_window_fullscreen)
+    if (active && active->window() == container.window().value() && is_active_window_fullscreen)
     {
         is_active_window_fullscreen = false;
         container.set_logical_area(container.get_logical_area());
@@ -756,12 +770,5 @@ Workspace* TilingWindowTree::get_workspace() const
 
 std::shared_ptr<LeafContainer> TilingWindowTree::active_container() const
 {
-    if (!state.active_window)
-        return nullptr;
-
-    auto container = window_controller.get_container(state.active_window);
-    if (!container)
-        return nullptr;
-
-    return Container::as_leaf(container);
+    return Container::as_leaf(state.active);
 }

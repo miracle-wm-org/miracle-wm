@@ -31,7 +31,7 @@ using namespace miracle;
 ContainerType miracle::container_type_from_string(std::string const& str)
 {
     if (str == "tiled")
-        return ContainerType::tiled;
+        return ContainerType::leaf;
     else if (str == "floating")
         return ContainerType::floating;
     else if (str == "shell")

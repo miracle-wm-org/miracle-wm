@@ -584,6 +584,11 @@ void ParentContainer::toggle_layout()
 {
 }
 
+void ParentContainer::set_tree(TilingWindowTree* tree_)
+{
+    tree = tree_;
+}
+
 void ParentContainer::on_focus_gained()
 {
 }
@@ -599,7 +604,7 @@ void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
 mir::geometry::Rectangle
 ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {
-    return mir::geometry::Rectangle();
+    return rectangle;
 }
 
 ContainerType ParentContainer::get_type() const
@@ -694,6 +699,11 @@ bool ParentContainer::move_by(Direction direction, int pixels)
 }
 
 bool ParentContainer::move_to(int x, int y)
+{
+    return false;
+}
+
+bool ParentContainer::is_fullscreen() const
 {
     return false;
 }
