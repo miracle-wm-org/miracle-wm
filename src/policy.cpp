@@ -50,7 +50,7 @@ Policy::Policy(
     SurfaceTracker& surface_tracker,
     mir::Server const& server) :
     window_manager_tools { tools },
-    floating_window_manager(tools, config->get_input_event_modifier()),
+    floating_window_manager(std::make_shared<miral::MinimalWindowManager>(tools, config->get_input_event_modifier())),
     external_client_launcher { external_client_launcher },
     runner { runner },
     config { config },
@@ -243,7 +243,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     auto shared_output = pending_output.lock();
     if (!shared_output)
     {
-        mir::log_warning("advise_new_window: output unavailable");
+        mir::log_warning("create_container: output unavailable");
         auto window = window_info.window();
         if (!output_list.empty())
         {
@@ -262,7 +262,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    auto container = shared_output->advise_new_window(window_info, pending_type);
+    auto container = shared_output->create_container(window_info, pending_type);
 
     container->animation_handle(animator.register_animateable());
     container->on_open();
@@ -287,7 +287,6 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
-    state.active_window = window_info.window();
     auto container = window_controller.get_container(window_info.window());
     if (!container)
     {
@@ -295,12 +294,12 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         return;
     }
 
+    state.active = container;
     container->on_focus_gained();
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
-    state.active_window = Window();
     auto container = window_controller.get_container(window_info.window());
     if (!container)
     {
@@ -308,6 +307,8 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
         return;
     }
 
+    if (container == state.active)
+        state.active = nullptr;
     container->on_focus_lost();
 }
 
@@ -326,17 +327,17 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     auto container = window_controller.get_container(window_info.window());
     if (!container)
     {
-        mir::log_error("advise_delete_window: container is not provided");
+        mir::log_error("delete_container: container is not provided");
         return;
     }
 
     if (container->get_output())
-        container->get_output()->advise_delete_window(container);
+        container->get_output()->delete_container(container);
 
     surface_tracker.remove(window_info.window());
 
-    if (state.active_window == window_info.window())
-        state.active_window = Window();
+    if (state.active == container)
+        state.active = nullptr;
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
@@ -547,21 +548,14 @@ void Policy::try_toggle_resize_mode()
         return;
     }
 
-    auto const& window = state.active_window;
-    if (!window)
-    {
-        state.mode = WindowManagerMode::normal;
-        return;
-    }
-
-    auto container = window_controller.get_container(window);
+    auto container = state.active;
     if (!container)
     {
         state.mode = WindowManagerMode::normal;
         return;
     }
 
-    if (container->get_type() != ContainerType::tiled)
+    if (container->get_type() != ContainerType::leaf)
     {
         state.mode = WindowManagerMode::normal;
         return;
@@ -580,11 +574,10 @@ bool Policy::try_request_vertical()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    container->request_vertical_layout();
+    state.active->request_vertical_layout();
     return true;
 }
 
@@ -593,11 +586,10 @@ bool Policy::try_toggle_layout()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    container->toggle_layout();
+    state.active->toggle_layout();
     return true;
 }
 
@@ -606,11 +598,10 @@ bool Policy::try_request_horizontal()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    container->request_horizontal_layout();
+    state.active->request_horizontal_layout();
     return true;
 }
 
@@ -619,11 +610,10 @@ bool Policy::try_resize(miracle::Direction direction)
     if (state.mode != WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->resize(direction);
+    return state.active->resize(direction);
 }
 
 bool Policy::try_move(miracle::Direction direction)
@@ -631,11 +621,10 @@ bool Policy::try_move(miracle::Direction direction)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->move(direction);
+    return state.active->move(direction);
 }
 
 bool Policy::try_move_by(miracle::Direction direction, int pixels)
@@ -643,11 +632,10 @@ bool Policy::try_move_by(miracle::Direction direction, int pixels)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->move_by(direction, pixels);
+    return state.active->move_by(direction, pixels);
 }
 
 bool Policy::try_move_to(int x, int y)
@@ -655,11 +643,10 @@ bool Policy::try_move_to(int x, int y)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->move_to(x, y);
+    return state.active->move_to(x, y);
 }
 
 bool Policy::try_select(miracle::Direction direction)
@@ -667,11 +654,10 @@ bool Policy::try_select(miracle::Direction direction)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->select_next(direction);
+    return state.active->select_next(direction);
 }
 
 bool Policy::try_close_window()
@@ -679,7 +665,14 @@ bool Policy::try_close_window()
     if (!active_output)
         return false;
 
-    window_controller.close(state.active_window);
+    if (!state.active)
+        return false;
+
+    auto window = state.active->window();
+    if (!window)
+        return false;
+
+    window_controller.close(window.value());
     return true;
 }
 
@@ -694,11 +687,10 @@ bool Policy::try_toggle_fullscreen()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->toggle_fullscreen();
+    return state.active->toggle_fullscreen();
 }
 
 bool Policy::select_workspace(int number)
@@ -718,21 +710,18 @@ bool Policy::move_active_to_workspace(int number)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output || !state.active_window)
+    if (!active_output || !state.active)
         return false;
 
-    auto& info = window_controller.info_for(state.active_window);
-    if (window_helpers::is_window_fullscreen(info.state()))
+    if (state.active->is_fullscreen())
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    auto window_to_move = state.active_window;
-    active_output->advise_delete_window(container);
-    state.active_window = Window();
+    auto to_move = state.active;
+    active_output->delete_container(state.active);
+    state.active = nullptr;
 
     auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);
-    screen_to_move_to->add_immediately(window_to_move, ContainerType::tiled);
-
+    screen_to_move_to->graft(to_move);
     return true;
 }
 
@@ -753,11 +742,10 @@ bool Policy::toggle_pinned_to_workspace()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->pinned(!container->pinned());
+    return state.active->pinned(!state.active->pinned());
 }
 
 bool Policy::set_is_pinned(bool pinned)
@@ -765,9 +753,8 @@ bool Policy::set_is_pinned(bool pinned)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!state.active_window)
+    if (!state.active)
         return false;
 
-    auto container = window_controller.get_container(state.active_window);
-    return container->pinned(pinned);
+    return state.active->pinned(pinned);
 }

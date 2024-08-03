@@ -225,7 +225,7 @@ Renderer::DrawData Renderer::get_draw_data(mir::graphics::Renderable const& rend
             auto tools = WindowToolsAccessor::get_instance().get_tools();
             auto& info = tools.info_for(window);
             auto userdata = static_pointer_cast<Container>(info.userdata());
-            data.needs_outline = (userdata->get_type() == ContainerType::tiled || userdata->get_type() == ContainerType::floating)
+            data.needs_outline = (userdata->get_type() == ContainerType::leaf || userdata->get_type() == ContainerType::floating)
                 && !info.parent();
             data.workspace_transform = userdata->get_output_transform() * userdata->get_workspace_transform();
             data.is_focused = userdata->is_focused();

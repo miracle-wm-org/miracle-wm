@@ -129,7 +129,7 @@ struct BorderConfig
 struct WorkspaceConfig
 {
     int num = -1;
-    ContainerType layout = ContainerType::tiled;
+    ContainerType layout = ContainerType::leaf;
 };
 
 class MiracleConfig
