@@ -30,13 +30,15 @@ using namespace miracle;
 
 FloatingContainer::FloatingContainer(
     miral::Window const& window,
-    miral::MinimalWindowManager& wm,
+    std::shared_ptr<miral::MinimalWindowManager> const& wm,
     WindowController& window_controller,
-    Workspace* workspace) :
+    Workspace* workspace,
+    CompositorState const& state) :
     window_ { window },
     wm { wm },
     window_controller { window_controller },
-    workspace_ { workspace }
+    workspace_ { workspace },
+    state { state }
 {
 }
 
@@ -82,31 +84,31 @@ size_t FloatingContainer::get_min_width() const
 void FloatingContainer::handle_ready()
 {
     auto& info = window_controller.info_for(window_);
-    wm.handle_window_ready(info);
+    wm->handle_window_ready(info);
 }
 
 void FloatingContainer::handle_modify(miral::WindowSpecification const& modifications)
 {
     auto& info = window_controller.info_for(window_);
-    wm.handle_modify_window(info, modifications);
+    wm->handle_modify_window(info, modifications);
 }
 
 void FloatingContainer::handle_request_move(MirInputEvent const* input_event)
 {
-    wm.handle_request_move(
+    wm->handle_request_move(
         window_controller.info_for(window_), input_event);
 }
 
 void FloatingContainer::handle_request_resize(
     MirInputEvent const* input_event, MirResizeEdge edge)
 {
-    wm.handle_request_resize(
+    wm->handle_request_resize(
         window_controller.info_for(window_), input_event, edge);
 }
 
 void FloatingContainer::handle_raise()
 {
-    wm.handle_raise_window(window_controller.info_for(window_));
+    wm->handle_raise_window(window_controller.info_for(window_));
 }
 
 void FloatingContainer::on_open()
@@ -116,23 +118,26 @@ void FloatingContainer::on_open()
 
 void FloatingContainer::on_focus_gained()
 {
-    wm.advise_focus_gained(window_controller.info_for(window_));
+    if (get_output()->get_active_workspace()->get_workspace() != workspace_->get_workspace())
+        return;
+
+    wm->advise_focus_gained(window_controller.info_for(window_));
 }
 
 void FloatingContainer::on_focus_lost()
 {
-    wm.advise_focus_lost(window_controller.info_for(window_));
+    wm->advise_focus_lost(window_controller.info_for(window_));
 }
 
 void FloatingContainer::on_move_to(geom::Point const& top_left)
 {
-    wm.advise_move_to(window_controller.info_for(window_), top_left);
+    wm->advise_move_to(window_controller.info_for(window_), top_left);
 }
 
 mir::geometry::Rectangle FloatingContainer::confirm_placement(
     MirWindowState state, mir::geometry::Rectangle const& placement)
 {
-    return wm.confirm_placement_on_display(
+    return wm->confirm_placement_on_display(
         window_controller.info_for(window_),
         state,
         placement);
@@ -193,6 +198,11 @@ Workspace* FloatingContainer::get_workspace() const
     return workspace_;
 }
 
+void FloatingContainer::set_workspace(Workspace* workspace)
+{
+    workspace_ = workspace;
+}
+
 Output* FloatingContainer::get_output() const
 {
     return workspace_->get_output();
@@ -220,7 +230,12 @@ void FloatingContainer::animation_handle(uint32_t handle)
 
 bool FloatingContainer::is_focused() const
 {
-    return get_output()->get_state().active_window == window_;
+    return state.active.get() == this;
+}
+
+bool FloatingContainer::is_fullscreen() const
+{
+    return window_controller.is_fullscreen(window_);
 }
 
 ContainerType FloatingContainer::get_type() const

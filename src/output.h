@@ -44,7 +44,7 @@ public:
         WorkspaceManager& workspace_manager,
         geom::Rectangle const& area,
         miral::WindowManagerTools const& tools,
-        miral::MinimalWindowManager& floating_window_manager,
+        std::shared_ptr<miral::MinimalWindowManager> const& floating_window_manager,
         CompositorState& state,
         std::shared_ptr<MiracleConfig> const& options,
         WindowController&,
@@ -53,8 +53,8 @@ public:
 
     bool handle_pointer_event(MirPointerEvent const* event);
     ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
-    [[nodiscard]] std::shared_ptr<Container> advise_new_window(miral::WindowInfo const& window_info, ContainerType type) const;
-    void advise_delete_window(std::shared_ptr<miracle::Container> const& container);
+    [[nodiscard]] std::shared_ptr<Container> create_container(miral::WindowInfo const& window_info, ContainerType type) const;
+    void delete_container(std::shared_ptr<miracle::Container> const &container);
     [[nodiscard]] bool select_window_from_point(int x, int y) const;
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
@@ -70,8 +70,12 @@ public:
     /// Immediately requests that the provided window be added to the output
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'place_new_window' followed
-    /// by 'advise_new_window'.
+    /// by 'create_container'.
     void add_immediately(miral::Window& window, ContainerType hint = ContainerType::none);
+
+    /// Takes an existing [Container] object and places it in an appropriate position
+    /// on the active [Workspace].
+    void graft(std::shared_ptr<Container> const& container);
     void set_is_active(bool new_is_active) { is_active_ = new_is_active; }
     void set_transform(glm::mat4 const& in);
     void set_position(glm::vec2 const&);
@@ -86,7 +90,6 @@ public:
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const { return application_zone_list; }
     [[nodiscard]] miral::Output const& get_output() { return output; }
     [[nodiscard]] bool is_active() const { return is_active_; }
-    [[nodiscard]] CompositorState const& get_state() const { return state; }
     [[nodiscard]] glm::mat4 get_transform() const;
     /// Gets the relative position of the current rectangle (e.g. the active
     /// rectangle with be at position (0, 0))
@@ -96,7 +99,7 @@ private:
     miral::Output output;
     WorkspaceManager& workspace_manager;
     miral::WindowManagerTools tools;
-    miral::MinimalWindowManager& floating_window_manager;
+    std::shared_ptr<miral::MinimalWindowManager> floating_window_manager;
     CompositorState& state;
     geom::Rectangle area;
     std::shared_ptr<MiracleConfig> config;

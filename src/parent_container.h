@@ -31,6 +31,7 @@ namespace miracle
 class LeafContainer;
 class MiracleConfig;
 class TilingWindowTree;
+class CompositorState;
 
 /// A parent container defines the layout of containers beneath it.
 class ParentContainer : public Container
@@ -40,7 +41,8 @@ public:
         geom::Rectangle,
         std::shared_ptr<MiracleConfig> const&,
         TilingWindowTree* tree,
-        std::shared_ptr<ParentContainer> const& parent);
+        std::shared_ptr<ParentContainer> const& parent,
+        CompositorState const& state);
     geom::Rectangle get_logical_area() const override;
     geom::Rectangle get_visible_area() const override;
     size_t num_nodes() const;
@@ -76,6 +78,7 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout() override;
+    void set_tree(TilingWindowTree*);
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(mir::geometry::Point const& top_left) override;
@@ -102,12 +105,16 @@ public:
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
 
+    bool is_fullscreen() const override;
+
 private:
     WindowController& node_interface;
     geom::Rectangle logical_area;
     TilingWindowTree* tree;
     std::shared_ptr<MiracleConfig> config;
     std::weak_ptr<ParentContainer> parent;
+    CompositorState const& state;
+
     NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
     std::vector<std::shared_ptr<Container>> sub_nodes;
     std::shared_ptr<LeafContainer> pending_node;

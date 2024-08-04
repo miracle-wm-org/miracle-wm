@@ -43,7 +43,7 @@ class Output;
 enum class ContainerType
 {
     none,
-    tiled,
+    leaf,
     floating,
     shell,
     parent
@@ -104,6 +104,7 @@ public:
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;
+    virtual bool is_fullscreen() const = 0;
     virtual std::optional<miral::Window> window() const = 0;
     virtual bool select_next(Direction) = 0;
     virtual bool pinned() const = 0;

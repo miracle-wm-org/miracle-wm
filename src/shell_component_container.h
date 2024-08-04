@@ -77,6 +77,8 @@ public:
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
 
+    bool is_fullscreen() const override;
+
 private:
     miral::Window window_;
     WindowController& window_controller;

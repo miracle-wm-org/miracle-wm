@@ -130,7 +130,7 @@ private:
     ContainerType pending_type;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
-    miral::MinimalWindowManager floating_window_manager;
+    std::shared_ptr<miral::MinimalWindowManager> floating_window_manager;
     AutoRestartingLauncher& external_client_launcher;
     miral::MirRunner& runner;
     std::shared_ptr<MiracleConfig> config;

@@ -68,6 +68,9 @@ public:
         miral::WindowInfo const&,
         std::shared_ptr<ParentContainer> const& container);
 
+    void graft(std::shared_ptr<ParentContainer> const&);
+    void graft(std::shared_ptr<LeafContainer> const&);
+
     /// Try to resize the current active window in the provided direction
     bool resize_container(Direction direction, Container&);
 

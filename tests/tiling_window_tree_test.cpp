@@ -125,7 +125,7 @@ public:
         auto leaf = tree.confirm_window(info, nullptr);
         pairs.push_back({ window, leaf });
 
-        state.active_window = window;
+        state.active = leaf;
         tree.advise_focus_gained(*leaf);
         return leaf;
     }

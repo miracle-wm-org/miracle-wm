@@ -166,6 +166,28 @@ json mode_to_json(WindowManagerMode mode)
     }
     }
 }
+
+json mode_event_to_json(WindowManagerMode mode)
+{
+    switch (mode)
+    {
+        case WindowManagerMode::normal:
+            return {
+            { "change", "default" },
+            { "pango_markup", true }
+            };
+        case WindowManagerMode::resizing:
+            return {
+            { "change", "resize" },
+            { "pango_markup", true }
+            };
+        default:
+        {
+            mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
+            return {};
+        }
+    }
+}
 }
 
 Ipc::Ipc(miral::MirRunner& runner,
@@ -382,7 +404,7 @@ void Ipc::on_focused(
 
 void Ipc::on_changed(WindowManagerMode mode)
 {
-    auto response = to_string(mode_to_json(mode));
+    auto response = to_string(mode_event_to_json(mode));
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IPC_EVENT_MODE)) == 0)
@@ -491,40 +513,34 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     case IPC_SUBSCRIBE:
     {
         json j = json::parse(buf);
+        bool success = true;
         for (auto const& i : j)
         {
             std::string event_type = i.template get<std::string>();
             mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
             if (event_type == "workspace")
-            {
                 client.subscribed_events |= event_mask(IPC_EVENT_WORKSPACE);
-                const std::string msg = "{\"success\": true}";
-                send_reply(client, payload_type, msg);
-            }
             else if (event_type == "window")
-            {
                 client.subscribed_events |= event_mask(IPC_EVENT_WINDOW);
-                const std::string msg = "{\"success\": true}";
-                send_reply(client, payload_type, msg);
-            }
             else if (event_type == "input")
-            {
                 client.subscribed_events |= event_mask(IPC_EVENT_INPUT);
-                const std::string msg = "{\"success\": true}";
-                send_reply(client, payload_type, msg);
-            }
             else if (event_type == "mode")
-            {
                 client.subscribed_events |= event_mask(IPC_EVENT_MODE);
-                const std::string msg = "{\"success\": true}";
-                send_reply(client, payload_type, msg);
-            }
             else
             {
                 mir::log_error("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
                 disconnect(client);
+                success = false;
+                break;
             }
         }
+
+        if (success)
+        {
+            const std::string msg = "{\"success\": true}";
+            send_reply(client, payload_type, msg);
+        }
+
         break;
     }
     case IPC_GET_TREE:

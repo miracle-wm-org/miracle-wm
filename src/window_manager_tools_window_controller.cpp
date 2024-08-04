@@ -194,7 +194,7 @@ void WindowManagerToolsWindowController::on_animation(
         { spec.top_left().value().x.as_int(), spec.top_left().value().y.as_int() },
         { scale.x, scale.y });
 
-    if (container->get_type() == ContainerType::tiled)
+    if (container->get_type() == ContainerType::leaf)
         clip(window, new_rectangle);
     else
         noclip(window);

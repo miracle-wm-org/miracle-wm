@@ -198,7 +198,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!container)
             return;
 
-        if (container->get_type() != ContainerType::tiled)
+        if (container->get_type() != ContainerType::leaf)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
@@ -224,7 +224,7 @@ void I3CommandExecutor::process_focus(I3Command const& command, I3ScopedCommandL
         if (!container)
             return;
 
-        if (container->get_type() != ContainerType::tiled)
+        if (container->get_type() != ContainerType::leaf)
         {
             mir::log_warning("Cannot focus prev when a tiling window is not selected");
             return;
@@ -332,10 +332,10 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            auto active_window = policy.get_state().active_window;
+            auto active = policy.get_state().active;
             auto area = active_output->get_area();
-            float x = (float)area.size.width.as_int() / 2.f - (float)active_window.size().width.as_int() / 2.f;
-            float y = (float)area.size.height.as_int() / 2.f - (float)active_window.size().height.as_int() / 2.f;
+            float x = (float)area.size.width.as_int() / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
+            float y = (float)area.size.height.as_int() / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
             policy.try_move_to((int)x, (int)y);
         }
         else if (arg1 == "mouse")
@@ -392,9 +392,9 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
                 y = end_y;
         }
 
-        auto active_window = policy.get_state().active_window;
-        float x_pos = x / 2.f - (float)active_window.size().width.as_int() / 2.f;
-        float y_pos = y / 2.f - (float)active_window.size().height.as_int() / 2.f;
+        auto active = policy.get_state().active;
+        float x_pos = x / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
+        float y_pos = y / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
         policy.try_move_to((int)x_pos, (int)y_pos);
         return;
     }
