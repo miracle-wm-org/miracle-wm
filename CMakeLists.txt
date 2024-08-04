@@ -8,17 +8,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(ENV{PKG_CONFIG_PATH} "/usr/local/lib/pkgconfig/")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+set(MIR_LIBRARIES_PKGCONFIG_DIRECTORY "" CACHE STRING "Search for Mir libraries pc files in this directory")
 option(SNAP_BUILD "Building as a snap?" OFF)
 
-set(MIR_LIBRARIES_PKGCONFIG_DIRECTORY "" CACHE STRING "Search for Mir libraries pc files in this directory")
-if(MIR_LIBRARIES_PKGCONFIG_DIRECTORY)
-    set(ENV{PKG_CONFIG_PATH} "${MIR_LIBRARIES_PKGCONFIG_DIRECTORY}:/usr/local/lib/pkgconfig/")
-endif()
+set(ENV{PKG_CONFIG_PATH} "${MIR_LIBRARIES_PKGCONFIG_DIRECTORY}:/usr/local/lib/pkgconfig/")
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
