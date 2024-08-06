@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "floating_container"
 
-#include "floating_container.h"
+#include "floating_window_container.h"
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "output.h"
@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-FloatingContainer::FloatingContainer(
+FloatingWindowContainer::FloatingWindowContainer(
     miral::Window const& window,
     std::shared_ptr<miral::MinimalWindowManager> const& wm,
     WindowController& window_controller,
@@ -42,21 +42,21 @@ FloatingContainer::FloatingContainer(
 {
 }
 
-void FloatingContainer::commit_changes()
+void FloatingWindowContainer::commit_changes()
 {
 }
 
-mir::geometry::Rectangle FloatingContainer::get_logical_area() const
+mir::geometry::Rectangle FloatingWindowContainer::get_logical_area() const
 {
     return get_visible_area();
 }
 
-void FloatingContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
+void FloatingWindowContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
 {
     window_controller.set_rectangle(window_, get_visible_area(), rectangle);
 }
 
-mir::geometry::Rectangle FloatingContainer::get_visible_area() const
+mir::geometry::Rectangle FloatingWindowContainer::get_visible_area() const
 {
     return {
         window_.top_left(),
@@ -64,59 +64,59 @@ mir::geometry::Rectangle FloatingContainer::get_visible_area() const
     };
 }
 
-void FloatingContainer::constrain() { }
+void FloatingWindowContainer::constrain() { }
 
-void FloatingContainer::set_parent(std::shared_ptr<ParentContainer> const& parent)
+void FloatingWindowContainer::set_parent(std::shared_ptr<ParentContainer> const& parent)
 {
     throw std::logic_error("FloatingContainer cannot have a parent");
 }
 
-size_t FloatingContainer::get_min_height() const
+size_t FloatingWindowContainer::get_min_height() const
 {
     return 1;
 }
 
-size_t FloatingContainer::get_min_width() const
+size_t FloatingWindowContainer::get_min_width() const
 {
     return 1;
 }
 
-void FloatingContainer::handle_ready()
+void FloatingWindowContainer::handle_ready()
 {
     auto& info = window_controller.info_for(window_);
     wm->handle_window_ready(info);
 }
 
-void FloatingContainer::handle_modify(miral::WindowSpecification const& modifications)
+void FloatingWindowContainer::handle_modify(miral::WindowSpecification const& modifications)
 {
     auto& info = window_controller.info_for(window_);
     wm->handle_modify_window(info, modifications);
 }
 
-void FloatingContainer::handle_request_move(MirInputEvent const* input_event)
+void FloatingWindowContainer::handle_request_move(MirInputEvent const* input_event)
 {
     wm->handle_request_move(
         window_controller.info_for(window_), input_event);
 }
 
-void FloatingContainer::handle_request_resize(
+void FloatingWindowContainer::handle_request_resize(
     MirInputEvent const* input_event, MirResizeEdge edge)
 {
     wm->handle_request_resize(
         window_controller.info_for(window_), input_event, edge);
 }
 
-void FloatingContainer::handle_raise()
+void FloatingWindowContainer::handle_raise()
 {
     wm->handle_raise_window(window_controller.info_for(window_));
 }
 
-void FloatingContainer::on_open()
+void FloatingWindowContainer::on_open()
 {
     window_controller.open(window_);
 }
 
-void FloatingContainer::on_focus_gained()
+void FloatingWindowContainer::on_focus_gained()
 {
     if (get_output()->get_active_workspace()->get_workspace() != workspace_->get_workspace())
         return;
@@ -124,17 +124,17 @@ void FloatingContainer::on_focus_gained()
     wm->advise_focus_gained(window_controller.info_for(window_));
 }
 
-void FloatingContainer::on_focus_lost()
+void FloatingWindowContainer::on_focus_lost()
 {
     wm->advise_focus_lost(window_controller.info_for(window_));
 }
 
-void FloatingContainer::on_move_to(geom::Point const& top_left)
+void FloatingWindowContainer::on_move_to(geom::Point const& top_left)
 {
     wm->advise_move_to(window_controller.info_for(window_), top_left);
 }
 
-mir::geometry::Rectangle FloatingContainer::confirm_placement(
+mir::geometry::Rectangle FloatingWindowContainer::confirm_placement(
     MirWindowState state, mir::geometry::Rectangle const& placement)
 {
     return wm->confirm_placement_on_display(
@@ -143,107 +143,107 @@ mir::geometry::Rectangle FloatingContainer::confirm_placement(
         placement);
 }
 
-bool FloatingContainer::pinned() const
+bool FloatingWindowContainer::pinned() const
 {
     return is_pinned;
 }
 
-bool FloatingContainer::pinned(bool in)
+bool FloatingWindowContainer::pinned(bool in)
 {
     is_pinned = in;
     return true;
 }
 
-std::optional<miral::Window> FloatingContainer::window() const
+std::optional<miral::Window> FloatingWindowContainer::window() const
 {
     return window_;
 }
 
-bool FloatingContainer::resize(Direction direction)
+bool FloatingWindowContainer::resize(Direction direction)
 {
     return false;
 }
 
-bool FloatingContainer::toggle_fullscreen()
+bool FloatingWindowContainer::toggle_fullscreen()
 {
     return false;
 }
 
-void FloatingContainer::request_horizontal_layout()
+void FloatingWindowContainer::request_horizontal_layout()
 {
 }
 
-void FloatingContainer::request_vertical_layout()
+void FloatingWindowContainer::request_vertical_layout()
 {
 }
 
-void FloatingContainer::toggle_layout()
+void FloatingWindowContainer::toggle_layout()
 {
 }
 
-void FloatingContainer::restore_state(MirWindowState state)
+void FloatingWindowContainer::restore_state(MirWindowState state)
 {
     restore_state_ = state;
 }
 
-std::optional<MirWindowState> FloatingContainer::restore_state()
+std::optional<MirWindowState> FloatingWindowContainer::restore_state()
 {
     auto state = restore_state_;
     restore_state_.reset();
     return state;
 }
 
-Workspace* FloatingContainer::get_workspace() const
+Workspace* FloatingWindowContainer::get_workspace() const
 {
     return workspace_;
 }
 
-void FloatingContainer::set_workspace(Workspace* workspace)
+void FloatingWindowContainer::set_workspace(Workspace* workspace)
 {
     workspace_ = workspace;
 }
 
-Output* FloatingContainer::get_output() const
+Output* FloatingWindowContainer::get_output() const
 {
     return workspace_->get_output();
 }
 
-glm::mat4 FloatingContainer::get_transform() const
+glm::mat4 FloatingWindowContainer::get_transform() const
 {
     return transform;
 }
 
-void FloatingContainer::set_transform(glm::mat4 transform_)
+void FloatingWindowContainer::set_transform(glm::mat4 transform_)
 {
     transform = transform_;
 }
 
-uint32_t FloatingContainer::animation_handle() const
+uint32_t FloatingWindowContainer::animation_handle() const
 {
     return animation_handle_;
 }
 
-void FloatingContainer::animation_handle(uint32_t handle)
+void FloatingWindowContainer::animation_handle(uint32_t handle)
 {
     animation_handle_ = handle;
 }
 
-bool FloatingContainer::is_focused() const
+bool FloatingWindowContainer::is_focused() const
 {
     return state.active.get() == this;
 }
 
-bool FloatingContainer::is_fullscreen() const
+bool FloatingWindowContainer::is_fullscreen() const
 {
     return window_controller.is_fullscreen(window_);
 }
 
-ContainerType FloatingContainer::get_type() const
+ContainerType FloatingWindowContainer::get_type() const
 {
-    return ContainerType::floating;
+    return ContainerType::floating_window;
 }
 
-glm::mat4 FloatingContainer::get_workspace_transform() const
+glm::mat4 FloatingWindowContainer::get_workspace_transform() const
 {
     if (is_pinned)
         return glm::mat4(1.f);
@@ -255,7 +255,7 @@ glm::mat4 FloatingContainer::get_workspace_transform() const
         glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
 }
 
-glm::mat4 FloatingContainer::get_output_transform() const
+glm::mat4 FloatingWindowContainer::get_output_transform() const
 {
     if (is_pinned)
         return glm::mat4(1.f);
@@ -263,17 +263,17 @@ glm::mat4 FloatingContainer::get_output_transform() const
     return get_output()->get_transform();
 }
 
-bool FloatingContainer::select_next(Direction)
+bool FloatingWindowContainer::select_next(Direction)
 {
     return false;
 }
 
-bool FloatingContainer::move(Direction direction)
+bool FloatingWindowContainer::move(Direction direction)
 {
     return move_by(direction, 10);
 }
 
-bool FloatingContainer::move_by(Direction direction, int pixels)
+bool FloatingWindowContainer::move_by(Direction direction, int pixels)
 {
     auto& info = window_controller.info_for(window_);
     auto prev_pos = window_.top_left();
@@ -309,7 +309,7 @@ bool FloatingContainer::move_by(Direction direction, int pixels)
     return true;
 }
 
-bool FloatingContainer::move_to(int x, int y)
+bool FloatingWindowContainer::move_to(int x, int y)
 {
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
@@ -317,7 +317,7 @@ bool FloatingContainer::move_to(int x, int y)
     return true;
 }
 
-std::weak_ptr<ParentContainer> FloatingContainer::get_parent() const
+std::weak_ptr<ParentContainer> FloatingWindowContainer::get_parent() const
 {
     return std::weak_ptr<ParentContainer>();
 }

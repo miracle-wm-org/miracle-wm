@@ -811,7 +811,7 @@ void FilesystemConfiguration::_load()
                 {
                     auto num = workspace["number"].as<int>();
                     auto type = container_type_from_string(workspace["layout"].as<std::string>());
-                    if (type != ContainerType::leaf && type != ContainerType::floating)
+                    if (type != ContainerType::leaf && type != ContainerType::floating_window)
                     {
                         mir::log_error("layout should be 'tiled' or 'floating': L%d:%d", workspace["layout"].Mark().line, workspace["layout"].Mark().column);
                         continue;
@@ -942,6 +942,11 @@ void FilesystemConfiguration::try_process_change()
     {
         on_change.listener(*this);
     }
+}
+
+uint FilesystemConfiguration::get_primary_modifier() const
+{
+    return primary_modifier;
 }
 
 uint FilesystemConfiguration::parse_modifier(std::string const& stringified_action_key)

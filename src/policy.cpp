@@ -20,9 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "miracle_config.h"
 #include "shell_component_container.h"
-#include "window_helpers.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
+#include "container_group_container.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -82,6 +82,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
+    state.modifiers = modifiers;
 
     auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
     if (custom_key_command != nullptr)
@@ -197,6 +198,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
+    auto action = miral::toolkit::mir_pointer_event_action(event);
     state.cursor_position = { x, y };
 
     // Select the output first
@@ -217,7 +219,27 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     }
 
     if (active_output && state.mode != WindowManagerMode::resizing)
+    {
+        if (action == mir_pointer_action_button_down)
+        {
+            if (state.modifiers == config->get_primary_modifier())
+            {
+                // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
+                if (state.mode != WindowManagerMode::selecting)
+                {
+                    state.mode = WindowManagerMode::selecting;
+                    group_selection = std::make_shared<ContainerGroupContainer>(state);
+                    state.active = group_selection;
+                }
+            }
+            else if (state.mode == WindowManagerMode::selecting)
+            {
+                // TODO: Get the selected Window from the click. 
+            }
+        }
+
         return active_output->handle_pointer_event(event);
+    }
 
     return false;
 }

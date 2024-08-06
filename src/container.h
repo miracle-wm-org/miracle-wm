@@ -36,7 +36,7 @@ class MiracleConfig;
 class TilingWindowTree;
 class LeafContainer;
 class ParentContainer;
-class FloatingContainer;
+class FloatingWindowContainer;
 class Workspace;
 class Output;
 
@@ -44,9 +44,10 @@ enum class ContainerType
 {
     none,
     leaf,
-    floating,
+    floating_window,
     shell,
-    parent
+    parent,
+    group
 };
 
 ContainerType container_type_from_string(std::string const& str);
@@ -118,7 +119,7 @@ public:
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
-    static std::shared_ptr<FloatingContainer> as_floating(std::shared_ptr<Container> const&);
+    static std::shared_ptr<FloatingWindowContainer> as_floating(std::shared_ptr<Container> const&);
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;

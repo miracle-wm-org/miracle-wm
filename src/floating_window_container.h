@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_FLOATING_CONTAINER_H
-#define MIRACLE_WM_FLOATING_CONTAINER_H
+#ifndef MIRACLE_WM_FLOATING_WINDOW_CONTAINER_H
+#define MIRACLE_WM_FLOATING_WINDOW_CONTAINER_H
 
 #include "container.h"
 #include <miral/minimal_window_manager.h>
@@ -28,10 +28,10 @@ class WindowController;
 class CompositorState;
 
 /// Contains a single floating window
-class FloatingContainer : public Container
+class FloatingWindowContainer : public Container
 {
 public:
-    FloatingContainer(
+    FloatingWindowContainer(
         miral::Window const&,
         std::shared_ptr<miral::MinimalWindowManager> const& wm,
         WindowController& window_controller,
@@ -100,4 +100,4 @@ private:
 
 } // miracle
 
-#endif // MIRACLE_WM_FLOATING_CONTAINER_H
+#endif // MIRACLE_WM_FLOATING_WINDOW_CONTAINER_H

@@ -29,17 +29,22 @@ enum class WindowManagerMode
 {
     normal = 0,
 
-    /// While resizing, only the window that was selected during
+    /// While [resizing], only the window that was selected during
     /// resize can be selected. If that window closes, resize
     /// is completed.
-    resizing
+    resizing,
+
+    /// While [selecting], only [Container]s selected with the multi-select
+    /// keybind/mousebind can be selected or deselected.
+    selecting
 };
 
 struct CompositorState
 {
-    mir::geometry::Point cursor_position;
     WindowManagerMode mode = WindowManagerMode::normal;
     std::shared_ptr<Container> active;
+    mir::geometry::Point cursor_position;
+    uint32_t modifiers = 0;
 };
 }
 

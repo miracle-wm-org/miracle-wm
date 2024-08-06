@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_helpers.h"
 #include "parent_container.h"
 
-#include "floating_container.h"
+#include "floating_window_container.h"
 #include "shell_component_container.h"
 #include <mir/log.h>
 #include <mir/scene/surface.h>
@@ -119,11 +119,11 @@ ContainerType Workspace::allocate_position(
         requested_specification = tree->place_new_window(requested_specification, get_layout_container());
         return ContainerType::leaf;
     }
-    case ContainerType::floating:
+    case ContainerType::floating_window:
     {
         requested_specification = floating_window_manager->place_new_window(app_info, requested_specification);
         requested_specification.server_side_decorated() = false;
-        return ContainerType::floating;
+        return ContainerType::floating_window;
     }
     default:
         return layout;
@@ -141,7 +141,7 @@ std::shared_ptr<Container> Workspace::create_container(
         container = tree->confirm_window(window_info, get_layout_container());
         break;
     }
-    case ContainerType::floating:
+    case ContainerType::floating_window:
     {
         floating_window_manager->advise_new_window(window_info);
         container = add_floating_window(window_info.window());
@@ -196,7 +196,7 @@ void Workspace::delete_container(std::shared_ptr<Container> const &container)
         tree->advise_delete_window(container);
         break;
     }
-    case ContainerType::floating:
+    case ContainerType::floating_window:
     {
         auto floating = Container::as_floating(container);
         floating_window_manager->advise_delete_window(window_controller.info_for(floating->window().value()));
@@ -324,10 +324,10 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
             spec);
         tools.modify_window(*window, new_spec);
 
-        new_type = ContainerType::floating;
+        new_type = ContainerType::floating_window;
         break;
     }
-    case ContainerType::floating:
+    case ContainerType::floating_window:
     {
         // First, remove the floating window
         delete_container(window_controller.get_container(*window));
@@ -409,9 +409,9 @@ bool Workspace::has_floating_window(std::shared_ptr<Container> const& container)
     return false;
 }
 
-std::shared_ptr<FloatingContainer> Workspace::add_floating_window(miral::Window const& window)
+std::shared_ptr<FloatingWindowContainer> Workspace::add_floating_window(miral::Window const& window)
 {
-    auto floating = std::make_shared<FloatingContainer>(
+    auto floating = std::make_shared<FloatingWindowContainer>(
         window, floating_window_manager, window_controller, this, state);
     floating_windows.push_back(floating);
     return floating;
@@ -446,7 +446,7 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 {
     switch (container->get_type())
     {
-        case ContainerType::floating:
+        case ContainerType::floating_window:
         {
             auto floating = Container::as_floating(container);
             floating->set_workspace(this);

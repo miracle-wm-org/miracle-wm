@@ -48,6 +48,7 @@ namespace miracle
 {
 
 class Container;
+class ContainerGroupContainer;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -143,6 +144,7 @@ private:
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;
     CompositorState state;
+    std::shared_ptr<ContainerGroupContainer> group_selection;
 };
 }
 

@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "animator.h"
 #include "compositor_state.h"
-#include "floating_container.h"
+#include "floating_window_container.h"
 #include "leaf_container.h"
 #include "vector_helpers.h"
 #include "window_helpers.h"
@@ -76,7 +76,10 @@ bool Output::handle_pointer_event(const MirPointerEvent* event)
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
     if (get_active_workspace_num() < 0)
+    {
+        mir::log_error("Output::handle_pointer_event: unexpectedly trying to handle a pointer event when we lack workspaces");
         return false;
+    }
 
     if (select_window_from_point(static_cast<int>(x), static_cast<int>(y)))
         return true;
