@@ -51,11 +51,10 @@ public:
         Animator&);
     ~Output() = default;
 
-    bool handle_pointer_event(MirPointerEvent const* event);
+    std::shared_ptr<Container> intersect(MirPointerEvent const* event);
     ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
     [[nodiscard]] std::shared_ptr<Container> create_container(miral::WindowInfo const& window_info, ContainerType type) const;
     void delete_container(std::shared_ptr<miracle::Container> const &container);
-    [[nodiscard]] bool select_window_from_point(int x, int y) const;
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);
@@ -110,7 +109,6 @@ private:
     std::vector<miral::Zone> application_zone_list;
     bool is_active_ = false;
     AnimationHandle handle;
-    bool has_clicked_floating_window = false;
 
     /// The position of the output for scrolling across workspaces
     glm::vec2 position_offset = glm::vec2(0.f);

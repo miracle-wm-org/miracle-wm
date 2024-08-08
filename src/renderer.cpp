@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
+#include "compositor_state.h"
 
 #include "container.h"
 #include "window_tools_accessor.h"
@@ -137,7 +138,8 @@ Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
     std::shared_ptr<MiracleConfig> const& config,
-    SurfaceTracker& surface_tracker) :
+    SurfaceTracker& surface_tracker,
+    CompositorState const& compositor_state) :
     output_surface { make_output_current(std::move(output)) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
@@ -145,7 +147,8 @@ Renderer::Renderer(
     screen_to_gl_coords(1),
     gl_interface { std::move(gl_interface) },
     config { config },
-    surface_tracker { surface_tracker }
+    surface_tracker { surface_tracker },
+    compositor_state { compositor_state }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);

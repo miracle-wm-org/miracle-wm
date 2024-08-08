@@ -266,32 +266,18 @@ void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> 
     });
 }
 
-bool Workspace::select_window_from_point(int x, int y)
+std::shared_ptr<Container> Workspace::select_from_point(int x, int y)
 {
-    if (tree->has_fullscreen_window())
-        return false;
-
     for (auto const& floating : floating_windows)
     {
         auto window = floating->window().value();
         geom::Rectangle window_area(window.top_left(), window.size());
-        if (floating == state.active && window_area.contains(geom::Point(x, y)))
-            return false;
-        else if (window_area.contains(geom::Point(x, y)))
-        {
-            window_controller.select_active_window(window);
-            return true;
-        }
+
+        if (window_area.contains(geom::Point(x, y)))
+            return floating;
     }
 
-    auto node = tree->select_window_from_point(x, y);
-    if (node && node != state.active)
-    {
-        window_controller.select_active_window(node->window().value());
-        return true;
-    }
-
-    return false;
+    return tree->select_window_from_point(x, y);
 }
 
 void Workspace::toggle_floating(std::shared_ptr<Container> const& container)

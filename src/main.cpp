@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "renderer.h"
 #include "surface_tracker.h"
 #include "version.h"
+#include "compositor_state.h"
 
 #include <libnotify/notify.h>
 #include <mir/log.h>
@@ -65,6 +66,7 @@ int main(int argc, char const* argv[])
 {
     PRINT_OPENING_MESSAGE(MIRACLE_VERSION_STRING);
     MirRunner runner { argc, argv };
+    miracle::CompositorState compositor_state;
 
     std::function<void()> shutdown_hook { [] { } };
     runner.add_stop_callback([&]
@@ -85,7 +87,7 @@ int main(int argc, char const* argv[])
     {
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
-                "tiling", auto_restarting_launcher, runner, config, surface_tracker, server)
+                "tiling", auto_restarting_launcher, runner, config, surface_tracker, server, compositor_state)
         };
         (*options)(server);
     });
@@ -130,7 +132,7 @@ int main(int argc, char const* argv[])
     }),
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> x, std::shared_ptr<mir::graphics::GLRenderingProvider> y)
     {
-        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config, surface_tracker);
+        return std::make_unique<miracle::Renderer>(std::move(y), std::move(x), config, surface_tracker, compositor_state);
     }),
             miroil::OpenGLContext(new miracle::GLConfig()) });
 }

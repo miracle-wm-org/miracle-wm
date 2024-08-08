@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class Container;
+class Output;
 
 enum class WindowManagerMode
 {
@@ -42,9 +43,11 @@ enum class WindowManagerMode
 struct CompositorState
 {
     WindowManagerMode mode = WindowManagerMode::normal;
+    std::shared_ptr<Output> active_output;
     std::shared_ptr<Container> active;
     mir::geometry::Point cursor_position;
     uint32_t modifiers = 0;
+    bool has_clicked_floating_window = false;
 };
 }
 

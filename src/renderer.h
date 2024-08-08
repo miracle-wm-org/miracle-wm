@@ -47,6 +47,7 @@ namespace graphics::gl
 namespace miracle
 {
 class MiracleConfig;
+class CompositorState;
 
 class Renderer : public mir::renderer::Renderer
 {
@@ -54,7 +55,8 @@ public:
     Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
         std::shared_ptr<MiracleConfig> const& config,
-        SurfaceTracker& surface_tracker);
+        SurfaceTracker& surface_tracker,
+        CompositorState const& compositor_state);
     ~Renderer() override = default;
 
     // These are called with a valid GL context:
@@ -117,6 +119,7 @@ private:
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<MiracleConfig> config;
     SurfaceTracker& surface_tracker;
+    CompositorState const& compositor_state;
 };
 
 }

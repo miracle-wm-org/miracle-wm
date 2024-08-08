@@ -71,30 +71,17 @@ std::shared_ptr<Workspace> const& Output::get_active_workspace() const
     throw std::runtime_error("get_active_workspace: unable to find the active workspace. We shouldn't be here!");
 }
 
-bool Output::handle_pointer_event(const MirPointerEvent* event)
+std::shared_ptr<Container> Output::intersect(const MirPointerEvent* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
     if (get_active_workspace_num() < 0)
     {
         mir::log_error("Output::handle_pointer_event: unexpectedly trying to handle a pointer event when we lack workspaces");
-        return false;
+        return nullptr;
     }
 
-    if (select_window_from_point(static_cast<int>(x), static_cast<int>(y)))
-        return true;
-
-    auto const action = mir_pointer_event_action(event);
-    if (has_clicked_floating_window || get_active_workspace()->has_floating_window(state.active))
-    {
-        if (action == mir_pointer_action_button_down)
-            has_clicked_floating_window = true;
-        else if (action == mir_pointer_action_button_up)
-            has_clicked_floating_window = false;
-        return floating_window_manager->handle_pointer_event(event);
-    }
-
-    return false;
+    return get_active_workspace()->select_from_point(x, y);
 }
 
 ContainerType Output::allocate_position(
@@ -121,10 +108,6 @@ void Output::delete_container(std::shared_ptr<miracle::Container> const &contain
     workspace->delete_container(container);
 }
 
-bool Output::select_window_from_point(int x, int y) const
-{
-    return get_active_workspace()->select_window_from_point(x, y);
-}
 
 void Output::advise_new_workspace(int workspace)
 {
