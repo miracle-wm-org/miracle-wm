@@ -132,6 +132,15 @@ struct WorkspaceConfig
     ContainerType layout = ContainerType::leaf;
 };
 
+enum class RenderFilter : int
+{
+    none,
+    grayscale,
+    protanopia,
+    deuteranopia,
+    tritanopia
+};
+
 class MiracleConfig
 {
 public:

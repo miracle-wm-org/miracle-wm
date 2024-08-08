@@ -374,6 +374,16 @@ miracle::Renderer::DrawData Renderer::draw(
     if (prog->alpha_uniform >= 0)
         glUniform1f(prog->alpha_uniform, renderable.alpha());
 
+    switch (compositor_state.mode)
+    {
+        case WindowManagerMode::selecting:
+            glUniform1i(prog->mode_uniform, (int)(data.is_focused ? RenderFilter::none : RenderFilter::grayscale));
+            break;
+        default:
+            glUniform1i(prog->mode_uniform, (int)RenderFilter::none);
+            break;
+    }
+
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.workspace_transform));
 
@@ -485,7 +495,7 @@ miracle::Renderer::DrawData Renderer::draw(
                 true,
                 false,
                 data.workspace_transform,
-                false,
+                data.is_focused,
                 { true,
                   color,
                   border_config.size }

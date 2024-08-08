@@ -81,6 +81,7 @@ struct ProgramData
     GLint transform_uniform = -1;
     GLint screen_to_gl_coords_uniform = -1;
     GLint alpha_uniform = -1;
+    GLint mode_uniform = -1;
     GLint outline_color_uniform = -1;
     mutable long long last_used_frameno = 0;
 

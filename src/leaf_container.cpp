@@ -17,13 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "leaf_container.h"
 #include "compositor_state.h"
-#include "mir_toolkit/common.h"
 #include "miracle_config.h"
 #include "output.h"
 #include "parent_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "workspace.h"
+#include "container_group_container.h"
+
+#include <mir_toolkit/common.h>
 #include <cmath>
 
 using namespace miracle;
@@ -321,7 +323,14 @@ void LeafContainer::animation_handle(uint32_t handle)
 
 bool LeafContainer::is_focused() const
 {
-    return state.active.get() == this;
+    if (state.active.get() == this || parent.lock()->is_focused())
+        return true;
+
+    auto group = Container::as_group(state.active);
+    if (!group)
+        return false;
+
+    return group->contains(shared_from_this());
 }
 
 ContainerType LeafContainer::get_type() const

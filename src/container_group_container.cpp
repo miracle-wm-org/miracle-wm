@@ -44,6 +44,17 @@ void ContainerGroupContainer::remove(std::shared_ptr<Container> const& container
     ), containers.end());
 }
 
+bool ContainerGroupContainer::contains(std::shared_ptr<Container const> const& container) const
+{
+    for (auto const& other : containers)
+    {
+        if (!other.expired() && other.lock() == container)
+            return true;
+    }
+
+    return false;
+}
+
 ContainerType ContainerGroupContainer::get_type() const
 {
     return ContainerType::group;

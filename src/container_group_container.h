@@ -37,6 +37,7 @@ public:
     ContainerGroupContainer(CompositorState&);
     void add(std::shared_ptr<Container> const&);
     void remove(std::shared_ptr<Container> const&);
+    bool contains(std::shared_ptr<Container const> const&) const;
 
     ContainerType get_type() const override;
     void restore_state(MirWindowState state) override;
