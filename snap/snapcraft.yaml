@@ -75,6 +75,7 @@ parts:
       - libnotify-dev
       - libgles2-mesa-dev
       - libmirrenderer-dev
+      - libmirwayland-dev
     stage-packages:
       - libmiral7
       - libmiroil5
