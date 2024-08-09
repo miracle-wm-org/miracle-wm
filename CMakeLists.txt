@@ -8,12 +8,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(ENV{PKG_CONFIG_PATH} "/usr/local/lib/pkgconfig/")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+set(MIR_LIBRARIES_PKGCONFIG_DIRECTORY "" CACHE STRING "Search for Mir libraries pc files in this directory")
 option(SNAP_BUILD "Building as a snap?" OFF)
+
+set(ENV{PKG_CONFIG_PATH} "${MIR_LIBRARIES_PKGCONFIG_DIRECTORY}:/usr/local/lib/pkgconfig/")
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
@@ -24,6 +26,7 @@ pkg_check_modules(MIRCOMMON mircommon REQUIRED)
 pkg_check_modules(MIRCOMMON_INTERNAL mircommon-internal REQUIRED)
 pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRSERVER_INTERNAL mirserver-internal REQUIRED)
+pkg_check_modules(MIRWAYLAND mirwayland REQUIRED)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
@@ -91,6 +94,7 @@ target_link_libraries(miracle-wm-implementation
     ${MIRPLATFORM_LDFLAGS}
     ${MIRSERVER_LDFLAGS}
     ${MIRSERVER_INTERNAL_LDFLAGS}
+    ${MIRWAYLAND_LDFLAGS}
     PkgConfig::YAML
     PkgConfig::GLIB
     PkgConfig::LIBEVDEV

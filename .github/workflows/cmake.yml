@@ -32,7 +32,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
         sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
-          libmiroil-dev libmirrenderer-dev libgles2-mesa-dev
+          libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev
 
 
     - name: Configure CMake
