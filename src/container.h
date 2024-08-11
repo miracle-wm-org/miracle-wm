@@ -46,6 +46,7 @@ enum class ContainerType
     none,
     leaf,
     floating_window,
+    floating_tree,
     shell,
     parent,
     group
@@ -63,8 +64,8 @@ class Container : public std::enable_shared_from_this<Container>
 public:
     virtual ContainerType get_type() const = 0;
 
-    virtual void restore_state(MirWindowState) = 0;
-    virtual std::optional<MirWindowState> restore_state() = 0;
+    virtual void show() = 0;
+    virtual void hide() = 0;
 
     /// Commits any changes made to this node to the screen. This must
     /// be call for changes to be pushed to the scene. Additionally,

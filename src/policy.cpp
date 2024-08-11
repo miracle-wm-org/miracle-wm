@@ -232,6 +232,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                     state.mode = WindowManagerMode::selecting;
                     group_selection = std::make_shared<ContainerGroupContainer>(state);
                     state.active = group_selection;
+                    mode_observer_registrar.advise_changed(state.mode);
                 }
             }
             else if (state.mode == WindowManagerMode::selecting)
@@ -240,6 +241,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 // TODO: Would it be better to check what we clicked in case it's in the group? Then we wouldn't
                 //  exit selection mode in this case.
                 state.mode = WindowManagerMode::normal;
+                mode_observer_registrar.advise_changed(state.mode);
             }
         }
 

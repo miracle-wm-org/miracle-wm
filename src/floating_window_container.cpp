@@ -181,16 +181,31 @@ void FloatingWindowContainer::toggle_layout()
 {
 }
 
-void FloatingWindowContainer::restore_state(MirWindowState state)
+void FloatingWindowContainer::show()
 {
-    restore_state_ = state;
+    if (is_pinned)
+    {
+        window_controller.raise(window_);
+        return;
+    }
+
+    if (restore_state_)
+    {
+        miral::WindowSpecification spec;
+        spec.state() = restore_state_.value();
+        window_controller.modify(window_, spec);
+        window_controller.raise(window_);
+        restore_state_.reset();
+    }
 }
 
-std::optional<MirWindowState> FloatingWindowContainer::restore_state()
+void FloatingWindowContainer::hide()
 {
-    auto state = restore_state_;
-    restore_state_.reset();
-    return state;
+    restore_state_ = window_controller.info_for(window_).state();
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_hidden;
+    window_controller.modify(window_, spec);
+    window_controller.send_to_back(window_);
 }
 
 Workspace* FloatingWindowContainer::get_workspace() const

@@ -15,30 +15,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_CONTAINER_GROUP_CONTAINER_H
-#define MIRACLE_WM_CONTAINER_GROUP_CONTAINER_H
+#ifndef MIRACLE_WM_FLOATING_TREE_CONTAINER_H
+#define MIRACLE_WM_FLOATING_TREE_CONTAINER_H
 
 #include "container.h"
-#include <vector>
 #include <memory>
 
 namespace miracle
 {
+class TilingWindowTree;
+class Workspace;
+class WindowController;
 class CompositorState;
+class MiracleConfig;
 
-/// A [Container] that contains [Container]s. This is often
-/// used in a temporary way when mulitple [Container]s are selected
-/// at once. The [ContainerGroupContainer] is incapable of performing
-/// some actions by design. It weakly owns its members, meaning that
-/// [Container]s may be removed from underneath it.
-class ContainerGroupContainer : public Container
+class FloatingTreeContainer : public Container
 {
 public:
-    ContainerGroupContainer(CompositorState&);
-    void add(std::shared_ptr<Container> const&);
-    void remove(std::shared_ptr<Container> const&);
-    bool contains(std::shared_ptr<Container const> const&) const;
-    [[nodiscard]] std::vector<std::weak_ptr<Container>> const& get_containers() const { return containers; }
+    FloatingTreeContainer(
+        Workspace*,
+        WindowController&,
+        CompositorState const&,
+        std::shared_ptr<MiracleConfig> const&
+    );
+    [[nodiscard]] TilingWindowTree* get_tree() const { return tree.get(); }
 
     ContainerType get_type() const override;
     void show() override;
@@ -87,10 +87,10 @@ public:
     bool move_to(int x, int y) override;
 
 private:
-    std::vector<std::weak_ptr<Container>> containers;
-    CompositorState& state;
+    std::unique_ptr<TilingWindowTree> tree;
+    Workspace* workspace_;
 };
 
 } // miracle
 
-#endif //MIRACLE_WM_CONTAINER_GROUP_CONTAINER_H
+#endif //MIRACLE_WM_FLOATING_TREE_CONTAINER_H

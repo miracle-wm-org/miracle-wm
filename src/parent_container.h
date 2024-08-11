@@ -85,8 +85,8 @@ public:
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
     ContainerType get_type() const override;
-    void restore_state(MirWindowState state) override;
-    std::optional<MirWindowState> restore_state() override;
+    void show() override;
+    void hide() override;
     void on_open() override;
     Workspace* get_workspace() const override;
     Output* get_output() const override;

@@ -64,8 +64,8 @@ public:
     bool pinned() const override;
     bool pinned(bool) override;
     [[nodiscard]] std::optional<miral::Window> window() const override;
-    void restore_state(MirWindowState state) override;
-    std::optional<MirWindowState> restore_state() override;
+    void show() override;
+    void hide() override;
     Workspace* get_workspace() const override;
     void set_workspace(Workspace*);
     Output* get_output() const override;

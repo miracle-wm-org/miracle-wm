@@ -60,14 +60,22 @@ ContainerType ContainerGroupContainer::get_type() const
     return ContainerType::group;
 }
 
-void ContainerGroupContainer::restore_state(MirWindowState state)
+void ContainerGroupContainer::show()
 {
-
+    for (auto const& container : containers)
+    {
+        if (auto c = container.lock())
+            c->show();
+    }
 }
 
-std::optional<MirWindowState> ContainerGroupContainer::restore_state()
+void ContainerGroupContainer::hide()
 {
-    return std::optional<MirWindowState>();
+    for (auto const& container : containers)
+    {
+        if (auto c = container.lock())
+            c->hide();
+    }
 }
 
 void ContainerGroupContainer::commit_changes()
@@ -238,12 +246,12 @@ ContainerGroupContainer::confirm_placement(MirWindowState state, mir::geometry::
 
 Workspace* ContainerGroupContainer::get_workspace() const
 {
-    return nullptr;
+    return state.active_output->get_active_workspace().get();
 }
 
 Output* ContainerGroupContainer::get_output() const
 {
-    return nullptr;
+    return state.active_output.get();
 }
 
 glm::mat4 ContainerGroupContainer::get_transform() const

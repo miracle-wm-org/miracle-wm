@@ -43,7 +43,6 @@ class Workspace;
 class TilingWindowTreeInterface
 {
 public:
-    virtual geom::Rectangle const& get_area() = 0;
     virtual std::vector<miral::Zone> const& get_zones() = 0;
     virtual Workspace* get_workspace() const = 0;
 };
@@ -55,7 +54,8 @@ public:
         std::unique_ptr<TilingWindowTreeInterface> tree_interface,
         WindowController&,
         CompositorState const&,
-        std::shared_ptr<MiracleConfig> const& options);
+        std::shared_ptr<MiracleConfig> const& options,
+        geom::Rectangle const& area);
     ~TilingWindowTree();
 
     /// Place a window in the specified container if one is provided.
@@ -102,6 +102,8 @@ public:
 
     /// Called when the physical display is resized.
     void set_area(geom::Rectangle const& new_area);
+
+    geom::Rectangle get_area() const;
 
     std::shared_ptr<LeafContainer> select_window_from_point(int x, int y);
 

@@ -612,13 +612,16 @@ ContainerType ParentContainer::get_type() const
     return ContainerType::parent;
 }
 
-void ParentContainer::restore_state(MirWindowState state)
+void ParentContainer::show()
 {
+    for (auto const& c : sub_nodes)
+        c->show();
 }
 
-std::optional<MirWindowState> ParentContainer::restore_state()
+void ParentContainer::hide()
 {
-    return std::nullopt;
+    for (auto const& c : sub_nodes)
+        c->hide();
 }
 
 void ParentContainer::on_open()

@@ -25,9 +25,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "parent_container.h"
-
 #include "floating_window_container.h"
+#include "floating_tree_container.h"
 #include "shell_component_container.h"
+#include "container_group_container.h"
+
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/zone.h>
@@ -43,11 +45,6 @@ public:
         screen { screen },
         workspace { workspace }
     {
-    }
-
-    geom::Rectangle const& get_area() override
-    {
-        return screen->get_area();
     }
 
     std::vector<miral::Zone> const& get_zones() override
@@ -84,7 +81,7 @@ Workspace::Workspace(
     floating_window_manager { floating_window_manager },
     tree(std::make_shared<TilingWindowTree>(
         std::make_unique<OutputTilingWindowTreeInterface>(output, this),
-        window_controller, state, config))
+        window_controller, state, config, output->get_area()))
 {
 }
 
@@ -106,17 +103,17 @@ void Workspace::recalculate_area()
 ContainerType Workspace::allocate_position(
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification& requested_specification,
-    ContainerType hint)
+    AllocationHint const& hint)
 {
     // If there's no ideal layout type, use the one provided by the workspace
-    auto layout = hint == ContainerType::none
+    auto layout = hint.container_type == ContainerType::none
         ? config->get_workspace_config(workspace).layout
-        : hint;
+        : hint.container_type;
     switch (layout)
     {
     case ContainerType::leaf:
     {
-        requested_specification = tree->place_new_window(requested_specification, get_layout_container());
+        requested_specification = hint.placement_tree->place_new_window(requested_specification, get_layout_container());
         return ContainerType::leaf;
     }
     case ContainerType::floating_window:
@@ -131,14 +128,15 @@ ContainerType Workspace::allocate_position(
 }
 
 std::shared_ptr<Container> Workspace::create_container(
-    miral::WindowInfo const& window_info, ContainerType type)
+    miral::WindowInfo const& window_info,
+    AllocationHint const& hint)
 {
     std::shared_ptr<Container> container = nullptr;
-    switch (type)
+    switch (hint.container_type)
     {
     case ContainerType::leaf:
     {
-        container = tree->confirm_window(window_info, get_layout_container());
+        container = hint.placement_tree->confirm_window(window_info, get_layout_container());
         break;
     }
     case ContainerType::floating_window:
@@ -214,29 +212,7 @@ void Workspace::show()
 {
     auto fullscreen_node = tree->show();
     for (auto const& floating : floating_windows)
-    {
-        // Pinned windows don't require restoration
-        if (floating->pinned())
-        {
-            tools.raise_tree(floating->window().value());
-            continue;
-        }
-
-        auto container = window_controller.get_container(floating->window().value());
-        if (!container)
-        {
-            mir::log_error("show: floating window lacks container");
-            continue;
-        }
-
-        if (auto restore_state = container->restore_state())
-        {
-            miral::WindowSpecification spec;
-            spec.state() = restore_state.value();
-            tools.modify_window(floating->window().value(), spec);
-            tools.raise_tree(floating->window().value());
-        }
-    }
+        floating->show();
 
     // TODO: ugh that's ugly. Fullscreen nodes should show above floating nodes
     if (fullscreen_node)
@@ -244,6 +220,14 @@ void Workspace::show()
         window_controller.select_active_window(fullscreen_node->window().value());
         window_controller.raise(fullscreen_node->window().value());
     }
+}
+
+void Workspace::hide()
+{
+    tree->hide();
+
+    for (auto const& floating : floating_windows)
+        floating->hide();
 }
 
 void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> const& f)
@@ -282,82 +266,100 @@ std::shared_ptr<Container> Workspace::select_from_point(int x, int y)
 
 void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
 {
-    ContainerType new_type = ContainerType::none;
-    auto window = container->window();
-    if (!window)
-        return;
+    auto const handle_ready = [&](
+        miral::Window const& window,
+        ContainerType container_type)
+    {
+        auto& info = window_controller.info_for(window);
+        auto new_container = create_container(info, ContainerType::floating_window);
+        new_container->handle_ready();
+        window_controller.select_active_window(state.active->window().value());
+    };
 
     switch (container->get_type())
     {
     case ContainerType::leaf:
     {
-        if (tree->has_fullscreen_window())
-        {
-            mir::log_warning("request_toggle_active_float: cannot float fullscreen window");
+        auto window = container->window();
+        if (!window)
             return;
-        }
 
-        // First, remove the window from the tiling window tree
+        // First, remove the container
         delete_container(window_controller.get_container(*window));
 
-        // Next, ask the floating window manager to place the new window
+        // Next, place the new container
         auto& prev_info = window_controller.info_for(*window);
         auto spec = window_helpers::copy_from(prev_info);
         spec.top_left() = geom::Point { window->top_left().x.as_int() + 20, window->top_left().y.as_int() + 20 };
         window_controller.noclip(*window);
-        auto new_spec = floating_window_manager->place_new_window(
-            tools.info_for(window->application()),
-            spec);
-        tools.modify_window(*window, new_spec);
+        allocate_position(tools.info_for(window->application()), spec, ContainerType::floating_window);
+        window_controller.modify(*window, spec);
 
-        new_type = ContainerType::floating_window;
+        // Finally, declare it ready
+        handle_ready(*window, ContainerType::floating_window);
         break;
     }
     case ContainerType::floating_window:
     {
-        // First, remove the floating window
+        auto window = container->window();
+        if (!window)
+            return;
+
+        // First, remove the container
         delete_container(window_controller.get_container(*window));
 
-        // Next, ask the tiling tree to place the new window
+        // Next, place the container
         auto& prev_info = window_controller.info_for(*window);
         miral::WindowSpecification spec = window_helpers::copy_from(prev_info);
-        auto new_spec = tree->place_new_window(spec, nullptr);
-        tools.modify_window(*window, new_spec);
+        allocate_position(tools.info_for(window->application()), spec, ContainerType::leaf);
+        window_controller.modify(*window, spec);
 
-        new_type = ContainerType::leaf;
+        // Finally, declare it ready
+        handle_ready(*window, ContainerType::leaf);
+        break;
+    }
+    case ContainerType::group:
+    {
+        auto group = Container::as_group(container);
+        auto tree_container = std::make_shared<FloatingTreeContainer>(
+            this,
+            window_controller,
+            state,
+            config
+        );
+        auto tree = tree_container->get_tree();
+
+        // Delete all containers in the group and add them to the new tree
+        for (auto const& c : group->get_containers())
+        {
+            if (auto s = c.lock())
+            {
+                delete_container(s);
+
+                auto window = s->window();
+                if (!window)
+                    continue;
+
+                auto& prev_info = window_controller.info_for(*window);
+                miral::WindowSpecification spec = window_helpers::copy_from(prev_info);
+                allocate_position(tools.info_for(window->application()), spec, ContainerType::leaf);
+                window_controller.modify(*window, spec);
+
+                handle_ready(*window, ContainerType::leaf);
+            }
+        }
+
+        floating_trees.push_back(tree_container);
+        break;
+    }
+    case ContainerType::floating_tree:
+    {
+        // TODO: !
         break;
     }
     default:
         mir::log_warning("toggle_floating: has no effect on window of type: %d", (int)container->get_type());
         return;
-    }
-
-    // In all cases, advise a new window and pretend like it is ready again
-    auto& info = window_controller.info_for(*window);
-    auto new_container = create_container(info, new_type);
-    new_container->handle_ready();
-    window_controller.select_active_window(state.active->window().value());
-}
-
-void Workspace::hide()
-{
-    tree->hide();
-
-    for (auto const& floating : floating_windows)
-    {
-        auto window = floating->window().value();
-        auto container = window_controller.get_container(window);
-        if (!container)
-        {
-            mir::log_error("hide: floating window lacks container");
-            continue;
-        }
-
-        container->restore_state(tools.info_for(window).state());
-        miral::WindowSpecification spec;
-        spec.state() = mir_window_state_hidden;
-        tools.modify_window(window, spec);
-        window_controller.send_to_back(window);
     }
 }
 

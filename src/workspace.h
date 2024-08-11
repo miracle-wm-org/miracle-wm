@@ -36,6 +36,13 @@ class WindowController;
 class CompositorState;
 class ParentContainer;
 class FloatingWindowContainer;
+class FloatingTreeContainer;
+
+struct AllocationHint
+{
+    ContainerType container_type;
+    TilingWindowTree* placement_tree;
+};
 
 class Workspace
 {
@@ -56,9 +63,9 @@ public:
     ContainerType allocate_position(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
-        ContainerType hint);
+        AllocationHint const& hint);
     std::shared_ptr<Container> create_container(
-        miral::WindowInfo const& window_info, ContainerType type);
+        miral::WindowInfo const& window_info, AllocationHint const& type);
     void handle_ready_hack(LeafContainer& container);
     void delete_container(std::shared_ptr<Container> const &container);
     void show();
@@ -81,6 +88,7 @@ private:
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
     std::vector<std::shared_ptr<FloatingWindowContainer>> floating_windows;
+    std::vector<std::shared_ptr<FloatingTreeContainer>> floating_trees;
     WindowController& window_controller;
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;

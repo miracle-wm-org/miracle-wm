@@ -68,6 +68,8 @@ add_library(miracle-wm-implementation
     src/shell_component_container.cpp
         src/container_group_container.cpp
         src/container_group_container.h
+        src/floating_tree_container.cpp
+        src/floating_tree_container.h
 )
 
 add_executable(miracle-wm

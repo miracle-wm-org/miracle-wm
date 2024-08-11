@@ -179,12 +179,15 @@ void LeafContainer::show()
 {
     next_state = before_shown_state;
     before_shown_state.reset();
+    commit_changes();
+    window_controller.raise(window_);
 }
 
 void LeafContainer::hide()
 {
     before_shown_state = window_controller.get_state(window_);
     next_state = mir_window_state_hidden;
+    commit_changes();
 }
 
 bool LeafContainer::toggle_fullscreen()
@@ -277,18 +280,6 @@ void LeafContainer::toggle_layout()
 void LeafContainer::set_tree(TilingWindowTree* tree_)
 {
     tree = tree_;
-}
-
-void LeafContainer::restore_state(MirWindowState state)
-{
-    restore_state_ = state;
-}
-
-std::optional<MirWindowState> LeafContainer::restore_state()
-{
-    auto state = restore_state_;
-    restore_state_.reset();
-    return state;
 }
 
 Workspace* LeafContainer::get_workspace() const

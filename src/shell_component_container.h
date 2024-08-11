@@ -33,8 +33,8 @@ public:
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 
-    void restore_state(MirWindowState state) override;
-    std::optional<MirWindowState> restore_state() override;
+    void show() override;
+    void hide() override;
     void commit_changes() override;
     mir::geometry::Rectangle get_logical_area() const override;
     void set_logical_area(mir::geometry::Rectangle const& rectangle) override;
