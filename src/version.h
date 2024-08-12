@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_VERSION_H
 
 #define MIRACLE_WM_MAJOR 0
-#define MIRACLE_WM_MINOR 2
+#define MIRACLE_WM_MINOR 3
 #define MIRACLE_WM_PATCH 1
 
-#define MIRACLE_VERSION_STRING "0.2.1"
+#define MIRACLE_VERSION_STRING "0.3.1"
 
 #endif // MIRACLE_WM_VERSION_H
