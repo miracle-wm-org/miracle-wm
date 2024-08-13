@@ -22,7 +22,7 @@ jobs:
     
     - name: Add PPA
       run: | 
-        sudo apt-add-repository ppa:mir-team/dev
+        sudo apt-add-repository ppa:mir-team/release
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
 

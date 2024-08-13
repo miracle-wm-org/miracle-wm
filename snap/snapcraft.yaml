@@ -15,7 +15,7 @@ platforms:
     
 package-repositories:
   - type: apt
-    ppa: mir-team/dev
+    ppa: mir-team/release
 
 apps:
   miracle-wm:
