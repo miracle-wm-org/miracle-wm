@@ -1,3 +1,28 @@
+miracle-wm (0.3.2-noble) noble; urgency=medium
+  - Animation support for windows opening, moving, and resizing
+  - Animation support for workspace changing
+  - A border can now be shown around each window, with the focused window receiving a different color
+  - Increased support for i3 IPC
+  - Upgraded the snap to core24
+  - Workspaces can now specify a default layout rule that they follow (either "tiled" or "floating")
+  - New configuration options
+  - snap: update to v0.3.0 by @mattkae in #187
+  - test + refactor: renames to more closely match i3, refactor to accomodate testing of the TilingWindowTree, initial tests for the tiling window tree by @mattkae in #189
+  - minor: rename master to develop because master is not the mastered version in this context by @mattkae in #190
+  - refactor: establish a single source of truth for the selected window by @mattkae in #192
+  - refactor: giving Window modification control over to the Workspace instead of the Output by @mattkae in #193
+  - refactor: make it so that the tiling window tree relies on the active window much less by @mattkae in #194
+  - refactor: remove WindowMetadata and make everything a container + refactor Output and Workspace big time such that they do way less work by @mattkae in #195
+  - bugfix: fixing how modes are reported and multi-subscriptions are created by @mattkae in #199
+  - bugfix: no longer relying on the Output to get the compositor state by @mattkae in #200
+  - refactor: a Container is used as the active element instead of a miral::Window by @mattkae in #201
+  - Allow using custom mir libraries directory by @TibboddiT in #198
+  - feature: swaymsg exit works now by @mattkae in #203
+  - feature: no longer restarting commands that exit with 127 by @mattkae in #204
+  - feature: if the configuration doesn't exist, we try to copy it from /usr/share/miracle-wm/config/default.yaml or we write it blank by @mattkae in #205
+
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Tue, 14 Aug 2024 10:10:00 -0500
+
 miracle-wm (0.2.0-noble) noble; urgency=medium
 
   - (#35) sway/i3 IPC support has been implemented to minimally support waybar

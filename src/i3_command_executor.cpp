@@ -66,6 +66,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         case I3CommandType::sticky:
             process_sticky(command, command_list);
             break;
+        case I3CommandType::exit:
+            policy.quit();
+            break;
         default:
             break;
         }

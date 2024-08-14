@@ -104,11 +104,6 @@ public:
         return renderable.shaped();
     }
 
-    mir::geometry::RectangleD src_bounds() const override
-    {
-        return {};
-    }
-
     [[nodiscard]] std::optional<mir::scene::Surface const*> surface_if_any() const override
     {
         return {};

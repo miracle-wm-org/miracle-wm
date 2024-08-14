@@ -6,7 +6,7 @@ description: |
   that provides a tiling-window manager.
 confinement: classic
 base: core24
-version: 0.3.0
+version: 0.3.2
 
 platforms:
   amd64:
@@ -15,7 +15,7 @@ platforms:
     
 package-repositories:
   - type: apt
-    ppa: mir-team/dev
+    ppa: mir-team/release
 
 apps:
   miracle-wm:
@@ -75,6 +75,7 @@ parts:
       - libnotify-dev
       - libgles2-mesa-dev
       - libmirrenderer-dev
+      - libmirwayland-dev
     stage-packages:
       - libmiral7
       - libmiroil5

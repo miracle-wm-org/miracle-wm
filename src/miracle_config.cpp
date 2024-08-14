@@ -29,11 +29,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <miral/runner.h>
 #include <sys/inotify.h>
+#include <filesystem>
 
 using namespace miracle;
 
 namespace
 {
+const char* MIRACLE_USR_SHARE_DIR = "/usr/share/miracle-wm/config/default.yaml";
+
 int program_exists(std::string const& name)
 {
     std::stringstream out;
@@ -131,32 +134,41 @@ T try_parse_enum(YAML::Node const& root, const char* key, std::function<T(std::s
     }
     return result;
 }
-}
 
-FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
-    runner { runner }
+std::string create_default_configuration_path()
 {
     std::stringstream config_path_stream;
     config_path_stream << g_get_user_config_dir();
     config_path_stream << "/miracle-wm.yaml";
-    config_path = config_path_stream.str();
-
-    mir::log_info("Configuration file path is: %s", config_path.c_str());
-
-    {
-        std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
-    }
-
-    _load();
-    _watch(runner);
+    return config_path_stream.str();
+}
 }
 
-FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner, std::string const& path) :
+FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
+    FilesystemConfiguration{runner, create_default_configuration_path()}
+{
+}
+
+FilesystemConfiguration::FilesystemConfiguration(
+    miral::MirRunner& runner, std::string const& path) :
     runner { runner },
     config_path { path }
 {
+    mir::log_info("Configuration file path is: %s", config_path.c_str());
+
+    if (!std::filesystem::exists(config_path))
     {
-        std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+        if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+        {
+            std::filesystem::copy_file(
+                MIRACLE_USR_SHARE_DIR,
+                config_path
+            );
+        }
+        else
+        {
+            std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+        }
     }
 
     mir::log_info("Configuration file path is: %s", config_path.c_str());
