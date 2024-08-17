@@ -301,7 +301,7 @@ auto Policy::place_new_window(
 
     auto new_spec = requested_specification;
     pending_output = state.active_output;
-    pending_type = state.active_output->allocate_position(app_info, new_spec);
+    pending_allocation = state.active_output->allocate_position(app_info, new_spec, {});
     return new_spec;
 }
 
@@ -329,12 +329,12 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    auto container = shared_output->create_container(window_info, pending_type);
+    auto container = shared_output->create_container(window_info, pending_allocation);
 
     container->animation_handle(animator.register_animateable());
     container->on_open();
 
-    pending_type = ContainerType::none;
+    pending_allocation.container_type = ContainerType::none;
     pending_output.reset();
 
     surface_tracker.add(window_info.window());

@@ -129,7 +129,7 @@ private:
     CompositorState& state;
     std::vector<std::shared_ptr<Output>> output_list;
     std::weak_ptr<Output> pending_output;
-    ContainerType pending_type;
+    AllocationHint pending_allocation;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     std::shared_ptr<miral::MinimalWindowManager> floating_window_manager;

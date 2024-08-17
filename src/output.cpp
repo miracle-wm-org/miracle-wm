@@ -84,22 +84,24 @@ std::shared_ptr<Container> Output::intersect(const MirPointerEvent* event)
     return get_active_workspace()->select_from_point(x, y);
 }
 
-ContainerType Output::allocate_position(
+AllocationHint Output::allocate_position(
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification& requested_specification,
-    ContainerType hint)
+    AllocationHint hint)
 {
-    auto ideal_type = hint == ContainerType::none ? window_helpers::get_ideal_type(requested_specification) : hint;
-    if (ideal_type == ContainerType::shell)
-        return ContainerType::shell;
+    hint.container_type = hint.container_type == ContainerType::none
+        ? window_helpers::get_ideal_type(requested_specification)
+        : hint.container_type;
+    if (hint.container_type == ContainerType::shell)
+        return hint;
 
-    return get_active_workspace()->allocate_position(app_info, requested_specification, ideal_type);
+    return get_active_workspace()->allocate_position(app_info, requested_specification, hint);
 }
 
 std::shared_ptr<Container> Output::create_container(
-    miral::WindowInfo const& window_info, ContainerType type) const
+    miral::WindowInfo const& window_info, AllocationHint const& hint) const
 {
-    return get_active_workspace()->create_container(window_info, type);
+    return get_active_workspace()->create_container(window_info, hint);
 }
 
 void Output::delete_container(std::shared_ptr<miracle::Container> const &container)
@@ -304,7 +306,7 @@ void Output::request_toggle_active_float()
     state.active->get_workspace()->toggle_floating(state.active);
 }
 
-void Output::add_immediately(miral::Window& window, ContainerType hint)
+void Output::add_immediately(miral::Window& window, AllocationHint hint)
 {
     auto& prev_info = window_controller.info_for(window);
     WindowSpecification spec = window_helpers::copy_from(prev_info);
@@ -313,9 +315,9 @@ void Output::add_immediately(miral::Window& window, ContainerType hint)
     if (spec.state() == mir_window_state_hidden)
         spec.state() = mir_window_state_restored;
 
-    ContainerType type = allocate_position(tools.info_for(window.application()), spec, hint);
+    AllocationHint result = allocate_position(tools.info_for(window.application()), spec, hint);
     tools.modify_window(window, spec);
-    auto container = create_container(window_controller.info_for(window), type);
+    auto container = create_container(window_controller.info_for(window), result);
     container->handle_ready();
 }
 

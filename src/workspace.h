@@ -40,8 +40,8 @@ class FloatingTreeContainer;
 
 struct AllocationHint
 {
-    ContainerType container_type;
-    TilingWindowTree* placement_tree;
+    ContainerType container_type = ContainerType::none;
+    TilingWindowTree* placement_tree = nullptr;
 };
 
 class Workspace
@@ -60,7 +60,7 @@ public:
     void set_area(mir::geometry::Rectangle const&);
     void recalculate_area();
 
-    ContainerType allocate_position(
+    AllocationHint allocate_position(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
         AllocationHint const& hint);

@@ -52,8 +52,12 @@ public:
     ~Output() = default;
 
     std::shared_ptr<Container> intersect(MirPointerEvent const* event);
-    ContainerType allocate_position(miral::ApplicationInfo const& app_info, miral::WindowSpecification& requested_specification, ContainerType hint = ContainerType::none);
-    [[nodiscard]] std::shared_ptr<Container> create_container(miral::WindowInfo const& window_info, ContainerType type) const;
+    AllocationHint allocate_position(
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification& requested_specification,
+        AllocationHint hint = AllocationHint());
+    [[nodiscard]] std::shared_ptr<Container> create_container(
+        miral::WindowInfo const& window_info, AllocationHint const& hint) const;
     void delete_container(std::shared_ptr<miracle::Container> const &container);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
@@ -70,7 +74,7 @@ public:
     /// with the provided type. This is a deviation away from the typical
     /// window-adding flow where you first call 'place_new_window' followed
     /// by 'create_container'.
-    void add_immediately(miral::Window& window, ContainerType hint = ContainerType::none);
+    void add_immediately(miral::Window& window, AllocationHint hint = AllocationHint());
 
     /// Takes an existing [Container] object and places it in an appropriate position
     /// on the active [Workspace].
