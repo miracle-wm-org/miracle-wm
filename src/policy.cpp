@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
 #include "container_group_container.h"
+#include "feature_flags.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -222,7 +223,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (state.active_output && state.mode != WindowManagerMode::resizing)
     {
-        if (action == mir_pointer_action_button_down)
+        if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
         {
             if (state.modifiers == config->get_primary_modifier())
             {

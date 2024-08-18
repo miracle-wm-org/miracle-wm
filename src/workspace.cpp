@@ -169,7 +169,7 @@ std::shared_ptr<Container> Workspace::create_container(
     //  Warning: We need to advise fullscreen only after we've associated the userdata() appropriately
     if (hint.container_type == ContainerType::leaf && window_helpers::is_window_fullscreen(window_info.state()))
     {
-        tree->advise_fullscreen_container(*Container::as_leaf(container));
+        hint.placement_tree->advise_fullscreen_container(*Container::as_leaf(container));
     }
     return container;
 }
@@ -192,6 +192,7 @@ void Workspace::delete_container(std::shared_ptr<Container> const &container)
     {
     case ContainerType::leaf:
     {
+        // TODO: Get the tree for this container
         tree->advise_delete_window(container);
         break;
     }
@@ -328,7 +329,6 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
             state,
             config
         );
-        auto tree = tree_container->get_tree();
 
         // Delete all containers in the group and add them to the new tree
         for (auto const& c : group->get_containers())
@@ -343,7 +343,7 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
 
                 auto& prev_info = window_controller.info_for(*window);
                 miral::WindowSpecification spec = window_helpers::copy_from(prev_info);
-                auto result = allocate_position(tools.info_for(window->application()), spec, { ContainerType::leaf, tree });
+                auto result = allocate_position(tools.info_for(window->application()), spec, { ContainerType::leaf, tree_container->get_tree() });
                 window_controller.modify(*window, spec);
 
                 handle_ready(*window, result);

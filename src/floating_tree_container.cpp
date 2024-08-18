@@ -53,7 +53,7 @@ FloatingTreeContainer::FloatingTreeContainer(
     CompositorState const& compositor_state,
     std::shared_ptr<MiracleConfig> const& config)
     : tree{std::make_unique<TilingWindowTree>(
-        std::move(std::make_unique<FloatingTreeTilingWindowTreeInterface>(workspace)),
+        std::make_unique<FloatingTreeTilingWindowTreeInterface>(workspace),
         window_controller,
         compositor_state,
         config,
