@@ -48,6 +48,7 @@ namespace miracle
 {
 
 class Container;
+class ContainerGroupContainer;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -58,7 +59,8 @@ public:
         miral::MirRunner&,
         std::shared_ptr<MiracleConfig> const&,
         SurfaceTracker&,
-        mir::Server const&);
+        mir::Server const&,
+        CompositorState&);
     ~Policy() override;
 
     // Interactions with the engine
@@ -118,16 +120,16 @@ public:
 
     // Getters
 
-    std::shared_ptr<Output> const& get_active_output() { return active_output; }
-    std::vector<std::shared_ptr<Output>> const& get_output_list() { return output_list; }
+    [[nodiscard]] std::shared_ptr<Output> const& get_active_output() const { return state.active_output; }
+    [[nodiscard]] std::vector<std::shared_ptr<Output>> const& get_output_list() const { return output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
-    std::shared_ptr<Output> active_output;
+    CompositorState& state;
     std::vector<std::shared_ptr<Output>> output_list;
     std::weak_ptr<Output> pending_output;
-    ContainerType pending_type;
+    AllocationHint pending_allocation;
     std::vector<Window> orphaned_window_list;
     miral::WindowManagerTools window_manager_tools;
     std::shared_ptr<miral::MinimalWindowManager> floating_window_manager;
@@ -142,7 +144,7 @@ private:
     WindowManagerToolsWindowController window_controller;
     I3CommandExecutor i3_command_executor;
     SurfaceTracker& surface_tracker;
-    CompositorState state;
+    std::shared_ptr<ContainerGroupContainer> group_selection;
 };
 }
 

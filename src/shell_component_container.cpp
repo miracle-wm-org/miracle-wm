@@ -29,13 +29,12 @@ ShellComponentContainer::ShellComponentContainer(
 {
 }
 
-void ShellComponentContainer::restore_state(MirWindowState state)
+void ShellComponentContainer::show()
 {
 }
 
-std::optional<MirWindowState> ShellComponentContainer::restore_state()
+void ShellComponentContainer::hide()
 {
-    return std::nullopt;
 }
 
 void ShellComponentContainer::commit_changes()

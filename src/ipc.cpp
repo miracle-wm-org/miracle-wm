@@ -159,6 +159,10 @@ json mode_to_json(WindowManagerMode mode)
         return {
             { "name", "resize" }
         };
+    case WindowManagerMode::selecting:
+        return {
+            { "name", "selecting" }
+        };
     default:
     {
         mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
@@ -179,6 +183,11 @@ json mode_event_to_json(WindowManagerMode mode)
         case WindowManagerMode::resizing:
             return {
             { "change", "resize" },
+            { "pango_markup", true }
+            };
+        case WindowManagerMode::selecting:
+            return {
+            { "change", "selecting" },
             { "pango_markup", true }
             };
         default:
@@ -566,6 +575,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
         json response;
         response.push_back("default");
         response.push_back("resize");
+        response.push_back("selecting");
         send_reply(client, payload_type, to_string(response));
         return;
     }

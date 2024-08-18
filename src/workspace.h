@@ -35,7 +35,14 @@ class TilingWindowTree;
 class WindowController;
 class CompositorState;
 class ParentContainer;
-class FloatingContainer;
+class FloatingWindowContainer;
+class FloatingTreeContainer;
+
+struct AllocationHint
+{
+    ContainerType container_type = ContainerType::none;
+    TilingWindowTree* placement_tree = nullptr;
+};
 
 class Workspace
 {
@@ -53,22 +60,22 @@ public:
     void set_area(mir::geometry::Rectangle const&);
     void recalculate_area();
 
-    ContainerType allocate_position(
+    AllocationHint allocate_position(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
-        ContainerType hint);
+        AllocationHint const& hint);
     std::shared_ptr<Container> create_container(
-        miral::WindowInfo const& window_info, ContainerType type);
+        miral::WindowInfo const& window_info, AllocationHint const& type);
     void handle_ready_hack(LeafContainer& container);
     void delete_container(std::shared_ptr<Container> const &container);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);
     void for_each_window(std::function<void(std::shared_ptr<Container>)> const&);
-    bool select_window_from_point(int x, int y);
+    std::shared_ptr<Container> select_from_point(int x, int y);
     void toggle_floating(std::shared_ptr<Container> const&);
     bool has_floating_window(std::shared_ptr<Container> const&);
-    std::shared_ptr<FloatingContainer> add_floating_window(miral::Window const&);
+    std::shared_ptr<FloatingWindowContainer> add_floating_window(miral::Window const&);
     Output* get_output();
     void trigger_rerender();
     [[nodiscard]] bool is_empty() const;
@@ -80,7 +87,8 @@ private:
     miral::WindowManagerTools tools;
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
-    std::vector<std::shared_ptr<FloatingContainer>> floating_windows;
+    std::vector<std::shared_ptr<FloatingWindowContainer>> floating_windows;
+    std::vector<std::shared_ptr<FloatingTreeContainer>> floating_trees;
     WindowController& window_controller;
     CompositorState const& state;
     std::shared_ptr<MiracleConfig> config;

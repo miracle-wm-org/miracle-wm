@@ -27,14 +27,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+namespace
+{
+geom::Rectangle r {
+    geom::Point(0, 0),
+    geom::Size(1280, 720)
+};
+}
+
 class SimpleTilingWindowTreeInterface : public TilingWindowTreeInterface
 {
 public:
-    geom::Rectangle const& get_area() override
-    {
-        return r;
-    }
-
     std::vector<miral::Zone> const& get_zones() override
     {
         return zones;
@@ -46,10 +49,6 @@ public:
     }
 
 private:
-    geom::Rectangle r {
-        geom::Point(0, 0),
-        geom::Size(1280, 720)
-    };
     std::vector<miral::Zone> zones = { r };
 };
 
@@ -105,7 +104,8 @@ public:
             std::make_unique<SimpleTilingWindowTreeInterface>(),
             window_controller,
             state,
-            std::make_shared<test::StubConfiguration>())
+            std::make_shared<test::StubConfiguration>(),
+            r)
     {
     }
 

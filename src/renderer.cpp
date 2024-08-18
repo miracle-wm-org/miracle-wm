@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
+#include "compositor_state.h"
 
 #include "container.h"
 #include "window_tools_accessor.h"
@@ -132,7 +133,8 @@ Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
     std::shared_ptr<MiracleConfig> const& config,
-    SurfaceTracker& surface_tracker) :
+    SurfaceTracker& surface_tracker,
+    CompositorState const& compositor_state) :
     output_surface { make_output_current(std::move(output)) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
@@ -140,7 +142,8 @@ Renderer::Renderer(
     screen_to_gl_coords(1),
     gl_interface { std::move(gl_interface) },
     config { config },
-    surface_tracker { surface_tracker }
+    surface_tracker { surface_tracker },
+    compositor_state { compositor_state }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -220,7 +223,7 @@ Renderer::DrawData Renderer::get_draw_data(mir::graphics::Renderable const& rend
             auto tools = WindowToolsAccessor::get_instance().get_tools();
             auto& info = tools.info_for(window);
             auto userdata = static_pointer_cast<Container>(info.userdata());
-            data.needs_outline = (userdata->get_type() == ContainerType::leaf || userdata->get_type() == ContainerType::floating)
+            data.needs_outline = (userdata->get_type() == ContainerType::leaf || userdata->get_type() == ContainerType::floating_window)
                 && !info.parent();
             data.workspace_transform = userdata->get_output_transform() * userdata->get_workspace_transform();
             data.is_focused = userdata->is_focused();
@@ -366,6 +369,16 @@ miracle::Renderer::DrawData Renderer::draw(
     if (prog->alpha_uniform >= 0)
         glUniform1f(prog->alpha_uniform, renderable.alpha());
 
+    switch (compositor_state.mode)
+    {
+        case WindowManagerMode::selecting:
+            glUniform1i(prog->mode_uniform, (int)(data.is_focused ? RenderFilter::none : RenderFilter::grayscale));
+            break;
+        default:
+            glUniform1i(prog->mode_uniform, (int)RenderFilter::none);
+            break;
+    }
+
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.workspace_transform));
 
@@ -477,7 +490,7 @@ miracle::Renderer::DrawData Renderer::draw(
                 true,
                 false,
                 data.workspace_transform,
-                false,
+                data.is_focused,
                 { true,
                   color,
                   border_config.size }

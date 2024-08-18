@@ -36,10 +36,11 @@ TilingWindowTree::TilingWindowTree(
     std::unique_ptr<TilingWindowTreeInterface> tree_interface,
     WindowController& window_controller,
     CompositorState const& state,
-    std::shared_ptr<MiracleConfig> const& config) :
+    std::shared_ptr<MiracleConfig> const& config,
+    geom::Rectangle const& area) :
     root_lane { std::make_shared<ParentContainer>(
         window_controller,
-        tree_interface->get_area(),
+        area,
         config,
         this,
         nullptr,
@@ -152,6 +153,11 @@ void TilingWindowTree::set_area(geom::Rectangle const& new_area)
 {
     root_lane->set_logical_area(new_area);
     root_lane->commit_changes();
+}
+
+geom::Rectangle TilingWindowTree::get_area() const
+{
+    return root_lane->get_logical_area();
 }
 
 std::shared_ptr<LeafContainer> TilingWindowTree::select_window_from_point(int x, int y)
@@ -719,15 +725,7 @@ void TilingWindowTree::hide()
     }
 
     is_hidden = true;
-    foreach_node([&](auto node)
-    {
-        auto leaf_node = Container::as_leaf(node);
-        if (leaf_node)
-        {
-            leaf_node->hide();
-            leaf_node->commit_changes();
-        }
-    });
+    root_lane->hide();
 }
 
 std::shared_ptr<LeafContainer> TilingWindowTree::show()
@@ -738,24 +736,18 @@ std::shared_ptr<LeafContainer> TilingWindowTree::show()
         return nullptr;
     }
 
+    root_lane->show();
     is_hidden = false;
-    std::shared_ptr<LeafContainer> fullscreen_node = nullptr;
-    foreach_node([&](auto node)
-    {
-        auto leaf_node = Container::as_leaf(node);
-        if (leaf_node)
-        {
-            leaf_node->show();
-            leaf_node->commit_changes();
 
-            if (leaf_node->is_fullscreen())
-                fullscreen_node = leaf_node;
-            else
-                window_controller.raise(leaf_node->window().value());
-        }
+    // TODO: This check is probably unnecessary
+    std::shared_ptr<Container> fullscreen_node = nullptr;
+    foreach_node([&](auto const& container)
+    {
+        if (container->is_fullscreen())
+            fullscreen_node = container;
     });
 
-    return fullscreen_node;
+    return Container::as_leaf(fullscreen_node);
 }
 
 bool TilingWindowTree::is_empty()

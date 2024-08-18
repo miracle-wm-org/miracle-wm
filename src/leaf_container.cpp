@@ -17,13 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "leaf_container.h"
 #include "compositor_state.h"
-#include "mir_toolkit/common.h"
 #include "miracle_config.h"
 #include "output.h"
 #include "parent_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "workspace.h"
+#include "container_group_container.h"
+
+#include <mir_toolkit/common.h>
 #include <cmath>
 
 using namespace miracle;
@@ -177,12 +179,15 @@ void LeafContainer::show()
 {
     next_state = before_shown_state;
     before_shown_state.reset();
+    commit_changes();
+    window_controller.raise(window_);
 }
 
 void LeafContainer::hide()
 {
     before_shown_state = window_controller.get_state(window_);
     next_state = mir_window_state_hidden;
+    commit_changes();
 }
 
 bool LeafContainer::toggle_fullscreen()
@@ -277,18 +282,6 @@ void LeafContainer::set_tree(TilingWindowTree* tree_)
     tree = tree_;
 }
 
-void LeafContainer::restore_state(MirWindowState state)
-{
-    restore_state_ = state;
-}
-
-std::optional<MirWindowState> LeafContainer::restore_state()
-{
-    auto state = restore_state_;
-    restore_state_.reset();
-    return state;
-}
-
 Workspace* LeafContainer::get_workspace() const
 {
     return tree->get_workspace();
@@ -321,7 +314,14 @@ void LeafContainer::animation_handle(uint32_t handle)
 
 bool LeafContainer::is_focused() const
 {
-    return state.active.get() == this;
+    if (state.active.get() == this || parent.lock()->is_focused())
+        return true;
+
+    auto group = Container::as_group(state.active);
+    if (!group)
+        return false;
+
+    return group->contains(shared_from_this());
 }
 
 ContainerType LeafContainer::get_type() const

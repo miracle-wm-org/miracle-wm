@@ -24,22 +24,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class Container;
+class Output;
 
 enum class WindowManagerMode
 {
     normal = 0,
 
-    /// While resizing, only the window that was selected during
+    /// While [resizing], only the window that was selected during
     /// resize can be selected. If that window closes, resize
     /// is completed.
-    resizing
+    resizing,
+
+    /// While [selecting], only [Container]s selected with the multi-select
+    /// keybind/mousebind can be selected or deselected.
+    selecting
 };
 
 struct CompositorState
 {
-    mir::geometry::Point cursor_position;
     WindowManagerMode mode = WindowManagerMode::normal;
+    std::shared_ptr<Output> active_output;
     std::shared_ptr<Container> active;
+    mir::geometry::Point cursor_position;
+    uint32_t modifiers = 0;
+    bool has_clicked_floating_window = false;
 };
 }
 

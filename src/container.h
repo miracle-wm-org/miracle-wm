@@ -36,7 +36,8 @@ class MiracleConfig;
 class TilingWindowTree;
 class LeafContainer;
 class ParentContainer;
-class FloatingContainer;
+class FloatingWindowContainer;
+class ContainerGroupContainer;
 class Workspace;
 class Output;
 
@@ -44,9 +45,11 @@ enum class ContainerType
 {
     none,
     leaf,
-    floating,
+    floating_window,
+    floating_tree,
     shell,
-    parent
+    parent,
+    group
 };
 
 ContainerType container_type_from_string(std::string const& str);
@@ -61,8 +64,8 @@ class Container : public std::enable_shared_from_this<Container>
 public:
     virtual ContainerType get_type() const = 0;
 
-    virtual void restore_state(MirWindowState) = 0;
-    virtual std::optional<MirWindowState> restore_state() = 0;
+    virtual void show() = 0;
+    virtual void hide() = 0;
 
     /// Commits any changes made to this node to the screen. This must
     /// be call for changes to be pushed to the scene. Additionally,
@@ -118,7 +121,8 @@ public:
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
-    static std::shared_ptr<FloatingContainer> as_floating(std::shared_ptr<Container> const&);
+    static std::shared_ptr<FloatingWindowContainer> as_floating(std::shared_ptr<Container> const&);
+    static std::shared_ptr<ContainerGroupContainer> as_group(std::shared_ptr<Container> const&);
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;

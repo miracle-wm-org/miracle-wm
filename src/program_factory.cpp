@@ -44,6 +44,21 @@ void main() {
    v_texcoord = texcoord;
 }
 )";
+
+const GLchar* const mode_scale_integration = R"(
+uniform int mode;
+
+vec4 resolve_color(vec4 v) {
+    if (mode == 1) {
+        float color =  0.299 * v.x + 0.587 * v.y + 0.114 * v.z;
+        return vec4(color, color, color, v.w);
+    }
+    else {
+        return v;
+    }
+}
+)";
+
 }
 
 miracle::ProgramData::ProgramData(GLuint program_id)
@@ -86,6 +101,10 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     alpha_uniform = glGetUniformLocation(id, "alpha");
     if (alpha_uniform < 0)
         mir::log_warning("Program is missing alpha_uniform");
+
+    mode_uniform = glGetUniformLocation(id, "mode");
+    if (mode_uniform < 0)
+        mir::log_warning("Program is missing mode_uniform");
 
     outline_color_uniform = glGetUniformLocation(id, "outline_color");
     if (outline_color_uniform < 0)
@@ -135,9 +154,10 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
         << "\n"
         << fragment_fragment
         << "\n"
+        << mode_scale_integration
         << "varying vec2 v_texcoord;\n"
            "void main() {\n"
-           "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+           "    gl_FragColor = resolve_color(sample_to_rgba(v_texcoord));\n"
            "}\n";
 
     std::stringstream alpha_fragment;
@@ -150,23 +170,26 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
         << "\n"
         << fragment_fragment
         << "\n"
+        << mode_scale_integration
         << "varying vec2 v_texcoord;\n"
            "uniform float alpha;\n"
            "void main() {\n"
-           "    gl_FragColor = alpha * sample_to_rgba(v_texcoord);\n"
+           "    gl_FragColor = alpha * resolve_color(sample_to_rgba(v_texcoord));\n"
            "}\n";
 
-    const GLchar* const outline_shader_src = R"(
-#ifdef GL_ES
-precision mediump float;
-#endif
-
-uniform float alpha;
-uniform vec4 outline_color;
-void main() {
-    gl_FragColor = alpha * outline_color;
-}
-)";
+    std::stringstream outline_shader_src;
+    outline_shader_src
+        << "\n"
+        << "#ifdef GL_ES\n"
+           "precision mediump float;\n"
+           "#endif\n"
+        << "\n"
+        << mode_scale_integration
+        << "uniform float alpha;\n"
+        << "uniform vec4 outline_color;\n"
+        << "void main() {\n"
+        << "    gl_FragColor = alpha * resolve_color(outline_color);\n"
+        << "}\n";
 
     // GL shader compilation is *not* threadsafe, and requires external synchronisation
     std::lock_guard lock { compilation_mutex };
@@ -178,7 +201,7 @@ void main() {
         compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())
     };
     ShaderHandle const outline_shader {
-        compile_shader(GL_FRAGMENT_SHADER, outline_shader_src)
+        compile_shader(GL_FRAGMENT_SHADER, outline_shader_src.str().c_str())
     };
 
     programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, opaque_shader), link_shader(vertex_shader, alpha_shader), link_shader(vertex_shader, outline_shader)));

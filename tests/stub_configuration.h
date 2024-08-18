@@ -116,6 +116,11 @@ namespace test
 
         void try_process_change() override { }
 
+        uint get_primary_modifier() const override
+        {
+            return 0;
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, (int)AnimateableEvent::max> animations;

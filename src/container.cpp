@@ -18,8 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "container"
 
 #include "container.h"
-#include "floating_container.h"
+#include "floating_window_container.h"
 #include "leaf_container.h"
+#include "container_group_container.h"
 #include "node_common.h"
 #include "output.h"
 #include "parent_container.h"
@@ -33,7 +34,7 @@ ContainerType miracle::container_type_from_string(std::string const& str)
     if (str == "tiled")
         return ContainerType::leaf;
     else if (str == "floating")
-        return ContainerType::floating;
+        return ContainerType::floating_window;
     else if (str == "shell")
         return ContainerType::shell;
     else
@@ -70,9 +71,14 @@ std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container>
     return std::dynamic_pointer_cast<ParentContainer>(container);
 }
 
-std::shared_ptr<FloatingContainer> Container::as_floating(std::shared_ptr<Container> const& container)
+std::shared_ptr<FloatingWindowContainer> Container::as_floating(std::shared_ptr<Container> const& container)
 {
-    return std::dynamic_pointer_cast<FloatingContainer>(container);
+    return std::dynamic_pointer_cast<FloatingWindowContainer>(container);
+}
+
+std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Container> const& container)
+{
+    return std::dynamic_pointer_cast<ContainerGroupContainer>(container);
 }
 
 bool Container::is_leaf()

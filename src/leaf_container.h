@@ -53,8 +53,6 @@ public:
     std::weak_ptr<ParentContainer> get_parent() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
     void set_state(MirWindowState state);
-    void show();
-    void hide();
     bool is_fullscreen() const override;
     void constrain() override;
     size_t get_min_width() const override;
@@ -80,8 +78,8 @@ public:
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
     [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
     void commit_changes() override;
-    void restore_state(MirWindowState state) override;
-    std::optional<MirWindowState> restore_state() override;
+    void show() override;
+    void hide() override;
     Workspace* get_workspace() const override;
     Output* get_output() const override;
     glm::mat4 get_transform() const override;
@@ -110,7 +108,6 @@ private:
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
-    std::optional<MirWindowState> restore_state_;
     glm::mat4 transform = glm::mat4(1.f);
     uint32_t animation_handle_ = 0;
 };

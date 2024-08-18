@@ -20,9 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "miracle_config.h"
 #include "shell_component_container.h"
-#include "window_helpers.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
+#include "container_group_container.h"
+#include "feature_flags.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -48,8 +49,10 @@ Policy::Policy(
     miral::MirRunner& runner,
     std::shared_ptr<MiracleConfig> const& config,
     SurfaceTracker& surface_tracker,
-    mir::Server const& server) :
+    mir::Server const& server,
+    CompositorState& compositor_state) :
     window_manager_tools { tools },
+    state{compositor_state},
     floating_window_manager(std::make_shared<miral::MinimalWindowManager>(tools, config->get_input_event_modifier())),
     external_client_launcher { external_client_launcher },
     runner { runner },
@@ -82,6 +85,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
+    state.modifiers = modifiers;
 
     auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
     if (custom_key_command != nullptr)
@@ -197,6 +201,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
+    auto action = miral::toolkit::mir_pointer_event_action(event);
     state.cursor_position = { x, y };
 
     // Select the output first
@@ -204,20 +209,83 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     {
         if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
-            if (active_output != output)
+            if (state.active_output != output)
             {
-                if (active_output)
-                    active_output->set_is_active(false);
-                active_output = output;
-                active_output->set_is_active(true);
+                if (state.active_output)
+                    state.active_output->set_is_active(false);
+                state.active_output = output;
+                state.active_output->set_is_active(true);
                 workspace_manager.request_focus(output->get_active_workspace_num());
             }
             break;
         }
     }
 
-    if (active_output && state.mode != WindowManagerMode::resizing)
-        return active_output->handle_pointer_event(event);
+    if (state.active_output && state.mode != WindowManagerMode::resizing)
+    {
+        if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
+        {
+            if (state.modifiers == config->get_primary_modifier())
+            {
+                // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
+                if (state.mode != WindowManagerMode::selecting)
+                {
+                    state.mode = WindowManagerMode::selecting;
+                    group_selection = std::make_shared<ContainerGroupContainer>(state);
+                    state.active = group_selection;
+                    mode_observer_registrar.advise_changed(state.mode);
+                }
+            }
+            else if (state.mode == WindowManagerMode::selecting)
+            {
+                // We clicked while we were in selection mode, so let's stop being in selection mode
+                // TODO: Would it be better to check what we clicked in case it's in the group? Then we wouldn't
+                //  exit selection mode in this case.
+                state.mode = WindowManagerMode::normal;
+                mode_observer_registrar.advise_changed(state.mode);
+            }
+        }
+
+        // Get Container intersection. Depending on the state, do something with that Container
+        std::shared_ptr<Container> intersected = state.active_output->intersect(event);
+        switch (state.mode)
+        {
+            case WindowManagerMode::normal:
+            {
+                bool has_changed_selected = false;
+                if (intersected)
+                {
+                    if (auto window = intersected->window().value())
+                    {
+                        if (state.active != intersected)
+                        {
+                            window_controller.select_active_window(window);
+                            has_changed_selected = true;
+                        }
+                    }
+                }
+
+                if (state.has_clicked_floating_window || state.active->get_type() == ContainerType::floating_window)
+                {
+                    if (action == mir_pointer_action_button_down)
+                        state.has_clicked_floating_window = true;
+                    else if (action == mir_pointer_action_button_up)
+                        state.has_clicked_floating_window = false;
+                    return floating_window_manager->handle_pointer_event(event);
+                }
+
+                return has_changed_selected;
+            }
+            case WindowManagerMode::selecting:
+            {
+                if (intersected && action == mir_pointer_action_button_down)
+                    group_selection->add(intersected);
+                return true;
+            }
+            default:
+                return false;
+        }
+    }
 
     return false;
 }
@@ -226,15 +294,15 @@ auto Policy::place_new_window(
     const miral::ApplicationInfo& app_info,
     const miral::WindowSpecification& requested_specification) -> miral::WindowSpecification
 {
-    if (!active_output)
+    if (!state.active_output)
     {
         mir::log_warning("place_new_window: no output available");
         return requested_specification;
     }
 
     auto new_spec = requested_specification;
-    pending_output = active_output;
-    pending_type = active_output->allocate_position(app_info, new_spec);
+    pending_output = state.active_output;
+    pending_allocation = state.active_output->allocate_position(app_info, new_spec, {});
     return new_spec;
 }
 
@@ -262,12 +330,12 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    auto container = shared_output->create_container(window_info, pending_type);
+    auto container = shared_output->create_container(window_info, pending_allocation);
 
     container->animation_handle(animator.register_animateable());
     container->on_open();
 
-    pending_type = ContainerType::none;
+    pending_allocation.container_type = ContainerType::none;
     pending_output.reset();
 
     surface_tracker.add(window_info.window());
@@ -294,8 +362,19 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         return;
     }
 
-    state.active = container;
-    container->on_focus_gained();
+    switch (state.mode)
+    {
+    case WindowManagerMode::selecting:
+        group_selection->add(container);
+        container->on_focus_gained();
+        break;
+    default:
+    {
+        state.active = container;
+        container->on_focus_gained();
+        break;
+    }
+    }
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
@@ -359,8 +438,8 @@ void Policy::advise_output_create(miral::Output const& output)
         floating_window_manager, state, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
     output_list.push_back(output_content);
-    if (active_output == nullptr)
-        active_output = output_content;
+    if (state.active_output == nullptr)
+        state.active_output = output_content;
 
     // Let's rehome some orphan windows if we need to
     if (!orphaned_window_list.empty())
@@ -368,7 +447,7 @@ void Policy::advise_output_create(miral::Output const& output)
         mir::log_info("Policy::advise_output_create: orphaned windows are being added to the new output, num=%zu", orphaned_window_list.size());
         for (auto& window : orphaned_window_list)
         {
-            active_output->add_immediately(window);
+            state.active_output->add_immediately(window);
         }
         orphaned_window_list.clear();
     }
@@ -418,14 +497,14 @@ void Policy::advise_output_delete(miral::Output const& output)
                 remove_workspaces();
 
                 mir::log_info("Policy::advise_output_delete: final output has been removed and windows have been orphaned");
-                active_output = nullptr;
+                state.active_output = nullptr;
             }
             else
             {
-                active_output = output_list.front();
+                state.active_output = output_list.front();
                 for (auto& window : other_output->collect_all_windows())
                 {
-                    active_output->add_immediately(window);
+                    state.active_output->add_immediately(window);
                 }
 
                 remove_workspaces();
@@ -542,20 +621,13 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 
 void Policy::try_toggle_resize_mode()
 {
-    if (!active_output)
+    if (!state.active)
     {
         state.mode = WindowManagerMode::normal;
         return;
     }
 
-    auto container = state.active;
-    if (!container)
-    {
-        state.mode = WindowManagerMode::normal;
-        return;
-    }
-
-    if (container->get_type() != ContainerType::leaf)
+    if (state.active->get_type() != ContainerType::leaf)
     {
         state.mode = WindowManagerMode::normal;
         return;
@@ -662,9 +734,6 @@ bool Policy::try_select(miracle::Direction direction)
 
 bool Policy::try_close_window()
 {
-    if (!active_output)
-        return false;
-
     if (!state.active)
         return false;
 
@@ -698,10 +767,10 @@ bool Policy::select_workspace(int number)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_output)
         return false;
 
-    workspace_manager.request_workspace(active_output, number);
+    workspace_manager.request_workspace(state.active_output, number);
     return true;
 }
 
@@ -710,17 +779,17 @@ bool Policy::move_active_to_workspace(int number)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output || !state.active)
+    if (!state.active)
         return false;
 
     if (state.active->is_fullscreen())
         return false;
 
     auto to_move = state.active;
-    active_output->delete_container(state.active);
+    state.active->get_output()->delete_container(state.active);
     state.active = nullptr;
 
-    auto screen_to_move_to = workspace_manager.request_workspace(active_output, number);
+    auto screen_to_move_to = workspace_manager.request_workspace(state.active_output, number);
     screen_to_move_to->graft(to_move);
     return true;
 }
@@ -730,10 +799,10 @@ bool Policy::toggle_floating()
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    if (!active_output)
+    if (!state.active_output)
         return false;
 
-    active_output->request_toggle_active_float();
+    state.active_output->request_toggle_active_float();
     return true;
 }
 

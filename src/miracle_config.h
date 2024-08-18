@@ -132,6 +132,15 @@ struct WorkspaceConfig
     ContainerType layout = ContainerType::leaf;
 };
 
+enum class RenderFilter : int
+{
+    none,
+    grayscale,
+    protanopia,
+    deuteranopia,
+    tritanopia
+};
+
 class MiracleConfig
 {
 public:
@@ -158,6 +167,7 @@ public:
     virtual int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) = 0;
     virtual void unregister_listener(int handle) = 0;
     virtual void try_process_change() = 0;
+    virtual uint get_primary_modifier() const = 0;
 };
 
 class FilesystemConfiguration : public MiracleConfig
@@ -186,6 +196,7 @@ public:
     int register_listener(std::function<void(miracle::MiracleConfig&)> const&, int priority) override;
     void unregister_listener(int handle) override;
     void try_process_change() override;
+    [[nodiscard]] uint get_primary_modifier() const override;
 
 private:
     struct ChangeListener
