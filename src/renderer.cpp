@@ -66,10 +66,6 @@ public:
     {
     }
 
-    mir::geometry::RectangleD src_bounds() const override {
-        return {};
-    }
-
     [[nodiscard]] ID id() const override
     {
         return "";
