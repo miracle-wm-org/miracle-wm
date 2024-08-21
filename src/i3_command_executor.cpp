@@ -434,13 +434,61 @@ void I3CommandExecutor::process_sticky(I3Command const& command, I3ScopedCommand
         mir::log_warning("process_sticky: unknown arguments: %s", arg0.c_str());
 }
 
+// This command will be
 void I3CommandExecutor::process_input(I3Command const& command, I3ScopedCommandList const& command_list)
 {
+    // Payloads appear in the following format:
+    //    [type:X, xkb_Y, Z]
+    // where X is something like "keyboard", Y is the variable that we want to change
+    // and Z is the value of that variable. Z may not be included at all, in which
+    // case the variable is set to the default.
     if (command.arguments.size() < 2)
     {
         mir::log_warning("process_input: expects at least 2 arguments");
         return;
     }
 
-    
+    const char* const TYPE_PREFIX = "type:";
+    const size_t TYPE_PREFIX_LEN = strlen(TYPE_PREFIX);
+    std::string_view type_str = command.arguments[0];
+    if (!type_str.starts_with("type:"))
+    {
+        mir::log_warning("process_input: 'type' string is misformatted: %s", command.arguments[0].c_str());
+        return;
+    }
+
+    std::string_view type = type_str.substr(TYPE_PREFIX_LEN);
+    assert(type == "keyboard");
+
+    std::string_view xkb_str = command.arguments[1];
+    const char* const XKB_PREFIX = "xkb_";
+    const size_t XKB_PREFIX_LEN = strlen(XKB_PREFIX);
+    if (!xkb_str.starts_with(XKB_PREFIX))
+    {
+        mir::log_warning("process_input: 'xkb' string is misformatted: %s", command.arguments[1].c_str());
+        return;
+    }
+
+    std::string_view xkb_variable_name = xkb_str.substr(XKB_PREFIX_LEN);
+    assert(xkb_variable_name == "model"
+        || xkb_variable_name == "layout"
+        || xkb_variable_name == "variant"
+        || xkb_variable_name == "options");
+
+    mir::log_info("Processing input from locale1: type=%s, xkb_variable=%s", type.data(), xkb_variable_name.data());
+
+    // TODO: This is where we need to process the request
+    if (command.arguments.size() == 3)
+    {
+
+    }
+    else if (command.arguments.size() < 3)
+    {
+        // TODO: Set to the default
+    }
+    else
+    {
+        mir::log_warning("process_input: > 3 arguments were provided but only <= 3 are expected");
+        return;
+    }
 }

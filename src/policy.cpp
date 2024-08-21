@@ -265,7 +265,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                     }
                 }
 
-                if (state.has_clicked_floating_window || state.active->get_type() == ContainerType::floating_window)
+                if (state.has_clicked_floating_window || (state.active && state.active->get_type() == ContainerType::floating_window))
                 {
                     if (action == mir_pointer_action_button_down)
                         state.has_clicked_floating_window = true;
