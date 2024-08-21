@@ -69,6 +69,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         case I3CommandType::exit:
             policy.quit();
             break;
+        case I3CommandType::input:
+            process_input(command, command_list);
+            break;
         default:
             break;
         }
@@ -429,4 +432,15 @@ void I3CommandExecutor::process_sticky(I3Command const& command, I3ScopedCommand
         policy.toggle_pinned_to_workspace();
     else
         mir::log_warning("process_sticky: unknown arguments: %s", arg0.c_str());
+}
+
+void I3CommandExecutor::process_input(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    if (command.arguments.size() < 2)
+    {
+        mir::log_warning("process_input: expects at least 2 arguments");
+        return;
+    }
+
+    
 }
