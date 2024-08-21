@@ -81,11 +81,6 @@ public:
         return get_rectangle(renderable.screen_position());
     }
 
-    geom::RectangleD src_bounds() const override
-    {
-        return {};
-    }
-
     [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
     {
         auto clip_area_rect = renderable.clip_area();
