@@ -51,7 +51,8 @@ enum class I3CommandType
     scratchpad,
     nop,
     i3_bar,
-    gaps
+    gaps,
+    input
 };
 
 enum class I3ScopeType

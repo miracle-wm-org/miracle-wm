@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jpcre2.h"
 #include "window_controller.h"
 #include "window_helpers.h"
+#include "string_extensions.h"
 
 #include <cstring>
 #include <ranges>
@@ -215,7 +216,7 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
             I3Command next_command = { I3CommandType::none };
 
             // Next, we can now read the command tokens space-by-space
-            for (auto const& command_token : ((command_view) | std::ranges::views::split(' ')))
+            for (auto const& command_token : ((trim_left(command_view)) | std::ranges::views::split(' ')))
             {
                 if (next_command.type == I3CommandType::none)
                 {
@@ -261,6 +262,8 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
                         next_command.type = I3CommandType::i3_bar;
                     else if (equals(command_token.data(), "gaps"))
                         next_command.type = I3CommandType::gaps;
+                    else if (equals(command_token.data(), "input"))
+                        next_command.type = I3CommandType::input;
                     else
                     {
                         mir::log_error("Invalid i3 command type: %s", command_token.data());
