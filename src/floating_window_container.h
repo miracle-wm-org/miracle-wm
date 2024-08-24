@@ -82,6 +82,8 @@ public:
     bool move(Direction) override;
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
+    bool toggle_stacked() override { return false; };
+    bool is_stacking() const override { return false; }
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 

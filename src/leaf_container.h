@@ -34,7 +34,14 @@ class MiracleConfig;
 class TilingWindowTree;
 class CompositorState;
 
-/// A [LeafContainer] contains one or many windows (in the event that windows are stacked or tabbed).
+/// A [LeafContainer] is always the final node in a [Container]
+/// tree and holds no children nodes. It may contain one window
+/// or many windows, the latter case being true in the event that
+/// the container is stacked. Only the selected window in the stack
+/// will be shown when in stacking mode.
+///
+/// This container is guaranteed to have at least one window, or
+/// else it is invalid.
 class LeafContainer : public Container
 {
 public:
@@ -76,7 +83,7 @@ public:
     void set_tree(TilingWindowTree* tree);
 
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
-    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+    [[nodiscard]] std::optional<miral::Window> window() const override;
     void commit_changes() override;
     void show() override;
     void hide() override;
@@ -94,6 +101,8 @@ public:
     bool move(Direction) override;
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
+    bool toggle_stacked() override;
+    bool is_stacking() const override;
 
 private:
     WindowController& window_controller;
@@ -101,7 +110,9 @@ private:
     std::optional<geom::Rectangle> next_logical_area;
     std::shared_ptr<MiracleConfig> config;
     TilingWindowTree* tree;
-    miral::Window window_;
+    bool is_stacking_;
+    uint32_t selected_index = 0;
+    std::vector<miral::Window> stack_;
     std::weak_ptr<ParentContainer> parent;
     CompositorState const& state;
 
@@ -110,6 +121,7 @@ private:
     NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
     glm::mat4 transform = glm::mat4(1.f);
     uint32_t animation_handle_ = 0;
+    miral::Window window_() const;
 };
 
 } // miracle

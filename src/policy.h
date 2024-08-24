@@ -117,6 +117,7 @@ public:
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
     bool set_is_pinned(bool);
+    bool toggle_stacked();
 
     // Getters
 

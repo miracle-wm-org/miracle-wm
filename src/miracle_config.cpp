@@ -341,6 +341,8 @@ void FilesystemConfiguration::_load()
                 key_command = DefaultKeyCommand::ToggleFloating;
             else if (name == "toggle_pinned_to_workspace")
                 key_command = DefaultKeyCommand::TogglePinnedToWorkspace;
+            else if (name == "toggle_stacked")
+                key_command = DefaultKeyCommand::ToggleStacked;
             else
             {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
@@ -525,7 +527,10 @@ void FilesystemConfiguration::_load()
          KEY_SPACE },
         { MirKeyboardAction ::mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_P     }
+         KEY_P     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_S     }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {
