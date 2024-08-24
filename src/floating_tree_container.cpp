@@ -51,15 +51,17 @@ FloatingTreeContainer::FloatingTreeContainer(
     Workspace* workspace,
     WindowController& window_controller,
     CompositorState const& compositor_state,
-    std::shared_ptr<MiracleConfig> const& config)
-    : tree{std::make_unique<TilingWindowTree>(
-        std::make_unique<FloatingTreeTilingWindowTreeInterface>(workspace),
-        window_controller,
-        compositor_state,
-        config,
-        geom::Rectangle{geom::Point{100, 100}, geom::Size{640, 480}}
-    )},
-      workspace_{workspace}
+    std::shared_ptr<MiracleConfig> const& config) :
+    tree {
+        std::make_unique<TilingWindowTree>(
+            std::make_unique<FloatingTreeTilingWindowTreeInterface>(workspace),
+            window_controller,
+            compositor_state,
+            config,
+            geom::Rectangle { geom::Point { 100, 100 }, geom::Size { 640, 480 } }
+             )
+},
+    workspace_ { workspace }
 {
 }
 
@@ -87,7 +89,7 @@ mir::geometry::Rectangle FloatingTreeContainer::get_logical_area() const
     return tree->get_area();
 }
 
-void FloatingTreeContainer::set_logical_area(mir::geometry::Rectangle const &rectangle)
+void FloatingTreeContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
 {
     tree->set_area(rectangle);
 }
@@ -99,7 +101,6 @@ mir::geometry::Rectangle FloatingTreeContainer::get_visible_area() const
 
 void FloatingTreeContainer::constrain()
 {
-
 }
 
 std::weak_ptr<ParentContainer> FloatingTreeContainer::get_parent() const
@@ -107,7 +108,7 @@ std::weak_ptr<ParentContainer> FloatingTreeContainer::get_parent() const
     return {};
 }
 
-void FloatingTreeContainer::set_parent(std::shared_ptr<ParentContainer> const &ptr)
+void FloatingTreeContainer::set_parent(std::shared_ptr<ParentContainer> const& ptr)
 {
     throw std::logic_error("FloatingTreeContainer::set_parent: invalid operation");
 }
@@ -126,23 +127,22 @@ void FloatingTreeContainer::handle_ready()
 {
 }
 
-void FloatingTreeContainer::handle_modify(miral::WindowSpecification const &specification)
+void FloatingTreeContainer::handle_modify(miral::WindowSpecification const& specification)
 {
 }
 
-void FloatingTreeContainer::handle_request_move(MirInputEvent const *input_event)
+void FloatingTreeContainer::handle_request_move(MirInputEvent const* input_event)
 {
     // TODO
 }
 
-void FloatingTreeContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+void FloatingTreeContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
 {
     // TODO
 }
 
 void FloatingTreeContainer::handle_raise()
 {
-
 }
 
 bool FloatingTreeContainer::resize(Direction direction)
@@ -179,10 +179,9 @@ void FloatingTreeContainer::on_focus_gained()
 
 void FloatingTreeContainer::on_focus_lost()
 {
-
 }
 
-void FloatingTreeContainer::on_move_to(mir::geometry::Point const &top_left)
+void FloatingTreeContainer::on_move_to(mir::geometry::Point const& top_left)
 {
     auto area = tree->get_area();
     area.top_left = top_left;
@@ -190,17 +189,17 @@ void FloatingTreeContainer::on_move_to(mir::geometry::Point const &top_left)
 }
 
 mir::geometry::Rectangle
-FloatingTreeContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+FloatingTreeContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {
     return rectangle;
 }
 
-Workspace *FloatingTreeContainer::get_workspace() const
+Workspace* FloatingTreeContainer::get_workspace() const
 {
     return workspace_;
 }
 
-Output *FloatingTreeContainer::get_output() const
+Output* FloatingTreeContainer::get_output() const
 {
     return workspace_->get_output();
 }
@@ -212,7 +211,6 @@ glm::mat4 FloatingTreeContainer::get_transform() const
 
 void FloatingTreeContainer::set_transform(glm::mat4 transform)
 {
-
 }
 
 glm::mat4 FloatingTreeContainer::get_workspace_transform() const
@@ -232,7 +230,6 @@ uint32_t FloatingTreeContainer::animation_handle() const
 
 void FloatingTreeContainer::animation_handle(uint32_t uint_32)
 {
-
 }
 
 bool FloatingTreeContainer::is_focused() const
@@ -284,7 +281,7 @@ bool FloatingTreeContainer::move_by(Direction direction, int pixels)
 bool FloatingTreeContainer::move_to(int x, int y)
 {
     auto area = tree->get_area();
-    area.top_left = geom::Point{x, y};
+    area.top_left = geom::Point { x, y };
     tree->set_area(area);
     return true;
 }

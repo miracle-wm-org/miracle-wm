@@ -18,12 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "policy.h"
+#include "container_group_container.h"
+#include "feature_flags.h"
 #include "miracle_config.h"
 #include "shell_component_container.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"
-#include "container_group_container.h"
-#include "feature_flags.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -52,7 +52,7 @@ Policy::Policy(
     mir::Server const& server,
     CompositorState& compositor_state) :
     window_manager_tools { tools },
-    state{compositor_state},
+    state { compositor_state },
     floating_window_manager(std::make_shared<miral::MinimalWindowManager>(tools, config->get_input_event_modifier())),
     external_client_launcher { external_client_launcher },
     runner { runner },
@@ -250,40 +250,40 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         std::shared_ptr<Container> intersected = state.active_output->intersect(event);
         switch (state.mode)
         {
-            case WindowManagerMode::normal:
+        case WindowManagerMode::normal:
+        {
+            bool has_changed_selected = false;
+            if (intersected)
             {
-                bool has_changed_selected = false;
-                if (intersected)
+                if (auto window = intersected->window().value())
                 {
-                    if (auto window = intersected->window().value())
+                    if (state.active != intersected)
                     {
-                        if (state.active != intersected)
-                        {
-                            window_controller.select_active_window(window);
-                            has_changed_selected = true;
-                        }
+                        window_controller.select_active_window(window);
+                        has_changed_selected = true;
                     }
                 }
-
-                if (state.has_clicked_floating_window || (state.active && state.active->get_type() == ContainerType::floating_window))
-                {
-                    if (action == mir_pointer_action_button_down)
-                        state.has_clicked_floating_window = true;
-                    else if (action == mir_pointer_action_button_up)
-                        state.has_clicked_floating_window = false;
-                    return floating_window_manager->handle_pointer_event(event);
-                }
-
-                return has_changed_selected;
             }
-            case WindowManagerMode::selecting:
+
+            if (state.has_clicked_floating_window || (state.active && state.active->get_type() == ContainerType::floating_window))
             {
-                if (intersected && action == mir_pointer_action_button_down)
-                    group_selection->add(intersected);
-                return true;
+                if (action == mir_pointer_action_button_down)
+                    state.has_clicked_floating_window = true;
+                else if (action == mir_pointer_action_button_up)
+                    state.has_clicked_floating_window = false;
+                return floating_window_manager->handle_pointer_event(event);
             }
-            default:
-                return false;
+
+            return has_changed_selected;
+        }
+        case WindowManagerMode::selecting:
+        {
+            if (intersected && action == mir_pointer_action_button_down)
+                group_selection->add(intersected);
+            return true;
+        }
+        default:
+            return false;
         }
     }
 

@@ -19,16 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace.h"
 #include "compositor_state.h"
+#include "container_group_container.h"
+#include "floating_tree_container.h"
+#include "floating_window_container.h"
 #include "leaf_container.h"
 #include "miracle_config.h"
 #include "output.h"
+#include "parent_container.h"
+#include "shell_component_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
-#include "parent_container.h"
-#include "floating_window_container.h"
-#include "floating_tree_container.h"
-#include "shell_component_container.h"
-#include "container_group_container.h"
 
 #include <mir/log.h>
 #include <mir/scene/surface.h>
@@ -186,7 +186,7 @@ void Workspace::handle_ready_hack(LeafContainer& container)
         window_controller.raise(state.active->window().value());
 }
 
-void Workspace::delete_container(std::shared_ptr<Container> const &container)
+void Workspace::delete_container(std::shared_ptr<Container> const& container)
 {
     switch (container->get_type())
     {
@@ -269,8 +269,8 @@ std::shared_ptr<Container> Workspace::select_from_point(int x, int y)
 void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
 {
     auto const handle_ready = [&](
-        miral::Window const& window,
-        AllocationHint const& result)
+                                  miral::Window const& window,
+                                  AllocationHint const& result)
     {
         auto& info = window_controller.info_for(window);
         auto new_container = create_container(info, result);
@@ -327,8 +327,7 @@ void Workspace::toggle_floating(std::shared_ptr<Container> const& container)
             this,
             window_controller,
             state,
-            config
-        );
+            config);
 
         // Delete all containers in the group and add them to the new tree
         for (auto const& c : group->get_containers())
@@ -435,22 +434,22 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 {
     switch (container->get_type())
     {
-        case ContainerType::floating_window:
-        {
-            auto floating = Container::as_floating(container);
-            floating->set_workspace(this);
-            floating_windows.push_back(floating);
-            break;
-        }
-        case ContainerType::parent:
-            tree->graft(Container::as_parent(container));
-            break;
-        case ContainerType::leaf:
-            tree->graft(Container::as_leaf(container));
-            break;
-        default:
-            mir::log_error("Workspace::graft: ungraftable container type: %d", (int)container->get_type());
-            break;
+    case ContainerType::floating_window:
+    {
+        auto floating = Container::as_floating(container);
+        floating->set_workspace(this);
+        floating_windows.push_back(floating);
+        break;
+    }
+    case ContainerType::parent:
+        tree->graft(Container::as_parent(container));
+        break;
+    case ContainerType::leaf:
+        tree->graft(Container::as_leaf(container));
+        break;
+    default:
+        mir::log_error("Workspace::graft: ungraftable container type: %d", (int)container->get_type());
+        break;
     }
 }
 

@@ -16,14 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "container_group_container.h"
-#include "workspace.h"
-#include "output.h"
 #include "compositor_state.h"
+#include "output.h"
+#include "workspace.h"
 
 namespace miracle
 {
-ContainerGroupContainer::ContainerGroupContainer(CompositorState& state)
-    : state{state}
+ContainerGroupContainer::ContainerGroupContainer(CompositorState& state) :
+    state { state }
 {
 }
 
@@ -35,13 +35,13 @@ void ContainerGroupContainer::add(std::shared_ptr<Container> const& container)
 void ContainerGroupContainer::remove(std::shared_ptr<Container> const& container)
 {
     containers.erase(std::remove_if(
-        containers.begin(),
-        containers.end(),
-        [&](std::weak_ptr<Container> const& weak_container)
-        {
-            return weak_container.expired() || weak_container.lock() == container;
-        }
-    ), containers.end());
+                         containers.begin(),
+                         containers.end(),
+                         [&](std::weak_ptr<Container> const& weak_container)
+    {
+        return weak_container.expired() || weak_container.lock() == container;
+    }),
+        containers.end());
 }
 
 bool ContainerGroupContainer::contains(std::shared_ptr<Container const> const& container) const
@@ -92,9 +92,8 @@ mir::geometry::Rectangle ContainerGroupContainer::get_logical_area() const
     return {};
 }
 
-void ContainerGroupContainer::set_logical_area(mir::geometry::Rectangle const &rectangle)
+void ContainerGroupContainer::set_logical_area(mir::geometry::Rectangle const& rectangle)
 {
-
 }
 
 mir::geometry::Rectangle ContainerGroupContainer::get_visible_area() const
@@ -116,7 +115,7 @@ std::weak_ptr<ParentContainer> ContainerGroupContainer::get_parent() const
     return {};
 }
 
-void ContainerGroupContainer::set_parent(std::shared_ptr<ParentContainer> const &ptr)
+void ContainerGroupContainer::set_parent(std::shared_ptr<ParentContainer> const& ptr)
 {
     throw std::logic_error("Cannot set-parent on ContainerGroup");
 }
@@ -136,7 +135,7 @@ void ContainerGroupContainer::handle_ready()
     throw std::logic_error("handle_ready should not be called on a ContainerGroup");
 }
 
-void ContainerGroupContainer::handle_modify(miral::WindowSpecification const &specification)
+void ContainerGroupContainer::handle_modify(miral::WindowSpecification const& specification)
 {
     for (auto const& container : containers)
     {
@@ -145,7 +144,7 @@ void ContainerGroupContainer::handle_modify(miral::WindowSpecification const &sp
     }
 }
 
-void ContainerGroupContainer::handle_request_move(MirInputEvent const *input_event)
+void ContainerGroupContainer::handle_request_move(MirInputEvent const* input_event)
 {
     for (auto const& container : containers)
     {
@@ -154,7 +153,7 @@ void ContainerGroupContainer::handle_request_move(MirInputEvent const *input_eve
     }
 }
 
-void ContainerGroupContainer::handle_request_resize(MirInputEvent const *input_event, MirResizeEdge edge)
+void ContainerGroupContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
 {
     for (auto const& container : containers)
     {
@@ -233,13 +232,12 @@ void ContainerGroupContainer::on_focus_lost()
 {
 }
 
-void ContainerGroupContainer::on_move_to(mir::geometry::Point const &top_left)
+void ContainerGroupContainer::on_move_to(mir::geometry::Point const& top_left)
 {
-
 }
 
 mir::geometry::Rectangle
-ContainerGroupContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const &rectangle)
+ContainerGroupContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {
     return {};
 }
@@ -261,7 +259,6 @@ glm::mat4 ContainerGroupContainer::get_transform() const
 
 void ContainerGroupContainer::set_transform(glm::mat4 transform)
 {
-
 }
 
 glm::mat4 ContainerGroupContainer::get_workspace_transform() const
@@ -281,7 +278,6 @@ uint32_t ContainerGroupContainer::animation_handle() const
 
 void ContainerGroupContainer::animation_handle(uint32_t uint_32)
 {
-
 }
 
 bool ContainerGroupContainer::is_focused() const

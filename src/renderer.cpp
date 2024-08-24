@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "GLRenderer"
 
 #include "renderer.h"
+#include "compositor_state.h"
 #include "miracle_config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
-#include "compositor_state.h"
 
 #include "container.h"
 #include "window_tools_accessor.h"
@@ -371,12 +371,12 @@ miracle::Renderer::DrawData Renderer::draw(
 
     switch (compositor_state.mode)
     {
-        case WindowManagerMode::selecting:
-            glUniform1i(prog->mode_uniform, (int)(data.is_focused ? RenderFilter::none : RenderFilter::grayscale));
-            break;
-        default:
-            glUniform1i(prog->mode_uniform, (int)RenderFilter::none);
-            break;
+    case WindowManagerMode::selecting:
+        glUniform1i(prog->mode_uniform, (int)(data.is_focused ? RenderFilter::none : RenderFilter::grayscale));
+        break;
+    default:
+        glUniform1i(prog->mode_uniform, (int)RenderFilter::none);
+        break;
     }
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
@@ -492,8 +492,8 @@ miracle::Renderer::DrawData Renderer::draw(
                 data.workspace_transform,
                 data.is_focused,
                 { true,
-                  color,
-                  border_config.size }
+                             color,
+                             border_config.size }
             };
         }
     }
