@@ -58,7 +58,7 @@ public:
         AllocationHint hint = AllocationHint());
     [[nodiscard]] std::shared_ptr<Container> create_container(
         miral::WindowInfo const& window_info, AllocationHint const& hint) const;
-    void delete_container(std::shared_ptr<miracle::Container> const &container);
+    void delete_container(std::shared_ptr<miracle::Container> const& container);
     void advise_new_workspace(int workspace);
     void advise_workspace_deleted(int workspace);
     bool advise_workspace_active(int workspace);

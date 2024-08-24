@@ -480,7 +480,6 @@ void I3CommandExecutor::process_input(I3Command const& command, I3ScopedCommandL
     // TODO: This is where we need to process the request
     if (command.arguments.size() == 3)
     {
-
     }
     else if (command.arguments.size() < 3)
     {

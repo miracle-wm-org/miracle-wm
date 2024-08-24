@@ -18,13 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle-main"
 
 #include "auto_restarting_launcher.h"
+#include "compositor_state.h"
 #include "miracle_config.h"
 #include "miracle_gl_config.h"
 #include "policy.h"
 #include "renderer.h"
 #include "surface_tracker.h"
 #include "version.h"
-#include "compositor_state.h"
 
 #include <libnotify/notify.h>
 #include <mir/log.h>

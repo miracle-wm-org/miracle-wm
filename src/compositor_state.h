@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_COMPOSITOR_STATE_H
 #define MIRACLE_WM_COMPOSITOR_STATE_H
 
-#include <mir/geometry/point.h>
 #include <memory>
+#include <mir/geometry/point.h>
 
 namespace miracle
 {

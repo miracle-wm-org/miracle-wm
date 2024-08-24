@@ -70,6 +70,11 @@ struct sockaddr_un* ipc_user_sockaddr()
     return ipc_sockaddr;
 }
 
+bool fd_is_valid(int fd)
+{
+    return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
+
 json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
 {
     bool is_focused = screen->get_active_workspace_num() == key;
@@ -175,26 +180,26 @@ json mode_event_to_json(WindowManagerMode mode)
 {
     switch (mode)
     {
-        case WindowManagerMode::normal:
-            return {
-            { "change", "default" },
-            { "pango_markup", true }
-            };
-        case WindowManagerMode::resizing:
-            return {
-            { "change", "resize" },
-            { "pango_markup", true }
-            };
-        case WindowManagerMode::selecting:
-            return {
-            { "change", "selecting" },
-            { "pango_markup", true }
-            };
-        default:
-        {
-            mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
-            return {};
-        }
+    case WindowManagerMode::normal:
+        return {
+            { "change",       "default" },
+            { "pango_markup", true      }
+        };
+    case WindowManagerMode::resizing:
+        return {
+            { "change",       "resize" },
+            { "pango_markup", true     }
+        };
+    case WindowManagerMode::selecting:
+        return {
+            { "change",       "selecting" },
+            { "pango_markup", true        }
+        };
+    default:
+    {
+        mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
+        return {};
+    }
     }
 }
 }
@@ -252,6 +257,8 @@ Ipc::Ipc(miral::MirRunner& runner,
     // Set i3 IPC socket path so that i3-msg works out of the box
     setenv("I3SOCK", ipc_sockaddr->sun_path, 1);
     setenv("SWAYSOCK", ipc_sockaddr->sun_path, 1);
+
+    mir::log_info("Listening to IPC socket on path: %s", ipc_sockaddr->sun_path);
 
     ipc_socket = mir::Fd { ipc_socket_raw };
     socket_handle = runner.register_fd_handler(ipc_socket, [&](int fd)
@@ -444,7 +451,8 @@ void Ipc::disconnect(Ipc::IpcClient& client)
     });
     if (it != clients.end())
     {
-        shutdown(client.client_fd, SHUT_RDWR);
+        if (fd_is_valid(client.client_fd))
+            shutdown(client.client_fd, SHUT_RDWR);
         mir::log_info("Disconnected client: %d", (int)client.client_fd);
         clients.erase(it);
     }
@@ -523,6 +531,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     {
         json j = json::parse(buf);
         bool success = true;
+        bool send_event_tick = false;
         for (auto const& i : j)
         {
             std::string event_type = i.template get<std::string>();
@@ -535,6 +544,11 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
                 client.subscribed_events |= event_mask(IPC_EVENT_INPUT);
             else if (event_type == "mode")
                 client.subscribed_events |= event_mask(IPC_EVENT_MODE);
+            else if (event_type == "tick")
+            {
+                client.subscribed_events |= event_mask(IPC_EVENT_TICK);
+                send_event_tick = true;
+            }
             else
             {
                 mir::log_error("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
@@ -550,13 +564,22 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
             send_reply(client, payload_type, msg);
         }
 
+        if (send_event_tick)
+        {
+            json response = {
+                { "first",   true },
+                { "payload", ""   }
+            };
+            send_reply(client, IPC_EVENT_TICK, to_string(response));
+        }
+
         break;
     }
     case IPC_GET_TREE:
     {
         auto json_string = to_string(outputs_to_json(policy.get_output_list()));
         send_reply(client, payload_type, json_string);
-        return;
+        break;
     }
     case IPC_GET_VERSION:
     {
@@ -568,7 +591,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
             { "loaded_config_file_name", config->get_filename() }
         };
         send_reply(client, payload_type, to_string(response));
-        return;
+        break;
     }
     case IPC_GET_BINDING_MODES:
     {
@@ -577,13 +600,33 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
         response.push_back("resize");
         response.push_back("selecting");
         send_reply(client, payload_type, to_string(response));
-        return;
+        break;
     }
     case IPC_GET_BINDING_STATE:
     {
         auto const& state = policy.get_state();
         send_reply(client, payload_type, to_string(mode_to_json(state.mode)));
-        return;
+        break;
+    }
+    case IPC_SEND_TICK:
+    {
+        const std::string msg = "{\"success\": true}";
+        send_reply(client, payload_type, msg);
+
+        for (auto& other_client : clients)
+        {
+            if ((other_client.subscribed_events & event_mask(IPC_EVENT_TICK)) == 0)
+            {
+                continue;
+            }
+
+            json response = {
+                { "first",   false            },
+                { "payload", std::string(buf) }
+            };
+            send_reply(other_client, IPC_EVENT_TICK, to_string(response));
+        }
+        break;
     }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
@@ -594,12 +637,20 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
 
 void Ipc::send_reply(miracle::Ipc::IpcClient& client, miracle::IpcCommandType command_type, const std::string& payload)
 {
+    if (!fd_is_valid(client.client_fd.operator int()))
+    {
+        mir::log_warning("Unable to send reply to client: file descriptor is invalid");
+        disconnect(client);
+        return;
+    }
+
     const uint32_t payload_length = payload.size();
     char data[IPC_HEADER_SIZE];
 
+    const auto casted_command = static_cast<uint32_t>(command_type);
     memcpy(data, ipc_magic, sizeof(ipc_magic));
     memcpy(data + sizeof(ipc_magic), &payload_length, sizeof(payload_length));
-    memcpy(data + sizeof(ipc_magic) + sizeof(payload_length), &command_type, sizeof(command_type));
+    memcpy(data + sizeof(ipc_magic) + sizeof(payload_length), &casted_command, sizeof(casted_command));
 
     auto new_buffer_size = client.buffer.size();
     while (client.write_buffer_len + IPC_HEADER_SIZE + payload_length >= new_buffer_size)
@@ -625,11 +676,35 @@ void Ipc::send_reply(miracle::Ipc::IpcClient& client, miracle::IpcCommandType co
     handle_writeable(client);
 }
 
+namespace
+{
+// https://stackoverflow.com/questions/24920748/how-to-handle-a-sigpipe-error-inside-the-object-that-generated-it
+ssize_t write_nosigpipe(int fd, void* buf, size_t len)
+{
+    sigset_t oldset, newset;
+    ssize_t result;
+    siginfo_t si;
+    struct timespec ts = { 0 };
+
+    sigemptyset(&newset);
+    sigaddset(&newset, SIGPIPE);
+    pthread_sigmask(SIG_BLOCK, &newset, &oldset);
+
+    result = write(fd, buf, len);
+
+    while (sigtimedwait(&newset, &si, &ts) >= 0 || errno != EAGAIN)
+        ;
+    pthread_sigmask(SIG_SETMASK, &oldset, 0);
+
+    return result;
+}
+}
+
 void Ipc::handle_writeable(miracle::Ipc::IpcClient& client)
 {
     while (client.write_buffer_len > 0)
     {
-        ssize_t written = write(client.client_fd, client.buffer.data(), client.write_buffer_len);
+        ssize_t written = write_nosigpipe(client.client_fd, client.buffer.data(), client.write_buffer_len);
         if (written == -1 && errno == EAGAIN)
         {
             return;

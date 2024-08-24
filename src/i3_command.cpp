@@ -17,9 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "i3_command.h"
 #include "jpcre2.h"
+#include "string_extensions.h"
 #include "window_controller.h"
 #include "window_helpers.h"
-#include "string_extensions.h"
 
 #include <cstring>
 #include <ranges>

@@ -20,4 +20,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIRACLE_FEATURE_FLAG_MULTI_SELECT false
 
-#endif //MIRACLE_WM_FEATURE_FLAGS_H
+#endif // MIRACLE_WM_FEATURE_FLAGS_H

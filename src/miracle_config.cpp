@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <glib-2.0/glib.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
@@ -29,7 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <miral/runner.h>
 #include <sys/inotify.h>
-#include <filesystem>
 
 using namespace miracle;
 
@@ -145,7 +145,7 @@ std::string create_default_configuration_path()
 }
 
 FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
-    FilesystemConfiguration{runner, create_default_configuration_path()}
+    FilesystemConfiguration { runner, create_default_configuration_path() }
 {
 }
 
@@ -162,8 +162,7 @@ FilesystemConfiguration::FilesystemConfiguration(
         {
             std::filesystem::copy_file(
                 MIRACLE_USR_SHARE_DIR,
-                config_path
-            );
+                config_path);
         }
         else
         {

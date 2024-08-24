@@ -21,11 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string_view>
 
 template <typename T>
-std::string_view trim_left (T const & data)
+std::string_view trim_left(T const& data)
 {
-    std::string_view sv{data};
-    sv.remove_prefix( std::min(sv.find_first_not_of(' '), sv.size()));
+    std::string_view sv { data };
+    sv.remove_prefix(std::min(sv.find_first_not_of(' '), sv.size()));
     return sv;
 }
 
-#endif //MIRACLE_WM_STRING_EXTENSIONS_H
+#endif // MIRACLE_WM_STRING_EXTENSIONS_H

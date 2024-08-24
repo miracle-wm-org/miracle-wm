@@ -104,12 +104,11 @@ std::shared_ptr<Container> Output::create_container(
     return get_active_workspace()->create_container(window_info, hint);
 }
 
-void Output::delete_container(std::shared_ptr<miracle::Container> const &container)
+void Output::delete_container(std::shared_ptr<miracle::Container> const& container)
 {
     auto workspace = container->get_workspace();
     workspace->delete_container(container);
 }
-
 
 void Output::advise_new_workspace(int workspace)
 {

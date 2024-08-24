@@ -67,7 +67,7 @@ public:
     std::shared_ptr<Container> create_container(
         miral::WindowInfo const& window_info, AllocationHint const& type);
     void handle_ready_hack(LeafContainer& container);
-    void delete_container(std::shared_ptr<Container> const &container);
+    void delete_container(std::shared_ptr<Container> const& container);
     void show();
     void hide();
     void transfer_pinned_windows_to(std::shared_ptr<Workspace> const& other);

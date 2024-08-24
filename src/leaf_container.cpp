@@ -17,16 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "leaf_container.h"
 #include "compositor_state.h"
+#include "container_group_container.h"
 #include "miracle_config.h"
 #include "output.h"
 #include "parent_container.h"
 #include "tiling_window_tree.h"
 #include "window_helpers.h"
 #include "workspace.h"
-#include "container_group_container.h"
 
-#include <mir_toolkit/common.h>
 #include <cmath>
+#include <mir_toolkit/common.h>
 
 using namespace miracle;
 
@@ -37,7 +37,7 @@ LeafContainer::LeafContainer(
     TilingWindowTree* tree,
     std::shared_ptr<ParentContainer> const& parent,
     CompositorState const& state) :
-    window_controller {node_interface },
+    window_controller { node_interface },
     logical_area { std::move(area) },
     config { config },
     tree { tree },
