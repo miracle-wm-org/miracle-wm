@@ -220,7 +220,7 @@ private:
     };
 
     static uint parse_modifier(std::string const& stringified_action_key);
-    void _init();
+    void _init(std::optional<StartupApp> const&);
     void _reload();
     void _watch(miral::MirRunner& runner);
     void read_animation_definitions(YAML::Node const&);

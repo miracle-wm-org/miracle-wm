@@ -161,7 +161,7 @@ FilesystemConfiguration::FilesystemConfiguration(
         mir::log_info("FilesystemConfiguration: File is being loaded immediately on construction. "
                       "It is assumed that you are running this inside of a test");
         config_path = default_config_path;
-        _init();
+        _init(std::nullopt);
     }
 }
 
@@ -170,25 +170,34 @@ void FilesystemConfiguration::load(mir::Server& server)
     const char* config_file_name_option = "config";
     server.add_configuration_option(
         config_file_name_option,
-        "file path to the miracle-wm yaml configuration file",
+        "File path to the miracle-wm yaml configuration file",
         default_config_path);
 
     const char* no_config_option = "no-config";
     server.add_configuration_option(
         no_config_option,
-        "if specified, the configuration file will not be loaded",
+        "If specified, the configuration file will not be loaded",
         false);
 
-    server.add_init_callback([this, config_file_name_option, no_config_option, &server]
+    const char* exec_option = "exec";
+    server.add_configuration_option(
+        exec_option,
+        "Specifies an application to run when miracle starts",
+        "");
+
+    server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, &server]
     {
         auto const server_opts = server.get_options();
         no_config = server_opts->get<bool>(no_config_option);
         config_path = server_opts->get<std::string>(config_file_name_option);
-        _init();
+        std::optional<StartupApp> exec_app = std::nullopt;
+        if (server_opts->is_set(exec_option))
+            exec_app = StartupApp { server_opts->get<std::string>(exec_option) };
+        _init(exec_app);
     });
 }
 
-void FilesystemConfiguration::_init()
+void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app)
 {
     if (no_config)
     {
@@ -215,6 +224,11 @@ void FilesystemConfiguration::_init()
     }
 
     _reload();
+
+    // If the user specified an --exec <APP_NAME>, let's add that to the list
+    if (startup_app)
+        options.startup_apps.push_back(startup_app.value());
+
     for (auto const& listener : config_ready_listeners)
         listener();
 
