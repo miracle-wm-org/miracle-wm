@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLEWM_MIRACLE_CONFIG_H
-#define MIRACLEWM_MIRACLE_CONFIG_H
+#ifndef MIRACLEWM_CONFIG_H
+#define MIRACLEWM_CONFIG_H
 
 #include "animation_defintion.h"
 #include "container.h"
@@ -230,30 +230,37 @@ private:
     std::vector<ChangeListener> on_change_listeners;
     std::string default_config_path;
     std::string config_path;
+    bool no_config = false;
     mir::Fd inotify_fd;
     std::unique_ptr<miral::FdHandle> watch_handle;
     int file_watch = 0;
     std::mutex mutex;
     std::vector<std::function<void()>> config_ready_listeners;
+    std::atomic<bool> has_changes = false;
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
-    uint primary_modifier = mir_input_event_modifier_meta;
-    std::vector<CustomKeyCommand> custom_key_commands;
-    KeyCommandList key_commands[DefaultKeyCommand::MAX];
-    int inner_gaps_x = 10;
-    int inner_gaps_y = 10;
-    int outer_gaps_x = 10;
-    int outer_gaps_y = 10;
-    std::vector<StartupApp> startup_apps;
-    std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
-    std::string desired_terminal = "";
-    int resize_jump = 50;
-    std::vector<EnvironmentVariable> environment_variables;
-    BorderConfig border_config;
-    std::atomic<bool> has_changes = false;
-    bool animations_enabled = true;
-    std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
-    std::vector<WorkspaceConfig> workspace_configs;
+    struct ConfigDetails
+    {
+        ConfigDetails();
+        uint primary_modifier = mir_input_event_modifier_meta;
+        std::vector<CustomKeyCommand> custom_key_commands;
+        KeyCommandList key_commands[DefaultKeyCommand::MAX];
+        int inner_gaps_x = 10;
+        int inner_gaps_y = 10;
+        int outer_gaps_x = 10;
+        int outer_gaps_y = 10;
+        std::vector<StartupApp> startup_apps;
+        std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
+        std::string desired_terminal = "";
+        int resize_jump = 50;
+        std::vector<EnvironmentVariable> environment_variables;
+        BorderConfig border_config;
+        bool animations_enabled = true;
+        std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
+        std::vector<WorkspaceConfig> workspace_configs;
+    };
+
+    ConfigDetails options;
 };
 }
 

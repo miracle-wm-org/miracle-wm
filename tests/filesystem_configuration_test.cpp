@@ -1,4 +1,4 @@
-#include "miracle_config.h"
+#include "config.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
 #include <filesystem>

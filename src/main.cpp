@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "auto_restarting_launcher.h"
 #include "compositor_state.h"
-#include "miracle_config.h"
+#include "config.h"
 #include "miracle_gl_config.h"
 #include "policy.h"
 #include "renderer.h"
@@ -28,8 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <libnotify/notify.h>
 #include <mir/log.h>
-#include <mir/server.h>
+#include <mir/options/option.h>
 #include <mir/renderer/gl/gl_surface.h>
+#include <mir/server.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
@@ -41,7 +42,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
-#include <mir/options/option.h>
 
 #define PRINT_OPENING_MESSAGE(x) mir::log_info("Welcome to miracle-wm v%s", x);
 

@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle"
 
 #include "policy.h"
+#include "config.h"
 #include "container_group_container.h"
 #include "feature_flags.h"
-#include "miracle_config.h"
 #include "shell_component_container.h"
 #include "window_tools_accessor.h"
 #include "workspace_manager.h"

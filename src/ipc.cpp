@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "miracle_ipc"
 
 #include "ipc.h"
+#include "config.h"
 #include "i3_command_executor.h"
-#include "miracle_config.h"
 #include "output.h"
 #include "policy.h"
 #include "version.h"

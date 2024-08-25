@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
-#include "miracle_config.h"
+#include "config.h"
 #include <chrono>
 #include <mir/server_action_queue.h>
 #define MIR_LOG_COMPONENT "animator"

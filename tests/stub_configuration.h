@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_STUB_CONFIGURATION_H
 #define MIRACLE_WM_STUB_CONFIGURATION_H
 
-#include "miracle_config.h"
+#include "config.h"
 
 namespace miracle
 {
@@ -26,8 +26,8 @@ namespace test
 {
     class StubConfiguration : public miracle::MiracleConfig
     {
-        void load(mir::Server& server) override {}
-        void on_config_ready(std::function<void()> const&) override {}
+        void load(mir::Server& server) override { }
+        void on_config_ready(std::function<void()> const&) override { }
         [[nodiscard]] std::string const& get_filename() const override { return ""; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
         [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override

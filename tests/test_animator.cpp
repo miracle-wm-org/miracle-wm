@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
-#include "miracle_config.h"
+#include "config.h"
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
 #include <fstream>

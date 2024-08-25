@@ -17,8 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "leaf_container.h"
 #include "compositor_state.h"
+#include "config.h"
 #include "container_group_container.h"
-#include "miracle_config.h"
 #include "output.h"
 #include "parent_container.h"
 #include "tiling_window_tree.h"
