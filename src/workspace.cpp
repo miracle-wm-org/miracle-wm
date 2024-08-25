@@ -19,11 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace.h"
 #include "compositor_state.h"
+#include "config.h"
 #include "container_group_container.h"
 #include "floating_tree_container.h"
 #include "floating_window_container.h"
 #include "leaf_container.h"
-#include "miracle_config.h"
 #include "output.h"
 #include "parent_container.h"
 #include "shell_component_container.h"

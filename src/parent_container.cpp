@@ -16,9 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "parent_container.h"
+#include "config.h"
 #include "container.h"
 #include "leaf_container.h"
-#include "miracle_config.h"
 #include "tiling_window_tree.h"
 #include "workspace.h"
 #include <cmath>

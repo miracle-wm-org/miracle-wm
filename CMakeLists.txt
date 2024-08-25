@@ -44,8 +44,8 @@ add_library(miracle-wm-implementation
     src/container.cpp
     src/window_helpers.h
     src/window_helpers.cpp
-    src/miracle_config.cpp
-    src/miracle_config.h
+    src/config.cpp
+    src/config.h
     src/output.cpp
     src/workspace_manager.cpp
     src/ipc.cpp
@@ -67,12 +67,12 @@ add_library(miracle-wm-implementation
     src/program_factory.cpp
     src/mode_observer.cpp
     src/debug_helper.h
-        src/floating_window_container.cpp
+    src/floating_window_container.cpp
     src/shell_component_container.cpp
-        src/container_group_container.cpp
-        src/container_group_container.h
-        src/floating_tree_container.cpp
-        src/floating_tree_container.h
+    src/container_group_container.cpp
+    src/container_group_container.h
+    src/floating_tree_container.cpp
+    src/floating_tree_container.h
 )
 
 add_executable(miracle-wm

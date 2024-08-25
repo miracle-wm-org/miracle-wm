@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "renderer.h"
 #include "compositor_state.h"
-#include "miracle_config.h"
+#include "config.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
 

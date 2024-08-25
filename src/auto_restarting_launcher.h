@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_AUTO_RESTARTING_LAUNCHER_H
 #define MIRACLEWM_AUTO_RESTARTING_LAUNCHER_H
 
-#include "miracle_config.h"
+#include "config.h"
 #include <map>
 #include <miral/external_client.h>
 #include <miral/runner.h>
