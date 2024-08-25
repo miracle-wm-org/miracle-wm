@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <libnotify/notify.h>
 #include <mir/log.h>
+#include <mir/server.h>
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/add_init_callback.h>
 #include <miral/append_event_filter.h>
@@ -40,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
 #include <miroil/open_gl_context.h>
+#include <mir/options/option.h>
 
 #define PRINT_OPENING_MESSAGE(x) mir::log_info("Welcome to miracle-wm v%s", x);
 
@@ -83,8 +85,9 @@ int main(int argc, char const* argv[])
 
     WindowManagerOptions* options;
     auto window_managers = ServerMiddleman(
-        [&](auto& server)
+        [&](mir::Server& server)
     {
+        config->load(server);
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
                 "tiling", auto_restarting_launcher, runner, config, surface_tracker, server, compositor_state)
@@ -94,13 +97,13 @@ int main(int argc, char const* argv[])
 
     Keymap config_keymap;
 
-    auto const run_startup_apps = [&]()
+    config->on_config_ready([&]()
     {
         for (auto const& app : config->get_startup_apps())
         {
             auto_restarting_launcher.launch(app);
         }
-    };
+    });
 
     notify_init("miracle-wm");
 
@@ -124,7 +127,6 @@ int main(int argc, char const* argv[])
             config_keymap,
             external_client_launcher,
             display_configuration_options,
-            AddInitCallback(run_startup_apps),
             AppendEventFilter([&config](MirEvent const*)
     {
         config->try_process_change();

@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle_config.h"
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
+#include <mir/server.h>
+#include <mir/options/option.h>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -150,32 +152,20 @@ FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
 }
 
 FilesystemConfiguration::FilesystemConfiguration(
-    miral::MirRunner& runner, std::string const& path) :
+    miral::MirRunner& runner, std::string const& path, bool load_immediately) :
     runner { runner },
-    config_path { path }
+    default_config_path { path }
 {
-    mir::log_info("Configuration file path is: %s", config_path.c_str());
-
-    if (!std::filesystem::exists(config_path))
+    if (load_immediately)
     {
-        if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
-        {
-            std::filesystem::copy_file(
-                MIRACLE_USR_SHARE_DIR,
-                config_path);
-        }
-        else
-        {
-            std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
-        }
+        mir::log_info("FilesystemConfiguration: File is being loaded immediately on construction. "
+                 "It is assumed that you are running this inside of a test");
+        config_path = default_config_path;
+        _init();
     }
-
-    mir::log_info("Configuration file path is: %s", config_path.c_str());
-    _load();
-    _watch(runner);
 }
 
-void FilesystemConfiguration::_load()
+void FilesystemConfiguration::_reload()
 {
     std::lock_guard<std::mutex> lock(mutex);
 
@@ -936,7 +926,7 @@ void FilesystemConfiguration::_watch(miral::MirRunner& runner)
 
         if (inotify_buffer.event.mask & (IN_MODIFY))
         {
-            _load();
+            _reload();
             has_changes = true;
         }
     });
@@ -1001,6 +991,52 @@ uint FilesystemConfiguration::parse_modifier(std::string const& stringified_acti
     else
         mir::log_error("Unable to process action_key: %s", stringified_action_key.c_str());
     return mir_input_event_modifier_none;
+}
+
+void FilesystemConfiguration::load(mir::Server& server)
+{
+    const char* config_file_name_option = "miracle-config-path";
+    server.add_configuration_option(
+        config_file_name_option,
+        "file path to the miracle-wm yaml configuration file",
+        default_config_path);
+
+    server.add_init_callback([this, config_file_name_option, &server]
+    {
+         auto const options = server.get_options();
+         config_path = options->get<std::string>(config_file_name_option);
+         _init();
+    });
+}
+
+void FilesystemConfiguration::_init()
+{
+    mir::log_info("Configuration file path is: %s", config_path.c_str());
+    if (!std::filesystem::exists(config_path))
+    {
+        if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+        {
+            std::filesystem::copy_file(
+            MIRACLE_USR_SHARE_DIR,
+            config_path);
+        }
+        else
+        {
+            std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+        }
+    }
+
+    _reload();
+    for (auto const& listener : config_ready_listeners)
+        listener();
+
+    config_ready_listeners.clear();
+    _watch(runner);
+}
+
+void FilesystemConfiguration::on_config_ready(std::function<void()> const& listener)
+{
+    config_ready_listeners.push_back(listener);
 }
 
 std::string const& FilesystemConfiguration::get_filename() const

@@ -33,6 +33,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <vector>
 
+namespace mir
+{
+class Server;
+}
+
 namespace YAML
 {
 class Node;
@@ -144,6 +149,9 @@ enum class RenderFilter : int
 class MiracleConfig
 {
 public:
+    virtual ~MiracleConfig() = default;
+    virtual void load(mir::Server& server) = 0;
+    virtual void on_config_ready(std::function<void()> const&) = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
@@ -174,8 +182,13 @@ class FilesystemConfiguration : public MiracleConfig
 {
 public:
     explicit FilesystemConfiguration(miral::MirRunner&);
-    FilesystemConfiguration(miral::MirRunner&, std::string const&);
+    FilesystemConfiguration(miral::MirRunner&, std::string const&, bool load_immediately = false);
+    ~FilesystemConfiguration() = default;
+    FilesystemConfiguration(FilesystemConfiguration const&) = default;
+    auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = default;
 
+    void load(mir::Server& server) override;
+    void on_config_ready(std::function<void()> const&) override;
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
@@ -207,18 +220,21 @@ private:
     };
 
     static uint parse_modifier(std::string const& stringified_action_key);
-    void _load();
+    void _init();
+    void _reload();
     void _watch(miral::MirRunner& runner);
     void read_animation_definitions(YAML::Node const&);
 
     miral::MirRunner& runner;
     int next_listener_handle = 0;
     std::vector<ChangeListener> on_change_listeners;
+    std::string default_config_path;
     std::string config_path;
     mir::Fd inotify_fd;
     std::unique_ptr<miral::FdHandle> watch_handle;
     int file_watch = 0;
     std::mutex mutex;
+    std::vector<std::function<void()>> config_ready_listeners;
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
     uint primary_modifier = mir_input_event_modifier_meta;
