@@ -14,7 +14,7 @@ def server():
     
     env = os.environ.copy()
     env['WAYLAND_DISPLAY'] = 'wayland-98'
-    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600', '--no-config', '1'],
+    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600'],
                     env=env, stdout=PIPE, stderr=STDOUT)
     
     socket = ""
@@ -22,7 +22,6 @@ def server():
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             data = line.decode("utf-8").strip()
-            print(data)
             if to_find in data:
                 i = data.index(to_find)
                 i = i + len(to_find)
@@ -30,9 +29,5 @@ def server():
                 break
 
         yield socket
-        for line in iter(process.stdout.readline, b''):
-            data = line.decode("utf-8").strip()
-            print(data)
-
         process.terminate()
         return
