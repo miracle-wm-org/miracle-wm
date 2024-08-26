@@ -14,7 +14,7 @@ def server():
     
     env = os.environ.copy()
     env['WAYLAND_DISPLAY'] = 'wayland-98'
-    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600'],
+    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600', '--no-config', '1'],
                     env=env, stdout=PIPE, stderr=STDOUT)
     
     socket = ""
