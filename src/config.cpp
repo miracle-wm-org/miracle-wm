@@ -193,10 +193,12 @@ void FilesystemConfiguration::load(mir::Server& server)
         config_path = server_opts->get<std::string>(config_file_name_option);
         std::optional<StartupApp> exec_app = std::nullopt;
         if (server_opts->is_set(exec_option))
+        {
             exec_app = StartupApp {
                 .command=server_opts->get<std::string>(exec_option),
                 .should_halt_compositor_on_death=true
             };
+        }
         _init(exec_app);
     });
 }
@@ -231,7 +233,10 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
 
     // If the user specified an --exec <APP_NAME>, let's add that to the list
     if (startup_app)
+    {
+        mir::log_info("Miracle will die when the application specified with --exec dies");
         options.startup_apps.push_back(startup_app.value());
+    }
 
     for (auto const& listener : config_ready_listeners)
         listener();
