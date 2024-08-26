@@ -1,4 +1,4 @@
-> [!WARNING]
+a> [!WARNING]
 > This project is a work in progress. The first stable, feature-complete release
 > will be version 1.0.0. As such, it is advised that you do not use this as your daily driver
 > unless you are willing to encounter some paper cuts along the way. If you are willing to 
