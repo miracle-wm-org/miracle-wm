@@ -182,8 +182,7 @@ void FilesystemConfiguration::load(mir::Server& server)
     const char* exec_option = "exec";
     server.add_configuration_option(
         exec_option,
-        "Specifies an application that will run when miracle starts. When this application "
-        "dies, miracle will also die.",
+        "Specifies an application to run when miracle starts",
         "");
 
     server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, &server]
@@ -193,10 +192,7 @@ void FilesystemConfiguration::load(mir::Server& server)
         config_path = server_opts->get<std::string>(config_file_name_option);
         std::optional<StartupApp> exec_app = std::nullopt;
         if (server_opts->is_set(exec_option))
-            exec_app = StartupApp {
-                .command=server_opts->get<std::string>(exec_option),
-                .should_halt_compositor_on_death=true
-            };
+            exec_app = StartupApp { server_opts->get<std::string>(exec_option) };
         _init(exec_app);
     });
 }
