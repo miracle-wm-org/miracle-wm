@@ -76,6 +76,12 @@ void AutoRestartingLauncher::reap()
                 }
             }
 
+            if (cmd.should_halt_compositor_on_death)
+            {
+                runner.stop();
+                return;
+            }
+
             if (cmd.restart_on_death)
             {
                 if (status != 127)
