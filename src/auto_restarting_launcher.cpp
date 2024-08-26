@@ -43,9 +43,7 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
         return;
     }
     mir::log_info("Started external client %s with pid=%d", cmd.command.c_str(), pid);
-
-    if (cmd.restart_on_death)
-        pid_to_command_map[pid] = cmd;
+    pid_to_command_map[pid] = cmd;
 }
 
 void AutoRestartingLauncher::kill_all()
