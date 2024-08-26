@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLEWM_MIRACLE_CONFIG_H
-#define MIRACLEWM_MIRACLE_CONFIG_H
+#ifndef MIRACLEWM_CONFIG_H
+#define MIRACLEWM_CONFIG_H
 
 #include "animation_defintion.h"
 #include "container.h"
@@ -32,6 +32,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace mir
+{
+class Server;
+}
 
 namespace YAML
 {
@@ -145,6 +150,9 @@ enum class RenderFilter : int
 class MiracleConfig
 {
 public:
+    virtual ~MiracleConfig() = default;
+    virtual void load(mir::Server& server) = 0;
+    virtual void on_config_ready(std::function<void()> const&) = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
@@ -175,8 +183,13 @@ class FilesystemConfiguration : public MiracleConfig
 {
 public:
     explicit FilesystemConfiguration(miral::MirRunner&);
-    FilesystemConfiguration(miral::MirRunner&, std::string const&);
+    FilesystemConfiguration(miral::MirRunner&, std::string const&, bool load_immediately = false);
+    ~FilesystemConfiguration() = default;
+    FilesystemConfiguration(FilesystemConfiguration const&) = default;
+    auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = default;
 
+    void load(mir::Server& server) override;
+    void on_config_ready(std::function<void()> const&) override;
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
@@ -208,37 +221,47 @@ private:
     };
 
     static uint parse_modifier(std::string const& stringified_action_key);
-    void _load();
+    void _init(std::optional<StartupApp> const&);
+    void _reload();
     void _watch(miral::MirRunner& runner);
     void read_animation_definitions(YAML::Node const&);
 
     miral::MirRunner& runner;
     int next_listener_handle = 0;
     std::vector<ChangeListener> on_change_listeners;
+    std::string default_config_path;
     std::string config_path;
+    bool no_config = false;
     mir::Fd inotify_fd;
     std::unique_ptr<miral::FdHandle> watch_handle;
     int file_watch = 0;
     std::mutex mutex;
+    std::vector<std::function<void()>> config_ready_listeners;
+    std::atomic<bool> has_changes = false;
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
-    uint primary_modifier = mir_input_event_modifier_meta;
-    std::vector<CustomKeyCommand> custom_key_commands;
-    KeyCommandList key_commands[DefaultKeyCommand::MAX];
-    int inner_gaps_x = 10;
-    int inner_gaps_y = 10;
-    int outer_gaps_x = 10;
-    int outer_gaps_y = 10;
-    std::vector<StartupApp> startup_apps;
-    std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
-    std::string desired_terminal = "";
-    int resize_jump = 50;
-    std::vector<EnvironmentVariable> environment_variables;
-    BorderConfig border_config;
-    std::atomic<bool> has_changes = false;
-    bool animations_enabled = true;
-    std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
-    std::vector<WorkspaceConfig> workspace_configs;
+    struct ConfigDetails
+    {
+        ConfigDetails();
+        uint primary_modifier = mir_input_event_modifier_meta;
+        std::vector<CustomKeyCommand> custom_key_commands;
+        KeyCommandList key_commands[DefaultKeyCommand::MAX];
+        int inner_gaps_x = 10;
+        int inner_gaps_y = 10;
+        int outer_gaps_x = 10;
+        int outer_gaps_y = 10;
+        std::vector<StartupApp> startup_apps;
+        std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
+        std::string desired_terminal = "";
+        int resize_jump = 50;
+        std::vector<EnvironmentVariable> environment_variables;
+        BorderConfig border_config;
+        bool animations_enabled = true;
+        std::array<AnimationDefinition, (int)AnimateableEvent::max> animation_defintions;
+        std::vector<WorkspaceConfig> workspace_configs;
+    };
+
+    ConfigDetails options;
 };
 }
 

@@ -16,9 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include <glm/fwd.hpp>
-#define MIR_LOG_COMPONENT "miracle_config"
+#define MIR_LOG_COMPONENT "config"
 
-#include "miracle_config.h"
+#include "config.h"
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <libnotify/notify.h>
 #include <mir/log.h>
+#include <mir/options/option.h>
+#include <mir/server.h>
 #include <miral/runner.h>
 #include <sys/inotify.h>
 
@@ -150,47 +152,102 @@ FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
 }
 
 FilesystemConfiguration::FilesystemConfiguration(
-    miral::MirRunner& runner, std::string const& path) :
+    miral::MirRunner& runner, std::string const& path, bool load_immediately) :
     runner { runner },
-    config_path { path }
+    default_config_path { path }
 {
-    mir::log_info("Configuration file path is: %s", config_path.c_str());
-
-    if (!std::filesystem::exists(config_path))
+    if (load_immediately)
     {
-        if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+        mir::log_info("FilesystemConfiguration: File is being loaded immediately on construction. "
+                      "It is assumed that you are running this inside of a test");
+        config_path = default_config_path;
+        _init(std::nullopt);
+    }
+}
+
+void FilesystemConfiguration::load(mir::Server& server)
+{
+    const char* config_file_name_option = "config";
+    server.add_configuration_option(
+        config_file_name_option,
+        "File path to the miracle-wm yaml configuration file",
+        default_config_path);
+
+    const char* no_config_option = "no-config";
+    server.add_configuration_option(
+        no_config_option,
+        "If specified, the configuration file will not be loaded",
+        false);
+
+    const char* exec_option = "exec";
+    server.add_configuration_option(
+        exec_option,
+        "Specifies an application to run when miracle starts",
+        "");
+
+    server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, &server]
+    {
+        auto const server_opts = server.get_options();
+        no_config = server_opts->get<bool>(no_config_option);
+        config_path = server_opts->get<std::string>(config_file_name_option);
+        std::optional<StartupApp> exec_app = std::nullopt;
+        if (server_opts->is_set(exec_option))
+            exec_app = StartupApp { server_opts->get<std::string>(exec_option) };
+        _init(exec_app);
+    });
+}
+
+void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app)
+{
+    if (no_config)
+    {
+        mir::log_info("No configuration option was set, so the file will not be created");
+    }
+    else
+    {
+        mir::log_info("Configuration file path is: %s", config_path.c_str());
+        if (!std::filesystem::exists(config_path))
         {
-            std::filesystem::copy_file(
-                MIRACLE_USR_SHARE_DIR,
-                config_path);
-        }
-        else
-        {
-            std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+            if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+            {
+                mir::log_info("Configuration being copied from %s", MIRACLE_USR_SHARE_DIR);
+                std::filesystem::copy_file(
+                    MIRACLE_USR_SHARE_DIR,
+                    config_path);
+            }
+            else
+            {
+                mir::log_info("Configuration being written blank");
+                std::fstream file(config_path, std::ios::out | std::ios::in | std::ios::app);
+            }
         }
     }
 
-    mir::log_info("Configuration file path is: %s", config_path.c_str());
-    _load();
+    _reload();
+
+    // If the user specified an --exec <APP_NAME>, let's add that to the list
+    if (startup_app)
+        options.startup_apps.push_back(startup_app.value());
+
+    for (auto const& listener : config_ready_listeners)
+        listener();
+
+    config_ready_listeners.clear();
     _watch(runner);
 }
 
-void FilesystemConfiguration::_load()
+void FilesystemConfiguration::_reload()
 {
     std::lock_guard<std::mutex> lock(mutex);
 
     // Reset all
-    primary_modifier = mir_input_event_modifier_meta;
-    custom_key_commands = {};
-    inner_gaps_x = 10;
-    inner_gaps_y = 10;
-    outer_gaps_x = 10;
-    outer_gaps_y = 10;
-    startup_apps = {};
-    terminal = wrap_command("miracle-wm-sensible-terminal");
-    desired_terminal = "";
-    resize_jump = 50;
-    border_config = { 0, glm::vec4(0), glm::vec4(0) };
+    options = ConfigDetails();
+
+    if (no_config)
+    {
+        mir::log_info("No configuration was specified, so the config will not load.");
+        return;
+    }
 
     // Load the new configuration
     mir::log_info("Configuration is loading...");
@@ -202,7 +259,7 @@ void FilesystemConfiguration::_load()
         if (modifier == mir_input_event_modifier_none)
             mir::log_error("action_key: invalid action key: %s", stringified_action_key.c_str());
         else
-            primary_modifier = parse_modifier(stringified_action_key);
+            options.primary_modifier = parse_modifier(stringified_action_key);
     }
 
     if (config["default_action_overrides"])
@@ -397,13 +454,644 @@ void FilesystemConfiguration::_load()
             if (is_invalid)
                 continue;
 
-            key_commands[key_command].push_back({ keyboard_action,
+            options.key_commands[key_command].push_back({ keyboard_action,
                 modifiers,
                 code });
         }
     }
 
-    // Fill in default actions if the list is zero for any one of them
+    // Custom actions
+    if (config["custom_actions"])
+    {
+        auto const custom_actions = config["custom_actions"];
+        if (!custom_actions.IsSequence())
+        {
+            mir::log_error("custom_actions: value must be an array");
+            return;
+        }
+
+        for (auto i = 0; i < custom_actions.size(); i++)
+        {
+            auto sub_node = custom_actions[i];
+            if (!sub_node["command"])
+            {
+                mir::log_error("custom_actions: missing command");
+                continue;
+            }
+
+            if (!sub_node["action"])
+            {
+                mir::log_error("custom_actions: missing action");
+                continue;
+            }
+
+            if (!sub_node["modifiers"])
+            {
+                mir::log_error("custom_actions: missing modifiers");
+                continue;
+            }
+
+            if (!sub_node["key"])
+            {
+                mir::log_error("custom_actions: missing key");
+                continue;
+            }
+
+            std::string command;
+            std::string action;
+            std::string key;
+            YAML::Node modifiers_node;
+            try
+            {
+                command = wrap_command(sub_node["command"].as<std::string>());
+                action = sub_node["action"].as<std::string>();
+                key = sub_node["key"].as<std::string>();
+                modifiers_node = sub_node["modifiers"];
+            }
+            catch (YAML::BadConversion const& e)
+            {
+                mir::log_error("Unable to parse custom_actions[%d]: %s", i, e.msg.c_str());
+                continue;
+            }
+
+            // TODO: Copy & paste here
+            MirKeyboardAction keyboard_action;
+            if (action == "up")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
+            else if (action == "down")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_down;
+            else if (action == "repeat")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_repeat;
+            else if (action == "modifiers")
+                keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
+            else
+            {
+                mir::log_error("custom_actions: Unknown keyboard action: %s", action.c_str());
+                continue;
+            }
+
+            auto code = libevdev_event_code_from_name(EV_KEY,
+                key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
+            if (code < 0)
+            {
+                mir::log_error(
+                    "custom_actions: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h",
+                    key.c_str());
+                continue;
+            }
+
+            if (!modifiers_node.IsSequence())
+            {
+                mir::log_error("custom_actions: Provided modifiers is not an array");
+                continue;
+            }
+
+            uint modifiers = 0;
+            bool is_invalid = false;
+            for (auto j = 0; j < modifiers_node.size(); j++)
+            {
+                try
+                {
+                    auto modifier = modifiers_node[j].as<std::string>();
+                    modifiers = modifiers | parse_modifier(modifier);
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse modifier for custom_actions[%d]: %s", i, e.msg.c_str());
+                    is_invalid = true;
+                    break;
+                }
+            }
+
+            if (is_invalid)
+                continue;
+
+            options.custom_key_commands.push_back({ keyboard_action,
+                modifiers,
+                code,
+                command });
+        }
+    }
+
+    // Gap sizes
+    if (config["inner_gaps"])
+    {
+        int new_inner_gaps_x = options.inner_gaps_x;
+        int new_inner_gaps_y = options.inner_gaps_y;
+        try
+        {
+            if (config["inner_gaps"]["x"])
+                new_inner_gaps_x = config["inner_gaps"]["x"].as<int>();
+            if (config["inner_gaps"]["y"])
+                new_inner_gaps_y = config["inner_gaps"]["y"].as<int>();
+
+            options.inner_gaps_x = new_inner_gaps_x;
+            options.inner_gaps_y = new_inner_gaps_y;
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse inner_gaps: %s", e.msg.c_str());
+        }
+    }
+    if (config["outer_gaps"])
+    {
+        try
+        {
+            int new_outer_gaps_x = options.outer_gaps_x;
+            int new_outer_gaps_y = options.outer_gaps_y;
+            if (config["outer_gaps"]["x"])
+                new_outer_gaps_x = config["outer_gaps"]["x"].as<int>();
+            if (config["outer_gaps"]["y"])
+                new_outer_gaps_y = config["outer_gaps"]["y"].as<int>();
+
+            options.outer_gaps_x = new_outer_gaps_x;
+            options.outer_gaps_y = new_outer_gaps_y;
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse outer_gaps: %s", e.msg.c_str());
+        }
+    }
+
+    // Startup Apps
+    if (config["startup_apps"])
+    {
+        if (!config["startup_apps"].IsSequence())
+        {
+            mir::log_error("startup_apps is not an array");
+        }
+        else
+        {
+            for (auto const& node : config["startup_apps"])
+            {
+                if (!node["command"])
+                {
+                    mir::log_error("startup_apps: app lacks a command");
+                    continue;
+                }
+
+                try
+                {
+                    auto command = wrap_command(node["command"].as<std::string>());
+                    bool restart_on_death = false;
+                    if (node["restart_on_death"])
+                    {
+                        restart_on_death = node["restart_on_death"].as<bool>();
+                    }
+
+                    options.startup_apps.push_back({ std::move(command), restart_on_death });
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse startup_apps: %s", e.msg.c_str());
+                }
+            }
+        }
+    }
+
+    // Terminal
+    if (config["terminal"])
+    {
+        try
+        {
+            options.terminal = wrap_command(config["terminal"].as<std::string>());
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse terminal: %s", e.msg.c_str());
+        }
+    }
+
+    if (options.terminal && !program_exists(options.terminal.value()))
+    {
+        options.desired_terminal = options.terminal.value();
+        options.terminal.reset();
+    }
+
+    // Resizing
+    if (config["resize_jump"])
+    {
+        try
+        {
+            options.resize_jump = config["resize_jump"].as<int>();
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse resize_jump: %s", e.msg.c_str());
+        }
+    }
+
+    // Environment variables
+    if (config["environment_variables"])
+    {
+        if (!config["environment_variables"].IsSequence())
+        {
+            mir::log_error("environment_variables is not an array");
+        }
+        else
+        {
+            for (auto const& node : config["environment_variables"])
+            {
+                if (!node["key"])
+                {
+                    mir::log_error("environment_variables: item is missing a 'key'");
+                    continue;
+                }
+
+                if (!node["value"])
+                {
+                    mir::log_error("environment_variables: item is missing a 'value'");
+                    continue;
+                }
+
+                try
+                {
+                    auto key = node["key"].as<std::string>();
+                    auto value = node["value"].as<std::string>();
+                    options.environment_variables.push_back({ key, value });
+                }
+                catch (YAML::BadConversion const& e)
+                {
+                    mir::log_error("Unable to parse environment_variable_entry: %s", e.msg.c_str());
+                }
+            }
+        }
+    }
+
+    if (config["border"])
+    {
+        try
+        {
+            auto border = config["border"];
+            auto size = border["size"].as<int>();
+            auto color = parse_color(border["color"]);
+            auto focus_color = parse_color(border["focus_color"]);
+            options.border_config = { size, focus_color, color };
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("Unable to parse border: %s", e.msg.c_str());
+        }
+    }
+
+    if (config["workspaces"])
+    {
+        try
+        {
+            auto const& workspaces = config["workspaces"];
+            if (!workspaces.IsSequence())
+            {
+                mir::log_error("workspaces: expected sequence: L%d:%d", workspaces.Mark().line, workspaces.Mark().column);
+            }
+            else
+            {
+                for (auto const& workspace : workspaces)
+                {
+                    auto num = workspace["number"].as<int>();
+                    auto type = container_type_from_string(workspace["layout"].as<std::string>());
+                    if (type != ContainerType::leaf && type != ContainerType::floating_window)
+                    {
+                        mir::log_error("layout should be 'tiled' or 'floating': L%d:%d", workspace["layout"].Mark().line, workspace["layout"].Mark().column);
+                        continue;
+                    }
+
+                    options.workspace_configs.push_back({ num, type });
+                }
+            }
+        }
+        catch (YAML::BadConversion const& e)
+        {
+            mir::log_error("workspaces: unable to parse: %s, L%d:%d", e.msg.c_str(), e.mark.line, e.mark.column);
+        }
+    }
+
+    read_animation_definitions(config);
+}
+
+void FilesystemConfiguration::read_animation_definitions(YAML::Node const& root)
+{
+    if (root["animations"])
+    {
+        auto animations_node = root["animations"];
+        if (!animations_node.IsSequence())
+        {
+            mir::log_error("Unable to parse animations_node: animations_node is not an array");
+            return;
+        }
+
+        for (auto const& node : animations_node)
+        {
+            auto const& event = try_parse_enum<AnimateableEvent>(
+                node,
+                "event",
+                from_string_animateable_event,
+                AnimateableEvent::max);
+            if (event == AnimateableEvent::max)
+                continue;
+
+            auto const& type = try_parse_enum<AnimationType>(
+                node,
+                "type",
+                from_string_animation_type,
+                AnimationType::max);
+            if (type == AnimationType::max)
+                continue;
+
+            auto const& function = try_parse_enum<EaseFunction>(
+                node,
+                "function",
+                from_string_ease_function,
+                EaseFunction::max);
+            if (function == EaseFunction::max)
+                continue;
+
+            options.animation_defintions[(int)event].type = type;
+            options.animation_defintions[(int)event].function = function;
+            try_parse_value(node, "duration", options.animation_defintions[(int)event].duration_seconds);
+            try_parse_value(node, "c1", options.animation_defintions[(int)event].c1);
+            try_parse_value(node, "c2", options.animation_defintions[(int)event].c2);
+            try_parse_value(node, "c3", options.animation_defintions[(int)event].c3);
+            try_parse_value(node, "c4", options.animation_defintions[(int)event].c4);
+            try_parse_value(node, "n1", options.animation_defintions[(int)event].n1);
+            try_parse_value(node, "d1", options.animation_defintions[(int)event].d1);
+        }
+    }
+
+    if (root["enable_animations"])
+        try_parse_value(root, "enable_animations", options.animations_enabled);
+}
+
+void FilesystemConfiguration::_watch(miral::MirRunner& runner)
+{
+    if (no_config)
+    {
+        mir::log_info("No configuration was selected, so the configuration will not be watched");
+        return;
+    }
+
+    inotify_fd = mir::Fd { inotify_init() };
+    file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
+    if (file_watch < 0)
+        mir::fatal_error("Unable to watch the config file");
+
+    watch_handle = runner.register_fd_handler(inotify_fd, [&](int file_fd)
+    {
+        union
+        {
+            inotify_event event;
+            char buffer[sizeof(inotify_event) + NAME_MAX + 1];
+        } inotify_buffer;
+
+        if (read(inotify_fd, &inotify_buffer, sizeof(inotify_buffer)) < static_cast<ssize_t>(sizeof(inotify_event)))
+            return;
+
+        if (inotify_buffer.event.mask & (IN_MODIFY))
+        {
+            _reload();
+            has_changes = true;
+        }
+    });
+}
+
+void FilesystemConfiguration::try_process_change()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!has_changes)
+        return;
+
+    has_changes = false;
+    for (auto const& on_change : on_change_listeners)
+    {
+        on_change.listener(*this);
+    }
+}
+
+uint FilesystemConfiguration::get_primary_modifier() const
+{
+    return options.primary_modifier;
+}
+
+uint FilesystemConfiguration::parse_modifier(std::string const& stringified_action_key)
+{
+    if (stringified_action_key == "alt")
+        return mir_input_event_modifier_alt;
+    else if (stringified_action_key == "alt_left")
+        return mir_input_event_modifier_alt_left;
+    else if (stringified_action_key == "alt_right")
+        return mir_input_event_modifier_alt_right;
+    else if (stringified_action_key == "shift")
+        return mir_input_event_modifier_shift;
+    else if (stringified_action_key == "shift_left")
+        return mir_input_event_modifier_shift_left;
+    else if (stringified_action_key == "shift_right")
+        return mir_input_event_modifier_shift_right;
+    else if (stringified_action_key == "sym")
+        return mir_input_event_modifier_sym;
+    else if (stringified_action_key == "function")
+        return mir_input_event_modifier_function;
+    else if (stringified_action_key == "ctrl")
+        return mir_input_event_modifier_ctrl;
+    else if (stringified_action_key == "ctrl_left")
+        return mir_input_event_modifier_ctrl_left;
+    else if (stringified_action_key == "ctrl_right")
+        return mir_input_event_modifier_ctrl_right;
+    else if (stringified_action_key == "meta")
+        return mir_input_event_modifier_meta;
+    else if (stringified_action_key == "meta_left")
+        return mir_input_event_modifier_meta_left;
+    else if (stringified_action_key == "meta_right")
+        return mir_input_event_modifier_meta_right;
+    else if (stringified_action_key == "caps_lock")
+        return mir_input_event_modifier_caps_lock;
+    else if (stringified_action_key == "num_lock")
+        return mir_input_event_modifier_num_lock;
+    else if (stringified_action_key == "scroll_lock")
+        return mir_input_event_modifier_scroll_lock;
+    else if (stringified_action_key == "primary")
+        return miracle_input_event_modifier_default;
+    else
+        mir::log_error("Unable to process action_key: %s", stringified_action_key.c_str());
+    return mir_input_event_modifier_none;
+}
+
+void FilesystemConfiguration::on_config_ready(std::function<void()> const& listener)
+{
+    config_ready_listeners.push_back(listener);
+}
+
+std::string const& FilesystemConfiguration::get_filename() const
+{
+    return config_path;
+}
+
+MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
+{
+    return (MirInputEventModifier)options.primary_modifier;
+}
+
+CustomKeyCommand const*
+FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
+{
+    // TODO: Copy & paste
+    for (auto const& command : options.custom_key_commands)
+    {
+        if (action != command.action)
+            continue;
+
+        auto command_modifiers = command.modifiers;
+        if (command_modifiers & miracle_input_event_modifier_default)
+            command_modifiers = command_modifiers & ~miracle_input_event_modifier_default | get_input_event_modifier();
+
+        if (command_modifiers != modifiers)
+            continue;
+
+        if (scan_code == command.key)
+            return &command;
+    }
+
+    return nullptr;
+}
+
+bool FilesystemConfiguration::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const
+{
+    for (int i = 0; i < DefaultKeyCommand::MAX; i++)
+    {
+        for (auto command : options.key_commands[i])
+        {
+            if (action != command.action)
+                continue;
+
+            auto command_modifiers = command.modifiers;
+            if (command_modifiers & miracle_input_event_modifier_default)
+                command_modifiers = command_modifiers & ~miracle_input_event_modifier_default | get_input_event_modifier();
+
+            if (command_modifiers != modifiers)
+                continue;
+
+            if (scan_code == command.key)
+            {
+                if (f((DefaultKeyCommand)i))
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+int FilesystemConfiguration::get_inner_gaps_x() const
+{
+    return options.inner_gaps_x;
+}
+
+int FilesystemConfiguration::get_inner_gaps_y() const
+{
+    return options.inner_gaps_y;
+}
+
+int FilesystemConfiguration::get_outer_gaps_x() const
+{
+    return options.outer_gaps_x;
+}
+
+int FilesystemConfiguration::get_outer_gaps_y() const
+{
+    return options.outer_gaps_y;
+}
+
+const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const
+{
+    return options.startup_apps;
+}
+
+int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func)
+{
+    return register_listener(func, 5);
+}
+
+int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func, int priority)
+{
+    int handle = next_listener_handle++;
+
+    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
+    {
+        if (it->priority >= priority)
+        {
+            on_change_listeners.insert(it, { func, priority, handle });
+            return handle;
+        }
+    }
+
+    on_change_listeners.push_back({ func, priority, handle });
+    return handle;
+}
+
+void FilesystemConfiguration::unregister_listener(int handle)
+{
+    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
+    {
+        if (it->handle == handle)
+        {
+            on_change_listeners.erase(it);
+            return;
+        }
+    }
+}
+
+std::optional<std::string> const& FilesystemConfiguration::get_terminal_command() const
+{
+    if (!options.terminal)
+    {
+        auto error_string = "Terminal program does not exist " + options.desired_terminal;
+        mir::log_error("%s", error_string.c_str());
+        NotifyNotification* n = notify_notification_new(
+            "Terminal program does not exist",
+            error_string.c_str(),
+            nullptr);
+        notify_notification_set_timeout(n, 5000);
+        notify_notification_show(n, nullptr);
+    }
+    return options.terminal;
+}
+
+int FilesystemConfiguration::get_resize_jump() const
+{
+    return options.resize_jump;
+}
+
+std::vector<EnvironmentVariable> const& FilesystemConfiguration::get_env_variables() const
+{
+    return options.environment_variables;
+}
+
+BorderConfig const& FilesystemConfiguration::get_border_config() const
+{
+    return options.border_config;
+}
+
+std::array<AnimationDefinition, (int)AnimateableEvent::max> const& FilesystemConfiguration::get_animation_definitions() const
+{
+    return options.animation_defintions;
+}
+
+bool FilesystemConfiguration::are_animations_enabled() const
+{
+    return options.animations_enabled;
+}
+
+WorkspaceConfig FilesystemConfiguration::get_workspace_config(int key) const
+{
+    for (auto const& config : options.workspace_configs)
+    {
+        if (config.num == key)
+            return config;
+    }
+
+    return { key, ContainerType::leaf };
+}
+
+FilesystemConfiguration::ConfigDetails::ConfigDetails()
+{
     const KeyCommand default_key_commands[DefaultKeyCommand::MAX] = {
         { MirKeyboardAction::mir_keyboard_action_down,
          miracle_input_event_modifier_default,
@@ -538,316 +1226,6 @@ void FilesystemConfiguration::_load()
             key_commands[i].push_back(default_key_commands[i]);
     }
 
-    // Custom actions
-    if (config["custom_actions"])
-    {
-        auto const custom_actions = config["custom_actions"];
-        if (!custom_actions.IsSequence())
-        {
-            mir::log_error("custom_actions: value must be an array");
-            return;
-        }
-
-        for (auto i = 0; i < custom_actions.size(); i++)
-        {
-            auto sub_node = custom_actions[i];
-            if (!sub_node["command"])
-            {
-                mir::log_error("custom_actions: missing command");
-                continue;
-            }
-
-            if (!sub_node["action"])
-            {
-                mir::log_error("custom_actions: missing action");
-                continue;
-            }
-
-            if (!sub_node["modifiers"])
-            {
-                mir::log_error("custom_actions: missing modifiers");
-                continue;
-            }
-
-            if (!sub_node["key"])
-            {
-                mir::log_error("custom_actions: missing key");
-                continue;
-            }
-
-            std::string command;
-            std::string action;
-            std::string key;
-            YAML::Node modifiers_node;
-            try
-            {
-                command = wrap_command(sub_node["command"].as<std::string>());
-                action = sub_node["action"].as<std::string>();
-                key = sub_node["key"].as<std::string>();
-                modifiers_node = sub_node["modifiers"];
-            }
-            catch (YAML::BadConversion const& e)
-            {
-                mir::log_error("Unable to parse custom_actions[%d]: %s", i, e.msg.c_str());
-                continue;
-            }
-
-            // TODO: Copy & paste here
-            MirKeyboardAction keyboard_action;
-            if (action == "up")
-                keyboard_action = MirKeyboardAction::mir_keyboard_action_up;
-            else if (action == "down")
-                keyboard_action = MirKeyboardAction::mir_keyboard_action_down;
-            else if (action == "repeat")
-                keyboard_action = MirKeyboardAction::mir_keyboard_action_repeat;
-            else if (action == "modifiers")
-                keyboard_action = MirKeyboardAction::mir_keyboard_action_modifiers;
-            else
-            {
-                mir::log_error("custom_actions: Unknown keyboard action: %s", action.c_str());
-                continue;
-            }
-
-            auto code = libevdev_event_code_from_name(EV_KEY,
-                key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
-            if (code < 0)
-            {
-                mir::log_error(
-                    "custom_actions: Unknown keyboard code in configuration: %s. See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h",
-                    key.c_str());
-                continue;
-            }
-
-            if (!modifiers_node.IsSequence())
-            {
-                mir::log_error("custom_actions: Provided modifiers is not an array");
-                continue;
-            }
-
-            uint modifiers = 0;
-            bool is_invalid = false;
-            for (auto j = 0; j < modifiers_node.size(); j++)
-            {
-                try
-                {
-                    auto modifier = modifiers_node[j].as<std::string>();
-                    modifiers = modifiers | parse_modifier(modifier);
-                }
-                catch (YAML::BadConversion const& e)
-                {
-                    mir::log_error("Unable to parse modifier for custom_actions[%d]: %s", i, e.msg.c_str());
-                    is_invalid = true;
-                    break;
-                }
-            }
-
-            if (is_invalid)
-                continue;
-
-            custom_key_commands.push_back({ keyboard_action,
-                modifiers,
-                code,
-                command });
-        }
-    }
-
-    // Gap sizes
-    if (config["inner_gaps"])
-    {
-        int new_inner_gaps_x = inner_gaps_x;
-        int new_inner_gaps_y = inner_gaps_y;
-        try
-        {
-            if (config["inner_gaps"]["x"])
-                new_inner_gaps_x = config["inner_gaps"]["x"].as<int>();
-            if (config["inner_gaps"]["y"])
-                new_inner_gaps_y = config["inner_gaps"]["y"].as<int>();
-
-            inner_gaps_x = new_inner_gaps_x;
-            inner_gaps_y = new_inner_gaps_y;
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("Unable to parse inner_gaps: %s", e.msg.c_str());
-        }
-    }
-    if (config["outer_gaps"])
-    {
-        try
-        {
-            int new_outer_gaps_x = outer_gaps_x;
-            int new_outer_gaps_y = outer_gaps_y;
-            if (config["outer_gaps"]["x"])
-                new_outer_gaps_x = config["outer_gaps"]["x"].as<int>();
-            if (config["outer_gaps"]["y"])
-                new_outer_gaps_y = config["outer_gaps"]["y"].as<int>();
-
-            outer_gaps_x = new_outer_gaps_x;
-            outer_gaps_y = new_outer_gaps_y;
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("Unable to parse outer_gaps: %s", e.msg.c_str());
-        }
-    }
-
-    // Startup Apps
-    if (config["startup_apps"])
-    {
-        if (!config["startup_apps"].IsSequence())
-        {
-            mir::log_error("startup_apps is not an array");
-        }
-        else
-        {
-            for (auto const& node : config["startup_apps"])
-            {
-                if (!node["command"])
-                {
-                    mir::log_error("startup_apps: app lacks a command");
-                    continue;
-                }
-
-                try
-                {
-                    auto command = wrap_command(node["command"].as<std::string>());
-                    bool restart_on_death = false;
-                    if (node["restart_on_death"])
-                    {
-                        restart_on_death = node["restart_on_death"].as<bool>();
-                    }
-
-                    startup_apps.push_back({ std::move(command), restart_on_death });
-                }
-                catch (YAML::BadConversion const& e)
-                {
-                    mir::log_error("Unable to parse startup_apps: %s", e.msg.c_str());
-                }
-            }
-        }
-    }
-
-    // Terminal
-    if (config["terminal"])
-    {
-        try
-        {
-            terminal = wrap_command(config["terminal"].as<std::string>());
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("Unable to parse terminal: %s", e.msg.c_str());
-        }
-    }
-
-    if (terminal && !program_exists(terminal.value()))
-    {
-        desired_terminal = terminal.value();
-        terminal.reset();
-    }
-
-    // Resizing
-    if (config["resize_jump"])
-    {
-        try
-        {
-            resize_jump = config["resize_jump"].as<int>();
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("Unable to parse resize_jump: %s", e.msg.c_str());
-        }
-    }
-
-    // Environment variables
-    if (config["environment_variables"])
-    {
-        if (!config["environment_variables"].IsSequence())
-        {
-            mir::log_error("environment_variables is not an array");
-        }
-        else
-        {
-            for (auto const& node : config["environment_variables"])
-            {
-                if (!node["key"])
-                {
-                    mir::log_error("environment_variables: item is missing a 'key'");
-                    continue;
-                }
-
-                if (!node["value"])
-                {
-                    mir::log_error("environment_variables: item is missing a 'value'");
-                    continue;
-                }
-
-                try
-                {
-                    auto key = node["key"].as<std::string>();
-                    auto value = node["value"].as<std::string>();
-                    environment_variables.push_back({ key, value });
-                }
-                catch (YAML::BadConversion const& e)
-                {
-                    mir::log_error("Unable to parse environment_variable_entry: %s", e.msg.c_str());
-                }
-            }
-        }
-    }
-
-    if (config["border"])
-    {
-        try
-        {
-            auto border = config["border"];
-            auto size = border["size"].as<int>();
-            auto color = parse_color(border["color"]);
-            auto focus_color = parse_color(border["focus_color"]);
-            border_config = { size, focus_color, color };
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("Unable to parse border: %s", e.msg.c_str());
-        }
-    }
-
-    if (config["workspaces"])
-    {
-        try
-        {
-            auto const& workspaces = config["workspaces"];
-            if (!workspaces.IsSequence())
-            {
-                mir::log_error("workspaces: expected sequence: L%d:%d", workspaces.Mark().line, workspaces.Mark().column);
-            }
-            else
-            {
-                for (auto const& workspace : workspaces)
-                {
-                    auto num = workspace["number"].as<int>();
-                    auto type = container_type_from_string(workspace["layout"].as<std::string>());
-                    if (type != ContainerType::leaf && type != ContainerType::floating_window)
-                    {
-                        mir::log_error("layout should be 'tiled' or 'floating': L%d:%d", workspace["layout"].Mark().line, workspace["layout"].Mark().column);
-                        continue;
-                    }
-
-                    workspace_configs.push_back({ num, type });
-                }
-            }
-        }
-        catch (YAML::BadConversion const& e)
-        {
-            mir::log_error("workspaces: unable to parse: %s, L%d:%d", e.msg.c_str(), e.mark.line, e.mark.column);
-        }
-    }
-
-    read_animation_definitions(config);
-}
-
-void FilesystemConfiguration::read_animation_definitions(YAML::Node const& root)
-{
     std::array<AnimationDefinition, (int)AnimateableEvent::max> parsed({
         {
          AnimationType::grow,
@@ -868,313 +1246,5 @@ void FilesystemConfiguration::read_animation_definitions(YAML::Node const& root)
          EaseFunction::ease_out_sine,
          0.175f }
     });
-    if (root["animations"])
-    {
-        auto animations_node = root["animations"];
-        if (!animations_node.IsSequence())
-        {
-            mir::log_error("Unable to parse animations_node: animations_node is not an array");
-            return;
-        }
-
-        for (auto const& node : animations_node)
-        {
-            auto const& event = try_parse_enum<AnimateableEvent>(
-                node,
-                "event",
-                from_string_animateable_event,
-                AnimateableEvent::max);
-            if (event == AnimateableEvent::max)
-                continue;
-
-            auto const& type = try_parse_enum<AnimationType>(
-                node,
-                "type",
-                from_string_animation_type,
-                AnimationType::max);
-            if (type == AnimationType::max)
-                continue;
-
-            auto const& function = try_parse_enum<EaseFunction>(
-                node,
-                "function",
-                from_string_ease_function,
-                EaseFunction::max);
-            if (function == EaseFunction::max)
-                continue;
-
-            parsed[(int)event].type = type;
-            parsed[(int)event].function = function;
-            try_parse_value(node, "duration", parsed[(int)event].duration_seconds);
-            try_parse_value(node, "c1", parsed[(int)event].c1);
-            try_parse_value(node, "c2", parsed[(int)event].c2);
-            try_parse_value(node, "c3", parsed[(int)event].c3);
-            try_parse_value(node, "c4", parsed[(int)event].c4);
-            try_parse_value(node, "n1", parsed[(int)event].n1);
-            try_parse_value(node, "d1", parsed[(int)event].d1);
-        }
-    }
-
     animation_defintions = parsed;
-
-    if (root["enable_animations"])
-        try_parse_value(root, "enable_animations", animations_enabled);
-}
-
-void FilesystemConfiguration::_watch(miral::MirRunner& runner)
-{
-    inotify_fd = mir::Fd { inotify_init() };
-    file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
-    if (file_watch < 0)
-        mir::fatal_error("Unable to watch the config file");
-
-    watch_handle = runner.register_fd_handler(inotify_fd, [&](int file_fd)
-    {
-        union
-        {
-            inotify_event event;
-            char buffer[sizeof(inotify_event) + NAME_MAX + 1];
-        } inotify_buffer;
-
-        if (read(inotify_fd, &inotify_buffer, sizeof(inotify_buffer)) < static_cast<ssize_t>(sizeof(inotify_event)))
-            return;
-
-        if (inotify_buffer.event.mask & (IN_MODIFY))
-        {
-            _load();
-            has_changes = true;
-        }
-    });
-}
-
-void FilesystemConfiguration::try_process_change()
-{
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!has_changes)
-        return;
-
-    has_changes = false;
-    for (auto const& on_change : on_change_listeners)
-    {
-        on_change.listener(*this);
-    }
-}
-
-uint FilesystemConfiguration::get_primary_modifier() const
-{
-    return primary_modifier;
-}
-
-uint FilesystemConfiguration::parse_modifier(std::string const& stringified_action_key)
-{
-    if (stringified_action_key == "alt")
-        return mir_input_event_modifier_alt;
-    else if (stringified_action_key == "alt_left")
-        return mir_input_event_modifier_alt_left;
-    else if (stringified_action_key == "alt_right")
-        return mir_input_event_modifier_alt_right;
-    else if (stringified_action_key == "shift")
-        return mir_input_event_modifier_shift;
-    else if (stringified_action_key == "shift_left")
-        return mir_input_event_modifier_shift_left;
-    else if (stringified_action_key == "shift_right")
-        return mir_input_event_modifier_shift_right;
-    else if (stringified_action_key == "sym")
-        return mir_input_event_modifier_sym;
-    else if (stringified_action_key == "function")
-        return mir_input_event_modifier_function;
-    else if (stringified_action_key == "ctrl")
-        return mir_input_event_modifier_ctrl;
-    else if (stringified_action_key == "ctrl_left")
-        return mir_input_event_modifier_ctrl_left;
-    else if (stringified_action_key == "ctrl_right")
-        return mir_input_event_modifier_ctrl_right;
-    else if (stringified_action_key == "meta")
-        return mir_input_event_modifier_meta;
-    else if (stringified_action_key == "meta_left")
-        return mir_input_event_modifier_meta_left;
-    else if (stringified_action_key == "meta_right")
-        return mir_input_event_modifier_meta_right;
-    else if (stringified_action_key == "caps_lock")
-        return mir_input_event_modifier_caps_lock;
-    else if (stringified_action_key == "num_lock")
-        return mir_input_event_modifier_num_lock;
-    else if (stringified_action_key == "scroll_lock")
-        return mir_input_event_modifier_scroll_lock;
-    else if (stringified_action_key == "primary")
-        return miracle_input_event_modifier_default;
-    else
-        mir::log_error("Unable to process action_key: %s", stringified_action_key.c_str());
-    return mir_input_event_modifier_none;
-}
-
-std::string const& FilesystemConfiguration::get_filename() const
-{
-    return config_path;
-}
-
-MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
-{
-    return (MirInputEventModifier)primary_modifier;
-}
-
-CustomKeyCommand const*
-FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
-{
-    // TODO: Copy & paste
-    for (auto const& command : custom_key_commands)
-    {
-        if (action != command.action)
-            continue;
-
-        auto command_modifiers = command.modifiers;
-        if (command_modifiers & miracle_input_event_modifier_default)
-            command_modifiers = command_modifiers & ~miracle_input_event_modifier_default | get_input_event_modifier();
-
-        if (command_modifiers != modifiers)
-            continue;
-
-        if (scan_code == command.key)
-            return &command;
-    }
-
-    return nullptr;
-}
-
-bool FilesystemConfiguration::matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const
-{
-    for (int i = 0; i < DefaultKeyCommand::MAX; i++)
-    {
-        for (auto command : key_commands[i])
-        {
-            if (action != command.action)
-                continue;
-
-            auto command_modifiers = command.modifiers;
-            if (command_modifiers & miracle_input_event_modifier_default)
-                command_modifiers = command_modifiers & ~miracle_input_event_modifier_default | get_input_event_modifier();
-
-            if (command_modifiers != modifiers)
-                continue;
-
-            if (scan_code == command.key)
-            {
-                if (f((DefaultKeyCommand)i))
-                    return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-int FilesystemConfiguration::get_inner_gaps_x() const
-{
-    return inner_gaps_x;
-}
-
-int FilesystemConfiguration::get_inner_gaps_y() const
-{
-    return inner_gaps_y;
-}
-
-int FilesystemConfiguration::get_outer_gaps_x() const
-{
-    return outer_gaps_x;
-}
-
-int FilesystemConfiguration::get_outer_gaps_y() const
-{
-    return outer_gaps_y;
-}
-
-const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const
-{
-    return startup_apps;
-}
-
-int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func)
-{
-    return register_listener(func, 5);
-}
-
-int FilesystemConfiguration::register_listener(std::function<void(miracle::MiracleConfig&)> const& func, int priority)
-{
-    int handle = next_listener_handle++;
-
-    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
-    {
-        if (it->priority >= priority)
-        {
-            on_change_listeners.insert(it, { func, priority, handle });
-            return handle;
-        }
-    }
-
-    on_change_listeners.push_back({ func, priority, handle });
-    return handle;
-}
-
-void FilesystemConfiguration::unregister_listener(int handle)
-{
-    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
-    {
-        if (it->handle == handle)
-        {
-            on_change_listeners.erase(it);
-            return;
-        }
-    }
-}
-
-std::optional<std::string> const& FilesystemConfiguration::get_terminal_command() const
-{
-    if (!terminal)
-    {
-        auto error_string = "Terminal program does not exist " + desired_terminal;
-        mir::log_error("%s", error_string.c_str());
-        NotifyNotification* n = notify_notification_new(
-            "Terminal program does not exist",
-            error_string.c_str(),
-            nullptr);
-        notify_notification_set_timeout(n, 5000);
-        notify_notification_show(n, nullptr);
-    }
-    return terminal;
-}
-
-int FilesystemConfiguration::get_resize_jump() const
-{
-    return resize_jump;
-}
-
-std::vector<EnvironmentVariable> const& FilesystemConfiguration::get_env_variables() const
-{
-    return environment_variables;
-}
-
-BorderConfig const& FilesystemConfiguration::get_border_config() const
-{
-    return border_config;
-}
-
-std::array<AnimationDefinition, (int)AnimateableEvent::max> const& FilesystemConfiguration::get_animation_definitions() const
-{
-    return animation_defintions;
-}
-
-bool FilesystemConfiguration::are_animations_enabled() const
-{
-    return animations_enabled;
-}
-
-WorkspaceConfig FilesystemConfiguration::get_workspace_config(int key) const
-{
-    for (auto const& config : workspace_configs)
-    {
-        if (config.num == key)
-            return config;
-    }
-
-    return { key, ContainerType::leaf };
 }
