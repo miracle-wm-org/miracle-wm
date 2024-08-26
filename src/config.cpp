@@ -194,10 +194,14 @@ void FilesystemConfiguration::load(mir::Server& server)
         std::optional<StartupApp> exec_app = std::nullopt;
         if (server_opts->is_set(exec_option))
         {
-            exec_app = StartupApp {
-                .command=server_opts->get<std::string>(exec_option),
-                .should_halt_compositor_on_death=true
-            };
+            auto command = server_opts->get<std::string>(exec_option);
+            if (!command.empty())
+            {
+                exec_app = StartupApp {
+                    .command=command,
+                    .should_halt_compositor_on_death=true
+                };
+            }
         }
         _init(exec_app);
     });
