@@ -539,6 +539,6 @@ void Animator::stop()
         return;
 
     running = false;
-    cv.notify_one();
+    //cv.notify_one();
     run_thread.join();
 }
