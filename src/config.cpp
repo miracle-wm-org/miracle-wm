@@ -37,7 +37,8 @@ using namespace miracle;
 
 namespace
 {
-const char* MIRACLE_USR_SHARE_DIR = "/usr/share/miracle-wm/config/default.yaml";
+const char* MIRACLE_DEFAULT_CONFIG_FILE = "/usr/share/miracle-wm/config/default.yaml";
+const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
 
 int program_exists(std::string const& name)
 {
@@ -182,7 +183,8 @@ void FilesystemConfiguration::load(mir::Server& server)
     const char* exec_option = "exec";
     server.add_configuration_option(
         exec_option,
-        "Specifies an application to run when miracle starts",
+        "Specifies an application that will run when miracle starts. When this application "
+        "dies, miracle will also die.",
         "");
 
     server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, &server]
@@ -192,7 +194,16 @@ void FilesystemConfiguration::load(mir::Server& server)
         config_path = server_opts->get<std::string>(config_file_name_option);
         std::optional<StartupApp> exec_app = std::nullopt;
         if (server_opts->is_set(exec_option))
-            exec_app = StartupApp { server_opts->get<std::string>(exec_option) };
+        {
+            auto command = server_opts->get<std::string>(exec_option);
+            if (!command.empty())
+            {
+                exec_app = StartupApp {
+                    .command=command,
+                    .should_halt_compositor_on_death=true
+                };
+            }
+        }
         _init(exec_app);
     });
 }
@@ -208,11 +219,23 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
         mir::log_info("Configuration file path is: %s", config_path.c_str());
         if (!std::filesystem::exists(config_path))
         {
-            if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+
+            if (!std::filesystem::exists(std::filesystem::path(config_path).parent_path()))
             {
-                mir::log_info("Configuration being copied from %s", MIRACLE_USR_SHARE_DIR);
+                mir::log_info("Configuration directory path missing, creating it now");
+                std::filesystem::create_directories(std::filesystem::path(config_path).parent_path());
+            }
+            if (std::filesystem::exists(MIRACLE_DEFAULT_CONFIG_DIR))
+            {
+                mir::log_info("Configuration hierarchy being copied from %s", MIRACLE_DEFAULT_CONFIG_DIR);
+                const auto fs_copyopts = std::filesystem::copy_options::recursive;
+                std::filesystem::copy(MIRACLE_DEFAULT_CONFIG_DIR, std::filesystem::path(config_path).parent_path(), fs_copyopts);
+            }
+            else if (std::filesystem::exists(MIRACLE_DEFAULT_CONFIG_FILE))
+            {
+                mir::log_info("Configuration being copied from %s", MIRACLE_DEFAULT_CONFIG_FILE);
                 std::filesystem::copy_file(
-                    MIRACLE_USR_SHARE_DIR,
+                    MIRACLE_DEFAULT_CONFIG_FILE,
                     config_path);
             }
             else
@@ -227,7 +250,10 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
 
     // If the user specified an --exec <APP_NAME>, let's add that to the list
     if (startup_app)
+    {
+        mir::log_info("Miracle will die when the application specified with --exec dies");
         options.startup_apps.push_back(startup_app.value());
+    }
 
     for (auto const& listener : config_ready_listeners)
         listener();
