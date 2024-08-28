@@ -37,7 +37,8 @@ using namespace miracle;
 
 namespace
 {
-const char* MIRACLE_USR_SHARE_DIR = "/usr/share/miracle-wm/config/default.yaml";
+const char* MIRACLE_DEFAULT_CONFIG_FILE = "/usr/share/miracle-wm/config/default.yaml";
+const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
 
 int program_exists(std::string const& name)
 {
@@ -218,11 +219,23 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
         mir::log_info("Configuration file path is: %s", config_path.c_str());
         if (!std::filesystem::exists(config_path))
         {
-            if (std::filesystem::exists(MIRACLE_USR_SHARE_DIR))
+
+            if (!std::filesystem::exists(std::filesystem::path(config_path).parent_path()))
             {
-                mir::log_info("Configuration being copied from %s", MIRACLE_USR_SHARE_DIR);
+                mir::log_info("Configuration directory path missing, creating it now");
+                std::filesystem::create_directories(std::filesystem::path(config_path).parent_path());
+            }
+            if (std::filesystem::exists(MIRACLE_DEFAULT_CONFIG_DIR))
+            {
+                mir::log_info("Configuration hierarchy being copied from %s", MIRACLE_DEFAULT_CONFIG_DIR);
+                const auto fs_copyopts = std::filesystem::copy_options::recursive;
+                std::filesystem::copy(MIRACLE_DEFAULT_CONFIG_DIR, std::filesystem::path(config_path).parent_path(), fs_copyopts);
+            }
+            else if (std::filesystem::exists(MIRACLE_DEFAULT_CONFIG_FILE))
+            {
+                mir::log_info("Configuration being copied from %s", MIRACLE_DEFAULT_CONFIG_FILE);
                 std::filesystem::copy_file(
-                    MIRACLE_USR_SHARE_DIR,
+                    MIRACLE_DEFAULT_CONFIG_FILE,
                     config_path);
             }
             else
