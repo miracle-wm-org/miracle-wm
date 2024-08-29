@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace.h"
 
 #include <cmath>
+#include <cassert>
 #include <mir_toolkit/common.h>
 
 using namespace miracle;
@@ -49,6 +50,7 @@ LeafContainer::LeafContainer(
 void LeafContainer::associate_to_window(miral::Window const& in_window)
 {
     stack_.push_back(in_window);
+    assert(!is_stacking_ && stack_.size() == 1 || is_stacking_);
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
@@ -374,7 +376,17 @@ miral::Window LeafContainer::window_() const
 
 bool LeafContainer::toggle_stacked()
 {
-    return false;
+    is_stacking_ = !is_stacking_;
+    if (is_stacking_)
+    {
+    }
+    else
+    {
+        // TODO: all windows but the selected window must be
+        // re-added back into the tiling grid
+    }
+    
+    return true;
 }
 
 bool LeafContainer::is_stacking() const
