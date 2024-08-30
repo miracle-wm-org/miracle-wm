@@ -34,6 +34,7 @@ class TilingWindowTree;
 class CompositorState;
 
 /// A parent container defines the layout of containers beneath it.
+/// The container
 class ParentContainer : public Container
 {
 public:
@@ -51,14 +52,14 @@ public:
     void graft_existing(std::shared_ptr<Container> const& node, int index);
     std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
     void set_logical_area(geom::Rectangle const& target_rect) override;
-    void set_direction(NodeLayoutDirection direction);
+    void set_direction(LayoutScheme direction);
     void swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
     void remove(std::shared_ptr<Container> const& node);
     void commit_changes() override;
     std::shared_ptr<Container> at(size_t i) const;
     std::shared_ptr<LeafContainer> get_nth_window(size_t i) const;
     std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
-    NodeLayoutDirection get_direction() { return direction; }
+    LayoutScheme get_direction() { return scheme; }
     std::vector<std::shared_ptr<Container>> const& get_sub_nodes() const;
     [[nodiscard]] int get_index_of_node(Container const* node) const;
     [[nodiscard]] int get_index_of_node(std::shared_ptr<Container> const& node) const;
@@ -104,10 +105,8 @@ public:
     bool move(Direction direction) override;
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
-    bool toggle_stacked() override { return false; };
-    bool is_stacking() const override { return false; }
-
     bool is_fullscreen() const override;
+    bool toggle_stacked() override;
 
 private:
     WindowController& node_interface;
@@ -117,7 +116,7 @@ private:
     std::weak_ptr<ParentContainer> parent;
     CompositorState const& state;
 
-    NodeLayoutDirection direction = NodeLayoutDirection::horizontal;
+    LayoutScheme scheme = LayoutScheme::horizontal;
     std::vector<std::shared_ptr<Container>> sub_nodes;
     std::shared_ptr<LeafContainer> pending_node;
 

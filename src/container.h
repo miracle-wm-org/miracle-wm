@@ -49,7 +49,8 @@ enum class ContainerType
     floating_tree,
     shell,
     parent,
-    group
+    group,
+    stack
 };
 
 ContainerType container_type_from_string(std::string const& str);
@@ -116,7 +117,6 @@ public:
     virtual bool move_by(Direction, int pixels) = 0;
     virtual bool move_to(int x, int y) = 0;
     virtual bool toggle_stacked() = 0;
-    virtual bool is_stacking() const = 0;
 
     bool is_leaf();
     bool is_lane();

@@ -26,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace.h"
 
 #include <cmath>
-#include <cassert>
 #include <mir_toolkit/common.h>
 
 using namespace miracle;
@@ -49,8 +48,7 @@ LeafContainer::LeafContainer(
 
 void LeafContainer::associate_to_window(miral::Window const& in_window)
 {
-    stack_.push_back(in_window);
-    assert(!is_stacking_ && stack_.size() == 1 || is_stacking_);
+    window_ = in_window;
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
@@ -115,11 +113,10 @@ geom::Rectangle LeafContainer::get_visible_area() const
 
 void LeafContainer::constrain()
 {
-    auto window = window_();
-    if (window_controller.is_fullscreen(window))
-        window_controller.noclip(window);
+    if (window_controller.is_fullscreen(window_))
+        window_controller.noclip(window_);
     else
-        window_controller.clip(window, get_visible_area());
+        window_controller.clip(window_, get_visible_area());
 }
 
 size_t LeafContainer::get_min_width() const
@@ -140,8 +137,7 @@ void LeafContainer::handle_ready()
 
 void LeafContainer::handle_modify(miral::WindowSpecification const& modifications)
 {
-    auto window = window_();
-    auto const& info = window_controller.info_for(window);
+    auto const& info = window_controller.info_for(window_);
 
     // TODO: Check if the current workspace is active. If not, return early.
 
@@ -166,13 +162,12 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
         mods.size().consume();
     }
 
-    window_controller.modify(window, mods);
+    window_controller.modify(window_, mods);
 }
 
 void LeafContainer::handle_raise()
 {
-    auto window = window_();
-    window_controller.select_active_window(window);
+    window_controller.select_active_window(window_);
 }
 
 bool LeafContainer::resize(miracle::Direction direction)
@@ -185,19 +180,19 @@ void LeafContainer::show()
     next_state = before_shown_state;
     before_shown_state.reset();
     commit_changes();
-    window_controller.raise(window_());
+    window_controller.raise(window_);
 }
 
 void LeafContainer::hide()
 {
-    before_shown_state = window_controller.get_state(window_());
+    before_shown_state = window_controller.get_state(window_);
     next_state = mir_window_state_hidden;
     commit_changes();
 }
 
 bool LeafContainer::toggle_fullscreen()
 {
-    if (window_controller.is_fullscreen(window_()))
+    if (window_controller.is_fullscreen(window_))
         next_state = mir_window_state_restored;
     else
         next_state = mir_window_state_fullscreen;
@@ -216,7 +211,7 @@ mir::geometry::Rectangle LeafContainer::confirm_placement(
 
 void LeafContainer::on_open()
 {
-    window_controller.open(window_());
+    window_controller.open(window_);
 }
 
 void LeafContainer::on_focus_gained()
@@ -234,19 +229,14 @@ void LeafContainer::on_move_to(geom::Point const&)
 
 bool LeafContainer::is_fullscreen() const
 {
-    return window_controller.is_fullscreen(window_());
-}
-
-std::optional<miral::Window> LeafContainer::window() const
-{
-    return stack_[selected_index];
+    return window_controller.is_fullscreen(window_);
 }
 
 void LeafContainer::commit_changes()
 {
     if (next_state)
     {
-        window_controller.change_state(window_(), next_state.value());
+        window_controller.change_state(window_, next_state.value());
         constrain();
         next_state.reset();
     }
@@ -256,9 +246,9 @@ void LeafContainer::commit_changes()
         auto previous = get_visible_area();
         logical_area = next_logical_area.value();
         next_logical_area.reset();
-        if (!window_controller.is_fullscreen(window_()))
+        if (!window_controller.is_fullscreen(window_))
         {
-            window_controller.set_rectangle(window_(), previous, get_visible_area());
+            window_controller.set_rectangle(window_, previous, get_visible_area());
             constrain();
         }
     }
@@ -369,27 +359,8 @@ bool LeafContainer::move_to(int, int)
     return false;
 }
 
-miral::Window LeafContainer::window_() const
-{
-    return stack_[selected_index];
-}
-
 bool LeafContainer::toggle_stacked()
 {
-    is_stacking_ = !is_stacking_;
-    if (is_stacking_)
-    {
-    }
-    else
-    {
-        // TODO: all windows but the selected window must be
-        // re-added back into the tiling grid
-    }
-    
+    tree->request_stacked_layout(*this);
     return true;
-}
-
-bool LeafContainer::is_stacking() const
-{
-    return false;
 }

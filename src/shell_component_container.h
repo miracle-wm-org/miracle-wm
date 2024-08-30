@@ -77,7 +77,6 @@ public:
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
     bool toggle_stacked() override { return false; };
-    bool is_stacking() const override { return false; }
 
     bool is_fullscreen() const override;
 

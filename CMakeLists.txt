@@ -73,7 +73,6 @@ add_library(miracle-wm-implementation
     src/container_group_container.h
     src/floating_tree_container.cpp
     src/floating_tree_container.h
-    src/stacking_container.cpp src/stacking_container.h
 )
 
 add_executable(miracle-wm

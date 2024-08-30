@@ -15,13 +15,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "parent_container"
 #include "parent_container.h"
 #include "config.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "tiling_window_tree.h"
 #include "workspace.h"
+#include "compositor_state.h"
 #include <cmath>
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -132,7 +135,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
 
     auto placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
-    if (direction == NodeLayoutDirection::horizontal)
+    if (scheme == LayoutScheme::horizontal)
     {
         auto result = insert_node_internal(
             placement_area.size.width.as_int(),
@@ -162,7 +165,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
         };
         pending_logical_rect = new_node_logical_rect;
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         auto result = insert_node_internal(
             placement_area.size.height.as_int(),
@@ -192,6 +195,15 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
         };
         pending_logical_rect = new_node_logical_rect;
     }
+    else if (scheme == LayoutScheme::stack)
+    {
+        pending_logical_rect = placement_area;
+    }
+    else
+    {
+        mir::fatal_error("Invalid scheme during create_space");
+    }
+
     return pending_logical_rect;
 }
 
@@ -269,7 +281,8 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
     logical_area = target_rect;
     auto target_placement_area = get_logical_area();
     std::vector<geom::Rectangle> pending_size_updates;
-    if (direction == NodeLayoutDirection::horizontal)
+    pending_size_updates.reserve(sub_nodes.size());
+    if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
         for (size_t idx = 0; idx < sub_nodes.size(); idx++)
@@ -310,7 +323,7 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
             pending_size_updates.back().size.width = geom::Width { pending_size_updates.back().size.width.as_int() + leftover_width };
         }
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
         for (size_t idx = 0; idx < sub_nodes.size(); idx++)
@@ -350,6 +363,17 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
             int leftover_height = target_placement_area.size.height.as_int() - total_height;
             pending_size_updates.back().size.height = geom::Height { pending_size_updates.back().size.height.as_int() + leftover_height };
         }
+    }
+    else if (scheme == LayoutScheme::stack)
+    {
+        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        {
+            pending_size_updates.push_back(target_placement_area);
+        }
+    }
+    else
+    {
+        mir::log_error("Cannot set_logical_area with invalid scheme");
     }
 
     for (size_t i = 0; i < sub_nodes.size(); i++)
@@ -407,9 +431,9 @@ const std::vector<std::shared_ptr<Container>>& ParentContainer::get_sub_nodes() 
     return sub_nodes;
 }
 
-void ParentContainer::set_direction(miracle::NodeLayoutDirection new_direction)
+void ParentContainer::set_direction(miracle::LayoutScheme new_scheme)
 {
-    direction = new_direction;
+    scheme = new_scheme;
 }
 
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
@@ -501,7 +525,7 @@ void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_pare
 void ParentContainer::relayout()
 {
     auto placement_area = get_logical_area();
-    if (direction == NodeLayoutDirection::horizontal)
+    if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
         for (auto const& node : sub_nodes)
@@ -519,7 +543,7 @@ void ParentContainer::relayout()
             node->set_logical_area(rectangle);
         }
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
         for (auto const& node : sub_nodes)
@@ -536,6 +560,15 @@ void ParentContainer::relayout()
             rectangle.size.height = geom::Height { rectangle.size.height.as_int() + diff_per_node };
             node->set_logical_area(rectangle);
         }
+    }
+    else if (scheme == LayoutScheme::stack)
+    {
+        for (auto const& node : sub_nodes)
+            node->set_logical_area(placement_area);
+    }
+    else
+    {
+        mir::log_error("Invalid scheme during relayout");
     }
 
     // Note that it is important to use the logical_area here instead of the placement area
@@ -591,6 +624,14 @@ void ParentContainer::set_tree(TilingWindowTree* tree_)
 
 void ParentContainer::on_focus_gained()
 {
+    if (scheme == LayoutScheme::stack)
+    {
+        for (auto const& container : sub_nodes)
+        {
+            if (container != state.active && container->window())
+                node_interface.send_to_back(container->window().value());
+        }
+    }
 }
 
 void ParentContainer::on_focus_lost()
@@ -709,4 +750,15 @@ bool ParentContainer::move_to(int x, int y)
 bool ParentContainer::is_fullscreen() const
 {
     return false;
+}
+
+bool ParentContainer::toggle_stacked()
+{
+    if (scheme == LayoutScheme::stack)
+        scheme = LayoutScheme::horizontal;
+    else
+        scheme = LayoutScheme::stack;
+
+    relayout();
+    return true;
 }
