@@ -30,26 +30,29 @@ parser.add_argument('--fix', type=bool,
 args = parser.parse_args()
 fix = args.fix
 
-root_dir = Path(__file__).parent.parent / "src"
-error_files = []
-error_data = []
-for x in os.listdir(root_dir.as_posix()):
-    file = root_dir / x
-    if file.as_posix().endswith(".h") or file.as_posix().endswith(".cpp"):
-        with open(file, 'r') as original:
-            content = original.read()
-            if not content.startswith(LICENSE):
-                error_files.append(file.as_posix())
-                error_data.append(content)
+to_check = ["src", "miraclemsg"]
 
-if fix is True:
-    for i in range(0, len(error_files)):
-        file = error_files[i]
-        data = error_data[i]
-        with open(file, 'w') as f:
-            f.write(LICENSE)
-            f.write(data)
-elif len(error_files) > 0:
-    print("The following files are missing the GPL License at the top: ")
-    print("  " + "\n  ".join(error_files))
-    exit(1)
+for d in to_check:
+    root_dir = Path(__file__).parent.parent / d
+    error_files = []
+    error_data = []
+    for x in os.listdir(root_dir.as_posix()):
+        file = root_dir / x
+        if file.as_posix().endswith(".h") or file.as_posix().endswith(".cpp"):
+            with open(file, 'r') as original:
+                content = original.read()
+                if not content.startswith(LICENSE):
+                    error_files.append(file.as_posix())
+                    error_data.append(content)
+
+    if fix is True:
+        for i in range(0, len(error_files)):
+            file = error_files[i]
+            data = error_data[i]
+            with open(file, 'w') as f:
+                f.write(LICENSE)
+                f.write(data)
+    elif len(error_files) > 0:
+        print("The following files are missing the GPL License at the top: ")
+        print("  " + "\n  ".join(error_files))
+        exit(1)
