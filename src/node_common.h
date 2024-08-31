@@ -24,7 +24,7 @@ enum class LayoutScheme
 {
     horizontal,
     vertical,
-    stack,
+    tabbing,
     none
 };
 }

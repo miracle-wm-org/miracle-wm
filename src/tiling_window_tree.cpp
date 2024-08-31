@@ -253,7 +253,7 @@ void TilingWindowTree::request_horizontal_layout(Container& container)
 
 void TilingWindowTree::request_stacked_layout(Container& container)
 {
-    handle_layout_scheme(LayoutScheme::stack, container);
+    handle_layout_scheme(LayoutScheme::tabbing, container);
 }
 
 void TilingWindowTree::toggle_layout(Container& container)
@@ -407,7 +407,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
         if (is_vertical && grandparent_direction == LayoutScheme::vertical
             || !is_vertical && (
             grandparent_direction == LayoutScheme::horizontal
-            || grandparent_direction == LayoutScheme::stack))
+            || grandparent_direction == LayoutScheme::tabbing))
         {
             if (is_negative)
             {

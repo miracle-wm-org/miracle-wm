@@ -116,7 +116,7 @@ public:
     virtual bool move(Direction) = 0;
     virtual bool move_by(Direction, int pixels) = 0;
     virtual bool move_to(int x, int y) = 0;
-    virtual bool toggle_stacked() = 0;
+    virtual bool toggle_tabbing() = 0;
 
     bool is_leaf();
     bool is_lane();

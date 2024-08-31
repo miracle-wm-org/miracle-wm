@@ -94,7 +94,7 @@ enum DefaultKeyCommand
     MoveToWorkspace0,
     ToggleFloating,
     TogglePinnedToWorkspace,
-    ToggleStacked,
+    ToggleTabbing,
     MAX
 };
 

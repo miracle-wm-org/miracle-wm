@@ -106,7 +106,7 @@ public:
     bool move_by(Direction direction, int pixels) override;
     bool move_to(int x, int y) override;
     bool is_fullscreen() const override;
-    bool toggle_stacked() override;
+    bool toggle_tabbing() override;
 
 private:
     WindowController& node_interface;

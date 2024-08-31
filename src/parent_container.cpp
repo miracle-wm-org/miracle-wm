@@ -195,7 +195,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
         };
         pending_logical_rect = new_node_logical_rect;
     }
-    else if (scheme == LayoutScheme::stack)
+    else if (scheme == LayoutScheme::tabbing)
     {
         pending_logical_rect = placement_area;
     }
@@ -364,7 +364,7 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
             pending_size_updates.back().size.height = geom::Height { pending_size_updates.back().size.height.as_int() + leftover_height };
         }
     }
-    else if (scheme == LayoutScheme::stack)
+    else if (scheme == LayoutScheme::tabbing)
     {
         for (size_t idx = 0; idx < sub_nodes.size(); idx++)
         {
@@ -561,7 +561,7 @@ void ParentContainer::relayout()
             node->set_logical_area(rectangle);
         }
     }
-    else if (scheme == LayoutScheme::stack)
+    else if (scheme == LayoutScheme::tabbing)
     {
         for (auto const& node : sub_nodes)
             node->set_logical_area(placement_area);
@@ -624,7 +624,7 @@ void ParentContainer::set_tree(TilingWindowTree* tree_)
 
 void ParentContainer::on_focus_gained()
 {
-    if (scheme == LayoutScheme::stack)
+    if (scheme == LayoutScheme::tabbing)
     {
         for (auto const& container : sub_nodes)
         {
@@ -752,12 +752,12 @@ bool ParentContainer::is_fullscreen() const
     return false;
 }
 
-bool ParentContainer::toggle_stacked()
+bool ParentContainer::toggle_tabbing()
 {
-    if (scheme == LayoutScheme::stack)
+    if (scheme == LayoutScheme::tabbing)
         scheme = LayoutScheme::horizontal;
     else
-        scheme = LayoutScheme::stack;
+        scheme = LayoutScheme::tabbing;
 
     relayout();
     return true;

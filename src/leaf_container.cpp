@@ -359,7 +359,7 @@ bool LeafContainer::move_to(int, int)
     return false;
 }
 
-bool LeafContainer::toggle_stacked()
+bool LeafContainer::toggle_tabbing()
 {
     tree->request_stacked_layout(*this);
     return true;
