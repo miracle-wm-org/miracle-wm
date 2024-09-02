@@ -92,7 +92,7 @@ public:
     void request_horizontal_layout(Container&);
 
     /// Request that the provided container become stacked.
-    void request_stacked_layout(Container&);
+    void requested_tabbing_layout(Container&);
 
     // Request a change from the current layout scheme to another layout scheme
     void toggle_layout(Container&);

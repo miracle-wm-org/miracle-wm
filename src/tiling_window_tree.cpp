@@ -251,7 +251,7 @@ void TilingWindowTree::request_horizontal_layout(Container& container)
     handle_layout_scheme(LayoutScheme::horizontal, container);
 }
 
-void TilingWindowTree::request_stacked_layout(Container& container)
+void TilingWindowTree::requested_tabbing_layout(Container& container)
 {
     handle_layout_scheme(LayoutScheme::tabbing, container);
 }
@@ -278,15 +278,18 @@ void TilingWindowTree::handle_layout_scheme(LayoutScheme scheme, Container& cont
         return;
     }
 
-    auto parent = Container::as_parent(container.get_parent().lock());
-    if (parent->num_nodes() != 1)
-        parent = parent->convert_to_parent(container.shared_from_this());
-
+    auto parent = container.get_parent().lock();
     if (!parent)
     {
         mir::log_warning("handle_layout_scheme: parent is not set");
         return;
     }
+
+    // If the parent already has more than just [container] as a child AND
+    // the parent is NOT a tabbing parent, then we create a new parent for this
+    // single [container].
+    if (parent->num_nodes() > 1 && parent->get_direction() != LayoutScheme::tabbing)
+        parent = parent->convert_to_parent(container.shared_from_this());
 
     parent->set_direction(scheme);
 }

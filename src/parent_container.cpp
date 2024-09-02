@@ -434,6 +434,9 @@ const std::vector<std::shared_ptr<Container>>& ParentContainer::get_sub_nodes() 
 void ParentContainer::set_direction(miracle::LayoutScheme new_scheme)
 {
     scheme = new_scheme;
+    relayout();
+    constrain();
+    commit_changes();
 }
 
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
