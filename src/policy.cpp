@@ -189,6 +189,8 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return toggle_floating();
         case TogglePinnedToWorkspace:
             return toggle_pinned_to_workspace();
+        case ToggleTabbing:
+            return toggle_tabbing();
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
@@ -826,4 +828,15 @@ bool Policy::set_is_pinned(bool pinned)
         return false;
 
     return state.active->pinned(pinned);
+}
+
+bool Policy::toggle_tabbing()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active)
+        return false;
+
+    return state.active->toggle_tabbing();
 }

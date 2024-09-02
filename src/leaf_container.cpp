@@ -358,3 +358,15 @@ bool LeafContainer::move_to(int, int)
 {
     return false;
 }
+
+bool LeafContainer::toggle_tabbing()
+{
+    if (auto sh_parent = parent.lock())
+    {
+        if (sh_parent->get_direction() == LayoutScheme::tabbing)
+            tree->request_horizontal_layout(*this);
+        else
+            tree->requested_tabbing_layout(*this);
+    }
+    return true;
+}

@@ -81,6 +81,7 @@ public:
         return get_rectangle(renderable.screen_position());
     }
 
+
     [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
     {
         auto clip_area_rect = renderable.clip_area();

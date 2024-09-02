@@ -85,11 +85,14 @@ public:
 
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
-    // Request a change to vertical window placement
+    /// Request a change to vertical window placement
     void request_vertical_layout(Container&);
 
-    // Request a change to horizontal window placement
+    /// Request a change to horizontal window placement
     void request_horizontal_layout(Container&);
+
+    /// Request that the provided container become stacked.
+    void requested_tabbing_layout(Container&);
 
     // Request a change from the current layout scheme to another layout scheme
     void toggle_layout(Container&);
@@ -153,7 +156,7 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    void handle_direction_change(NodeLayoutDirection direction, Container&);
+    void handle_layout_scheme(LayoutScheme direction, Container &container);
     void handle_resize(Container& node, Direction direction, int amount);
 
     /// Constrains the container to its tile in the tree

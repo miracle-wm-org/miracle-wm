@@ -34,7 +34,7 @@ class MiracleConfig;
 class TilingWindowTree;
 class CompositorState;
 
-/// A [LeafContainer] contains one or many windows (in the event that windows are stacked or tabbed).
+/// A [LeafContainer] always contains a single window.
 class LeafContainer : public Container
 {
 public:
@@ -94,6 +94,7 @@ public:
     bool move(Direction) override;
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
+    bool toggle_tabbing() override;
 
 private:
     WindowController& window_controller;
@@ -107,7 +108,7 @@ private:
 
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
-    NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
+    LayoutScheme tentative_direction = LayoutScheme::none;
     glm::mat4 transform = glm::mat4(1.f);
     uint32_t animation_handle_ = 0;
 };

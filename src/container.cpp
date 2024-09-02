@@ -93,7 +93,7 @@ bool Container::is_lane()
 
 namespace
 {
-bool has_neighbor(Container const* container, NodeLayoutDirection direction, size_t cannot_be_index)
+bool has_neighbor(Container const* container, LayoutScheme direction, size_t cannot_be_index)
 {
     auto parent = container->get_parent().lock();
     if (!parent)
@@ -121,7 +121,7 @@ bool has_right_neighbor(Container const* container)
     if (!parent_container)
         return false;
 
-    return has_neighbor(container, NodeLayoutDirection::horizontal, parent_container->num_nodes() - 1);
+    return has_neighbor(container, LayoutScheme::horizontal, parent_container->num_nodes() - 1);
 }
 
 bool has_bottom_neighbor(Container const* container)
@@ -134,7 +134,7 @@ bool has_bottom_neighbor(Container const* container)
     if (!parent_container)
         return false;
 
-    return has_neighbor(container, NodeLayoutDirection::vertical, parent_container->num_nodes() - 1);
+    return has_neighbor(container, LayoutScheme::vertical, parent_container->num_nodes() - 1);
 }
 
 bool has_left_neighbor(Container const* container)
@@ -142,7 +142,7 @@ bool has_left_neighbor(Container const* container)
     auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(container, NodeLayoutDirection::horizontal, 0);
+    return has_neighbor(container, LayoutScheme::horizontal, 0);
 }
 
 bool has_top_neighbor(Container const* container)
@@ -150,7 +150,7 @@ bool has_top_neighbor(Container const* container)
     auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(container, NodeLayoutDirection::vertical, 0);
+    return has_neighbor(container, LayoutScheme::vertical, 0);
 }
 }
 
