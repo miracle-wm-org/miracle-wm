@@ -139,3 +139,4 @@ if(SNAP_BUILD)
 endif()
 
 add_subdirectory(tests/)
+add_subdirectory(miraclemsg/)

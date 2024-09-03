@@ -33,6 +33,9 @@ apps:
   miracle-wm-sensible-terminal:
     command: usr/local/bin/miracle-wm-sensible-terminal
 
+  miraclemsg:
+    command: usr/local/bin/miraclemsg
+
 parts:
   miracle-wm:
     build-attributes:
@@ -76,6 +79,7 @@ parts:
       - libgles2-mesa-dev
       - libmirrenderer-dev
       - libmirwayland-dev
+      - libjson-c-dev
     stage-packages:
       - libmiral7
       - libmiroil5
