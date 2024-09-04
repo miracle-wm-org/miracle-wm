@@ -198,8 +198,8 @@ void FilesystemConfiguration::load(mir::Server& server)
             if (!command.empty())
             {
                 exec_app = StartupApp {
-                    .command=command,
-                    .should_halt_compositor_on_death=true
+                    .command = command,
+                    .should_halt_compositor_on_death = true
                 };
             }
         }

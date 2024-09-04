@@ -1,0 +1,11 @@
+# Systemd provides xdg-desktop-autostart.target as a way to process XDG autostart
+# desktop files. The target sets RefuseManualStart though, and thus cannot be
+# used from scripts.
+#
+[Unit]
+Description=XDG autostart for Sway session
+Documentation=man:systemd.special(7) man:systemd-xdg-autostart-generator(8)
+Documentation=https://github.com/alebastr/sway-systemd
+BindsTo=xdg-desktop-autostart.target
+PartOf=sway-session.target
+After=sway-session.target

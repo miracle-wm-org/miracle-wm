@@ -17,12 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "parent_container"
 #include "parent_container.h"
+#include "compositor_state.h"
 #include "config.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "tiling_window_tree.h"
 #include "workspace.h"
-#include "compositor_state.h"
 #include <cmath>
 #include <mir/log.h>
 

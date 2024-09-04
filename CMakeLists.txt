@@ -123,8 +123,11 @@ add_custom_target(miracle-wm-sensible-terminal ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-sensible-terminal ${CMAKE_BINARY_DIR}/bin
 )
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.in miracle-wm-session @ONLY)
+
 install(PROGRAMS
     src/miracle-wm-sensible-terminal
+    ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 

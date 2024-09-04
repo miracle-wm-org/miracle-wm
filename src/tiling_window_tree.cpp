@@ -264,7 +264,7 @@ void TilingWindowTree::toggle_layout(Container& container)
 
     if (parent->get_direction() == LayoutScheme::horizontal)
         handle_layout_scheme(LayoutScheme::vertical, container);
-    else if (parent ->get_direction() == LayoutScheme::vertical)
+    else if (parent->get_direction() == LayoutScheme::vertical)
         handle_layout_scheme(LayoutScheme::horizontal, container);
     else
         mir::log_error("Parent with stack layout scheme cannot be toggled");
@@ -408,9 +408,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
         auto grandparent_direction = parent->get_direction();
         int index = parent->get_index_of_node(current_node);
         if (is_vertical && grandparent_direction == LayoutScheme::vertical
-            || !is_vertical && (
-            grandparent_direction == LayoutScheme::horizontal
-            || grandparent_direction == LayoutScheme::tabbing))
+            || !is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing))
         {
             if (is_negative)
             {
