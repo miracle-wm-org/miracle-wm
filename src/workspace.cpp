@@ -147,11 +147,6 @@ std::shared_ptr<Container> Workspace::create_container(
         break;
     }
     case ContainerType::shell:
-        if (window_info.state() == MirWindowState::mir_window_state_attached)
-        {
-            window_controller.select_active_window(window_info.window());
-        }
-
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller);
         break;
     default:
@@ -250,20 +245,6 @@ void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> 
                 f(container);
         }
     });
-}
-
-std::shared_ptr<Container> Workspace::select_from_point(int x, int y)
-{
-    for (auto const& floating : floating_windows)
-    {
-        auto window = floating->window().value();
-        geom::Rectangle window_area(window.top_left(), window.size());
-
-        if (window_area.contains(geom::Point(x, y)))
-            return floating;
-    }
-
-    return tree->select_window_from_point(x, y);
 }
 
 void Workspace::toggle_floating(std::shared_ptr<Container> const& container)

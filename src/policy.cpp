@@ -254,7 +254,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         {
         case WindowManagerMode::normal:
         {
-            bool has_changed_selected = false;
             if (intersected)
             {
                 if (auto window = intersected->window().value())
@@ -262,7 +261,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                     if (state.active != intersected)
                     {
                         window_controller.select_active_window(window);
-                        has_changed_selected = true;
                     }
                 }
             }
@@ -276,7 +274,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 return floating_window_manager->handle_pointer_event(event);
             }
 
-            return has_changed_selected;
+            return false;
         }
         case WindowManagerMode::selecting:
         {
@@ -353,6 +351,22 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
     }
 
     container->handle_ready();
+}
+
+mir::geometry::Rectangle
+Policy::confirm_placement_on_display(
+    miral::WindowInfo const& window_info,
+    MirWindowState new_state,
+    mir::geometry::Rectangle const& new_placement)
+{
+    auto container = window_controller.get_container(window_info.window());
+    if (!container)
+    {
+        mir::log_warning("confirm_placement_on_display: window lacks container");
+        return new_placement;
+    }
+
+    return container->confirm_placement(new_state, new_placement);
 }
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
@@ -540,22 +554,6 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
     }
 
     container->handle_raise();
-}
-
-mir::geometry::Rectangle
-Policy::confirm_placement_on_display(
-    const miral::WindowInfo& window_info,
-    MirWindowState new_state,
-    const mir::geometry::Rectangle& new_placement)
-{
-    auto container = window_controller.get_container(window_info.window());
-    if (!container)
-    {
-        mir::log_warning("confirm_placement_on_display: window lacks container");
-        return new_placement;
-    }
-
-    return container->confirm_placement(new_state, new_placement);
 }
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)

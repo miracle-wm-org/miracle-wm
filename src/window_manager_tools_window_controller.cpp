@@ -124,6 +124,9 @@ std::shared_ptr<Container> WindowManagerToolsWindowController::get_container(mir
     if (info.userdata())
         return static_pointer_cast<Container>(info.userdata());
 
+    if (info.parent())
+        return get_container(info.parent());
+
     return nullptr;
 }
 
