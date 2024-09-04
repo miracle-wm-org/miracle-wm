@@ -83,6 +83,7 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
+    window_controller.select_active_window(window_);
 }
 
 void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)
@@ -100,6 +101,7 @@ void ShellComponentContainer::handle_request_resize(MirInputEvent const* input_e
 
 void ShellComponentContainer::handle_raise()
 {
+    window_controller.select_active_window(window_);
 }
 
 bool ShellComponentContainer::resize(Direction direction)
@@ -126,6 +128,7 @@ void ShellComponentContainer::toggle_layout()
 
 void ShellComponentContainer::on_focus_gained()
 {
+    window_controller.raise(window_);
 }
 
 void ShellComponentContainer::on_focus_lost()
