@@ -33,10 +33,52 @@ AutoRestartingLauncher::AutoRestartingLauncher(
       { reap(); }); });
 }
 
+std::vector<std::string_view> split(std::string_view str, char delim)
+{
+    std::vector<std::string_view> result;
+    auto left = str.begin();
+    for (auto it = left; it != str.end(); ++it)
+    {
+        if (*it == delim)
+        {
+            result.emplace_back(&*left, it - left);
+            left = it + 1;
+        }
+    }
+    if (left != str.end())
+        result.emplace_back(&*left, str.end() - left);
+    return result;
+}
+
 void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
 {
     std::lock_guard lock { mutex };
-    auto pid = launcher.launch(cmd.command);
+    pid_t pid;
+    if (cmd.in_systemd_scope)
+    {
+        std::vector<std::string> result = {"systemd-run", "--user", "--property", "Restart=on-failure"};
+        size_t start = 0;
+        for (size_t i = 0; i < cmd.command.size(); i++)
+        {
+            if (cmd.command[i] == ' ')
+            {
+                if (start != i)
+                    result.push_back(cmd.command.substr(start, i - start));
+
+                start = i + 1;
+            }
+        }
+
+        if (start != cmd.command.size())
+            result.push_back(cmd.command.substr(start));
+
+        pid = launcher.launch(result);
+    }
+    else
+    {
+        pid = launcher.launch(cmd.command);
+    }
+    
     if (pid <= 0)
     {
         mir::log_error("Unable to start external client: %s\n", cmd.command.c_str());

@@ -247,10 +247,6 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
         options.startup_apps.push_back(startup_app.value());
     }
 
-    for (auto const& listener : config_ready_listeners)
-        listener();
-
-    config_ready_listeners.clear();
     is_loaded_ = true;
     _watch(runner);
 }
@@ -654,11 +650,17 @@ void FilesystemConfiguration::_reload()
                     auto command = wrap_command(node["command"].as<std::string>());
                     bool restart_on_death = false;
                     if (node["restart_on_death"])
-                    {
                         restart_on_death = node["restart_on_death"].as<bool>();
-                    }
 
-                    options.startup_apps.push_back({ std::move(command), restart_on_death });
+                    bool in_systemd_scope = false;
+                    if (node["in_systemd_scope"])
+                        in_systemd_scope = node["in_systemd_scope"].as<bool>();
+
+                    options.startup_apps.push_back({
+                        .command=std::move(command),
+                        .restart_on_death=restart_on_death,
+                        .in_systemd_scope=in_systemd_scope
+                    });
                 }
                 catch (YAML::BadConversion const& e)
                 {
@@ -931,14 +933,6 @@ uint FilesystemConfiguration::parse_modifier(std::string const& stringified_acti
     else
         mir::log_error("Unable to process action_key: %s", stringified_action_key.c_str());
     return mir_input_event_modifier_none;
-}
-
-void FilesystemConfiguration::on_config_ready(std::function<void()> const& listener)
-{
-    if (is_loaded_)
-        listener();
-    else
-        config_ready_listeners.push_back(listener);
 }
 
 std::string const& FilesystemConfiguration::get_filename() const
