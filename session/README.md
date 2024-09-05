@@ -29,5 +29,5 @@ following apps will rely on the environment variables set here.
 Finally, log out and log back into miracle. Once running, try to run:
 
 ```sh
-echo $XDG_SESSION_DESKTOP  # This should be "mir:miracle-wm"
+echo $XDG_SESSION_DESKTOP  # This should be "miracle-wm"
 ```
