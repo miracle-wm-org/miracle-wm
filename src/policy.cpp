@@ -763,6 +763,7 @@ bool Policy::try_close_window()
 
 bool Policy::quit()
 {
+    ipc->on_shutdown();
     runner.stop();
     return true;
 }

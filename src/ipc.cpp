@@ -353,7 +353,6 @@ Ipc::Ipc(miral::MirRunner& runner,
 
 Ipc::~Ipc()
 {
-    on_shutdown();
 }
 
 void Ipc::on_created(std::shared_ptr<Output> const& info, int key)
@@ -444,10 +443,11 @@ void Ipc::on_shutdown()
     }));
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_MODE)) == 0)
+        if ((client.subscribed_events & event_mask(IPC_EVENT_SHUTDOWN)) == 0)
         {
             continue;
         }
+
 
         send_reply(client, IPC_EVENT_SHUTDOWN, response);
     }
