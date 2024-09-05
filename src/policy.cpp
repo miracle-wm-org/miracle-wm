@@ -467,6 +467,18 @@ void Policy::advise_output_create(miral::Output const& output)
         }
         orphaned_window_list.clear();
     }
+
+    if (is_starting_)
+    {
+        is_starting_ = false;
+        config->on_config_ready([&]()
+        {
+            for (auto const& app : config->get_startup_apps())
+            {
+                external_client_launcher.launch(app);
+            }
+        });
+    }
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
@@ -617,6 +629,10 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
     {
         output->advise_application_zone_delete(application_zone);
     }
+}
+
+void Policy::advise_end()
+{
 }
 
 void Policy::try_toggle_resize_mode()

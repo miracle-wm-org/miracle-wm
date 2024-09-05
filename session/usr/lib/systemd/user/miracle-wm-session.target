@@ -1,5 +1,5 @@
 [Unit]
-Description=miracle session
+Description=miracle-wm session
 Documentation=man:systemd.special(7)
 BindsTo=graphical-session.target
 Wants=graphical-session-pre.target

@@ -251,6 +251,7 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
         listener();
 
     config_ready_listeners.clear();
+    is_loaded_ = true;
     _watch(runner);
 }
 
@@ -934,7 +935,10 @@ uint FilesystemConfiguration::parse_modifier(std::string const& stringified_acti
 
 void FilesystemConfiguration::on_config_ready(std::function<void()> const& listener)
 {
-    config_ready_listeners.push_back(listener);
+    if (is_loaded_)
+        listener();
+    else
+        config_ready_listeners.push_back(listener);
 }
 
 std::string const& FilesystemConfiguration::get_filename() const

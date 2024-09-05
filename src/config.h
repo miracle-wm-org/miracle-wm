@@ -239,6 +239,7 @@ private:
     std::mutex mutex;
     std::vector<std::function<void()>> config_ready_listeners;
     std::atomic<bool> has_changes = false;
+    bool is_loaded_ = false;
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
     struct ConfigDetails

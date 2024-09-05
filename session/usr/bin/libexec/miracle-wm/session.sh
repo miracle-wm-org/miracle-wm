@@ -1,5 +1,26 @@
 #!/bin/sh
 #
+#
+# Copyright (C) 2024  Matthew Kosarek
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Portions of this code originate from https://github.com/alebastr/sway-systemd,
+# licensed under the MIT license. See the LICENSE.sway-systemd file for details.
+#
+#
+#
 # Address several issues with DBus activation and systemd user sessions
 #
 # 1. DBus-activated and systemd services do not share the environment with user
@@ -25,7 +46,7 @@
 #    environment is to add it to a `graphical-session.target`. However, systemd
 #    forbids starting the graphical session target directly and encourages use
 #    of an environment-specific target units. Therefore, the integration
-#    package here provides and uses `sway-session.target` which would bind to
+#    package here provides and uses `miracle-wm-session.target` which would bind to
 #    the `graphical-session.target`.
 #
 # 5. Stop the target and unset the variables when the compositor exits.
@@ -36,7 +57,7 @@
 #  - https://www.freedesktop.org/software/systemd/man/systemd.special.html#graphical-session.target
 #  - https://systemd.io/DESKTOP_ENVIRONMENTS/
 #
-export XDG_CURRENT_DESKTOP=miracle-wm
+export XDG_CURRENT_DESKTOP=mir:miracle-wm
 export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-miracle-wm}"
 export XDG_SESSION_TYPE=wayland
 VARIABLES="DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE"
