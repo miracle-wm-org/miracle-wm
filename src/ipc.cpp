@@ -448,7 +448,6 @@ void Ipc::on_shutdown()
             continue;
         }
 
-
         send_reply(client, IPC_EVENT_SHUTDOWN, response);
     }
 }

@@ -656,11 +656,9 @@ void FilesystemConfiguration::_reload()
                     if (node["in_systemd_scope"])
                         in_systemd_scope = node["in_systemd_scope"].as<bool>();
 
-                    options.startup_apps.push_back({
-                        .command=std::move(command),
-                        .restart_on_death=restart_on_death,
-                        .in_systemd_scope=in_systemd_scope
-                    });
+                    options.startup_apps.push_back({ .command = std::move(command),
+                        .restart_on_death = restart_on_death,
+                        .in_systemd_scope = in_systemd_scope });
                 }
                 catch (YAML::BadConversion const& e)
                 {

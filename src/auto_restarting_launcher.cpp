@@ -56,7 +56,13 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
     pid_t pid;
     if (cmd.in_systemd_scope)
     {
-        std::vector<std::string> result = {"systemd-run", "--user", "--property", "Restart=on-failure"};
+        std::vector<std::string> result = { "systemd-run", "--user" };
+        if (cmd.restart_on_death)
+        {
+            result.push_back("--property");
+            result.push_back("Restart=on-failure");
+        }
+
         size_t start = 0;
         for (size_t i = 0; i < cmd.command.size(); i++)
         {
@@ -78,7 +84,7 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
     {
         pid = launcher.launch(cmd.command);
     }
-    
+
     if (pid <= 0)
     {
         mir::log_error("Unable to start external client: %s\n", cmd.command.c_str());
