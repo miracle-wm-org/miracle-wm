@@ -12,10 +12,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(MIR_LIBRARIES_PKGCONFIG_DIRECTORY "" CACHE STRING "Search for Mir libraries pc files in this directory")
 option(SNAP_BUILD "Building as a snap?" OFF)
-
-set(ENV{PKG_CONFIG_PATH} "${MIR_LIBRARIES_PKGCONFIG_DIRECTORY}:/usr/local/lib/pkgconfig/")
 
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
