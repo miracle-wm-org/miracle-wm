@@ -161,7 +161,7 @@ FilesystemConfiguration::FilesystemConfiguration(
         mir::log_info("FilesystemConfiguration: File is being loaded immediately on construction. "
                       "It is assumed that you are running this inside of a test");
         config_path = default_config_path;
-        _init(std::nullopt);
+        _init(std::nullopt, std::nullopt);
     }
 }
 
@@ -186,12 +186,24 @@ void FilesystemConfiguration::load(mir::Server& server)
         "dies, miracle will also die.",
         "");
 
-    server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, &server]
+    const char* systemd_session_configure_option = "systemd-session-configure";
+    server.add_configuration_option(
+        systemd_session_configure_option,
+        "If specified, this script will setup the systemd session before any apps are run",
+        "");
+
+    server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
     {
         auto const server_opts = server.get_options();
         no_config = server_opts->get<bool>(no_config_option);
         config_path = server_opts->get<std::string>(config_file_name_option);
+        std::optional<StartupApp> systemd_app = std::nullopt;
         std::optional<StartupApp> exec_app = std::nullopt;
+
+        auto systemd_session_configure = server_opts->get<std::string>(systemd_session_configure_option);
+        if (!systemd_session_configure.empty())
+            systemd_app = StartupApp { .command = systemd_session_configure };
+
         if (server_opts->is_set(exec_option))
         {
             auto command = server_opts->get<std::string>(exec_option);
@@ -203,11 +215,12 @@ void FilesystemConfiguration::load(mir::Server& server)
                 };
             }
         }
-        _init(exec_app);
+
+        _init(systemd_app, exec_app);
     });
 }
 
-void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app)
+void FilesystemConfiguration::_init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app)
 {
     if (no_config)
     {
@@ -240,11 +253,17 @@ void FilesystemConfiguration::_init(std::optional<StartupApp> const& startup_app
 
     _reload();
 
+    // If the user specified an --systemd-session-configure <APP_NAME>, let's add that to the list
+    if (systemd_app)
+    {
+        options.startup_apps.insert(options.startup_apps.begin(), systemd_app.value());
+    }
+
     // If the user specified an --exec <APP_NAME>, let's add that to the list
-    if (startup_app)
+    if (exec_app)
     {
         mir::log_info("Miracle will die when the application specified with --exec dies");
-        options.startup_apps.push_back(startup_app.value());
+        options.startup_apps.push_back(exec_app.value());
     }
 
     is_loaded_ = true;

@@ -1,8 +1,0 @@
-if ! command -v systemd-cat &> /dev/null
-then
-    @CMAKE_INSTALL_FULL_BINDIR@/miracle-wm
-    exit 0
-fi
-
-systemd-cat --identifier=miracle-wm @CMAKE_INSTALL_FULL_BINDIR@/miracle-wm
-exit 0

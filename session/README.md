@@ -7,20 +7,33 @@
 Miracle offers a standard way of integrating with `systemd` that is largely
 derived from https://github.com/alebastr/sway-systemd.
 
-## Setup
+
+## Installation
+To install miracle with systemd support, simply provide the following option to cmake:
+
+```
+cmake -DSYSTEMD_INTEGRATION=1 ..
+```
+
+## View Logs
+```sh
+journalctl --user --identifier miracle-wm
+```
+
+## Manual Setup
 From the root of the project:
 
 ```sh
 cd session
-cp usr/lib/systemd/user/*.target <SYSTEMD_USER_UNIT_DIRECTORY> # most likely /usr/lib/systemd/user/, $XDG_CONFIG_HOME/systemd/user/ or ~/.config/systemd/user
-cp usr/bin/libexec/miracle-wm/session.sh /usr/local/libexec/miracle-wm/session.sh
+cp usr/lib/systemd/user/*.target /usr/lib/systemd/user/   # or $XDG_CONFIG_HOME/systemd/user/ or ~/.config/systemd/user
+cp usr/bin/libexec/miracle-wm-session-setup /usr/local/libexec/miracle-wm/miracle-wm-session-setup
 ```
 
 Then, in your `~/.config/miracle-wm.yaml`, add:
 
 ```yaml
 startup_apps:
-  - command: /usr/local/libexec/miracle-wm/session.sh
+  - command: /usr/local/libexec/miracle-wm/miracle-wm-session-setup
 ```
 
 It is important that this is the first application that is executed, as the

@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(MIR_LIBRARIES_PKGCONFIG_DIRECTORY "" CACHE STRING "Search for Mir libraries pc files in this directory")
 option(SNAP_BUILD "Building as a snap?" OFF)
+option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 
 set(ENV{PKG_CONFIG_PATH} "${MIR_LIBRARIES_PKGCONFIG_DIRECTORY}:/usr/local/lib/pkgconfig/")
 
@@ -79,7 +80,6 @@ add_executable(miracle-wm
     src/main.cpp
 )
 
-
 target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRAL_INCLUDE_DIRS}
     ${MIROIL_INCLUDE_DIRS}
@@ -108,6 +108,21 @@ target_link_libraries(miracle-wm-implementation
     PkgConfig::GLESv2
     -lpcre2-8 -lpcre2-16 -lpcre2-32)
 
+if(SYSTEMD_INTEGRATION)
+    # Install systemd files
+    install(FILES session/usr/lib/systemd/user/miracle-wm-session.target
+        session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
+        DESTINATION /usr/lib/systemd/user/)
+
+    # Install the setup script
+    install(PROGRAMS session/usr/bin/libexec/miracle-wm-session-setup
+        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
+else()
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
+endif()
+
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
 
@@ -122,8 +137,6 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop
 add_custom_target(miracle-wm-sensible-terminal ALL
     cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-sensible-terminal ${CMAKE_BINARY_DIR}/bin
 )
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.in miracle-wm-session @ONLY)
 
 install(PROGRAMS
     src/miracle-wm-sensible-terminal

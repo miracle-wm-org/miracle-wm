@@ -1,0 +1,2 @@
+#!/bin/sh
+@CMAKE_INSTALL_FULL_BINDIR@/miracle-wm
