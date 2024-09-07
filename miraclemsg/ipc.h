@@ -18,7 +18,6 @@ Portions of this code originate from swaymsg, licensed under the MIT license.
 See the LICENSE.Sway file for details.
 **/
 
-
 #ifndef _SWAY_IPC_H
 #define _SWAY_IPC_H
 

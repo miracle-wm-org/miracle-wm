@@ -156,7 +156,7 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    void handle_layout_scheme(LayoutScheme direction, Container &container);
+    void handle_layout_scheme(LayoutScheme direction, Container& container);
     void handle_resize(Container& node, Direction direction, int amount);
 
     /// Constrains the container to its tile in the tree

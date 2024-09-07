@@ -351,6 +351,10 @@ Ipc::Ipc(miral::MirRunner& runner,
     });
 }
 
+Ipc::~Ipc()
+{
+}
+
 void Ipc::on_created(std::shared_ptr<Output> const& info, int key)
 {
     json j = {
@@ -429,6 +433,22 @@ void Ipc::on_changed(WindowManagerMode mode)
         }
 
         send_reply(client, IPC_EVENT_MODE, response);
+    }
+}
+
+void Ipc::on_shutdown()
+{
+    auto response = to_string(json({
+        { "change", "exit" }
+    }));
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IPC_EVENT_SHUTDOWN)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(client, IPC_EVENT_SHUTDOWN, response);
     }
 }
 
@@ -549,6 +569,8 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
                 client.subscribed_events |= event_mask(IPC_EVENT_TICK);
                 send_event_tick = true;
             }
+            else if (event_type == "shutdown")
+                client.subscribed_events |= event_mask(IPC_EVENT_SHUTDOWN);
             else
             {
                 mir::log_error("Cannot process IPC subscription event for event_type: %s", event_type.c_str());

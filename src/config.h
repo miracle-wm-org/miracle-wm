@@ -118,6 +118,7 @@ struct StartupApp
     bool restart_on_death = false;
     bool no_startup_id = false;
     bool should_halt_compositor_on_death = false;
+    bool in_systemd_scope = false;
 };
 
 struct EnvironmentVariable
@@ -153,7 +154,6 @@ class MiracleConfig
 public:
     virtual ~MiracleConfig() = default;
     virtual void load(mir::Server& server) = 0;
-    virtual void on_config_ready(std::function<void()> const&) = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
@@ -190,7 +190,6 @@ public:
     auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = default;
 
     void load(mir::Server& server) override;
-    void on_config_ready(std::function<void()> const&) override;
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
@@ -222,7 +221,7 @@ private:
     };
 
     static uint parse_modifier(std::string const& stringified_action_key);
-    void _init(std::optional<StartupApp> const&);
+    void _init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app);
     void _reload();
     void _watch(miral::MirRunner& runner);
     void read_animation_definitions(YAML::Node const&);
@@ -237,8 +236,8 @@ private:
     std::unique_ptr<miral::FdHandle> watch_handle;
     int file_watch = 0;
     std::mutex mutex;
-    std::vector<std::function<void()>> config_ready_listeners;
     std::atomic<bool> has_changes = false;
+    bool is_loaded_ = false;
 
     static const uint miracle_input_event_modifier_default = 1 << 18;
     struct ConfigDetails
