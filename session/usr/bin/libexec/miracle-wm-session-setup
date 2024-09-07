@@ -30,13 +30,13 @@
 #    Possible (but not exhaustive) list of variables:
 #    - DISPLAY - for X11 applications that are started as user session services
 #    - WAYLAND_DISPLAY - similarly, this is needed for wayland-native services
-#    - I3SOCK/SWAYSOCK - allow services to talk with sway using i3 IPC protocol
+#    - I3SOCK/SWAYSOCK - allow services to talk with miracle using i3 IPC protocol
 #
 # 2. `xdg-desktop-portal` requires XDG_CURRENT_DESKTOP to be set in order to
 #    select the right implementation for screenshot and screencast portals.
-#    With all the numerous ways to start sway, it's not possible to rely on the
+#    With all the numerous ways to start miracle, it's not possible to rely on the
 #    right value of the XDG_CURRENT_DESKTOP variable within the login session,
-#    therefore the script will ensure that it is always set to `sway`.
+#    therefore the script will ensure that it is always set to `miracle-wm`.
 #
 # 3. GUI applications started as a systemd service (or via xdg-autostart-generator)
 #    may rely on the XDG_SESSION_TYPE variable to select the backend.
