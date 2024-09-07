@@ -97,14 +97,6 @@ int main(int argc, char const* argv[])
 
     Keymap config_keymap;
 
-    config->on_config_ready([&]()
-    {
-        for (auto const& app : config->get_startup_apps())
-        {
-            auto_restarting_launcher.launch(app);
-        }
-    });
-
     notify_init("miracle-wm");
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}

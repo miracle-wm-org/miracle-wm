@@ -87,11 +87,13 @@ public:
         std::shared_ptr<mir::ServerActionQueue> const&,
         I3CommandExecutor&,
         std::shared_ptr<MiracleConfig> const&);
+    ~Ipc();
 
     void on_created(std::shared_ptr<Output> const& info, int key) override;
     void on_removed(std::shared_ptr<Output> const& info, int key) override;
     void on_focused(std::shared_ptr<Output> const& previous, int, std::shared_ptr<Output> const& current, int) override;
     void on_changed(WindowManagerMode mode) override;
+    void on_shutdown();
 
 private:
     struct IpcClient

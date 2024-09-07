@@ -81,7 +81,7 @@ std::shared_ptr<Container> Output::intersect(const MirPointerEvent* event)
 
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
-    if (auto const window = tools.window_at({x, y}))
+    if (auto const window = tools.window_at({ x, y }))
         return window_controller.get_container(window);
 
     return nullptr;

@@ -1,0 +1,10 @@
+[Unit]
+Description=Shutdown running miracle-wm session
+DefaultDependencies=no
+StopWhenUnneeded=true
+
+Conflicts=graphical-session.target graphical-session-pre.target
+After=graphical-session.target graphical-session-pre.target
+
+Conflicts=miracle-wm-session.target
+After=miracle-wm-session.target

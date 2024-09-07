@@ -97,6 +97,7 @@ public:
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
+    void advise_end() override;
 
     // Requests
 
@@ -126,6 +127,7 @@ public:
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
+    bool is_starting_ = true;
     CompositorState& state;
     std::vector<std::shared_ptr<Output>> output_list;
     std::weak_ptr<Output> pending_output;

@@ -617,6 +617,18 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
     }
 }
 
+void Policy::advise_end()
+{
+    if (is_starting_)
+    {
+        is_starting_ = false;
+        for (auto const& app : config->get_startup_apps())
+        {
+            external_client_launcher.launch(app);
+        }
+    }
+}
+
 void Policy::try_toggle_resize_mode()
 {
     if (!state.active)
@@ -745,6 +757,7 @@ bool Policy::try_close_window()
 
 bool Policy::quit()
 {
+    ipc->on_shutdown();
     runner.stop();
     return true;
 }
