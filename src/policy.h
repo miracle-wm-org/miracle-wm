@@ -119,6 +119,7 @@ public:
     bool toggle_pinned_to_workspace();
     bool set_is_pinned(bool);
     bool toggle_tabbing();
+    bool toggle_stacking();
 
     // Getters
 

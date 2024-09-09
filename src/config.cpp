@@ -434,6 +434,8 @@ void FilesystemConfiguration::_reload()
                 key_command = DefaultKeyCommand::TogglePinnedToWorkspace;
             else if (name == "toggle_tabbing")
                 key_command = DefaultKeyCommand::ToggleTabbing;
+            else if (name == "toggle_stacking")
+                key_command = DefaultKeyCommand::ToggleStacking;
             else
             {
                 mir::log_error("default_action_overrides: Unknown key command override: %s", name.c_str());
@@ -1251,7 +1253,10 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
          KEY_P     },
         { MirKeyboardAction ::mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_W     }
+         KEY_W     },
+        { MirKeyboardAction ::mir_keyboard_action_down,
+        miracle_input_event_modifier_default,
+        KEY_S     }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {

@@ -367,7 +367,19 @@ bool LeafContainer::toggle_tabbing()
         if (sh_parent->get_direction() == LayoutScheme::tabbing)
             tree->request_horizontal_layout(*this);
         else
-            tree->requested_tabbing_layout(*this);
+            tree->request_tabbing_layout(*this);
+    }
+    return true;
+}
+
+bool LeafContainer::toggle_stacking()
+{
+    if (auto sh_parent = parent.lock())
+    {
+        if (sh_parent->get_direction() == LayoutScheme::stacking)
+            tree->request_horizontal_layout(*this);
+        else
+            tree->request_stacking_layout(*this);
     }
     return true;
 }

@@ -83,6 +83,7 @@ public:
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
     bool toggle_tabbing() override { return false; };
+    bool toggle_stacking() override { return false; };
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 

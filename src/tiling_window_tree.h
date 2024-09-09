@@ -91,8 +91,11 @@ public:
     /// Request a change to horizontal window placement
     void request_horizontal_layout(Container&);
 
+    /// Request that the provided container become tabbed.
+    void request_tabbing_layout(Container&);
+
     /// Request that the provided container become stacked.
-    void requested_tabbing_layout(Container&);
+    void request_stacking_layout(Container&);
 
     // Request a change from the current layout scheme to another layout scheme
     void toggle_layout(Container&);
