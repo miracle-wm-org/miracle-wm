@@ -251,9 +251,14 @@ void TilingWindowTree::request_horizontal_layout(Container& container)
     handle_layout_scheme(LayoutScheme::horizontal, container);
 }
 
-void TilingWindowTree::requested_tabbing_layout(Container& container)
+void TilingWindowTree::request_tabbing_layout(Container& container)
 {
     handle_layout_scheme(LayoutScheme::tabbing, container);
+}
+
+void TilingWindowTree::request_stacking_layout(Container& container)
+{
+    handle_layout_scheme(LayoutScheme::stacking, container);
 }
 
 void TilingWindowTree::toggle_layout(Container& container)
@@ -286,9 +291,11 @@ void TilingWindowTree::handle_layout_scheme(LayoutScheme scheme, Container& cont
     }
 
     // If the parent already has more than just [container] as a child AND
-    // the parent is NOT a tabbing parent, then we create a new parent for this
+    // the parent is NOT a tabbing/stacking parent, then we create a new parent for this
     // single [container].
-    if (parent->num_nodes() > 1 && parent->get_direction() != LayoutScheme::tabbing)
+    if (parent->num_nodes() > 1
+        && parent->get_direction() != LayoutScheme::tabbing
+        && parent->get_direction() != LayoutScheme::stacking)
         parent = parent->convert_to_parent(container.shared_from_this());
 
     parent->set_direction(scheme);
@@ -407,7 +414,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     {
         auto grandparent_direction = parent->get_direction();
         int index = parent->get_index_of_node(current_node);
-        if (is_vertical && grandparent_direction == LayoutScheme::vertical
+        if (is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking)
             || !is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing))
         {
             if (is_negative)

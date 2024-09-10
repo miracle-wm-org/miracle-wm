@@ -25,6 +25,7 @@ enum class LayoutScheme
     horizontal,
     vertical,
     tabbing,
+    stacking,
     none
 };
 }

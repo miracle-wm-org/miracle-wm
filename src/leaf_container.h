@@ -95,6 +95,7 @@ public:
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
     bool toggle_tabbing() override;
+    bool toggle_stacking() override;
 
 private:
     WindowController& window_controller;
