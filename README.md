@@ -15,5 +15,4 @@ The intention is to build a compositor that is flashier and more feature-rich th
 
 # User Guide
 For all information related to `miracle-wm`, including installation instructions, build instructions,
-and a roadmap, visit: https://miracle-window-manager.github.io/miracle-wm-wiki/
-
+and a roadmap, visit: https://wiki.miracle-wm.org/latest/
