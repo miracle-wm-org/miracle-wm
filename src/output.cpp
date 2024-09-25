@@ -338,6 +338,17 @@ geom::Rectangle Output::get_workspace_rectangle(int workspace) const
     };
 }
 
+[[nodiscard]] Workspace const* Output::workspace(int key) const
+{
+    for (auto const& workspace : workspaces)
+    {
+        if (workspace->get_workspace() == key)
+            return workspace.get();
+    }
+
+    return nullptr;
+}
+
 glm::mat4 Output::get_transform() const
 {
     return final_transform;

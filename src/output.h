@@ -97,6 +97,7 @@ public:
     /// Gets the relative position of the current rectangle (e.g. the active
     /// rectangle with be at position (0, 0))
     [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
+    [[nodiscard]] Workspace const* workspace(int key) const;
 
 private:
     miral::Output output;

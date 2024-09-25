@@ -77,12 +77,17 @@ bool fd_is_valid(int fd)
 
 json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
 {
+    auto workspace = screen->workspace(key);
     bool is_focused = screen->get_active_workspace_num() == key;
-    auto area = screen->get_workspace_rectangle(key);
+
+    // Note: The reported workspace area appears to be the placement
+    // area of the root tree.
+    //   See: https://i3wm.org/docs/ipc.html#_tree_reply
+    auto area = workspace->get_tree()->get_area();
 
     return {
         { "num",     Workspace::workspace_to_number(key) },
-        { "id",      key                                 },
+        { "id",      reinterpret_cast<std::uintptr_t>(workspace) },
         { "type",    "workspace"                         },
         { "name",    std::to_string(key)                 },
         { "visible", screen->is_active() && is_focused   },
@@ -101,10 +106,10 @@ json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
 json output_to_json(std::shared_ptr<Output> const& output)
 {
     auto area = output->get_area();
-    auto miral_output = output->get_output();
+    auto _output = output->get_output();
     return {
-        { "id",     miral_output.id()   },
-        { "name",   miral_output.name() },
+        { "id",     reinterpret_cast<std::uintptr_t>(output.get())   },
+        { "name",   _output.name() },
         { "layout", "output"            },
         { "rect",   {
                       { "x", area.top_left.x.as_int() },
@@ -115,39 +120,65 @@ json output_to_json(std::shared_ptr<Output> const& output)
     };
 }
 
-json outputs_to_json(std::vector<std::shared_ptr<Output>> const& outputs)
+json tree_to_json(miracle::Policy const& policy)
 {
+    // See: https://github.com/swaywm/sway/blob/master/sway/sway-ipc.7.scd
+    geom::Point top_left{INT_MAX, INT_MAX};
+    geom::Point bottom_right{0, 0};
     json outputs_json;
-    for (auto const& output : outputs)
+    for (auto const& output : policy.get_output_list())
     {
-        json workspaces;
+        json nodes;
         for (auto const& workspace : output->get_workspaces())
         {
-            workspaces.push_back(workspace_to_json(output, workspace->get_workspace()));
+            auto workspace_json = workspace_to_json(output, workspace->get_workspace());
+
+            nodes.push_back(workspace_json);
         }
 
-        auto area = output->get_area();
-        auto miral_output = output->get_output();
+
+        auto& area = output->get_area();
+
+        // Recalculate the total extends of the tree
+        if (area.top_left.x.as_int() < top_left.x.as_int())
+            top_left.x = geom::X{area.top_left.x.as_int()};
+        if (area.top_left.y.as_int() < top_left.y.as_int())
+            top_left.y = geom::Y{area.top_left.y.as_int()};
+
+        int bottom_x = area.top_left.x.as_int() + area.size.width.as_int();
+        int bottom_y = area.top_left.y.as_int() + area.size.height.as_int();
+        if (bottom_x > bottom_right.x.as_int())
+            bottom_right.x = geom::X{bottom_x};
+        if (bottom_y > bottom_right.y.as_int())
+            bottom_right.y = geom::Y{bottom_y};
+
+        auto& _output = output->get_output();
         outputs_json.push_back({
-            { "id",     miral_output.id()    },
-            { "name",   miral_output.name()  },
-            { "layout", "output"             },
-            { "rect",   {
-                          { "x", area.top_left.x.as_int() },
-                          { "y", area.top_left.y.as_int() },
-                          { "width", area.size.width.as_int() },
-                          { "height", area.size.height.as_int() },
-                      } },
-            { "nodes",  workspaces           }
-        });
+           { "id",     reinterpret_cast<std::uintptr_t>(output.get())    },
+           { "name",   _output.name()  },
+           { "layout", "output"             },
+           { "rect",   {
+               { "x", area.top_left.x.as_int() },
+               { "y", area.top_left.y.as_int() },
+               { "width", area.size.width.as_int() },
+               { "height", area.size.height.as_int() },
+               } },
+           { "nodes",  nodes           }
+           });
     }
 
-    auto area = outputs[0]->get_area();
+    geom::Rectangle total_area{
+        top_left,
+        geom::Size{
+            geom::Width(bottom_right.x.as_int() - top_left.x.as_int()),
+            geom::Height(bottom_right.y.as_int() - top_left.y.as_int())
+        }
+    };
     json root = {
-        { "id",    0                                                                                                                                                        },
-        { "name",  "root"                                                                                                                                                   },
-        { "rect",  { { "x", area.top_left.x.as_int() }, { "y", area.top_left.y.as_int() }, { "width", area.size.width.as_int() }, { "height", area.size.height.as_int() } } },
-        { "nodes", outputs_json                                                                                                                                             }
+    { "id",    0                                                                                                                                                        },
+    { "name",  "root"                                                                                                                                                   },
+    { "rect",  { { "x", total_area.top_left.x.as_int() }, {"y", total_area.top_left.y.as_int() }, {"width", total_area.size.width.as_int() }, {"height", total_area.size.height.as_int() } } },
+    { "nodes", outputs_json                                                                                                                                             }
     };
     return root;
 }
@@ -599,7 +630,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     }
     case IPC_GET_TREE:
     {
-        auto json_string = to_string(outputs_to_json(policy.get_output_list()));
+        auto json_string = to_string(tree_to_json(policy));
         send_reply(client, payload_type, json_string);
         break;
     }

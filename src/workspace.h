@@ -80,6 +80,7 @@ public:
     [[nodiscard]] bool is_empty() const;
     void graft(std::shared_ptr<Container> const&);
     static int workspace_to_number(int workspace);
+    [[nodiscard]] TilingWindowTree const* get_tree() const { return tree.get(); }
 
 private:
     Output* output;
