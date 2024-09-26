@@ -38,6 +38,27 @@ pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 
 include(GNUInstallDirs)
 
+# Generate wlr-output-management-unstable protocol
+set(PROTOCOL "wlr-output-management-unstable-v1")
+set(PROTOCOL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/wayland-protocols/${PROTOCOL}.xml")
+set(GENERATE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/wlr-output-management-unstable-v1_wrapper")
+
+add_custom_command(
+    OUTPUT ${GENERATE_FILE}.cpp
+    OUTPUT ${GENERATE_FILE}.h
+    DEPENDS ${PROTOCOL_FILE}
+    COMMAND "sh" "-c" "mir_wayland_generator zwp_ ${PROTOCOL_FILE} header >${GENERATE_FILE}.h"
+    COMMAND "sh" "-c" "mir_wayland_generator zwp_ ${PROTOCOL_FILE} source >${GENERATE_FILE}.cpp"
+)
+
+add_custom_target(wlr-output-management-unstable-v1
+    DEPENDS ${GENERATE_FILE}.cpp
+    DEPENDS ${GENERATE_FILE}.h
+    SOURCES
+    ${GENERATE_FILE}.cpp
+    ${GENERATE_FILE}.h
+)
+
 add_library(miracle-wm-implementation
     STATIC
     src/policy.cpp
@@ -74,6 +95,7 @@ add_library(miracle-wm-implementation
     src/container_group_container.h
     src/floating_tree_container.cpp
     src/floating_tree_container.h
+    src/wlr-output-management-unstable-v1_wrapper.cpp src/wlr-output-management-unstable-v1_wrapper.h
 )
 
 add_executable(miracle-wm
@@ -89,6 +111,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
+    ${MIRWAYLAND_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include)
 
 target_link_libraries(miracle-wm-implementation
