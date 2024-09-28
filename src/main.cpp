@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "renderer.h"
 #include "surface_tracker.h"
 #include "version.h"
-#include "wlr-output-management-unstable-v1_wrapper.h"
 
 #include <libnotify/notify.h>
 #include <mir/log.h>

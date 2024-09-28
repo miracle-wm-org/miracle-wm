@@ -96,6 +96,7 @@ add_library(miracle-wm-implementation
     src/floating_tree_container.cpp
     src/floating_tree_container.h
     src/wlr-output-management-unstable-v1_wrapper.cpp src/wlr-output-management-unstable-v1_wrapper.h
+    src/wlr-ouput-management-unstable-v1.h src/wlr-ouput-management-unstable-v1.cpp
 )
 
 add_executable(miracle-wm
