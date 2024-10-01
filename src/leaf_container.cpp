@@ -145,8 +145,6 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 {
     auto const& info = window_controller.info_for(window_);
 
-    // TODO: Check if the current workspace is active. If not, return early.
-
     auto mods = modifications;
     if (mods.state().is_set() && mods.state().value() != info.state())
     {
