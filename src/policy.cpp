@@ -50,9 +50,11 @@ Policy::Policy(
     std::shared_ptr<MiracleConfig> const& config,
     SurfaceTracker& surface_tracker,
     mir::Server const& server,
-    CompositorState& compositor_state) :
+    CompositorState& compositor_state,
+    OutputListener& output_listener) :
     window_manager_tools { tools },
     state { compositor_state },
+    output_listener { output_listener },
     floating_window_manager(std::make_shared<miral::MinimalWindowManager>(tools, config->get_input_event_modifier())),
     external_client_launcher { external_client_launcher },
     runner { runner },
@@ -209,7 +211,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     state.cursor_position = { x, y };
 
     // Select the output first
-    for (auto const& output : output_list)
+    for (auto const& output : state.output_list)
     {
         if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
@@ -315,10 +317,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     {
         mir::log_warning("create_container: output unavailable");
         auto window = window_info.window();
-        if (!output_list.empty())
+        if (!state.output_list.empty())
         {
             // Our output is gone! Let's try to add it to a different output
-            output_list.front()->add_immediately(window);
+            state.output_list.front()->add_immediately(window);
         }
         else
         {
@@ -455,7 +457,7 @@ void Policy::advise_output_create(miral::Output const& output)
         output, workspace_manager, output.extents(), window_manager_tools,
         floating_window_manager, state, config, window_controller, animator);
     workspace_manager.request_first_available_workspace(output_content);
-    output_list.push_back(output_content);
+    state.output_list.push_back(output_content);
     if (state.active_output == nullptr)
         state.active_output = output_content;
 
@@ -469,11 +471,13 @@ void Policy::advise_output_create(miral::Output const& output)
         }
         orphaned_window_list.clear();
     }
+
+    output_listener.output_created(output);
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
-    for (auto& output : output_list)
+    for (auto& output : state.output_list)
     {
         if (output->get_output().is_same_output(original))
         {
@@ -481,11 +485,13 @@ void Policy::advise_output_update(miral::Output const& updated, miral::Output co
             break;
         }
     }
+
+    output_listener.output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
-    for (auto it = output_list.begin(); it != output_list.end(); it++)
+    for (auto it = state.output_list.begin(); it != state.output_list.end(); it++)
     {
         auto other_output = *it;
         if (other_output->get_output().is_same_output(output))
@@ -502,8 +508,8 @@ void Policy::advise_output_delete(miral::Output const& output)
                     workspace_manager.delete_workspace(w);
             };
 
-            output_list.erase(it);
-            if (output_list.empty())
+            state.output_list.erase(it);
+            if (state.output_list.empty())
             {
                 // All nodes should become orphaned
                 for (auto& window : other_output->collect_all_windows())
@@ -519,7 +525,7 @@ void Policy::advise_output_delete(miral::Output const& output)
             }
             else
             {
-                state.active_output = output_list.front();
+                state.active_output = state.output_list.front();
                 for (auto& window : other_output->collect_all_windows())
                 {
                     state.active_output->add_immediately(window);
@@ -530,6 +536,8 @@ void Policy::advise_output_delete(miral::Output const& output)
             break;
         }
     }
+
+    output_listener.output_deleted(output);
 }
 
 void Policy::handle_modify_window(
@@ -599,7 +607,7 @@ mir::geometry::Rectangle Policy::confirm_inherited_move(
 
 void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    for (auto const& output : output_list)
+    for (auto const& output : state.output_list)
     {
         output->advise_application_zone_create(application_zone);
     }
@@ -607,7 +615,7 @@ void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 
 void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
 {
-    for (auto const& output : output_list)
+    for (auto const& output : state.output_list)
     {
         output->advise_application_zone_update(updated, original);
     }
@@ -615,7 +623,7 @@ void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Z
 
 void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 {
-    for (auto const& output : output_list)
+    for (auto const& output : state.output_list)
     {
         output->advise_application_zone_delete(application_zone);
     }

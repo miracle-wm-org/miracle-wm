@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "surface_tracker.h"
 #include "window_manager_tools_window_controller.h"
-
+#include "output_listener.h"
 #include "workspace_manager.h"
 
 #include <memory>
@@ -60,7 +60,8 @@ public:
         std::shared_ptr<MiracleConfig> const&,
         SurfaceTracker&,
         mir::Server const&,
-        CompositorState&);
+        CompositorState&,
+        OutputListener&);
     ~Policy() override;
 
     // Interactions with the engine
@@ -124,14 +125,14 @@ public:
     // Getters
 
     [[nodiscard]] std::shared_ptr<Output> const& get_active_output() const { return state.active_output; }
-    [[nodiscard]] std::vector<std::shared_ptr<Output>> const& get_output_list() const { return output_list; }
+    [[nodiscard]] std::vector<std::shared_ptr<Output>> const& get_output_list() const { return state.output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
     bool is_starting_ = true;
     CompositorState& state;
-    std::vector<std::shared_ptr<Output>> output_list;
+    OutputListener& output_listener;
     std::weak_ptr<Output> pending_output;
     AllocationHint pending_allocation;
     std::vector<Window> orphaned_window_list;

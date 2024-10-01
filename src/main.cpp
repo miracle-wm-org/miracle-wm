@@ -15,6 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "wlr-output-management-unstable-v1_wrapper.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "miracle-main"
 
 #include "auto_restarting_launcher.h"
@@ -25,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "renderer.h"
 #include "surface_tracker.h"
 #include "version.h"
+#include "wlr-ouput-management-unstable-v1.h"
 
 #include <libnotify/notify.h>
 #include <mir/log.h>
@@ -77,6 +80,7 @@ int main(int argc, char const* argv[])
     ExternalClientLauncher external_client_launcher;
     miracle::AutoRestartingLauncher auto_restarting_launcher(runner, external_client_launcher);
     miracle::SurfaceTracker surface_tracker;
+    miracle::OutputListenerMultiplexer output_listener;
     auto config = std::make_shared<miracle::FilesystemConfiguration>(runner);
     for (auto const& env : config->get_env_variables())
     {
@@ -90,7 +94,7 @@ int main(int argc, char const* argv[])
         config->load(server);
         options = new WindowManagerOptions {
             add_window_manager_policy<miracle::Policy>(
-                "tiling", auto_restarting_launcher, runner, config, surface_tracker, server, compositor_state)
+                "tiling", auto_restarting_launcher, runner, config, surface_tracker, server, compositor_state, output_listener)
         };
         (*options)(server);
     });
@@ -108,6 +112,13 @@ int main(int argc, char const* argv[])
                                                .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
                                                .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
                                                .enable(miral::WaylandExtensions::ext_session_lock_manager_v1);
+    wayland_extensions.add_extension({ .name = mir::wayland::ZwlrOutputManagerV1::interface_name,
+        .build = [&output_listener, &compositor_state](miral::WaylandExtensions::Context const* context)
+    {
+        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context->display(), compositor_state);
+        output_listener.register_listener(extension.get());
+        return extension;
+    } });
 
     for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);

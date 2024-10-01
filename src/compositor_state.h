@@ -18,8 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_COMPOSITOR_STATE_H
 #define MIRACLE_WM_COMPOSITOR_STATE_H
 
-#include <memory>
 #include <mir/geometry/point.h>
+#include <memory>
+#include <vector>
 
 namespace miracle
 {
@@ -40,9 +41,11 @@ enum class WindowManagerMode
     selecting
 };
 
+/// Defines the high-level state of the compositor.
 struct CompositorState
 {
     WindowManagerMode mode = WindowManagerMode::normal;
+    std::vector<std::shared_ptr<Output>> output_list;
     std::shared_ptr<Output> active_output;
     std::shared_ptr<Container> active;
     mir::geometry::Point cursor_position;
