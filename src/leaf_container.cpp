@@ -105,6 +105,12 @@ geom::Rectangle LeafContainer::get_visible_area() const
         height -= half_gap_y;
     }
 
+    int const border_size = config->get_border_config().size;
+    x += border_size;
+    width -= 2 * border_size;
+    y += border_size;
+    height -= 2 * border_size;
+
     return {
         geom::Point { x,     y      },
         geom::Size { width, height }
