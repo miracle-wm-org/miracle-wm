@@ -66,22 +66,23 @@ miral::WindowSpecification TilingWindowTree::place_new_window(
     const miral::WindowSpecification& requested_specification,
     std::shared_ptr<ParentContainer> const& parent_)
 {
+    assert(
+        !requested_specification.state().is_set()
+        || requested_specification.state() == mir_window_state_restored
+        || requested_specification.state() == mir_window_state_unknown);
+
     auto parent = parent_ ? parent_ : root_lane;
+    auto container = parent->create_space_for_window();
+    auto rect = container->get_visible_area();
+
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width { 0 };
     new_spec.max_width() = geom::Width { std::numeric_limits<int>::max() };
     new_spec.min_height() = geom::Height { 0 };
     new_spec.max_height() = geom::Height { std::numeric_limits<int>::max() };
-    auto container = parent->create_space_for_window();
-    auto rect = container->get_visible_area();
-
-    if (!new_spec.state().is_set() || !window_helpers::is_window_fullscreen(new_spec.state().value()))
-    {
-        // We only set the size immediately if we have no strong opinions about the size
-        new_spec.size() = rect.size;
-        new_spec.top_left() = rect.top_left;
-    }
+    new_spec.size() = rect.size;
+    new_spec.top_left() = rect.top_left;
 
     return new_spec;
 }
