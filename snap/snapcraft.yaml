@@ -6,7 +6,7 @@ description: |
   that provides a tiling-window manager.
 confinement: classic
 base: core24
-version: 0.3.5
+version: 0.3.6
 
 platforms:
   amd64:

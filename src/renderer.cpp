@@ -86,6 +86,10 @@ public:
         return get_rectangle(renderable.screen_position());
     }
 
+    [[nodiscard]] geom::RectangleD src_bounds() const override
+    {
+        return renderable.src_bounds();
+    }
 
     [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
     {
