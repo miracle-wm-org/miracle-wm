@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_toolkit/event.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
+#include <nlohmann/json.hpp>
 #include <vector>
 
 namespace geom = mir::geometry;
@@ -118,9 +119,11 @@ public:
     virtual bool move_to(int x, int y) = 0;
     virtual bool toggle_tabbing() = 0;
     virtual bool toggle_stacking() = 0;
+    virtual nlohmann::json to_json() const = 0;
 
     bool is_leaf();
     bool is_lane();
+    [[nodiscard]] float get_percent_of_parent() const;
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);

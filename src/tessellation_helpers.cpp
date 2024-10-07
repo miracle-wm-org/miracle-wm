@@ -60,13 +60,24 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     mgl::Primitive rectangle;
     rectangle.type = GL_TRIANGLE_STRIP;
 
-    auto const [tex_top, tex_bottom, tex_left, tex_right] =
-        tex_coords_from_rect(renderable.buffer()->size(), renderable.src_bounds());
+    auto const [tex_top, tex_bottom, tex_left, tex_right] = tex_coords_from_rect(renderable.buffer()->size(), renderable.src_bounds());
 
     auto& vertices = rectangle.vertices;
-    vertices[0] = {{left,  top,    0.0f}, {tex_left, tex_top}};
-    vertices[1] = {{left,  bottom, 0.0f}, {tex_left, tex_bottom}};
-    vertices[2] = {{right, top,    0.0f}, {tex_right, tex_top}};
-    vertices[3] = {{right, bottom, 0.0f}, {tex_right, tex_bottom}};
+    vertices[0] = {
+        { left, top, 0.0f },
+        { tex_left, tex_top }
+    };
+    vertices[1] = {
+        { left, bottom, 0.0f },
+        { tex_left, tex_bottom }
+    };
+    vertices[2] = {
+        { right, top, 0.0f },
+        { tex_right, tex_top }
+    };
+    vertices[3] = {
+        { right, bottom, 0.0f },
+        { tex_right, tex_bottom }
+    };
     return rectangle;
 }

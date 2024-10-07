@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PARENT_NODE_H
 
 #include "container.h"
-#include "node_common.h"
+#include "layout_scheme.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
 
@@ -108,6 +108,8 @@ public:
     bool is_fullscreen() const override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
+    nlohmann::json to_json() const override;
+    [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
 
 private:
     WindowController& node_interface;

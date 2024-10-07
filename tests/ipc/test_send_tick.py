@@ -8,8 +8,6 @@ class TestSendTick:
             def __init__(self) -> None:
                 self.reply = ""
 
-        print(f"Using server: {server}")
-        
         reply = Reply()
         def wait_on_tick():
             def on_tick(i3, e: TickEvent):
@@ -18,7 +16,7 @@ class TestSendTick:
                     assert(e.payload == "ping")
                     conn1.main_quit()
 
-            conn1 = Connection(server)
+            conn1 = Connection(server.ipc)
             conn1.on(Event.TICK, on_tick)
             conn1.main()
         
@@ -27,7 +25,7 @@ class TestSendTick:
         time.sleep(1)  # A small wait time to ensure that the subscribe goes through first
 
         try:
-            conn2 = Connection(server)
+            conn2 = Connection(server.ipc)
             conn2.send_tick("ping")
             t1.join()
         except Exception as e:

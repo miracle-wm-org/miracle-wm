@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "policy.h"
 #include "version.h"
+#include "workspace.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -77,77 +78,90 @@ bool fd_is_valid(int fd)
 
 json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
 {
+    auto workspace = screen->workspace(key);
     bool is_focused = screen->get_active_workspace_num() == key;
-    auto area = screen->get_workspace_rectangle(key);
+
+    // Note: The reported workspace area appears to be the placement
+    // area of the root tree.
+    //   See: https://i3wm.org/docs/ipc.html#_tree_reply
+    auto area = workspace->get_tree()->get_area();
 
     return {
-        { "num",     Workspace::workspace_to_number(key) },
-        { "id",      key                                 },
-        { "type",    "workspace"                         },
-        { "name",    std::to_string(key)                 },
-        { "visible", screen->is_active() && is_focused   },
-        { "focused", screen->is_active() && is_focused   },
-        { "urgent",  false                               },
-        { "output",  screen->get_output().name()         },
+        { "num",     Workspace::workspace_to_number(key)         },
+        { "id",      reinterpret_cast<std::uintptr_t>(workspace) },
+        { "type",    "workspace"                                 },
+        { "name",    std::to_string(key)                         },
+        { "visible", screen->is_active() && is_focused           },
+        { "focused", screen->is_active() && is_focused           },
+        { "urgent",  false                                       },
+        { "output",  screen->get_output().name()                 },
         { "rect",    {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                     }
+                  }                             }
     };
 }
 
 json output_to_json(std::shared_ptr<Output> const& output)
 {
     auto area = output->get_area();
-    auto miral_output = output->get_output();
+    auto _output = output->get_output();
     return {
-        { "id",     miral_output.id()   },
-        { "name",   miral_output.name() },
-        { "layout", "output"            },
+        { "id",     reinterpret_cast<std::uintptr_t>(output.get()) },
+        { "name",   _output.name()                                 },
+        { "layout", "output"                                       },
         { "rect",   {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }    }
+                  }                               }
     };
 }
 
-json outputs_to_json(std::vector<std::shared_ptr<Output>> const& outputs)
+json tree_to_json(miracle::Policy const& policy)
 {
-    json outputs_json;
-    for (auto const& output : outputs)
+    // See: https://github.com/swaywm/sway/blob/master/sway/sway-ipc.7.scd
+    geom::Point top_left { INT_MAX, INT_MAX };
+    geom::Point bottom_right { 0, 0 };
+    json outputs_json = nlohmann::json::array();
+    for (auto const& output : policy.get_output_list())
     {
-        json workspaces;
-        for (auto const& workspace : output->get_workspaces())
-        {
-            workspaces.push_back(workspace_to_json(output, workspace->get_workspace()));
-        }
+        auto& area = output->get_area();
 
-        auto area = output->get_area();
-        auto miral_output = output->get_output();
-        outputs_json.push_back({
-            { "id",     miral_output.id()    },
-            { "name",   miral_output.name()  },
-            { "layout", "output"             },
-            { "rect",   {
-                          { "x", area.top_left.x.as_int() },
-                          { "y", area.top_left.y.as_int() },
-                          { "width", area.size.width.as_int() },
-                          { "height", area.size.height.as_int() },
-                      } },
-            { "nodes",  workspaces           }
-        });
+        // Recalculate the total extents of the tree
+        if (area.top_left.x.as_int() < top_left.x.as_int())
+            top_left.x = geom::X { area.top_left.x.as_int() };
+        if (area.top_left.y.as_int() < top_left.y.as_int())
+            top_left.y = geom::Y { area.top_left.y.as_int() };
+
+        int bottom_x = area.top_left.x.as_int() + area.size.width.as_int();
+        int bottom_y = area.top_left.y.as_int() + area.size.height.as_int();
+        if (bottom_x > bottom_right.x.as_int())
+            bottom_right.x = geom::X { bottom_x };
+        if (bottom_y > bottom_right.y.as_int())
+            bottom_right.y = geom::Y { bottom_y };
+
+        outputs_json.push_back(output->to_json());
     }
 
-    auto area = outputs[0]->get_area();
+    geom::Rectangle total_area {
+        top_left,
+        geom::Size {
+                    geom::Width(bottom_right.x.as_int() - top_left.x.as_int()),
+                    geom::Height(bottom_right.y.as_int() - top_left.y.as_int()) }
+    };
     json root = {
-        { "id",    0                                                                                                                                                        },
-        { "name",  "root"                                                                                                                                                   },
-        { "rect",  { { "x", area.top_left.x.as_int() }, { "y", area.top_left.y.as_int() }, { "width", area.size.width.as_int() }, { "height", area.size.height.as_int() } } },
-        { "nodes", outputs_json                                                                                                                                             }
+        { "id", 0 },
+        { "name", "root" },
+        {
+         "rect",
+         { { "x", total_area.top_left.x.as_int() }, { "y", total_area.top_left.y.as_int() }, { "width", total_area.size.width.as_int() }, { "height", total_area.size.height.as_int() } },
+         },
+        { "nodes", outputs_json },
+        { "type", "root" }
     };
     return root;
 }
@@ -599,7 +613,7 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     }
     case IPC_GET_TREE:
     {
-        auto json_string = to_string(outputs_to_json(policy.get_output_list()));
+        auto json_string = to_string(tree_to_json(policy));
         send_reply(client, payload_type, json_string);
         break;
     }

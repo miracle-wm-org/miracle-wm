@@ -15,19 +15,25 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLEWM_NODE_COMMON_H
-#define MIRACLEWM_NODE_COMMON_H
+#include "layout_scheme.h"
+#include <stdexcept>
 
-namespace miracle
+const char* miracle::to_string(miracle::LayoutScheme scheme)
 {
-enum class LayoutScheme
-{
-    horizontal,
-    vertical,
-    tabbing,
-    stacking,
-    none
-};
+    switch (scheme)
+    {
+    case LayoutScheme::horizontal:
+        return "splith";
+    case LayoutScheme::vertical:
+        return "splitv";
+    case LayoutScheme::stacking:
+        return "stacked";
+    case LayoutScheme::tabbing:
+        return "tabbed";
+    default:
+    {
+        std::string error = "Encountered unexpected scheme in to_string: " + std::to_string((int)scheme);
+        throw std::logic_error(error);
+    }
+    }
 }
-
-#endif

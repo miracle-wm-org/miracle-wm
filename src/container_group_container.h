@@ -34,7 +34,7 @@ class CompositorState;
 class ContainerGroupContainer : public Container
 {
 public:
-    ContainerGroupContainer(CompositorState&);
+    explicit ContainerGroupContainer(CompositorState&);
     void add(std::shared_ptr<Container> const&);
     void remove(std::shared_ptr<Container> const&);
     bool contains(std::shared_ptr<Container const> const&) const;
@@ -87,6 +87,7 @@ public:
     bool move_to(int x, int y) override;
     bool toggle_tabbing() override { return false; };
     bool toggle_stacking() override { return false; };
+    nlohmann::json to_json() const override { return {}; }
 
 private:
     std::vector<std::weak_ptr<Container>> containers;

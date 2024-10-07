@@ -74,6 +74,7 @@ add_library(miracle-wm-implementation
     src/container_group_container.h
     src/floating_tree_container.cpp
     src/floating_tree_container.h
+    src/layout_scheme.cpp
 )
 
 add_executable(miracle-wm
