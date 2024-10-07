@@ -49,4 +49,5 @@ class TestGetTree:
         
         assert len(workspace.nodes) == 2
         app = workspace.nodes[1]
+        assert app.focused == True
         assert app.percent == 0.5
