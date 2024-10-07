@@ -51,8 +51,6 @@ jobs:
 
     - name: IPC Tests
       run: |
-        sudo systemd-run --uid 1001 -p Environment=XDG_SESSION_TYPE=wayland -p PAMName=login -p TTYPath=/dev/tty1 -- tail -f /dev/null
-
         cd ${{github.workspace}}/tests/ipc
         python -m venv venv
         source venv/bin/activate
