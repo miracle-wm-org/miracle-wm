@@ -227,7 +227,7 @@ void Workspace::hide()
         floating->hide();
 }
 
-void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> const& f)
+void Workspace::for_each_window(std::function<void(std::shared_ptr<Container>)> const& f) const
 {
     for (auto const& window : floating_windows)
     {
@@ -381,7 +381,7 @@ bool Workspace::has_floating_window(std::shared_ptr<Container> const& container)
 std::shared_ptr<FloatingWindowContainer> Workspace::add_floating_window(miral::Window const& window)
 {
     auto floating = std::make_shared<FloatingWindowContainer>(
-        window, floating_window_manager, window_controller, this, state);
+        window, floating_window_manager, window_controller, this, state, config);
     floating_windows.push_back(floating);
     return floating;
 }
@@ -455,4 +455,66 @@ std::shared_ptr<ParentContainer> Workspace::get_layout_container()
         return nullptr;
 
     return parent;
+}
+
+nlohmann::json Workspace::to_json() const
+{
+    bool is_focused = output->get_active_workspace_num() == workspace;
+
+    // Note: The reported workspace area appears to be the placement
+    // area of the root tree.
+    //   See: https://i3wm.org/docs/ipc.html#_tree_reply
+    auto area = tree->get_area();
+
+    nlohmann::json floating_nodes = nlohmann::json::array();
+    for (auto const& container : floating_windows)
+        floating_nodes.push_back(container->to_json());
+
+    nlohmann::json nodes = nlohmann::json::array();
+    auto const root = tree->get_root();
+    for (auto const& container : root->get_sub_nodes())
+        nodes.push_back(container->to_json());
+
+    return {
+        { "num",                  Workspace::workspace_to_number(workspace)                       },
+        { "id",                   reinterpret_cast<std::uintptr_t>(this)                          },
+        { "type",                 "workspace"                                                     },
+        { "name",                 std::to_string(workspace)                                       },
+        { "visible",              output->is_active() && is_focused                               },
+        { "focused",              output->is_active() && is_focused && root->is_focused()         },
+        { "urgent",               false                                                           },
+        { "output",               output->get_output().name()                                     },
+        { "border",               "none"                                                          },
+        { "current_border_width", 0                                                               },
+        { "layout",               to_string(root->get_scheme())                                   },
+        { "orientation",          "none"                                                          },
+        { "percent",              nullptr                                                         },
+        { "window_rect",          {
+                             { "x", 0 },
+                             { "y", 0 },
+                             { "width", 0 },
+                             { "height", 0 },
+                         }                                                },
+        { "deco_rect",            {
+                           { "x", 0 },
+                           { "y", 0 },
+                           { "width", 0 },
+                           { "height", 0 },
+                       }                                                    },
+        { "geometry",             {
+                          { "x", 0 },
+                          { "y", 0 },
+                          { "width", 0 },
+                          { "height", 0 },
+                      }                                                      },
+        { "window",               nullptr                                                         },
+        { "floating_nodes",       floating_nodes                                                  },
+        { "rect",                 {
+                                                                                   { "x", area.top_left.x.as_int() },
+                                                                                   { "y", area.top_left.y.as_int() },
+                                                                                   { "width", area.size.width.as_int() },
+                                                                                   { "height", area.size.height.as_int() },
+                                                                               } },
+        { "nodes",                nodes                                                           }
+    };
 }

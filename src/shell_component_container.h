@@ -79,6 +79,7 @@ public:
     bool toggle_tabbing() override { return false; };
     bool toggle_stacking() override { return false; };
     bool is_fullscreen() const override;
+    nlohmann::json to_json() const override;
 
 private:
     miral::Window window_;

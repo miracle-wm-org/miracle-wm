@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_LEAF_NODE_H
 
 #include "container.h"
-#include "node_common.h"
+#include "layout_scheme.h"
 #include "window_controller.h"
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
@@ -96,6 +96,7 @@ public:
     bool move_to(int, int) override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
+    nlohmann::json to_json() const override;
 
 private:
     WindowController& window_controller;

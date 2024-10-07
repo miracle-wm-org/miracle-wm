@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "direction.h"
-#include "node_common.h"
+#include "layout_scheme.h"
 #include <memory>
 #include <mir/geometry/rectangle.h>
 #include <miral/window.h>
@@ -133,7 +133,8 @@ public:
     void recalculate_root_node_area();
     bool is_empty();
 
-    Workspace* get_workspace() const;
+    [[nodiscard]] Workspace* get_workspace() const;
+    [[nodiscard]] std::shared_ptr<ParentContainer> const& get_root() const { return root_lane; }
 
 private:
     struct MoveResult

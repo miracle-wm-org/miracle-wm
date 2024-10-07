@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "policy.h"
 #include "version.h"
+#include "workspace.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -86,20 +87,20 @@ json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
     auto area = workspace->get_tree()->get_area();
 
     return {
-        { "num",     Workspace::workspace_to_number(key) },
+        { "num",     Workspace::workspace_to_number(key)         },
         { "id",      reinterpret_cast<std::uintptr_t>(workspace) },
-        { "type",    "workspace"                         },
-        { "name",    std::to_string(key)                 },
-        { "visible", screen->is_active() && is_focused   },
-        { "focused", screen->is_active() && is_focused   },
-        { "urgent",  false                               },
-        { "output",  screen->get_output().name()         },
+        { "type",    "workspace"                                 },
+        { "name",    std::to_string(key)                         },
+        { "visible", screen->is_active() && is_focused           },
+        { "focused", screen->is_active() && is_focused           },
+        { "urgent",  false                                       },
+        { "output",  screen->get_output().name()                 },
         { "rect",    {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                     }
+                  }                             }
     };
 }
 
@@ -108,77 +109,59 @@ json output_to_json(std::shared_ptr<Output> const& output)
     auto area = output->get_area();
     auto _output = output->get_output();
     return {
-        { "id",     reinterpret_cast<std::uintptr_t>(output.get())   },
-        { "name",   _output.name() },
-        { "layout", "output"            },
+        { "id",     reinterpret_cast<std::uintptr_t>(output.get()) },
+        { "name",   _output.name()                                 },
+        { "layout", "output"                                       },
         { "rect",   {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }    }
+                  }                               }
     };
 }
 
 json tree_to_json(miracle::Policy const& policy)
 {
     // See: https://github.com/swaywm/sway/blob/master/sway/sway-ipc.7.scd
-    geom::Point top_left{INT_MAX, INT_MAX};
-    geom::Point bottom_right{0, 0};
-    json outputs_json;
+    geom::Point top_left { INT_MAX, INT_MAX };
+    geom::Point bottom_right { 0, 0 };
+    json outputs_json = nlohmann::json::array();
     for (auto const& output : policy.get_output_list())
     {
-        json nodes;
-        for (auto const& workspace : output->get_workspaces())
-        {
-            auto workspace_json = workspace_to_json(output, workspace->get_workspace());
-
-            nodes.push_back(workspace_json);
-        }
-
-
         auto& area = output->get_area();
 
-        // Recalculate the total extends of the tree
+        // Recalculate the total extents of the tree
         if (area.top_left.x.as_int() < top_left.x.as_int())
-            top_left.x = geom::X{area.top_left.x.as_int()};
+            top_left.x = geom::X { area.top_left.x.as_int() };
         if (area.top_left.y.as_int() < top_left.y.as_int())
-            top_left.y = geom::Y{area.top_left.y.as_int()};
+            top_left.y = geom::Y { area.top_left.y.as_int() };
 
         int bottom_x = area.top_left.x.as_int() + area.size.width.as_int();
         int bottom_y = area.top_left.y.as_int() + area.size.height.as_int();
         if (bottom_x > bottom_right.x.as_int())
-            bottom_right.x = geom::X{bottom_x};
+            bottom_right.x = geom::X { bottom_x };
         if (bottom_y > bottom_right.y.as_int())
-            bottom_right.y = geom::Y{bottom_y};
+            bottom_right.y = geom::Y { bottom_y };
 
-        auto& _output = output->get_output();
-        outputs_json.push_back({
-           { "id",     reinterpret_cast<std::uintptr_t>(output.get())    },
-           { "name",   _output.name()  },
-           { "layout", "output"             },
-           { "rect",   {
-               { "x", area.top_left.x.as_int() },
-               { "y", area.top_left.y.as_int() },
-               { "width", area.size.width.as_int() },
-               { "height", area.size.height.as_int() },
-               } },
-           { "nodes",  nodes           }
-           });
+        outputs_json.push_back(output->to_json());
     }
 
-    geom::Rectangle total_area{
+    geom::Rectangle total_area {
         top_left,
-        geom::Size{
-            geom::Width(bottom_right.x.as_int() - top_left.x.as_int()),
-            geom::Height(bottom_right.y.as_int() - top_left.y.as_int())
-        }
+        geom::Size {
+                    geom::Width(bottom_right.x.as_int() - top_left.x.as_int()),
+                    geom::Height(bottom_right.y.as_int() - top_left.y.as_int()) }
     };
     json root = {
-    { "id",    0                                                                                                                                                        },
-    { "name",  "root"                                                                                                                                                   },
-    { "rect",  { { "x", total_area.top_left.x.as_int() }, {"y", total_area.top_left.y.as_int() }, {"width", total_area.size.width.as_int() }, {"height", total_area.size.height.as_int() } } },
-    { "nodes", outputs_json                                                                                                                                             }
+        { "id", 0 },
+        { "name", "root" },
+        {
+         "rect",
+         { { "x", total_area.top_left.x.as_int() }, { "y", total_area.top_left.y.as_int() }, { "width", total_area.size.width.as_int() }, { "height", total_area.size.height.as_int() } },
+         },
+        { "nodes", outputs_json },
+        { "type", "root" }
     };
     return root;
 }

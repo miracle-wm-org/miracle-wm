@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <miral/minimal_window_manager.h>
 #include <miral/output.h>
+#include <nlohmann/json.hpp>
 
 namespace miracle
 {
@@ -98,6 +99,7 @@ public:
     /// rectangle with be at position (0, 0))
     [[nodiscard]] geom::Rectangle get_workspace_rectangle(int workspace) const;
     [[nodiscard]] Workspace const* workspace(int key) const;
+    nlohmann::json to_json() const;
 
 private:
     miral::Output output;

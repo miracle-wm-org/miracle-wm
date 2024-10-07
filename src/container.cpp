@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "container_group_container.h"
 #include "floating_window_container.h"
+#include "layout_scheme.h"
 #include "leaf_container.h"
-#include "node_common.h"
 #include "output.h"
 #include "parent_container.h"
 #define GLM_ENABLE_EXPERIMENTAL

@@ -86,6 +86,7 @@ public:
     bool move_to(int x, int y) override;
     bool toggle_tabbing() override { return false; };
     bool toggle_stacking() override { return false; };
+    nlohmann::json to_json() const override { return {}; }
 
 private:
     std::unique_ptr<TilingWindowTree> tree;

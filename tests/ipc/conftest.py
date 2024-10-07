@@ -2,10 +2,15 @@ import pytest
 from subprocess import Popen, PIPE, STDOUT
 import os
 
+class Server:
+    def __init__(self, ipc: str, wayland: str) -> None:
+        self.ipc = ipc
+        self.wayland = wayland
+
 @pytest.fixture()
 def server():
     if "MIRACLE_IPC_TEST_USE_ENV" in os.environ:
-        yield os.environ["SWAYSOCK"]
+        yield Server(os.environ["SWAYSOCK"], os.environ["WAYLAND_DISPLAY"])
         return
     
     command = "miracle-wm"
@@ -29,6 +34,6 @@ def server():
                 socket = data[i:].strip()
                 break
 
-        yield socket
+        yield Server(socket, env["WAYLAND_DISPLAY"])
         process.terminate()
         return

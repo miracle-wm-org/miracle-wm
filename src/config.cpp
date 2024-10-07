@@ -1255,8 +1255,8 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
          miracle_input_event_modifier_default,
          KEY_W     },
         { MirKeyboardAction ::mir_keyboard_action_down,
-        miracle_input_event_modifier_default,
-        KEY_S     }
+         miracle_input_event_modifier_default,
+         KEY_S     }
     };
     for (int i = 0; i < DefaultKeyCommand::MAX; i++)
     {

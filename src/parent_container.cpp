@@ -776,3 +776,61 @@ bool ParentContainer::toggle_stacking()
     relayout();
     return true;
 }
+
+nlohmann::json ParentContainer::to_json() const
+{
+    auto const visible_area = get_visible_area();
+    auto const logical_area = get_logical_area();
+    nlohmann::json containers_json;
+    for (auto const& container : sub_nodes)
+        containers_json.push_back(container->to_json());
+
+    auto const id = reinterpret_cast<std::uintptr_t>(this);
+    return {
+        { "id",                   id                              },
+        { "name",                 "Parent #" + std::to_string(id) },
+        { "rect",                 {
+                      { "x", logical_area.top_left.x.as_int() },
+                      { "y", logical_area.top_left.y.as_int() },
+                      { "width", logical_area.size.width.as_int() },
+                      { "height", logical_area.size.height.as_int() },
+                  }                              },
+        { "focused",              is_focused()                    },
+        { "focus",                std::vector<int>()              },
+        { "border",               "none"                          },
+        { "current_border_width", 0                               },
+        { "layout",               to_string(scheme)               },
+        { "orientation",          "none"                          },
+        { "percent",              1.0                             }, // TODO
+        { "window_rect",          {
+                             { "x", visible_area.top_left.x.as_int() },
+                             { "y", visible_area.top_left.y.as_int() },
+                             { "width", visible_area.size.width.as_int() },
+                             { "height", visible_area.size.height.as_int() },
+                         }                },
+        { "deco_rect",            {
+                           { "x", 0 },
+                           { "y", 0 },
+                           { "width", logical_area.size.width.as_int() },
+                           { "height", logical_area.size.height.as_int() },
+                       }                    },
+        { "geometry",             {
+                          { "x", 0 },
+                          { "y", 0 },
+                          { "width", logical_area.size.width.as_int() },
+                          { "height", logical_area.size.height.as_int() },
+                      }                      },
+        { "window",               0                               }, // TODO
+        { "urgent",               false                           },
+        { "floating_nodes",       std::vector<int>()              },
+        { "sticky",               false                           },
+        { "type",                 "con"                           },
+        { "fullscreen_mode",      is_fullscreen() ? 1 : 0         }, // TODO: Support value 2
+        { "visible",              true                            }, // TODO
+        { "shell",                "miracle-wm"                    }, // TODO
+        { "inhibit_idle",         false                           },
+        { "idle_inhibitors",      {}                              },
+        { "window_properties",    {}                              }, // TODO
+        { "nodes",                containers_json                 }
+    };
+}

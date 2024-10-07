@@ -28,6 +28,8 @@ enum class LayoutScheme
     stacking,
     none
 };
+
+const char* to_string(LayoutScheme);
 }
 
 #endif
