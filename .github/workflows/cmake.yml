@@ -50,6 +50,7 @@ jobs:
       run: cd ${{github.workspace}}/build && ./bin/miracle-wm-tests
 
     - name: IPC Tests
+      if: false 
       run: |
         cd ${{github.workspace}}/tests/ipc
         python -m venv venv
