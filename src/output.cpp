@@ -383,7 +383,6 @@ nlohmann::json Output::to_json() const
         { "urgent",               false                                  },
         { "border",               "none"                                 },
         { "current_border_width", 0                                      },
-        { "percent",              nullptr                                },
         { "window_rect",          {
                              { "x", 0 },
                              { "y", 0 },

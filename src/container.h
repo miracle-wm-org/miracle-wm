@@ -123,6 +123,7 @@ public:
 
     bool is_leaf();
     bool is_lane();
+    [[nodiscard]] float get_percent_of_parent() const;
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);

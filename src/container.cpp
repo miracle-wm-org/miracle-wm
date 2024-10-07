@@ -91,6 +91,34 @@ bool Container::is_lane()
     return as_parent(shared_from_this()) != nullptr;
 }
 
+float Container::get_percent_of_parent() const
+{
+    float percent = 1.f;
+
+    if (auto locked_parent = get_parent().lock())
+    {
+        switch (locked_parent->get_scheme())
+        {
+        case LayoutScheme::horizontal:
+            percent = static_cast<float>(get_logical_area().size.width.as_int())
+                / static_cast<float>(locked_parent->get_logical_area().size.width.as_int());
+            break;
+        case LayoutScheme::vertical:
+            percent = static_cast<float>(get_logical_area().size.height.as_int())
+                / static_cast<float>(locked_parent->get_logical_area().size.height.as_int());
+            break;
+        case LayoutScheme::tabbing:
+        case LayoutScheme::stacking:
+            percent = is_focused() ? 1.f : 0.f;
+            break;
+        default:
+            break;
+        }
+    }
+
+    return percent;
+}
+
 namespace
 {
 bool has_neighbor(Container const* container, LayoutScheme direction, size_t cannot_be_index)
