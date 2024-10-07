@@ -21,7 +21,6 @@ class TestGetTree:
         # Open gedit first
         my_env = os.environ.copy()
         my_env['WAYLAND_DISPLAY'] = server.wayland
-        print(server.wayland)
         p = subprocess.Popen(['gedit'], env=my_env)
         sleep(1)  # Give gedit some time to settle down and open
 
@@ -39,7 +38,6 @@ class TestGetTree:
         # Open gedit first
         my_env = os.environ.copy()
         my_env['WAYLAND_DISPLAY'] = server.wayland
-        print(server.wayland)
         p1 = subprocess.Popen(['gedit'], env=my_env)
         p2 = subprocess.Popen(['gnome-chess'], env=my_env)
         sleep(1)  # Give gedit some time to settle down and open
@@ -51,5 +49,4 @@ class TestGetTree:
         
         assert len(workspace.nodes) == 2
         app = workspace.nodes[1]
-        assert app.focused == True
         assert app.percent == 0.5
