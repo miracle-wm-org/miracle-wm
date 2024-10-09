@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "parent_container.h"
 #include "policy.h"
+#include "utility_general.h"
 #include "window_controller.h"
 #include "window_helpers.h"
 
@@ -71,6 +72,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
             break;
         case I3CommandType::input:
             process_input(command, command_list);
+            break;
+        case I3CommandType::workspace:
+            process_workspace(command, command_list);
             break;
         default:
             break;
@@ -338,7 +342,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            auto active = policy.get_state().active;
+            auto active = policy.get_state().active.get();
             auto area = active_output->get_area();
             float x = (float)area.size.width.as_int() / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
             float y = (float)area.size.height.as_int() / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
@@ -489,5 +493,76 @@ void I3CommandExecutor::process_input(I3Command const& command, I3ScopedCommandL
     {
         mir::log_warning("process_input: > 3 arguments were provided but only <= 3 are expected");
         return;
+    }
+}
+
+void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    if (command.arguments.empty())
+    {
+        mir::log_error("process_workspace: no arguments provided");
+        return;
+    }
+
+    std::string const& arg0 = command.arguments[0];
+    if (arg0 == "next")
+        policy.next_workspace();
+    else if (arg0 == "prev")
+        policy.prev_workspace();
+    else if (arg0 == "next_on_output")
+    {
+        if (auto const* output = policy.get_active_output())
+            policy.next_workspace_on_output(*output);
+        else
+            mir::log_error("process_workspace: next_on_output has no output to go next on");
+    }
+    else if (arg0 == "prev_on_output")
+    {
+        if (auto const* output = policy.get_active_output())
+            policy.prev_workspace_on_output(*output);
+        else
+            mir::log_error("process_workspace: prev_on_output has no output to go prev on");
+    }
+    else
+    {
+        bool back_and_forth = true;
+        std::string const* arg1 = &arg0;
+        if (arg0.starts_with("--"))
+        {
+            if (arg0 != "--no-auto-back-and-forth")
+            {
+                mir::log_error("process_workspace: unknown argument: %s", arg0.c_str());
+                return;
+            }
+
+            if (command.arguments.size() < 2)
+            {
+                mir::log_error("process_workspace: expected argument after --no-auto-back-and-forth");
+                return;
+            }
+
+            back_and_forth = false;
+            arg1 = &command.arguments[1];
+        }
+
+        int number = -1;
+        if (try_get_number(*arg1, number))
+        {
+            // Check if we just have "workspace number"
+            if (command.arguments.size() < 3)
+            {
+                policy.select_workspace(number);
+                return;
+            }
+
+            // We have "workspace number <name>"
+            arg1 = &command.arguments[2];
+            policy.select_workspace(*arg1, back_and_forth);
+        }
+        else
+        {
+            // We have "workspace <name>"
+            policy.select_workspace(*arg1, back_and_forth);
+        }
     }
 }

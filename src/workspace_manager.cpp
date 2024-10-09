@@ -27,18 +27,18 @@ using namespace miracle;
 WorkspaceManager::WorkspaceManager(
     WindowManagerTools const& tools,
     WorkspaceObserverRegistrar& registry,
-    std::function<std::shared_ptr<Output> const()> const& get_active_screen) :
+    std::function<Output const*()> const& get_active_screen) :
     tools_ { tools },
     registry { registry },
     get_active_screen { get_active_screen }
 {
 }
 
-std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Output> screen, int key)
+std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Output> const& screen, int key)
 {
-    if (workspaces[key] != nullptr)
+    if (output_to_workspace_mapping[key] != nullptr)
     {
-        auto output = workspaces[key];
+        auto output = output_to_workspace_mapping[key];
         auto active_workspace = output->get_active_workspace_num();
         if (active_workspace == key)
         {
@@ -50,26 +50,26 @@ std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Outp
         return output;
     }
 
-    workspaces[key] = screen;
+    output_to_workspace_mapping[key] = screen;
     screen->advise_new_workspace(key);
 
     request_focus(key);
-    registry.advise_created(workspaces[key], key);
+    registry.advise_created(*output_to_workspace_mapping[key].get(), key);
     return screen;
 }
 
-bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output> screen)
+bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output> const& screen)
 {
     for (int i = 1; i < NUM_WORKSPACES; i++)
     {
-        if (workspaces[i] == nullptr)
+        if (output_to_workspace_mapping[i] == nullptr)
         {
             request_workspace(screen, i);
             return true;
         }
     }
 
-    if (workspaces[0] == nullptr)
+    if (output_to_workspace_mapping[0] == nullptr)
     {
         request_workspace(screen, 0);
         return true;
@@ -78,13 +78,129 @@ bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output>
     return false;
 }
 
+bool WorkspaceManager::request_workspace(std::string const& name)
+{
+    for (auto const& output : output_to_workspace_mapping)
+    {
+        if (output == nullptr)
+            continue;
+
+        for (auto const& workspace : output->get_workspaces())
+        {
+            if (workspace->get_name() == name)
+            {
+                request_workspace(output, workspace->get_workspace());
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool WorkspaceManager::request_next(std::shared_ptr<Output> const& output)
+{
+    int start = output->get_active_workspace_num() + 1;
+    if (start == NUM_WORKSPACES)
+        start = 0;
+
+    int i = start;
+    while (i != output->get_active_workspace_num())
+    {
+        if (output_to_workspace_mapping[i] != nullptr)
+        {
+            request_workspace(output_to_workspace_mapping[i], i);
+            return true;
+        }
+
+        i++;
+
+        if (i == NUM_WORKSPACES)
+            i = 0;
+    }
+
+    return false;
+}
+
+bool WorkspaceManager::request_prev(std::shared_ptr<Output> const& output)
+{
+    int start = output->get_active_workspace_num() - 1;
+    if (start == NUM_WORKSPACES)
+        start = 0;
+
+    int i = start;
+    while (i != output->get_active_workspace_num())
+    {
+        if (output_to_workspace_mapping[i] != nullptr)
+        {
+            request_workspace(output_to_workspace_mapping[i], i);
+            return true;
+        }
+
+        i--;
+
+        if (i < 0)
+            i = NUM_WORKSPACES - 1;
+    }
+
+    return false;
+}
+
+bool WorkspaceManager::request_next_on_output(Output const& output)
+{
+    int start = output.get_active_workspace_num() + 1;
+    if (start == NUM_WORKSPACES)
+        start = 0;
+
+    int i = start;
+    while (i != output.get_active_workspace_num())
+    {
+        if (output_to_workspace_mapping[i].get() == &output)
+        {
+            request_workspace(output_to_workspace_mapping[i], i);
+            return true;
+        }
+
+        i++;
+
+        if (i == NUM_WORKSPACES)
+            i = 0;
+    }
+
+    return false;
+}
+
+bool WorkspaceManager::request_prev_on_output(Output const& output)
+{
+    int start = output.get_active_workspace_num() - 1;
+    if (start == NUM_WORKSPACES)
+        start = 0;
+
+    int i = start;
+    while (i != output.get_active_workspace_num())
+    {
+        if (output_to_workspace_mapping[i].get() == &output)
+        {
+            request_workspace(output_to_workspace_mapping[i], i);
+            return true;
+        }
+
+        i--;
+
+        if (i < 0)
+            i = NUM_WORKSPACES - 1;
+    }
+
+    return false;
+}
+
 bool WorkspaceManager::delete_workspace(int key)
 {
-    if (workspaces[key])
+    if (output_to_workspace_mapping[key])
     {
-        workspaces[key]->advise_workspace_deleted(key);
-        registry.advise_removed(workspaces[key], key);
-        workspaces[key] = nullptr;
+        registry.advise_removed(*output_to_workspace_mapping[key].get(), key);
+        output_to_workspace_mapping[key]->advise_workspace_deleted(key);
+        output_to_workspace_mapping[key] = nullptr;
         return true;
     }
 
@@ -93,17 +209,17 @@ bool WorkspaceManager::delete_workspace(int key)
 
 void WorkspaceManager::request_focus(int key)
 {
-    if (!workspaces[key])
+    if (!output_to_workspace_mapping[key])
         return;
 
     auto active_screen = get_active_screen();
-    workspaces[key]->advise_workspace_active(key);
+    output_to_workspace_mapping[key]->advise_workspace_active(key);
 
     if (active_screen != nullptr)
     {
         auto active_workspace = active_screen->get_active_workspace_num();
-        registry.advise_focused(active_screen, active_workspace, workspaces[key], key);
+        registry.advise_focused(active_screen, active_workspace, output_to_workspace_mapping[key].get(), key);
     }
     else
-        registry.advise_focused(nullptr, -1, workspaces[key], key);
+        registry.advise_focused(nullptr, -1, output_to_workspace_mapping[key].get(), key);
 }

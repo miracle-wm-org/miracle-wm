@@ -75,6 +75,7 @@ Workspace::Workspace(
     output { output },
     tools { tools },
     workspace { workspace },
+    name {},
     window_controller { window_controller },
     state { state },
     config { config },
@@ -434,14 +435,6 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
     }
 }
 
-int Workspace::workspace_to_number(int workspace)
-{
-    if (workspace == 0)
-        return 10;
-
-    return workspace - 1;
-}
-
 std::shared_ptr<ParentContainer> Workspace::get_layout_container()
 {
     if (!state.active)
@@ -476,7 +469,7 @@ nlohmann::json Workspace::to_json() const
         nodes.push_back(container->to_json());
 
     return {
-        { "num",                  Workspace::workspace_to_number(workspace)                       },
+        { "num",                  workspace                                                       },
         { "id",                   reinterpret_cast<std::uintptr_t>(this)                          },
         { "type",                 "workspace"                                                     },
         { "name",                 std::to_string(workspace)                                       },

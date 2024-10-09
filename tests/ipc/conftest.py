@@ -1,4 +1,5 @@
 import pytest
+import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import os
 
@@ -6,6 +7,11 @@ class Server:
     def __init__(self, ipc: str, wayland: str) -> None:
         self.ipc = ipc
         self.wayland = wayland
+
+    def open_app(self, command: str):
+        my_env = os.environ.copy()
+        my_env['WAYLAND_DISPLAY'] = self.wayland
+        return subprocess.Popen([command], env=my_env)
 
 @pytest.fixture()
 def server():
@@ -27,7 +33,7 @@ def server():
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             data = line.decode("utf-8").strip()
-            print(data)
+            # print(data)
             if to_find in data:
                 i = data.index(to_find)
                 i = i + len(to_find)
