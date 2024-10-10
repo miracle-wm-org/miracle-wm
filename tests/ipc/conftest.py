@@ -13,7 +13,7 @@ class Server:
         my_env['WAYLAND_DISPLAY'] = self.wayland
         return subprocess.Popen([command], env=my_env)
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def server():
     if "MIRACLE_IPC_TEST_USE_ENV" in os.environ:
         yield Server(os.environ["SWAYSOCK"], os.environ["WAYLAND_DISPLAY"])

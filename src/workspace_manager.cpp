@@ -36,6 +36,9 @@ WorkspaceManager::WorkspaceManager(
 
 std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Output> const& screen, int key)
 {
+    // Store the previously selected workspace in the event that we need to restore it later
+    last_selected_workspace = get_active_screen()->get_active_workspace_num();
+    
     if (output_to_workspace_mapping[key] != nullptr)
     {
         auto output = output_to_workspace_mapping[key];
@@ -58,24 +61,24 @@ std::shared_ptr<Output> WorkspaceManager::request_workspace(std::shared_ptr<Outp
     return screen;
 }
 
-bool WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output> const& screen)
+int WorkspaceManager::request_first_available_workspace(std::shared_ptr<Output> const& screen)
 {
     for (int i = 1; i < NUM_WORKSPACES; i++)
     {
         if (output_to_workspace_mapping[i] == nullptr)
         {
             request_workspace(screen, i);
-            return true;
+            return i;
         }
     }
 
     if (output_to_workspace_mapping[0] == nullptr)
     {
         request_workspace(screen, 0);
-        return true;
+        return 0;
     }
 
-    return false;
+    return -1;
 }
 
 bool WorkspaceManager::request_workspace(std::string const& name)

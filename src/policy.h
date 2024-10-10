@@ -113,7 +113,7 @@ public:
     bool try_close_window();
     bool quit();
     bool try_toggle_fullscreen();
-    bool select_workspace(int number);
+    bool select_workspace(int number, bool back_and_forth = true);
     bool select_workspace(std::string const& name, bool back_and_forth);
     bool next_workspace();
     bool prev_workspace();

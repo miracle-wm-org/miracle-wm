@@ -777,7 +777,7 @@ bool Policy::try_toggle_fullscreen()
     return state.active->toggle_fullscreen();
 }
 
-bool Policy::select_workspace(int number)
+bool Policy::select_workspace(int number, bool back_and_forth)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;

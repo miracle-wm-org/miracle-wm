@@ -52,7 +52,7 @@ public:
     /// isn't already shown.
     std::shared_ptr<Output> request_workspace(std::shared_ptr<Output> const& screen, int workspace);
 
-    bool request_first_available_workspace(std::shared_ptr<Output> const& screen);
+    int request_first_available_workspace(std::shared_ptr<Output> const& screen);
 
     /// Request the workspace by name. If it does not exist, then it will not
     /// be selected.
@@ -80,6 +80,7 @@ private:
     WorkspaceObserverRegistrar& registry;
     std::function<Output const*()> get_active_screen;
     std::array<std::shared_ptr<Output>, NUM_WORKSPACES> output_to_workspace_mapping;
+    int last_selected_workspace = -1;
 };
 }
 

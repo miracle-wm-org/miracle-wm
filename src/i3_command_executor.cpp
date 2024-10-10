@@ -551,7 +551,7 @@ void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedComm
             // Check if we just have "workspace number"
             if (command.arguments.size() < 3)
             {
-                policy.select_workspace(number);
+                policy.select_workspace(number, back_and_forth);
                 return;
             }
 
