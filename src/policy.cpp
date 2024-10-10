@@ -785,7 +785,7 @@ bool Policy::select_workspace(int number, bool back_and_forth)
     if (!state.active_output)
         return false;
 
-    workspace_manager.request_workspace(state.active_output, number);
+    workspace_manager.request_workspace(state.active_output, number, back_and_forth);
     return true;
 }
 
@@ -795,7 +795,7 @@ bool Policy::select_workspace(std::string const& name, bool back_and_forth)
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
-    return workspace_manager.request_workspace(name);
+    return workspace_manager.request_workspace(name, back_and_forth);
 }
 
 bool Policy::next_workspace()
