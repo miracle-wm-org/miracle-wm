@@ -331,7 +331,7 @@ void Output::graft(std::shared_ptr<Container> const& container)
 geom::Rectangle Output::get_workspace_rectangle(int workspace) const
 {
     // TODO: Support vertical workspaces one day in the future
-    size_t x = (Workspace::workspace_to_number(workspace)) * area.size.width.as_int();
+    const size_t x = (workspace - 1) * area.size.width.as_int();
     return geom::Rectangle {
         geom::Point { geom::X { x },            geom::Y { 0 }             },
         geom::Size { area.size.width.as_int(), area.size.height.as_int() }
@@ -370,7 +370,10 @@ nlohmann::json Output::to_json() const
 {
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& workspace : workspaces)
-        nodes.push_back(workspace->to_json());
+    {
+        if (workspace)
+            nodes.push_back(workspace->to_json());
+    }
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this) },

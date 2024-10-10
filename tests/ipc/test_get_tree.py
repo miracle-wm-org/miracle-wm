@@ -1,4 +1,4 @@
-from i3ipc import Connection, Event, TickEvent
+from i3ipc import Connection
 import os
 import subprocess
 from time import sleep

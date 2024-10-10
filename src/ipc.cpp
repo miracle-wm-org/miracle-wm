@@ -76,10 +76,10 @@ bool fd_is_valid(int fd)
     return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
 }
 
-json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
+json workspace_to_json(Output const& screen, int key)
 {
-    auto workspace = screen->workspace(key);
-    bool is_focused = screen->get_active_workspace_num() == key;
+    auto workspace = screen.workspace(key);
+    bool is_focused = screen.get_active_workspace_num() == key;
 
     // Note: The reported workspace area appears to be the placement
     // area of the root tree.
@@ -87,14 +87,14 @@ json workspace_to_json(std::shared_ptr<Output> const& screen, int key)
     auto area = workspace->get_tree()->get_area();
 
     return {
-        { "num",     Workspace::workspace_to_number(key)         },
+        { "num",     key                                         },
         { "id",      reinterpret_cast<std::uintptr_t>(workspace) },
         { "type",    "workspace"                                 },
         { "name",    std::to_string(key)                         },
-        { "visible", screen->is_active() && is_focused           },
-        { "focused", screen->is_active() && is_focused           },
+        { "visible", screen.is_active() && is_focused            },
+        { "focused", screen.is_active() && is_focused            },
         { "urgent",  false                                       },
-        { "output",  screen->get_output().name()                 },
+        { "output",  screen.get_output().name()                  },
         { "rect",    {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
@@ -369,7 +369,7 @@ Ipc::~Ipc()
 {
 }
 
-void Ipc::on_created(std::shared_ptr<Output> const& info, int key)
+void Ipc::on_created(Output const& info, int key)
 {
     json j = {
         { "change", "init" },
@@ -389,7 +389,7 @@ void Ipc::on_created(std::shared_ptr<Output> const& info, int key)
     }
 }
 
-void Ipc::on_removed(std::shared_ptr<Output> const& screen, int key)
+void Ipc::on_removed(Output const& screen, int key)
 {
     json j = {
         { "change", "empty" },
@@ -409,18 +409,18 @@ void Ipc::on_removed(std::shared_ptr<Output> const& screen, int key)
 }
 
 void Ipc::on_focused(
-    std::shared_ptr<Output> const& previous,
+    Output const* previous,
     int previous_key,
-    std::shared_ptr<Output> const& current,
+    Output const* current,
     int current_key)
 {
     json j = {
         { "change", "focus" },
-        { "current", workspace_to_json(current, current_key) }
+        { "current", workspace_to_json(*current, current_key) }
     };
 
     if (previous)
-        j["old"] = workspace_to_json(previous, previous_key);
+        j["old"] = workspace_to_json(*previous, previous_key);
     else
         j["old"] = nullptr;
 
@@ -542,9 +542,9 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
         json j = json::array();
         for (int i = 0; i < WorkspaceManager::NUM_WORKSPACES; i++)
         {
-            auto workspace = workspace_manager.get_workspaces()[i];
+            auto workspace = workspace_manager.get_output_to_workspace_mapping()[i].get();
             if (workspace)
-                j.push_back(workspace_to_json(workspace, i));
+                j.push_back(workspace_to_json(*workspace, i));
         }
         auto json_string = to_string(j);
         send_reply(client, payload_type, json_string);

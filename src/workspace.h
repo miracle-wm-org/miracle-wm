@@ -79,15 +79,17 @@ public:
     void trigger_rerender();
     [[nodiscard]] bool is_empty() const;
     void graft(std::shared_ptr<Container> const&);
-    static int workspace_to_number(int workspace);
+    /// Converts a workspace to its corresponding index in the workspace array.
     [[nodiscard]] TilingWindowTree const* get_tree() const { return tree.get(); }
     nlohmann::json to_json() const;
+    [[nodiscard]] std::string const& get_name() { return name; }
 
 private:
     Output* output;
     miral::WindowManagerTools tools;
     std::shared_ptr<TilingWindowTree> tree;
     int workspace;
+    std::string name;
     std::vector<std::shared_ptr<FloatingWindowContainer>> floating_windows;
     std::vector<std::shared_ptr<FloatingTreeContainer>> floating_trees;
     WindowController& window_controller;

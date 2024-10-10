@@ -113,7 +113,13 @@ public:
     bool try_close_window();
     bool quit();
     bool try_toggle_fullscreen();
-    bool select_workspace(int number);
+    bool select_workspace(int number, bool back_and_forth = true);
+    bool select_workspace(std::string const& name, bool back_and_forth);
+    bool next_workspace();
+    bool prev_workspace();
+    bool back_and_forth_workspace();
+    bool next_workspace_on_output(Output const&);
+    bool prev_workspace_on_output(Output const&);
     bool move_active_to_workspace(int number);
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
@@ -123,7 +129,7 @@ public:
 
     // Getters
 
-    [[nodiscard]] std::shared_ptr<Output> const& get_active_output() const { return state.active_output; }
+    [[nodiscard]] Output const* get_active_output() const { return state.active_output.get(); }
     [[nodiscard]] std::vector<std::shared_ptr<Output>> const& get_output_list() const { return output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }

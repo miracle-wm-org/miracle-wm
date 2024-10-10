@@ -777,7 +777,7 @@ bool Policy::try_toggle_fullscreen()
     return state.active->toggle_fullscreen();
 }
 
-bool Policy::select_workspace(int number)
+bool Policy::select_workspace(int number, bool back_and_forth)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -785,8 +785,60 @@ bool Policy::select_workspace(int number)
     if (!state.active_output)
         return false;
 
-    workspace_manager.request_workspace(state.active_output, number);
+    workspace_manager.request_workspace(state.active_output, number, back_and_forth);
     return true;
+}
+
+bool Policy::select_workspace(std::string const& name, bool back_and_forth)
+{
+    // TODO: Handle back_and_forth
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_workspace(name, back_and_forth);
+}
+
+bool Policy::next_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_next(state.active_output);
+    return true;
+}
+
+bool Policy::prev_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_prev(state.active_output);
+    return true;
+}
+
+bool Policy::back_and_forth_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_back_and_forth();
+    return true;
+}
+
+bool Policy::next_workspace_on_output(miracle::Output const& output)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_next_on_output(output);
+}
+
+bool Policy::prev_workspace_on_output(miracle::Output const& output)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_prev_on_output(output);
 }
 
 bool Policy::move_active_to_workspace(int number)
