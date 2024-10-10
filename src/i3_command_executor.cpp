@@ -523,6 +523,10 @@ void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedComm
         else
             mir::log_error("process_workspace: prev_on_output has no output to go prev on");
     }
+    else if (arg0 == "back_and_forth")
+    {
+        policy.back_and_forth_workspace();
+    }
     else
     {
         bool back_and_forth = true;

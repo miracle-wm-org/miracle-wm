@@ -167,6 +167,20 @@ bool WorkspaceManager::request_prev(std::shared_ptr<Output> const& output)
     return false;
 }
 
+bool WorkspaceManager::request_back_and_forth()
+{
+    if (last_selected)
+    {
+        if (auto output = last_selected->output.lock())
+        {
+            request_workspace(output, last_selected->number);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool WorkspaceManager::request_next_on_output(Output const& output)
 {
     int start = output.get_active_workspace_num() + 1;

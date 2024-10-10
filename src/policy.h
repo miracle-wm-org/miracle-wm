@@ -117,6 +117,7 @@ public:
     bool select_workspace(std::string const& name, bool back_and_forth);
     bool next_workspace();
     bool prev_workspace();
+    bool back_and_forth_workspace();
     bool next_workspace_on_output(Output const&);
     bool prev_workspace_on_output(Output const&);
     bool move_active_to_workspace(int number);

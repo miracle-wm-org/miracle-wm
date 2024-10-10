@@ -816,6 +816,15 @@ bool Policy::prev_workspace()
     return true;
 }
 
+bool Policy::back_and_forth_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_back_and_forth();
+    return true;
+}
+
 bool Policy::next_workspace_on_output(miracle::Output const& output)
 {
     if (state.mode == WindowManagerMode::resizing)

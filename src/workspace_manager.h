@@ -65,6 +65,8 @@ public:
     /// Selects the workspace before the current selected one
     bool request_prev(std::shared_ptr<Output> const& output);
 
+    bool request_back_and_forth();
+
     bool request_next_on_output(Output const&);
 
     bool request_prev_on_output(Output const&);
