@@ -408,6 +408,56 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         policy.try_move_to((int)x_pos, (int)y_pos);
         return;
     }
+    else if (arg0 == "window" || arg0 == "container")
+    {
+        auto const back_and_forth = std::find(command.options.begin(), command.options.end(), "--no-auto-back-and-forth") == command.options.end();
+        auto const& arg1 = command.arguments[index++];
+        if (arg1 != "to")
+        {
+            mir::log_error("process_move: expected 'to' after 'move window/container ...'");
+            return;
+        }
+
+        auto const& arg2 = command.arguments[index++];
+        if (arg2 != "workspace")
+        {
+            mir::log_error("process_move: expected 'workspace' after 'move window/container to...'");
+            return;
+        }
+
+        auto const& arg3 = command.arguments[index++];
+        int number = -1;
+        if (try_get_number(arg3, number))
+        {
+            // TODO: Do we need to care about the name here?
+            policy.move_active_to_workspace(number, back_and_forth);
+            return;
+        }
+        else if (arg3 == "next")
+        {
+            policy.move_active_to_next();
+            return;
+        }
+        else if (arg3 == "prev")
+        {
+            policy.move_active_to_prev();
+            return;
+        }
+        else if (arg3 == "current")
+        {
+            // TODO: Support window selection
+        }
+        else if (arg3 == "back_and_forth")
+        {
+            policy.move_active_to_back_and_forth();
+            return;
+        }
+        else
+        {
+            policy.move_active_to_workspace_named(arg3, back_and_forth);
+            return;
+        }
+    }
 
     if (direction < Direction::MAX)
     {
@@ -529,25 +579,8 @@ void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedComm
     }
     else
     {
-        bool back_and_forth = true;
         std::string const* arg1 = &arg0;
-        if (arg0.starts_with("--"))
-        {
-            if (arg0 != "--no-auto-back-and-forth")
-            {
-                mir::log_error("process_workspace: unknown argument: %s", arg0.c_str());
-                return;
-            }
-
-            if (command.arguments.size() < 2)
-            {
-                mir::log_error("process_workspace: expected argument after --no-auto-back-and-forth");
-                return;
-            }
-
-            back_and_forth = false;
-            arg1 = &command.arguments[1];
-        }
+        auto const back_and_forth = std::find(command.options.begin(), command.options.end(), "--no-auto-back-and-forth") == command.options.end();
 
         int number = -1;
         if (try_get_number(*arg1, number))
