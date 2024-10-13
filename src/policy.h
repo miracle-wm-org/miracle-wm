@@ -120,7 +120,11 @@ public:
     bool back_and_forth_workspace();
     bool next_workspace_on_output(Output const&);
     bool prev_workspace_on_output(Output const&);
-    bool move_active_to_workspace(int number);
+    bool move_active_to_workspace(int number, bool back_and_forth = true);
+    bool move_active_to_workspace_named(std::string const&, bool back_and_forth);
+    bool move_active_to_next();
+    bool move_active_to_prev();
+    bool move_active_to_back_and_forth();
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
     bool set_is_pinned(bool);
@@ -135,6 +139,8 @@ public:
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
+    bool can_move_container() const;
+
     bool is_starting_ = true;
     CompositorState& state;
     std::vector<std::shared_ptr<Output>> output_list;

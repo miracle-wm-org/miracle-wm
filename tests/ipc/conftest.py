@@ -25,11 +25,11 @@ def server():
     
     env = os.environ.copy()
     env['WAYLAND_DISPLAY'] = 'wayland-98'
-    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--platform-rendering-libs', 'mir:stub-graphics', '--virtual-output', '800x600', '--no-config', '1'],
+    process = Popen([command, '--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600', '--no-config', '1'],
                     env=env, stdout=PIPE, stderr=STDOUT)
     
     socket = ""
-    to_find = "Listening to IPC socket on path: "
+    to_find = "Listening to IPC socket on path: "   
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             data = line.decode("utf-8").strip()
@@ -41,5 +41,10 @@ def server():
                 break
 
         yield Server(socket, env["WAYLAND_DISPLAY"])
+
+        # for line in iter(process.stdout.readline, b''):
+        #     data = line.decode("utf-8").strip()
+        #     print(data)
+
         process.terminate()
         return

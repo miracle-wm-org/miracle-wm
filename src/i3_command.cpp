@@ -273,7 +273,10 @@ std::vector<I3ScopedCommandList> I3ScopedCommandList::parse(std::string_view con
                 else
                 {
                     auto s = std::string(command_token.data(), command_token.size());
-                    next_command.arguments.emplace_back(s);
+                    if (s.starts_with("--"))
+                        next_command.options.emplace_back(s);
+                    else
+                        next_command.arguments.emplace_back(s);
                 }
             }
 

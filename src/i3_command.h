@@ -95,6 +95,9 @@ struct I3Command
 {
     I3CommandType type = I3CommandType::none;
     std::vector<std::string> arguments;
+
+    /// Anything in the command that starts with "--"
+    std::vector<std::string> options;
 };
 
 struct I3ScopedCommandList

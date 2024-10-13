@@ -841,7 +841,94 @@ bool Policy::prev_workspace_on_output(miracle::Output const& output)
     return workspace_manager.request_prev_on_output(output);
 }
 
-bool Policy::move_active_to_workspace(int number)
+bool Policy::move_active_to_workspace(int number, bool back_and_forth)
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    auto output = workspace_manager.request_workspace(
+        state.active_output, number, back_and_forth);
+    output->graft(container);
+    return true;
+}
+
+bool Policy::move_active_to_workspace_named(std::string const& name, bool back_and_forth)
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_workspace(name, back_and_forth))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_next()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_next(state.active_output))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_prev()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_prev(state.active_output))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_back_and_forth()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_back_and_forth())
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::can_move_container() const
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -852,12 +939,6 @@ bool Policy::move_active_to_workspace(int number)
     if (state.active->is_fullscreen())
         return false;
 
-    auto to_move = state.active;
-    state.active->get_output()->delete_container(state.active);
-    state.active = nullptr;
-
-    auto screen_to_move_to = workspace_manager.request_workspace(state.active_output, number);
-    screen_to_move_to->graft(to_move);
     return true;
 }
 

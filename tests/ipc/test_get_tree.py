@@ -39,6 +39,7 @@ class TestGetTree:
         my_env = os.environ.copy()
         my_env['WAYLAND_DISPLAY'] = server.wayland
         p1 = subprocess.Popen(['gedit'], env=my_env)
+        sleep(1)  # Give gedit some time to settle down and open
         p2 = subprocess.Popen(['gnome-chess'], env=my_env)
         sleep(1)  # Give gedit some time to settle down and open
 
