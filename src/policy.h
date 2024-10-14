@@ -103,7 +103,7 @@ public:
 
     bool try_request_horizontal();
     bool try_request_vertical();
-    bool try_toggle_layout();
+    bool try_toggle_layout(bool cycle_through_all);
     void try_toggle_resize_mode();
     bool try_resize(Direction direction);
     bool try_move(Direction direction);
@@ -130,6 +130,8 @@ public:
     bool set_is_pinned(bool);
     bool toggle_tabbing();
     bool toggle_stacking();
+    bool set_layout(LayoutScheme scheme);
+    bool set_layout_default();
 
     // Getters
 
@@ -140,6 +142,7 @@ public:
 
 private:
     bool can_move_container() const;
+    bool can_set_layout() const;
 
     bool is_starting_ = true;
     CompositorState& state;

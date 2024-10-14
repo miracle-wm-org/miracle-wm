@@ -61,7 +61,7 @@ public:
     bool toggle_fullscreen() override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
-    void toggle_layout() override;
+    void toggle_layout(bool) override;
     bool pinned() const override;
     bool pinned(bool) override;
     [[nodiscard]] std::optional<miral::Window> window() const override;
@@ -85,6 +85,7 @@ public:
     bool move_to(int, int) override;
     bool toggle_tabbing() override { return false; };
     bool toggle_stacking() override { return false; };
+    bool set_layout(LayoutScheme scheme) override { return false; }
     std::weak_ptr<ParentContainer> get_parent() const override;
     nlohmann::json to_json() const override;
 

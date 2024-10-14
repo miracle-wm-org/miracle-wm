@@ -278,9 +278,9 @@ void LeafContainer::request_vertical_layout()
     tree->request_vertical_layout(*this);
 }
 
-void LeafContainer::toggle_layout()
+void LeafContainer::toggle_layout(bool cycle_thru_all)
 {
-    tree->toggle_layout(*this);
+    tree->toggle_layout(*this, cycle_thru_all);
 }
 
 void LeafContainer::set_tree(TilingWindowTree* tree_)
@@ -386,6 +386,12 @@ bool LeafContainer::toggle_stacking()
         else
             tree->request_stacking_layout(*this);
     }
+    return true;
+}
+
+bool LeafContainer::set_layout(LayoutScheme scheme)
+{
+    tree->request_layout(*this, scheme);
     return true;
 }
 

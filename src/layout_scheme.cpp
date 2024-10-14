@@ -37,3 +37,11 @@ const char* miracle::to_string(miracle::LayoutScheme scheme)
     }
     }
 }
+
+miracle::LayoutScheme miracle::get_next_layout(miracle::LayoutScheme scheme)
+{
+    auto next = static_cast<LayoutScheme>((int)scheme + 1);
+    if (next == LayoutScheme::none)
+        next = static_cast<LayoutScheme>(0);
+    return next;
+}

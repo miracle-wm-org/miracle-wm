@@ -1125,6 +1125,11 @@ WorkspaceConfig FilesystemConfiguration::get_workspace_config(int key) const
     return { key, ContainerType::leaf };
 }
 
+LayoutScheme FilesystemConfiguration::get_default_layout_scheme() const
+{
+    return LayoutScheme::horizontal;
+}
+
 FilesystemConfiguration::ConfigDetails::ConfigDetails()
 {
     const KeyCommand default_key_commands[DefaultKeyCommand::MAX] = {

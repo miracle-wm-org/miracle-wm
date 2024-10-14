@@ -76,6 +76,9 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
         case I3CommandType::workspace:
             process_workspace(command, command_list);
             break;
+        case I3CommandType::layout:
+            process_layout(command, command_list);
+            break;
         default:
             break;
         }
@@ -145,7 +148,7 @@ void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle
     }
     else if (command.arguments.front() == "toggle")
     {
-        policy.try_toggle_layout();
+        policy.try_toggle_layout(false);
     }
     else
     {
@@ -600,6 +603,66 @@ void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedComm
         {
             // We have "workspace <name>"
             policy.select_workspace(*arg1, back_and_forth);
+        }
+    }
+}
+
+void I3CommandExecutor::process_layout(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    // https://i3wm.org/docs/userguide.html#manipulating_layout
+    std::string const& arg0 = command.arguments[0];
+    if (arg0 == "default")
+        policy.set_layout_default();
+    else if (arg0 == "tabbed")
+        policy.set_layout(LayoutScheme::tabbing);
+    else if (arg0 == "stacking")
+        policy.set_layout(LayoutScheme::stacking);
+    else if (arg0 == "splitv")
+        policy.set_layout(LayoutScheme::vertical);
+    else if (arg0 == "splith")
+        policy.set_layout(LayoutScheme::horizontal);
+    else if (arg0 == "toggle")
+    {
+        if (command.arguments.size() == 1)
+        {
+            mir::log_error("process_layout: expected argument after 'layout toggle ...'");
+            return;
+        }
+
+        if (command.arguments.size() == 2)
+        {
+            auto const& arg1 = command.arguments[1];
+            if (arg1 == "split")
+                policy.try_toggle_layout(false);
+            else if (arg1 == "all")
+                policy.try_toggle_layout(true);
+            else
+                mir::log_error("process_layout: expected split/all after 'layout toggle X'");
+
+            return;
+        }
+        else
+        {
+            auto const& container = policy.get_state().active;
+            for (size_t i = 1; i < command.arguments.size(); i++)
+            {
+                auto const& argn = command.arguments[i];
+                if (arg0 == "split")
+                {
+                }
+                else if (arg0 == "tabbed")
+                {
+                }
+                else if (arg0 == "stacking")
+                {
+                }
+                else if (arg0 == "splitv")
+                {
+                }
+                else if (arg0 == "splith")
+                {
+                }
+            }
         }
     }
 }
