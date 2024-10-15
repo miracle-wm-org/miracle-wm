@@ -278,9 +278,9 @@ void LeafContainer::request_vertical_layout()
     tree->request_vertical_layout(*this);
 }
 
-void LeafContainer::toggle_layout()
+void LeafContainer::toggle_layout(bool cycle_thru_all)
 {
-    tree->toggle_layout(*this);
+    tree->toggle_layout(*this, cycle_thru_all);
 }
 
 void LeafContainer::set_tree(TilingWindowTree* tree_)
@@ -387,6 +387,24 @@ bool LeafContainer::toggle_stacking()
             tree->request_stacking_layout(*this);
     }
     return true;
+}
+
+bool LeafContainer::set_layout(LayoutScheme scheme)
+{
+    tree->request_layout(*this, scheme);
+    return true;
+}
+
+LayoutScheme LeafContainer::get_layout() const
+{
+    auto sh_parent = parent.lock().get();
+    if (!sh_parent)
+        return LayoutScheme::none;
+
+    if (sh_parent->num_nodes() == 1)
+        return sh_parent->get_layout();
+
+    return LayoutScheme::none;
 }
 
 nlohmann::json LeafContainer::to_json() const

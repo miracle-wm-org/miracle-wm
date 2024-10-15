@@ -667,7 +667,7 @@ bool Policy::try_request_vertical()
     return true;
 }
 
-bool Policy::try_toggle_layout()
+bool Policy::try_toggle_layout(bool cycle_thru_all)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -675,7 +675,7 @@ bool Policy::try_toggle_layout()
     if (!state.active)
         return false;
 
-    state.active->toggle_layout();
+    state.active->toggle_layout(cycle_thru_all);
     return true;
 }
 
@@ -978,10 +978,7 @@ bool Policy::set_is_pinned(bool pinned)
 
 bool Policy::toggle_tabbing()
 {
-    if (state.mode == WindowManagerMode::resizing)
-        return false;
-
-    if (!state.active)
+    if (!can_set_layout())
         return false;
 
     return state.active->toggle_tabbing();
@@ -989,11 +986,35 @@ bool Policy::toggle_tabbing()
 
 bool Policy::toggle_stacking()
 {
+    if (!can_set_layout())
+        return false;
+
+    return state.active->toggle_stacking();
+}
+
+bool Policy::set_layout(LayoutScheme scheme)
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->set_layout(scheme);
+}
+
+bool Policy::set_layout_default()
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->set_layout(config->get_default_layout_scheme());
+};
+
+bool Policy::can_set_layout() const
+{
     if (state.mode == WindowManagerMode::resizing)
         return false;
 
     if (!state.active)
         return false;
 
-    return state.active->toggle_stacking();
+    return true;
 }

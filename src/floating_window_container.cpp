@@ -182,7 +182,7 @@ void FloatingWindowContainer::request_vertical_layout()
 {
 }
 
-void FloatingWindowContainer::toggle_layout()
+void FloatingWindowContainer::toggle_layout(bool)
 {
 }
 
