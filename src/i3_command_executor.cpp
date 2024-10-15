@@ -644,25 +644,74 @@ void I3CommandExecutor::process_layout(I3Command const& command, I3ScopedCommand
         else
         {
             auto const& container = policy.get_state().active;
+            if (!container)
+            {
+                mir::log_error("process_layout: container unavailable");
+                return;
+            }
+
+            auto current_type = container->get_layout();
+            size_t index = 0;
             for (size_t i = 1; i < command.arguments.size(); i++)
             {
                 auto const& argn = command.arguments[i];
-                if (arg0 == "split")
+                if (argn == "split")
                 {
+                    if (current_type == LayoutScheme::horizontal || current_type == LayoutScheme::vertical)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
-                else if (arg0 == "tabbed")
+                else if (argn == "tabbed")
                 {
+                    if (current_type == LayoutScheme::tabbing)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
-                else if (arg0 == "stacking")
+                else if (argn == "stacking")
                 {
+                    if (current_type == LayoutScheme::stacking)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
-                else if (arg0 == "splitv")
+                else if (argn == "splitv")
                 {
+                    if (current_type == LayoutScheme::vertical)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
-                else if (arg0 == "splith")
+                else if (argn == "splith")
                 {
+                    if (current_type == LayoutScheme::horizontal)
+                    {
+                        index = i;
+                        break;
+                    }
                 }
             }
+
+            index++;
+            if (index == command.arguments.size())
+                index = 1;
+
+            auto const& target = command.arguments[index];
+            if (target == "split")
+                policy.try_toggle_layout(false);
+            else if (target == "tabbed")
+                policy.set_layout(LayoutScheme::tabbing);
+            else if (target == "stacking")
+                policy.set_layout(LayoutScheme::stacking);
+            else if (target == "splitv")
+                policy.set_layout(LayoutScheme::vertical);
+            else if (target == "splith")
+                policy.set_layout(LayoutScheme::horizontal);
         }
     }
 }

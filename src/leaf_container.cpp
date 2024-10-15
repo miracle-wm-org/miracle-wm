@@ -395,6 +395,18 @@ bool LeafContainer::set_layout(LayoutScheme scheme)
     return true;
 }
 
+LayoutScheme LeafContainer::get_layout() const
+{
+    auto sh_parent = parent.lock().get();
+    if (!sh_parent)
+        return LayoutScheme::none;
+
+    if (sh_parent->num_nodes() == 1)
+        return sh_parent->get_layout();
+
+    return LayoutScheme::none;
+}
+
 nlohmann::json LeafContainer::to_json() const
 {
     auto const app = window_.application();

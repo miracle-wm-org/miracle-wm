@@ -97,6 +97,7 @@ public:
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
     bool set_layout(LayoutScheme) override;
+    LayoutScheme get_layout() const override;
     nlohmann::json to_json() const override;
 
 private:

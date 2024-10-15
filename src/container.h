@@ -121,6 +121,7 @@ public:
     virtual bool toggle_tabbing() = 0;
     virtual bool toggle_stacking() = 0;
     virtual bool set_layout(LayoutScheme scheme) = 0;
+    virtual LayoutScheme get_layout() const = 0;
     virtual nlohmann::json to_json() const = 0;
 
     bool is_leaf();

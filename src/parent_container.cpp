@@ -795,6 +795,11 @@ bool ParentContainer::set_layout(LayoutScheme new_scheme)
     return true;
 }
 
+LayoutScheme ParentContainer::get_layout() const
+{
+    return scheme;
+}
+
 nlohmann::json ParentContainer::to_json() const
 {
     auto const visible_area = get_visible_area();

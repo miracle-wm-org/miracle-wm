@@ -86,6 +86,7 @@ public:
     bool toggle_tabbing() override { return false; };
     bool toggle_stacking() override { return false; };
     bool set_layout(LayoutScheme scheme) override { return false; }
+    LayoutScheme get_layout() const override { return LayoutScheme::none; }
     std::weak_ptr<ParentContainer> get_parent() const override;
     nlohmann::json to_json() const override;
 

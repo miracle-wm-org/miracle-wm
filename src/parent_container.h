@@ -107,7 +107,8 @@ public:
     bool is_fullscreen() const override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
-    bool set_layout(LayoutScheme scheme);
+    bool set_layout(LayoutScheme scheme) override;
+    LayoutScheme get_layout() const override;
     nlohmann::json to_json() const override;
     [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
 

@@ -27,7 +27,7 @@ const char* miracle::to_string(miracle::LayoutScheme scheme)
     case LayoutScheme::vertical:
         return "splitv";
     case LayoutScheme::stacking:
-        return "stacked";
+        return "stacking";
     case LayoutScheme::tabbing:
         return "tabbed";
     default:
