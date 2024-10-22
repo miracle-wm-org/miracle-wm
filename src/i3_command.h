@@ -95,6 +95,7 @@ struct I3Command
 {
     I3CommandType type = I3CommandType::none;
     std::vector<std::string> arguments;
+    std::vector<std::string> options;
 };
 
 struct I3ScopedCommandList

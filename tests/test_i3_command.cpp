@@ -92,8 +92,8 @@ TEST_F(I3CommandTest, CanParseExecCommandWithNoStartupId)
     auto commands = I3ScopedCommandList::parse(v);
     ASSERT_EQ(commands[0].commands.size(), 1);
     ASSERT_EQ(commands[0].commands[0].type, I3CommandType::exec);
-    ASSERT_EQ(commands[0].commands[0].arguments[0], "--no-startup-id");
-    ASSERT_EQ(commands[0].commands[0].arguments[1], "gedit");
+    ASSERT_EQ(commands[0].commands[0].options[0], "--no-startup-id");
+    ASSERT_EQ(commands[0].commands[0].arguments[0], "gedit");
 }
 
 TEST_F(I3CommandTest, CanParseSplitCommand)
