@@ -112,21 +112,23 @@ void I3CommandExecutor::process_exec(miracle::I3Command const& command, miracle:
         return;
     }
 
-    size_t arg_index = 0;
     bool no_startup_id = false;
-    if (command.arguments[arg_index] == "--no-startup-id")
-    {
+    if (!command.options.empty() && command.options[0] == "--no-startup-id")
         no_startup_id = true;
-        arg_index++;
-    }
 
-    if (arg_index >= command.arguments.size())
+    if (command.arguments.empty())
     {
         mir::log_warning("process_exec: argument does not have a command to run");
         return;
     }
 
-    StartupApp app { command.arguments[arg_index], false, no_startup_id };
+    std::string exec_cmd;
+    for (auto const& arg : command.arguments)
+    {
+        exec_cmd += arg + " ";
+    }
+
+    StartupApp app { exec_cmd, false, no_startup_id };
     launcher.launch(app);
 }
 
