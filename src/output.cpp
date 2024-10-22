@@ -331,11 +331,22 @@ void Output::graft(std::shared_ptr<Container> const& container)
 geom::Rectangle Output::get_workspace_rectangle(int workspace) const
 {
     // TODO: Support vertical workspaces one day in the future
-    size_t x = (Workspace::workspace_to_number(workspace)) * area.size.width.as_int();
+    const size_t x = (workspace - 1) * area.size.width.as_int();
     return geom::Rectangle {
         geom::Point { geom::X { x },            geom::Y { 0 }             },
         geom::Size { area.size.width.as_int(), area.size.height.as_int() }
     };
+}
+
+[[nodiscard]] Workspace const* Output::workspace(int key) const
+{
+    for (auto const& workspace : workspaces)
+    {
+        if (workspace->get_workspace() == key)
+            return workspace.get();
+    }
+
+    return nullptr;
 }
 
 glm::mat4 Output::get_transform() const
@@ -353,4 +364,52 @@ void Output::set_position(glm::vec2 const& v)
 {
     position_offset = v;
     final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
+}
+
+nlohmann::json Output::to_json() const
+{
+    nlohmann::json nodes = nlohmann::json::array();
+    for (auto const& workspace : workspaces)
+    {
+        if (workspace)
+            nodes.push_back(workspace->to_json());
+    }
+
+    return {
+        { "id",                   reinterpret_cast<std::uintptr_t>(this) },
+        { "name",                 output.name()                          },
+        { "type",                 "output"                               },
+        { "layout",               "output"                               },
+        { "orientation",          "none"                                 },
+        { "visible",              true                                   },
+        { "focused",              is_active()                            },
+        { "urgent",               false                                  },
+        { "border",               "none"                                 },
+        { "current_border_width", 0                                      },
+        { "window_rect",          {
+                             { "x", 0 },
+                             { "y", 0 },
+                             { "width", 0 },
+                             { "height", 0 },
+                         }                       },
+        { "deco_rect",            {
+                           { "x", 0 },
+                           { "y", 0 },
+                           { "width", 0 },
+                           { "height", 0 },
+                       }                           },
+        { "geometry",             {
+                          { "x", 0 },
+                          { "y", 0 },
+                          { "width", 0 },
+                          { "height", 0 },
+                      }                             },
+        { "rect",                 {
+                      { "x", area.top_left.x.as_int() },
+                      { "y", area.top_left.y.as_int() },
+                      { "width", area.size.width.as_int() },
+                      { "height", area.size.height.as_int() },
+                  }                                     },
+        { "nodes",                nodes                                  }
+    };
 }

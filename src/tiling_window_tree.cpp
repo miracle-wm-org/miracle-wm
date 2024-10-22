@@ -66,22 +66,23 @@ miral::WindowSpecification TilingWindowTree::place_new_window(
     const miral::WindowSpecification& requested_specification,
     std::shared_ptr<ParentContainer> const& parent_)
 {
+    assert(
+        !requested_specification.state().is_set()
+        || requested_specification.state() == mir_window_state_restored
+        || requested_specification.state() == mir_window_state_unknown);
+
     auto parent = parent_ ? parent_ : root_lane;
+    auto container = parent->create_space_for_window();
+    auto rect = container->get_visible_area();
+
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;
     new_spec.min_width() = geom::Width { 0 };
     new_spec.max_width() = geom::Width { std::numeric_limits<int>::max() };
     new_spec.min_height() = geom::Height { 0 };
     new_spec.max_height() = geom::Height { std::numeric_limits<int>::max() };
-    auto container = parent->create_space_for_window();
-    auto rect = container->get_visible_area();
-
-    if (!new_spec.state().is_set() || !window_helpers::is_window_fullscreen(new_spec.state().value()))
-    {
-        // We only set the size immediately if we have no strong opinions about the size
-        new_spec.size() = rect.size;
-        new_spec.top_left() = rect.top_left;
-    }
+    new_spec.size() = rect.size;
+    new_spec.top_left() = rect.top_left;
 
     return new_spec;
 }
@@ -241,29 +242,54 @@ bool TilingWindowTree::move_container(miracle::Direction direction, Container& c
     return true;
 }
 
+void TilingWindowTree::request_layout(Container& container, miracle::LayoutScheme scheme)
+{
+    handle_layout_scheme(scheme, container);
+}
+
 void TilingWindowTree::request_vertical_layout(Container& container)
 {
-    handle_direction_change(NodeLayoutDirection::vertical, container);
+    handle_layout_scheme(LayoutScheme::vertical, container);
 }
 
 void TilingWindowTree::request_horizontal_layout(Container& container)
 {
-    handle_direction_change(NodeLayoutDirection::horizontal, container);
+    handle_layout_scheme(LayoutScheme::horizontal, container);
 }
 
-void TilingWindowTree::toggle_layout(Container& container)
+void TilingWindowTree::request_tabbing_layout(Container& container)
+{
+    handle_layout_scheme(LayoutScheme::tabbing, container);
+}
+
+void TilingWindowTree::request_stacking_layout(Container& container)
+{
+    handle_layout_scheme(LayoutScheme::stacking, container);
+}
+
+void TilingWindowTree::toggle_layout(Container& container, bool cycle_thru_all)
 {
     auto parent = Container::as_parent(container.get_parent().lock());
     if (!parent)
+    {
+        mir::log_error("toggle_layout: unable to get parent container");
         return;
+    }
 
-    if (parent->get_direction() == NodeLayoutDirection::horizontal)
-        handle_direction_change(NodeLayoutDirection::vertical, container);
+    if (cycle_thru_all)
+        handle_layout_scheme(get_next_layout(parent->get_direction()), container);
     else
-        handle_direction_change(NodeLayoutDirection::horizontal, container);
+    {
+        if (parent->get_direction() == LayoutScheme::horizontal)
+            handle_layout_scheme(LayoutScheme::vertical, container);
+        else if (parent->get_direction() == LayoutScheme::vertical)
+            handle_layout_scheme(LayoutScheme::horizontal, container);
+        else
+            mir::log_error("Parent with stack layout scheme cannot be toggled");
+    }
 }
 
-void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, Container& container)
+void TilingWindowTree::handle_layout_scheme(LayoutScheme scheme, Container& container)
 {
     if (is_active_window_fullscreen)
     {
@@ -271,23 +297,30 @@ void TilingWindowTree::handle_direction_change(NodeLayoutDirection direction, Co
         return;
     }
 
-    auto parent = Container::as_parent(container.get_parent().lock());
-    if (parent->num_nodes() != 1)
-        parent = parent->convert_to_parent(container.shared_from_this());
-
+    auto parent = container.get_parent().lock();
     if (!parent)
     {
-        mir::log_warning("handle_direction_change: parent is not set");
+        mir::log_warning("handle_layout_scheme: parent is not set");
         return;
     }
 
-    parent->set_direction(direction);
+    // If the parent already has more than just [container] as a child AND
+    // the parent is NOT a tabbing/stacking parent, then we create a new parent for this
+    // single [container].
+    if (parent->num_nodes() > 1
+        && parent->get_direction() != LayoutScheme::tabbing
+        && parent->get_direction() != LayoutScheme::stacking)
+        parent = parent->convert_to_parent(container.shared_from_this());
+
+    parent->set_layout(scheme);
 }
 
 void TilingWindowTree::advise_focus_gained(LeafContainer& container)
 {
     if (is_active_window_fullscreen)
         window_controller.raise(container.window().value());
+    else if (auto const& parent = container.get_parent().lock())
+        parent->on_focus_gained();
 }
 
 void TilingWindowTree::advise_delete_window(std::shared_ptr<Container> const& container)
@@ -305,20 +338,20 @@ void TilingWindowTree::advise_delete_window(std::shared_ptr<Container> const& co
 
 namespace
 {
-NodeLayoutDirection from_direction(Direction direction)
+LayoutScheme from_direction(Direction direction)
 {
     switch (direction)
     {
     case Direction::up:
     case Direction::down:
-        return NodeLayoutDirection::vertical;
+        return LayoutScheme::vertical;
     case Direction::right:
     case Direction::left:
-        return NodeLayoutDirection::horizontal;
+        return LayoutScheme::horizontal;
     default:
         mir::log_error(
-            "from_direction: somehow we are trying to create a NodeLayoutDirection from an incorrect Direction");
-        return NodeLayoutDirection::horizontal;
+            "from_direction: somehow we are trying to create a LayoutScheme from an incorrect Direction");
+        return LayoutScheme::horizontal;
     }
 }
 
@@ -346,8 +379,8 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
     auto lane_node = Container::as_parent(node);
-    if (is_vertical && lane_node->get_direction() == NodeLayoutDirection::vertical
-        || !is_vertical && lane_node->get_direction() == NodeLayoutDirection::horizontal)
+    if (is_vertical && lane_node->get_direction() == LayoutScheme::vertical
+        || !is_vertical && lane_node->get_direction() == LayoutScheme::horizontal)
     {
         if (is_negative)
         {
@@ -384,7 +417,7 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     bool is_vertical = is_vertical_direction(direction);
     bool is_negative = is_negative_direction(direction);
     auto current_node = from.shared_from_this();
-    auto parent = Container::as_parent(current_node->get_parent().lock());
+    auto parent = current_node->get_parent().lock();
     if (!parent)
     {
         mir::log_warning("Cannot handle_select the root node");
@@ -395,8 +428,8 @@ std::shared_ptr<LeafContainer> TilingWindowTree::handle_select(
     {
         auto grandparent_direction = parent->get_direction();
         int index = parent->get_index_of_node(current_node);
-        if (is_vertical && grandparent_direction == NodeLayoutDirection::vertical
-            || !is_vertical && grandparent_direction == NodeLayoutDirection::horizontal)
+        if (is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking)
+            || !is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing))
         {
             if (is_negative)
             {
@@ -446,7 +479,7 @@ TilingWindowTree::MoveResult TilingWindowTree::handle_move(Container& from, Dire
             this,
             nullptr,
             state);
-        after_root_lane->set_direction(new_layout_direction);
+        after_root_lane->set_layout(new_layout_direction);
         after_root_lane->graft_existing(root_lane, 0);
         root_lane = after_root_lane;
         recalculate_root_node_area();
@@ -478,8 +511,8 @@ void TilingWindowTree::handle_resize(
     }
 
     bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_main_axis_movement = (is_vertical && parent->get_direction() == NodeLayoutDirection::vertical)
-        || (!is_vertical && parent->get_direction() == NodeLayoutDirection::horizontal);
+    bool is_main_axis_movement = (is_vertical && parent->get_direction() == LayoutScheme::vertical)
+        || (!is_vertical && parent->get_direction() == LayoutScheme::horizontal);
 
     if (is_main_axis_movement && parent->num_nodes() == 1)
     {

@@ -189,6 +189,10 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return toggle_floating();
         case TogglePinnedToWorkspace:
             return toggle_pinned_to_workspace();
+        case ToggleTabbing:
+            return toggle_tabbing();
+        case ToggleStacking:
+            return toggle_stacking();
         default:
             std::cerr << "Unknown key_command: " << key_command << std::endl;
             break;
@@ -663,7 +667,7 @@ bool Policy::try_request_vertical()
     return true;
 }
 
-bool Policy::try_toggle_layout()
+bool Policy::try_toggle_layout(bool cycle_thru_all)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -671,7 +675,7 @@ bool Policy::try_toggle_layout()
     if (!state.active)
         return false;
 
-    state.active->toggle_layout();
+    state.active->toggle_layout(cycle_thru_all);
     return true;
 }
 
@@ -773,7 +777,7 @@ bool Policy::try_toggle_fullscreen()
     return state.active->toggle_fullscreen();
 }
 
-bool Policy::select_workspace(int number)
+bool Policy::select_workspace(int number, bool back_and_forth)
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -781,11 +785,150 @@ bool Policy::select_workspace(int number)
     if (!state.active_output)
         return false;
 
-    workspace_manager.request_workspace(state.active_output, number);
+    workspace_manager.request_workspace(state.active_output, number, back_and_forth);
     return true;
 }
 
-bool Policy::move_active_to_workspace(int number)
+bool Policy::select_workspace(std::string const& name, bool back_and_forth)
+{
+    // TODO: Handle back_and_forth
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_workspace(name, back_and_forth);
+}
+
+bool Policy::next_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_next(state.active_output);
+    return true;
+}
+
+bool Policy::prev_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_prev(state.active_output);
+    return true;
+}
+
+bool Policy::back_and_forth_workspace()
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    workspace_manager.request_back_and_forth();
+    return true;
+}
+
+bool Policy::next_workspace_on_output(miracle::Output const& output)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_next_on_output(output);
+}
+
+bool Policy::prev_workspace_on_output(miracle::Output const& output)
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    return workspace_manager.request_prev_on_output(output);
+}
+
+bool Policy::move_active_to_workspace(int number, bool back_and_forth)
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    auto output = workspace_manager.request_workspace(
+        state.active_output, number, back_and_forth);
+    output->graft(container);
+    return true;
+}
+
+bool Policy::move_active_to_workspace_named(std::string const& name, bool back_and_forth)
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_workspace(name, back_and_forth))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_next()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_next(state.active_output))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_prev()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_prev(state.active_output))
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::move_active_to_back_and_forth()
+{
+    if (!can_move_container())
+        return false;
+
+    auto container = state.active;
+    container->get_output()->delete_container(container);
+    state.active = nullptr;
+
+    if (workspace_manager.request_back_and_forth())
+    {
+        state.active_output->graft(container);
+        return true;
+    }
+
+    return false;
+}
+
+bool Policy::can_move_container() const
 {
     if (state.mode == WindowManagerMode::resizing)
         return false;
@@ -796,12 +939,6 @@ bool Policy::move_active_to_workspace(int number)
     if (state.active->is_fullscreen())
         return false;
 
-    auto to_move = state.active;
-    state.active->get_output()->delete_container(state.active);
-    state.active = nullptr;
-
-    auto screen_to_move_to = workspace_manager.request_workspace(state.active_output, number);
-    screen_to_move_to->graft(to_move);
     return true;
 }
 
@@ -837,4 +974,47 @@ bool Policy::set_is_pinned(bool pinned)
         return false;
 
     return state.active->pinned(pinned);
+}
+
+bool Policy::toggle_tabbing()
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->toggle_tabbing();
+}
+
+bool Policy::toggle_stacking()
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->toggle_stacking();
+}
+
+bool Policy::set_layout(LayoutScheme scheme)
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->set_layout(scheme);
+}
+
+bool Policy::set_layout_default()
+{
+    if (!can_set_layout())
+        return false;
+
+    return state.active->set_layout(config->get_default_layout_scheme());
+};
+
+bool Policy::can_set_layout() const
+{
+    if (state.mode == WindowManagerMode::resizing)
+        return false;
+
+    if (!state.active)
+        return false;
+
+    return true;
 }

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "direction.h"
-#include "node_common.h"
+#include "layout_scheme.h"
 #include <memory>
 #include <mir/geometry/rectangle.h>
 #include <miral/window.h>
@@ -85,14 +85,22 @@ public:
 
     bool has_fullscreen_window() const { return is_active_window_fullscreen; }
 
-    // Request a change to vertical window placement
+    void request_layout(Container&, LayoutScheme);
+
+    /// Request a change to vertical window placement
     void request_vertical_layout(Container&);
 
-    // Request a change to horizontal window placement
+    /// Request a change to horizontal window placement
     void request_horizontal_layout(Container&);
 
+    /// Request that the provided container become tabbed.
+    void request_tabbing_layout(Container&);
+
+    /// Request that the provided container become stacked.
+    void request_stacking_layout(Container&);
+
     // Request a change from the current layout scheme to another layout scheme
-    void toggle_layout(Container&);
+    void toggle_layout(Container&, bool cycle_thru_all);
 
     /// Advises us to focus the provided container.
     void advise_focus_gained(LeafContainer&);
@@ -127,7 +135,8 @@ public:
     void recalculate_root_node_area();
     bool is_empty();
 
-    Workspace* get_workspace() const;
+    [[nodiscard]] Workspace* get_workspace() const;
+    [[nodiscard]] std::shared_ptr<ParentContainer> const& get_root() const { return root_lane; }
 
 private:
     struct MoveResult
@@ -153,7 +162,7 @@ private:
     bool is_hidden = false;
     int config_handle = 0;
 
-    void handle_direction_change(NodeLayoutDirection direction, Container&);
+    void handle_layout_scheme(LayoutScheme direction, Container& container);
     void handle_resize(Container& node, Direction direction, int amount);
 
     /// Constrains the container to its tile in the tree

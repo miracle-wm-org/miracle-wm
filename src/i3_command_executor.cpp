@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "parent_container.h"
 #include "policy.h"
+#include "utility_general.h"
 #include "window_controller.h"
 #include "window_helpers.h"
 
@@ -71,6 +72,12 @@ void I3CommandExecutor::process(miracle::I3ScopedCommandList const& command_list
             break;
         case I3CommandType::input:
             process_input(command, command_list);
+            break;
+        case I3CommandType::workspace:
+            process_workspace(command, command_list);
+            break;
+        case I3CommandType::layout:
+            process_layout(command, command_list);
             break;
         default:
             break;
@@ -143,7 +150,7 @@ void I3CommandExecutor::process_split(miracle::I3Command const& command, miracle
     }
     else if (command.arguments.front() == "toggle")
     {
-        policy.try_toggle_layout();
+        policy.try_toggle_layout(false);
     }
     else
     {
@@ -340,7 +347,7 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            auto active = policy.get_state().active;
+            auto active = policy.get_state().active.get();
             auto area = active_output->get_area();
             float x = (float)area.size.width.as_int() / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
             float y = (float)area.size.height.as_int() / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
@@ -405,6 +412,56 @@ void I3CommandExecutor::process_move(I3Command const& command, I3ScopedCommandLi
         float y_pos = y / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
         policy.try_move_to((int)x_pos, (int)y_pos);
         return;
+    }
+    else if (arg0 == "window" || arg0 == "container")
+    {
+        auto const back_and_forth = std::find(command.options.begin(), command.options.end(), "--no-auto-back-and-forth") == command.options.end();
+        auto const& arg1 = command.arguments[index++];
+        if (arg1 != "to")
+        {
+            mir::log_error("process_move: expected 'to' after 'move window/container ...'");
+            return;
+        }
+
+        auto const& arg2 = command.arguments[index++];
+        if (arg2 != "workspace")
+        {
+            mir::log_error("process_move: expected 'workspace' after 'move window/container to...'");
+            return;
+        }
+
+        auto const& arg3 = command.arguments[index++];
+        int number = -1;
+        if (try_get_number(arg3, number))
+        {
+            // TODO: Do we need to care about the name here?
+            policy.move_active_to_workspace(number, back_and_forth);
+            return;
+        }
+        else if (arg3 == "next")
+        {
+            policy.move_active_to_next();
+            return;
+        }
+        else if (arg3 == "prev")
+        {
+            policy.move_active_to_prev();
+            return;
+        }
+        else if (arg3 == "current")
+        {
+            // TODO: Support window selection
+        }
+        else if (arg3 == "back_and_forth")
+        {
+            policy.move_active_to_back_and_forth();
+            return;
+        }
+        else
+        {
+            policy.move_active_to_workspace_named(arg3, back_and_forth);
+            return;
+        }
     }
 
     if (direction < Direction::MAX)
@@ -491,5 +548,172 @@ void I3CommandExecutor::process_input(I3Command const& command, I3ScopedCommandL
     {
         mir::log_warning("process_input: > 3 arguments were provided but only <= 3 are expected");
         return;
+    }
+}
+
+void I3CommandExecutor::process_workspace(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    if (command.arguments.empty())
+    {
+        mir::log_error("process_workspace: no arguments provided");
+        return;
+    }
+
+    std::string const& arg0 = command.arguments[0];
+    if (arg0 == "next")
+        policy.next_workspace();
+    else if (arg0 == "prev")
+        policy.prev_workspace();
+    else if (arg0 == "next_on_output")
+    {
+        if (auto const* output = policy.get_active_output())
+            policy.next_workspace_on_output(*output);
+        else
+            mir::log_error("process_workspace: next_on_output has no output to go next on");
+    }
+    else if (arg0 == "prev_on_output")
+    {
+        if (auto const* output = policy.get_active_output())
+            policy.prev_workspace_on_output(*output);
+        else
+            mir::log_error("process_workspace: prev_on_output has no output to go prev on");
+    }
+    else if (arg0 == "back_and_forth")
+    {
+        policy.back_and_forth_workspace();
+    }
+    else
+    {
+        std::string const* arg1 = &arg0;
+        auto const back_and_forth = std::find(command.options.begin(), command.options.end(), "--no-auto-back-and-forth") == command.options.end();
+
+        int number = -1;
+        if (try_get_number(*arg1, number))
+        {
+            // Check if we just have "workspace number"
+            if (command.arguments.size() < 3)
+            {
+                policy.select_workspace(number, back_and_forth);
+                return;
+            }
+
+            // We have "workspace number <name>"
+            arg1 = &command.arguments[2];
+            policy.select_workspace(*arg1, back_and_forth);
+        }
+        else
+        {
+            // We have "workspace <name>"
+            policy.select_workspace(*arg1, back_and_forth);
+        }
+    }
+}
+
+void I3CommandExecutor::process_layout(I3Command const& command, I3ScopedCommandList const& command_list)
+{
+    // https://i3wm.org/docs/userguide.html#manipulating_layout
+    std::string const& arg0 = command.arguments[0];
+    if (arg0 == "default")
+        policy.set_layout_default();
+    else if (arg0 == "tabbed")
+        policy.set_layout(LayoutScheme::tabbing);
+    else if (arg0 == "stacking")
+        policy.set_layout(LayoutScheme::stacking);
+    else if (arg0 == "splitv")
+        policy.set_layout(LayoutScheme::vertical);
+    else if (arg0 == "splith")
+        policy.set_layout(LayoutScheme::horizontal);
+    else if (arg0 == "toggle")
+    {
+        if (command.arguments.size() == 1)
+        {
+            mir::log_error("process_layout: expected argument after 'layout toggle ...'");
+            return;
+        }
+
+        if (command.arguments.size() == 2)
+        {
+            auto const& arg1 = command.arguments[1];
+            if (arg1 == "split")
+                policy.try_toggle_layout(false);
+            else if (arg1 == "all")
+                policy.try_toggle_layout(true);
+            else
+                mir::log_error("process_layout: expected split/all after 'layout toggle X'");
+
+            return;
+        }
+        else
+        {
+            auto const& container = policy.get_state().active;
+            if (!container)
+            {
+                mir::log_error("process_layout: container unavailable");
+                return;
+            }
+
+            auto current_type = container->get_layout();
+            size_t index = 0;
+            for (size_t i = 1; i < command.arguments.size(); i++)
+            {
+                auto const& argn = command.arguments[i];
+                if (argn == "split")
+                {
+                    if (current_type == LayoutScheme::horizontal || current_type == LayoutScheme::vertical)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                else if (argn == "tabbed")
+                {
+                    if (current_type == LayoutScheme::tabbing)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                else if (argn == "stacking")
+                {
+                    if (current_type == LayoutScheme::stacking)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                else if (argn == "splitv")
+                {
+                    if (current_type == LayoutScheme::vertical)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                else if (argn == "splith")
+                {
+                    if (current_type == LayoutScheme::horizontal)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+            }
+
+            index++;
+            if (index == command.arguments.size())
+                index = 1;
+
+            auto const& target = command.arguments[index];
+            if (target == "split")
+                policy.try_toggle_layout(false);
+            else if (target == "tabbed")
+                policy.set_layout(LayoutScheme::tabbing);
+            else if (target == "stacking")
+                policy.set_layout(LayoutScheme::stacking);
+            else if (target == "splitv")
+                policy.set_layout(LayoutScheme::vertical);
+            else if (target == "splith")
+                policy.set_layout(LayoutScheme::horizontal);
+        }
     }
 }

@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_LEAF_NODE_H
 
 #include "container.h"
-#include "node_common.h"
+#include "layout_scheme.h"
 #include "window_controller.h"
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
@@ -34,7 +34,7 @@ class MiracleConfig;
 class TilingWindowTree;
 class CompositorState;
 
-/// A [LeafContainer] contains one or many windows (in the event that windows are stacked or tabbed).
+/// A [LeafContainer] always contains a single window.
 class LeafContainer : public Container
 {
 public:
@@ -72,7 +72,7 @@ public:
     void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
-    void toggle_layout() override;
+    void toggle_layout(bool cycle_thru_all) override;
     void set_tree(TilingWindowTree* tree);
 
     [[nodiscard]] TilingWindowTree* get_tree() const { return tree; }
@@ -94,6 +94,11 @@ public:
     bool move(Direction) override;
     bool move_by(Direction, int) override;
     bool move_to(int, int) override;
+    bool toggle_tabbing() override;
+    bool toggle_stacking() override;
+    bool set_layout(LayoutScheme) override;
+    LayoutScheme get_layout() const override;
+    nlohmann::json to_json() const override;
 
 private:
     WindowController& window_controller;
@@ -107,7 +112,7 @@ private:
 
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
-    NodeLayoutDirection tentative_direction = NodeLayoutDirection::none;
+    LayoutScheme tentative_direction = LayoutScheme::none;
     glm::mat4 transform = glm::mat4(1.f);
     uint32_t animation_handle_ = 0;
 };

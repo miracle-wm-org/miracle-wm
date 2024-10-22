@@ -103,7 +103,7 @@ public:
 
     bool try_request_horizontal();
     bool try_request_vertical();
-    bool try_toggle_layout();
+    bool try_toggle_layout(bool cycle_through_all);
     void try_toggle_resize_mode();
     bool try_resize(Direction direction);
     bool try_move(Direction direction);
@@ -113,20 +113,37 @@ public:
     bool try_close_window();
     bool quit();
     bool try_toggle_fullscreen();
-    bool select_workspace(int number);
-    bool move_active_to_workspace(int number);
+    bool select_workspace(int number, bool back_and_forth = true);
+    bool select_workspace(std::string const& name, bool back_and_forth);
+    bool next_workspace();
+    bool prev_workspace();
+    bool back_and_forth_workspace();
+    bool next_workspace_on_output(Output const&);
+    bool prev_workspace_on_output(Output const&);
+    bool move_active_to_workspace(int number, bool back_and_forth = true);
+    bool move_active_to_workspace_named(std::string const&, bool back_and_forth);
+    bool move_active_to_next();
+    bool move_active_to_prev();
+    bool move_active_to_back_and_forth();
     bool toggle_floating();
     bool toggle_pinned_to_workspace();
     bool set_is_pinned(bool);
+    bool toggle_tabbing();
+    bool toggle_stacking();
+    bool set_layout(LayoutScheme scheme);
+    bool set_layout_default();
 
     // Getters
 
-    [[nodiscard]] std::shared_ptr<Output> const& get_active_output() const { return state.active_output; }
+    [[nodiscard]] Output const* get_active_output() const { return state.active_output.get(); }
     [[nodiscard]] std::vector<std::shared_ptr<Output>> const& get_output_list() const { return output_list; }
     [[nodiscard]] geom::Point const& get_cursor_position() const { return state.cursor_position; }
     [[nodiscard]] CompositorState const& get_state() const { return state; }
 
 private:
+    bool can_move_container() const;
+    bool can_set_layout() const;
+
     bool is_starting_ = true;
     CompositorState& state;
     std::vector<std::shared_ptr<Output>> output_list;

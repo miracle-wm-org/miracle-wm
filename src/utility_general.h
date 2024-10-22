@@ -15,17 +15,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLEWM_NODE_COMMON_H
-#define MIRACLEWM_NODE_COMMON_H
+#ifndef MIRACLE_WM_UTILITY_GENERAL_H
+#define MIRACLE_WM_UTILITY_GENERAL_H
+
+#include <algorithm>
+#include <string>
 
 namespace miracle
 {
-enum class NodeLayoutDirection
+bool try_get_number(std::string const& s, int& out)
 {
-    horizontal,
-    vertical,
-    none
-};
+    try
+    {
+        out = std::stoi(s);
+        return true;
+    }
+    catch (std::invalid_argument const& ex)
+    {
+        return false;
+    }
+    catch (std::out_of_range const& ex)
+    {
+        return false;
+    }
+}
 }
 
-#endif
+#endif // MIRACLE_WM_UTILITY_GENERAL_H

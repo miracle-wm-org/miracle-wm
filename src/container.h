@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_CONTAINER_H
 
 #include "direction.h"
+#include "layout_scheme.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -26,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_toolkit/event.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
+#include <nlohmann/json.hpp>
 #include <vector>
 
 namespace geom = mir::geometry;
@@ -49,7 +51,8 @@ enum class ContainerType
     floating_tree,
     shell,
     parent,
-    group
+    group,
+    stack
 };
 
 ContainerType container_type_from_string(std::string const& str);
@@ -90,7 +93,7 @@ public:
     virtual bool toggle_fullscreen() = 0;
     virtual void request_horizontal_layout() = 0;
     virtual void request_vertical_layout() = 0;
-    virtual void toggle_layout() = 0;
+    virtual void toggle_layout(bool cycle_thru_all) = 0;
     virtual void on_open() = 0;
     virtual void on_focus_gained() = 0;
     virtual void on_focus_lost() = 0;
@@ -115,9 +118,15 @@ public:
     virtual bool move(Direction) = 0;
     virtual bool move_by(Direction, int pixels) = 0;
     virtual bool move_to(int x, int y) = 0;
+    virtual bool toggle_tabbing() = 0;
+    virtual bool toggle_stacking() = 0;
+    virtual bool set_layout(LayoutScheme scheme) = 0;
+    virtual LayoutScheme get_layout() const = 0;
+    virtual nlohmann::json to_json() const = 0;
 
     bool is_leaf();
     bool is_lane();
+    [[nodiscard]] float get_percent_of_parent() const;
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);

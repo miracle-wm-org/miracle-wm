@@ -56,6 +56,8 @@ private:
     void process_move(I3Command const&, I3ScopedCommandList const&);
     void process_sticky(I3Command const&, I3ScopedCommandList const&);
     void process_input(I3Command const&, I3ScopedCommandList const&);
+    void process_workspace(I3Command const&, I3ScopedCommandList const&);
+    void process_layout(I3Command const&, I3ScopedCommandList const&);
 };
 
 } // miracle

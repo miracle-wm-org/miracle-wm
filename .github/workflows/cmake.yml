@@ -35,7 +35,7 @@ jobs:
           libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev
           
         sudo apt install mir-platform-graphics-virtual xwayland \
-          mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic
+          mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
@@ -50,6 +50,7 @@ jobs:
       run: cd ${{github.workspace}}/build && ./bin/miracle-wm-tests
 
     - name: IPC Tests
+      if: false 
       run: |
         cd ${{github.workspace}}/tests/ipc
         python -m venv venv

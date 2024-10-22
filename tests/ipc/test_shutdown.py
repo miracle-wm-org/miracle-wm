@@ -8,14 +8,12 @@ class TestSendTick:
             def __init__(self) -> None:
                 self.is_shutdown = False
 
-        print(f"Using server: {server}")
-        
         reply = Reply()
         def wait_on_shutdown():
             def on_shutdown(i3, e):
                 reply.is_shutdown = True
 
-            conn1 = Connection(server)
+            conn1 = Connection(server.ipc)
             conn1.on(Event.SHUTDOWN, on_shutdown)
             try:
                 conn1.main()
@@ -27,7 +25,7 @@ class TestSendTick:
         time.sleep(1)  # A small wait time to ensure that the subscribe goes through first
 
         try:
-            conn2 = Connection(server)
+            conn2 = Connection(server.ipc)
             conn2.command("exit")
             t1.join()
         except Exception as e:

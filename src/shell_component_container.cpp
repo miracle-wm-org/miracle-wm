@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "shell_component_container.h"
 #include "window_controller.h"
+#include <mir/scene/session.h>
 
 namespace miracle
 {
@@ -122,7 +123,7 @@ void ShellComponentContainer::request_vertical_layout()
 {
 }
 
-void ShellComponentContainer::toggle_layout()
+void ShellComponentContainer::toggle_layout(bool)
 {
 }
 
@@ -235,6 +236,65 @@ bool ShellComponentContainer::move_to(int x, int y)
 bool ShellComponentContainer::is_fullscreen() const
 {
     return false;
+}
+
+nlohmann::json ShellComponentContainer::to_json() const
+{
+    auto const app = window_.application();
+    auto const& win_info = window_controller.info_for(window_);
+    auto const visible_area = get_visible_area();
+    auto const logical_area = get_logical_area();
+    return {
+        { "id",                   reinterpret_cast<std::uintptr_t>(this)                                                                                                                                                   },
+        { "name",                 app->name()                                                                                                                                                                              },
+        { "rect",                 {
+                      { "x", logical_area.top_left.x.as_int() },
+                      { "y", logical_area.top_left.y.as_int() },
+                      { "width", logical_area.size.width.as_int() },
+                      { "height", logical_area.size.height.as_int() },
+                  }                                                                                                                                                                                       },
+        { "focused",              is_focused()                                                                                                                                                                             },
+        { "focus",                std::vector<int>()                                                                                                                                                                       },
+        { "border",               "none"                                                                                                                                                                                   },
+        { "current_border_width", 0                                                                                                                                                                                        },
+        { "layout",               "dockarea"                                                                                                                                                                               },
+        { "orientation",          "none"                                                                                                                                                                                   },
+        { "window_rect",          {
+                                                                                                                                                                                                     { "x", visible_area.top_left.x.as_int() },
+                                                                                                                                                                                                     { "y", visible_area.top_left.y.as_int() },
+                                                                                                                                                                                                     { "width", visible_area.size.width.as_int() },
+                                                                                                                                                                                                     { "height", visible_area.size.height.as_int() },
+                                                                                                                                                                                                 } },
+        { "deco_rect",            {
+                           { "x", 0 },
+                           { "y", 0 },
+                           { "width", logical_area.size.width.as_int() },
+                           { "height", logical_area.size.height.as_int() },
+                       }                                                                                                                                                                             },
+        { "geometry",             {
+                          { "x", 0 },
+                          { "y", 0 },
+                          { "width", logical_area.size.width.as_int() },
+                          { "height", logical_area.size.height.as_int() },
+                      }                                                                                                                                                                               },
+        { "window",               0                                                                                                                                                                                        }, // TODO
+        { "urgent",               false                                                                                                                                                                                    },
+        { "floating_nodes",       std::vector<int>()                                                                                                                                                                       },
+        { "sticky",               false                                                                                                                                                                                    },
+        { "type",                 "dockarea"                                                                                                                                                                               },
+        { "fullscreen_mode",      is_fullscreen() ? 1 : 0                                                                                                                                                                  }, // TODO: Support value 2
+        { "pid",                  app->process_id()                                                                                                                                                                        },
+        { "app_id",               win_info.application_id()                                                                                                                                                                },
+        { "visible",              true                                                                                                                                                                                     },
+        { "shell",                "miracle-wm"                                                                                                                                                                             }, // TODO
+        { "inhibit_idle",         false                                                                                                                                                                                    },
+        { "idle_inhibitors",      {
+                                                            { "application", "none" },
+                                                            { "user", "visible" },
+                                                        }                                                                                                                                      },
+        { "window_properties",    {}                                                                                                                                                                                       }, // TODO
+        { "nodes",                std::vector<int>()                                                                                                                                                                       }
+    };
 }
 
 } // miracle

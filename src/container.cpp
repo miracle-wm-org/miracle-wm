@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "container_group_container.h"
 #include "floating_window_container.h"
+#include "layout_scheme.h"
 #include "leaf_container.h"
-#include "node_common.h"
 #include "output.h"
 #include "parent_container.h"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -91,9 +91,37 @@ bool Container::is_lane()
     return as_parent(shared_from_this()) != nullptr;
 }
 
+float Container::get_percent_of_parent() const
+{
+    float percent = 1.f;
+
+    if (auto locked_parent = get_parent().lock())
+    {
+        switch (locked_parent->get_scheme())
+        {
+        case LayoutScheme::horizontal:
+            percent = static_cast<float>(get_logical_area().size.width.as_int())
+                / static_cast<float>(locked_parent->get_logical_area().size.width.as_int());
+            break;
+        case LayoutScheme::vertical:
+            percent = static_cast<float>(get_logical_area().size.height.as_int())
+                / static_cast<float>(locked_parent->get_logical_area().size.height.as_int());
+            break;
+        case LayoutScheme::tabbing:
+        case LayoutScheme::stacking:
+            percent = is_focused() ? 1.f : 0.f;
+            break;
+        default:
+            break;
+        }
+    }
+
+    return percent;
+}
+
 namespace
 {
-bool has_neighbor(Container const* container, NodeLayoutDirection direction, size_t cannot_be_index)
+bool has_neighbor(Container const* container, LayoutScheme direction, size_t cannot_be_index)
 {
     auto parent = container->get_parent().lock();
     if (!parent)
@@ -121,7 +149,7 @@ bool has_right_neighbor(Container const* container)
     if (!parent_container)
         return false;
 
-    return has_neighbor(container, NodeLayoutDirection::horizontal, parent_container->num_nodes() - 1);
+    return has_neighbor(container, LayoutScheme::horizontal, parent_container->num_nodes() - 1);
 }
 
 bool has_bottom_neighbor(Container const* container)
@@ -134,7 +162,7 @@ bool has_bottom_neighbor(Container const* container)
     if (!parent_container)
         return false;
 
-    return has_neighbor(container, NodeLayoutDirection::vertical, parent_container->num_nodes() - 1);
+    return has_neighbor(container, LayoutScheme::vertical, parent_container->num_nodes() - 1);
 }
 
 bool has_left_neighbor(Container const* container)
@@ -142,7 +170,7 @@ bool has_left_neighbor(Container const* container)
     auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(container, NodeLayoutDirection::horizontal, 0);
+    return has_neighbor(container, LayoutScheme::horizontal, 0);
 }
 
 bool has_top_neighbor(Container const* container)
@@ -150,7 +178,7 @@ bool has_top_neighbor(Container const* container)
     auto shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
-    return has_neighbor(container, NodeLayoutDirection::vertical, 0);
+    return has_neighbor(container, LayoutScheme::vertical, 0);
 }
 }
 

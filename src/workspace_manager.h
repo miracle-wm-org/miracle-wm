@@ -43,29 +43,55 @@ public:
     explicit WorkspaceManager(
         WindowManagerTools const& tools,
         WorkspaceObserverRegistrar& registry,
-        std::function<std::shared_ptr<Output> const()> const& get_active_screen);
+        std::function<Output const*()> const& get_active_screen);
     virtual ~WorkspaceManager() = default;
 
     /// Request the workspace. If it does not yet exist, then one
     /// is created on the current Screen. If it does exist, we navigate
     /// to the screen containing that workspace and show it if it
     /// isn't already shown.
-    std::shared_ptr<Output> request_workspace(std::shared_ptr<Output> screen, int workspace);
+    std::shared_ptr<Output> request_workspace(std::shared_ptr<Output> const& screen, int workspace, bool back_and_forth = true);
 
-    bool request_first_available_workspace(std::shared_ptr<Output> screen);
+    /// Returns any available workspace with the lowest numerical value starting with 1.
+    int request_first_available_workspace(std::shared_ptr<Output> const& screen);
+
+    /// Request the workspace by name. If it does not exist, then it will not
+    /// be selected.
+    bool request_workspace(std::string const& name, bool back_and_forth = true);
+
+    /// Selects the next workspace after the current selected one.
+    bool request_next(std::shared_ptr<Output> const& output);
+
+    /// Selects the workspace before the current selected one
+    bool request_prev(std::shared_ptr<Output> const& output);
+
+    bool request_back_and_forth();
+
+    bool request_next_on_output(Output const&);
+
+    bool request_prev_on_output(Output const&);
 
     bool delete_workspace(int workspace);
 
-    void request_focus(int workspace);
+    /// Focuses a workspace only if it is already mapped to an output. Prefer using request_workspace
+    /// for most situations.
+    std::shared_ptr<Output> request_focus(int workspace);
 
     static int constexpr NUM_WORKSPACES = 10;
-    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> const& get_workspaces() { return workspaces; }
+    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> const& get_output_to_workspace_mapping() { return output_to_workspace_mapping; }
 
 private:
+    struct LastSelectedWorkspace
+    {
+        int number = -1;
+        std::weak_ptr<Output> output;
+    };
+
     WindowManagerTools tools_;
     WorkspaceObserverRegistrar& registry;
-    std::function<std::shared_ptr<Output> const()> get_active_screen;
-    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> workspaces;
+    std::function<Output const*()> get_active_screen;
+    std::array<std::shared_ptr<Output>, NUM_WORKSPACES> output_to_workspace_mapping;
+    std::optional<LastSelectedWorkspace> last_selected;
 };
 }
 

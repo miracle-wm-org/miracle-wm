@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-void WorkspaceObserverRegistrar::advise_created(std::shared_ptr<Output> const& info, int key)
+void WorkspaceObserverRegistrar::advise_created(Output const& info, int key)
 {
     for (auto& observer : observers)
     {
@@ -28,7 +28,7 @@ void WorkspaceObserverRegistrar::advise_created(std::shared_ptr<Output> const& i
     }
 }
 
-void WorkspaceObserverRegistrar::advise_removed(std::shared_ptr<Output> const& info, int key)
+void WorkspaceObserverRegistrar::advise_removed(Output const& info, int key)
 {
     for (auto& observer : observers)
     {
@@ -38,9 +38,9 @@ void WorkspaceObserverRegistrar::advise_removed(std::shared_ptr<Output> const& i
 }
 
 void WorkspaceObserverRegistrar::advise_focused(
-    std::shared_ptr<Output> const& previous,
+    Output const* previous,
     int previous_key,
-    std::shared_ptr<Output> const& current,
+    Output const* current,
     int current_key)
 {
     for (auto& observer : observers)

@@ -15,14 +15,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "parent_container"
 #include "parent_container.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "container.h"
 #include "leaf_container.h"
+#include "output.h"
 #include "tiling_window_tree.h"
 #include "workspace.h"
 #include <cmath>
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -94,7 +97,8 @@ ParentContainer::ParentContainer(
     tree { tree },
     config { config },
     parent { parent },
-    state { state }
+    state { state },
+    scheme { config->get_default_layout_scheme() }
 {
 }
 
@@ -133,7 +137,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
 
     auto placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
-    if (direction == NodeLayoutDirection::horizontal)
+    if (scheme == LayoutScheme::horizontal)
     {
         auto result = insert_node_internal(
             placement_area.size.width.as_int(),
@@ -163,7 +167,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
         };
         pending_logical_rect = new_node_logical_rect;
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         auto result = insert_node_internal(
             placement_area.size.height.as_int(),
@@ -193,6 +197,15 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
         };
         pending_logical_rect = new_node_logical_rect;
     }
+    else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
+    {
+        pending_logical_rect = placement_area;
+    }
+    else
+    {
+        mir::fatal_error("Invalid scheme during create_space");
+    }
+
     return pending_logical_rect;
 }
 
@@ -270,7 +283,8 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
     logical_area = target_rect;
     auto target_placement_area = get_logical_area();
     std::vector<geom::Rectangle> pending_size_updates;
-    if (direction == NodeLayoutDirection::horizontal)
+    pending_size_updates.reserve(sub_nodes.size());
+    if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
         for (size_t idx = 0; idx < sub_nodes.size(); idx++)
@@ -311,7 +325,7 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
             pending_size_updates.back().size.width = geom::Width { pending_size_updates.back().size.width.as_int() + leftover_width };
         }
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
         for (size_t idx = 0; idx < sub_nodes.size(); idx++)
@@ -351,6 +365,17 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect)
             int leftover_height = target_placement_area.size.height.as_int() - total_height;
             pending_size_updates.back().size.height = geom::Height { pending_size_updates.back().size.height.as_int() + leftover_height };
         }
+    }
+    else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
+    {
+        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        {
+            pending_size_updates.push_back(target_placement_area);
+        }
+    }
+    else
+    {
+        mir::log_error("Cannot set_logical_area with invalid scheme");
     }
 
     for (size_t i = 0; i < sub_nodes.size(); i++)
@@ -408,11 +433,6 @@ const std::vector<std::shared_ptr<Container>>& ParentContainer::get_sub_nodes() 
     return sub_nodes;
 }
 
-void ParentContainer::set_direction(miracle::NodeLayoutDirection new_direction)
-{
-    direction = new_direction;
-}
-
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
     auto first_index = get_index_of_node(first);
@@ -442,7 +462,7 @@ void ParentContainer::remove(const std::shared_ptr<Container>& node)
             sub_nodes.push_back(sub_node);
             sub_node->set_parent(as_parent(shared_from_this()));
         }
-        set_direction(dying_lane->get_direction());
+        set_layout(dying_lane->get_direction());
     }
 
     relayout();
@@ -502,7 +522,7 @@ void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_pare
 void ParentContainer::relayout()
 {
     auto placement_area = get_logical_area();
-    if (direction == NodeLayoutDirection::horizontal)
+    if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
         for (auto const& node : sub_nodes)
@@ -520,7 +540,7 @@ void ParentContainer::relayout()
             node->set_logical_area(rectangle);
         }
     }
-    else
+    else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
         for (auto const& node : sub_nodes)
@@ -537,6 +557,15 @@ void ParentContainer::relayout()
             rectangle.size.height = geom::Height { rectangle.size.height.as_int() + diff_per_node };
             node->set_logical_area(rectangle);
         }
+    }
+    else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
+    {
+        for (auto const& node : sub_nodes)
+            node->set_logical_area(placement_area);
+    }
+    else
+    {
+        mir::log_error("Invalid scheme during relayout");
     }
 
     // Note that it is important to use the logical_area here instead of the placement area
@@ -575,14 +604,29 @@ bool ParentContainer::toggle_fullscreen()
 
 void ParentContainer::request_horizontal_layout()
 {
+    scheme = LayoutScheme::horizontal;
+    relayout();
 }
 
 void ParentContainer::request_vertical_layout()
 {
+    scheme = LayoutScheme::vertical;
+    relayout();
 }
 
-void ParentContainer::toggle_layout()
+void ParentContainer::toggle_layout(bool cycle_thru_all)
 {
+    if (cycle_thru_all)
+        scheme = get_next_layout(scheme);
+    else
+    {
+        if (scheme == LayoutScheme::vertical)
+            scheme == LayoutScheme::horizontal;
+        else if (scheme == LayoutScheme::horizontal)
+            scheme = LayoutScheme::vertical;
+    }
+
+    relayout();
 }
 
 void ParentContainer::set_tree(TilingWindowTree* tree_)
@@ -592,6 +636,14 @@ void ParentContainer::set_tree(TilingWindowTree* tree_)
 
 void ParentContainer::on_focus_gained()
 {
+    if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
+    {
+        for (auto const& container : sub_nodes)
+        {
+            if (container != state.active && container->window())
+                node_interface.send_to_back(container->window().value());
+        }
+    }
 }
 
 void ParentContainer::on_focus_lost()
@@ -710,4 +762,111 @@ bool ParentContainer::move_to(int x, int y)
 bool ParentContainer::is_fullscreen() const
 {
     return false;
+}
+
+bool ParentContainer::toggle_tabbing()
+{
+    if (scheme == LayoutScheme::tabbing)
+        scheme = LayoutScheme::horizontal;
+    else
+        scheme = LayoutScheme::tabbing;
+
+    relayout();
+    return true;
+}
+
+bool ParentContainer::toggle_stacking()
+{
+    if (scheme == LayoutScheme::stacking)
+        scheme = LayoutScheme::horizontal;
+    else
+        scheme = LayoutScheme::stacking;
+
+    relayout();
+    return true;
+}
+
+bool ParentContainer::set_layout(LayoutScheme new_scheme)
+{
+    scheme = new_scheme;
+    relayout();
+    constrain();
+    commit_changes();
+    return true;
+}
+
+LayoutScheme ParentContainer::get_layout() const
+{
+    return scheme;
+}
+
+nlohmann::json ParentContainer::to_json() const
+{
+    auto const visible_area = get_visible_area();
+    auto const logical_area = get_logical_area();
+    nlohmann::json containers_json;
+    for (auto const& container : sub_nodes)
+
+        containers_json.push_back(container->to_json());
+    auto workspace = get_workspace();
+    auto output = get_output();
+    auto locked_parent = parent.lock();
+    bool visible = true;
+    if (!output->is_active())
+        visible = false;
+
+    if (output->get_active_workspace_num() != workspace->get_workspace())
+        visible = false;
+
+    if (locked_parent == nullptr)
+        visible = false;
+
+    auto const id = reinterpret_cast<std::uintptr_t>(this);
+    return {
+        { "id",                   id                                                                                                                                                                                                                                      },
+        { "name",                 "Parent #" + std::to_string(id)                                                                                                                                                                                                         },
+        { "rect",                 {
+                      { "x", logical_area.top_left.x.as_int() },
+                      { "y", logical_area.top_left.y.as_int() },
+                      { "width", logical_area.size.width.as_int() },
+                      { "height", logical_area.size.height.as_int() },
+                  }                                                                                                                                                                                                                                      },
+        { "focused",              is_focused()                                                                                                                                                                                                                            },
+        { "focus",                std::vector<int>()                                                                                                                                                                                                                      },
+        { "border",               "none"                                                                                                                                                                                                                                  },
+        { "current_border_width", 0                                                                                                                                                                                                                                       },
+        { "layout",               to_string(scheme)                                                                                                                                                                                                                       },
+        { "orientation",          "none"                                                                                                                                                                                                                                  },
+        { "percent",              get_percent_of_parent()                                                                                                                                                                                                                 },
+        { "window_rect",          {
+                                                                                                                                                                                                                                                    { "x", visible_area.top_left.x.as_int() },
+                                                                                                                                                                                                                                                    { "y", visible_area.top_left.y.as_int() },
+                                                                                                                                                                                                                                                    { "width", visible_area.size.width.as_int() },
+                                                                                                                                                                                                                                                    { "height", visible_area.size.height.as_int() },
+                                                                                                                                                                                                                                                } },
+        { "deco_rect",            {
+                           { "x", 0 },
+                           { "y", 0 },
+                           { "width", logical_area.size.width.as_int() },
+                           { "height", logical_area.size.height.as_int() },
+                       }                                                                                                                                                                                                                            },
+        { "geometry",             {
+                          { "x", 0 },
+                          { "y", 0 },
+                          { "width", logical_area.size.width.as_int() },
+                          { "height", logical_area.size.height.as_int() },
+                      }                                                                                                                                                                                                                              },
+        { "window",               0                                                                                                                                                                                                                                       }, // TODO
+        { "urgent",               false                                                                                                                                                                                                                                   },
+        { "floating_nodes",       std::vector<int>()                                                                                                                                                                                                                      },
+        { "sticky",               false                                                                                                                                                                                                                                   },
+        { "type",                 "con"                                                                                                                                                                                                                                   },
+        { "fullscreen_mode",      is_fullscreen() ? 1 : 0                                                                                                                                                                                                                 }, // TODO: Support value 2
+        { "visible",              visible                                                                                                                                                                                                                                 },
+        { "shell",                "miracle-wm"                                                                                                                                                                                                                            }, // TODO
+        { "inhibit_idle",         false                                                                                                                                                                                                                                   },
+        { "idle_inhibitors",      {}                                                                                                                                                                                                                                      },
+        { "window_properties",    {}                                                                                                                                                                                                                                      }, // TODO
+        { "nodes",                containers_json                                                                                                                                                                                                                         }
+    };
 }

@@ -1,11 +1,22 @@
 import pytest
+import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import os
 
-@pytest.fixture()
+class Server:
+    def __init__(self, ipc: str, wayland: str) -> None:
+        self.ipc = ipc
+        self.wayland = wayland
+
+    def open_app(self, command: str):
+        my_env = os.environ.copy()
+        my_env['WAYLAND_DISPLAY'] = self.wayland
+        return subprocess.Popen([command], env=my_env)
+
+@pytest.fixture(scope="function")
 def server():
     if "MIRACLE_IPC_TEST_USE_ENV" in os.environ:
-        yield os.environ["SWAYSOCK"]
+        yield Server(os.environ["SWAYSOCK"], os.environ["WAYLAND_DISPLAY"])
         return
     
     command = "miracle-wm"
@@ -18,17 +29,22 @@ def server():
                     env=env, stdout=PIPE, stderr=STDOUT)
     
     socket = ""
-    to_find = "Listening to IPC socket on path: "
+    to_find = "Listening to IPC socket on path: "   
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             data = line.decode("utf-8").strip()
-            print(data)
+            # print(data)
             if to_find in data:
                 i = data.index(to_find)
                 i = i + len(to_find)
                 socket = data[i:].strip()
                 break
 
-        yield socket
+        yield Server(socket, env["WAYLAND_DISPLAY"])
+
+        # for line in iter(process.stdout.readline, b''):
+        #     data = line.decode("utf-8").strip()
+        #     print(data)
+
         process.terminate()
         return
