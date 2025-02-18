@@ -302,9 +302,7 @@ std::vector<std::shared_ptr<WorkspaceInterface>> WorkspaceManager::workspaces() 
     {
         for (auto const& w : output->get_workspaces())
         {
-            insert_sorted(result, w, [](
-                std::shared_ptr<WorkspaceInterface> const& a,
-                std::shared_ptr<WorkspaceInterface> const& b)
+            insert_sorted(result, w, [](std::shared_ptr<WorkspaceInterface> const& a, std::shared_ptr<WorkspaceInterface> const& b)
             {
                 if (a->num() && b->num())
                     return a->num().value() < b->num().value();
