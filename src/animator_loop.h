@@ -54,7 +54,6 @@ private:
     std::shared_ptr<Animator> animator;
     std::thread run_thread;
     bool running = false;
-    std::chrono::duration<float> delta_time;
 };
 
 class ServerActionQueueAnimatorLoop : public AnimatorLoop

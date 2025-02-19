@@ -423,7 +423,7 @@ void Animator::tick(float dt)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
 
-    for (auto& item : active)
+    for (auto const& item : active)
     {
         if (item->is_going_to_great_animator_in_the_sky())
             continue;
