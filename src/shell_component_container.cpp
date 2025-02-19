@@ -147,6 +147,10 @@ void ShellComponentContainer::on_move_to(mir::geometry::Point const& top_left)
 {
 }
 
+void ShellComponentContainer::on_resize(mir::geometry::Size const&)
+{
+}
+
 mir::geometry::Rectangle
 ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {

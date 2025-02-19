@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container_group_container.h"
 #include "compositor_state.h"
+#include "mir/geometry/forward.h"
 #include "output_interface.h"
 #include "workspace_interface.h"
 
@@ -244,6 +245,10 @@ void ContainerGroupContainer::on_focus_lost()
 }
 
 void ContainerGroupContainer::on_move_to(mir::geometry::Point const& top_left)
+{
+}
+
+void ContainerGroupContainer::on_resize(mir::geometry::Size const& size)
 {
 }
 

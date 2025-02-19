@@ -97,6 +97,7 @@ public:
     virtual void on_focus_gained() = 0;
     virtual void on_focus_lost() = 0;
     virtual void on_move_to(geom::Point const& top_left) = 0;
+    virtual void on_resize(geom::Size const& size) = 0;
     virtual mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&)
         = 0;
