@@ -48,6 +48,7 @@ void RenderDataManager::add(Container const& container)
     if (container.window() == std::nullopt)
         return;
 
+    std::lock_guard lock(mutex);
     render_data.emplace_back(RenderData {
         .surface = container.window()->operator std::shared_ptr<mir::scene::Surface>().get(),
         .needs_outline = needs_outline(container),
@@ -58,6 +59,7 @@ void RenderDataManager::add(Container const& container)
 
 void RenderDataManager::transform_change(Container const& container)
 {
+    std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
         if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
@@ -70,6 +72,7 @@ void RenderDataManager::transform_change(Container const& container)
 
 void RenderDataManager::workspace_transform_change(Container const& container)
 {
+    std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
         if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
@@ -82,6 +85,7 @@ void RenderDataManager::workspace_transform_change(Container const& container)
 
 void RenderDataManager::focus_change(Container const& container)
 {
+    std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
         if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
@@ -94,6 +98,7 @@ void RenderDataManager::focus_change(Container const& container)
 
 void RenderDataManager::remove(Container const& container)
 {
+    std::lock_guard lock(mutex);
     render_data.erase(std::remove_if(render_data.begin(), render_data.end(), [&](RenderData const& data)
     {
         return data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get();
@@ -107,9 +112,8 @@ std::vector<RenderData> const& RenderDataManager::get()
     copy_for_renderer.clear();
     if (render_data.capacity() > copy_for_renderer.capacity())
         copy_for_renderer.reserve(render_data.capacity());
-    std::copy(
-        render_data.begin(),
-        render_data.end(),
+    std::ranges::copy(render_data
+        ,
         std::back_inserter(copy_for_renderer));
     return copy_for_renderer;
 }
