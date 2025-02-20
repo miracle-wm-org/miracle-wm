@@ -67,6 +67,7 @@ public:
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(mir::geometry::Point const& top_left) override;
+    void on_resize(mir::geometry::Size const& size) override;
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
     WorkspaceInterface* get_workspace() const override;

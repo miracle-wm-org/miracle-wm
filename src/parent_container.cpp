@@ -709,6 +709,10 @@ void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
 {
 }
 
+void ParentContainer::on_resize(geom::Size const& size)
+{
+}
+
 mir::geometry::Rectangle
 ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
 {

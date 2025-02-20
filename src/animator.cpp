@@ -423,7 +423,7 @@ void Animator::tick(float dt)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
 
-    for (auto& item : active)
+    for (auto const& item : active)
     {
         if (item->is_going_to_great_animator_in_the_sky())
             continue;
@@ -436,11 +436,10 @@ void Animator::tick(float dt)
             item->mark_for_great_animator_in_the_sky();
     }
 
-    active.erase(std::remove_if(active.begin(), active.end(), [](std::shared_ptr<Animation> const& animation)
+    std::erase_if(active, [](std::shared_ptr<Animation> const& animation)
     {
         return animation->is_going_to_great_animator_in_the_sky();
-    }),
-        active.end());
+    });
 }
 
 void Animator::set_size_hack(AnimationHandle handle, mir::geometry::Size const& size)

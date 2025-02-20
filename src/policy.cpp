@@ -509,6 +509,19 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
     container->on_move_to(top_left);
 }
 
+void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
+{
+    std::lock_guard lock(self->mutex);
+    auto container = window_controller->get_container(window_info.window());
+    if (!container)
+    {
+        mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
+        return;
+    }
+
+    container->on_resize(new_size);
+}
+
 void Policy::advise_output_create(miral::Output const& output)
 {
     std::lock_guard lock(self->mutex);

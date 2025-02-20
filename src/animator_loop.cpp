@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator_loop.h"
 #include "animator.h"
 
+#include <iostream>
 #include <mir/server_action_queue.h>
 
 using namespace miracle;
@@ -50,26 +51,34 @@ void ThreadedAnimatorLoop::stop()
 
 void ThreadedAnimatorLoop::run()
 {
-    using clock = std::chrono::high_resolution_clock;
-    constexpr std::chrono::nanoseconds timestep(16ms);
-    auto last_time = clock::now();
+    using clock = std::chrono::steady_clock;
+    constexpr float target_fps = 60.f;
+    constexpr float target_ms = 1000.f / target_fps;
+    constexpr float dt = 1.f / target_fps;
+    constexpr std::chrono::duration<float, std::milli> frame_duration(target_ms);
     running = true;
 
     while (running)
     {
+        auto frame_start = clock::now();
         {
             std::unique_lock lock(animator->get_lock());
             if (!animator->has_animations())
             {
                 animator->get_cv().wait(lock);
-                last_time = clock::now();
+                frame_start = clock::now();
             }
         }
 
-        delta_time = clock::now() - last_time;
-        last_time = clock::now();
-        animator->tick(delta_time.count());
-        std::this_thread::sleep_for(1ms);
+        animator->tick(dt);
+
+        auto frame_end = clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
+
+        if (elapsed < frame_duration)
+        {
+            std::this_thread::sleep_for(frame_duration - elapsed);
+        }
     }
 }
 

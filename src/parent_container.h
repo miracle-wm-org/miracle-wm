@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "layout_scheme.h"
+#include "mir/geometry/forward.h"
 #include "miral/window_specification.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
@@ -87,6 +88,7 @@ public:
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(mir::geometry::Point const& top_left) override;
+    void on_resize(mir::geometry::Size const&) override;
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
     ContainerType get_type() const override;

@@ -258,10 +258,6 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     /// Note: This request comes from the client, so we may accept or ignore whatever
     /// it is that we find here.
     auto mods = modifications;
-
-    if (mods.size().is_set())
-        window_controller->set_size_hack(animation_handle_, mods.size().value());
-
     auto visible_area = get_visible_area();
     auto state = window_controller->get_state(window_);
     if (mods.state().is_set())
@@ -508,6 +504,11 @@ void LeafContainer::on_focus_lost()
 
 void LeafContainer::on_move_to(geom::Point const&)
 {
+}
+
+void LeafContainer::on_resize(geom::Size const& size)
+{
+    window_controller->set_size_hack(animation_handle_, size);
 }
 
 bool LeafContainer::is_fullscreen() const
