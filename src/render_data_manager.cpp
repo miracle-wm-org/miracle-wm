@@ -112,8 +112,7 @@ std::vector<RenderData> const& RenderDataManager::get()
     copy_for_renderer.clear();
     if (render_data.capacity() > copy_for_renderer.capacity())
         copy_for_renderer.reserve(render_data.capacity());
-    std::ranges::copy(render_data
-        ,
+    std::ranges::copy(render_data,
         std::back_inserter(copy_for_renderer));
     return copy_for_renderer;
 }

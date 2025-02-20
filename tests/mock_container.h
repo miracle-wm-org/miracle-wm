@@ -55,6 +55,7 @@ namespace test
         MOCK_METHOD(void, on_focus_gained, (), (override));
         MOCK_METHOD(void, on_focus_lost, (), (override));
         MOCK_METHOD(void, on_move_to, (geom::Point const&), (override));
+        MOCK_METHOD(void, on_resize, (geom::Size const&), (override));
         MOCK_METHOD(mir::geometry::Rectangle, confirm_placement, (MirWindowState, mir::geometry::Rectangle const&), (override));
         MOCK_METHOD(WorkspaceInterface*, get_workspace, (), (const, override));
         MOCK_METHOD(void, set_workspace, (WorkspaceInterface*), (override));

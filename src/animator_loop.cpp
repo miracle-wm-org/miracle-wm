@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator_loop.h"
 #include "animator.h"
 
-#include <mir/server_action_queue.h>
 #include <iostream>
+#include <mir/server_action_queue.h>
 
 using namespace miracle;
 using namespace std::chrono_literals;
@@ -75,7 +75,8 @@ void ThreadedAnimatorLoop::run()
         auto frame_end = clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
 
-        if (elapsed < frame_duration) {
+        if (elapsed < frame_duration)
+        {
             std::this_thread::sleep_for(frame_duration - elapsed);
         }
     }

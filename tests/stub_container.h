@@ -144,6 +144,10 @@ namespace test
         {
         }
 
+        void on_resize(mir::geometry::Size const& size) override
+        {
+        }
+
         mir::geometry::Rectangle confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override
         {
             return {};
