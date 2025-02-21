@@ -65,11 +65,12 @@ public:
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current);
+    virtual ~Animation() = default;
 
     Animation& operator=(Animation const& other) = default;
 
     AnimationStepResult init();
-    AnimationStepResult step(float const dt);
+    AnimationStepResult step(float dt);
     [[nodiscard]] AnimationHandle get_handle() const { return handle; }
     float get_runtime_seconds() const { return runtime_seconds; }
     void set_current_size(mir::geometry::Size const& size);

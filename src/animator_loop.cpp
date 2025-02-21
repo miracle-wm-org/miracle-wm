@@ -52,7 +52,7 @@ void ThreadedAnimatorLoop::stop()
 void ThreadedAnimatorLoop::run()
 {
     using clock = std::chrono::steady_clock;
-    constexpr float target_fps = 60.f;
+    constexpr float target_fps = 120.f;
     constexpr float target_ms = 1000.f / target_fps;
     constexpr float dt = 1.f / target_fps;
     constexpr std::chrono::duration<float, std::milli> frame_duration(target_ms);
@@ -92,13 +92,13 @@ ServerActionQueueAnimatorLoop::ServerActionQueueAnimatorLoop(
 
 ServerActionQueueAnimatorLoop::~ServerActionQueueAnimatorLoop()
 {
-    stop();
+    ServerActionQueueAnimatorLoop::stop();
 }
 
 void ServerActionQueueAnimatorLoop::start()
 {
     running = true;
-    using clock = std::chrono::high_resolution_clock;
+    using clock = std::chrono::steady_clock;
     last_time = clock::now();
     run();
 }
@@ -116,7 +116,7 @@ void ServerActionQueueAnimatorLoop::run()
     if (!running)
         return;
 
-    using clock = std::chrono::high_resolution_clock;
+    using clock = std::chrono::steady_clock;
     delta_time = clock::now() - last_time;
     last_time = clock::now();
     animator->tick(delta_time.count());

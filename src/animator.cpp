@@ -31,17 +31,17 @@ namespace geom = mir::geometry;
 
 namespace
 {
-inline glm::vec2 to_glm_vec2(mir::geometry::Point const& p)
+glm::vec2 to_glm_vec2(mir::geometry::Point const& p)
 {
     return { p.x.as_int(), p.y.as_int() };
 }
 
-inline float get_percent_complete(float target, float real)
+float get_percent_complete(float const target, float const real)
 {
     if (target == 0)
         return 1.f;
 
-    float percent = real / target;
+    float const percent = real / target;
     if (std::isinf(percent) != 0 || percent > 1.f)
         return 1.f;
     else
@@ -68,7 +68,7 @@ float ease_out_bounce(AnimationDefinition const& defintion, float x)
     }
 }
 
-inline float ease(AnimationDefinition const& defintion, float t)
+float ease(AnimationDefinition const& defintion, float t)
 {
     // https://easings.net/
     switch (defintion.function)
@@ -76,11 +76,11 @@ inline float ease(AnimationDefinition const& defintion, float t)
     case EaseFunction::linear:
         return t;
     case EaseFunction::ease_in_sine:
-        return 1 - cosf((t * M_PI) / 2.f);
+        return 1 - cosf((t * M_PIf) / 2.f);
     case EaseFunction::ease_in_out_sine:
-        return -(cosf(M_PI * t) - 1) / 2;
+        return -(cosf(M_PIf * t) - 1) / 2;
     case EaseFunction::ease_out_sine:
-        return sinf((t * M_PI) / 2.f);
+        return sinf((t * M_PIf) / 2.f);
     case EaseFunction::ease_in_quad:
         return t * t;
     case EaseFunction::ease_out_quad:
@@ -167,9 +167,9 @@ inline float ease(AnimationDefinition const& defintion, float t)
     }
 }
 
-inline float interpolate_scale(float p, float start, float end)
+float interpolate_scale(float const p, float const start, float const end)
 {
-    float diff = end - start;
+    float const diff = end - start;
     if (diff == 0)
         return 1.f;
 
@@ -177,17 +177,17 @@ inline float interpolate_scale(float p, float start, float end)
     // to the [start] value. For example, if we are growing from 200
     // to 250, and p=0.5, then we should be at width 225, which would
     // be a scale up of 225 / 220;
-    float current = start + diff * p;
+    float const current = start + diff * p;
     return current / end;
 }
 
-inline float interpolate_scale2(float p, float start, float end, float real)
+float interpolate_scale2(float const p, float const start, float const end, float const real)
 {
-    float diff = end - start;
+    float const diff = end - start;
     if (diff == 0)
         return 1.f;
 
-    float current = start + diff * p;
+    float const current = start + diff * p;
     return current / real;
 }
 
@@ -209,8 +209,8 @@ struct SlideResult
 inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle const& to, geom::Size const& committed_size)
 {
     auto const distance = to.top_left - from.top_left;
-    float const dx = (float)distance.dx.as_int() * p;
-    float const dy = (float)distance.dy.as_int() * p;
+    float const dx = static_cast<float>(distance.dx.as_int()) * p;
+    float const dy = static_cast<float>(distance.dy.as_int()) * p;
 
     float const clip_scale_x = interpolate_scale(p, static_cast<float>(from.size.width.as_value()), static_cast<float>(to.size.width.as_value()));
     float const clip_scale_y = interpolate_scale(p, static_cast<float>(from.size.height.as_value()), static_cast<float>(to.size.height.as_value()));
@@ -236,8 +236,8 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
         static_cast<float>(committed_size.height.as_value()));
 
     return {
-        .position = glm::vec2(from.top_left.x.as_int() + dx, from.top_left.y.as_int() + dy),
-        .clip_area_size = glm::vec2(to.size.width.as_int() * clip_scale_x, to.size.height.as_int() * clip_scale_y),
+        .position = glm::vec2(static_cast<float>(from.top_left.x.as_int()) + dx, static_cast<float>(from.top_left.y.as_int()) + dy),
+        .clip_area_size = glm::vec2(static_cast<float>(to.size.width.as_int()) * clip_scale_x, static_cast<float>(to.size.height.as_int()) * clip_scale_y),
         .transform = glm::scale(glm::mat4(1.0), glm::vec3(real_scale_x, real_scale_y, 0.f))
     };
 }
@@ -321,7 +321,7 @@ AnimationStepResult Animation::init()
     }
 }
 
-AnimationStepResult Animation::step(float const dt)
+AnimationStepResult Animation::step(float dt)
 {
     runtime_seconds += dt;
     float const t = (runtime_seconds / definition.duration_seconds);
@@ -336,29 +336,29 @@ AnimationStepResult Animation::step(float const dt)
     case AnimationType::slide:
     {
         auto const p = ease(definition, t);
-        auto const result = slide(p, from, to, real_size);
-        clip_area.top_left.x = geom::X { result.position.x };
-        clip_area.top_left.y = geom::Y { result.position.y };
-        clip_area.size.width = geom::Width { result.clip_area_size.x };
-        clip_area.size.height = geom::Height { result.clip_area_size.y };
+        const auto [position, clip_area_size, transform] = slide(p, from, to, real_size);
+        clip_area.top_left.x = geom::X { position.x };
+        clip_area.top_left.y = geom::Y { position.y };
+        clip_area.size.width = geom::Width { clip_area_size.x };
+        clip_area.size.height = geom::Height { clip_area_size.y };
         return {
             handle,
             false,
             clip_area,
-            result.position,
+            position,
             std::nullopt,
-            result.transform
+            transform
         };
     }
     case AnimationType::grow:
     {
-        auto p = ease(definition, t);
-        glm::vec3 translate(
-            (float)to.size.width.as_value() / 2.f,
-            (float)to.size.height.as_value() / 2.f,
+        auto const p = ease(definition, t);
+        glm::vec3 const translate(
+            static_cast<float>(to.size.width.as_value()) / 2.f,
+            static_cast<float>(to.size.height.as_value()) / 2.f,
             0);
-        auto inverse_translate = -translate;
-        glm::mat4 transform = glm::translate(
+        auto const inverse_translate = -translate;
+        glm::mat4 const transform = glm::translate(
             glm::scale(
                 glm::translate(translate),
                 glm::vec3(p, p, 1.f)),
@@ -367,13 +367,13 @@ AnimationStepResult Animation::step(float const dt)
     }
     case AnimationType::shrink:
     {
-        auto p = 1.f - ease(definition, t);
-        glm::vec3 translate(
-            (float)to.size.width.as_value() / 2.f,
-            (float)to.size.height.as_value() / 2.f,
+        auto const p = 1.f - ease(definition, t);
+        glm::vec3 const translate(
+            static_cast<float>(to.size.width.as_value()) / 2.f,
+            static_cast<float>(to.size.height.as_value()) / 2.f,
             0);
-        auto inverse_translate = -translate;
-        glm::mat4 transform = glm::translate(
+        auto const inverse_translate = -translate;
+        glm::mat4 const transform = glm::translate(
             glm::scale(
                 glm::translate(translate),
                 glm::vec3(p, p, 1.f)),
@@ -409,7 +409,7 @@ AnimationHandle Animator::register_animateable()
 void Animator::append(std::shared_ptr<Animation> const& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto& other : active)
+    for (auto const& other : active)
     {
         if (other->get_handle() == animation->get_handle())
             other->mark_for_great_animator_in_the_sky();
@@ -446,17 +446,17 @@ void Animator::set_size_hack(AnimationHandle handle, mir::geometry::Size const& 
 {
     std::lock_guard<std::mutex> lock(processing_lock);
 
-    for (auto& animation : active)
+    for (auto const& animation : active)
     {
         if (animation->get_handle() == handle)
             animation->set_current_size(size);
     }
 }
 
-void Animator::remove_by_animation_handle(miracle::AnimationHandle handle)
+void Animator::remove_by_animation_handle(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto& animation : active)
+    for (auto const& animation : active)
     {
         if (animation->get_handle() == handle)
             animation->mark_for_great_animator_in_the_sky();
