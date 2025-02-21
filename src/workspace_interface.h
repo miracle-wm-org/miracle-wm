@@ -74,8 +74,6 @@ public:
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
-    virtual void select_first_window() = 0;
-
     [[nodiscard]] virtual OutputInterface* get_output() const = 0;
 
     virtual void set_output(OutputInterface*) = 0;

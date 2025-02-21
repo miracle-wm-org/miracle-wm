@@ -249,7 +249,6 @@ bool WorkspaceManager::request_focus(uint32_t id)
         registry->advise_focused(std::nullopt, id);
 
     existing->get_output()->advise_workspace_active(*this, id);
-    existing->select_first_window();
     return true;
 }
 

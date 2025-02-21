@@ -58,8 +58,6 @@ namespace test
 
         MOCK_METHOD(void, advise_focus_gained, (std::shared_ptr<Container> const& container), (override));
 
-        MOCK_METHOD(void, select_first_window, (), (override));
-
         MOCK_METHOD(OutputInterface*, get_output, (), (const, override));
 
         MOCK_METHOD(void, set_output, (OutputInterface*), (override));
