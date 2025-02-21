@@ -73,7 +73,7 @@ private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     bool running = false;
     std::chrono::duration<float> delta_time;
-    std::chrono::system_clock::time_point last_time;
+    std::chrono::steady_clock::time_point last_time;
 };
 }
 

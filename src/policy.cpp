@@ -113,7 +113,7 @@ Policy::Policy(
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
-    animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
+    animator_loop(std::make_unique<ServerActionQueueAnimatorLoop>(animator, server.the_main_loop())),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
             state,

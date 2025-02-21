@@ -1184,7 +1184,7 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
          },
         {
          AnimationType::slide,
-         EaseFunction::ease_in_out_back,
+         EaseFunction::linear,
          0.25f,
          },
         {
