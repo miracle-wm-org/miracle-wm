@@ -228,6 +228,15 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show()
 {
+    if (auto const last_selected = last_selected_container.lock())
+    {
+        /// The BasicWindowManager will attempt to show a window that is being shown if one is
+        /// not selected. Hence, we always show and try to select the last selected window
+        /// first so that we don't accidentally show the first window on the workspace.
+        last_selected->show();
+        if (last_selected->window().has_value())
+            window_controller->select_active_window(last_selected->window().value());
+    }
     root->show();
     for (auto const& floating : floating_trees)
         floating->show();
@@ -386,38 +395,6 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
             MoveResult::traversal_type_append,
             root
         };
-}
-
-void Workspace::select_first_window()
-{
-    // Check if the selected container is already on this workspace
-    if (state->focused_container() && state->focused_container()->get_workspace() == this)
-        return;
-
-    // First, try and select the previously selected container if it is still around
-    if (!last_selected_container.expired())
-    {
-        for_each_window([&](std::shared_ptr<Container> const& container)
-        {
-            if (container == last_selected_container.lock())
-            {
-                window_controller->select_active_window(container->window().value());
-                return true;
-            }
-
-            return false;
-        });
-    }
-
-    if (!for_each_window([&](std::shared_ptr<Container> const& container)
-    {
-        window_controller->select_active_window(container->window().value());
-        return true;
-    }))
-    {
-        // If all fails, select nothing
-        window_controller->select_active_window(miral::Window {});
-    }
 }
 
 OutputInterface* Workspace::get_output() const

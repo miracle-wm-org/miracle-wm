@@ -62,7 +62,6 @@ public:
     bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
-    void select_first_window() override;
     OutputInterface* get_output() const override;
     void set_output(OutputInterface*) override;
     void workspace_transform_change_hack() override;
