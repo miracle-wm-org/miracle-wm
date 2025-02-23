@@ -240,3 +240,15 @@ INSTANTIATE_TEST_SUITE_P(
     LeafContainerMaximizedTest,
     LeafContainerMaximizedTest,
     ::testing::Values(mir_window_state_maximized, mir_window_state_vertmaximized, mir_window_state_horizmaximized));
+
+TEST_F(LeafContainerTest, ShowingContainerCausesRaise)
+{
+    EXPECT_CALL(*window_controller, raise(testing::_));
+    leaf_container->show();
+}
+
+TEST_F(LeafContainerTest, HidingContainerCausesSendToBack)
+{
+    EXPECT_CALL(*window_controller, send_to_back(testing::_));
+    leaf_container->hide();
+}
