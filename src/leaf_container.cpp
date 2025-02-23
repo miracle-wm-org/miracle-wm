@@ -269,6 +269,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
         case mir_window_state_horizmaximized:
         case mir_window_state_vertmaximized:
         case mir_window_state_minimized:
+        case mir_window_state_hidden: // Hidden window requests form the client are NOT respected.
             mods.state() = mir_window_state_restored;
             break;
         default:
