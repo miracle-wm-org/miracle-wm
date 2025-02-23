@@ -239,6 +239,7 @@ miral::WindowSpecification ParentContainer::place_new_window(
         case mir_window_state_maximized:
         case mir_window_state_horizmaximized:
         case mir_window_state_vertmaximized:
+        case mir_window_state_minimized:
             new_spec.state() = mir_window_state_restored;
             break;
         default:

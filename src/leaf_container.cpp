@@ -268,6 +268,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
         case mir_window_state_maximized:
         case mir_window_state_horizmaximized:
         case mir_window_state_vertmaximized:
+        case mir_window_state_minimized:
             mods.state() = mir_window_state_restored;
             break;
         default:
