@@ -195,6 +195,22 @@ TEST_F(LeafContainerTest, IfParentIsUnanchoredThenParentCanBeResizedDown)
     leaf_container->resize(Direction::down, 20);
 }
 
+TEST_F(LeafContainerTest, IfModifyingWindowToFullScreenThenNoclipIsCalled)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+    EXPECT_CALL(*window_controller, noclip(testing::_));
+    leaf_container->handle_modify(spec);
+}
+
+TEST_F(LeafContainerTest, IfModifyingWindowToRestoredThenClipIsCalled)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_restored;
+    EXPECT_CALL(*window_controller, clip(testing::_, testing::_));
+    leaf_container->handle_modify(spec);
+}
+
 namespace
 {
 bool has_restored_state(miral::WindowSpecification const& spec)
