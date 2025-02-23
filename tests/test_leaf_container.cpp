@@ -239,7 +239,7 @@ TEST_P(LeafContainerMaximizedTest, CannotMaximizeWindowInHandleModify)
 INSTANTIATE_TEST_SUITE_P(
     LeafContainerMaximizedTest,
     LeafContainerMaximizedTest,
-    ::testing::Values(mir_window_state_maximized, mir_window_state_vertmaximized, mir_window_state_horizmaximized, mir_window_state_minimized));
+    ::testing::Values(mir_window_state_maximized, mir_window_state_vertmaximized, mir_window_state_horizmaximized, mir_window_state_minimized, mir_window_state_hidden));
 
 TEST_F(LeafContainerTest, ShowingContainerCausesRaise)
 {
