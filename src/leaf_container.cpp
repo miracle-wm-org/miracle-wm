@@ -453,6 +453,7 @@ void LeafContainer::show()
     next_state = before_shown_state;
     before_shown_state.reset();
     commit_changes();
+    window_controller->raise(window_);
 }
 
 void LeafContainer::hide()
@@ -460,6 +461,7 @@ void LeafContainer::hide()
     before_shown_state = window_controller->get_state(window_);
     next_state = mir_window_state_hidden;
     commit_changes();
+    window_controller->send_to_back(window_);
 }
 
 bool LeafContainer::toggle_fullscreen()
