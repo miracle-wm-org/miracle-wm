@@ -114,6 +114,8 @@ private:
     mir::geometry::Rectangle viewport;
     glm::mat4 screen_to_gl_coords;
     glm::mat4 display_transform;
+    double x_scale = 1.f;
+    double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<Config> config;

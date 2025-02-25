@@ -293,10 +293,10 @@ miracle::Renderer::DrawData Renderer::draw(
         clip_pos = display_transform * data.data.workspace_transform * clip_pos;
 
         glScissor(
-            (int)clip_pos.x - viewport.top_left.x.as_int(),
-            (int)clip_pos.y,
-            clip_area.value().size.width.as_int(),
-            clip_area.value().size.height.as_int());
+            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
+            static_cast<int>(clip_pos.y * y_scale),
+            clip_area.value().size.width.as_int() * x_scale,
+            clip_area.value().size.height.as_int() * y_scale);
     }
 
     // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
@@ -560,6 +560,9 @@ void Renderer::update_gl_viewport()
     auto const output_size = output_surface->size();
     int const output_width = output_size.width.as_value();
     int const output_height = output_size.height.as_value();
+
+    x_scale = static_cast<double>(output_width) / viewport_width;
+    y_scale = static_cast<double>(output_height) / viewport_height;
 
     if (viewport_width > 0.0f && viewport_height > 0.0f && output_width > 0 && output_height > 0)
     {
