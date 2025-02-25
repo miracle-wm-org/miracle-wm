@@ -213,7 +213,6 @@ ContainerType ShellComponentContainer::get_type() const
 
 void ShellComponentContainer::on_open()
 {
-    window_controller->open(window_);
 }
 
 std::optional<miral::Window> ShellComponentContainer::window() const

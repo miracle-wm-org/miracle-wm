@@ -98,7 +98,7 @@ private:
     miral::Window window_;
     std::shared_ptr<WindowController> window_controller;
     uint32_t handle_ = 0;
-    glm::mat4 transform_;
+    glm::mat4 transform_ = glm::mat4(1.f);
 };
 
 } // miracle
