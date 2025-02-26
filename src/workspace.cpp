@@ -223,15 +223,22 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 
 void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 {
-    if (!is_animating)
+    if (!is_showing)
         last_selected_container = container;
 }
 
 void Workspace::show()
 {
+    // HACK: miral will try to select a newly visible window if none is currently
+    // selected. In most instances, we do not want this, as we would rather
+    // select our [last_selected_container] instead. To work around this, we set
+    // a flag that tells miral not to select the last focused container while we
+    // are in the process of becoming visible.
+    is_showing = true;
     root->show();
     for (auto const& floating : floating_trees)
         floating->show();
+    is_showing = false;
 }
 
 void Workspace::hide()
@@ -466,13 +473,6 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 
 void Workspace::on_animation_start()
 {
-    is_animating = true;
-}
-
-void Workspace::on_animation_end()
-{
-    is_animating = false;
-
     if (auto const sh_last_selected = last_selected_container.lock())
     {
         if (sh_last_selected->window().has_value())
@@ -490,6 +490,10 @@ void Workspace::on_animation_end()
 
         return false;
     });
+}
+
+void Workspace::on_animation_end()
+{
 }
 
 std::shared_ptr<ParentContainer> Workspace::get_layout_container()

@@ -99,7 +99,7 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> const& state;
     std::shared_ptr<Config> config;
-    bool is_animating = false;
+    bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
     int config_handle = 0;
 

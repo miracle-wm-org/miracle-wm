@@ -264,7 +264,6 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // Note: It is very important that [active_workspace] be modified before notifications
     // are sent out.
     active_workspace = to;
-    to->on_animation_start();
 
     auto from_src = get_workspace_rectangle(from_index);
     from->transfer_pinned_windows_to(to);
@@ -289,6 +288,9 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
     if (!config->are_animations_enabled())
     {
+        to->show();
+        from->hide();
+        to->on_animation_start();
         handle_workspace_animation(
             AnimationStepResult { handle,
                 true,
@@ -298,6 +300,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
                 glm::mat4(1.f) },
             to,
             from);
+        to->on_animation_end();
         return true;
     }
 
@@ -323,6 +326,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
             workspace->show();
     }
 
+    to->on_animation_start();
     return true;
 }
 
