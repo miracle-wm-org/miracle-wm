@@ -116,6 +116,7 @@ Policy::Policy(
     animator_loop(std::make_unique<ServerActionQueueAnimatorLoop>(animator, server.the_main_loop())),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
+            this,
             state,
             config,
             window_controller,
@@ -135,7 +136,8 @@ Policy::Policy(
         runner,
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, workspace_manager, state, *launcher, window_controller),
-        config))
+        config)),
+    main_loop_(server.the_main_loop())
 {
     workspace_observer_registrar->register_interest(ipc);
     workspace_observer_registrar->register_interest(self);
@@ -425,7 +427,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
-        mir::log_error("advise_focus_gained: container is not provided");
+        mir::log_error("Policy::advise_focus_gained: container is not provided");
         return;
     }
 
@@ -438,14 +440,16 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     default:
     {
         auto* workspace = container->get_workspace();
+        if (workspace != output_manager->focused()->active().get())
+        {
+            // TODO: In this scenario, we may want to navigate to the focused workspace.
+            //  This was removed because it breaks workspace animations.
+            mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+            break;
+        }
+
         state->focus_container(container);
         container->on_focus_gained();
-
-        // TODO: This logic was put in place to navigate to the focused
-        //  workspace.
-        // if (workspace && workspace != output_manager->focused()->active())
-        //    workspace_manager->request_focus(workspace->id());
-
         if (workspace)
             workspace->advise_focus_gained(container);
         break;
@@ -624,6 +628,15 @@ void Policy::handle_animation(
     }
 
     window_controller->process_animation(asr, sh_container);
+}
+
+void Policy::handle_workspace_animation(
+    AnimationStepResult const& asr,
+    std::shared_ptr<WorkspaceInterface> const& to,
+    std::shared_ptr<WorkspaceInterface> const& from)
+{
+    std::lock_guard lock(self->mutex);
+    to->get_output()->handle_workspace_animation(asr, to, from);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(

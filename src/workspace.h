@@ -67,6 +67,8 @@ public:
     void workspace_transform_change_hack() override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
+    void on_animation_start() override;
+    void on_animation_end() override;
     [[nodiscard]] uint32_t id() const override { return id_; }
     [[nodiscard]] std::optional<int> num() const override { return num_; }
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
@@ -97,6 +99,7 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> const& state;
     std::shared_ptr<Config> config;
+    bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
     int config_handle = 0;
 
