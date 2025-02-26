@@ -27,7 +27,7 @@ public:
     RenderDataManager render_data_manager;
 };
 
-TEST_F(RenderDataManagerTest, values_are_populated_when_container_added)
+TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
 {
     ::testing::NiceMock<test::MockContainer> container;
     ON_CALL(container, window())
@@ -53,7 +53,7 @@ TEST_F(RenderDataManagerTest, values_are_populated_when_container_added)
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
 }
 
-TEST_F(RenderDataManagerTest, can_change_transform)
+TEST_F(RenderDataManagerTest, CanChangeTransform)
 {
     ::testing::NiceMock<test::MockContainer> container;
     ON_CALL(container, window())
@@ -83,7 +83,7 @@ TEST_F(RenderDataManagerTest, can_change_transform)
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
 }
 
-TEST_F(RenderDataManagerTest, can_change_workspace_transform)
+TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 {
     ::testing::NiceMock<test::MockContainer> container;
     ON_CALL(container, window())
@@ -113,7 +113,7 @@ TEST_F(RenderDataManagerTest, can_change_workspace_transform)
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(2.f));
 }
 
-TEST_F(RenderDataManagerTest, can_change_focus)
+TEST_F(RenderDataManagerTest, CanChangeFocus)
 {
     ::testing::NiceMock<test::MockContainer> container;
     ON_CALL(container, window())

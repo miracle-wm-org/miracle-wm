@@ -33,7 +33,7 @@ class ScratchpadTest : public testing::Test
 public:
 };
 
-TEST_F(ScratchpadTest, can_add_leaf_container_to_scratchpad)
+TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
 {
     auto window_controller = std::make_shared<test::MockWindowController>();
     auto output_factory = std::make_unique<test::MockOutputFactory>();
@@ -53,7 +53,7 @@ TEST_F(ScratchpadTest, can_add_leaf_container_to_scratchpad)
     EXPECT_TRUE(scratchpad.contains(container));
 }
 
-TEST_F(ScratchpadTest, cannot_add_non_leaf_container_to_scratchpad)
+TEST_F(ScratchpadTest, CannotAddNonLeafContainerToScratchpad)
 {
     auto window_controller = std::make_shared<test::MockWindowController>();
     auto output_factory = std::make_unique<test::MockOutputFactory>();
@@ -68,7 +68,7 @@ TEST_F(ScratchpadTest, cannot_add_non_leaf_container_to_scratchpad)
     EXPECT_FALSE(scratchpad.contains(container));
 }
 
-TEST_F(ScratchpadTest, can_show_container)
+TEST_F(ScratchpadTest, CanShowContainer)
 {
     // Setup
     auto window_controller = std::make_shared<test::MockWindowController>();

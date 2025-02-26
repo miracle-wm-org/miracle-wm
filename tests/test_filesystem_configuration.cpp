@@ -380,7 +380,7 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableCanBeParsed)
     EXPECT_EQ(config.get_env_variables().size(), 1);
 }
 
-TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithArrayColors)
+TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithArrayColors)
 {
     YAML::Node border;
     border["size"] = 2;
@@ -415,7 +415,7 @@ TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithArrayColors)
     EXPECT_EQ(config.get_border_config().focus_color.a, 1.f);
 }
 
-TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithHexColor)
+TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithHexColor)
 {
     YAML::Node border;
     border["size"] = 2;
@@ -440,7 +440,7 @@ TEST_F(FilesystemConfigurationTest, BorderCanbeParsedWithHexColor)
     EXPECT_EQ(config.get_border_config().color.a, 1.f);
 }
 
-TEST_F(FilesystemConfigurationTest, BorderCanbeParsedObjectColor)
+TEST_F(FilesystemConfigurationTest, BorderCanBeParsedObjectColor)
 {
     YAML::Node border;
     border["size"] = 2;

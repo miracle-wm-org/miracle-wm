@@ -115,14 +115,14 @@ public:
     Workspace workspace;
 };
 
-TEST_F(WorkspaceTest, can_add_single_window_without_border_and_gaps)
+TEST_F(WorkspaceTest, CanAddSingleWindowWithoutBorderAndGaps)
 {
     auto leaf = create_leaf();
     ASSERT_EQ(leaf->get_logical_area().size, geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT));
     ASSERT_EQ(leaf->get_logical_area().top_left, geom::Point(0, 0));
 }
 
-TEST_F(WorkspaceTest, can_add_two_windows_horizontally_without_border_and_gaps)
+TEST_F(WorkspaceTest, CanAddTwoWindowsHorizontallyWithoutBorderAndGaps)
 {
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf();
@@ -134,7 +134,7 @@ TEST_F(WorkspaceTest, can_add_two_windows_horizontally_without_border_and_gaps)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(OUTPUT_WIDTH / 2.f, 0));
 }
 
-TEST_F(WorkspaceTest, can_add_two_windows_vertically_without_border_and_gaps)
+TEST_F(WorkspaceTest, CanAddTwoWindowsVerticallyWithoutBorderAndGaps)
 {
     auto leaf1 = create_leaf();
     leaf1->request_vertical_layout();
@@ -147,7 +147,7 @@ TEST_F(WorkspaceTest, can_add_two_windows_vertically_without_border_and_gaps)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(0, OUTPUT_HEIGHT / 2.f));
 }
 
-TEST_F(WorkspaceTest, can_add_three_windows_horizontally_without_border_and_gaps)
+TEST_F(WorkspaceTest, CanAddThreeWindowsHorizontallyWithoutBorderAndGaps)
 {
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf();
@@ -163,13 +163,13 @@ TEST_F(WorkspaceTest, can_add_three_windows_horizontally_without_border_and_gaps
     ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(floorf(OUTPUT_WIDTH * (2.f / 3.f)) - 1, 0));
 }
 
-TEST_F(WorkspaceTest, can_start_dragging_a_leaf)
+TEST_F(WorkspaceTest, CanStartDraggingALeaf)
 {
     auto leaf1 = create_leaf();
     ASSERT_TRUE(leaf1->drag_start());
 }
 
-TEST_F(WorkspaceTest, can_drag_a_leaf_to_a_position)
+TEST_F(WorkspaceTest, CanDragALeafToAPosition)
 {
     auto leaf1 = create_leaf();
     leaf1->drag_start();
@@ -179,7 +179,7 @@ TEST_F(WorkspaceTest, can_drag_a_leaf_to_a_position)
     ASSERT_EQ(data.rectangle.top_left.y.as_int(), 50);
 }
 
-TEST_F(WorkspaceTest, can_stop_dragging_a_leaf)
+TEST_F(WorkspaceTest, CanStopDraggingALeaf)
 {
     auto leaf1 = create_leaf();
     leaf1->drag_start();
@@ -190,7 +190,7 @@ TEST_F(WorkspaceTest, can_stop_dragging_a_leaf)
     ASSERT_EQ(data.rectangle.top_left.y.as_int(), 0);
 }
 
-TEST_F(WorkspaceTest, can_move_container_to_sibling)
+TEST_F(WorkspaceTest, CanMoveContainerToSibling)
 {
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf();
@@ -202,7 +202,7 @@ TEST_F(WorkspaceTest, can_move_container_to_sibling)
     ASSERT_EQ(leaf1->get_logical_area().top_left, geom::Point(OUTPUT_WIDTH / 2.f, 0));
 }
 
-TEST_F(WorkspaceTest, can_move_container_to_different_parent)
+TEST_F(WorkspaceTest, CanMoveContainerToDifferentParent)
 {
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf();
@@ -217,7 +217,7 @@ TEST_F(WorkspaceTest, can_move_container_to_different_parent)
     ASSERT_EQ(workspace.get_root()->num_nodes(), 3);
 }
 
-TEST_F(WorkspaceTest, can_move_container_to_container_in_other_tree)
+TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
     Workspace other(
@@ -239,7 +239,7 @@ TEST_F(WorkspaceTest, can_move_container_to_container_in_other_tree)
     ASSERT_EQ(leaf2->get_workspace(), &other);
 }
 
-TEST_F(WorkspaceTest, can_move_container_to_tree)
+TEST_F(WorkspaceTest, CanMoveContainerToTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
     Workspace other(
@@ -258,7 +258,7 @@ TEST_F(WorkspaceTest, can_move_container_to_tree)
     ASSERT_EQ(leaf1->get_logical_area(), OTHER_OUTPUT_SIZE);
 }
 
-TEST_F(WorkspaceTest, dragged_windows_do_not_change_their_position_when_a_new_window_is_added)
+TEST_F(WorkspaceTest, DraggedWindowsDoNotChangeTheirPositionWhenANewWindowIsAdded)
 {
     auto leaf1 = create_leaf();
     leaf1->drag_start();
@@ -269,7 +269,7 @@ TEST_F(WorkspaceTest, dragged_windows_do_not_change_their_position_when_a_new_wi
     ASSERT_EQ(window_controller->get_window_data(leaf1).rectangle.size, geom::Size(OUTPUT_WIDTH / 2.f, OUTPUT_HEIGHT));
 }
 
-TEST_F(WorkspaceTest, dragged_windows_are_unconstrained)
+TEST_F(WorkspaceTest, DraggedWindowsAreUnconstrained)
 {
     auto leaf1 = create_leaf();
     leaf1->drag_start();
@@ -279,13 +279,13 @@ TEST_F(WorkspaceTest, dragged_windows_are_unconstrained)
     ASSERT_EQ(window_controller->get_window_data(leaf1).clip, leaf1->get_visible_area());
 }
 
-TEST_F(WorkspaceTest, workspace_bounds_are_initialized_to_output_size_when_no_app_zones_are_present)
+TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToOutputSizeWhenNoAppZonesArePresent)
 {
     // Assert that the first tree (w/o app zones) is equal to the output size.
     ASSERT_EQ(workspace.get_root()->get_logical_area(), OUTPUT_SIZE);
 }
 
-TEST_F(WorkspaceTest, workspace_bounds_are_initialized_to_first_zone_size_when_app_zones_are_present)
+TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesArePresent)
 {
     auto output = std::make_unique<testing::NiceMock<test::MockOutput>>();
     ON_CALL(*output, get_area())

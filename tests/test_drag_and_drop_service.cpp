@@ -84,7 +84,7 @@ public:
     DragAndDropService service;
 };
 
-TEST_F(DragAndDropServiceTest, can_start_dragging)
+TEST_F(DragAndDropServiceTest, CanStartDragging)
 {
     auto container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     test::MockOutput* mock_output = new test::MockOutput();
@@ -118,7 +118,7 @@ TEST_F(DragAndDropServiceTest, can_start_dragging)
     ASSERT_EQ(state->mode(), WindowManagerMode::dragging);
 }
 
-TEST_F(DragAndDropServiceTest, can_stop_dragging)
+TEST_F(DragAndDropServiceTest, CanStopDragging)
 {
     auto container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     test::MockOutput* mock_output = new test::MockOutput();
@@ -160,7 +160,7 @@ TEST_F(DragAndDropServiceTest, can_stop_dragging)
     ASSERT_EQ(state->mode(), WindowManagerMode::normal);
 }
 
-TEST_F(DragAndDropServiceTest, can_drag_to_other_container)
+TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
 {
     test::MockOutput* mock_output = new test::MockOutput();
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;

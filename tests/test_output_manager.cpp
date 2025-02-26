@@ -30,7 +30,7 @@ class OutputManagerTest : public testing::Test
 {
 };
 
-TEST(OutputManagerTest, create_output_success)
+TEST(OutputManagerTest, CreateOutputSuccess)
 {
     // Arrange
     auto mock_factory = std::make_unique<test::MockOutputFactory>();
@@ -63,7 +63,7 @@ TEST(OutputManagerTest, create_output_success)
     EXPECT_EQ(manager->outputs()[0].get(), mock_output);
 }
 
-TEST(OutputManagerTest, update_output_area)
+TEST(OutputManagerTest, UpdateOutputArea)
 {
     // Arrange
     auto mock_factory = std::make_unique<test::MockOutputFactory>();
@@ -104,7 +104,7 @@ TEST(OutputManagerTest, update_output_area)
     });
 }
 
-TEST(OutputManagerTest, remove_output)
+TEST(OutputManagerTest, RemoveOutput)
 {
     // Arrange
     auto mock_factory = std::make_unique<test::MockOutputFactory>();
@@ -145,7 +145,7 @@ TEST(OutputManagerTest, remove_output)
     EXPECT_EQ(manager->outputs().size(), 1);
 }
 
-TEST(OutputManagerTest, focus_and_unfocus)
+TEST(OutputManagerTest, FocusAndUnfocus)
 {
     // Arrange
     auto mock_factory = std::make_unique<test::MockOutputFactory>();
@@ -191,7 +191,7 @@ TEST(OutputManagerTest, focus_and_unfocus)
     EXPECT_EQ(after_unfocus, nullptr);
 }
 
-TEST(OutputManagerTest, remove_focused_output)
+TEST(OutputManagerTest, RemoveFocusedOutput)
 {
     // Arrange
     auto mock_factory = std::make_unique<test::MockOutputFactory>();

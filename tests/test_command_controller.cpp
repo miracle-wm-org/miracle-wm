@@ -74,7 +74,7 @@ public:
     std::shared_ptr<CommandController> command_controller;
 };
 
-TEST_F(CommandControllerTest, cannot_move_active_to_same_workspace_by_number)
+TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 {
     auto container = std::make_shared<testing::NiceMock<test::MockContainer>>();
     state->add(container);
@@ -89,7 +89,7 @@ TEST_F(CommandControllerTest, cannot_move_active_to_same_workspace_by_number)
     ASSERT_FALSE(command_controller->move_active_to_workspace(1));
 }
 
-TEST_F(CommandControllerTest, cannot_move_active_to_same_workspace_by_name)
+TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 {
     auto container = std::make_shared<testing::NiceMock<test::MockContainer>>();
     state->add(container);
