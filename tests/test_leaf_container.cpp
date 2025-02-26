@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
+#include "container_group_container.h"
 #include "leaf_container.h"
 #include "mir/geometry/forward.h"
 #include "mir_toolkit/common.h"
@@ -251,4 +252,34 @@ TEST_F(LeafContainerTest, HidingContainerCausesSendToBack)
 {
     EXPECT_CALL(*window_controller, send_to_back(testing::_));
     leaf_container->hide();
+}
+
+TEST_F(LeafContainerTest, LeafContainerIsNotFocusedWhenStateHasNoFocusedContainer)
+{
+    EXPECT_FALSE(leaf_container->is_focused());
+}
+
+TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenStateFocusesThisContainer)
+{
+    state->focus_container(leaf_container);
+    EXPECT_TRUE(leaf_container->is_focused());
+}
+
+TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenParentIsFocused)
+{
+    state->focus_container(parent, true);
+    EXPECT_CALL(*parent, is_focused())
+        .WillOnce(testing::Return(true));
+    EXPECT_TRUE(leaf_container->is_focused());
+}
+
+TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenGroupIsFocused)
+{
+    auto container_group_container = std::make_shared<ContainerGroupContainer>(
+        state);
+    state->focus_container(container_group_container, true);
+    container_group_container->add(leaf_container);
+    EXPECT_CALL(*parent, is_focused())
+        .WillOnce(testing::Return(false));
+    EXPECT_TRUE(leaf_container->is_focused());
 }
