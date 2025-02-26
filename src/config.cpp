@@ -1194,7 +1194,7 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
          },
         { AnimationType::slide,
          EaseFunction::ease_out_sine,
-         1.f }
+         0.25f }
     });
     animation_definitions = parsed;
 }
