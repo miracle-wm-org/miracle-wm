@@ -462,3 +462,12 @@ void Animator::remove_by_animation_handle(AnimationHandle handle)
             animation->mark_for_great_animator_in_the_sky();
     }
 }
+
+bool Animator::is_animating(AnimationHandle handle)
+{
+    std::lock_guard<std::mutex> lock(processing_lock);
+    return std::any_of(active.begin(), active.end(), [handle](std::shared_ptr<Animation> const& animation)
+    {
+        return animation->get_handle() == handle;
+    });
+}

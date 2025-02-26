@@ -71,6 +71,10 @@ std::shared_ptr<WorkspaceInterface> Output::active() const
 
 std::shared_ptr<Container> Output::intersect(float x, float y)
 {
+    // If the output is animating, then we can't trust any pointer events.
+    if (animator->is_animating(handle))
+        return nullptr;
+
     if (auto const window = window_controller->window_at(x, y))
         return window_controller->get_container(window);
 
