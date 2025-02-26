@@ -117,6 +117,10 @@ public:
     bool reload_config();
     void set_mode(WindowManagerMode mode);
     void select_container(std::shared_ptr<Container> const&);
+    void on_workspace_animation(
+        AnimationStepResult const& asr,
+        std::shared_ptr<WorkspaceInterface> const& to,
+        std::shared_ptr<WorkspaceInterface> const&);
     [[nodiscard]] nlohmann::json to_json() const;
     [[nodiscard]] nlohmann::json outputs_json() const;
     [[nodiscard]] nlohmann::json workspaces_json() const;

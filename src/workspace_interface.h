@@ -84,6 +84,8 @@ public:
 
     [[nodiscard]] virtual bool is_empty() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;
+    virtual void on_animation_start() = 0;
+    virtual void on_animation_end() = 0;
 
     [[nodiscard]] virtual uint32_t id() const = 0;
     [[nodiscard]] virtual std::optional<int> num() const = 0;

@@ -73,6 +73,8 @@ namespace test
         MOCK_METHOD(std::optional<std::string> const&, name, (), (const, override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
+        MOCK_METHOD(void, on_animation_start, (), (override));
+        MOCK_METHOD(void, on_animation_end, (), (override));
     };
 }
 }

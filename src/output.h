@@ -22,10 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class Policy;
+
 class Output : public OutputInterface
 {
 public:
     Output(
+        Policy* policy,
         std::string name,
         int id,
         geom::Rectangle const& area,
@@ -59,6 +62,10 @@ public:
     void set_info(int id, std::string name) override;
     void set_defunct() override;
     void unset_defunct() override;
+    void handle_workspace_animation(
+        AnimationStepResult const& result,
+        std::shared_ptr<WorkspaceInterface> const& to,
+        std::shared_ptr<WorkspaceInterface> const& from) override;
 
     [[nodiscard]] std::vector<miral::Window> collect_all_windows() const override;
     [[nodiscard]] std::shared_ptr<WorkspaceInterface> active() const override;
@@ -95,12 +102,9 @@ private:
         Output* output;
     };
 
-    void on_workspace_animation(
-        AnimationStepResult const& result,
-        std::shared_ptr<WorkspaceInterface> const& to,
-        std::shared_ptr<WorkspaceInterface> const& from);
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
+    Policy* policy;
     std::string name_;
     int id_;
     std::shared_ptr<CompositorState> state;

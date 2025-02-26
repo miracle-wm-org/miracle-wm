@@ -83,6 +83,11 @@ public:
     /// around to be reassociated with a "true" output.
     virtual void set_defunct() = 0;
     virtual void unset_defunct() = 0;
+    virtual void handle_workspace_animation(
+        AnimationStepResult const& result,
+        std::shared_ptr<WorkspaceInterface> const& to,
+        std::shared_ptr<WorkspaceInterface> const& from)
+        = 0;
 
     // Getters
     [[nodiscard]] virtual std::vector<miral::Window> collect_all_windows() const = 0;

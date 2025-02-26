@@ -179,6 +179,44 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     }
 }
 
+void CommandController::on_workspace_animation(
+    AnimationStepResult const& asr,
+    std::shared_ptr<WorkspaceInterface> const& to,
+    std::shared_ptr<WorkspaceInterface> const&)
+{
+    std::lock_guard lock(mutex);
+    if (asr.is_complete)
+    {
+        if (asr.position)
+            to->get_output()->set_position(asr.position.value());
+        if (asr.transform)
+            to->get_output()->set_transform(asr.transform.value());
+
+        for (auto const& workspace : to->get_output()->get_workspaces())
+        {
+            if (workspace != to)
+                workspace->hide();
+        }
+
+        to->workspace_transform_change_hack();
+        to->on_animation_end();
+        return;
+    }
+
+    if (asr.position)
+        to->get_output()->set_position(asr.position.value());
+    if (asr.transform)
+        to->get_output()->set_transform(asr.transform.value());
+
+    for (auto const& workspace : to->get_output()->get_workspaces())
+    {
+        if (!workspace)
+            continue;
+
+        workspace->workspace_transform_change_hack();
+    }
+}
+
 bool CommandController::try_select(miracle::Direction direction)
 {
     std::lock_guard lock(mutex);

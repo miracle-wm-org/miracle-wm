@@ -22,21 +22,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "policy.h"
 #include "vector_helpers.h"
-#include "window_helpers.h"
 
 #include "workspace.h"
 #include "workspace_manager.h"
 #include <glm/gtx/transform.hpp>
 #include <memory>
 #include <mir/log.h>
-#include <miral/toolkit_event.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
 
 using namespace miracle;
 
 Output::Output(
+    Policy* policy,
     std::string name,
     int id,
     geom::Rectangle const& area,
@@ -44,6 +44,7 @@ Output::Output(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator) :
+    policy { policy },
     name_ { std::move(name) },
     id_ { id },
     area { area },
@@ -243,14 +244,14 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
     if (!to)
     {
-        mir::fatal_error("advise_workspace_active: switch to workspace that doesn't exist: %d", id);
+        mir::log_error("Output::advise_workspace_active: switch to workspace that doesn't exist: %d", id);
         return false;
     }
 
     if (!from)
     {
-        to->show();
         active_workspace = to;
+        to->show();
 
         auto to_rectangle = get_workspace_rectangle(to_index);
         set_position(glm::vec2(
@@ -263,6 +264,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // Note: It is very important that [active_workspace] be modified before notifications
     // are sent out.
     active_workspace = to;
+    to->on_animation_start();
 
     auto from_src = get_workspace_rectangle(from_index);
     from->transfer_pinned_windows_to(to);
@@ -287,7 +289,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
     if (!config->are_animations_enabled())
     {
-        on_workspace_animation(
+        handle_workspace_animation(
             AnimationStepResult { handle,
                 true,
                 dest,
@@ -342,10 +344,13 @@ Output::WorkspaceAnimation::WorkspaceAnimation(
 
 void Output::WorkspaceAnimation::on_tick(miracle::AnimationStepResult const& asr)
 {
-    output->on_workspace_animation(asr, to_workspace, from_workspace);
+    output->policy->main_loop()->enqueue(this, [asr = asr, to_workspace = to_workspace, from_workspace = from_workspace, output = output]()
+    {
+        output->policy->handle_workspace_animation(asr, to_workspace, from_workspace);
+    });
 }
 
-void Output::on_workspace_animation(
+void Output::handle_workspace_animation(
     AnimationStepResult const& asr,
     std::shared_ptr<WorkspaceInterface> const& to,
     std::shared_ptr<WorkspaceInterface> const&)
@@ -364,6 +369,7 @@ void Output::on_workspace_animation(
         }
 
         to->workspace_transform_change_hack();
+        to->on_animation_end();
         return;
     }
 

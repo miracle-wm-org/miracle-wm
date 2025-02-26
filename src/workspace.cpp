@@ -223,20 +223,12 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 
 void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 {
-    last_selected_container = container;
+    if (!is_animating)
+        last_selected_container = container;
 }
 
 void Workspace::show()
 {
-    if (auto const last_selected = last_selected_container.lock())
-    {
-        /// The BasicWindowManager will attempt to show a window that is being shown if one is
-        /// not selected. Hence, we always show and try to select the last selected window
-        /// first so that we don't accidentally show the first window on the workspace.
-        last_selected->show();
-        if (last_selected->window().has_value())
-            window_controller->select_active_window(last_selected->window().value());
-    }
     root->show();
     for (auto const& floating : floating_trees)
         floating->show();
@@ -465,11 +457,39 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
         root->commit_changes();
         break;
     default:
-        mir::log_error("MiralWorkspace::graft: ungraftable container type: %d", (int)container->get_type());
+        mir::log_error("Workspace::graft: ungraftable container type: %d", (int)container->get_type());
         break;
     }
 
     container->set_workspace(this);
+}
+
+void Workspace::on_animation_start()
+{
+    is_animating = true;
+}
+
+void Workspace::on_animation_end()
+{
+    is_animating = false;
+
+    if (auto const sh_last_selected = last_selected_container.lock())
+    {
+        if (sh_last_selected->window().has_value())
+            window_controller->select_active_window(sh_last_selected->window().value());
+        return;
+    }
+
+    for_each_window([&](std::shared_ptr<Container> const& container)
+    {
+        if (container->window().has_value())
+        {
+            window_controller->select_active_window(container->window().value());
+            return true;
+        }
+
+        return false;
+    });
 }
 
 std::shared_ptr<ParentContainer> Workspace::get_layout_container()

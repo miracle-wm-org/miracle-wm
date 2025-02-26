@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class Policy;
 class WorkspaceManager;
 class CompositorState;
 class Config;
@@ -32,6 +33,7 @@ class MiralOutputFactory : public OutputFactoryInterface
 {
 public:
     MiralOutputFactory(
+        Policy* policy,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
@@ -42,6 +44,7 @@ public:
         mir::geometry::Rectangle area) override;
 
 private:
+    Policy* policy;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;

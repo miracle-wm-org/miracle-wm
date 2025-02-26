@@ -94,6 +94,10 @@ public:
     void handle_animation(
         AnimationStepResult const& asr,
         std::weak_ptr<Container> const& container);
+    void handle_workspace_animation(
+        AnimationStepResult const& asr,
+        std::shared_ptr<WorkspaceInterface> const& to,
+        std::shared_ptr<WorkspaceInterface> const& from);
     auto confirm_inherited_move(
         const miral::WindowInfo& window_info,
         mir::geometry::Displacement movement) -> mir::geometry::Rectangle override;
@@ -101,6 +105,8 @@ public:
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
     void advise_end() override;
+
+    [[nodiscard]] std::shared_ptr<mir::MainLoop> const& main_loop() const { return main_loop_; }
 
 private:
     class Self;
@@ -122,6 +128,7 @@ private:
     std::shared_ptr<Ipc> ipc;
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<ContainerGroupContainer> group_selection;
+    std::shared_ptr<mir::MainLoop> main_loop_;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
