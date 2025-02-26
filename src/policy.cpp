@@ -440,7 +440,10 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     default:
     {
         auto* workspace = container->get_workspace();
-        if (workspace != output_manager->focused()->active().get())
+
+        // If the container has a null workspace, it is always selectable. Otherwise
+        // it needs to be on the active workspace.
+        if (workspace != nullptr && workspace != output_manager->focused()->active().get())
         {
             // TODO: In this scenario, we may want to navigate to the focused workspace.
             //  This was removed because it breaks workspace animations.
