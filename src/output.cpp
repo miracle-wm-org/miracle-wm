@@ -52,7 +52,11 @@ Output::Output(
     config { config },
     window_controller { window_controller },
     animator { animator },
-    handle { animator->register_animateable() }
+    handle { animator->register_animateable() },
+    position_offset { 0.f, 0.f },
+    transform { glm::mat4(1.f) },
+    final_transform { glm::mat4(1.f) },
+    is_defunct_ { false }
 {
 }
 
@@ -225,9 +229,9 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 {
     std::shared_ptr<WorkspaceInterface> from = nullptr;
     std::shared_ptr<WorkspaceInterface> to = nullptr;
-    int from_index = -1;
-    int to_index = -1;
-    for (int i = 0; i < workspaces.size(); i++)
+    size_t from_index = 0;
+    size_t to_index = 0;
+    for (size_t i = 0; i < workspaces.size(); i++)
     {
         auto const& workspace = workspaces[i];
         if (!active_workspace.expired() && workspace == active_workspace.lock())
@@ -261,7 +265,10 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         set_position(glm::vec2(
             -to_rectangle.top_left.x.as_int(),
             -to_rectangle.top_left.y.as_int()));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         to->workspace_transform_change_hack();
+#pragma GCC diagnostic pop
         return true;
     }
 
@@ -411,7 +418,7 @@ void Output::advise_application_zone_update(miral::Zone const& updated, miral::Z
         if (zone == original)
         {
             zone = updated;
-            for (auto& workspace : workspaces)
+            for (auto const& workspace : workspaces)
                 workspace->recalculate_area();
             break;
         }
@@ -426,7 +433,7 @@ void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 
     if (application_zone_list.size() != original_size)
     {
-        for (auto& workspace : workspaces)
+        for (auto const& workspace : workspaces)
             workspace->recalculate_area();
     }
 }
@@ -470,7 +477,7 @@ geom::Rectangle Output::get_workspace_rectangle(size_t i) const
     auto const& workspace = workspaces[i];
     size_t x = 0;
     if (workspace->num())
-        x = (workspace->num().value() - 1) * area.size.width.as_int();
+        x = static_cast<size_t>((workspace->num().value() - 1) * area.size.width.as_int());
     else
     {
         // Find the index of the first non-numbered workspace
@@ -481,7 +488,7 @@ geom::Rectangle Output::get_workspace_rectangle(size_t i) const
                 break;
         }
 
-        x = ((WorkspaceManager::NUM_DEFAULT_WORKSPACES - 1) + (i - j)) * area.size.width.as_int();
+        x = (WorkspaceManager::NUM_DEFAULT_WORKSPACES - 1) + (i - j) * static_cast<size_t>(area.size.width.as_int());
     }
 
     return geom::Rectangle {

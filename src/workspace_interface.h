@@ -78,7 +78,6 @@ public:
 
     virtual void set_output(OutputInterface*) = 0;
 
-    [[deprecated("Do not use unless you have a very good reason to do so!")]]
     virtual void workspace_transform_change_hack()
         = 0;
 
