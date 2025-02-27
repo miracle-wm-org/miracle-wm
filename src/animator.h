@@ -103,7 +103,8 @@ public:
     void append(std::shared_ptr<Animation> const&);
     void set_size_hack(AnimationHandle handle, mir::geometry::Size const& size);
     void remove_by_animation_handle(AnimationHandle handle);
-    bool has_animations() const { return !active.empty(); }
+    [[nodiscard]] bool has_animations() const { return !active.empty(); }
+    [[nodiscard]] bool is_animating(AnimationHandle handle);
     std::condition_variable& get_cv() { return cv; }
     std::mutex& get_lock() { return processing_lock; }
 
