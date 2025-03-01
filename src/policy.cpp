@@ -39,6 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <miral/zone.h>
+#include <mir/input/scene.h>
 #include <mutex>
 
 using namespace miracle;
@@ -143,6 +144,7 @@ Policy::Policy(
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc);
     animator_loop->start();
+    server.the_input_scene()->emit_scene_changed();
 }
 
 Policy::~Policy()

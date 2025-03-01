@@ -274,6 +274,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     while (auto const gl_error = glGetError())
         mir::log_debug("GL error: %d", gl_error);
 
+    last_renders = std::move(renderables);
     return output;
 }
 

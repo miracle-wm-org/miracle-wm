@@ -26,6 +26,8 @@ namespace miracle
 {
 
 class Container;
+class Animator;
+class Config;
 
 struct RenderData
 {
@@ -40,17 +42,24 @@ class RenderDataManager
 {
 public:
     RenderDataManager();
+    void set_animator(std::shared_ptr<Animator> const&);
     void add(Container const&);
     void remove(Container const&);
     void transform_change(Container const&);
     void workspace_transform_change(Container const&);
     void focus_change(Container const&);
     std::vector<RenderData> const& get();
+    void set_last(mir::graphics::RenderableList const& last);
+    
 
 private:
     std::mutex mutex;
     std::vector<RenderData> render_data;
     std::vector<RenderData> copy_for_renderer;
+    std::shared_ptr<Animator> animator;
+    std::shared_ptr<Config> config;
+    mir::graphics::RenderableList last_renderables;
+    mir::graphics::RenderableList animating_renderables;
 };
 
 } // miracle
