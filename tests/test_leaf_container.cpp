@@ -18,12 +18,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container_group_container.h"
+#include "container_scope.h"
 #include "leaf_container.h"
 #include "mir/geometry/forward.h"
 #include "mir_toolkit/common.h"
+#include "miral/application_info.h"
 #include "miral/window_specification.h"
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
+#include "mock_session.h"
+#include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output_manager.h"
@@ -64,9 +68,14 @@ public:
     },
             config,
             parent,
-            state))
+            state)),
+        session(std::make_shared<test::MockSession>()),
+        surface(std::make_shared<test::MockSurface>()),
+        app(session),
+        window(app, surface)
     {
         state->add(leaf_container);
+        leaf_container->associate_to_window(window);
     }
 
 protected:
@@ -74,9 +83,13 @@ protected:
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::unique_ptr<OutputManager> output_manager = std::make_unique<OutputManager>(std::make_unique<test::MockOutputFactory>());
-    std::unique_ptr<WorkspaceInterface> workspace;
+    std::unique_ptr<test::MockWorkspace> workspace;
     std::shared_ptr<test::MockParentContainer> parent;
     std::shared_ptr<LeafContainer> leaf_container;
+    std::shared_ptr<test::MockSession> session;
+    std::shared_ptr<test::MockSurface> surface;
+    miral::Application app;
+    miral::Window window;
 };
 
 TEST_F(LeafContainerTest, InitializesWithCorrectLogicalArea)
@@ -233,7 +246,7 @@ TEST_P(LeafContainerMaximizedTest, CannotMaximizeWindowInHandleModify)
     miral::WindowSpecification spec;
     spec.state() = state;
 
-    EXPECT_CALL(*window_controller, modify(miral::Window {}, testing::Truly(has_restored_state)));
+    EXPECT_CALL(*window_controller, modify(window, testing::Truly(has_restored_state)));
     leaf_container->handle_modify(spec);
 }
 
@@ -283,3 +296,200 @@ TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenGroupIsFocused)
         .WillOnce(testing::Return(false));
     EXPECT_TRUE(leaf_container->is_focused());
 }
+
+TEST_F(LeafContainerTest, MatchWithAppId)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::app_id;
+    scope.value = "foo";
+
+    miral::WindowSpecification spec;
+    miral::WindowInfo info(window, spec);
+    EXPECT_CALL(*window_controller, info_for(window))
+        .WillRepeatedly(testing::ReturnRef(info));
+    EXPECT_CALL(*surface, application_id())
+        .WillRepeatedly(testing::Return("foo"));
+    EXPECT_TRUE(leaf_container->matches(scope));
+    scope.value = "bar";
+    EXPECT_FALSE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchAll)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::all;
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+struct LeafContainerMatchType
+{
+    std::string scope_value;
+    MirWindowType required;
+};
+
+class LeafContainerMatchTypeTest : public LeafContainerTest, public ::testing::WithParamInterface<LeafContainerMatchType>
+{
+};
+
+TEST_P(LeafContainerMatchTypeTest, MatchWindowType)
+{
+    auto param = GetParam();
+    ContainerScope scope;
+    scope.type = ContainerScopeType::window_type;
+    scope.value = param.scope_value;
+
+    miral::WindowSpecification spec;
+    spec.type() = param.required;
+    miral::WindowInfo info(window, spec);
+    EXPECT_CALL(*window_controller, info_for(window))
+        .WillRepeatedly(testing::ReturnRef(info));
+    EXPECT_CALL(*surface, type())
+        .WillRepeatedly(testing::Return(param.required));
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LeafContainerMatchTypeTest,
+    LeafContainerMatchTypeTest,
+    ::testing::Values(
+        LeafContainerMatchType { "normal", mir_window_type_normal },
+        LeafContainerMatchType { "dialog", mir_window_type_dialog },
+        LeafContainerMatchType { "utility", mir_window_type_utility },
+        LeafContainerMatchType { "toolbar", mir_window_type_decoration },
+        LeafContainerMatchType { "menu", mir_window_type_decoration },
+        LeafContainerMatchType { "dropdown_menu", mir_window_type_menu },
+        LeafContainerMatchType { "popup_menu", mir_window_type_menu },
+        LeafContainerMatchType { "tooltip", mir_window_type_tip },
+        LeafContainerMatchType { "notification", mir_window_type_freestyle }));
+
+TEST_F(LeafContainerTest, MatchTitle)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::title;
+    scope.value = "foo";
+
+    miral::WindowSpecification spec;
+    spec.name() = "foo";
+    miral::WindowInfo info(window, spec);
+    EXPECT_CALL(*window_controller, info_for(window))
+        .WillRepeatedly(testing::ReturnRef(info));
+    EXPECT_TRUE(leaf_container->matches(scope));
+    scope.value = "bar";
+    EXPECT_FALSE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchTitleWithSpecialFocusedKeyword)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::title;
+    scope.value = "__focused__";
+
+    state->focus_container(leaf_container);
+
+    miral::WindowSpecification spec;
+    spec.name() = "foo";
+    miral::WindowInfo info(window, spec);
+    EXPECT_CALL(*window_controller, info_for(window))
+        .WillRepeatedly(testing::ReturnRef(info));
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchPid)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::pid;
+    scope.value = "123";
+
+    miral::ApplicationInfo info(session);
+    EXPECT_CALL(*window_controller, app_info(window))
+        .WillRepeatedly(testing::ReturnRef(info));
+    EXPECT_CALL(*session, process_id())
+        .WillRepeatedly(testing::Return(123));
+    EXPECT_TRUE(leaf_container->matches(scope));
+    scope.value = "456";
+    EXPECT_FALSE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchConId)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::con_id;
+    scope.value = std::to_string(reinterpret_cast<std::uintptr_t>(leaf_container.get()));
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchConIdWithFocusedSpecialValue)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::con_id;
+    scope.value = "__focused__";
+
+    state->focus_container(leaf_container);
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchWorkspaceName)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::workspace;
+    scope.value = "foo";
+
+    std::optional<std::string> const name = "foo";
+    EXPECT_CALL(*workspace, name())
+        .WillRepeatedly(testing::ReturnRef(name));
+    EXPECT_TRUE(leaf_container->matches(scope));
+    scope.value = "bar";
+    EXPECT_FALSE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchFloating)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::floating;
+
+    EXPECT_CALL(*parent, anchored())
+        .WillRepeatedly(testing::Return(false));
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+TEST_F(LeafContainerTest, MatchTiling)
+{
+    ContainerScope scope;
+    scope.type = ContainerScopeType::tiling;
+
+    EXPECT_CALL(*parent, anchored())
+        .WillRepeatedly(testing::Return(true));
+
+    EXPECT_TRUE(leaf_container->matches(scope));
+}
+
+class LeafContainerMatchNotSupportedTest : public LeafContainerTest, public ::testing::WithParamInterface<ContainerScopeType>
+{
+};
+
+TEST_P(LeafContainerMatchNotSupportedTest, MatchWindowType)
+{
+    auto param = GetParam();
+    ContainerScope scope;
+    scope.type = param;
+    EXPECT_FALSE(leaf_container->matches(scope));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LeafContainerMatchNotSupportedTest,
+    LeafContainerMatchNotSupportedTest,
+    ::testing::Values(
+        ContainerScopeType::urgent,
+        ContainerScopeType::con_mark,
+        ContainerScopeType::floating_from,
+        ContainerScopeType::tiling_from,
+        ContainerScopeType::class_,
+        ContainerScopeType::id,
+        ContainerScopeType::window_role,
+        ContainerScopeType::instance,
+        ContainerScopeType::machine));

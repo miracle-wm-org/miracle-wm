@@ -18,9 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_I3_COMMAND_H
 #define MIRACLEWM_I3_COMMAND_H
 
+#include "container_scope.h"
+
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -56,40 +57,6 @@ enum class IpcCommandType
     resize
 };
 
-// https://i3wm.org/docs/userguide.html#command_criteria
-enum class IpcScopeType
-{
-    none,
-    all,
-    machine,
-    title,
-    urgent,
-    workspace,
-    con_mark,
-    con_id,
-    floating,
-    floating_from,
-    tiling,
-    tiling_from,
-
-    /// TODO: X11-only
-    class_,
-    /// TODO: X11-only
-    instance,
-    /// TODO: X11-only
-    window_role,
-    /// TODO: X11-only
-    window_type,
-    // TODO: X11-only
-    id,
-};
-
-struct IpcScope
-{
-    IpcScopeType type;
-    std::string value;
-};
-
 struct IpcCommand
 {
     IpcCommandType type;
@@ -99,7 +66,7 @@ struct IpcCommand
 
 struct IpcParseResult
 {
-    std::vector<IpcScope> scope;
+    std::vector<ContainerScope> scope;
     std::vector<IpcCommand> commands;
 };
 

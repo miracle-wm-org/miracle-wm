@@ -100,6 +100,7 @@ public:
     void scratchpad_state(ScratchpadState) override { }
     ScratchpadState scratchpad_state() const override { return ScratchpadState::none; }
     LayoutScheme get_layout() const override { return LayoutScheme::none; }
+    bool matches(ContainerScope const&) const override { return false; }
     nlohmann::json to_json(bool is_workspace_active) const override { return {}; }
 
 private:

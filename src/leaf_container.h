@@ -110,6 +110,7 @@ public:
     ScratchpadState scratchpad_state() const override;
     void scratchpad_state(ScratchpadState) override;
     LayoutScheme get_layout() const override;
+    bool matches(ContainerScope const&) const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
     static std::shared_ptr<LeafContainer> handle_select(

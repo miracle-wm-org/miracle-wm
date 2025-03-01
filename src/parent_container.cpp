@@ -906,6 +906,11 @@ LayoutScheme ParentContainer::get_layout() const
     return scheme;
 }
 
+bool ParentContainer::matches(ContainerScope const&) const
+{
+    return false;
+}
+
 bool ParentContainer::set_anchored(bool anchor)
 {
     is_anchored = anchor;

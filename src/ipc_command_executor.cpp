@@ -225,22 +225,22 @@ IpcValidationResult IpcCommandExecutor::process_exec(miracle::IpcCommand const& 
     return {};
 }
 
-IpcValidationResult IpcCommandExecutor::process_split(miracle::IpcCommand const& command, miracle::IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command, IpcParseResult const& command_list)
 {
     if (command.arguments.empty())
         return parse_error("process_split: no arguments were supplied");
 
     if (command.arguments.front() == "vertical")
     {
-        policy->try_request_vertical();
+        policy->try_request_vertical(command_list.scope);
     }
     else if (command.arguments.front() == "horizontal")
     {
-        policy->try_request_horizontal();
+        policy->try_request_horizontal(command_list.scope);
     }
     else if (command.arguments.front() == "toggle")
     {
-        policy->try_toggle_layout(false);
+        policy->try_toggle_layout(false, command_list.scope);
     }
     else
     {
@@ -281,17 +281,17 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
             workspace_manager->request_focus(container->get_workspace()->id());
     }
     else if (arg == "left")
-        policy->try_select(Direction::left);
+        policy->try_select(Direction::left, command_list.scope);
     else if (arg == "right")
-        policy->try_select(Direction::right);
+        policy->try_select(Direction::right, command_list.scope);
     else if (arg == "up")
-        policy->try_select(Direction::up);
+        policy->try_select(Direction::up, command_list.scope);
     else if (arg == "down")
-        policy->try_select(Direction::down);
+        policy->try_select(Direction::down, command_list.scope);
     else if (arg == "parent")
-        policy->try_select_parent();
+        policy->try_select_parent(command_list.scope);
     else if (arg == "child")
-        policy->try_select_child();
+        policy->try_select_child(command_list.scope);
     else if (arg == "prev")
     {
         auto container = state->focused_container();
@@ -331,11 +331,11 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
         }
     }
     else if (arg == "floating")
-        policy->try_select_floating();
+        policy->try_select_floating(command_list.scope);
     else if (arg == "tiling")
-        policy->try_select_tiling();
+        policy->try_select_tiling(command_list.scope);
     else if (arg == "mode_toggle")
-        policy->try_select_toggle();
+        policy->try_select_toggle(command_list.scope);
     else if (arg == "output")
     {
         if (command.arguments.size() < 2)
@@ -441,12 +441,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             auto area = active_output->get_area();
             float x = (float)area.size.width.as_int() / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
             float y = (float)area.size.height.as_int() / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
-            policy->try_move_to((int)x, (int)y);
+            policy->try_move_to((int)x, (int)y, command_list.scope);
         }
         else if (arg1 == "mouse")
         {
             auto const& position = state->cursor_position;
-            policy->try_move_to((int)position.x.as_int(), (int)position.y.as_int());
+            policy->try_move_to((int)position.x.as_int(), (int)position.y.as_int(), command_list.scope);
         }
         else
         {
@@ -459,7 +459,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             if (!parse_move_distance(command.arguments, index, total_size, move_distance_y))
                 return parse_error("process_move: move position <x> <y>: unable to parse y");
 
-            policy->try_move_to(move_distance_x, move_distance_y);
+            policy->try_move_to(move_distance_x, move_distance_y, command_list.scope);
         }
 
         return {};
@@ -489,7 +489,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         auto active = state->focused_container();
         float x_pos = x / 2.f - (float)active->get_visible_area().size.width.as_int() / 2.f;
         float y_pos = y / 2.f - (float)active->get_visible_area().size.height.as_int() / 2.f;
-        policy->try_move_to((int)x_pos, (int)y_pos);
+        policy->try_move_to((int)x_pos, (int)y_pos, command_list.scope);
         return {};
     }
     else if (arg0 == "window" || arg0 == "container")
@@ -580,9 +580,9 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     {
         int move_distance;
         if (parse_move_distance(command.arguments, index, total_size, move_distance))
-            policy->try_move_by(direction, move_distance);
+            policy->try_move_by(direction, move_distance, command_list.scope);
         else
-            policy->try_move(direction);
+            policy->try_move(direction, command_list.scope);
     }
 
     return {};
@@ -735,9 +735,9 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
         {
             auto const& arg1 = command.arguments[1];
             if (arg1 == "split")
-                policy->try_toggle_layout(false);
+                policy->try_toggle_layout(false, command_list.scope);
             else if (arg1 == "all")
-                policy->try_toggle_layout(true);
+                policy->try_toggle_layout(true, command_list.scope);
             else
                 return parse_error("process_layout: expected split/all after 'layout toggle X'");
 
@@ -802,7 +802,7 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
 
             auto const& target = command.arguments[index];
             if (target == "split")
-                policy->try_toggle_layout(false);
+                policy->try_toggle_layout(false, command_list.scope);
             else if (target == "tabbed")
                 policy->set_layout(LayoutScheme::tabbing);
             else if (target == "stacking")
@@ -953,7 +953,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!adjust.success)
             return parse_error(adjust.error);
 
-        policy->try_resize(adjust.direction, adjust.first);
+        policy->try_resize(adjust.direction, adjust.first, command_list.scope);
     }
     else if (arg0 == "shrink")
     {
@@ -961,7 +961,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!adjust.success)
             return parse_error(adjust.error);
 
-        policy->try_resize(adjust.direction, adjust.first);
+        policy->try_resize(adjust.direction, adjust.first, command_list.scope);
     }
     else if (arg0 == "set")
     {
@@ -969,7 +969,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!result.success)
             return parse_error(result.error);
 
-        policy->try_set_size(result.width, result.height);
+        policy->try_set_size(result.width, result.height, command_list.scope);
     }
     else
         return parse_error(std::format("process_resize: unexpected argument: {}", arg0.c_str()));
