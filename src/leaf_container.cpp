@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container_group_container.h"
+#include "container_scope.h"
+#include "jpcre2.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
@@ -904,6 +906,170 @@ LayoutScheme LeafContainer::get_layout() const
         return sh_parent->get_layout();
 
     return LayoutScheme::none;
+}
+
+bool LeafContainer::matches(ContainerScope const& scope) const
+{
+    typedef jpcre2::select<char> jp;
+
+    switch (scope.type)
+    {
+    case ContainerScopeType::all:
+        return true;
+    case ContainerScopeType::app_id:
+    {
+        auto const& info = window_controller->info_for(window_);
+        jp::Regex re;
+        re.setPattern(scope.value).compile();
+        return re.match(info.application_id());
+    }
+    case ContainerScopeType::window_type:
+    {
+        auto const& info = window_controller->info_for(window_);
+        if (scope.value == "normal")
+            return info.type() == mir_window_type_normal;
+        else if (scope.value == "dialog")
+            return info.type() == mir_window_type_dialog;
+        else if (scope.value == "utility")
+            return info.type() == mir_window_type_utility;
+        else if (scope.value == "toolbar")
+            return info.type() == mir_window_type_decoration;
+        else if (scope.value == "splash")
+            return false; // Unsupported
+        else if (scope.value == "menu")
+            return info.type() == mir_window_type_decoration;
+        else if (scope.value == "dropdown_menu")
+            return info.type() == mir_window_type_menu;
+        else if (scope.value == "popup_menu")
+            return info.type() == mir_window_type_menu;
+        else if (scope.value == "tooltip")
+            return info.type() == mir_window_type_tip;
+        else if (scope.value == "notification")
+            return info.type() == mir_window_type_freestyle;
+        return false;
+    }
+    case ContainerScopeType::title:
+    {
+        if (scope.value == "__focused__")
+        {
+            if (!state->focused_container())
+            {
+                mir::log_warning("LeafContainer::matches: title is __focused__ but nothing is focused");
+                return false;
+            }
+
+            if (auto const window = state->focused_container()->window())
+            {
+                auto const& info = window_controller->info_for(window_);
+                auto const& focused_info = window_controller->info_for(window.value());
+                return focused_info.name() == info.name();
+            }
+            else
+            {
+                mir::log_error("LeafContainer::matches: title matcher, focused container lacks a window");
+                return false;
+            }
+        }
+
+        auto const& info = window_controller->info_for(window_);
+        jp::Regex re;
+        re.setPattern(scope.value).compile();
+        return re.match(info.name());
+    }
+    case ContainerScopeType::pid:
+    {
+        int int_num;
+        try
+        {
+            int_num = std::stoi(scope.value);
+        }
+        catch (const std::invalid_argument& e)
+        {
+            mir::log_error("Invalid argument: %s", e.what());
+            return false;
+        }
+        catch (const std::out_of_range& e)
+        {
+            mir::log_error("Out of range: %s", e.what());
+            return false;
+        }
+
+        auto const& app = window_controller->app_info(window_);
+        return app.application()->process_id() == int_num;
+    }
+    case ContainerScopeType::workspace:
+    {
+        if (scope.value == "__focused__")
+        {
+            if (state->focused_container() == nullptr)
+            {
+                mir::log_warning("LeafContainer::matches: workspace is __focused__ but nothing is focused");
+                return false;
+            }
+
+            return workspace == state->focused_container()->get_workspace();
+        }
+
+        jp::Regex re;
+        re.setPattern(scope.value).compile();
+        return workspace != nullptr && workspace->name() != std::nullopt && re.match(workspace->name().value());
+    }
+    case ContainerScopeType::con_id:
+    {
+        std::uintptr_t int_num;
+        if (scope.value == "__focused__")
+        {
+            if (state->focused_container() == nullptr)
+            {
+                mir::log_warning("LeafContainer::matches: con_id is __focused__ but nothing is focused");
+                return false;
+            }
+
+            int_num = reinterpret_cast<std::uintptr_t>(state->focused_container().get());
+        }
+        else
+        {
+            try
+            {
+                int_num = std::stoul(scope.value);
+            }
+            catch (const std::invalid_argument& e)
+            {
+                mir::log_error("Invalid argument: %s", e.what());
+                return false;
+            }
+            catch (const std::out_of_range& e)
+            {
+                mir::log_error("Out of range: %s", e.what());
+                return false;
+            }
+        }
+
+        auto const id = reinterpret_cast<std::uintptr_t>(this);
+        return int_num == id;
+    }
+    case ContainerScopeType::floating:
+        return !anchored();
+    case ContainerScopeType::tiling:
+        return anchored();
+    case ContainerScopeType::urgent:
+    case ContainerScopeType::con_mark:
+        mir::log_warning("TODO: Unimplemented");
+        return false;
+    case ContainerScopeType::floating_from:
+    case ContainerScopeType::tiling_from:
+        mir::log_error("Unsupported because these are mostly useless");
+        return false;
+    case ContainerScopeType::class_:
+    case ContainerScopeType::id:
+    case ContainerScopeType::window_role:
+    case ContainerScopeType::instance:
+    case ContainerScopeType::machine:
+        mir::log_error("Unsupported because this is an X11 value");
+        return false;
+    default:
+        return false;
+    }
 }
 
 MirDepthLayer LeafContainer::get_depth_layer(bool is_fullscreen, bool is_anchored)

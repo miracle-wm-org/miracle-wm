@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_COMMAND_CONTROLLER_H
 
 #include "compositor_state.h"
+#include "container_scope.h"
 #include "direction.h"
 #include "output_interface.h"
 #include <nlohmann/json.hpp>
@@ -64,24 +65,24 @@ public:
         std::shared_ptr<Scratchpad> const& scratchpad,
         std::shared_ptr<OutputManager> const& output_manager);
 
-    bool try_request_horizontal();
-    bool try_request_vertical();
-    bool try_toggle_layout(bool cycle_through_all);
+    bool try_request_horizontal(std::vector<ContainerScope> const& scope);
+    bool try_request_vertical(std::vector<ContainerScope> const& scope);
+    bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope);
     void try_toggle_resize_mode();
-    bool try_resize(Direction direction, int pixels);
-    bool try_set_size(std::optional<int> const& width, std::optional<int> const& height);
-    bool try_move(Direction direction);
-    bool try_move_by(Direction direction, int pixels);
-    bool try_move_to(int x, int y);
-    bool try_select(Direction direction);
-    bool try_select_parent();
-    bool try_select_child();
-    bool try_select_floating();
-    bool try_select_tiling();
-    bool try_select_toggle();
-    bool try_close_window();
+    bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope);
+    bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope);
+    bool try_move(Direction direction, std::vector<ContainerScope> const& scope);
+    bool try_move_by(Direction direction, int pixels, std::vector<ContainerScope> const& scope);
+    bool try_move_to(int x, int y, std::vector<ContainerScope> const& scope);
+    bool try_select(Direction direction, std::vector<ContainerScope> const& scope);
+    bool try_select_parent(std::vector<ContainerScope> const& scope);
+    bool try_select_child(std::vector<ContainerScope> const& scope);
+    bool try_select_floating(std::vector<ContainerScope> const& scope);
+    bool try_select_tiling(std::vector<ContainerScope> const& scope);
+    bool try_select_toggle(std::vector<ContainerScope> const& scope);
+    bool try_close_window(std::vector<ContainerScope> const& scope);
     bool quit();
-    bool try_toggle_fullscreen();
+    bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope);
     bool select_workspace(int number, bool back_and_forth = true);
     bool select_workspace(std::string const& name, bool back_and_forth);
     bool next_workspace();
@@ -96,13 +97,13 @@ public:
     bool move_active_to_back_and_forth();
     bool move_to_scratchpad();
     bool show_scratchpad();
-    bool toggle_floating();
-    bool toggle_pinned_to_workspace();
-    bool set_is_pinned(bool);
-    bool toggle_tabbing();
-    bool toggle_stacking();
-    bool set_layout(LayoutScheme scheme);
-    bool set_layout_default();
+    bool toggle_floating(std::vector<ContainerScope> const& scope = {});
+    bool toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope = {});
+    bool set_is_pinned(bool, std::vector<ContainerScope> const& scope = {});
+    bool toggle_tabbing(std::vector<ContainerScope> const& scope = {});
+    bool toggle_stacking(std::vector<ContainerScope> const& scope = {});
+    bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope = {});
+    bool set_layout_default(std::vector<ContainerScope> const& scope = {});
     void move_cursor_to_output(OutputInterface const&);
     bool try_select_next_output();
     bool try_select_prev_output();
@@ -136,6 +137,9 @@ private:
 
     bool can_move_container() const;
     bool can_set_layout() const;
+
+    /// Given the provided scope, this method will figure out what containers meet that criteria.
+    std::vector<std::shared_ptr<Container>> resolve_scope(std::vector<ContainerScope> const&);
 
     /// Floats the container and returns the new [ParentContainer] of that container.
     std::shared_ptr<ParentContainer> toggle_floating_internal(std::shared_ptr<Container> const& container);

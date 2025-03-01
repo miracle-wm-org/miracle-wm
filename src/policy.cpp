@@ -26,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_factory.h"
 #include "output_manager.h"
 #include "parent_container.h"
-#include "shell_component_container.h"
 #include "workspace_manager.h"
 
 #include <iostream>
@@ -183,42 +182,42 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return true;
         }
         case DefaultKeyCommand::RequestVertical:
-            return command_controller->try_request_vertical();
+            return command_controller->try_request_vertical(empty_scope);
         case DefaultKeyCommand::RequestHorizontal:
-            return command_controller->try_request_horizontal();
+            return command_controller->try_request_horizontal(empty_scope);
         case DefaultKeyCommand::ToggleResize:
             command_controller->try_toggle_resize_mode();
             return true;
         case DefaultKeyCommand::ResizeUp:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::up, config->get_resize_jump());
+            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::up, config->get_resize_jump(), empty_scope);
         case DefaultKeyCommand::ResizeDown:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::down, config->get_resize_jump());
+            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::down, config->get_resize_jump(), empty_scope);
         case DefaultKeyCommand::ResizeLeft:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::left, config->get_resize_jump());
+            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::left, config->get_resize_jump(), empty_scope);
         case DefaultKeyCommand::ResizeRight:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::right, config->get_resize_jump());
+            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::right, config->get_resize_jump(), empty_scope);
         case DefaultKeyCommand::MoveUp:
-            return command_controller->try_move(Direction::up);
+            return command_controller->try_move(Direction::up, empty_scope);
         case DefaultKeyCommand::MoveDown:
-            return command_controller->try_move(Direction::down);
+            return command_controller->try_move(Direction::down, empty_scope);
         case DefaultKeyCommand::MoveLeft:
-            return command_controller->try_move(Direction::left);
+            return command_controller->try_move(Direction::left, empty_scope);
         case DefaultKeyCommand::MoveRight:
-            return command_controller->try_move(Direction::right);
+            return command_controller->try_move(Direction::right, empty_scope);
         case DefaultKeyCommand::SelectUp:
-            return command_controller->try_select(Direction::up);
+            return command_controller->try_select(Direction::up, empty_scope);
         case DefaultKeyCommand::SelectDown:
-            return command_controller->try_select(Direction::down);
+            return command_controller->try_select(Direction::down, empty_scope);
         case DefaultKeyCommand::SelectLeft:
-            return command_controller->try_select(Direction::left);
+            return command_controller->try_select(Direction::left, empty_scope);
         case DefaultKeyCommand::SelectRight:
-            return command_controller->try_select(Direction::right);
+            return command_controller->try_select(Direction::right, empty_scope);
         case DefaultKeyCommand::QuitActiveWindow:
-            return command_controller->try_close_window();
+            return command_controller->try_close_window(empty_scope);
         case DefaultKeyCommand::QuitCompositor:
             return command_controller->quit();
         case DefaultKeyCommand::Fullscreen:
-            return command_controller->try_toggle_fullscreen();
+            return command_controller->try_toggle_fullscreen(empty_scope);
         case DefaultKeyCommand::SelectWorkspace1:
             return command_controller->select_workspace(1);
         case DefaultKeyCommand::SelectWorkspace2:

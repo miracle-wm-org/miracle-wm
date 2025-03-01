@@ -74,97 +74,137 @@ void CommandController::try_toggle_resize_mode()
         set_mode(WindowManagerMode::resizing);
 }
 
-bool CommandController::try_request_vertical()
+bool CommandController::try_request_vertical(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
-        return false;
-
-    state->focused_container()->request_vertical_layout();
+    for (auto const& container : resolve_scope(scope))
+    {
+        container->request_vertical_layout();
+    }
     return true;
 }
 
-bool CommandController::try_toggle_layout(bool cycle_thru_all)
+bool CommandController::try_toggle_layout(bool cycle_thru_all, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    state->focused_container()->toggle_layout(cycle_thru_all);
+    for (auto const& container : containers)
+    {
+        container->toggle_layout(cycle_thru_all);
+    }
     return true;
 }
 
-bool CommandController::try_request_horizontal()
+bool CommandController::try_request_horizontal(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
-        return false;
+    for (auto const& container : resolve_scope(scope))
+    {
+        container->request_horizontal_layout();
+    }
 
-    state->focused_container()->request_horizontal_layout();
     return true;
 }
 
-bool CommandController::try_resize(miracle::Direction direction, int pixels)
+bool CommandController::try_resize(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->resize(direction, pixels);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->resize(direction, pixels))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::try_set_size(std::optional<int> const& width, std::optional<int> const& height)
+bool CommandController::try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->set_size(width, height);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->set_size(width, height))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::try_move(miracle::Direction direction)
+bool CommandController::try_move(miracle::Direction direction, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->move(direction);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->move(direction))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::try_move_by(miracle::Direction direction, int pixels)
+bool CommandController::try_move_by(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->move_by(direction, pixels);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->move_by(direction, pixels))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::try_move_to(int x, int y)
+bool CommandController::try_move_to(int x, int y, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->move_to(x, y);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->move_to(x, y))
+            result = false;
+    }
+    return result;
 }
 
 void CommandController::select_container(std::shared_ptr<Container> const& container)
@@ -179,144 +219,198 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     }
 }
 
-bool CommandController::try_select(miracle::Direction direction)
+bool CommandController::try_select(miracle::Direction direction, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->select_next(direction);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->select_next(direction))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::try_select_parent()
+bool CommandController::try_select_parent(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    if (!state->focused_container()->get_parent().expired())
+    bool result = true;
+    for (auto const& container : containers)
     {
-        select_container(state->focused_container()->get_parent().lock());
-        return true;
-    }
-    else
-    {
-        mir::log_error("try_select_parent: no parent to select");
-        return false;
-    }
-}
-
-bool CommandController::try_select_child()
-{
-    std::lock_guard lock(mutex);
-    if (state->mode() != WindowManagerMode::normal)
-        return false;
-
-    if (!state->focused_container())
-        return false;
-
-    if (state->focused_container()->get_type() != ContainerType::parent)
-    {
-        mir::log_info("CommandController::try_select_child: parent is not selected");
-        return false;
-    }
-
-    for (auto const& container : state->containers())
-    {
-        if (!container.expired())
+        if (!container->get_parent().expired())
         {
-            auto const lock_container = container.lock();
-            if (lock_container->get_parent().expired())
-                continue;
-
-            if (lock_container->get_parent().lock() == state->focused_container())
-                select_container(lock_container);
+            select_container(container->get_parent().lock());
         }
-    }
-
-    if (!state->focused_container()->get_parent().expired())
-    {
-        state->focus_container(state->focused_container()->get_parent().lock());
-        return true;
-    }
-    else
-    {
-        mir::log_error("try_select_parent: no parent to select");
-        return false;
-    }
-}
-
-bool CommandController::try_select_floating()
-{
-    std::lock_guard lock(mutex);
-    if (state->mode() != WindowManagerMode::normal)
-        return false;
-
-    if (auto to_select = state->first_floating())
-    {
-        if (auto const& window = to_select->window())
-        {
-            window_controller->select_active_window(window.value());
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool CommandController::try_select_tiling()
-{
-    std::lock_guard lock(mutex);
-    if (state->mode() != WindowManagerMode::normal)
-        return false;
-
-    if (auto to_select = state->first_tiling())
-    {
-        if (auto const& window = to_select->window())
-        {
-            window_controller->select_active_window(window.value());
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool CommandController::try_select_toggle()
-{
-    std::lock_guard lock(mutex);
-    if (state->mode() != WindowManagerMode::normal)
-        return false;
-
-    if (auto const active = state->focused_container())
-    {
-        if (active->anchored())
-            return try_select_floating();
         else
-            return try_select_tiling();
+        {
+            mir::log_error("try_select_parent: no parent to select");
+            result = false;
+        }
     }
-
-    return false;
+    return result;
 }
 
-bool CommandController::try_close_window()
+bool CommandController::try_select_child(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    if (!state->focused_container())
+    if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto window = state->focused_container()->window();
-    if (!window)
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    window_controller->close(window.value());
-    return true;
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->get_type() != ContainerType::parent)
+        {
+            mir::log_info("CommandController::try_select_child: parent is not selected");
+            result = false;
+            continue;
+        }
+
+        for (auto const& child : state->containers())
+        {
+            if (!child.expired())
+            {
+                auto const lock_child = child.lock();
+                if (lock_child->get_parent().expired())
+                    continue;
+
+                if (lock_child->get_parent().lock() == container)
+                    select_container(lock_child);
+            }
+        }
+
+        if (!container->get_parent().expired())
+        {
+            state->focus_container(container->get_parent().lock());
+        }
+        else
+        {
+            mir::log_error("try_select_parent: no parent to select");
+            result = false;
+        }
+    }
+    return result;
+}
+
+bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (auto to_select = state->first_floating())
+        {
+            if (auto const& window = to_select->window())
+            {
+                window_controller->select_active_window(window.value());
+            }
+            else
+            {
+                result = false;
+            }
+        }
+        else
+        {
+            result = false;
+        }
+    }
+    return result;
+}
+
+bool CommandController::try_select_tiling(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (auto to_select = state->first_tiling())
+        {
+            if (auto const& window = to_select->window())
+            {
+                window_controller->select_active_window(window.value());
+            }
+            else
+            {
+                result = false;
+            }
+        }
+        else
+        {
+            result = false;
+        }
+    }
+    return result;
+}
+
+bool CommandController::try_select_toggle(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->anchored())
+            result = try_select_floating(scope) && result;
+        else
+            result = try_select_tiling(scope) && result;
+    }
+    return result;
+}
+
+bool CommandController::try_close_window(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (auto window = container->window())
+            window_controller->close(window.value());
+        else
+            result = false;
+    }
+    return result;
 }
 
 bool CommandController::quit()
@@ -326,16 +420,23 @@ bool CommandController::quit()
     return true;
 }
 
-bool CommandController::try_toggle_fullscreen()
+bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->toggle_fullscreen();
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->toggle_fullscreen())
+            result = false;
+    }
+    return result;
 }
 
 bool CommandController::select_workspace(int number, bool back_and_forth)
@@ -537,10 +638,7 @@ bool CommandController::can_move_container() const
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
-        return false;
-
-    if (state->focused_container()->is_fullscreen())
+    if (state->focused_container() && state->focused_container()->is_fullscreen())
         return false;
 
     return true;
@@ -598,77 +696,161 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
     }
 }
 
-bool CommandController::toggle_floating()
+bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    toggle_floating_internal(state->focused_container());
-    return true;
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!toggle_floating_internal(container))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::toggle_pinned_to_workspace()
+bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->pinned(!state->focused_container()->pinned());
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->pinned(!container->pinned()))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::set_is_pinned(bool pinned)
+bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    return state->focused_container()->pinned(pinned);
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (!container->pinned(pinned))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::toggle_tabbing()
+bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_set_layout())
         return false;
 
-    return state->focused_container()->toggle_tabbing();
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->is_fullscreen())
+        {
+            result = false;
+            continue;
+        }
+
+        if (!container->toggle_tabbing())
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::toggle_stacking()
+bool CommandController::toggle_stacking(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_set_layout())
         return false;
 
-    return state->focused_container()->toggle_stacking();
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->is_fullscreen())
+        {
+            result = false;
+            continue;
+        }
+
+        if (!container->toggle_stacking())
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::set_layout(LayoutScheme scheme)
+bool CommandController::set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_set_layout())
         return false;
 
-    return state->focused_container()->set_layout(scheme);
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->is_fullscreen())
+        {
+            result = false;
+            continue;
+        }
+
+        if (!container->set_layout(scheme))
+            result = false;
+    }
+    return result;
 }
 
-bool CommandController::set_layout_default()
+bool CommandController::set_layout_default(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_set_layout())
         return false;
 
-    return state->focused_container()->set_layout(config->get_default_layout_scheme());
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        if (container->is_fullscreen())
+        {
+            result = false;
+            continue;
+        }
+
+        if (!container->set_layout(config->get_default_layout_scheme()))
+            result = false;
+    }
+    return result;
 }
 
 void CommandController::move_cursor_to_output(OutputInterface const& output)
@@ -780,6 +962,41 @@ bool CommandController::try_select_output(Direction direction)
     }
 
     return false;
+}
+
+std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::vector<ContainerScope> const& scope_list)
+{
+    if (scope_list.empty())
+    {
+        if (auto focused = state->focused_container())
+            return { focused };
+        else
+            return {};
+    }
+
+    std::vector<std::shared_ptr<Container>> result;
+    for (auto const& container : state->containers())
+    {
+        if (container.expired())
+            continue;
+
+        auto const& container_ptr = container.lock();
+        bool matches = true;
+
+        for (auto const& scope : scope_list)
+        {
+            if (!container_ptr->matches(scope))
+            {
+                matches = false;
+                break;
+            }
+        }
+
+        if (matches)
+            result.push_back(container_ptr);
+    }
+
+    return result;
 }
 
 OutputInterface* CommandController::_next_output_in_list(std::vector<std::string> const& names)
@@ -977,10 +1194,7 @@ bool CommandController::can_set_layout() const
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!state->focused_container())
-        return false;
-
-    return !state->focused_container()->is_fullscreen();
+    return true;
 }
 
 bool CommandController::reload_config()

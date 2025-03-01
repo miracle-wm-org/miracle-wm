@@ -270,6 +270,11 @@ namespace test
             return LayoutScheme::horizontal;
         }
 
+        bool matches(ContainerScope const&) const override
+        {
+            return false;
+        }
+
         nlohmann::json to_json(bool) const override
         {
             return {};

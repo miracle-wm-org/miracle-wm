@@ -87,6 +87,7 @@ namespace test
         MOCK_METHOD(void, scratchpad_state, (ScratchpadState), (override));
         MOCK_METHOD(ScratchpadState, scratchpad_state, (), (const, override));
         MOCK_METHOD(LayoutScheme, get_layout, (), (const, override));
+        MOCK_METHOD(bool, matches, (ContainerScope const&), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
     };
 }

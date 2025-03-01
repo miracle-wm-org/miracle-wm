@@ -15,23 +15,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <cctype>
-#include <sstream>
-#define MIR_LOG_COMPONENT "miracle::i3_command"
+#define MIR_LOG_COMPONENT "ipc_command"
 
 #include "ipc_command.h"
-
 #include "ipc.h"
-#include "jpcre2.h"
-#include "string_extensions.h"
-#include "window_controller.h"
-#include "window_helpers.h"
 
-#include <cstring>
+#include <cctype>
 #include <mir/log.h>
-#include <miral/application.h>
-#include <miral/application_info.h>
-#include <ranges>
+#include <sstream>
 
 using namespace miracle;
 
@@ -58,32 +49,32 @@ constexpr char SCOPE_DELIM = ' ';
 constexpr char LITERAL_OPEN = '"';
 constexpr char LITERAL_CLOSE = '"';
 
-IpcScopeType scope_from_string(const std::string& s)
+ContainerScopeType scope_from_string(const std::string& s)
 {
     if (s == CLASS_STRING)
-        return IpcScopeType::class_;
+        return ContainerScopeType::class_;
     else if (s == INSTANCE_STRING)
-        return IpcScopeType::instance;
+        return ContainerScopeType::instance;
     else if (s == WINDOW_ROLE_STRING)
-        return IpcScopeType::window_role;
+        return ContainerScopeType::window_role;
     else if (s == MACHINE_STRING)
-        return IpcScopeType::machine;
+        return ContainerScopeType::machine;
     else if (s == ID_STRING)
-        return IpcScopeType::id;
+        return ContainerScopeType::id;
     else if (s == TITLE_STRING)
-        return IpcScopeType::title;
+        return ContainerScopeType::title;
     else if (s == URGENT_STRING)
-        return IpcScopeType::urgent;
+        return ContainerScopeType::urgent;
     else if (s == WORKSPACE_STRING)
-        return IpcScopeType::workspace;
+        return ContainerScopeType::workspace;
     else if (s == ALL_STRING)
-        return IpcScopeType::all;
+        return ContainerScopeType::all;
     else if (s == FLOATING_STRING)
-        return IpcScopeType::floating;
+        return ContainerScopeType::floating;
     else if (s == TILING_STRING)
-        return IpcScopeType::tiling;
+        return ContainerScopeType::tiling;
     else
-        return IpcScopeType::all;
+        return ContainerScopeType::all;
 }
 
 IpcCommandType command_from_string(const std::string& str)
