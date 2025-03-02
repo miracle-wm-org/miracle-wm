@@ -20,8 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "config.h"
 #include <algorithm>
+#include <iostream>
 #include <mir/scene/surface.h>
+#include <mir/input/scene.h>
 #include <mir/graphics/renderable.h>
+#include <glm/gtx/string_cast.hpp>
+#include <iostream>
 
 using namespace miracle;
 
@@ -91,6 +95,8 @@ class RenderableAnimation : public Animation
 {
 public:
     RenderableAnimation(
+        RenderDataManager* render_data_manager,
+        std::shared_ptr<mir::input::Scene> const& scene,
         std::shared_ptr<AnimatedRenderable> renderable,
         AnimationHandle handle,
         AnimationDefinition definition,
@@ -98,16 +104,27 @@ public:
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current) :
         Animation(handle, definition, from, to, current),
-        renderable{ std::move(renderable) }
+        render_data_manager { render_data_manager },
+        scene{ scene },
+        renderable{ renderable }
     {}
 
     void on_tick(AnimationStepResult const& result) override
     {
         if (result.transform)
             renderable->transform = result.transform.value();
+
+        std::cout << glm::to_string(result.transform.value()) << "\n";
+
+        scene->emit_scene_changed();
+
+        if (result.is_complete)
+            render_data_manager->remove_animating_renderable(renderable);
     }
 
 private:
+    RenderDataManager* render_data_manager;
+    std::shared_ptr<mir::input::Scene> scene;
     std::shared_ptr<AnimatedRenderable> renderable;
 };
 
@@ -128,6 +145,21 @@ inline glm::mat4 workspace_transform(Container const& container)
 RenderDataManager::RenderDataManager()
 {
     render_data.reserve(48);
+}
+
+void RenderDataManager::set_config(std::shared_ptr<Config> const& config_)
+{
+    config = config_;
+}
+
+void RenderDataManager::set_animator(std::shared_ptr<Animator> const& animator_)
+{
+    animator = animator_;
+}
+
+void RenderDataManager::set_input_scene(std::shared_ptr<mir::input::Scene> const& scene_)
+{
+    scene = scene_;
 }
 
 void RenderDataManager::add(Container const& container)
@@ -196,16 +228,21 @@ void RenderDataManager::remove(Container const& container)
     // add a new animateable for the renderables that we've stored from the
     // last render for this surface. We then call surface_changed() to make
     // sure that the re-render happens as the animation happens here.
-    render_data.erase(std::remove_if(render_data.begin(), render_data.end(), [&](RenderData const& data)
+    auto it = std::find_if(render_data.begin(), render_data.end(), [&](RenderData const& data)
     {
         return data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get();
-    }),
-        render_data.end());
+    });
+
+    if (it == render_data.end())
+        return;
+
+    auto data = *it;
+    render_data.erase(it);
 
     if (!config->are_animations_enabled())
         return;
 
-    for (auto const& renderable : last_renderables)
+    for (auto const& renderable : data.previous)
     {
         auto window = container.window();
         if (!window)
@@ -216,6 +253,8 @@ void RenderDataManager::remove(Container const& container)
             auto animated_renderable = std::make_shared<AnimatedRenderable>(renderable, animator->register_animateable());
             animating_renderables.push_back(animated_renderable);
             auto animation = std::make_shared<RenderableAnimation>(
+                this,
+                scene,
                 animated_renderable,
                 animated_renderable->handle,
                 config->get_animation_definitions()[(int)AnimateableEvent::window_close],
@@ -226,7 +265,6 @@ void RenderDataManager::remove(Container const& container)
             animator->append(animation);
         }
     }
-
 }
 
 std::vector<RenderData> const& RenderDataManager::get()
@@ -240,16 +278,30 @@ std::vector<RenderData> const& RenderDataManager::get()
     return copy_for_renderer;
 }
 
+mir::graphics::RenderableList RenderDataManager::extra_renderables() const
+{
+    return animating_renderables;
+}
+
 void RenderDataManager::set_last(mir::graphics::RenderableList const& last)
 {
     std::lock_guard lock(mutex);
     for (auto& item : render_data)
     {
+        item.previous.clear();
         for (auto const& renderable : last)
         {
-
+            if (item.surface == renderable->surface_if_any())
+            {
+                item.previous.push_back(renderable);
+            }
         }
     }
-    last_renderables = last;
+}
+
+void RenderDataManager::remove_animating_renderable(std::shared_ptr<mir::graphics::Renderable> const& renderable)
+{
+    std::lock_guard lock(mutex);
+    animating_renderables.erase(std::remove(animating_renderables.begin(), animating_renderables.end(), renderable), animating_renderables.end());
 }
 

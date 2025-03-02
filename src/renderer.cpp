@@ -268,13 +268,20 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         }
     }
 
+    for (auto const& r : compositor_state->render_data_manager()->extra_renderables())
+        draw(*r, {
+        .enabled = true,
+        .data = {
+            .transform = r->transformation(),
+        }});
+
     auto output = output_surface->commit();
 
     // Report any GL errors after commit, to catch any *during* commit
     while (auto const gl_error = glGetError())
         mir::log_debug("GL error: %d", gl_error);
 
-    last_renders = std::move(renderables);
+    compositor_state->render_data_manager()->set_last(renderables);
     return output;
 }
 

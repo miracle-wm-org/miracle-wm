@@ -144,6 +144,10 @@ Policy::Policy(
     mode_observer_registrar->register_interest(ipc);
     animator_loop->start();
     server.the_input_scene()->emit_scene_changed();
+
+    state->render_data_manager()->set_config(config);
+    state->render_data_manager()->set_animator(animator);
+    state->render_data_manager()->set_input_scene(server.the_input_scene());
 }
 
 Policy::~Policy()

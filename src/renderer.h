@@ -120,7 +120,6 @@ private:
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
-    mir::graphics::RenderableList mutable last_renders;
 };
 
 }
