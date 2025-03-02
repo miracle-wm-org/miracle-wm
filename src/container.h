@@ -42,6 +42,7 @@ class ParentContainer;
 class ContainerGroupContainer;
 class WorkspaceInterface;
 class OutputInterface;
+class ContainerScope;
 
 enum class ContainerType
 {
@@ -131,6 +132,7 @@ public:
     virtual void scratchpad_state(ScratchpadState) = 0;
     virtual ScratchpadState scratchpad_state() const = 0;
     virtual LayoutScheme get_layout() const = 0;
+    virtual bool matches(ContainerScope const&) const = 0;
     virtual nlohmann::json to_json(bool is_workspace_visible) const = 0;
 
     bool is_leaf();

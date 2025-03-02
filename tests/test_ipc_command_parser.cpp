@@ -29,7 +29,7 @@ TEST_F(IpcCommandParserTest, TestClassParsing)
     const char* v = "[class=\"XYZ\"]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::class_);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::class_);
     ASSERT_EQ(scope.scope[0].value, "XYZ");
 }
 
@@ -38,7 +38,7 @@ TEST_F(IpcCommandParserTest, TestAllParsing)
     const char* v = "[all]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::all);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::all);
 }
 
 TEST_F(IpcCommandParserTest, TestMultipleParsing)
@@ -46,9 +46,9 @@ TEST_F(IpcCommandParserTest, TestMultipleParsing)
     const char* v = "[class=\"Firefox\" window_role=\"About\"]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::class_);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::class_);
     ASSERT_EQ(scope.scope[0].value, "Firefox");
-    ASSERT_EQ(scope.scope[1].type, IpcScopeType::window_role);
+    ASSERT_EQ(scope.scope[1].type, ContainerScopeType::window_role);
     ASSERT_EQ(scope.scope[1].value, "About");
 }
 
@@ -57,7 +57,7 @@ TEST_F(IpcCommandParserTest, TestComplexClassParsing)
     const char* v = "[class=\"^(?i)(?!firefox)(?!gnome-terminal).*\"]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::class_);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::class_);
     ASSERT_EQ(scope.scope[0].value, "^(?i)(?!firefox)(?!gnome-terminal).*");
 }
 
@@ -66,7 +66,7 @@ TEST_F(IpcCommandParserTest, TestTilingParsing)
     const char* v = "[tiling]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::tiling);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::tiling);
 }
 
 TEST_F(IpcCommandParserTest, TestFloatingParsing)
@@ -74,7 +74,7 @@ TEST_F(IpcCommandParserTest, TestFloatingParsing)
     const char* v = "[floating ]";
     IpcCommandParser parser(v);
     auto scope = parser.parse();
-    ASSERT_EQ(scope.scope[0].type, IpcScopeType::floating);
+    ASSERT_EQ(scope.scope[0].type, ContainerScopeType::floating);
 }
 
 TEST_F(IpcCommandParserTest, CanParseSingleI3Command)
