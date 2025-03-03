@@ -591,14 +591,19 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
     std::lock_guard lock(self->mutex);
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
-        mir::log_error("handle_request_move: window lacks container");
+        mir::log_error("Policy::handle_request_move: window lacks container");
         return;
     }
 
-    container->handle_request_move(input_event);
+    auto const pointer_event = mir_input_event_get_pointer_event(input_event);
+    auto const x = miral::toolkit::mir_pointer_event_axis_value(pointer_event, MirPointerAxis::mir_pointer_axis_x);
+    auto const y = miral::toolkit::mir_pointer_event_axis_value(pointer_event, MirPointerAxis::mir_pointer_axis_y);
+    auto const action = miral::toolkit::mir_pointer_event_action(pointer_event);
+    move_service->handle_pointer_event(
+        *state, x, y, action, config->process_modifier(config->move_modifier()));
 }
 
 void Policy::handle_request_resize(

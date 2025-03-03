@@ -47,7 +47,7 @@ bool MoveService::handle_pointer_event(
         if (action == mir_pointer_action_button_up)
         {
             command_controller->set_mode(WindowManagerMode::normal);
-            return true;
+            return false;
         }
 
         if (!state.focused_container())
@@ -60,8 +60,8 @@ bool MoveService::handle_pointer_event(
         if (cursor_x == x && cursor_y == y)
             return false;
 
-        auto dx = x - cursor_x;
-        auto dy = y - cursor_y;
+        auto const dx = x - cursor_x;
+        auto const dy = y - cursor_y;
         state.focused_container()->move_by(dx, dy);
         cursor_x = x;
         cursor_y = y;
@@ -69,7 +69,7 @@ bool MoveService::handle_pointer_event(
     }
     else if (action == mir_pointer_action_button_down)
     {
-        uint move_modifier = config->process_modifier(config->move_modifier());
+        uint const move_modifier = config->process_modifier(config->move_modifier());
         if (move_modifier != modifiers)
             return false;
 
@@ -82,7 +82,7 @@ bool MoveService::handle_pointer_event(
         if (output_manager->focused() == nullptr)
             return false;
 
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
+        std::shared_ptr<Container> const intersected = output_manager->focused()->intersect(x, y);
         if (!intersected)
             return false;
 
