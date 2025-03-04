@@ -121,6 +121,7 @@ add_library(miracle-wm-implementation
     src/output.h src/output.cpp
     src/move_service.h src/move_service.cpp
     src/container_scope.h
+    src/animating_surface.cpp src/animating_surface.h
 )
 
 add_executable(miracle-wm

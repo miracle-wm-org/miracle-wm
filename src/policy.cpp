@@ -27,17 +27,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_manager.h"
 #include "parent_container.h"
 #include "workspace_manager.h"
+#include "animating_surface.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
+#include <mir/shell/surface_stack.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/application_info.h>
 #include <miral/runner.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
-#include <miral/zone.h>
 #include <mutex>
 
 using namespace miracle;
@@ -136,7 +137,8 @@ Policy::Policy(
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, workspace_manager, state, *launcher, window_controller),
         config)),
-    main_loop_(server.the_main_loop())
+    main_loop_(server.the_main_loop()),
+    surface_stack(server.the_surface_stack())
 {
     workspace_observer_registrar->register_interest(ipc);
     workspace_observer_registrar->register_interest(self);
@@ -500,6 +502,24 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         state->unfocus_container(container);
 
     state->remove(container);
+
+    if (container->get_type() != ContainerType::leaf)
+        return;
+
+    if (!config->are_animations_enabled())
+        return;
+
+    auto surface = window_info.window().operator std::shared_ptr<mir::scene::Surface>();
+    auto animating_surface = std::make_shared<AnimatingSurface>(
+        surface,
+        animator->register_animateable(),
+        config->get_animation_definitions()[static_cast<int>(AnimateableEvent::window_close)],
+        container->get_visible_area(),
+        geom::Rectangle{},
+        container->get_visible_area());
+
+    surface_stack->add_surface(surface, mir::input::InputReceptionMode::normal);
+    animator->append(animating_surface);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)

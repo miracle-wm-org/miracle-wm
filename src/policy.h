@@ -44,6 +44,11 @@ class MirRunner;
 class ExternalClientLauncher;
 }
 
+namespace mir::shell
+{
+    class SurfaceStack;
+}
+
 namespace miracle
 {
 
@@ -130,6 +135,7 @@ private:
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
+    std::shared_ptr<mir::shell::SurfaceStack> surface_stack;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
