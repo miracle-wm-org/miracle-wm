@@ -65,6 +65,7 @@ public:
     OutputInterface* get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
+    void on_workspace_transform() override;
     glm::mat4 get_workspace_transform() const override;
     glm::mat4 get_output_transform() const override;
     uint32_t animation_handle() const override;

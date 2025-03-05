@@ -403,6 +403,7 @@ bool Animation::is_going_to_great_animator_in_the_sky() const
 
 AnimationHandle Animator::register_animateable()
 {
+    std::lock_guard<std::mutex> lock(processing_lock);
     return next_handle++;
 }
 

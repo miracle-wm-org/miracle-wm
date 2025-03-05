@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_manager_tools.h>
 #include <optional>
 
+#include "render_data_manager.h"
+
 namespace geom = mir::geometry;
 
 namespace miracle
@@ -88,6 +90,7 @@ public:
     OutputInterface* get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
+    void on_workspace_transform() override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
@@ -126,6 +129,7 @@ private:
     bool next_with_animations = true;
     std::shared_ptr<Config> config;
     miral::Window window_;
+    RenderDataManagerId id = -1;
     std::weak_ptr<ParentContainer> parent;
     std::shared_ptr<CompositorState> state;
 

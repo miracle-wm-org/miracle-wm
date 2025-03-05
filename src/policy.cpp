@@ -22,12 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "constants.h"
 #include "container_group_container.h"
+#include "dying_surface_manager.h"
 #include "feature_flags.h"
+#include "forwarding_surface.h"
 #include "output_factory.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "workspace_manager.h"
-#include "animating_surface.h"
 
 #include <iostream>
 #include <mir/geometry/rectangle.h>
@@ -107,6 +108,7 @@ Policy::Policy(
     miral::ExternalClientLauncher& external_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state) :
+    tools { tools },
     config { config },
     state { state },
     launcher { std::make_unique<AutoRestartingLauncher>(runner, external_client_launcher) },
@@ -138,7 +140,13 @@ Policy::Policy(
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, workspace_manager, state, *launcher, window_controller),
         config)),
     main_loop_(server.the_main_loop()),
-    surface_stack(server.the_surface_stack())
+    dying_surface_manager(std::make_unique<DyingSurfaceManager>(
+        main_loop_,
+        server.the_surface_stack(),
+        state,
+        window_controller,
+        config,
+        animator))
 {
     workspace_observer_registrar->register_interest(ipc);
     workspace_observer_registrar->register_interest(self);
@@ -503,23 +511,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
     state->remove(container);
 
-    if (container->get_type() != ContainerType::leaf)
-        return;
-
-    if (!config->are_animations_enabled())
-        return;
-
-    auto surface = window_info.window().operator std::shared_ptr<mir::scene::Surface>();
-    auto animating_surface = std::make_shared<AnimatingSurface>(
-        surface,
-        animator->register_animateable(),
-        config->get_animation_definitions()[static_cast<int>(AnimateableEvent::window_close)],
-        container->get_visible_area(),
-        geom::Rectangle{},
-        container->get_visible_area());
-
-    surface_stack->add_surface(surface, mir::input::InputReceptionMode::normal);
-    animator->append(animating_surface);
+    dying_surface_manager->animate_dying_surface(container);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)

@@ -753,6 +753,10 @@ void ParentContainer::set_workspace(WorkspaceInterface* next)
         node->set_workspace(workspace);
 }
 
+void ParentContainer::on_workspace_transform()
+{
+}
+
 OutputInterface* ParentContainer::get_output() const
 {
     return get_workspace()->get_output();

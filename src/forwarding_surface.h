@@ -18,21 +18,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef ANIMATING_SURFACE_H
 #define ANIMATING_SURFACE_H
 
-#include "animator.h"
 #include <mir/scene/surface.h>
 
 namespace miracle
 {
-class AnimatingSurface : public virtual mir::scene::Surface, public virtual Animation
+class CompositorState;
+
+/// This is a surface that forwards all of its functionality
+/// to the provided surface. It is useful when you want everything
+/// about an existing surface except for the Renderable will
+/// resolve to this surface instead.
+///
+/// This class is specifically useful with the [DyingSurfaceManager].
+/// Other than that, its use seems minimal at best.
+class ForwardingSurface : public mir::scene::Surface
 {
 public:
-    AnimatingSurface(
-        std::shared_ptr<mir::scene::Surface> const&,
-        AnimationHandle handle,
-        AnimationDefinition definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current);
+    explicit ForwardingSurface(std::shared_ptr<mir::scene::Surface> const&);
+    ~ForwardingSurface() override;
     bool input_area_contains(const mir::geometry::Point& point) const override;
     mir::input::InputReceptionMode reception_mode() const override;
     void consume(const std::shared_ptr<MirEvent const>& event) override;
@@ -89,10 +92,10 @@ public:
     void set_window_margins(mir::geometry::DeltaY top, mir::geometry::DeltaX left, mir::geometry::DeltaY bottom, mir::geometry::DeltaX right) override;
     auto focus_mode() const -> MirFocusMode override;
     void set_focus_mode(MirFocusMode focus_mode) override;
-    void on_tick(AnimationStepResult const&) override;
+
 private:
     std::shared_ptr<mir::scene::Surface> surface_;
 };
 }
 
-#endif //ANIMATING_SURFACE_H
+#endif // ANIMATING_SURFACE_H

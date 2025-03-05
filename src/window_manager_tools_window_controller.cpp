@@ -301,3 +301,8 @@ miral::Window WindowManagerToolsWindowController::window_at(float x, float y)
 {
     return tools.window_at({ x, y });
 }
+
+void WindowManagerToolsWindowController::invoke_under_lock(std::function<void()> const& f)
+{
+    tools.invoke_under_lock(f);
+}

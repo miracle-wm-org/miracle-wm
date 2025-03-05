@@ -107,6 +107,7 @@ public:
     virtual OutputInterface* get_output() const = 0;
     virtual glm::mat4 get_transform() const = 0;
     virtual void set_transform(glm::mat4 transform) = 0;
+    virtual void on_workspace_transform() = 0;
     virtual glm::mat4 get_workspace_transform() const;
     virtual glm::mat4 get_output_transform() const;
     virtual uint32_t animation_handle() const = 0;
