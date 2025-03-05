@@ -38,7 +38,7 @@ public:
         std::shared_ptr<CommandController> const& command_controller,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<OutputManager> const& output_manager);
-    bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, uint modifiers);
+    bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers);
 
 private:
     std::shared_ptr<CommandController> command_controller;

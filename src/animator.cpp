@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "animator.h"
+#include <algorithm>
 #include <chrono>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -76,11 +77,11 @@ float ease(AnimationDefinition const& defintion, float t)
     case EaseFunction::linear:
         return t;
     case EaseFunction::ease_in_sine:
-        return 1 - cosf((t * M_PIf) / 2.f);
+        return 1 - cosf((t * static_cast<float>(M_PI)) / 2.f);
     case EaseFunction::ease_in_out_sine:
-        return -(cosf(M_PIf * t) - 1) / 2;
+        return -(cosf(static_cast<float>(M_PI) * t) - 1) / 2;
     case EaseFunction::ease_out_sine:
-        return sinf((t * M_PIf) / 2.f);
+        return sinf((t * static_cast<float>(M_PI)) / 2.f);
     case EaseFunction::ease_in_quad:
         return t * t;
     case EaseFunction::ease_out_quad:
