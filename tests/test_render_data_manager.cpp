@@ -29,21 +29,11 @@ public:
 
 TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
 {
-    ::testing::NiceMock<test::MockContainer> container;
-    ON_CALL(container, window())
-        .WillByDefault(::testing::Return(miral::Window()));
-    ON_CALL(container, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
-    ON_CALL(container, get_output_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_workspace_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, is_focused())
-        .WillByDefault(::testing::Return(true));
-
-    render_data_manager.add(container);
+    render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f) });
 
     auto result = render_data_manager.get();
     ASSERT_EQ(result.size(), 1);
@@ -55,25 +45,13 @@ TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
 
 TEST_F(RenderDataManagerTest, CanChangeTransform)
 {
-    ::testing::NiceMock<test::MockContainer> container;
-    ON_CALL(container, window())
-        .WillByDefault(::testing::Return(miral::Window()));
-    ON_CALL(container, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
-    ON_CALL(container, get_output_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_workspace_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, is_focused())
-        .WillByDefault(::testing::Return(true));
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f) });
 
-    render_data_manager.add(container);
-
-    ON_CALL(container, get_transform())
-        .WillByDefault(::testing::Return(glm::mat4(2.f)));
-    render_data_manager.transform_change(container);
+    render_data_manager.transform_change(id, glm::mat4(2.f));
 
     auto result = render_data_manager.get();
     ASSERT_EQ(result.size(), 1);
@@ -85,25 +63,13 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
 
 TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 {
-    ::testing::NiceMock<test::MockContainer> container;
-    ON_CALL(container, window())
-        .WillByDefault(::testing::Return(miral::Window()));
-    ON_CALL(container, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
-    ON_CALL(container, get_output_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_workspace_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, is_focused())
-        .WillByDefault(::testing::Return(true));
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f) });
 
-    render_data_manager.add(container);
-
-    ON_CALL(container, get_workspace_transform())
-        .WillByDefault(::testing::Return(glm::mat4(2.f)));
-    render_data_manager.workspace_transform_change(container);
+    render_data_manager.workspace_transform_change(id, glm::mat4(2.f));
 
     auto result = render_data_manager.get();
     ASSERT_EQ(result.size(), 1);
@@ -115,25 +81,13 @@ TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 
 TEST_F(RenderDataManagerTest, CanChangeFocus)
 {
-    ::testing::NiceMock<test::MockContainer> container;
-    ON_CALL(container, window())
-        .WillByDefault(::testing::Return(miral::Window()));
-    ON_CALL(container, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
-    ON_CALL(container, get_output_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_workspace_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, get_transform())
-        .WillByDefault(::testing::Return(glm::mat4(1.f)));
-    ON_CALL(container, is_focused())
-        .WillByDefault(::testing::Return(true));
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f) });
 
-    render_data_manager.add(container);
-
-    ON_CALL(container, is_focused())
-        .WillByDefault(::testing::Return(false));
-    render_data_manager.focus_change(container);
+    render_data_manager.focus_change(id, false);
 
     auto result = render_data_manager.get();
     ASSERT_EQ(result.size(), 1);
@@ -152,21 +106,11 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
     int value = GetParam();
     for (int i = 0; i < value; i++)
     {
-        ::testing::NiceMock<test::MockContainer> container;
-        ON_CALL(container, window())
-            .WillByDefault(::testing::Return(miral::Window()));
-        ON_CALL(container, get_type())
-            .WillByDefault(::testing::Return(ContainerType::leaf));
-        ON_CALL(container, get_output_transform())
-            .WillByDefault(::testing::Return(glm::mat4(1.f)));
-        ON_CALL(container, get_workspace_transform())
-            .WillByDefault(::testing::Return(glm::mat4(1.f)));
-        ON_CALL(container, get_transform())
-            .WillByDefault(::testing::Return(glm::mat4(1.f)));
-        ON_CALL(container, is_focused())
-            .WillByDefault(::testing::Return(true));
-
-        render_data_manager.add(container);
+        render_data_manager.add({ .surface = nullptr,
+            .needs_outline = true,
+            .is_focused = true,
+            .transform = glm::mat4(1.f),
+            .workspace_transform = glm::mat4(1.f) });
     }
 
     auto result = render_data_manager.get();
