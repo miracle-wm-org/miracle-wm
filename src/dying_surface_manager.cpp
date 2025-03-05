@@ -33,7 +33,7 @@ public:
     RawSurfaceAnimation(
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<mir::scene::Surface> const& surface,
-        AnimationHandle handle,
+        AnimationHandle const& handle,
         AnimationDefinition const& definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
@@ -109,7 +109,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
         window_controller->invoke_under_lock([this, surface = surface, container = container]
         {
             auto animating_surface = std::make_shared<ForwardingSurface>(surface);
-            auto raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
+            auto const raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
                 compositor_state,
                 animating_surface,
                 animator->register_animateable(),
@@ -119,7 +119,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
                 container->get_visible_area(),
                 container->get_transform(),
                 container->get_output_transform() * container->get_workspace_transform(),
-                [surface_stack = surface_stack, animating_surface = animating_surface]()
+                [surface_stack = surface_stack, animating_surface = animating_surface]
             {
                 surface_stack->remove_surface(animating_surface);
             });

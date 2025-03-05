@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DYING_SURFACE_MANAGER_H
 
 #include <memory>
-#include <vector>
 
 namespace mir
 {

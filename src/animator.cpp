@@ -369,8 +369,8 @@ AnimationStepResult Animation::step(float dt)
     {
         auto const p = 1.f - ease(definition, t);
         glm::vec3 const translate(
-            static_cast<float>(to.size.width.as_value()) / 2.f,
-            static_cast<float>(to.size.height.as_value()) / 2.f,
+            static_cast<float>(from.size.width.as_value()) / 2.f,
+            static_cast<float>(from.size.height.as_value()) / 2.f,
             0);
         auto const inverse_translate = -translate;
         glm::mat4 const transform = glm::translate(
