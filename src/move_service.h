@@ -32,7 +32,7 @@ class MoveService
 {
 public:
     MoveService(std::shared_ptr<CommandController> const&, std::shared_ptr<Config> const&, std::shared_ptr<OutputManager> const& output_manager);
-    bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, uint modifiers);
+    bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers);
 
 private:
     std::shared_ptr<CommandController> command_controller;

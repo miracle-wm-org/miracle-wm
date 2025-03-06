@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
+#include <mutex>
 #include <vector>
 
 namespace miracle

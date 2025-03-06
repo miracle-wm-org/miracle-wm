@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "layout_scheme.h"
 #include <stdexcept>
+#include <string>
 
 const char* miracle::to_string(miracle::LayoutScheme scheme)
 {

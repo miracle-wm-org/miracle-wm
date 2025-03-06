@@ -40,7 +40,7 @@ bool MoveService::handle_pointer_event(
     float x,
     float y,
     MirPointerAction action,
-    uint modifiers)
+    unsigned int modifiers)
 {
     if (state.mode() == WindowManagerMode::moving)
     {
