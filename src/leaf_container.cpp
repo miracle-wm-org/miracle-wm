@@ -125,6 +125,19 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
 
     return { target_parent, to_update };
 }
+
+inline bool needs_outline(Container const& container)
+{
+    auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
+    container.window().value();
+    return (container.get_type() == ContainerType::leaf)
+        && (surface == nullptr || !surface->parent());
+}
+
+inline glm::mat4 workspace_transform(Container const& container)
+{
+    return container.get_output_transform() * container.get_workspace_transform();
+}
 }
 
 LeafContainer::LeafContainer(
@@ -145,13 +158,20 @@ LeafContainer::LeafContainer(
 
 LeafContainer::~LeafContainer()
 {
-    state->render_data_manager()->remove(*this);
+    state->render_data_manager()->remove(id);
 }
 
 void LeafContainer::associate_to_window(miral::Window const& in_window)
 {
     window_ = in_window;
-    state->render_data_manager()->add(*this);
+    id = state->render_data_manager()->add({
+        RenderData {
+                    .surface = window()->operator std::shared_ptr<mir::scene::Surface>().get(),
+                    .needs_outline = needs_outline(*this),
+                    .is_focused = is_focused(),
+                    .transform = get_transform(),
+                    .workspace_transform = workspace_transform(*this) }
+    });
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
@@ -503,12 +523,12 @@ void LeafContainer::on_focus_gained()
 {
     if (auto sh_parent = parent.lock())
         sh_parent->on_focus_gained();
-    state->render_data_manager()->focus_change(*this);
+    state->render_data_manager()->focus_change(id, true);
 }
 
 void LeafContainer::on_focus_lost()
 {
-    state->render_data_manager()->focus_change(*this);
+    state->render_data_manager()->focus_change(id, false);
 }
 
 void LeafContainer::on_move_to(geom::Point const&)
@@ -629,7 +649,23 @@ void LeafContainer::set_transform(glm::mat4 transform_)
     {
         surface->set_transformation(transform_);
         transform = transform_;
-        state->render_data_manager()->transform_change(*this);
+        state->render_data_manager()->transform_change(id, transform_);
+    }
+}
+
+void LeafContainer::on_workspace_transform()
+{
+    state->render_data_manager()->workspace_transform_change(id, workspace_transform(*this));
+    auto surface = window_.operator std::shared_ptr<mir::scene::Surface>();
+    if (surface)
+    {
+        // While we don't use this transform in rendering, we do need it
+        // so that the compositor understands which surfaces overlap
+        // and properly obscures them.
+        auto full_transform = get_output_transform()
+            * get_workspace_transform()
+            * get_transform();
+        surface->set_transformation(full_transform);
     }
 }
 

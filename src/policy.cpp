@@ -22,7 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "constants.h"
 #include "container_group_container.h"
+#include "dying_surface_manager.h"
 #include "feature_flags.h"
+#include "forwarding_surface.h"
 #include "output_factory.h"
 #include "output_manager.h"
 #include "parent_container.h"
@@ -32,12 +34,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
+#include <mir/shell/surface_stack.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/application_info.h>
 #include <miral/runner.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
-#include <miral/zone.h>
 #include <mutex>
 
 using namespace miracle;
@@ -106,6 +108,7 @@ Policy::Policy(
     miral::ExternalClientLauncher& external_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state) :
+    tools { tools },
     config { config },
     state { state },
     launcher { std::make_unique<AutoRestartingLauncher>(runner, external_client_launcher) },
@@ -136,7 +139,14 @@ Policy::Policy(
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, workspace_manager, state, *launcher, window_controller),
         config)),
-    main_loop_(server.the_main_loop())
+    main_loop_(server.the_main_loop()),
+    dying_surface_manager(std::make_unique<DyingSurfaceManager>(
+        main_loop_,
+        server.the_surface_stack(),
+        state,
+        window_controller,
+        config,
+        animator))
 {
     workspace_observer_registrar->register_interest(ipc);
     workspace_observer_registrar->register_interest(self);
@@ -500,6 +510,8 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         state->unfocus_container(container);
 
     state->remove(container);
+
+    dying_surface_manager->animate_dying_surface(container);
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)

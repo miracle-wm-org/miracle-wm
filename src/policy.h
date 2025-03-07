@@ -51,6 +51,7 @@ class Container;
 class ContainerGroupContainer;
 class AnimatorLoop;
 class OutputManager;
+class DyingSurfaceManager;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -111,6 +112,7 @@ public:
 private:
     class Self;
 
+    miral::WindowManagerTools tools;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Animator> animator;
@@ -130,6 +132,7 @@ private:
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
+    std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

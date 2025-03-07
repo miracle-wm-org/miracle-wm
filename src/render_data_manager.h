@@ -27,9 +27,11 @@ namespace miracle
 {
 
 class Container;
+typedef int RenderDataManagerId;
 
 struct RenderData
 {
+    RenderDataManagerId id = 0;
     mir::scene::Surface* surface;
     bool needs_outline = false;
     bool is_focused = false;
@@ -41,14 +43,15 @@ class RenderDataManager
 {
 public:
     RenderDataManager();
-    void add(Container const&);
-    void remove(Container const&);
-    void transform_change(Container const&);
-    void workspace_transform_change(Container const&);
-    void focus_change(Container const&);
+    RenderDataManagerId add(RenderData const&&);
+    void remove(RenderDataManagerId id);
+    void transform_change(RenderDataManagerId id, glm::mat4 const& transform);
+    void workspace_transform_change(RenderDataManagerId id, glm::mat4 const& transform);
+    void focus_change(RenderDataManagerId id, bool is_focused);
     std::vector<RenderData> const& get();
 
 private:
+    RenderDataManagerId next_id = 0;
     std::mutex mutex;
     std::vector<RenderData> render_data;
     std::vector<RenderData> copy_for_renderer;

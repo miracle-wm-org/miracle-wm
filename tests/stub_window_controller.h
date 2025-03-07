@@ -139,6 +139,11 @@ public:
     {
     }
 
+    void invoke_under_lock(std::function<void()> const& f) override
+    {
+        f();
+    }
+
 private:
     std::vector<StubWindowData>& pairs;
     miral::WindowInfo stub_win_info;

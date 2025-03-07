@@ -57,6 +57,7 @@ public:
     virtual void set_size_hack(AnimationHandle handle, geom::Size const& size) = 0;
     virtual miral::Window window_at(float x, float y) = 0;
     virtual void process_animation(AnimationStepResult const&, std::shared_ptr<Container> const&) = 0;
+    virtual void invoke_under_lock(std::function<void()> const& f) = 0;
 };
 
 }

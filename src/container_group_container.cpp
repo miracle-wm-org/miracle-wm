@@ -277,6 +277,10 @@ void ContainerGroupContainer::set_transform(glm::mat4 transform)
 {
 }
 
+void ContainerGroupContainer::on_workspace_transform()
+{
+}
+
 glm::mat4 ContainerGroupContainer::get_workspace_transform() const
 {
     return glm::mat4(1.f);

@@ -181,6 +181,10 @@ void ShellComponentContainer::set_transform(glm::mat4 transform)
     }
 }
 
+void ShellComponentContainer::on_workspace_transform()
+{
+}
+
 glm::mat4 ShellComponentContainer::get_workspace_transform() const
 {
     return glm::mat4(1.f);

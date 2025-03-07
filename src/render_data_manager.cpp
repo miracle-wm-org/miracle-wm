@@ -22,86 +22,65 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-namespace
-{
-inline bool needs_outline(Container const& container)
-{
-    auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
-    container.window().value();
-    return (container.get_type() == ContainerType::leaf)
-        && (surface == nullptr || !surface->parent());
-}
-
-inline glm::mat4 workspace_transform(Container const& container)
-{
-    return container.get_output_transform() * container.get_workspace_transform();
-}
-}
-
 RenderDataManager::RenderDataManager()
 {
     render_data.reserve(48);
 }
 
-void RenderDataManager::add(Container const& container)
+RenderDataManagerId RenderDataManager::add(RenderData const&& data)
 {
-    if (container.window() == std::nullopt)
-        return;
-
     std::lock_guard lock(mutex);
-    render_data.emplace_back(RenderData {
-        .surface = container.window()->operator std::shared_ptr<mir::scene::Surface>().get(),
-        .needs_outline = needs_outline(container),
-        .is_focused = container.is_focused(),
-        .transform = container.get_transform(),
-        .workspace_transform = workspace_transform(container) });
+    auto id = next_id++;
+    render_data.push_back(data);
+    render_data.back().id = id;
+    return id;
 }
 
-void RenderDataManager::transform_change(Container const& container)
+void RenderDataManager::transform_change(RenderDataManagerId id, glm::mat4 const& transform)
 {
     std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
-        if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
+        if (data.id == id)
         {
-            data.transform = container.get_transform();
+            data.transform = transform;
             return;
         }
     }
 }
 
-void RenderDataManager::workspace_transform_change(Container const& container)
+void RenderDataManager::workspace_transform_change(RenderDataManagerId id, glm::mat4 const& transform)
 {
     std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
-        if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
+        if (data.id == id)
         {
-            data.workspace_transform = workspace_transform(container);
+            data.workspace_transform = transform;
             return;
         }
     }
 }
 
-void RenderDataManager::focus_change(Container const& container)
+void RenderDataManager::focus_change(RenderDataManagerId id, bool is_focused)
 {
     std::lock_guard lock(mutex);
     for (auto& data : render_data)
     {
-        if (data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get())
+        if (data.id == id)
         {
-            data.is_focused = container.is_focused();
+            data.is_focused = is_focused;
             return;
         }
     }
 }
 
-void RenderDataManager::remove(Container const& container)
+void RenderDataManager::remove(RenderDataManagerId id)
 {
     std::lock_guard lock(mutex);
     render_data.erase(std::remove_if(render_data.begin(), render_data.end(), [&](RenderData const& data)
     {
-        return data.surface == container.window()->operator std::shared_ptr<mir::scene::Surface>().get();
+        return data.id == id;
     }),
         render_data.end());
 }

@@ -172,6 +172,10 @@ namespace test
         {
         }
 
+        void on_workspace_transform() override
+        {
+        }
+
         glm::mat4 get_workspace_transform() const override
         {
             return Container::get_workspace_transform();

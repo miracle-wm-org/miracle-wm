@@ -415,22 +415,7 @@ void Workspace::workspace_transform_change_hack()
     //  the lock over and over again.
     for_each_window([&](std::shared_ptr<Container> const& container)
     {
-        auto window = container->window();
-        state->render_data_manager()->workspace_transform_change(*container);
-        if (window)
-        {
-            auto surface = window->operator std::shared_ptr<mir::scene::Surface>();
-            if (surface)
-            {
-                // While we don't use this transform in rendering, we do need it
-                // so that the compositor understands which surfaces overlap
-                // and properly obscures them.
-                auto full_transform = container->get_output_transform()
-                    * container->get_workspace_transform()
-                    * container->get_transform();
-                surface->set_transformation(full_transform);
-            }
-        }
+        container->on_workspace_transform();
         return false;
     });
 }

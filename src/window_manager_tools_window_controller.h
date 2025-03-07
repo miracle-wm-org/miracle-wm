@@ -62,6 +62,7 @@ public:
     void set_size_hack(AnimationHandle handle, mir::geometry::Size const& size) override;
     miral::Window window_at(float x, float y) override;
     void process_animation(AnimationStepResult const&, std::shared_ptr<Container> const&) override;
+    void invoke_under_lock(std::function<void()> const& f) override;
 
 private:
     miral::WindowManagerTools tools;
