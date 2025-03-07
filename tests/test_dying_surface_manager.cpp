@@ -20,11 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dying_surface_manager.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
+#include "mock_main_loop.h"
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_surface_stack.h"
 #include "mock_window_controller.h"
-#include <mirtest-internal/mir/test/doubles/mock_main_loop.h>
 
 #include <gtest/gtest.h>
 
