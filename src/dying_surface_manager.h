@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace mir
 {
-class MainLoop;
+class ServerActionQueue;
 namespace shell
 {
     class SurfaceStack;
@@ -37,11 +37,14 @@ class WindowController;
 class Config;
 class Animator;
 
+/// When a [Container] is removed, we notify this service which
+/// manages any visual interaction on the container as it closes.
+/// This most likely means some sort of closing animation.
 class DyingSurfaceManager
 {
 public:
     DyingSurfaceManager(
-        std::shared_ptr<mir::MainLoop> const& main_loop,
+        std::shared_ptr<mir::ServerActionQueue> const& main_loop,
         std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<WindowController> const& window_controller,
@@ -51,7 +54,7 @@ public:
     void animate_dying_surface(std::shared_ptr<Container> const& container);
 
 private:
-    std::shared_ptr<mir::MainLoop> main_loop;
+    std::shared_ptr<mir::ServerActionQueue> main_loop;
     std::shared_ptr<mir::shell::SurfaceStack> surface_stack;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<WindowController> window_controller;

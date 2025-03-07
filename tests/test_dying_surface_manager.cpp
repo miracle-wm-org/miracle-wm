@@ -1,0 +1,110 @@
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
+#include "animator.h"
+#include "compositor_state.h"
+#include "dying_surface_manager.h"
+#include "mock_configuration.h"
+#include "mock_container.h"
+#include "mock_session.h"
+#include "mock_surface.h"
+#include "mock_surface_stack.h"
+#include "mock_window_controller.h"
+#include <mirtest-internal/mir/test/doubles/mock_main_loop.h>
+
+#include <gtest/gtest.h>
+
+using namespace miracle;
+
+class DyingSurfaceManagerTest : public testing::Test
+{
+public:
+    DyingSurfaceManagerTest() :
+        main_loop(std::make_shared<mir::test::doubles::MockMainLoop>()),
+        surface_stack(std::make_shared<test::MockSurfaceStack>()),
+        compositor_state(std::make_shared<CompositorState>()),
+        window_controller(std::make_shared<test::MockWindowController>()),
+        config(std::make_shared<test::MockConfig>()),
+        animator(std::make_shared<Animator>()),
+        dying_surface_manager(
+            main_loop,
+            surface_stack,
+            compositor_state,
+            window_controller,
+            config,
+            animator)
+    {
+    }
+
+    std::shared_ptr<mir::test::doubles::MockMainLoop> main_loop;
+    std::shared_ptr<test::MockSurfaceStack> surface_stack;
+    std::shared_ptr<CompositorState> compositor_state;
+    std::shared_ptr<test::MockWindowController> window_controller;
+    std::shared_ptr<test::MockConfig> config;
+    std::shared_ptr<Animator> animator;
+    DyingSurfaceManager dying_surface_manager;
+};
+
+TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
+{
+    auto const container = std::make_shared<test::MockContainer>();
+
+    // Pre-conditions for starting the animation
+    EXPECT_CALL(*container, get_type())
+        .WillOnce(testing::Return(ContainerType::leaf));
+    EXPECT_CALL(*config, are_animations_enabled())
+        .WillOnce(testing::Return(true));
+
+    auto const session = std::make_shared<test::MockSession>();
+    auto const surface = std::make_shared<test::MockSurface>();
+    miral::Window const window(session, surface);
+
+    // Condition for starting the loop
+    EXPECT_CALL(*container, window())
+        .WillOnce(testing::Return(window));
+    EXPECT_CALL(*main_loop, enqueue)
+        .WillOnce(::testing::InvokeArgument<1>());
+    EXPECT_CALL(*window_controller, invoke_under_lock)
+        .WillOnce(::testing::InvokeArgument<0>());
+
+    // Resolution of the animation
+    std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animation_definitions;
+    animation_definitions[static_cast<int>(AnimateableEvent::window_close)] = {
+        .duration_seconds = 10.f
+    };
+    EXPECT_CALL(*config, get_animation_definitions())
+        .WillOnce(testing::ReturnRef(animation_definitions));
+
+    constexpr mir::geometry::Rectangle area(
+        mir::geometry::Point(0, 0),
+        mir::geometry::Size(100, 100));
+    EXPECT_CALL(*container, get_visible_area())
+        .WillRepeatedly(testing::Return(area));
+    EXPECT_CALL(*container, get_output_transform())
+        .WillOnce(testing::Return(glm::mat4(1.f)));
+    EXPECT_CALL(*container, get_workspace_transform())
+        .WillOnce(testing::Return(glm::mat4(1.f)));
+    EXPECT_CALL(*container, get_transform())
+        .WillOnce(testing::Return(glm::mat4(1.f)));
+
+    // Expect the surface stack to have been modified as well as the animator
+    EXPECT_CALL(*surface_stack, add_surface(testing::_, mir::input::InputReceptionMode::normal))
+        .Times(1);
+    EXPECT_FALSE(animator->has_animations());
+    dying_surface_manager.animate_dying_surface(container);
+    EXPECT_TRUE(animator->has_animations());
+}

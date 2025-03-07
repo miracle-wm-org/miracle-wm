@@ -80,7 +80,7 @@ private:
 }
 
 DyingSurfaceManager::DyingSurfaceManager(
-    std::shared_ptr<mir::MainLoop> const& main_loop,
+    std::shared_ptr<mir::ServerActionQueue> const& main_loop,
     std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<WindowController> const& window_controller,
