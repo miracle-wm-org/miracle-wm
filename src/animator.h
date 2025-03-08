@@ -43,6 +43,7 @@ extern const AnimationHandle none_animation_handle;
 /// Callback data provided to the caller on each tick.
 struct AnimationStepResult
 {
+public:
     /// The handle of the animation to which this result matches
     AnimationHandle handle = none_animation_handle;
 
