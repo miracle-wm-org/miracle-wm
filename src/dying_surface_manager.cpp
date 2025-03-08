@@ -67,6 +67,9 @@ public:
             surface_->set_transformation(result.transform.value());
         }
 
+        if (result.opacity)
+            surface_->set_alpha(result.opacity.value());
+
         if (result.is_complete)
             on_finish();
     }

@@ -54,6 +54,7 @@ struct AnimationStepResult
     std::optional<glm::vec2> position;
     std::optional<glm::vec2> size;
     std::optional<glm::mat4> transform;
+    std::optional<float> opacity;
 };
 
 class Animation
