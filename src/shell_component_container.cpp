@@ -195,10 +195,6 @@ glm::mat4 ShellComponentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ShellComponentContainer::set_alpha(float const alpha)
-{
-}
-
 uint32_t ShellComponentContainer::animation_handle() const
 {
     return handle_;

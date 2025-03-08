@@ -75,19 +75,6 @@ void RenderDataManager::focus_change(RenderDataManagerId id, bool is_focused)
     }
 }
 
-void RenderDataManager::alpha_change(RenderDataManagerId id, float const alpha)
-{
-    std::lock_guard lock(mutex);
-    for (auto& data : render_data)
-    {
-        if (data.id == id)
-        {
-            data.alpha = alpha;
-            return;
-        }
-    }
-}
-
 void RenderDataManager::remove(RenderDataManagerId id)
 {
     std::lock_guard lock(mutex);

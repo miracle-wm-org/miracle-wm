@@ -110,7 +110,6 @@ public:
     virtual void on_workspace_transform() = 0;
     virtual glm::mat4 get_workspace_transform() const;
     virtual glm::mat4 get_output_transform() const;
-    virtual void set_alpha(float const alpha) = 0;
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;

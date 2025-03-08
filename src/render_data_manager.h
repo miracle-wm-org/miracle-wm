@@ -37,7 +37,6 @@ struct RenderData
     bool is_focused = false;
     glm::mat4 transform = glm::mat4(1.f);
     glm::mat4 workspace_transform = glm::mat4(1.f);
-    float alpha = 1.f;
 };
 
 class RenderDataManager
@@ -49,7 +48,6 @@ public:
     void transform_change(RenderDataManagerId id, glm::mat4 const& transform);
     void workspace_transform_change(RenderDataManagerId id, glm::mat4 const& transform);
     void focus_change(RenderDataManagerId id, bool is_focused);
-    void alpha_change(RenderDataManagerId id, float const alpha);
     std::vector<RenderData> const& get();
 
 private:

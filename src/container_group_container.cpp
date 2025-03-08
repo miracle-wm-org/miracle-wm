@@ -291,10 +291,6 @@ glm::mat4 ContainerGroupContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ContainerGroupContainer::set_alpha(float const alpha)
-{
-}
-
 uint32_t ContainerGroupContainer::animation_handle() const
 {
     return 0;

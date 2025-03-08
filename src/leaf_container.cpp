@@ -669,11 +669,6 @@ void LeafContainer::on_workspace_transform()
     }
 }
 
-void LeafContainer::set_alpha(float const alpha)
-{
-    state->render_data_manager()->alpha_change(id, alpha);
-}
-
 uint32_t LeafContainer::animation_handle() const
 {
     return animation_handle_;

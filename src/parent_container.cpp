@@ -781,10 +781,6 @@ glm::mat4 ParentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ParentContainer::set_alpha(float const alpha)
-{
-}
-
 uint32_t ParentContainer::animation_handle() const
 {
     return 0;

@@ -91,7 +91,6 @@ public:
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void on_workspace_transform() override;
-    void set_alpha(float const alpha) override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
