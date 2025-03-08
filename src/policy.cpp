@@ -115,7 +115,7 @@ Policy::Policy(
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
-    animator_loop(std::make_unique<ServerActionQueueAnimatorLoop>(animator, server.the_main_loop())),
+    animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
             this,
@@ -573,7 +573,14 @@ void Policy::handle_modify_window(
     auto const* workspace = container->get_workspace();
     if (workspace)
     {
-        if (workspace != output_manager->focused()->active().get())
+        auto focused_output = output_manager->focused();
+        if (!focused_output)
+        {
+            mir::log_error("Policy::handle_modify_window: focused_output unavailable");
+            return;
+        }
+
+        if (workspace != focused_output->active().get())
             return;
     }
     else if (scratchpad_->contains(container) && !scratchpad_->is_showing(container))
