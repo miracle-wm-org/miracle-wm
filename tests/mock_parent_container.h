@@ -64,6 +64,7 @@ namespace test
         MOCK_METHOD(void, on_workspace_transform, (), (override));
         MOCK_METHOD(glm::mat4, get_workspace_transform, (), (const, override));
         MOCK_METHOD(glm::mat4, get_output_transform, (), (const, override));
+        MOCK_METHOD(void, set_alpha, (float const), (override));
         MOCK_METHOD(uint32_t, animation_handle, (), (const, override));
         MOCK_METHOD(void, animation_handle, (uint32_t), (override));
         MOCK_METHOD(bool, is_focused, (), (const, override));
