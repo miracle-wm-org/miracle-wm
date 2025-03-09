@@ -1,3 +1,4 @@
+#include "animation_defintion.h"
 #include "config.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
@@ -6,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <miral/runner.h>
 #include <vector>
+#include <yaml-cpp/node/node.h>
 
 using namespace miracle;
 
@@ -510,3 +512,43 @@ TEST_F(FilesystemConfigurationTest, DragAndDropMissingModifiers)
     EXPECT_EQ(config.drag_and_drop().enabled, true);
     EXPECT_EQ(config.drag_and_drop().modifiers, miracle_input_event_modifier_default | mir_input_event_modifier_shift);
 }
+
+struct AnimationTypeParam
+{
+    std::string value;
+    AnimationType expected;
+};
+
+class FilesystemConfigurationTestAnimationTypes : public FilesystemConfigurationTest, public ::testing::WithParamInterface<AnimationTypeParam>
+{
+};
+
+TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
+{
+    auto param = GetParam();
+    YAML::Node animations_node;
+    YAML::Node animation;
+    animation["event"] = "window_open";
+    animation["type"] = param.value;
+    animation["function"] = "linear";
+    animations_node.push_back(animation);
+
+    YAML::Node root;
+    root["animations"] = animations_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(runner, path, true);
+    auto def = config.get_animation_definitions()[static_cast<int>(AnimateableEvent::window_open)];
+    EXPECT_EQ(def.type, param.expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FilesystemConfigurationTestAnimationTypes,
+    FilesystemConfigurationTestAnimationTypes,
+    ::testing::Values(
+        AnimationTypeParam("disabled", AnimationType::disabled),
+        AnimationTypeParam("slide", AnimationType::slide),
+        AnimationTypeParam("grow", AnimationType::grow),
+        AnimationTypeParam("shrink", AnimationType::shrink),
+        AnimationTypeParam("fade_in", AnimationType::fade_in),
+        AnimationTypeParam("fade_out", AnimationType::fade_out)));
