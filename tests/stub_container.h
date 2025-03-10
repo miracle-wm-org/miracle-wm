@@ -186,6 +186,10 @@ namespace test
             return Container::get_output_transform();
         }
 
+        void set_alpha(float const alpha) override
+        {
+        }
+
         uint32_t animation_handle() const override
         {
             return 0;

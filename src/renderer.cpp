@@ -319,6 +319,7 @@ miracle::Renderer::DrawData Renderer::draw(
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
+    float alpha = renderable.alpha() * data.data.alpha;
     auto const* const prog =
         [&](bool alpha) -> ProgramData const*
     {
@@ -328,7 +329,7 @@ miracle::Renderer::DrawData Renderer::draw(
         if (alpha)
             return &family.alpha;
         return &family.opaque;
-    }(renderable.alpha() < 1.0f);
+    }(alpha < 1.0f);
 
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)
@@ -372,7 +373,7 @@ miracle::Renderer::DrawData Renderer::draw(
         glm::value_ptr(transform));
 
     if (prog->alpha_uniform >= 0)
-        glUniform1f(prog->alpha_uniform, renderable.alpha());
+        glUniform1f(prog->alpha_uniform, alpha);
 
     switch (compositor_state->mode())
     {
@@ -491,6 +492,8 @@ miracle::Renderer::DrawData Renderer::draw(
         if (border_config.size > 0)
         {
             auto color = data.data.is_focused ? border_config.focus_color : border_config.color;
+            if (data.data.alpha != 1.f)
+                color.a = data.data.alpha;
             return DrawData {
                 true,
                 data.data,

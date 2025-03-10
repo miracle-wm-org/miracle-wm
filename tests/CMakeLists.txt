@@ -24,6 +24,7 @@ pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 
 add_executable(miracle-wm-tests
+    mock_animation.h
     mock_configuration.h
     mock_container.h
     mock_output.h

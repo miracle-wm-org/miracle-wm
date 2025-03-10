@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
+#include "mock_animation.h"
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -46,7 +47,6 @@ public:
 
 class AnimatorTest : public testing::Test
 {
-public:
 };
 
 TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
@@ -71,6 +71,65 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
             mir::geometry::Point(0, 0),
             mir::geometry::Size(0, 0)));
     animator.append(animation);
-    animator.tick(0.16);
+    animator.tick(0.16f);
     EXPECT_EQ(animation->was_called, true);
+}
+
+MATCHER_P(OpacityIs, expected_opacity, "")
+{
+    return arg.opacity == expected_opacity;
+}
+
+TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
+{
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    AnimationDefinition definition {
+        .type = AnimationType::fade_in,
+        .function = EaseFunction::linear,
+        .duration_seconds = 1
+    };
+    auto const animation = std::make_shared<test::MockAnimation>(
+        handle,
+        definition,
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(600, 0),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)));
+    EXPECT_CALL(*animation, on_tick(OpacityIs(0.f)));
+    animator.append(animation);
+    EXPECT_CALL(*animation, on_tick(OpacityIs(0.75f)));
+    animator.tick(0.75f);
+}
+
+TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
+{
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    AnimationDefinition definition {
+        .type = AnimationType::fade_out,
+        .function = EaseFunction::linear,
+        .duration_seconds = 1
+    };
+    auto const animation = std::make_shared<test::MockAnimation>(
+        handle,
+        definition,
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(600, 0),
+            mir::geometry::Size(0, 0)),
+        mir::geometry::Rectangle(
+            mir::geometry::Point(0, 0),
+            mir::geometry::Size(0, 0)));
+    EXPECT_CALL(*animation, on_tick(OpacityIs(1.f)));
+    animator.append(animation);
+    EXPECT_CALL(*animation, on_tick(OpacityIs(0.25f)));
+    animator.tick(0.75f);
 }

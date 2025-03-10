@@ -43,6 +43,7 @@ extern const AnimationHandle none_animation_handle;
 /// Callback data provided to the caller on each tick.
 struct AnimationStepResult
 {
+public:
     /// The handle of the animation to which this result matches
     AnimationHandle handle = none_animation_handle;
 
@@ -54,6 +55,7 @@ struct AnimationStepResult
     std::optional<glm::vec2> position;
     std::optional<glm::vec2> size;
     std::optional<glm::mat4> transform;
+    std::optional<float> opacity;
 };
 
 class Animation

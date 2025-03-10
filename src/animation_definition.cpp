@@ -113,6 +113,10 @@ std::optional<AnimationType> miracle::from_string_animation_type(std::string con
         return AnimationType::grow;
     else if (str == "shrink")
         return AnimationType::shrink;
+    else if (str == "fade_in")
+        return AnimationType::fade_in;
+    else if (str == "fade_out")
+        return AnimationType::fade_out;
     else
         return std::nullopt;
 }

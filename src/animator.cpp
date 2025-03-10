@@ -315,6 +315,10 @@ AnimationStepResult Animation::init()
         auto result = slide(0, from, to, real_size);
         return { handle, false, clip_area, result.position, to_vec2_size(to), result.transform };
     }
+    case AnimationType::fade_in:
+        return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 0 };
+    case AnimationType::fade_out:
+        return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 1 };
     case AnimationType::disabled:
         return { handle, true, clip_area, to_vec2_point(to), to_vec2_size(to), glm::mat4(1.f) };
     default:
@@ -348,7 +352,8 @@ AnimationStepResult Animation::step(float dt)
             clip_area,
             position,
             std::nullopt,
-            transform
+            transform,
+            1.f
         };
     }
     case AnimationType::grow:
@@ -380,6 +385,16 @@ AnimationStepResult Animation::step(float dt)
                 glm::vec3(p, p, 1.f)),
             inverse_translate);
         return { handle, false, to, std::nullopt, std::nullopt, transform };
+    }
+    case AnimationType::fade_in:
+    {
+        auto const p = ease(definition, t);
+        return { .handle = handle, .is_complete = false, .opacity = p };
+    }
+    case AnimationType::fade_out:
+    {
+        auto const p = 1.f - ease(definition, t);
+        return { .handle = handle, .is_complete = false, .opacity = p };
     }
     case AnimationType::disabled:
     default:

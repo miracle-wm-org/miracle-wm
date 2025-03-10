@@ -1178,8 +1178,8 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
 
     std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> parsed({
         {
-         AnimationType::grow,
-         EaseFunction::ease_in_sine,
+         AnimationType::fade_in,
+         EaseFunction::linear,
          0.3f,
          },
         {
@@ -1188,9 +1188,9 @@ FilesystemConfiguration::ConfigDetails::ConfigDetails()
          0.25f,
          },
         {
-         AnimationType::shrink,
-         EaseFunction::ease_out_back,
-         0.25f,
+         AnimationType::fade_out,
+         EaseFunction::linear,
+         0.3f,
          },
         { AnimationType::slide,
          EaseFunction::ease_out_sine,
