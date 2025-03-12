@@ -390,7 +390,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
     std::lock_guard lock(self->mutex);
     if (!output_manager->focused())
-        mir::fatal_error("create_container: an output should always be available");
+    {
+        mir::log_error("Policy::advise_new_window: no focused output");
+        return;
+    }
 
     auto container = output_manager->focused()->create_container(window_info, pending_allocation);
     container->animation_handle(animator->register_animateable());
@@ -452,7 +455,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 
         // If the container has a null workspace, it is always selectable. Otherwise
         // it needs to be on the active workspace.
-        if (workspace != nullptr && workspace != output_manager->focused()->active().get())
+        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active().get())
         {
             // TODO: In this scenario, we may want to navigate to the focused workspace.
             //  This was removed because it breaks workspace animations.
