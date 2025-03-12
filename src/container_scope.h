@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_CONTAINER_SCOPE_H
 #define MIRACLE_CONTAINER_SCOPE_H
 
+#include <memory>
 #include <string>
 
 namespace miracle
@@ -61,6 +62,19 @@ struct ContainerScope
 {
     ContainerScopeType type;
     std::string value;
+    std::weak_ptr<Container> container;
+
+    /// Create a scope that targets a specific container
+    static ContainerScope from_container(std::shared_ptr<Container> const& container)
+    {
+        return { ContainerScopeType::none, "", container };
+    }
+
+    /// Create a scope that matches all containers
+    static ContainerScope all()
+    {
+        return { ContainerScopeType::all, "" };
+    }
 };
 
 }

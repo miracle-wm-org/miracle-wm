@@ -120,6 +120,7 @@ add_library(miracle-wm-implementation
     src/output_factory.cpp src/output_factory.cpp
     src/output.h src/output.cpp
     src/move_service.h src/move_service.cpp
+    src/resize_service.h src/resize_service.cpp
     src/container_scope.h
     src/forwarding_surface.cpp src/forwarding_surface.h
     src/dying_surface_manager.cpp src/dying_surface_manager.h
