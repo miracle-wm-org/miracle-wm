@@ -974,6 +974,17 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
             return {};
     }
 
+    // Check if we have a direct container reference
+    for (auto const& scope : scope_list)
+    {
+        if (!scope.container.expired())
+        {
+            auto container = scope.container.lock();
+            if (container)
+                return { container };
+        }
+    }
+
     std::vector<std::shared_ptr<Container>> result;
     for (auto const& container : state->containers())
     {

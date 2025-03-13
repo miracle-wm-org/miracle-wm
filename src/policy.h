@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mode_observer.h"
 #include "move_service.h"
 #include "output.h"
+#include "resize_service.h"
 #include "scratchpad.h"
 #include "window_manager_tools_window_controller.h"
 #include "workspace_manager.h"
@@ -128,6 +129,7 @@ private:
     std::vector<ContainerScope> empty_scope;
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;
+    std::unique_ptr<ResizeService> resize_service;
     std::shared_ptr<Ipc> ipc;
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<ContainerGroupContainer> group_selection;

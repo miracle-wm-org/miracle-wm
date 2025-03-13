@@ -134,6 +134,7 @@ Policy::Policy(
         std::make_unique<MirRunnerCommandControllerInterface>(runner), scratchpad_, output_manager)),
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
+    resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
     ipc(std::make_shared<Ipc>(
         runner,
         command_controller,
@@ -309,6 +310,9 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
             break;
         }
     }
+
+    if (resize_service->handle_pointer_event(x, y, action, modifiers))
+        return true;
 
     if (move_service->handle_pointer_event(*state, x, y, action, modifiers))
         return true;
@@ -641,7 +645,9 @@ void Policy::handle_request_resize(
         return;
     }
 
-    container->handle_request_resize(input_event, edge);
+    auto const pointer_event = mir_input_event_get_pointer_event(input_event);
+    auto const action = miral::toolkit::mir_pointer_event_action(pointer_event);
+    resize_service->handle_request_resize(container, action, edge);
 }
 
 void Policy::handle_animation(

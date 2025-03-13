@@ -43,6 +43,7 @@ add_executable(miracle-wm-tests
     test_scratchpad.cpp
     test_command_controller.cpp
     test_dying_surface_manager.cpp
+    test_resize_service.cpp
     stub_configuration.h
     stub_session.h
     stub_surface.h
