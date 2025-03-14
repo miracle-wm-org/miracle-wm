@@ -415,7 +415,6 @@ bool CommandController::try_close_window(std::vector<ContainerScope> const& scop
 
 bool CommandController::quit()
 {
-    std::lock_guard lock(mutex);
     interface->quit();
     return true;
 }
