@@ -100,7 +100,7 @@ int main(int argc, char const* argv[])
     for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);
 
-    auto i = runner.run_with(
+    return runner.run_with(
         { PolicyLoader(runner, external_client_launcher, config, compositor_state),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
@@ -117,6 +117,4 @@ int main(int argc, char const* argv[])
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
     }),
             miroil::OpenGLContext(new miracle::GLConfig()) });
-
-    return i;
 }

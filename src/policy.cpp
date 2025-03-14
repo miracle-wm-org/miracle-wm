@@ -153,6 +153,13 @@ Policy::Policy(
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc);
     animator_loop->start();
+
+    // TODO: This is a hack until we figure out what is happening with
+    //  https://github.com/canonical/mir/issues/3823.
+    runner.add_stop_callback([&]
+    {
+        ipc->on_shutdown();
+    });
 }
 
 Policy::~Policy()
