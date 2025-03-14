@@ -37,6 +37,7 @@ class Container;
 class WindowController
 {
 public:
+    virtual ~WindowController() = default;
     virtual void set_rectangle(miral::Window const&, geom::Rectangle const&, geom::Rectangle const&, bool with_animations = true) = 0;
     virtual MirWindowState get_state(miral::Window const&) = 0;
     virtual void change_state(miral::Window const&, MirWindowState state) = 0;

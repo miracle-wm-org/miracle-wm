@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "miracle_gl_config.h"
 #include "policy.h"
-#include "render_data_manager.h"
 #include "renderer.h"
 #include "version.h"
 
@@ -43,21 +42,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miral;
 
-/// Wraps another miral API so that we can gain access to the underlying Server.
-class ServerMiddleman
+class PolicyLoader
 {
 public:
-    explicit ServerMiddleman(std::function<void(::mir::Server&)> const& f) :
-        f { f }
+    PolicyLoader(MirRunner& runner,
+        ExternalClientLauncher& launcher,
+        std::shared_ptr<miracle::Config> const& config,
+        std::shared_ptr<miracle::CompositorState> const& compositor_state) :
+        runner(runner),
+        launcher(launcher),
+        config(config),
+        compositor_state(compositor_state)
     {
     }
-    void operator()(mir::Server& server) const
+
+    void operator()(mir::Server& server)
     {
-        f(server);
+        config->load(server);
+        auto policy = add_window_manager_policy<miracle::Policy>(
+            "tiling", server, runner, launcher, config, compositor_state);
+        options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
+        options->operator()(server);
     }
 
 private:
-    std::function<void(::mir::Server&)> f;
+    MirRunner& runner;
+    ExternalClientLauncher& launcher;
+    std::shared_ptr<miracle::Config> config;
+    std::shared_ptr<miracle::CompositorState> compositor_state;
+    std::shared_ptr<WindowManagerOptions> options;
 };
 
 int main(int argc, char const* argv[])
@@ -73,20 +86,7 @@ int main(int argc, char const* argv[])
         setenv(env.key.c_str(), env.value.c_str(), 1);
     }
 
-    WindowManagerOptions* options;
-    auto window_managers = ServerMiddleman(
-        [&](mir::Server& server)
-    {
-        config->load(server);
-        options = new WindowManagerOptions {
-            add_window_manager_policy<miracle::Policy>(
-                "tiling", server, runner, external_client_launcher, config, compositor_state)
-        };
-        (*options)(server);
-    });
-
     Keymap config_keymap;
-
     WaylandExtensions wayland_extensions = WaylandExtensions {}
                                                .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
                                                .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
@@ -101,7 +101,7 @@ int main(int argc, char const* argv[])
         wayland_extensions.enable(extension);
 
     return runner.run_with(
-        { window_managers,
+        { PolicyLoader(runner, external_client_launcher, config, compositor_state),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             config_keymap,

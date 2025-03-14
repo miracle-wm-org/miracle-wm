@@ -50,7 +50,7 @@ public:
         std::shared_ptr<Config> const& config,
         std::shared_ptr<ParentContainer> const& parent,
         std::shared_ptr<CompositorState> const& state);
-    ~LeafContainer();
+    ~LeafContainer() override;
 
     void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;

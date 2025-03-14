@@ -111,11 +111,12 @@ Policy::Policy(
     tools { tools },
     config { config },
     state { state },
-    launcher { std::make_unique<AutoRestartingLauncher>(runner, external_client_launcher) },
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
-    animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
+    launcher { std::make_unique<AutoRestartingLauncher>(runner, external_client_launcher) },
+    workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
+    mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
             this,
@@ -123,11 +124,9 @@ Policy::Policy(
             config,
             window_controller,
             animator))),
-    workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
-    scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
     self(std::make_shared<Self>(*this)),
-    mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
+    scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
     command_controller(std::make_shared<CommandController>(
         config, self->mutex, state, window_controller,
         workspace_manager, mode_observer_registrar,
@@ -140,6 +139,7 @@ Policy::Policy(
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, workspace_manager, state, *launcher, window_controller),
         config)),
+    animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
     dying_surface_manager(std::make_unique<DyingSurfaceManager>(
         main_loop_,
@@ -153,6 +153,13 @@ Policy::Policy(
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc);
     animator_loop->start();
+
+    // TODO: This is a hack until we figure out what is happening with
+    //  https://github.com/canonical/mir/issues/3823.
+    runner.add_stop_callback([&]
+    {
+        ipc->on_shutdown();
+    });
 }
 
 Policy::~Policy()

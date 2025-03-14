@@ -36,7 +36,7 @@ public:
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&);
-    ~Output() override final;
+    ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
     std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;

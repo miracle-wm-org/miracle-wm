@@ -349,6 +349,9 @@ void Ipc::on_shutdown()
 
         send_reply(client, IPC_EVENT_SHUTDOWN, response);
     }
+
+    for (auto& client : clients)
+        disconnect(client);
 }
 
 Ipc::IpcClient& Ipc::get_client(int fd)
@@ -546,8 +549,10 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
         disconnect(client);
-        return;
+        break;
     }
+
+    free(buf);
 }
 
 void Ipc::send_reply(miracle::Ipc::IpcClient& client, miracle::IpcType command_type, const std::string& payload)

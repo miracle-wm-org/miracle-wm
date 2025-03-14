@@ -46,6 +46,7 @@ void ThreadedAnimatorLoop::stop()
         return;
 
     running = false;
+    animator->get_cv().notify_one();
     run_thread.join();
 }
 
@@ -67,6 +68,9 @@ void ThreadedAnimatorLoop::run()
             {
                 animator->get_cv().wait(lock);
                 frame_start = clock::now();
+
+                if (!running)
+                    return;
             }
         }
 

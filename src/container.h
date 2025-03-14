@@ -64,6 +64,7 @@ ContainerType container_type_from_string(std::string const& str);
 class Container : public std::enable_shared_from_this<Container>
 {
 public:
+    virtual ~Container() = default;
     virtual ContainerType get_type() const = 0;
 
     virtual void show() = 0;

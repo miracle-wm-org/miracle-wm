@@ -47,6 +47,7 @@ public:
         WorkspaceInterface* workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
+    ~ParentContainer() override = default;
     virtual geom::Rectangle get_area() const;
     geom::Rectangle get_logical_area() const override;
     geom::Rectangle get_visible_area() const override;
