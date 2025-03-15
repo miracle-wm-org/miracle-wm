@@ -58,7 +58,7 @@ bool MoveService::handle_pointer_event(
 
         /// If we haven't moved since last time, there's nothing to do
         if (cursor_x == x && cursor_y == y)
-            return false;
+            return true;
 
         auto const dx = x - cursor_x;
         auto const dy = y - cursor_y;
