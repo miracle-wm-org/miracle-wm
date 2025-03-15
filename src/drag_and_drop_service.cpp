@@ -64,7 +64,7 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
 
         /// If we haven't moved since last time, there's nothing to do
         if (current_x == x && current_y == y)
-            return false;
+            return true;
 
         current_x = x;
         current_y = y;
