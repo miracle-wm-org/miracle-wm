@@ -671,7 +671,21 @@ void LeafContainer::on_workspace_transform()
 
 void LeafContainer::set_alpha(float const alpha)
 {
+    // We want the alpha on the surface to be maintained to whatever the client
+    // set it, so we set a separate alpha in the render data manager instead
+    // of the surface alpha. In the Renderer, we then multiply these two values
+    // to get the final value.
+    //
+    // Unfortunately, this will not cause a rerender, which is why we also
+    // set the transformation to the current transformation. This will cause
+    // the Surface to be marked as dirty and get rerendered.
+    //
+    // This is unfortunate.
     state->render_data_manager()->alpha_change(id, alpha);
+    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+    {
+        surface->set_transformation(transform);
+    }
 }
 
 uint32_t LeafContainer::animation_handle() const
