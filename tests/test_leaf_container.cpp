@@ -493,3 +493,13 @@ INSTANTIATE_TEST_SUITE_P(
         ContainerScopeType::window_role,
         ContainerScopeType::instance,
         ContainerScopeType::machine));
+
+TEST_F(LeafContainerTest, CanSetAlpha)
+{
+    EXPECT_CALL(*surface, set_transformation(leaf_container->get_transform()));
+    leaf_container->set_alpha(0.5f);
+
+    auto data = state->render_data_manager()->get();
+    EXPECT_EQ(data.size(), 1);
+    EXPECT_EQ(data[0].alpha, 0.5f);
+}
