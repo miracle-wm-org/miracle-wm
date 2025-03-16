@@ -79,6 +79,7 @@ public:
     [[nodiscard]] geom::Rectangle get_workspace_rectangle(size_t i) const override final;
     [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override final;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override final;
+    [[nodiscard]] nlohmann::json to_json_for_output_list(bool is_focused) const override final;
 
 private:
     class WorkspaceAnimation : public Animation

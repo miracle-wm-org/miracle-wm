@@ -589,3 +589,29 @@ nlohmann::json Output::to_json(bool is_focused) const
         { "nodes",                nodes                                  }
     };
 }
+
+nlohmann::json Output::to_json_for_output_list(bool is_focused) const
+{
+    auto active_workspace = active();
+    nlohmann::json workspace;
+
+    if (active_workspace)
+        workspace = { "current_workspace", active_workspace->display_name() };
+    else
+        workspace = { "current_workspace", nullptr };
+
+    return {
+        { "name",   name_            },
+        { "active", is_focused       },
+        { "make",   "Unknown"        }, // TODO: Supply this value
+        { "model",  "Unknown"        }, // TODO: Supply this value
+        { "serial", "Unknown"        }, // TODO: Supply this value
+        workspace,
+        { "rect",   {
+                      { "x", area.top_left.x.as_int() },
+                      { "y", area.top_left.y.as_int() },
+                      { "width", area.size.width.as_int() },
+                      { "height", area.size.height.as_int() },
+                  } },
+    };
+}
