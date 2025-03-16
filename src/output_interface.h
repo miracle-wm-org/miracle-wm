@@ -102,6 +102,9 @@ public:
     [[nodiscard]] virtual geom::Rectangle get_workspace_rectangle(size_t i) const = 0;
     [[nodiscard]] virtual WorkspaceInterface const* workspace(uint32_t id) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_focused) const = 0;
+
+    /// This method should implement https://i3wm.org/docs/ipc.html#_outputs_reply
+    [[nodiscard]] virtual nlohmann::json to_json_for_output_list(bool is_focused) const = 0;
 };
 
 }

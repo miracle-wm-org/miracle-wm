@@ -1277,7 +1277,7 @@ nlohmann::json CommandController::outputs_json() const
         if (output->is_defunct())
             continue;
 
-        j.push_back(output->to_json(output_manager->focused() == output.get()));
+        j.push_back(output->to_json_for_output_list(output_manager->focused() == output.get()));
     }
     return j;
 }
