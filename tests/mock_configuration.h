@@ -54,6 +54,7 @@ namespace test
         MOCK_METHOD(void, try_process_change, (), (override));
         MOCK_METHOD(uint, get_primary_modifier, (), (const, override));
         MOCK_METHOD(uint, move_modifier, (), (const, override));
+        MOCK_METHOD(uint, get_primary_button, (), (const, override));
     };
 }
 }

@@ -40,11 +40,12 @@ bool MoveService::handle_pointer_event(
     float x,
     float y,
     MirPointerAction action,
-    unsigned int modifiers)
+    unsigned int modifiers,
+    MirPointerButtons buttons)
 {
     if (state.mode() == WindowManagerMode::moving)
     {
-        if (action == mir_pointer_action_button_up)
+        if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
         {
             command_controller->set_mode(WindowManagerMode::normal);
             return false;
@@ -69,6 +70,9 @@ bool MoveService::handle_pointer_event(
     }
     else if (action == mir_pointer_action_button_down)
     {
+        if ((config->get_primary_button() & buttons) == 0)
+            return false;
+
         uint const move_modifier = config->process_modifier(config->move_modifier());
         if (move_modifier != modifiers)
             return false;

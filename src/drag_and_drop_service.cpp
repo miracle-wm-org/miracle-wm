@@ -40,14 +40,14 @@ DragAndDropService::DragAndDropService(
 {
 }
 
-bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers)
+bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers, MirPointerButtons buttons)
 {
     if (!MIRACLE_FEATURE_FLAG_DRAG_AND_DROP || !config->drag_and_drop().enabled)
         return false;
 
     if (state.mode() == WindowManagerMode::dragging)
     {
-        if (action == mir_pointer_action_button_up)
+        if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
         {
             command_controller->set_mode(WindowManagerMode::normal);
             if (state.focused_container())
@@ -100,6 +100,9 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
     }
     else if (action == mir_pointer_action_button_down)
     {
+        if ((config->get_primary_button() & buttons) == 0)
+            return false;
+
         uint command_modifiers = config->process_modifier(config->drag_and_drop().modifiers);
         if (command_modifiers != modifiers)
             return false;

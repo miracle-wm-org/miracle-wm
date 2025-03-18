@@ -824,6 +824,11 @@ uint FilesystemConfiguration::get_primary_modifier() const
     return options.primary_modifier;
 }
 
+uint FilesystemConfiguration::get_primary_button() const
+{
+    return options.primary_button;
+}
+
 std::optional<uint> FilesystemConfiguration::try_parse_modifier(std::string const& stringified_action_key)
 {
     if (stringified_action_key == "alt")

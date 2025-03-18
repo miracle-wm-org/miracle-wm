@@ -67,6 +67,8 @@ public:
             .WillByDefault(::testing::Return(DragAndDropConfiguration {
                 .enabled = true,
                 .modifiers = mir_input_event_modifier_meta }));
+        ON_CALL(*config, get_primary_button())
+            .WillByDefault(::testing::Return(mir_pointer_button_primary));
     }
 
     std::recursive_mutex mutex;
@@ -113,7 +115,8 @@ TEST_F(DragAndDropServiceTest, CanStartDragging)
         100,
         100,
         mir_pointer_action_button_down,
-        mir_input_event_modifier_meta));
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary));
 
     ASSERT_EQ(state->mode(), WindowManagerMode::dragging);
 }
@@ -146,7 +149,8 @@ TEST_F(DragAndDropServiceTest, CanStopDragging)
         100,
         100,
         mir_pointer_action_button_down,
-        mir_input_event_modifier_meta);
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary);
 
     ASSERT_EQ(state->mode(), WindowManagerMode::dragging);
 
@@ -155,7 +159,8 @@ TEST_F(DragAndDropServiceTest, CanStopDragging)
         100,
         100,
         mir_pointer_action_button_up,
-        mir_input_event_modifier_meta);
+        mir_input_event_modifier_meta,
+        0);
 
     ASSERT_EQ(state->mode(), WindowManagerMode::normal);
 }
@@ -188,7 +193,8 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
         100,
         100,
         mir_pointer_action_button_down,
-        mir_input_event_modifier_meta);
+        mir_input_event_modifier_meta,
+        mir_pointer_button_primary);
 
     auto other_container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     state->add(other_container);
@@ -217,5 +223,6 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
         500,
         500,
         mir_pointer_action_button_down,
-        mir_input_event_modifier_none);
+        mir_input_event_modifier_none,
+        0);
 }
