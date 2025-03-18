@@ -35,7 +35,7 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<OutputManager> const& output_manager);
 
-    bool handle_pointer_event(float x, float y, MirPointerAction action, MirPointerButtons buttons);
+    bool handle_pointer_event(float x, float y, MirPointerAction action);
     void handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge);
 
 private:

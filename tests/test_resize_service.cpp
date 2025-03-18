@@ -101,7 +101,7 @@ TEST_F(ResizeServiceTest, CanStartResizing)
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_east);
 
     ASSERT_EQ(state->mode(), WindowManagerMode::resizing);
-    ASSERT_TRUE(service.handle_pointer_event(100, 100, mir_pointer_action_button_down, 0));
+    ASSERT_TRUE(service.handle_pointer_event(100, 100, mir_pointer_action_button_down));
 }
 
 TEST_F(ResizeServiceTest, CannotResizeWhenParentHasMoreThanOneChild)
@@ -181,7 +181,7 @@ TEST_F(ResizeServiceTest, ResizeNorthEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_north);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(100, 80), geom::Size(200, 220)), false));
-    ASSERT_TRUE(service.handle_pointer_event(150, 80, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(150, 80, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeSouthEdge)
@@ -208,7 +208,7 @@ TEST_F(ResizeServiceTest, ResizeSouthEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_south);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(100, 100), geom::Size(200, 250)), false));
-    ASSERT_TRUE(service.handle_pointer_event(150, 350, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(150, 350, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeEastEdge)
@@ -235,7 +235,7 @@ TEST_F(ResizeServiceTest, ResizeEastEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_east);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(100, 100), geom::Size(250, 200)), false));
-    ASSERT_TRUE(service.handle_pointer_event(350, 150, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(350, 150, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeWestEdge)
@@ -262,7 +262,7 @@ TEST_F(ResizeServiceTest, ResizeWestEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_west);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(80, 100), geom::Size(220, 200)), false));
-    ASSERT_TRUE(service.handle_pointer_event(80, 150, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(80, 150, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeNorthEastEdge)
@@ -289,7 +289,7 @@ TEST_F(ResizeServiceTest, ResizeNorthEastEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_northeast);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(100, 80), geom::Size(150, 220)), false));
-    ASSERT_TRUE(service.handle_pointer_event(250, 80, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(250, 80, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeNorthWestEdge)
@@ -316,7 +316,7 @@ TEST_F(ResizeServiceTest, ResizeNorthWestEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_northwest);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(80, 80), geom::Size(220, 220)), false));
-    ASSERT_TRUE(service.handle_pointer_event(80, 80, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(80, 80, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeSouthEastEdge)
@@ -343,7 +343,7 @@ TEST_F(ResizeServiceTest, ResizeSouthEastEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_southeast);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(100, 100), geom::Size(150, 150)), false));
-    ASSERT_TRUE(service.handle_pointer_event(250, 250, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(250, 250, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, ResizeSouthWestEdge)
@@ -370,7 +370,7 @@ TEST_F(ResizeServiceTest, ResizeSouthWestEdge)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_southwest);
     EXPECT_CALL(*parent, set_logical_area(geom::Rectangle(geom::Point(80, 100), geom::Size(220, 150)), false));
-    ASSERT_TRUE(service.handle_pointer_event(80, 250, mir_pointer_action_motion, 0));
+    ASSERT_TRUE(service.handle_pointer_event(80, 250, mir_pointer_action_motion));
 }
 
 TEST_F(ResizeServiceTest, StopsResizingWhenButtonReleased)
@@ -395,7 +395,7 @@ TEST_F(ResizeServiceTest, StopsResizingWhenButtonReleased)
 
     service.handle_request_resize(container, mir_pointer_action_button_down, mir_resize_edge_east);
 
-    ASSERT_TRUE(service.handle_pointer_event(100, 100, mir_pointer_action_button_down, 0));
-    ASSERT_FALSE(service.handle_pointer_event(100, 100, mir_pointer_action_button_up, 0));
+    ASSERT_TRUE(service.handle_pointer_event(100, 100, mir_pointer_action_button_down));
+    ASSERT_FALSE(service.handle_pointer_event(100, 100, mir_pointer_action_button_up));
     ASSERT_EQ(state->mode(), WindowManagerMode::normal);
 }

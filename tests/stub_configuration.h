@@ -139,6 +139,11 @@ namespace test
             return 0;
         }
 
+        [[nodiscard]] uint get_primary_button() const override
+        {
+            return mir_pointer_button_primary;
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

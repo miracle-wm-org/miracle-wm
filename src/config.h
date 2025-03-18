@@ -193,6 +193,7 @@ public:
     virtual void unregister_listener(int handle) = 0;
     virtual void try_process_change() = 0;
     [[nodiscard]] virtual uint get_primary_modifier() const = 0;
+    [[nodiscard]] virtual uint get_primary_button() const = 0;
     uint process_modifier(uint modifier) const;
 };
 
@@ -231,12 +232,14 @@ public:
     void unregister_listener(int handle) override;
     void try_process_change() override;
     [[nodiscard]] uint get_primary_modifier() const override;
+    [[nodiscard]] uint get_primary_button() const override;
 
 private:
     struct ConfigDetails
     {
         ConfigDetails();
         uint primary_modifier = mir_input_event_modifier_meta;
+        uint primary_button = mir_pointer_button_primary;
         std::vector<CustomKeyCommand> custom_key_commands;
         KeyCommandList key_commands[static_cast<int>(DefaultKeyCommand::MAX)];
         int inner_gaps_x = 10;

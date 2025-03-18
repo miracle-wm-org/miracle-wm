@@ -40,7 +40,7 @@ void ResizeService::stop()
     command_controller->set_mode(WindowManagerMode::normal);
 }
 
-bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction action, MirPointerButtons buttons)
+bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction action)
 {
     if (!is_resizing)
         return false;

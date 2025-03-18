@@ -297,8 +297,9 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     std::lock_guard lock(self->mutex);
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
-    auto action = miral::toolkit::mir_pointer_event_action(event);
+    auto const action = miral::toolkit::mir_pointer_event_action(event);
     auto const modifiers = miral::toolkit::mir_pointer_event_modifiers(event) & MODIFIER_MASK;
+    auto const buttons = mir_pointer_event_buttons(event);
     state->cursor_position = { x, y };
 
     // Select the output first
@@ -311,20 +312,20 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 if (output_manager->focused())
                     output_manager->unfocus(output_manager->focused()->id());
                 output_manager->focus(output->id());
-                if (auto active = output->active())
+                if (auto const active = output->active())
                     workspace_manager->request_focus(active->id());
             }
             break;
         }
     }
 
-    if (resize_service->handle_pointer_event(x, y, action, modifiers))
+    if (resize_service->handle_pointer_event(x, y, action))
         return true;
 
-    if (move_service->handle_pointer_event(*state, x, y, action, modifiers))
+    if (move_service->handle_pointer_event(*state, x, y, action, modifiers, buttons))
         return true;
 
-    if (drag_and_drop_service->handle_pointer_event(*state, x, y, action, modifiers))
+    if (drag_and_drop_service->handle_pointer_event(*state, x, y, action, modifiers, buttons))
         return true;
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
@@ -635,8 +636,9 @@ void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputE
     auto const x = miral::toolkit::mir_pointer_event_axis_value(pointer_event, MirPointerAxis::mir_pointer_axis_x);
     auto const y = miral::toolkit::mir_pointer_event_axis_value(pointer_event, MirPointerAxis::mir_pointer_axis_y);
     auto const action = miral::toolkit::mir_pointer_event_action(pointer_event);
+    auto const buttons = miral::toolkit::mir_pointer_event_buttons(pointer_event);
     move_service->handle_pointer_event(
-        *state, x, y, action, config->process_modifier(config->move_modifier()));
+        *state, x, y, action, config->process_modifier(config->move_modifier()), buttons);
 }
 
 void Policy::handle_request_resize(
