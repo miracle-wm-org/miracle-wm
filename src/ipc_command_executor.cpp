@@ -26,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "utility_general.h"
 #include "window_controller.h"
 #include "window_helpers.h"
-#include "workspace_manager.h"
 
 #define MIR_LOG_COMPONENT "miracle"
 #include <format>
@@ -105,13 +104,11 @@ protected:
 IpcCommandExecutor::IpcCommandExecutor(
     std::shared_ptr<CommandController> const& policy,
     std::shared_ptr<OutputManager> const& output_manager,
-    std::shared_ptr<WorkspaceManager> const& workspace_manager,
     std::shared_ptr<CompositorState> const& state,
     AutoRestartingLauncher& launcher,
     std::shared_ptr<WindowController> const& window_controller) :
     policy { policy },
     output_manager { output_manager },
-    workspace_manager { workspace_manager },
     state { state },
     launcher { launcher },
     window_controller { window_controller }
@@ -172,24 +169,6 @@ IpcValidationResult IpcCommandExecutor::process(miracle::IpcParseResult const& c
     }
 
     return {};
-}
-
-miral::Window IpcCommandExecutor::get_window_meeting_criteria(IpcParseResult const& command_list)
-{
-    for (auto const& container : state->containers())
-    {
-        if (container.expired())
-            continue;
-
-        auto window = container.lock()->window();
-        if (auto const& w = window.value())
-        {
-            // if (command_list.meets_criteria(w, window_controller))
-            return window.value();
-        }
-    }
-
-    return miral::Window {};
 }
 
 IpcValidationResult IpcCommandExecutor::parse_error(std::string error)
@@ -256,14 +235,9 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     if (command.arguments.empty())
     {
         if (command_list.scope.empty())
-        {
             return parse_error("Focus command expected scope but none was provided");
-        }
 
-        auto window = get_window_meeting_criteria(command_list);
-        if (window)
-            window_controller->select_active_window(window);
-
+        policy->try_select(command_list.scope);
         return {};
     }
 
@@ -271,14 +245,9 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     if (arg == "workspace")
     {
         if (command_list.scope.empty())
-        {
             return parse_error("Focus 'workspace' command expected scope but none was provided");
-        }
 
-        auto window = get_window_meeting_criteria(command_list);
-        auto container = window_controller->get_container(window);
-        if (container)
-            workspace_manager->request_focus(container->get_workspace()->id());
+        policy->select_workspace_with_scope(command_list.scope);
     }
     else if (arg == "left")
         policy->try_select(Direction::left, command_list.scope);
@@ -296,7 +265,7 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     {
         auto container = state->focused_container();
         if (!container)
-            return parse_error("Active container does nto exist");
+            return parse_error("Active container does not exist");
 
         if (container->get_type() != ContainerType::leaf)
             return parse_error("Cannot focus prev when a tiling window is not selected");

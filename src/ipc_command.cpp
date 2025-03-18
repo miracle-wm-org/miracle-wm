@@ -15,10 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "container_scope.h"
 #define MIR_LOG_COMPONENT "ipc_command"
 
-#include "ipc_command.h"
 #include "ipc.h"
+#include "ipc_command.h"
 
 #include <cctype>
 #include <mir/log.h>
@@ -39,6 +40,8 @@ const char* WORKSPACE_STRING = "workspace";
 const char* ALL_STRING = "all";
 const char* FLOATING_STRING = "floating";
 const char* TILING_STRING = "tiling";
+const char* PID_STRING = "pid";
+const char* APP_ID_STRING = "app_id";
 
 constexpr char COMMAND_DELIM = ' ';
 constexpr char INTER_COMMAND_DELIM = ';';
@@ -73,8 +76,12 @@ ContainerScopeType scope_from_string(const std::string& s)
         return ContainerScopeType::floating;
     else if (s == TILING_STRING)
         return ContainerScopeType::tiling;
+    else if (s == PID_STRING)
+        return ContainerScopeType::pid;
+    else if (s == APP_ID_STRING)
+        return ContainerScopeType::app_id;
     else
-        return ContainerScopeType::all;
+        return ContainerScopeType::none;
 }
 
 IpcCommandType command_from_string(const std::string& str)
