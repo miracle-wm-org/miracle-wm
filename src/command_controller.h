@@ -74,6 +74,7 @@ public:
     bool try_move(Direction direction, std::vector<ContainerScope> const& scope);
     bool try_move_by(Direction direction, int pixels, std::vector<ContainerScope> const& scope);
     bool try_move_to(int x, int y, std::vector<ContainerScope> const& scope);
+    bool try_select(std::vector<ContainerScope> const& scope);
     bool try_select(Direction direction, std::vector<ContainerScope> const& scope);
     bool try_select_parent(std::vector<ContainerScope> const& scope);
     bool try_select_child(std::vector<ContainerScope> const& scope);
@@ -85,6 +86,7 @@ public:
     bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope);
     bool select_workspace(int number, bool back_and_forth = true);
     bool select_workspace(std::string const& name, bool back_and_forth);
+    bool select_workspace_with_scope(std::vector<ContainerScope> const& scope);
     bool next_workspace();
     bool prev_workspace();
     bool back_and_forth_workspace();

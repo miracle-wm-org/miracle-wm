@@ -26,7 +26,6 @@ namespace miracle
 {
 
 class CommandController;
-class WorkspaceManager;
 class AutoRestartingLauncher;
 class WindowController;
 class OutputManager;
@@ -46,7 +45,6 @@ public:
     IpcCommandExecutor(
         std::shared_ptr<CommandController> const&,
         std::shared_ptr<OutputManager> const&,
-        std::shared_ptr<WorkspaceManager> const&,
         std::shared_ptr<CompositorState> const&,
         AutoRestartingLauncher&,
         std::shared_ptr<WindowController> const&);
@@ -55,12 +53,10 @@ public:
 private:
     std::shared_ptr<CommandController> policy;
     std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<CompositorState> state;
     AutoRestartingLauncher& launcher;
     std::shared_ptr<WindowController> window_controller;
 
-    miral::Window get_window_meeting_criteria(IpcParseResult const&);
     IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_focus(IpcCommand const&, IpcParseResult const&);

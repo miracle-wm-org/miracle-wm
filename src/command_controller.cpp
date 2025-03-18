@@ -219,6 +219,20 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     }
 }
 
+bool CommandController::try_select(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    select_container(containers[0]);
+    return true;
+}
+
 bool CommandController::try_select(miracle::Direction direction, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
@@ -454,11 +468,26 @@ bool CommandController::select_workspace(int number, bool back_and_forth)
 bool CommandController::select_workspace(std::string const& name, bool back_and_forth)
 {
     std::lock_guard lock(mutex);
-    // TODO: Handle back_and_forth
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
     return workspace_manager->request_workspace(output_manager->focused(), name, back_and_forth);
+}
+
+bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    if (!containers[0]->get_workspace())
+        return false;
+
+    return workspace_manager->request_focus(containers[0]->get_workspace()->id());
 }
 
 bool CommandController::next_workspace()
