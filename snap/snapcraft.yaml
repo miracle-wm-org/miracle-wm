@@ -80,6 +80,8 @@ parts:
       - libmirrenderer-dev
       - libmirwayland-dev
       - libjson-c-dev
+      - libgtest-dev
+      - libgmock-dev
     stage-packages:
       - libmiral7
       - libmiroil5
