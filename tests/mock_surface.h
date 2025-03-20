@@ -28,7 +28,7 @@ namespace test
     class MockSurface : public mir::scene::Surface
     {
     public:
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION > 19)
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 19)
         MOCK_METHOD(void, initial_placement_done, (), (override));
 #endif
         MOCK_METHOD(mir::geometry::Displacement, content_offset, (), (const, override));
