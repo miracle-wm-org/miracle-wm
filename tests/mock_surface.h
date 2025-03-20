@@ -19,6 +19,7 @@
 
 #include <gmock/gmock.h>
 #include <mir/scene/surface.h>
+#include <mir/version.h>
 
 namespace miracle
 {
@@ -27,7 +28,9 @@ namespace test
     class MockSurface : public mir::scene::Surface
     {
     public:
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION > 19)
         MOCK_METHOD(void, initial_placement_done, (), (override));
+#endif
         MOCK_METHOD(mir::geometry::Displacement, content_offset, (), (const, override));
         MOCK_METHOD(std::shared_ptr<mir::frontend::BufferStream>, primary_buffer_stream, (), (const, override));
         MOCK_METHOD((mir::wayland::Weak<mir::frontend::WlSurface> const&), wayland_surface, (), (override));

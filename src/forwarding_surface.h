@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ANIMATING_SURFACE_H
 
 #include <mir/scene/surface.h>
+#include <mir/version.h>
 
 namespace miracle
 {
@@ -47,7 +48,9 @@ public:
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void register_early_observer(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void unregister_interest(const mir::scene::SurfaceObserver& observer) override;
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION > 19)
     void initial_placement_done() override;
+#endif
     std::string name() const override;
     mir::geometry::Size content_size() const override;
     mir::geometry::Rectangle input_bounds() const override;

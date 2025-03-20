@@ -146,9 +146,11 @@ void ForwardingSurface::unregister_interest(const mir::scene::SurfaceObserver& o
     surface_->unregister_interest(observer);
 }
 
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION > 19)
 void ForwardingSurface::initial_placement_done()
 {
 }
+#endif
 
 std::string ForwardingSurface::name() const
 {
