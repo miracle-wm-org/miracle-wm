@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/server_action_queue.h>
 #include <utility>
+#include <vector>
 
 using namespace miracle;
 using namespace std::chrono_literals;
