@@ -2,22 +2,24 @@ Source: miracle-wm
 Section: devel
 Priority: optional
 Maintainer: Matthew Kosarek <matthew@matthewkosarek.xyz>
-Build-Depends: cmake,
-               pkg-config,
-               build-essential,
-               libmiral-dev,
-               libgtest-dev,
-               libyaml-cpp-dev,
-               libglib2.0-dev,
+Build-Depends: build-essential,
+               cmake,
                libevdev-dev,
-               nlohmann-json3-dev,
-               libmirwayland-dev,
-               libmiroil-dev,
-               libmircommon-internal-dev,
+               libglib2.0-dev,
+               libgmock-dev,
+               libgtest-dev,
+               libjson-c-dev,
+               libmiral-dev,
                libmircommon-dev,
-               libmirserver-internal-dev,
+               libmircommon-internal-dev,
+               libmiroil-dev,
                libmirrenderer-dev,
-               pcre2-utils
+               libmirserver-internal-dev,
+               libmirwayland-dev,
+               libyaml-cpp-dev,
+               nlohmann-json3-dev,
+               pcre2-utils,
+               pkg-config
 Homepage: https://github.com/mattkae/miracle-wm
 
 Package: miracle-wm
