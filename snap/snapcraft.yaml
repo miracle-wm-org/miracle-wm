@@ -84,7 +84,7 @@ parts:
       - libgmock-dev
     stage-packages:
       - libmiral7
-      - libmiroil5
+      - libmiroil7
       - mir-graphics-drivers-desktop
       - mir-graphics-drivers-nvidia
       - pcre2-utils
