@@ -467,4 +467,68 @@ void miracle_config_set_animation_definition(
     def.d1 = definition->d1;
 }
 
+size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->workspace_configs.size();
+}
+
+miracle_workspace_config_t miracle_config_get_workspace_config(
+    const miracle_config_data_t* config,
+    size_t index) {
+    
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    if (index >= data->workspace_configs.size())
+        return {-1, -1, nullptr};
+
+    static thread_local std::string name_copy;
+    const auto& ws = data->workspace_configs[index];
+    
+    if (ws.name)
+        name_copy = *ws.name;
+    else
+        name_copy.clear();
+
+    return {
+        ws.num ? *ws.num : -1,
+        ws.layout ? static_cast<int>(*ws.layout) : -1,
+        ws.name ? name_copy.c_str() : nullptr
+    };
+}
+
+void miracle_config_add_workspace_config(
+    miracle_config_data_t* config,
+    int num,
+    int container_type,
+    const char* name) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    miracle::WorkspaceConfig ws;
+    
+    if (num >= 0)
+        ws.num = num;
+    if (container_type >= 0)
+        ws.layout = static_cast<miracle::ContainerType>(container_type);
+    if (name)
+        ws.name = name;
+
+    data->workspace_configs.push_back(ws);
+}
+
+void miracle_config_clear_workspace_configs(miracle_config_data_t* config) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->workspace_configs.clear();
+}
+
+bool miracle_config_remove_workspace_config(
+    miracle_config_data_t* config,
+    size_t index) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    if (index >= data->workspace_configs.size())
+        return false;
+    
+    data->workspace_configs.erase(data->workspace_configs.begin() + index);
+    return true;
+}
+
 } // extern "C"

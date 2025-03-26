@@ -257,6 +257,27 @@ void miracle_config_set_animation_definition(
     miracle_animatable_event_t event,
     const miracle_animation_definition_t* definition);
 
+// Workspace config accessors
+typedef struct {
+    int num; // -1 if not set
+    int container_type; // miracle::ContainerType as int
+    const char* name; // NULL if not set
+} miracle_workspace_config_t;
+
+size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config);
+miracle_workspace_config_t miracle_config_get_workspace_config(
+    const miracle_config_data_t* config,
+    size_t index);
+void miracle_config_add_workspace_config(
+    miracle_config_data_t* config,
+    int num,
+    int container_type,
+    const char* name);
+void miracle_config_clear_workspace_configs(miracle_config_data_t* config);
+bool miracle_config_remove_workspace_config(
+    miracle_config_data_t* config,
+    size_t index);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 
