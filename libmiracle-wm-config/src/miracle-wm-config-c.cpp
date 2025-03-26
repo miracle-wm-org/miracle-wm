@@ -5,25 +5,32 @@
 extern "C" {
 
 miracle_config_load_result_t* miracle_config_load(const char* path) {
-    auto result = new miracle::ConfigLoadResult(miracle::load_config(path));
-    return reinterpret_cast<miracle_config_load_result_t*>(result);
+    auto cpp_result = new miracle::ConfigLoadResult(miracle::load_config(path));
+    auto result = new miracle_config_load_result_t();
+    result->config._internal = &cpp_result->config;
+    result->_errors = &cpp_result->errors;
+    return result;
+}
+
+const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result) {
+    return &result->config;
 }
 
 size_t miracle_config_get_error_count(const miracle_config_load_result_t* result) {
-    auto internal = reinterpret_cast<const miracle::ConfigLoadResult*>(result->_internal);
-    return internal->errors.size();
+    auto errors = reinterpret_cast<const std::vector<miracle::Error>*>(result->_errors);
+    return errors->size();
 }
 
 const miracle_config_error_t* miracle_config_get_error(
     const miracle_config_load_result_t* result, 
     size_t index) {
     
-    auto internal = reinterpret_cast<const miracle::ConfigLoadResult*>(result->_internal);
-    if (index >= internal->errors.size())
+    auto errors = reinterpret_cast<const std::vector<miracle::Error>*>(result->_errors);
+    if (index >= errors->size())
         return nullptr;
 
     static thread_local miracle_config_error_t error;
-    const auto& cpp_error = internal->errors[index];
+    const auto& cpp_error = (*errors)[index];
     
     error.line = cpp_error.line;
     error.column = cpp_error.column;
@@ -38,9 +45,99 @@ const miracle_config_error_t* miracle_config_get_error(
 
 void miracle_config_free(miracle_config_load_result_t* result) {
     if (result) {
-        delete reinterpret_cast<miracle::ConfigLoadResult*>(result->_internal);
-        delete result;
+        delete reinterpret_cast<miracle::ConfigLoadResult*>(result);
     }
+}
+
+// ConfigData accessors implementation
+uint miracle_config_get_primary_modifier(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->primary_modifier;
+}
+
+void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->primary_modifier = modifier;
+}
+
+uint miracle_config_get_primary_button(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->primary_button;
+}
+
+void miracle_config_set_primary_button(miracle_config_data_t* config, uint button) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->primary_button = button;
+}
+
+int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->inner_gaps_x;
+}
+
+void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->inner_gaps_x = value;
+}
+
+int miracle_config_get_inner_gaps_y(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->inner_gaps_y;
+}
+
+void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->inner_gaps_y = value;
+}
+
+int miracle_config_get_outer_gaps_x(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->outer_gaps_x;
+}
+
+void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->outer_gaps_x = value;
+}
+
+int miracle_config_get_outer_gaps_y(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->outer_gaps_y;
+}
+
+void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->outer_gaps_y = value;
+}
+
+int miracle_config_get_resize_jump(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->resize_jump;
+}
+
+void miracle_config_set_resize_jump(miracle_config_data_t* config, int value) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->resize_jump = value;
+}
+
+bool miracle_config_get_animations_enabled(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->animations_enabled;
+}
+
+void miracle_config_set_animations_enabled(miracle_config_data_t* config, bool enabled) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->animations_enabled = enabled;
+}
+
+const char* miracle_config_get_terminal(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->terminal ? data->terminal->c_str() : nullptr;
+}
+
+void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->terminal = terminal ? std::optional<std::string>(terminal) : std::nullopt;
 }
 
 } // extern "C"

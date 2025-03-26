@@ -39,8 +39,46 @@ typedef struct {
 } miracle_config_error_t;
 
 typedef struct {
-    void* _internal; // Opaque pointer to ConfigLoadResult
+    void* _internal; // Opaque pointer to ConfigData
+} miracle_config_data_t;
+
+typedef struct {
+    miracle_config_data_t config;
+    void* _errors; // Opaque pointer to vector<Error>
 } miracle_config_load_result_t;
+
+// ConfigData accessors
+uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
+void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
+
+uint miracle_config_get_primary_button(const miracle_config_data_t* config);
+void miracle_config_set_primary_button(miracle_config_data_t* config, uint button);
+
+int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
+void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value);
+
+int miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
+void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value);
+
+int miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
+void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value);
+
+int miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
+void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value);
+
+int miracle_config_get_resize_jump(const miracle_config_data_t* config);
+void miracle_config_set_resize_jump(miracle_config_data_t* config, int value);
+
+bool miracle_config_get_animations_enabled(const miracle_config_data_t* config);
+void miracle_config_set_animations_enabled(miracle_config_data_t* config, bool enabled);
+
+// Returns pointer to terminal command string or NULL if not set
+const char* miracle_config_get_terminal(const miracle_config_data_t* config);
+// Set terminal command (makes a copy of the string)
+void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal);
+
+// Returns pointer to config data from load result
+const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result);
 
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
