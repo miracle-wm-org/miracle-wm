@@ -24,3 +24,24 @@ target_include_directories(libmiracle-wm-config PUBLIC SYSTEM
 target_link_libraries(libmiracle-wm-config
     ${MIRCORE_LDFLAGS}
     PkgConfig::YAML)
+
+# Tests
+if(BUILD_TESTING)
+    add_executable(test_c_api
+        tests/test_c_api.cpp
+    )
+
+    target_include_directories(test_c_api PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${MIRCORE_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(test_c_api
+        libmiracle-wm-config
+        GTest::GTest
+        GTest::Main
+        ${MIRCORE_LDFLAGS}
+    )
+
+    add_test(NAME test_c_api COMMAND test_c_api)
+endif()
