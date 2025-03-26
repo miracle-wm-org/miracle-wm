@@ -1,10 +1,10 @@
-#include "animation_defintion.h"
 #include "config.h"
 #include "yaml-cpp/yaml.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <miracle/animation_definition.h>
 #include <miral/runner.h>
 #include <vector>
 #include <yaml-cpp/node/node.h>

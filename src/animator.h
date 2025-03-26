@@ -18,11 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_ANIMATOR_H
 #define MIRACLEWM_ANIMATOR_H
 
-#include "animation_defintion.h"
 #include <condition_variable>
 #include <functional>
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
+#include <miracle/animation_definition.h>
 #include <mutex>
 #include <optional>
 #include <thread>
