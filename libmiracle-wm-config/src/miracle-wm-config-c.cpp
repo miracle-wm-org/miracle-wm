@@ -379,4 +379,41 @@ void miracle_config_clear_key_commands(
     data->key_commands[command_type].clear();
 }
 
+miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    miracle_border_config_t result;
+    result.size = data->border_config.size;
+    
+    // Copy glm::vec4 to float[4]
+    for (int i = 0; i < 4; i++) {
+        result.focus_color[i] = data->border_config.focus_color[i];
+        result.color[i] = data->border_config.color[i];
+    }
+    
+    return result;
+}
+
+void miracle_config_set_border_config(
+    miracle_config_data_t* config,
+    int size,
+    const float focus_color[4],
+    const float color[4]) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->border_config.size = size;
+    
+    // Copy float[4] to glm::vec4
+    if (focus_color) {
+        for (int i = 0; i < 4; i++) {
+            data->border_config.focus_color[i] = focus_color[i];
+        }
+    }
+    
+    if (color) {
+        for (int i = 0; i < 4; i++) {
+            data->border_config.color[i] = color[i];
+        }
+    }
+}
+
 } // extern "C"

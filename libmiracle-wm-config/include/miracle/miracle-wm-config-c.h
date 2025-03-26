@@ -167,6 +167,20 @@ void miracle_config_clear_key_commands(
     miracle_config_data_t* config,
     int command_type);
 
+// Border config accessors
+typedef struct {
+    int size;
+    float focus_color[4]; // RGBA
+    float color[4]; // RGBA
+} miracle_border_config_t;
+
+miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config);
+void miracle_config_set_border_config(
+    miracle_config_data_t* config,
+    int size,
+    const float focus_color[4],
+    const float color[4]);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 
