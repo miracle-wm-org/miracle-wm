@@ -123,6 +123,23 @@ void miracle_config_add_startup_app(
 void miracle_config_clear_startup_apps(miracle_config_data_t* config);
 bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index);
 
+// Environment variable accessors
+typedef struct {
+    const char* key;
+    const char* value;
+} miracle_environment_variable_t;
+
+size_t miracle_config_get_environment_variable_count(const miracle_config_data_t* config);
+miracle_environment_variable_t miracle_config_get_environment_variable(
+    const miracle_config_data_t* config, 
+    size_t index);
+void miracle_config_add_environment_variable(
+    miracle_config_data_t* config,
+    const char* key,
+    const char* value);
+void miracle_config_clear_environment_variables(miracle_config_data_t* config);
+bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 

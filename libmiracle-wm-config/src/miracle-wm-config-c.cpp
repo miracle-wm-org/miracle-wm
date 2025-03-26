@@ -250,4 +250,55 @@ bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t ind
     return true;
 }
 
+size_t miracle_config_get_environment_variable_count(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->environment_variables.size();
+}
+
+miracle_environment_variable_t miracle_config_get_environment_variable(
+    const miracle_config_data_t* config, 
+    size_t index) {
+    
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    if (index >= data->environment_variables.size())
+        return {nullptr, nullptr};
+
+    static thread_local std::string key_copy;
+    static thread_local std::string value_copy;
+    const auto& var = data->environment_variables[index];
+    key_copy = var.key;
+    value_copy = var.value;
+
+    return {
+        key_copy.c_str(),
+        value_copy.c_str()
+    };
+}
+
+void miracle_config_add_environment_variable(
+    miracle_config_data_t* config,
+    const char* key,
+    const char* value) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->environment_variables.push_back({
+        key ? key : "",
+        value ? value : ""
+    });
+}
+
+void miracle_config_clear_environment_variables(miracle_config_data_t* config) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->environment_variables.clear();
+}
+
+bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    if (index >= data->environment_variables.size())
+        return false;
+    
+    data->environment_variables.erase(data->environment_variables.begin() + index);
+    return true;
+}
+
 } // extern "C"
