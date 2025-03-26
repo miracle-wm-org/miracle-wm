@@ -10,7 +10,7 @@ pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 find_package(GTest REQUIRED)
 
-add_library(libmiracle-wm-config
+add_library(miracle-wm-config
     SHARED
     src/miracle-wm-config.cpp include/miracle/miracle-wm-config.h
     include/miracle/animation_definition.h
@@ -19,25 +19,21 @@ add_library(libmiracle-wm-config
     include/miracle/modifiers.h
     src/miracle-wm-config-c.cpp include/miracle/miracle-wm-config-c.h)
 
-target_include_directories(libmiracle-wm-config PUBLIC SYSTEM
+target_include_directories(miracle-wm-config PUBLIC SYSTEM
     include
     ${MIRCORE_INCLUDE_DIRS})
 
-target_link_libraries(libmiracle-wm-config
+target_link_libraries(miracle-wm-config
     ${MIRCORE_LDFLAGS}
     PkgConfig::YAML
     PkgConfig::LIBEVDEV)
 
 # Installation
-install(TARGETS libmiracle-wm-config
+install(TARGETS miracle-wm-config
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
-)
-
-install(DIRECTORY include/miracle
-    DESTINATION include
-    FILES_MATCHING PATTERN "*.h"
+    PUBLIC_HEADER DESTINATION include
 )
 
 # Tests
@@ -53,7 +49,7 @@ target_include_directories(test_miracle_wm_config_c_api PRIVATE
 )
 
 target_link_libraries(test_miracle_wm_config_c_api
-    libmiracle-wm-config
+    miracle-wm-config
     GTest::GTest
     GTest::Main
     ${MIRCORE_LDFLAGS}
