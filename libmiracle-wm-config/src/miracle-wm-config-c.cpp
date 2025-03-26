@@ -186,4 +186,13 @@ void miracle_config_clear_custom_key_commands(miracle_config_data_t* config) {
     data->custom_key_commands.clear();
 }
 
+bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    if (index >= data->custom_key_commands.size())
+        return false;
+    
+    data->custom_key_commands.erase(data->custom_key_commands.begin() + index);
+    return true;
+}
+
 } // extern "C"

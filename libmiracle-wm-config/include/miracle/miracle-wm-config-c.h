@@ -99,6 +99,8 @@ void miracle_config_add_custom_key_command(
     int key,
     const char* command);
 void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
+// Remove command at index (returns false if index is invalid)
+bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index);
 
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
