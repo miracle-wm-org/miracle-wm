@@ -15,27 +15,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_ANIMATION_DEFINTION_H
-#define MIRACLE_WM_ANIMATION_DEFINTION_H
+#ifndef MIRACLE_WM_CONFIG_ANIMATION_DEFINITION_H
+#define MIRACLE_WM_CONFIG_ANIMATION_DEFINITION_H
 
-#include "mir/geometry/point.h"
-#include <optional>
-#include <string>
+#include "export.h"
+#include <array>
 
 namespace miracle
 {
-/// Defines an event that can be animated.
-enum class AnimateableEvent
-{
-    window_open,
-    window_move,
-    window_close,
-    workspace_switch,
-    max
-};
 
 /// Defines the ease function for an event
-enum class EaseFunction
+enum class MIRACLE_WM_CONFIG_API EaseFunction
 {
     linear,
     ease_in_sine,
@@ -71,7 +61,41 @@ enum class EaseFunction
     max
 };
 
-enum class AnimationType
+constexpr std::array<const char*, static_cast<int>(EaseFunction::max)> ease_function_strings = {
+    "linear",
+    "ease_in_sine",
+    "ease_out_sine",
+    "ease_in_out_sine",
+    "ease_in_quad",
+    "ease_out_quad",
+    "ease_in_out_quad",
+    "ease_in_cubic",
+    "ease_out_cubic",
+    "ease_in_out_cubic",
+    "ease_in_quart",
+    "ease_out_quart",
+    "ease_in_out_quart",
+    "ease_in_quint",
+    "ease_out_quint",
+    "ease_in_out_quint",
+    "ease_in_expo",
+    "ease_out_expo",
+    "ease_in_out_expo",
+    "ease_in_circ",
+    "ease_out_circ",
+    "ease_in_out_circ",
+    "ease_in_back",
+    "ease_out_back",
+    "ease_in_out_back",
+    "ease_in_elastic",
+    "ease_out_elastic",
+    "ease_in_out_elastic",
+    "ease_in_bounce",
+    "ease_out_bounce",
+    "ease_in_out_bounce"
+};
+
+enum class MIRACLE_WM_CONFIG_API AnimationType
 {
     disabled,
     slide,
@@ -82,9 +106,18 @@ enum class AnimationType
     max
 };
 
+constexpr std::array<const char*, static_cast<int>(AnimationType::max)> animation_type_strings = {
+    "disabled",
+    "slide",
+    "grow",
+    "shrink",
+    "fade_in",
+    "fade_out"
+};
+
 /// Defines an animation that the Animator can use.
-/// Each animations is mapped to a single AnimateableEvent.
-struct AnimationDefinition
+/// Each animations are mapped to a single AnimateableEvent.
+struct MIRACLE_WM_CONFIG_API AnimationDefinition
 {
     AnimationType type = AnimationType::max;
     EaseFunction function = EaseFunction::linear;
@@ -100,10 +133,22 @@ struct AnimationDefinition
     float d1 = 2.75f;
 };
 
-std::optional<AnimateableEvent> from_string_animateable_event(std::string const&);
-std::optional<EaseFunction> from_string_ease_function(std::string const&);
-std::optional<AnimationType> from_string_animation_type(std::string const&);
+/// Defines an event that can be animated.
+enum class MIRACLE_WM_CONFIG_API AnimateableEvent
+{
+    window_open,
+    window_move,
+    window_close,
+    workspace_switch,
+    max
+};
 
+constexpr std::array<const char*, static_cast<int>(AnimateableEvent::max)> animateable_event_strings = {
+    "window_open",
+    "window_move",
+    "window_close",
+    "workspace_switch"
+};
 }
 
-#endif // MIRACLE_WM_ANIMATION_DEFINTION_H
+#endif // MIRACLE_WM_CONFIG_ANIMATION_DEFINITION_H

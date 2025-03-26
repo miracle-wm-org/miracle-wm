@@ -99,7 +99,6 @@ add_library(miracle-wm-implementation
     src/ipc_command_executor.cpp
     src/render_data_manager.cpp
     src/animator.cpp
-    src/animation_definition.cpp
     src/program_factory.cpp
     src/mode_observer.cpp
     src/debug_helper.h
@@ -108,7 +107,6 @@ add_library(miracle-wm-implementation
     src/container_group_container.h
     src/layout_scheme.cpp
     src/utility_general.h
-    src/config_error_handler.cpp src/config_error_handler.h
     src/scratchpad.h src/scratchpad.cpp
     src/compositor_state.h src/compositor_state.cpp
     src/math_helpers.h
@@ -139,7 +137,8 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
-    ${PROJECT_SOURCE_DIR}/include)
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/libmiracle-wm-config/include)
 
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
@@ -155,7 +154,8 @@ target_link_libraries(miracle-wm-implementation
     nlohmann_json::nlohmann_json
     PkgConfig::EGL
     PkgConfig::GLESv2
-    -lpcre2-8 -lpcre2-16 -lpcre2-32)
+    -lpcre2-8 -lpcre2-16 -lpcre2-32
+    libmiracle-wm-config)
 
 if(SYSTEMD_INTEGRATION)
     # Install systemd files
@@ -205,3 +205,4 @@ endif()
 
 add_subdirectory(tests/)
 add_subdirectory(miraclemsg/)
+add_subdirectory(libmiracle-wm-config/)
