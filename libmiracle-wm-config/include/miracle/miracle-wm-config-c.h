@@ -77,8 +77,28 @@ const char* miracle_config_get_terminal(const miracle_config_data_t* config);
 // Set terminal command (makes a copy of the string)
 void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal);
 
+typedef struct {
+    int action; // MirKeyboardAction as int
+    uint modifiers;
+    int key;
+    const char* command; // NULL-terminated string
+} miracle_custom_key_command_t;
+
 // Returns pointer to config data from load result
 const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result);
+
+// Custom key command accessors
+size_t miracle_config_get_custom_key_command_count(const miracle_config_data_t* config);
+miracle_custom_key_command_t miracle_config_get_custom_key_command(
+    const miracle_config_data_t* config, 
+    size_t index);
+void miracle_config_add_custom_key_command(
+    miracle_config_data_t* config,
+    int action,
+    uint modifiers,
+    int key,
+    const char* command);
+void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
 
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);

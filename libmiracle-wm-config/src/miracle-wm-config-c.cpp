@@ -140,4 +140,50 @@ void miracle_config_set_terminal(miracle_config_data_t* config, const char* term
     data->terminal = terminal ? std::optional<std::string>(terminal) : std::nullopt;
 }
 
+size_t miracle_config_get_custom_key_command_count(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->custom_key_commands.size();
+}
+
+miracle_custom_key_command_t miracle_config_get_custom_key_command(
+    const miracle_config_data_t* config, 
+    size_t index) {
+    
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    if (index >= data->custom_key_commands.size())
+        return {0, 0, 0, nullptr};
+
+    static thread_local std::string command_copy;
+    const auto& cmd = data->custom_key_commands[index];
+    command_copy = cmd.command;
+
+    return {
+        static_cast<int>(cmd.action),
+        cmd.modifiers,
+        cmd.key,
+        command_copy.c_str()
+    };
+}
+
+void miracle_config_add_custom_key_command(
+    miracle_config_data_t* config,
+    int action,
+    uint modifiers,
+    int key,
+    const char* command) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->custom_key_commands.push_back({
+        static_cast<MirKeyboardAction>(action),
+        modifiers,
+        key,
+        command ? command : ""
+    });
+}
+
+void miracle_config_clear_custom_key_commands(miracle_config_data_t* config) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->custom_key_commands.clear();
+}
+
 } // extern "C"
