@@ -416,4 +416,55 @@ void miracle_config_set_border_config(
     }
 }
 
+size_t miracle_config_get_animation_definition_count() {
+    return static_cast<int>(miracle::AnimateableEvent::max);
+}
+
+miracle_animation_definition_t miracle_config_get_animation_definition(
+    const miracle_config_data_t* config,
+    miracle_animatable_event_t event) {
+    
+    if (event < 0 || event >= MIRACLE_ANIMATABLE_EVENT_MAX)
+        return {MIRACLE_ANIMATION_TYPE_DISABLED, MIRACLE_EASE_FUNCTION_LINEAR};
+
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    const auto& def = data->animation_definitions[event];
+
+    return {
+        static_cast<miracle_animation_type_t>(def.type),
+        static_cast<miracle_ease_function_t>(def.function),
+        def.duration_seconds,
+        def.c1,
+        def.c2,
+        def.c3,
+        def.c4,
+        def.c5,
+        def.n1,
+        def.d1
+    };
+}
+
+void miracle_config_set_animation_definition(
+    miracle_config_data_t* config,
+    miracle_animatable_event_t event,
+    const miracle_animation_definition_t* definition) {
+    
+    if (event < 0 || event >= MIRACLE_ANIMATABLE_EVENT_MAX || !definition)
+        return;
+
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    auto& def = data->animation_definitions[event];
+
+    def.type = static_cast<miracle::AnimationType>(definition->type);
+    def.function = static_cast<miracle::EaseFunction>(definition->function);
+    def.duration_seconds = definition->duration_seconds;
+    def.c1 = definition->c1;
+    def.c2 = definition->c2;
+    def.c3 = definition->c3;
+    def.c4 = definition->c4;
+    def.c5 = definition->c5;
+    def.n1 = definition->n1;
+    def.d1 = definition->d1;
+}
+
 } // extern "C"
