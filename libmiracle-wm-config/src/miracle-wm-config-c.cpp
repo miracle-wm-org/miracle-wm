@@ -531,4 +531,14 @@ bool miracle_config_remove_workspace_config(
     return true;
 }
 
+uint miracle_config_get_move_modifier(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->move_modifier;
+}
+
+void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifier) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->move_modifier = modifier;
+}
+
 } // extern "C"

@@ -278,6 +278,10 @@ bool miracle_config_remove_workspace_config(
     miracle_config_data_t* config,
     size_t index);
 
+// Move modifier accessors
+uint miracle_config_get_move_modifier(const miracle_config_data_t* config);
+void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifier);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 
