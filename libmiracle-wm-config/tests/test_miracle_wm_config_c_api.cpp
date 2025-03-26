@@ -106,14 +106,14 @@ TEST_F(CAPIWrapperTest, WorkspaceConfigs) {
     miracle_config_add_workspace_config(
         &wrapper->config,
         1,
-        static_cast<int>(miracle::ContainerType::horizontal),
+        static_cast<int>(miracle::ContainerType::leaf),
         "Main");
     
     EXPECT_EQ(miracle_config_get_workspace_config_count(&wrapper->config), 1);
     
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
     EXPECT_EQ(ws.num, 1);
-    EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::horizontal));
+    EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::leaf));
     EXPECT_STREQ(ws.name, "Main");
 }
 

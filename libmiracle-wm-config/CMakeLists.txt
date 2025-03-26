@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(PkgConfig)
 pkg_check_modules(MIRCORE mircore REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
+pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
+find_package(GTest REQUIRED)
 
 add_library(libmiracle-wm-config
     SHARED
@@ -23,25 +25,26 @@ target_include_directories(libmiracle-wm-config PUBLIC SYSTEM
 
 target_link_libraries(libmiracle-wm-config
     ${MIRCORE_LDFLAGS}
-    PkgConfig::YAML)
+    PkgConfig::YAML
+    PkgConfig::LIBEVDEV)
 
 # Tests
-if(BUILD_TESTING)
-    add_executable(test_c_api
-        tests/test_c_api.cpp
-    )
+add_executable(test_miracle_wm_config_c_api
+    tests/test_miracle_wm_config_c_api.cpp
+)
 
-    target_include_directories(test_c_api PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-        ${MIRCORE_INCLUDE_DIRS}
-    )
+target_include_directories(test_miracle_wm_config_c_api PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${MIRCORE_INCLUDE_DIRS}
+    ${GTEST_INCLUDE_DIRS}
+    ${GMOCK_INCLUDE_DIRS}
+)
 
-    target_link_libraries(test_c_api
-        libmiracle-wm-config
-        GTest::GTest
-        GTest::Main
-        ${MIRCORE_LDFLAGS}
-    )
+target_link_libraries(test_miracle_wm_config_c_api
+    libmiracle-wm-config
+    GTest::GTest
+    GTest::Main
+    ${MIRCORE_LDFLAGS}
+)
 
-    add_test(NAME test_c_api COMMAND test_c_api)
-endif()
+add_test(NAME test_miracle_wm_config_c_api COMMAND test_miracle_wm_config_c_api)
