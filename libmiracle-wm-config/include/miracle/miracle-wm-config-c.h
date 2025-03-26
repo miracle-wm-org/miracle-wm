@@ -159,6 +159,13 @@ void miracle_config_add_key_command(
     int action,
     uint modifiers,
     int key);
+bool miracle_config_remove_key_command(
+    miracle_config_data_t* config,
+    int command_type,
+    size_t index);
+void miracle_config_clear_key_commands(
+    miracle_config_data_t* config,
+    int command_type);
 
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);

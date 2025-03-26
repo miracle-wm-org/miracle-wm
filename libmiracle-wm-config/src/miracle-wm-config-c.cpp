@@ -351,4 +351,32 @@ void miracle_config_add_key_command(
     });
 }
 
+bool miracle_config_remove_key_command(
+    miracle_config_data_t* config,
+    int command_type,
+    size_t index) {
+    
+    if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
+        return false;
+
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    if (index >= data->key_commands[command_type].size())
+        return false;
+    
+    data->key_commands[command_type].erase(
+        data->key_commands[command_type].begin() + index);
+    return true;
+}
+
+void miracle_config_clear_key_commands(
+    miracle_config_data_t* config,
+    int command_type) {
+    
+    if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
+        return;
+
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->key_commands[command_type].clear();
+}
+
 } // extern "C"
