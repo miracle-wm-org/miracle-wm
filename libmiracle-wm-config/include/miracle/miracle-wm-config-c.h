@@ -282,6 +282,18 @@ bool miracle_config_remove_workspace_config(
 uint miracle_config_get_move_modifier(const miracle_config_data_t* config);
 void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifier);
 
+// Drag and drop config accessors
+typedef struct {
+    bool enabled;
+    uint modifiers;
+} miracle_drag_and_drop_config_t;
+
+miracle_drag_and_drop_config_t miracle_config_get_drag_and_drop(const miracle_config_data_t* config);
+void miracle_config_set_drag_and_drop(
+    miracle_config_data_t* config,
+    bool enabled,
+    uint modifiers);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 

@@ -541,4 +541,22 @@ void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifi
     data->move_modifier = modifier;
 }
 
+miracle_drag_and_drop_config_t miracle_config_get_drag_and_drop(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return {
+        data->drag_and_drop.enabled,
+        data->drag_and_drop.modifiers
+    };
+}
+
+void miracle_config_set_drag_and_drop(
+    miracle_config_data_t* config,
+    bool enabled,
+    uint modifiers) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->drag_and_drop.enabled = enabled;
+    data->drag_and_drop.modifiers = modifiers;
+}
+
 } // extern "C"
