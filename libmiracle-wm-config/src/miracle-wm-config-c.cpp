@@ -301,4 +301,54 @@ bool miracle_config_remove_environment_variable(miracle_config_data_t* config, s
     return true;
 }
 
+size_t miracle_config_get_key_command_count() {
+    return static_cast<int>(miracle::DefaultKeyCommand::MAX);
+}
+
+size_t miracle_config_get_key_command_list_count(const miracle_config_data_t* config, int command_type) {
+    if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
+        return 0;
+    
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->key_commands[command_type].size();
+}
+
+miracle_key_command_t miracle_config_get_key_command(
+    const miracle_config_data_t* config,
+    int command_type,
+    size_t index) {
+    
+    if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
+        return {0, 0, 0};
+
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    if (index >= data->key_commands[command_type].size())
+        return {0, 0, 0};
+
+    const auto& cmd = data->key_commands[command_type][index];
+    return {
+        static_cast<int>(cmd.action),
+        cmd.modifiers,
+        cmd.key
+    };
+}
+
+void miracle_config_add_key_command(
+    miracle_config_data_t* config,
+    int command_type,
+    int action,
+    uint modifiers,
+    int key) {
+    
+    if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
+        return;
+
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->key_commands[command_type].push_back({
+        static_cast<MirKeyboardAction>(action),
+        modifiers,
+        key
+    });
+}
+
 } // extern "C"
