@@ -195,4 +195,59 @@ bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, siz
     return true;
 }
 
+size_t miracle_config_get_startup_app_count(const miracle_config_data_t* config) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    return data->startup_apps.size();
+}
+
+miracle_startup_app_t miracle_config_get_startup_app(const miracle_config_data_t* config, size_t index) {
+    auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+    if (index >= data->startup_apps.size())
+        return {nullptr, false, false, false, false};
+
+    static thread_local std::string command_copy;
+    const auto& app = data->startup_apps[index];
+    command_copy = app.command;
+
+    return {
+        command_copy.c_str(),
+        app.restart_on_death,
+        app.no_startup_id,
+        app.should_halt_compositor_on_death,
+        app.in_systemd_scope
+    };
+}
+
+void miracle_config_add_startup_app(
+    miracle_config_data_t* config,
+    const char* command,
+    bool restart_on_death,
+    bool no_startup_id,
+    bool should_halt_compositor_on_death,
+    bool in_systemd_scope) {
+    
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->startup_apps.push_back({
+        command ? command : "",
+        restart_on_death,
+        no_startup_id,
+        should_halt_compositor_on_death,
+        in_systemd_scope
+    });
+}
+
+void miracle_config_clear_startup_apps(miracle_config_data_t* config) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    data->startup_apps.clear();
+}
+
+bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index) {
+    auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+    if (index >= data->startup_apps.size())
+        return false;
+    
+    data->startup_apps.erase(data->startup_apps.begin() + index);
+    return true;
+}
+
 } // extern "C"

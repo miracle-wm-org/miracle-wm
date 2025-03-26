@@ -102,6 +102,27 @@ void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
 // Remove command at index (returns false if index is invalid)
 bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index);
 
+// Startup app accessors
+typedef struct {
+    const char* command;
+    bool restart_on_death;
+    bool no_startup_id;
+    bool should_halt_compositor_on_death;
+    bool in_systemd_scope;
+} miracle_startup_app_t;
+
+size_t miracle_config_get_startup_app_count(const miracle_config_data_t* config);
+miracle_startup_app_t miracle_config_get_startup_app(const miracle_config_data_t* config, size_t index);
+void miracle_config_add_startup_app(
+    miracle_config_data_t* config,
+    const char* command,
+    bool restart_on_death,
+    bool no_startup_id,
+    bool should_halt_compositor_on_death,
+    bool in_systemd_scope);
+void miracle_config_clear_startup_apps(miracle_config_data_t* config);
+bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index);
+
 // Creates a new ConfigLoadResult by loading from the given path
 miracle_config_load_result_t* miracle_config_load(const char* path);
 
