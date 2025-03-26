@@ -28,6 +28,18 @@ target_link_libraries(libmiracle-wm-config
     PkgConfig::YAML
     PkgConfig::LIBEVDEV)
 
+# Installation
+install(TARGETS libmiracle-wm-config
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/miracle
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h"
+)
+
 # Tests
 add_executable(test_miracle_wm_config_c_api
     tests/test_miracle_wm_config_c_api.cpp
