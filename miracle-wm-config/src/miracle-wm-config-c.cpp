@@ -69,6 +69,19 @@ extern "C"
         data->primary_modifier = modifier;
     }
 
+    uint miracle_config_get_primary_options_count()
+    {
+        return miracle::mir_input_event_modifier_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_primary_option(uint i)
+    {
+        return {
+            miracle::mir_input_event_modifier_opts[i].first,
+            miracle::mir_input_event_modifier_opts[i].second
+        };
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);

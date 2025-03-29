@@ -19,30 +19,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_CONFIG_MODIFIERS_H
 
 #include <array>
+#include <cstdlib>
 #include <mir_toolkit/events/enums.h>
 
 namespace miracle
 {
+constexpr uint miracle_input_event_modifier_default = 1 << 18;
 
-constexpr std::array<const char*, 18> mir_input_event_modifier_strings = {
-    "none",
-    "alt",
-    "alt_left",
-    "alt_right",
-    "shift",
-    "shift_left",
-    "shift_right",
-    "sym",
-    "function",
-    "ctrl",
-    "ctrl_left",
-    "ctrl_right",
-    "meta",
-    "meta_left",
-    "meta_right",
-    "caps_lock",
-    "num_lock",
-    "scroll_lock"
+constexpr std::array<std::pair<const char*, uint>, 19> mir_input_event_modifier_opts = {
+    std::pair { "alt",         mir_input_event_modifier_alt         },
+    std::pair { "alt_left",    mir_input_event_modifier_alt_left    },
+    std::pair { "alt_right",   mir_input_event_modifier_alt_right   },
+    std::pair { "shift",       mir_input_event_modifier_shift       },
+    std::pair { "shift_left",  mir_input_event_modifier_shift_left  },
+    std::pair { "shift_right", mir_input_event_modifier_shift_right },
+    std::pair { "sym",         mir_input_event_modifier_sym         },
+    std::pair { "function",    mir_input_event_modifier_function    },
+    std::pair { "ctrl",        mir_input_event_modifier_ctrl        },
+    std::pair { "ctrl_left",   mir_input_event_modifier_ctrl_left   },
+    std::pair { "ctrl_right",  mir_input_event_modifier_ctrl_right  },
+    std::pair { "meta",        mir_input_event_modifier_meta        },
+    std::pair { "meta_left",   mir_input_event_modifier_meta_left   },
+    std::pair { "meta_right",  mir_input_event_modifier_meta_right  },
+    std::pair { "caps_lock",   mir_input_event_modifier_caps_lock   },
+    std::pair { "num_lock",    mir_input_event_modifier_num_lock    },
+    std::pair { "scroll_lock", mir_input_event_modifier_scroll_lock },
+    std::pair { "primary",     miracle_input_event_modifier_default }
 };
 
 }

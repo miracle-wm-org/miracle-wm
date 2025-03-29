@@ -113,13 +113,10 @@ void create_error(YAML::Node const& node, ParsingContext& context)
 
 std::optional<uint> try_parse_modifier(std::string const& str, ParsingContext& context)
 {
-    if (str == "primary")
-        return miracle::miracle_input_event_modifier_default;
-
-    for (auto i = 0; i < miracle::mir_input_event_modifier_strings.size(); i++)
+    for (const auto& [fst, snd] : miracle::mir_input_event_modifier_opts)
     {
-        if (miracle::mir_input_event_modifier_strings[i] == str)
-            return 1 << i;
+        if (fst == str)
+            return snd;
     }
 
     return std::nullopt;
