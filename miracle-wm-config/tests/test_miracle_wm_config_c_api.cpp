@@ -46,6 +46,19 @@ TEST_F(CAPIWrapperTest, ModifierOptionsCanBeFound)
     }
 }
 
+TEST_F(CAPIWrapperTest, MouseButtonOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_mouse_button_options_count(), Eq(8));
+}
+
+TEST_F(CAPIWrapperTest, MouseBUttonOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_mouse_button_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_mouse_button_option(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CustomKeyCommands)
 {
     // Test add/get

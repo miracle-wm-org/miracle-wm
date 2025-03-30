@@ -1,5 +1,6 @@
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
+#include <miracle/mouse_button.h>
 #include <vector>
 
 extern "C"
@@ -89,6 +90,19 @@ extern "C"
         return {
             miracle::mir_input_event_modifier_opts[i].first,
             miracle::mir_input_event_modifier_opts[i].second
+        };
+    }
+
+    uint miracle_config_get_mouse_button_options_count()
+    {
+        return miracle::mir_mouse_buttons_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_mouse_button_option(uint i)
+    {
+        return {
+            miracle::mir_mouse_buttons_opts[i].first,
+            miracle::mir_mouse_buttons_opts[i].second
         };
     }
 
