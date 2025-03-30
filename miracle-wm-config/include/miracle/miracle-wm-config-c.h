@@ -58,11 +58,15 @@ extern "C"
         uint value;
     } miracle_config_option_t;
 
+    // Options getters
+    uint miracle_config_get_modifier_options_count();
+    miracle_config_option_t miracle_config_get_modifier_option(uint i);
+    uint miracle_config_get_mouse_button_options_count();
+    miracle_config_option_t miracle_config_get_mouse_button_option(uint i);
+
     // ConfigData accessors
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
-    uint miracle_config_get_primary_options_count();
-    miracle_config_option_t miracle_config_get_primary_option(uint i);
 
     uint miracle_config_get_primary_button(const miracle_config_data_t* config);
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button);

@@ -7,8 +7,8 @@ extern "C"
 
     miracle_config_load_result_t* miracle_config_load(const char* path)
     {
-        auto cpp_result = new miracle::ConfigLoadResult(miracle::load_config(path));
-        auto result = new miracle_config_load_result_t();
+        auto const cpp_result = new miracle::ConfigLoadResult(miracle::load_config(path));
+        auto const result = new miracle_config_load_result_t();
         result->config._internal = &cpp_result->config;
         result->_errors = &cpp_result->errors;
         return result;
@@ -59,22 +59,32 @@ extern "C"
     // ConfigData accessors implementation
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->primary_modifier;
     }
 
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        data->primary_modifier = modifier;
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+
+        for (auto const& [fst, scd] : miracle::mir_input_event_modifier_opts)
+        {
+            if (scd == modifier)
+            {
+                data->primary_modifier = modifier;
+                return;
+            }
+        }
+
+        // TODO: Bubble the error back to the user
     }
 
-    uint miracle_config_get_primary_options_count()
+    uint miracle_config_get_modifier_options_count()
     {
         return miracle::mir_input_event_modifier_opts.size();
     }
 
-    miracle_config_option_t miracle_config_get_primary_option(uint i)
+    miracle_config_option_t miracle_config_get_modifier_option(uint i)
     {
         return {
             miracle::mir_input_event_modifier_opts[i].first,

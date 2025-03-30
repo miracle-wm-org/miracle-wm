@@ -19,16 +19,31 @@ protected:
     std::unique_ptr<miracle_config_load_result_t> wrapper;
 };
 
-TEST_F(CAPIWrapperTest, PrimaryModifier)
+TEST_F(CAPIWrapperTest, CanSetValidPrimaryModifier)
 {
     uint modifier = mir_input_event_modifier_alt;
     miracle_config_set_primary_modifier(&wrapper->config, modifier);
     EXPECT_EQ(miracle_config_get_primary_modifier(&wrapper->config), modifier);
 }
 
-TEST_F(CAPIWrapperTest, PrimaryModifierOptionsCount)
+TEST_F(CAPIWrapperTest, CannotSetInvalidPrimaryModifier)
 {
-    ASSERT_THAT(miracle_config_get_primary_options_count(), Eq(19));
+    uint modifier = 123;
+    miracle_config_set_primary_modifier(&wrapper->config, modifier);
+    EXPECT_NE(miracle_config_get_primary_modifier(&wrapper->config), modifier);
+}
+
+TEST_F(CAPIWrapperTest, ModifierOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_modifier_options_count(), Eq(18));
+}
+
+TEST_F(CAPIWrapperTest, ModifierOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_modifier_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_modifier_option(i).name, Ne(nullptr));
+    }
 }
 
 TEST_F(CAPIWrapperTest, CustomKeyCommands)

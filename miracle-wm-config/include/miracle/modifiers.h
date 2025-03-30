@@ -26,7 +26,7 @@ namespace miracle
 {
 constexpr uint miracle_input_event_modifier_default = 1 << 18;
 
-constexpr std::array<std::pair<const char*, uint>, 19> mir_input_event_modifier_opts = {
+constexpr std::array<std::pair<const char*, uint>, 18> mir_input_event_modifier_opts = {
     std::pair { "alt",         mir_input_event_modifier_alt         },
     std::pair { "alt_left",    mir_input_event_modifier_alt_left    },
     std::pair { "alt_right",   mir_input_event_modifier_alt_right   },
