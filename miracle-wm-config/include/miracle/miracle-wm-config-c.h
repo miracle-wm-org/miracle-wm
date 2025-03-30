@@ -63,6 +63,8 @@ extern "C"
     miracle_config_option_t miracle_config_get_modifier_option(uint i);
     uint miracle_config_get_mouse_button_options_count();
     miracle_config_option_t miracle_config_get_mouse_button_option(uint i);
+    uint miracle_config_get_mouse_actions_options_count();
+    miracle_config_option_t miracle_config_get_mouse_actions_option(uint i);
 
     // ConfigData accessors
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
@@ -96,7 +98,7 @@ extern "C"
 
     typedef struct
     {
-        int action; // MirKeyboardAction as int
+        uint action; // MirKeyboardAction as uint
         uint modifiers;
         int key;
         const char* command; // NULL-terminated string
@@ -112,7 +114,14 @@ extern "C"
         size_t index);
     void miracle_config_add_custom_key_command(
         miracle_config_data_t* config,
-        int action,
+        uint action,
+        uint modifiers,
+        int key,
+        const char* command);
+    void miracle_config_edit_custom_key_command(
+        miracle_config_data_t* config,
+        size_t index,
+        uint action,
         uint modifiers,
         int key,
         const char* command);

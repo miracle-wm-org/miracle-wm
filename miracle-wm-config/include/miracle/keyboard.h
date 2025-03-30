@@ -19,15 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_CONFIG_KEYBOARD_H
 
 #include <array>
+#include <cstdlib>
 #include <mir_toolkit/events/enums.h>
 
 namespace miracle
 {
-constexpr std::array<const char*, mir_keyboard_actions> mir_keyboard_actions_strings = {
-    "up",
-    "down",
-    "repeat",
-    "modifiers"
+constexpr std::array<std::pair<const char*, uint>, mir_keyboard_actions> mir_keyboard_actions_strings = {
+    std::pair { "up",     mir_keyboard_action_up     },
+    std::pair { "down",   mir_keyboard_action_down   },
+    std::pair { "repeat", mir_keyboard_action_repeat }
 };
 }
 

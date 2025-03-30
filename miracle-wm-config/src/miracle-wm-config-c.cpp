@@ -106,6 +106,19 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_mouse_actions_options_count()
+    {
+        return miracle::mir_mouse_actions_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_mouse_actions_option(uint i)
+    {
+        return {
+            miracle::mir_mouse_actions_opts[i].first,
+            miracle::mir_mouse_actions_opts[i].second
+        };
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
@@ -115,7 +128,16 @@ extern "C"
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        data->primary_button = button;
+        for (auto const& [fst, scd] : miracle::mir_mouse_buttons_opts)
+        {
+            if (scd == button)
+            {
+                data->primary_button = button;
+                return;
+            }
+        }
+
+        // TODO: Error handling
     }
 
     int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
@@ -127,6 +149,8 @@ extern "C"
     void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (value < 0)
+            value = 0;
         data->inner_gaps_x = value;
     }
 
@@ -139,6 +163,8 @@ extern "C"
     void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (value < 0)
+            value = 0;
         data->inner_gaps_y = value;
     }
 
@@ -151,6 +177,8 @@ extern "C"
     void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (value < 0)
+            value = 0;
         data->outer_gaps_x = value;
     }
 
@@ -163,6 +191,8 @@ extern "C"
     void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (value < 0)
+            value = 0;
         data->outer_gaps_y = value;
     }
 
@@ -175,6 +205,8 @@ extern "C"
     void miracle_config_set_resize_jump(miracle_config_data_t* config, int value)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (value < 0)
+            value = 0;
         data->resize_jump = value;
     }
 
@@ -222,7 +254,7 @@ extern "C"
         command_copy = cmd.command;
 
         return {
-            static_cast<int>(cmd.action),
+            static_cast<uint>(cmd.action),
             cmd.modifiers,
             cmd.key,
             command_copy.c_str()
@@ -231,17 +263,56 @@ extern "C"
 
     void miracle_config_add_custom_key_command(
         miracle_config_data_t* config,
-        int action,
+        uint action,
         uint modifiers,
         int key,
         const char* command)
     {
+
+        bool found_action = false;
+        for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
+        {
+            if (snd == action)
+                found_action = true;
+        }
+
+        if (!found_action)
+            return;
 
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         data->custom_key_commands.push_back({ static_cast<MirKeyboardAction>(action),
             modifiers,
             key,
             command ? command : "" });
+    }
+
+    void miracle_config_edit_custom_key_command(
+        miracle_config_data_t* config,
+        size_t index,
+        uint action,
+        uint modifiers,
+        int key,
+        const char* command)
+    {
+
+        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (index < 0 || index >= data->custom_key_commands.size())
+            return;
+
+        bool found_action = false;
+        for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
+        {
+            if (snd == action)
+                found_action = true;
+        }
+
+        if (!found_action)
+            return;
+
+        data->custom_key_commands[index] = { static_cast<MirKeyboardAction>(action),
+            modifiers,
+            key,
+            command ? command : "" };
     }
 
     void miracle_config_clear_custom_key_commands(miracle_config_data_t* config)

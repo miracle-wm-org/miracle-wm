@@ -41,10 +41,10 @@ struct ParsingContext
 
 std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::mir_keyboard_actions_strings.size(); i++)
+    for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
     {
-        if (miracle::mir_keyboard_actions_strings[i] == str)
-            return static_cast<MirKeyboardAction>(i);
+        if (fst == str)
+            return static_cast<MirKeyboardAction>(snd);
     }
 
     return std::nullopt;

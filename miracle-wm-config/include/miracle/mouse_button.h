@@ -35,6 +35,14 @@ constexpr std::array<std::pair<const char*, uint>, 8> mir_mouse_buttons_opts = {
     std::pair { "task",      mir_pointer_button_task      }
 };
 
+constexpr std::array<std::pair<const char*, uint>, mir_pointer_actions> mir_mouse_actions_opts = {
+    std::pair { "up",     mir_pointer_action_button_up   },
+    std::pair { "down",   mir_pointer_action_button_down },
+    std::pair { "enter",  mir_pointer_action_enter       },
+    std::pair { "leave",  mir_pointer_action_leave       },
+    std::pair { "motion", mir_pointer_action_motion      }
+};
+
 }
 
 #endif // MIRACLE_WM_CONFIG_MOUSE_BUTTON_H
