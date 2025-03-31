@@ -119,6 +119,19 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_keyboard_actions_options_count()
+    {
+        return miracle::mir_keyboard_actions_strings.size();
+    }
+
+    miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i)
+    {
+        return {
+            miracle::mir_keyboard_actions_strings[i].first,
+            miracle::mir_keyboard_actions_strings[i].second
+        };
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);

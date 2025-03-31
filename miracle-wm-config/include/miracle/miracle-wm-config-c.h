@@ -65,6 +65,8 @@ extern "C"
     miracle_config_option_t miracle_config_get_mouse_button_option(uint i);
     uint miracle_config_get_mouse_actions_options_count();
     miracle_config_option_t miracle_config_get_mouse_actions_option(uint i);
+    uint miracle_config_get_keyboard_actions_options_count();
+    miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
 
     // ConfigData accessors
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);

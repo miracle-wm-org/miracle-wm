@@ -61,7 +61,7 @@ TEST_F(CAPIWrapperTest, MouseButtonOptionsCanBeFound)
 
 TEST_F(CAPIWrapperTest, MouseActionsOptionsCount)
 {
-    ASSERT_THAT(miracle_config_get_mouse_actions_options_count(), Eq(mir_pointer_actions));
+    ASSERT_THAT(miracle_config_get_mouse_actions_options_count(), Eq(mir_pointer_actions - 1));
 }
 
 TEST_F(CAPIWrapperTest, MouseActionsOptionsCanBeFound)
@@ -69,6 +69,19 @@ TEST_F(CAPIWrapperTest, MouseActionsOptionsCanBeFound)
     for (uint i = 0; i < miracle_config_get_mouse_actions_options_count(); i++)
     {
         ASSERT_THAT(miracle_config_get_mouse_actions_option(i).name, Ne(nullptr));
+    }
+}
+
+TEST_F(CAPIWrapperTest, KeyboardActionsOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_keyboard_actions_options_count(), Eq(mir_keyboard_actions - 1));
+}
+
+TEST_F(CAPIWrapperTest, KeyboardActionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_keyboard_actions_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_keyboard_actions_option(i).name, Ne(nullptr));
     }
 }
 
