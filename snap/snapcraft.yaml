@@ -86,8 +86,11 @@ parts:
       - libmiral7
       - libmiroil7
       - mir-graphics-drivers-desktop
+      - mir-platform-graphics-virtual
       - mir-graphics-drivers-nvidia
       - pcre2-utils
+      - libgl1-mesa-dri
+      - libdrm-nouveau2
     prime:
       - -lib/udev
       - -usr/doc
@@ -103,30 +106,17 @@ parts:
       - -usr/share/lintian
       - -usr/share/man
       - -usr/share/pkgconfig
+      - -usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgallium*
 
   session:
     plugin: dump
     source: session
 
-  mesa-patchelf:
-    build-attributes:
-      - enable-patchelf
-    plugin: nil
-    stage-packages:
-    - libgl1-mesa-dri
-    - libtinfo6
-    # included in this part because they try to pull in mesa bits
-    - xwayland
-    stage:
-      # The libraries in .../dri need no-patchelf, so they come from the mesa-unpatched part
-      - -usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
-
   mesa-no-patchelf:
     plugin: nil
     stage-packages:
-      - libgl1-mesa-dri
+      - mesa-libgallium
     build-attributes:
       - no-patchelf # Otherwise snapcraft may strip the build ID and cause the driver to crash
     stage:
-      # Only the libraries in .../dri need to not be patched, the rest come from the mesa part
-      - usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
+      - usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgallium*
