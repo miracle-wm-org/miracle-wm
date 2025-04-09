@@ -61,7 +61,7 @@ TEST_F(CAPIWrapperTest, MouseButtonOptionsCanBeFound)
 
 TEST_F(CAPIWrapperTest, MouseActionsOptionsCount)
 {
-    ASSERT_THAT(miracle_config_get_mouse_actions_options_count(), Eq(mir_pointer_actions - 1));
+    ASSERT_THAT(miracle_config_get_mouse_actions_options_count(), Eq(mir_pointer_actions));
 }
 
 TEST_F(CAPIWrapperTest, MouseActionsOptionsCanBeFound)
