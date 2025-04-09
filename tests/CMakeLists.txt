@@ -42,6 +42,7 @@ add_executable(miracle-wm-tests
     stub_container.h)
 
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM
+    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
     ${MIRAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
     ${GTEST_INCLUDE_DIRS}
@@ -49,6 +50,7 @@ target_include_directories(miracle-wm-tests PUBLIC SYSTEM
 
 target_link_libraries(miracle-wm-tests
     miracle-wm-implementation
+    miracle-wm-config
     ${GTEST_LIBRARIES}
     ${MIRAL_LDFLAGS}
     ${MIRSERVER_LDFLAGS}

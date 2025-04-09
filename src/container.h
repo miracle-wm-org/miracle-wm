@@ -22,15 +22,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "scratchpad_state.h"
 
 #include "layout_scheme.h"
-#include <functional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <mir/geometry/rectangle.h>
 #include <mir_toolkit/event.h>
+#include <miracle/container_type.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <nlohmann/json.hpp>
-#include <vector>
 
 namespace geom = mir::geometry;
 
@@ -43,16 +42,6 @@ class ContainerGroupContainer;
 class WorkspaceInterface;
 class OutputInterface;
 class ContainerScope;
-
-enum class ContainerType
-{
-    none,
-    leaf,
-    shell,
-    parent,
-    group,
-    stack
-};
 
 ContainerType container_type_from_string(std::string const& str);
 
