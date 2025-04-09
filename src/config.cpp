@@ -213,9 +213,9 @@ void FilesystemConfiguration::reload()
 
     mir::log_info("Configuration is loading...");
     auto const [config, errors] = load_config(config_path);
-    if (errors.empty())
-        options = config;
-    else
+    options = config;
+
+    if (!errors.empty())
     {
         for (auto const& error : errors)
             mir::log_error("Configuration parsing error: %s (%s::L%d:%d)",

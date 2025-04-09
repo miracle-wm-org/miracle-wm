@@ -41,10 +41,10 @@ struct ParsingContext
 
 std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::mir_keyboard_actions_strings.size(); i++)
+    for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
     {
-        if (miracle::mir_keyboard_actions_strings[i] == str)
-            return static_cast<MirKeyboardAction>(i);
+        if (fst == str)
+            return static_cast<MirKeyboardAction>(snd);
     }
 
     return std::nullopt;
@@ -113,13 +113,10 @@ void create_error(YAML::Node const& node, ParsingContext& context)
 
 std::optional<uint> try_parse_modifier(std::string const& str, ParsingContext& context)
 {
-    if (str == "primary")
-        return miracle::miracle_input_event_modifier_default;
-
-    for (auto i = 0; i < miracle::mir_input_event_modifier_strings.size(); i++)
+    for (const auto& [fst, snd] : miracle::mir_input_event_modifier_opts)
     {
-        if (miracle::mir_input_event_modifier_strings[i] == str)
-            return 1 << i;
+        if (fst == str)
+            return snd;
     }
 
     return std::nullopt;

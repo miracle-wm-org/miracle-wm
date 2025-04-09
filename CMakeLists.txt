@@ -138,7 +138,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/libmiracle-wm-config/include)
+    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include)
 
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
@@ -155,7 +155,7 @@ target_link_libraries(miracle-wm-implementation
     PkgConfig::EGL
     PkgConfig::GLESv2
     -lpcre2-8 -lpcre2-16 -lpcre2-32
-    libmiracle-wm-config)
+    miracle-wm-config)
 
 if(SYSTEMD_INTEGRATION)
     # Install systemd files
@@ -205,4 +205,4 @@ endif()
 
 add_subdirectory(tests/)
 add_subdirectory(miraclemsg/)
-add_subdirectory(libmiracle-wm-config/)
+add_subdirectory(miracle-wm-config/)

@@ -35,8 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-constexpr uint miracle_input_event_modifier_default = 1 << 18;
-
 struct MIRACLE_WM_CONFIG_API KeyCommand
 {
     MirKeyboardAction action;

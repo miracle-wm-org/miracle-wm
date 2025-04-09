@@ -15,36 +15,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_CONFIG_MODIFIERS_H
-#define MIRACLE_WM_CONFIG_MODIFIERS_H
+#ifndef MIRACLE_WM_CONFIG_KEYBOARD_H
+#define MIRACLE_WM_CONFIG_KEYBOARD_H
 
 #include <array>
+#include <cstdlib>
 #include <mir_toolkit/events/enums.h>
 
 namespace miracle
 {
-
-constexpr std::array<const char*, 18> mir_input_event_modifier_strings = {
-    "none",
-    "alt",
-    "alt_left",
-    "alt_right",
-    "shift",
-    "shift_left",
-    "shift_right",
-    "sym",
-    "function",
-    "ctrl",
-    "ctrl_left",
-    "ctrl_right",
-    "meta",
-    "meta_left",
-    "meta_right",
-    "caps_lock",
-    "num_lock",
-    "scroll_lock"
+constexpr std::array<std::pair<const char*, uint>, mir_keyboard_actions - 1> mir_keyboard_actions_strings = {
+    std::pair { "up",     mir_keyboard_action_up     },
+    std::pair { "down",   mir_keyboard_action_down   },
+    std::pair { "repeat", mir_keyboard_action_repeat }
 };
-
 }
 
-#endif // MIRACLE_WM_CONFIG_MODIFIERS_H
+#endif // MIRACLE_WM_CONFIG_KEYBOARD_H
