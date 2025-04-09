@@ -68,7 +68,20 @@ extern "C"
     uint miracle_config_get_keyboard_actions_options_count();
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
 
-    // ConfigData accessors
+    // Creates a new ConfigLoadResult by loading from the given path
+    miracle_config_load_result_t* miracle_config_load(const char* path);
+
+    // Gets the number of errors in the result
+    size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);
+
+    // Gets an error by index (0-based)
+    const miracle_config_error_t* miracle_config_get_error(
+        const miracle_config_load_result_t* result,
+        size_t index);
+
+    // Frees the memory allocated for the config load result
+    void miracle_config_free(miracle_config_load_result_t* result);
+
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
 
@@ -93,16 +106,14 @@ extern "C"
     bool miracle_config_get_animations_enabled(const miracle_config_data_t* config);
     void miracle_config_set_animations_enabled(miracle_config_data_t* config, bool enabled);
 
-    // Returns pointer to terminal command string or NULL if not set
     const char* miracle_config_get_terminal(const miracle_config_data_t* config);
-    // Set terminal command (makes a copy of the string)
     void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal);
 
     typedef struct
     {
         uint action; // MirKeyboardAction as uint
-        uint modifiers;
-        int key;
+        uint modifiers; // List of modifiers as uint
+        int key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
         const char* command; // NULL-terminated string
     } miracle_custom_key_command_t;
 
@@ -332,20 +343,6 @@ extern "C"
         miracle_config_data_t* config,
         bool enabled,
         uint modifiers);
-
-    // Creates a new ConfigLoadResult by loading from the given path
-    miracle_config_load_result_t* miracle_config_load(const char* path);
-
-    // Gets the number of errors in the result
-    size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);
-
-    // Gets an error by index (0-based)
-    const miracle_config_error_t* miracle_config_get_error(
-        const miracle_config_load_result_t* result,
-        size_t index);
-
-    // Frees the memory allocated for the config load result
-    void miracle_config_free(miracle_config_load_result_t* result);
 
 #ifdef __cplusplus
 }
