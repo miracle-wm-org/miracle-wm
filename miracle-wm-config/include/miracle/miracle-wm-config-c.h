@@ -67,6 +67,8 @@ extern "C"
     miracle_config_option_t miracle_config_get_mouse_actions_option(uint i);
     uint miracle_config_get_keyboard_actions_options_count();
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
+    uint miracle_config_get_built_in_key_commands_count();
+    miracle_config_option_t miracle_config_get_built_in_key_commands(uint i);
 
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
@@ -141,6 +143,17 @@ extern "C"
     void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
     // Remove command at index (returns false if index is invalid)
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index);
+
+    typedef struct
+    {
+        uint action; // MirKeyboardAction as uint
+        uint modifiers; // List of modifiers as uint
+        int key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+        uint command; // DefaultKeyCommand as uint
+    } miracle_built_in_key_command_t;
+
+    /// Retrieve the number of built-in key commands.
+    size_t miracle_config_get_built_in_key_command_count(const miracle_config_data_t* config);
 
     // Startup app accessors
     typedef struct

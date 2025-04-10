@@ -85,6 +85,19 @@ TEST_F(CAPIWrapperTest, KeyboardActionsCanBeFound)
     }
 }
 
+TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCount)
+{
+    ASSERT_THAT(miracle_config_get_built_in_key_commands_count(), Eq(static_cast<uint>(miracle::DefaultKeyCommand::MAX)));
+}
+
+TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_built_in_key_commands_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_built_in_key_commands(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CanSetPrimaryButton)
 {
     uint primary_button = mir_pointer_button_tertiary;

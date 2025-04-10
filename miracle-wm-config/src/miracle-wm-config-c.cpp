@@ -1,6 +1,7 @@
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
+#include <miracle/default_key_command.h>
 #include <vector>
 
 extern "C"
@@ -129,6 +130,19 @@ extern "C"
         return {
             miracle::mir_keyboard_actions_strings[i].first,
             miracle::mir_keyboard_actions_strings[i].second
+        };
+    }
+
+    uint miracle_config_get_built_in_key_commands_count()
+    {
+        return miracle::default_key_command_strings.size();
+    }
+
+    miracle_config_option_t miracle_config_get_built_in_key_commands(uint i)
+    {
+        return {
+        miracle::default_key_command_strings[i],
+        i
         };
     }
 
