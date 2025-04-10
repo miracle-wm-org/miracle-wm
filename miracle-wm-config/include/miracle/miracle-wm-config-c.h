@@ -133,7 +133,7 @@ extern "C"
         const char* command);
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
-        size_t index,
+        int index,
         uint action,
         uint modifiers,
         int key,
