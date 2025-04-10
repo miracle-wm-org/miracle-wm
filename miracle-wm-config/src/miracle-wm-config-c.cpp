@@ -301,13 +301,12 @@ extern "C"
 
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
-        size_t index,
+        int index,
         uint action,
         uint modifiers,
         int key,
         const char* command)
     {
-
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         if (index < 0 || index >= data->custom_key_commands.size())
             return;
