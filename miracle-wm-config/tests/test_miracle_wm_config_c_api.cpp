@@ -88,14 +88,14 @@ TEST_F(CAPIWrapperTest, KeyboardActionsCanBeFound)
 
 TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCount)
 {
-    ASSERT_THAT(miracle_config_get_built_in_key_commands_count(), Eq(static_cast<uint>(miracle::DefaultKeyCommand::MAX)));
+    ASSERT_THAT(miracle_config_get_built_in_key_command_options_count(), Eq(static_cast<uint>(miracle::DefaultKeyCommand::MAX)));
 }
 
 TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
 {
-    for (uint i = 0; i < miracle_config_get_built_in_key_commands_count(); i++)
+    for (uint i = 0; i < miracle_config_get_built_in_key_command_options_count(); i++)
     {
-        ASSERT_THAT(miracle_config_get_built_in_key_commands(i).name, Ne(nullptr));
+        ASSERT_THAT(miracle_config_get_built_in_key_command_option(i).name, Ne(nullptr));
     }
 }
 
