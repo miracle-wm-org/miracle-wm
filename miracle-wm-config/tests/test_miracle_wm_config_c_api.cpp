@@ -314,7 +314,7 @@ TEST_F(CAPIWrapperTest, CanRemoveBuiltInKeyCommand)
     EXPECT_THAT(miracle_config_remove_built_in_key_command_override(&wrapper->config, 0), Eq(true));
 }
 
-TEST_F(CAPIWrapperTest, StartupApps)
+TEST_F(CAPIWrapperTest, CanAddStartupApps)
 {
     miracle_config_add_startup_app(
         &wrapper->config,
@@ -332,6 +332,47 @@ TEST_F(CAPIWrapperTest, StartupApps)
     EXPECT_FALSE(app.no_startup_id);
     EXPECT_TRUE(app.should_halt_compositor_on_death);
     EXPECT_FALSE(app.in_systemd_scope);
+}
+
+TEST_F(CAPIWrapperTest, CanSetStartupApps)
+{
+    miracle_config_add_startup_app(
+        &wrapper->config,
+        "test-app",
+        true,
+        false,
+        true,
+        false);
+
+    miracle_config_set_startup_app(
+       &wrapper->config,
+       0,
+       "test-app-2",
+       false,
+       true,
+       false,
+       true);
+
+    auto app = miracle_config_get_startup_app(&wrapper->config, 0);
+    EXPECT_STREQ(app.command, "test-app-2");
+    EXPECT_FALSE(app.restart_on_death);
+    EXPECT_TRUE(app.no_startup_id);
+    EXPECT_FALSE(app.should_halt_compositor_on_death);
+    EXPECT_TRUE(app.in_systemd_scope);
+}
+
+TEST_F(CAPIWrapperTest, CanRemoveStartupApps)
+{
+    miracle_config_add_startup_app(
+        &wrapper->config,
+        "test-app",
+        true,
+        false,
+        true,
+        false);
+
+    miracle_config_remove_startup_app(&wrapper->config, 0);
+    EXPECT_EQ(miracle_config_get_startup_app_count(&wrapper->config), 0);
 }
 
 TEST_F(CAPIWrapperTest, BorderConfig)
