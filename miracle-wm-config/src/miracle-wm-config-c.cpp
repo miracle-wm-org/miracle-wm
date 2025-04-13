@@ -133,12 +133,12 @@ extern "C"
         };
     }
 
-    uint miracle_config_get_built_in_key_commands_count()
+    uint miracle_config_get_built_in_key_command_options_count()
     {
         return miracle::default_key_command_strings.size();
     }
 
-    miracle_config_option_t miracle_config_get_built_in_key_commands(uint i)
+    miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i)
     {
         return {
             miracle::default_key_command_strings[i],
