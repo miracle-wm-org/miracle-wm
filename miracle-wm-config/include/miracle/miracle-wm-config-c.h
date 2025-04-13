@@ -152,8 +152,26 @@ extern "C"
         uint command; // DefaultKeyCommand as uint
     } miracle_built_in_key_command_t;
 
-    /// Retrieve the number of built-in key commands.
-    size_t miracle_config_get_built_in_key_command_count(const miracle_config_data_t* config);
+    size_t miracle_config_get_built_in_key_command_override_count(const miracle_config_data_t* config);
+    miracle_built_in_key_command_t miracle_config_get_built_in_key_command_override(
+        const miracle_config_data_t* config,
+        size_t index);
+    void miracle_config_add_built_in_key_command_override(
+        miracle_config_data_t* config,
+        uint action,
+        uint modifiers,
+        int key,
+        uint command);
+    void miracle_config_set_built_in_key_command_override(
+        miracle_config_data_t* config,
+        int index,
+        uint action,
+        uint modifiers,
+        int key,
+        uint command);
+    bool miracle_config_remove_built_in_key_command_override(
+        const miracle_config_data_t* config,
+        size_t index);
 
     // Startup app accessors
     typedef struct
@@ -194,34 +212,6 @@ extern "C"
         const char* value);
     void miracle_config_clear_environment_variables(miracle_config_data_t* config);
     bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index);
-
-    // Key command accessors (fixed size array)
-    typedef struct
-    {
-        int action; // MirKeyboardAction as int
-        uint modifiers;
-        int key;
-    } miracle_key_command_t;
-
-    size_t miracle_config_get_key_command_count();
-    size_t miracle_config_get_key_command_list_count(const miracle_config_data_t* config, int command_type);
-    miracle_key_command_t miracle_config_get_key_command(
-        const miracle_config_data_t* config,
-        int command_type,
-        size_t index);
-    void miracle_config_add_key_command(
-        miracle_config_data_t* config,
-        int command_type,
-        int action,
-        uint modifiers,
-        int key);
-    bool miracle_config_remove_key_command(
-        miracle_config_data_t* config,
-        int command_type,
-        size_t index);
-    void miracle_config_clear_key_commands(
-        miracle_config_data_t* config,
-        int command_type);
 
     // Border config accessors
     typedef struct
