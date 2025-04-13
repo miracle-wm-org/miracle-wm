@@ -1,3 +1,4 @@
+#include <miracle/default_key_command.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
@@ -129,6 +130,19 @@ extern "C"
         return {
             miracle::mir_keyboard_actions_strings[i].first,
             miracle::mir_keyboard_actions_strings[i].second
+        };
+    }
+
+    uint miracle_config_get_built_in_key_commands_count()
+    {
+        return miracle::default_key_command_strings.size();
+    }
+
+    miracle_config_option_t miracle_config_get_built_in_key_commands(uint i)
+    {
+        return {
+            miracle::default_key_command_strings[i],
+            i
         };
     }
 
@@ -343,6 +357,73 @@ extern "C"
         return true;
     }
 
+    size_t miracle_config_get_built_in_key_command_override_count(const miracle_config_data_t* config)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        return data->built_in_key_command_overrides.size();
+    }
+
+    miracle_built_in_key_command_t miracle_config_get_built_in_key_command_override(
+        const miracle_config_data_t* config,
+        size_t index)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const& command = data->built_in_key_command_overrides[index];
+        return {
+            .action = static_cast<uint>(command.action),
+            .modifiers = command.modifiers,
+            .key = command.key,
+            .command = static_cast<uint>(command.default_key_command)
+        };
+    }
+
+    void miracle_config_add_built_in_key_command_override(
+        miracle_config_data_t* config,
+        uint action,
+        uint modifiers,
+        int key,
+        uint command)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        data->built_in_key_command_overrides.push_back(miracle::BuiltInKeyCommandOverride {
+            static_cast<MirKeyboardAction>(action),
+            modifiers,
+            key,
+            static_cast<miracle::DefaultKeyCommand>(command) });
+    }
+
+    void miracle_config_set_built_in_key_command_override(
+        miracle_config_data_t* config,
+        int index,
+        uint action,
+        uint modifiers,
+        int key,
+        uint command)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->built_in_key_command_overrides.size())
+            return;
+
+        data->built_in_key_command_overrides[index] = miracle::BuiltInKeyCommandOverride {
+            static_cast<MirKeyboardAction>(action),
+            modifiers,
+            key,
+            static_cast<miracle::DefaultKeyCommand>(command)
+        };
+    }
+
+    bool miracle_config_remove_built_in_key_command_override(
+        const miracle_config_data_t* config,
+        size_t index)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->built_in_key_command_overrides.size())
+            return false;
+
+        data->built_in_key_command_overrides.erase(data->built_in_key_command_overrides.begin() + index);
+        return true;
+    }
+
     size_t miracle_config_get_startup_app_count(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
@@ -458,83 +539,6 @@ extern "C"
     size_t miracle_config_get_key_command_count()
     {
         return static_cast<int>(miracle::DefaultKeyCommand::MAX);
-    }
-
-    size_t miracle_config_get_key_command_list_count(const miracle_config_data_t* config, int command_type)
-    {
-        if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
-            return 0;
-
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        return data->key_commands[command_type].size();
-    }
-
-    miracle_key_command_t miracle_config_get_key_command(
-        const miracle_config_data_t* config,
-        int command_type,
-        size_t index)
-    {
-
-        if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
-            return { 0, 0, 0 };
-
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        if (index >= data->key_commands[command_type].size())
-            return { 0, 0, 0 };
-
-        const auto& cmd = data->key_commands[command_type][index];
-        return {
-            static_cast<int>(cmd.action),
-            cmd.modifiers,
-            cmd.key
-        };
-    }
-
-    void miracle_config_add_key_command(
-        miracle_config_data_t* config,
-        int command_type,
-        int action,
-        uint modifiers,
-        int key)
-    {
-
-        if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
-            return;
-
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        data->key_commands[command_type].push_back({ static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key });
-    }
-
-    bool miracle_config_remove_key_command(
-        miracle_config_data_t* config,
-        int command_type,
-        size_t index)
-    {
-
-        if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
-            return false;
-
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (index >= data->key_commands[command_type].size())
-            return false;
-
-        data->key_commands[command_type].erase(
-            data->key_commands[command_type].begin() + index);
-        return true;
-    }
-
-    void miracle_config_clear_key_commands(
-        miracle_config_data_t* config,
-        int command_type)
-    {
-
-        if (command_type < 0 || command_type >= static_cast<int>(miracle::DefaultKeyCommand::MAX))
-            return;
-
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        data->key_commands[command_type].clear();
     }
 
     miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config)

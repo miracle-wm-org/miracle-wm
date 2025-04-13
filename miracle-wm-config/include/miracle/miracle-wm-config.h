@@ -47,7 +47,10 @@ struct MIRACLE_WM_CONFIG_API CustomKeyCommand : KeyCommand
     std::string command;
 };
 
-typedef std::vector<KeyCommand> KeyCommandList;
+struct MIRACLE_WM_CONFIG_API BuiltInKeyCommandOverride : KeyCommand
+{
+    DefaultKeyCommand default_key_command;
+};
 
 struct MIRACLE_WM_CONFIG_API StartupApp
 {
@@ -99,7 +102,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     uint primary_modifier = mir_input_event_modifier_meta;
     uint primary_button = mir_pointer_button_primary;
     std::vector<CustomKeyCommand> custom_key_commands;
-    KeyCommandList key_commands[static_cast<int>(DefaultKeyCommand::MAX)];
+    std::vector<BuiltInKeyCommandOverride> built_in_key_command_overrides;
     int inner_gaps_x = 10;
     int inner_gaps_y = 10;
     int outer_gaps_x = 10;

@@ -1,5 +1,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <linux/input-event-codes.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 
@@ -82,6 +83,19 @@ TEST_F(CAPIWrapperTest, KeyboardActionsCanBeFound)
     for (uint i = 0; i < miracle_config_get_keyboard_actions_options_count(); i++)
     {
         ASSERT_THAT(miracle_config_get_keyboard_actions_option(i).name, Ne(nullptr));
+    }
+}
+
+TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCount)
+{
+    ASSERT_THAT(miracle_config_get_built_in_key_commands_count(), Eq(static_cast<uint>(miracle::DefaultKeyCommand::MAX)));
+}
+
+TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_built_in_key_commands_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_built_in_key_commands(i).name, Ne(nullptr));
     }
 }
 
@@ -244,6 +258,60 @@ TEST_F(CAPIWrapperTest, CanClearCustomKeyCommand)
 
     miracle_config_clear_custom_key_commands(&wrapper->config);
     EXPECT_EQ(miracle_config_get_custom_key_command_count(&wrapper->config), 0);
+}
+
+TEST_F(CAPIWrapperTest, CanAddBuiltInKeyCommand)
+{
+    miracle_config_add_built_in_key_command_override(
+        &wrapper->config,
+        mir_keyboard_action_down,
+        mir_input_event_modifier_meta,
+        KEY_F,
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
+    EXPECT_THAT(miracle_config_get_built_in_key_command_override_count(&wrapper->config), Eq(1));
+    auto const key_command = miracle_config_get_built_in_key_command_override(
+        &wrapper->config, 0);
+    EXPECT_THAT(key_command.action, Eq(mir_keyboard_action_down));
+    EXPECT_THAT(key_command.modifiers, Eq(mir_input_event_modifier_meta));
+    EXPECT_THAT(key_command.key, Eq(KEY_F));
+    EXPECT_THAT(key_command.command, Eq(static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen)));
+}
+
+TEST_F(CAPIWrapperTest, CanUpdateBuiltInKeyCommand)
+{
+    miracle_config_add_built_in_key_command_override(
+        &wrapper->config,
+        mir_keyboard_action_down,
+        mir_input_event_modifier_meta,
+        KEY_F,
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
+
+    miracle_config_set_built_in_key_command_override(
+        &wrapper->config,
+        0,
+        mir_keyboard_action_up,
+        mir_input_event_modifier_alt,
+        KEY_K,
+        static_cast<uint>(miracle::DefaultKeyCommand::MoveDown));
+
+    auto const key_command = miracle_config_get_built_in_key_command_override(
+        &wrapper->config, 0);
+    EXPECT_THAT(key_command.action, Eq(mir_keyboard_action_up));
+    EXPECT_THAT(key_command.modifiers, Eq(mir_input_event_modifier_alt));
+    EXPECT_THAT(key_command.key, Eq(KEY_K));
+    EXPECT_THAT(key_command.command, Eq(static_cast<uint>(miracle::DefaultKeyCommand::MoveDown)));
+}
+
+TEST_F(CAPIWrapperTest, CanRemoveBuiltInKeyCommand)
+{
+    miracle_config_add_built_in_key_command_override(
+        &wrapper->config,
+        mir_keyboard_action_down,
+        mir_input_event_modifier_meta,
+        KEY_F,
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
+
+    EXPECT_THAT(miracle_config_remove_built_in_key_command_override(&wrapper->config, 0), Eq(true));
 }
 
 TEST_F(CAPIWrapperTest, StartupApps)
