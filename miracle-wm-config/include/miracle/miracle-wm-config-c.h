@@ -192,7 +192,14 @@ extern "C"
         bool no_startup_id,
         bool should_halt_compositor_on_death,
         bool in_systemd_scope);
-    void miracle_config_clear_startup_apps(miracle_config_data_t* config);
+    void miracle_config_set_startup_app(
+        miracle_config_data_t* config,
+        int index,
+        const char* command,
+        bool restart_on_death,
+        bool no_startup_id,
+        bool should_halt_compositor_on_death,
+        bool in_systemd_scope);
     bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index);
 
     // Environment variable accessors

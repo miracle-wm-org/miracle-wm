@@ -457,13 +457,32 @@ extern "C"
         bool should_halt_compositor_on_death,
         bool in_systemd_scope)
     {
-
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         data->startup_apps.push_back({ command ? command : "",
             restart_on_death,
             no_startup_id,
             should_halt_compositor_on_death,
             in_systemd_scope });
+    }
+
+    void miracle_config_set_startup_app(
+        miracle_config_data_t* config,
+        int index,
+        const char* command,
+        bool restart_on_death,
+        bool no_startup_id,
+        bool should_halt_compositor_on_death,
+        bool in_systemd_scope)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->startup_apps.size())
+            return;
+
+        data->startup_apps[index] = { command ? command : "",
+            restart_on_death,
+            no_startup_id,
+            should_halt_compositor_on_death,
+            in_systemd_scope };
     }
 
     void miracle_config_clear_startup_apps(miracle_config_data_t* config)
