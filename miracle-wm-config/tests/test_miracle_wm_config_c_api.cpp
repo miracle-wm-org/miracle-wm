@@ -345,13 +345,13 @@ TEST_F(CAPIWrapperTest, CanSetStartupApps)
         false);
 
     miracle_config_set_startup_app(
-       &wrapper->config,
-       0,
-       "test-app-2",
-       false,
-       true,
-       false,
-       true);
+        &wrapper->config,
+        0,
+        "test-app-2",
+        false,
+        true,
+        false,
+        true);
 
     auto app = miracle_config_get_startup_app(&wrapper->config, 0);
     EXPECT_STREQ(app.command, "test-app-2");
@@ -373,6 +373,48 @@ TEST_F(CAPIWrapperTest, CanRemoveStartupApps)
 
     miracle_config_remove_startup_app(&wrapper->config, 0);
     EXPECT_EQ(miracle_config_get_startup_app_count(&wrapper->config), 0);
+}
+
+TEST_F(CAPIWrapperTest, CanAddEnvironmentVariable)
+{
+    miracle_config_add_environment_variable(
+        &wrapper->config,
+        "first",
+        "second");
+
+    EXPECT_THAT(miracle_config_get_environment_variable_count(&wrapper->config), Eq(1));
+    auto const env_variable = miracle_config_get_environment_variable(&wrapper->config, 0);
+    EXPECT_THAT(std::string(env_variable.key), Eq("first"));
+    EXPECT_THAT(std::string(env_variable.value), Eq("second"));
+}
+
+TEST_F(CAPIWrapperTest, CanSetEnvironmentVariable)
+{
+    miracle_config_add_environment_variable(
+        &wrapper->config,
+        "first",
+        "second");
+
+    miracle_config_set_environment_variable(
+        &wrapper->config,
+        0,
+        "third",
+        "fourth");
+
+    auto const env_variable = miracle_config_get_environment_variable(&wrapper->config, 0);
+    EXPECT_THAT(std::string(env_variable.key), Eq("third"));
+    EXPECT_THAT(std::string(env_variable.value), Eq("fourth"));
+}
+
+TEST_F(CAPIWrapperTest, CanRemoveEnvironmentVariable)
+{
+    miracle_config_add_environment_variable(
+        &wrapper->config,
+        "first",
+        "second");
+    miracle_config_remove_environment_variable(&wrapper->config, 0);
+
+    EXPECT_THAT(miracle_config_get_environment_variable_count(&wrapper->config), Eq(0));
 }
 
 TEST_F(CAPIWrapperTest, BorderConfig)

@@ -539,6 +539,20 @@ extern "C"
             value ? value : "" });
     }
 
+    void miracle_config_set_environment_variable(
+        miracle_config_data_t* config,
+        int index,
+        const char* key,
+        const char* value)
+    {
+        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->environment_variables.size())
+            return;
+
+        data->environment_variables[index] = { key ? key : "",
+            value ? value : "" };
+    }
+
     void miracle_config_clear_environment_variables(miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
