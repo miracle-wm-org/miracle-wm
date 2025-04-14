@@ -217,7 +217,11 @@ extern "C"
         miracle_config_data_t* config,
         const char* key,
         const char* value);
-    void miracle_config_clear_environment_variables(miracle_config_data_t* config);
+    void miracle_config_set_environment_variable(
+        miracle_config_data_t* config,
+        int index,
+        const char* key,
+        const char* value);
     bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index);
 
     // Border config accessors
