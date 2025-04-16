@@ -538,7 +538,7 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
     write_yaml_node(root);
 
     FilesystemConfiguration config(runner, path, true);
-    auto def = config.get_animation_definitions()[static_cast<int>(AnimateableEvent::window_open)];
+    auto def = config.get_animation_definition(AnimateableEvent::window_open);
     EXPECT_EQ(def.type, param.expected);
 }
 

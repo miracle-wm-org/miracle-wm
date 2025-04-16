@@ -86,8 +86,8 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
     animation_definitions[static_cast<int>(AnimateableEvent::window_close)] = {
         .duration_seconds = 10.f
     };
-    EXPECT_CALL(*config, get_animation_definitions())
-        .WillOnce(testing::ReturnRef(animation_definitions));
+    EXPECT_CALL(*config, get_animation_definition(AnimateableEvent::window_close))
+        .WillOnce(testing::ReturnRef(animation_definitions[static_cast<int>(AnimateableEvent::window_close)]));
 
     constexpr mir::geometry::Rectangle area(
         mir::geometry::Point(0, 0),

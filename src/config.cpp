@@ -561,9 +561,9 @@ BorderConfig const& FilesystemConfiguration::get_border_config() const
     return options.border_config;
 }
 
-std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> const& FilesystemConfiguration::get_animation_definitions() const
+AnimationDefinition const& FilesystemConfiguration::get_animation_definition(AnimateableEvent event) const
 {
-    return options.animation_definitions;
+    return options.animation_definitions[static_cast<int>(event)];
 }
 
 bool FilesystemConfiguration::are_animations_enabled() const

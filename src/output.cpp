@@ -318,7 +318,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
     auto animation = std::make_shared<WorkspaceAnimation>(
         handle,
-        config->get_animation_definitions()[(int)AnimateableEvent::workspace_switch],
+        config->get_animation_definition(AnimateableEvent::workspace_switch),
         src,
         dest,
         real,

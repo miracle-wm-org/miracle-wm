@@ -71,7 +71,7 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
 
     auto animation = std::make_shared<WindowAnimation>(
         container->animation_handle(),
-        config->get_animation_definitions()[(int)AnimateableEvent::window_open],
+        config->get_animation_definition(AnimateableEvent::window_open),
         rect,
         rect,
         rect,
@@ -113,7 +113,7 @@ void WindowManagerToolsWindowController::set_rectangle(
 
     auto animation = std::make_shared<WindowAnimation>(
         container->animation_handle(),
-        config->get_animation_definitions()[(int)AnimateableEvent::window_move],
+        config->get_animation_definition(AnimateableEvent::window_move),
         from,
         to,
         geom::Rectangle { window.top_left(), window.size() },

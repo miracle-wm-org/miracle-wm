@@ -116,7 +116,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
                 compositor_state,
                 animating_surface,
                 animator->register_animateable(),
-                config->get_animation_definitions()[static_cast<int>(AnimateableEvent::window_close)],
+                config->get_animation_definition(AnimateableEvent::window_close),
                 container->get_visible_area(),
                 geom::Rectangle {},
                 container->get_visible_area(),
