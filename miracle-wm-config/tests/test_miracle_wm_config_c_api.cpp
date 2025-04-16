@@ -434,9 +434,10 @@ TEST_F(CAPIWrapperTest, BorderConfig)
     EXPECT_THAT(border.color, ElementsAre(0.5f, 0.5f, 0.5f, 1.0f));
 }
 
-TEST_F(CAPIWrapperTest, AnimationDefinitions)
+TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
 {
-    miracle_animation_definition_t def = {
+    miracle_animation_definition_t const def = {
+        false,
         MIRACLE_ANIMATION_TYPE_SLIDE,
         MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE,
         0.5f,
@@ -455,6 +456,34 @@ TEST_F(CAPIWrapperTest, AnimationDefinitions)
     EXPECT_EQ(result.type, MIRACLE_ANIMATION_TYPE_SLIDE);
     EXPECT_EQ(result.function, MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE);
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
+}
+
+TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
+{
+    miracle_animation_definition_t const def = {
+        false,
+        MIRACLE_ANIMATION_TYPE_SLIDE,
+        MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE,
+        0.5f,
+        1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
+    };
+
+    miracle_config_set_animation_definition(
+        &wrapper->config,
+        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN,
+        &def);
+
+    miracle_config_reset_animation_definition(
+        &wrapper->config,
+        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN);
+
+    auto result = miracle_config_get_animation_definition(
+        &wrapper->config,
+        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN);
+
+    EXPECT_EQ(result.type, MIRACLE_ANIMATION_TYPE_FADE_IN);
+    EXPECT_EQ(result.function, MIRACLE_EASE_FUNCTION_LINEAR);
+    EXPECT_FLOAT_EQ(result.duration_seconds, 0.3f);
 }
 
 TEST_F(CAPIWrapperTest, WorkspaceConfigs)

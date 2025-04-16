@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "miracle/miracle-wm-config.h"
+#include "miracle/animation_definition_internal.h"
 #include <cstdlib>
 #include <fstream>
 #include <functional>
@@ -612,6 +613,7 @@ void read_animation_definitions(YAML::Node const& animations_node, ParsingContex
             continue;
 
         int const event_as_int = static_cast<int>(event.value());
+        context.result.config.animation_definitions[event_as_int].is_default = false;
         context.result.config.animation_definitions[event_as_int].type = type.value();
         context.result.config.animation_definitions[event_as_int].function = function.value();
         try_parse_value(node, "duration", context.result.config.animation_definitions[event_as_int].duration_seconds, context, true);
@@ -650,27 +652,7 @@ void read_drag_and_drop(YAML::Node const& node, ParsingContext& context)
 
 miracle::ConfigData::ConfigData()
 {
-    std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> constexpr parsed({
-        {
-         AnimationType::fade_in,
-         EaseFunction::linear,
-         0.3f,
-         },
-        {
-         AnimationType::slide,
-         EaseFunction::linear,
-         0.25f,
-         },
-        {
-         AnimationType::fade_out,
-         EaseFunction::linear,
-         0.3f,
-         },
-        { AnimationType::slide,
-         EaseFunction::ease_out_sine,
-         0.25f }
-    });
-    animation_definitions = parsed;
+    animation_definitions = internal::default_animation_definitions;
 }
 
 miracle::ConfigLoadResult miracle::load_config(std::string const& path)

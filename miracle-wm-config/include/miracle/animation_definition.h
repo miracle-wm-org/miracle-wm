@@ -119,6 +119,7 @@ constexpr std::array<const char*, static_cast<int>(AnimationType::max)> animatio
 /// Each animations are mapped to a single AnimateableEvent.
 struct MIRACLE_WM_CONFIG_API AnimationDefinition
 {
+    bool is_default = true;
     AnimationType type = AnimationType::max;
     EaseFunction function = EaseFunction::linear;
     float duration_seconds = 1.f;

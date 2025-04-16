@@ -298,6 +298,7 @@ extern "C"
 
     typedef struct
     {
+        bool is_default;
         miracle_animation_type_t type;
         miracle_ease_function_t function;
         float duration_seconds;
@@ -318,6 +319,9 @@ extern "C"
         miracle_config_data_t* config,
         miracle_animatable_event_t event,
         const miracle_animation_definition_t* definition);
+    void miracle_config_reset_animation_definition(
+        miracle_config_data_t* config,
+        miracle_animatable_event_t event);
 
     // Workspace config accessors
     typedef struct
