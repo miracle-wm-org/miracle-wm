@@ -147,6 +147,19 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_animateable_event_options_count()
+    {
+        return static_cast<uint>(miracle::AnimateableEvent::max);
+    }
+
+    miracle_config_option_t miracle_config_get_animateable_event_option(uint i)
+    {
+        return {
+            miracle::animateable_event_strings[i],
+            i
+        };
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);

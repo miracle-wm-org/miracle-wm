@@ -99,6 +99,19 @@ TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
     }
 }
 
+TEST_F(CAPIWrapperTest, AnimateableEventOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_animateable_event_options_count(), Eq(static_cast<uint>(miracle::AnimateableEvent::max)));
+}
+
+TEST_F(CAPIWrapperTest, AnimateableEventOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_animateable_event_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_animateable_event_option(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CanSetPrimaryButton)
 {
     uint primary_button = mir_pointer_button_tertiary;
