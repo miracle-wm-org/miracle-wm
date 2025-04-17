@@ -477,23 +477,23 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
 {
     miracle_animation_definition_t const def = {
         false,
-        MIRACLE_ANIMATION_TYPE_SLIDE,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE,
+        static_cast<uint>(miracle::AnimationType::slide),
+        static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
         0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
     };
 
     miracle_config_set_animation_definition(
         &wrapper->config,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN,
+        static_cast<uint>(miracle::AnimateableEvent::window_open),
         &def);
 
     auto result = miracle_config_get_animation_definition(
         &wrapper->config,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN);
+        static_cast<uint>(miracle::AnimateableEvent::window_open));
 
-    EXPECT_EQ(result.type, MIRACLE_ANIMATION_TYPE_SLIDE);
-    EXPECT_EQ(result.function, MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE);
+    EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::slide));
+    EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::ease_out_bounce));
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
 }
 
@@ -501,27 +501,27 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
 {
     miracle_animation_definition_t const def = {
         false,
-        MIRACLE_ANIMATION_TYPE_SLIDE,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE,
+        static_cast<uint>(miracle::AnimationType::slide),
+        static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
         0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
     };
 
     miracle_config_set_animation_definition(
         &wrapper->config,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN,
+        static_cast<uint>(miracle::AnimateableEvent::window_open),
         &def);
 
     miracle_config_reset_animation_definition(
         &wrapper->config,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN);
+        static_cast<uint>(miracle::AnimateableEvent::window_open));
 
     auto result = miracle_config_get_animation_definition(
         &wrapper->config,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN);
+        static_cast<uint>(miracle::AnimateableEvent::window_open));
 
-    EXPECT_EQ(result.type, MIRACLE_ANIMATION_TYPE_FADE_IN);
-    EXPECT_EQ(result.function, MIRACLE_EASE_FUNCTION_LINEAR);
+    EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::fade_in));
+    EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::linear));
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.3f);
 }
 

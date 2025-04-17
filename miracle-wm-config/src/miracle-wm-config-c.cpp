@@ -665,19 +665,15 @@ extern "C"
 
     miracle_animation_definition_t miracle_config_get_animation_definition(
         const miracle_config_data_t* config,
-        miracle_animatable_event_t event)
+        size_t index)
     {
-
-        if (event >= MIRACLE_ANIMATABLE_EVENT_MAX)
-            return { true, MIRACLE_ANIMATION_TYPE_DISABLED, MIRACLE_EASE_FUNCTION_LINEAR };
-
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        const auto& def = data->animation_definitions[event];
+        const auto& def = data->animation_definitions[index];
 
         return {
             def.is_default,
-            static_cast<miracle_animation_type_t>(def.type),
-            static_cast<miracle_ease_function_t>(def.function),
+            static_cast<uint>(def.type),
+            static_cast<uint>(def.function),
             def.duration_seconds,
             def.c1,
             def.c2,
@@ -691,14 +687,11 @@ extern "C"
 
     void miracle_config_set_animation_definition(
         miracle_config_data_t* config,
-        miracle_animatable_event_t event,
+        size_t index,
         const miracle_animation_definition_t* definition)
     {
-        if (event >= MIRACLE_ANIMATABLE_EVENT_MAX || !definition)
-            return;
-
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        auto& def = data->animation_definitions[event];
+        auto& def = data->animation_definitions[index];
 
         def.type = static_cast<miracle::AnimationType>(definition->type);
         def.function = static_cast<miracle::EaseFunction>(definition->function);
@@ -714,14 +707,11 @@ extern "C"
 
     void miracle_config_reset_animation_definition(
         miracle_config_data_t* config,
-        miracle_animatable_event_t event)
+        size_t index)
     {
-        if (event >= MIRACLE_ANIMATABLE_EVENT_MAX)
-            return;
-
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        auto& def = data->animation_definitions[event];
-        def = miracle::internal::default_animation_definitions[event];
+        auto& def = data->animation_definitions[index];
+        def = miracle::internal::default_animation_definitions[index];
     }
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config)

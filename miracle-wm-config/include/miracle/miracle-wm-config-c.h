@@ -246,67 +246,11 @@ extern "C"
         const float color[4]);
 
     // Animation definition accessors
-    typedef enum
-    {
-        MIRACLE_ANIMATION_TYPE_DISABLED,
-        MIRACLE_ANIMATION_TYPE_SLIDE,
-        MIRACLE_ANIMATION_TYPE_GROW,
-        MIRACLE_ANIMATION_TYPE_SHRINK,
-        MIRACLE_ANIMATION_TYPE_FADE_IN,
-        MIRACLE_ANIMATION_TYPE_FADE_OUT,
-        MIRACLE_ANIMATION_TYPE_MAX
-    } miracle_animation_type_t;
-
-    typedef enum
-    {
-        MIRACLE_EASE_FUNCTION_LINEAR,
-        MIRACLE_EASE_FUNCTION_EASE_IN_SINE,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_SINE,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_SINE,
-        MIRACLE_EASE_FUNCTION_EASE_IN_QUAD,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_QUAD,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_QUAD,
-        MIRACLE_EASE_FUNCTION_EASE_IN_CUBIC,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_CUBIC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_CUBIC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_QUART,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_QUART,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_QUART,
-        MIRACLE_EASE_FUNCTION_EASE_IN_QUINT,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_QUINT,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_QUINT,
-        MIRACLE_EASE_FUNCTION_EASE_IN_EXPO,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_EXPO,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_EXPO,
-        MIRACLE_EASE_FUNCTION_EASE_IN_CIRC,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_CIRC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_CIRC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_BACK,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_BACK,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_BACK,
-        MIRACLE_EASE_FUNCTION_EASE_IN_ELASTIC,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_ELASTIC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_ELASTIC,
-        MIRACLE_EASE_FUNCTION_EASE_IN_BOUNCE,
-        MIRACLE_EASE_FUNCTION_EASE_OUT_BOUNCE,
-        MIRACLE_EASE_FUNCTION_EASE_IN_OUT_BOUNCE,
-        MIRACLE_EASE_FUNCTION_MAX
-    } miracle_ease_function_t;
-
-    typedef enum
-    {
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_OPEN,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_MOVE,
-        MIRACLE_ANIMATABLE_EVENT_WINDOW_CLOSE,
-        MIRACLE_ANIMATABLE_EVENT_WORKSPACE_SWITCH,
-        MIRACLE_ANIMATABLE_EVENT_MAX
-    } miracle_animatable_event_t;
-
     typedef struct
     {
         bool is_default;
-        miracle_animation_type_t type;
-        miracle_ease_function_t function;
+        uint type;
+        uint function;
         float duration_seconds;
         float c1;
         float c2;
@@ -320,14 +264,14 @@ extern "C"
     size_t miracle_config_get_animation_definition_count();
     miracle_animation_definition_t miracle_config_get_animation_definition(
         const miracle_config_data_t* config,
-        miracle_animatable_event_t event);
+        size_t index);
     void miracle_config_set_animation_definition(
         miracle_config_data_t* config,
-        miracle_animatable_event_t event,
+        size_t index,
         const miracle_animation_definition_t* definition);
     void miracle_config_reset_animation_definition(
         miracle_config_data_t* config,
-        miracle_animatable_event_t event);
+        size_t index);
 
     // Workspace config accessors
     typedef struct
