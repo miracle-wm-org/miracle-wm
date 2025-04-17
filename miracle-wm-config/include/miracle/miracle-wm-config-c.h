@@ -71,6 +71,10 @@ extern "C"
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
     uint miracle_config_get_animateable_event_options_count();
     miracle_config_option_t miracle_config_get_animateable_event_option(uint i);
+    uint miracle_config_get_animation_type_options_count();
+    miracle_config_option_t miracle_config_get_animation_type_option(uint i);
+    uint miracle_config_get_ease_function_options_count();
+    miracle_config_option_t miracle_config_get_ease_function_option(uint i);
 
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);

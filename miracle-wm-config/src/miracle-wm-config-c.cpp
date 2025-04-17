@@ -147,6 +147,32 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_animation_type_options_count()
+    {
+        return static_cast<uint>(miracle::AnimationType::max);
+    }
+
+    miracle_config_option_t miracle_config_get_animation_type_option(uint i)
+    {
+        return {
+            miracle::animation_type_strings[i],
+            i
+        };
+    }
+
+    uint miracle_config_get_ease_function_options_count()
+    {
+        return static_cast<uint>(miracle::EaseFunction::max);
+    }
+
+    miracle_config_option_t miracle_config_get_ease_function_option(uint i)
+    {
+        return {
+            miracle::ease_function_strings[i],
+            i
+        };
+    }
+
     uint miracle_config_get_animateable_event_options_count()
     {
         return static_cast<uint>(miracle::AnimateableEvent::max);

@@ -112,6 +112,32 @@ TEST_F(CAPIWrapperTest, AnimateableEventOptionsCanBeFound)
     }
 }
 
+TEST_F(CAPIWrapperTest, AnimationTypeOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_animation_type_options_count(), Eq(static_cast<uint>(miracle::AnimationType::max)));
+}
+
+TEST_F(CAPIWrapperTest, AnimationTypeOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_animation_type_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_animation_type_option(i).name, Ne(nullptr));
+    }
+}
+
+TEST_F(CAPIWrapperTest, EaseFunctionOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_ease_function_options_count(), Eq(static_cast<uint>(miracle::EaseFunction::max)));
+}
+
+TEST_F(CAPIWrapperTest, EaseFunctionOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_ease_function_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_ease_function_option(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CanSetPrimaryButton)
 {
     uint primary_button = mir_pointer_button_tertiary;
