@@ -62,7 +62,7 @@ public:
     [[nodiscard]] virtual int get_resize_jump() const = 0;
     [[nodiscard]] virtual std::vector<EnvironmentVariable> const& get_env_variables() const = 0;
     [[nodiscard]] virtual BorderConfig const& get_border_config() const = 0;
-    [[nodiscard]] virtual std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> const& get_animation_definitions() const = 0;
+    [[nodiscard]] virtual AnimationDefinition const& get_animation_definition(AnimateableEvent event) const = 0;
     [[nodiscard]] virtual bool are_animations_enabled() const = 0;
     [[nodiscard]] virtual WorkspaceConfig get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const = 0;
     [[nodiscard]] virtual LayoutScheme get_default_layout_scheme() const = 0;
@@ -104,7 +104,7 @@ public:
     [[nodiscard]] int get_resize_jump() const override;
     [[nodiscard]] std::vector<EnvironmentVariable> const& get_env_variables() const override;
     [[nodiscard]] BorderConfig const& get_border_config() const override;
-    [[nodiscard]] std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> const& get_animation_definitions() const override;
+    [[nodiscard]] AnimationDefinition const& get_animation_definition(AnimateableEvent event) const override;
     [[nodiscard]] bool are_animations_enabled() const override;
     [[nodiscard]] WorkspaceConfig get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const override;
     [[nodiscard]] LayoutScheme get_default_layout_scheme() const override;

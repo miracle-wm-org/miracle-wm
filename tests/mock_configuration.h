@@ -43,7 +43,7 @@ namespace test
         MOCK_METHOD(int, get_resize_jump, (), (const, override));
         MOCK_METHOD(std::vector<EnvironmentVariable> const&, get_env_variables, (), (const, override));
         MOCK_METHOD(BorderConfig const&, get_border_config, (), (const, override));
-        MOCK_METHOD((std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> const&), get_animation_definitions, (), (const, override));
+        MOCK_METHOD((AnimationDefinition const&), get_animation_definition, (AnimateableEvent), (const, override));
         MOCK_METHOD(bool, are_animations_enabled, (), (const, override));
         MOCK_METHOD(WorkspaceConfig, get_workspace_config, (std::optional<int> const& num, std::optional<std::string> const& name), (const, override));
         MOCK_METHOD(LayoutScheme, get_default_layout_scheme, (), (const, override));

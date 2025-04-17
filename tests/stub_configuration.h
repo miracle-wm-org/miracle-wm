@@ -86,9 +86,9 @@ namespace test
             return border_config;
         }
 
-        [[nodiscard]] std::array<AnimationDefinition, (int)AnimateableEvent::max> const& get_animation_definitions() const override
+        [[nodiscard]] AnimationDefinition const& get_animation_definition(AnimateableEvent event) const override
         {
-            return animations;
+            return animations[static_cast<int>(event)];
         }
 
         [[nodiscard]] bool are_animations_enabled() const override
