@@ -75,6 +75,8 @@ extern "C"
     miracle_config_option_t miracle_config_get_animation_type_option(uint i);
     uint miracle_config_get_ease_function_options_count();
     miracle_config_option_t miracle_config_get_ease_function_option(uint i);
+    uint miracle_config_get_layout_options_count();
+    miracle_config_option_t miracle_config_get_layout_option(uint i);
 
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
@@ -287,6 +289,12 @@ extern "C"
         size_t index);
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
+        int num,
+        int container_type,
+        const char* name);
+    void miracle_config_set_workspace_config(
+        miracle_config_data_t* config,
+        size_t index,
         int num,
         int container_type,
         const char* name);

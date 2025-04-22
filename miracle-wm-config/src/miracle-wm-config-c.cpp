@@ -186,6 +186,19 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_layout_options_count()
+    {
+        return static_cast<uint>(miracle::ContainerType::max);
+    }
+
+    miracle_config_option_t miracle_config_get_layout_option(uint i)
+    {
+        return {
+            miracle::container_type_strings[i],
+            i
+        };
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
@@ -764,10 +777,28 @@ extern "C"
         data->workspace_configs.push_back(ws);
     }
 
-    void miracle_config_clear_workspace_configs(miracle_config_data_t* config)
+    void miracle_config_set_workspace_config(
+        miracle_config_data_t* config,
+        size_t index,
+        int num,
+        int container_type,
+        const char* name)
     {
+
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        data->workspace_configs.clear();
+        if (index >= data->workspace_configs.size())
+            return;
+
+        miracle::WorkspaceConfig ws;
+
+        if (num >= 0)
+            ws.num = num;
+        if (container_type >= 0)
+            ws.layout = static_cast<miracle::ContainerType>(container_type);
+        if (name)
+            ws.name = name;
+
+        data->workspace_configs[index] = ws;
     }
 
     bool miracle_config_remove_workspace_config(
