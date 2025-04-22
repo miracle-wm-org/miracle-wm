@@ -138,6 +138,19 @@ TEST_F(CAPIWrapperTest, EaseFunctionOptionsCanBeFound)
     }
 }
 
+TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_layout_options_count(), Eq(static_cast<uint>(miracle::ContainerType::max)));
+}
+
+TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_layout_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_layout_option(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CanSetPrimaryButton)
 {
     uint primary_button = mir_pointer_button_tertiary;
@@ -525,7 +538,7 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.3f);
 }
 
-TEST_F(CAPIWrapperTest, WorkspaceConfigs)
+TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
 {
     miracle_config_add_workspace_config(
         &wrapper->config,
@@ -539,6 +552,39 @@ TEST_F(CAPIWrapperTest, WorkspaceConfigs)
     EXPECT_EQ(ws.num, 1);
     EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::leaf));
     EXPECT_STREQ(ws.name, "Main");
+}
+
+TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
+{
+    miracle_config_add_workspace_config(
+        &wrapper->config,
+        1,
+        static_cast<int>(miracle::ContainerType::leaf),
+        "Main");
+
+    miracle_config_set_workspace_config(
+        &wrapper->config,
+        0,
+        2,
+        static_cast<int>(miracle::ContainerType::stack),
+        "Other");
+
+    auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
+    EXPECT_EQ(ws.num, 2);
+    EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::stack));
+    EXPECT_STREQ(ws.name, "Other");
+}
+
+TEST_F(CAPIWrapperTest, CanRemoveWorkspaceConfig)
+{
+    miracle_config_add_workspace_config(
+        &wrapper->config,
+        1,
+        static_cast<int>(miracle::ContainerType::leaf),
+        "Main");
+
+    miracle_config_remove_workspace_config(&wrapper->config, 0);
+    EXPECT_EQ(miracle_config_get_workspace_config_count(&wrapper->config), 0);
 }
 
 TEST_F(CAPIWrapperTest, DragAndDropConfig)
