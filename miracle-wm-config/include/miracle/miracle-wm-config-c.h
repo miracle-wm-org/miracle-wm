@@ -54,6 +54,12 @@ extern "C"
 
     typedef struct
     {
+        bool success;
+        void* _errors; // Opaque pointer to vector<Error>
+    } miracle_config_save_result_t;
+
+    typedef struct
+    {
         const char* name;
         uint value;
     } miracle_config_option_t;
@@ -80,6 +86,9 @@ extern "C"
 
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
+
+    // Saves the config to the given path
+    miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config);
 
     // Gets the number of errors in the result
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);

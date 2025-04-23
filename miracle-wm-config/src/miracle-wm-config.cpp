@@ -718,7 +718,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         {
             out << YAML::BeginMap;
             out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<int>(override.default_key_command)];
-            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action];
+            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
             out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, override.key);
             
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
@@ -741,7 +741,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         {
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << action.command;
-            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action];
+            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
             out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, action.key);
             
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;

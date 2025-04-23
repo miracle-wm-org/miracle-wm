@@ -17,6 +17,16 @@ extern "C"
         return result;
     }
 
+    miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        auto result = miracle::save_config(path, *data);
+        auto c_result = new miracle_config_save_result_t();
+        c_result->success = result.success;
+        c_result->_errors = &result.errors;
+        return c_result;
+    }
+
     const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result)
     {
         return &result->config;
