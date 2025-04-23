@@ -613,10 +613,10 @@ TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
     EXPECT_TRUE(save_result->success);
-    EXPECT_EQ(miracle_config_get_error_count(save_result), 0);
+    EXPECT_EQ(miracle_save_result_get_error_count(save_result), 0);
     
     // Clean up
-    miracle_config_free(save_result);
+    miracle_save_result_free(save_result);
     std::remove(temp_path);
 }
 
@@ -627,13 +627,13 @@ TEST_F(CAPIWrapperTest, SaveFailsForInvalidPath)
     
     auto save_result = miracle_config_save(invalid_path, &wrapper->config);
     EXPECT_FALSE(save_result->success);
-    EXPECT_GT(miracle_config_get_error_count(save_result), 0);
+    EXPECT_GT(miracle_save_result_get_error_count(save_result), 0);
     
     // Verify error message contains expected text
-    auto error = miracle_config_get_error(save_result, 0);
+    auto error = miracle_save_result_get_error(save_result, 0);
     EXPECT_THAT(std::string(error->message), HasSubstr("Failed to save config"));
     
-    miracle_config_free(save_result);
+    miracle_save_result_free(save_result);
 }
 
 TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
@@ -654,7 +654,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
     EXPECT_TRUE(save_result->success);
-    miracle_config_free(save_result);
+    miracle_save_result_free(save_result);
 
     // Load it back
     auto load_result = miracle_config_load(temp_path);

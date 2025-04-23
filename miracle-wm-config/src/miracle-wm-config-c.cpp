@@ -13,18 +13,8 @@ extern "C"
         auto const cpp_result = new miracle::ConfigLoadResult(miracle::load_config(path));
         auto const result = new miracle_config_load_result_t();
         result->config._internal = &cpp_result->config;
-        result->_errors = &cpp_result->errors;
+        result->ptr = cpp_result;
         return result;
-    }
-
-    miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config)
-    {
-        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
-        auto result = miracle::save_config(path, *data);
-        auto c_result = new miracle_config_save_result_t();
-        c_result->success = result.success;
-        c_result->_errors = &result.errors;
-        return c_result;
     }
 
     const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result)
@@ -34,16 +24,16 @@ extern "C"
 
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result)
     {
-        auto errors = reinterpret_cast<const std::vector<miracle::Error>*>(result->_errors);
-        return errors->size();
+        auto data = reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
+        return data->errors.size();
     }
 
     const miracle_config_error_t* miracle_config_get_error(
         const miracle_config_load_result_t* result,
         size_t index)
     {
-
-        auto errors = reinterpret_cast<const std::vector<miracle::Error>*>(result->_errors);
+        auto data = reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
+        auto errors = &data->errors;
         if (index >= errors->size())
             return nullptr;
 
@@ -65,7 +55,57 @@ extern "C"
     {
         if (result)
         {
-            delete reinterpret_cast<miracle::ConfigLoadResult*>(result);
+            delete reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
+            delete result;
+        }
+    }
+
+    // Save result
+    miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        auto result = new miracle::ConfigSaveResult(miracle::save_config(path, *data));
+        auto c_result = new miracle_config_save_result_t();
+        c_result->success = result->success;
+        c_result->ptr = result;
+        return c_result;
+    }
+
+    size_t miracle_save_result_get_error_count(const miracle_config_save_result_t* result)
+    {
+        auto ptr = reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
+        return ptr->errors.size();
+    }
+
+    const miracle_config_error_t* miracle_save_result_get_error(
+        const miracle_config_save_result_t* result,
+        size_t index)
+    {
+        auto ptr = reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
+        auto errors = &ptr->errors;
+        if (index >= errors->size())
+            return nullptr;
+
+        static thread_local miracle_config_error_t error;
+        const auto& cpp_error = (*errors)[index];
+
+        error.line = cpp_error.line;
+        error.column = cpp_error.column;
+        error.level = cpp_error.level == miracle::ErrorLevel::warning
+            ? MIRACLE_CONFIG_ERROR_LEVEL_WARNING
+            : MIRACLE_CONFIG_ERROR_LEVEL_ERROR;
+        error.filename = cpp_error.filename.c_str();
+        error.message = cpp_error.message.c_str();
+
+        return &error;
+    }
+
+    void miracle_save_result_free(miracle_config_save_result_t* result)
+    {
+        if (result)
+        {
+            delete reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
+            delete result;
         }
     }
 

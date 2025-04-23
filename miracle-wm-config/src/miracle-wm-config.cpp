@@ -927,7 +927,11 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
 
     try {
         std::ofstream fout(path);
-        fout << out.c_str();
+        fout.exceptions(std::ios::failbit | std::ios::badbit);
+        if (fout.is_open())
+            fout << out.c_str();
+        else
+            throw std::runtime_error("Error opening file");
     } catch (std::exception const& e) {
         result.success = false;
         result.errors.push_back({
