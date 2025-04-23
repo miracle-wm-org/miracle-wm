@@ -49,8 +49,14 @@ extern "C"
     typedef struct
     {
         miracle_config_data_t config;
-        void* _errors; // Opaque pointer to vector<Error>
+        void* ptr; // Opaque pointer to miracle::ConfigLoadResult
     } miracle_config_load_result_t;
+
+    typedef struct
+    {
+        bool success;
+        void* ptr; // Opaque pointer to miracle::ConfigSaveResult
+    } miracle_config_save_result_t;
 
     typedef struct
     {
@@ -81,6 +87,7 @@ extern "C"
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
 
+
     // Gets the number of errors in the result
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);
 
@@ -91,6 +98,20 @@ extern "C"
 
     // Frees the memory allocated for the config load result
     void miracle_config_free(miracle_config_load_result_t* result);
+
+    // Saves the config to the given path
+    miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config);
+
+    // Gets the number of errors in a [miracle_config_save_result_t]
+    size_t miracle_save_result_get_error_count(const miracle_config_save_result_t* result);
+
+    // Gets an error by index (0-based)
+    const miracle_config_error_t* miracle_save_result_get_error(
+        const miracle_config_save_result_t* result,
+        size_t index);
+
+    // Frees the memory allocated by [miracle_config_save].
+    void miracle_save_result_free(miracle_config_save_result_t* result);
 
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);

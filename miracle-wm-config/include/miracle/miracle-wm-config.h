@@ -140,10 +140,21 @@ struct MIRACLE_WM_CONFIG_API ConfigLoadResult
     std::vector<Error> errors;
 };
 
+struct MIRACLE_WM_CONFIG_API ConfigSaveResult
+{
+    bool success;
+    std::vector<Error> errors;
+};
+
 /// Loads the configuration from the provided [path] and returns the loaded
 /// configuration along with any errors that were found.
 /// \returns Configuration alongside found errors
 MIRACLE_WM_CONFIG_API ConfigLoadResult load_config(std::string const& path);
+
+/// Save the configuration to the provided [path] and returns information about
+/// the success of the save
+/// \returns [ConfigSaveResult]
+MIRACLE_WM_CONFIG_API ConfigSaveResult save_config(std::string const& path, ConfigData const& config);
 
 }
 

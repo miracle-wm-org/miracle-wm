@@ -693,3 +693,252 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
 
     return context.result;
 }
+
+miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigData const& config)
+{
+    ConfigSaveResult result(true);
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+
+    // Save primary modifier
+    for (auto const& [name, value] : mir_input_event_modifier_opts)
+    {
+        if (value == config.primary_modifier)
+        {
+            out << YAML::Key << "action_key" << YAML::Value << name;
+            break;
+        }
+    }
+
+    // Save default action overrides
+    if (!config.built_in_key_command_overrides.empty())
+    {
+        out << YAML::Key << "default_action_overrides" << YAML::Value << YAML::BeginSeq;
+        for (auto const& override : config.built_in_key_command_overrides)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<int>(override.default_key_command)];
+            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
+            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, override.key);
+            
+            out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
+            for (auto const& [name, value] : mir_input_event_modifier_opts)
+            {
+                if (override.modifiers & value)
+                    out << name;
+            }
+            out << YAML::EndSeq;
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save custom actions
+    if (!config.custom_key_commands.empty())
+    {
+        out << YAML::Key << "custom_actions" << YAML::Value << YAML::BeginSeq;
+        for (auto const& action : config.custom_key_commands)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "command" << YAML::Value << action.command;
+            out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
+            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, action.key);
+            
+            out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
+            for (auto const& [name, value] : mir_input_event_modifier_opts)
+            {
+                if (action.modifiers & value)
+                    out << name;
+            }
+            out << YAML::EndSeq;
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save gaps
+    out << YAML::Key << "inner_gaps" << YAML::Value << YAML::BeginMap
+        << YAML::Key << "x" << YAML::Value << config.inner_gaps_x
+        << YAML::Key << "y" << YAML::Value << config.inner_gaps_y
+        << YAML::EndMap;
+
+    out << YAML::Key << "outer_gaps" << YAML::Value << YAML::BeginMap
+        << YAML::Key << "x" << YAML::Value << config.outer_gaps_x
+        << YAML::Key << "y" << YAML::Value << config.outer_gaps_y
+        << YAML::EndMap;
+
+    // Save startup apps
+    if (!config.startup_apps.empty())
+    {
+        out << YAML::Key << "startup_apps" << YAML::Value << YAML::BeginSeq;
+        for (auto const& app : config.startup_apps)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "command" << YAML::Value << app.command;
+            if (app.restart_on_death)
+                out << YAML::Key << "restart_on_death" << YAML::Value << app.restart_on_death;
+            if (app.in_systemd_scope)
+                out << YAML::Key << "in_systemd_scope" << YAML::Value << app.in_systemd_scope;
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save terminal
+    if (config.terminal)
+        out << YAML::Key << "terminal" << YAML::Value << config.terminal.value();
+
+    // Save resize jump
+    out << YAML::Key << "resize_jump" << YAML::Value << config.resize_jump;
+
+    // Save environment variables
+    if (!config.environment_variables.empty())
+    {
+        out << YAML::Key << "environment_variables" << YAML::Value << YAML::BeginSeq;
+        for (auto const& var : config.environment_variables)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "key" << YAML::Value << var.key;
+            out << YAML::Key << "value" << YAML::Value << var.value;
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save border config
+    if (config.border_config.size > 0)
+    {
+        out << YAML::Key << "border" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "size" << YAML::Value << config.border_config.size;
+        
+        // Save colors as hex values
+        auto to_hex = [](glm::vec4 const& color) {
+            return ((int)(color.r * 255) << 24) |
+                   ((int)(color.g * 255) << 16) |
+                   ((int)(color.b * 255) << 8)  |
+                   ((int)(color.a * 255));
+        };
+        
+        out << YAML::Key << "color" << YAML::Value << YAML::Hex << to_hex(config.border_config.color);
+        out << YAML::Key << "focus_color" << YAML::Value << YAML::Hex << to_hex(config.border_config.focus_color);
+        out << YAML::EndMap;
+    }
+
+    // Save workspaces
+    if (!config.workspace_configs.empty())
+    {
+        out << YAML::Key << "workspaces" << YAML::Value << YAML::BeginSeq;
+        for (auto const& workspace : config.workspace_configs)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "number" << YAML::Value << workspace.num.value();
+            if (workspace.layout)
+                out << YAML::Key << "layout" << YAML::Value << container_type_strings[static_cast<int>(workspace.layout.value())];
+            if (workspace.name)
+                out << YAML::Key << "name" << YAML::Value << workspace.name.value();
+            out << YAML::EndMap;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save animations
+    if (!config.animations_enabled)
+    {
+        out << YAML::Key << "enable_animations" << YAML::Value << config.animations_enabled;
+    }
+
+    // Save animation definitions
+    bool has_custom_animations = false;
+    for (auto const& def : config.animation_definitions)
+    {
+        if (!def.is_default)
+        {
+            has_custom_animations = true;
+            break;
+        }
+    }
+
+    if (has_custom_animations)
+    {
+        out << YAML::Key << "animations" << YAML::Value << YAML::BeginSeq;
+        for (int i = 0; i < static_cast<int>(AnimateableEvent::max); i++)
+        {
+            auto const& def = config.animation_definitions[i];
+            if (!def.is_default)
+            {
+                out << YAML::BeginMap;
+                out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
+                out << YAML::Key << "type" << YAML::Value << animation_type_strings[static_cast<int>(def.type)];
+                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<int>(def.function)];
+                if (def.duration_seconds != 0.f)
+                    out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
+                if (def.c1 != 0.f)
+                    out << YAML::Key << "c1" << YAML::Value << def.c1;
+                if (def.c2 != 0.f)
+                    out << YAML::Key << "c2" << YAML::Value << def.c2;
+                if (def.c3 != 0.f)
+                    out << YAML::Key << "c3" << YAML::Value << def.c3;
+                if (def.c4 != 0.f)
+                    out << YAML::Key << "c4" << YAML::Value << def.c4;
+                if (def.n1 != 0.f)
+                    out << YAML::Key << "n1" << YAML::Value << def.n1;
+                if (def.d1 != 0.f)
+                    out << YAML::Key << "d1" << YAML::Value << def.d1;
+                out << YAML::EndMap;
+            }
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save move modifier
+    if (config.move_modifier != miracle_input_event_modifier_default)
+    {
+        out << YAML::Key << "move_modifier" << YAML::Value << YAML::BeginSeq;
+        for (auto const& [name, value] : mir_input_event_modifier_opts)
+        {
+            if (config.move_modifier & value)
+                out << name;
+        }
+        out << YAML::EndSeq;
+    }
+
+    // Save drag and drop
+    if (!config.drag_and_drop.enabled || 
+        config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
+    {
+        out << YAML::Key << "drag_and_drop" << YAML::Value << YAML::BeginMap;
+        if (!config.drag_and_drop.enabled)
+            out << YAML::Key << "enabled" << YAML::Value << config.drag_and_drop.enabled;
+        
+        if (config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
+        {
+            out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
+            for (auto const& [name, value] : mir_input_event_modifier_opts)
+            {
+                if (config.drag_and_drop.modifiers & value)
+                    out << name;
+            }
+            out << YAML::EndSeq;
+        }
+        out << YAML::EndMap;
+    }
+
+    out << YAML::EndMap;
+
+    try {
+        std::ofstream fout(path);
+        fout.exceptions(std::ios::failbit | std::ios::badbit);
+        if (fout.is_open())
+            fout << out.c_str();
+        else
+            throw std::runtime_error("Error opening file");
+    } catch (std::exception const& e) {
+        result.success = false;
+        result.errors.push_back({
+            -1, -1, ErrorLevel::error, path,
+            std::string("Failed to save config: ") + e.what()
+        });
+    }
+
+    return result;
+}
