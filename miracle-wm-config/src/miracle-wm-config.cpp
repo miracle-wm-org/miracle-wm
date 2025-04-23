@@ -693,3 +693,10 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
 
     return context.result;
 }
+
+miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigData const& config)
+{
+    ConfigSaveResult result(true);
+
+    return result;
+}
