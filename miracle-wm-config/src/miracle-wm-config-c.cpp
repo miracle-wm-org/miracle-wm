@@ -708,7 +708,7 @@ extern "C"
         {
             for (int i = 0; i < 4; i++)
             {
-                data->border_config.focus_color[i] = focus_color[i];
+                data->border_config.focus_color[3 - i] = focus_color[i];
             }
         }
 
@@ -716,7 +716,7 @@ extern "C"
         {
             for (int i = 0; i < 4; i++)
             {
-                data->border_config.color[i] = color[i];
+                data->border_config.color[3 - i] = color[i];
             }
         }
     }
@@ -756,6 +756,7 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions[index];
 
+        def.is_default = false;
         def.type = static_cast<miracle::AnimationType>(definition->type);
         def.function = static_cast<miracle::EaseFunction>(definition->function);
         def.duration_seconds = definition->duration_seconds;

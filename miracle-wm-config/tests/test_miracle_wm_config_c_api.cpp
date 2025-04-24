@@ -604,7 +604,7 @@ TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
     const char* temp_path = "/tmp/miracle_test_config.yaml";
-    
+
     // Set some config values
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
@@ -614,7 +614,7 @@ TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
     EXPECT_TRUE(save_result->success);
     EXPECT_EQ(miracle_save_result_get_error_count(save_result), 0);
-    
+
     // Clean up
     miracle_save_result_free(save_result);
     std::remove(temp_path);
@@ -624,22 +624,22 @@ TEST_F(CAPIWrapperTest, SaveFailsForInvalidPath)
 {
     // Try to save to invalid path
     const char* invalid_path = "/nonexistent/path/config.yaml";
-    
+
     auto save_result = miracle_config_save(invalid_path, &wrapper->config);
     EXPECT_FALSE(save_result->success);
     EXPECT_GT(miracle_save_result_get_error_count(save_result), 0);
-    
+
     // Verify error message contains expected text
     auto error = miracle_save_result_get_error(save_result, 0);
     EXPECT_THAT(std::string(error->message), HasSubstr("Failed to save config"));
-    
+
     miracle_save_result_free(save_result);
 }
 
 TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 {
     const char* temp_path = "/tmp/miracle_test_roundtrip.yaml";
-    
+
     // Set some config values
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
@@ -659,17 +659,17 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     // Load it back
     auto load_result = miracle_config_load(temp_path);
     EXPECT_EQ(miracle_config_get_error_count(load_result), 0);
-    
+
     // Verify values match
     auto loaded_config = miracle_config_get_data(load_result);
     EXPECT_EQ(miracle_config_get_primary_modifier(loaded_config), mir_input_event_modifier_alt);
     EXPECT_EQ(miracle_config_get_inner_gaps_x(loaded_config), 20);
-    
+
     EXPECT_EQ(miracle_config_get_environment_variable_count(loaded_config), 1);
     auto env = miracle_config_get_environment_variable(loaded_config, 0);
     EXPECT_STREQ(env.key, "TEST");
     EXPECT_STREQ(env.value, "VALUE");
-    
+
     EXPECT_EQ(miracle_config_get_custom_key_command_count(loaded_config), 1);
     auto cmd = miracle_config_get_custom_key_command(loaded_config, 0);
     EXPECT_EQ(cmd.action, mir_keyboard_action_down);

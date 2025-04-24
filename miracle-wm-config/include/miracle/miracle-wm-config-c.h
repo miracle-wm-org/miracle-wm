@@ -87,7 +87,6 @@ extern "C"
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
 
-
     // Gets the number of errors in the result
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);
 
