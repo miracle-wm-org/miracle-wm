@@ -84,6 +84,8 @@ extern "C"
     uint miracle_config_get_layout_options_count();
     miracle_config_option_t miracle_config_get_layout_option(uint i);
 
+    const char* miracle_config_path();
+
     // Creates a new ConfigLoadResult by loading from the given path
     miracle_config_load_result_t* miracle_config_load(const char* path);
 

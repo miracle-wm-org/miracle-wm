@@ -8,6 +8,7 @@ find_package(PkgConfig)
 pkg_check_modules(MIRCORE mircore REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
+pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 find_package(GTest REQUIRED)
 
 add_library(miracle-wm-config
@@ -31,7 +32,8 @@ target_include_directories(miracle-wm-config PUBLIC SYSTEM
 target_link_libraries(miracle-wm-config
     ${MIRCORE_LDFLAGS}
     PkgConfig::YAML
-    PkgConfig::LIBEVDEV)
+    PkgConfig::LIBEVDEV
+    PkgConfig::GLIB)
 
 # Installation
 install(TARGETS miracle-wm-config
