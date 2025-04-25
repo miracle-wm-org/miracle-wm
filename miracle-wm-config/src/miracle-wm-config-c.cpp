@@ -756,6 +756,7 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions[index];
 
+        def.is_default = false;
         def.type = static_cast<miracle::AnimationType>(definition->type);
         def.function = static_cast<miracle::EaseFunction>(definition->function);
         def.duration_seconds = definition->duration_seconds;

@@ -19,6 +19,11 @@ add_library(miracle-wm-config
     include/miracle/modifiers.h
     src/miracle-wm-config-c.cpp include/miracle/miracle-wm-config-c.h)
 
+set_target_properties(miracle-wm-config PROPERTIES
+    VERSION 0.0.1
+    SOVERSION 1
+)
+
 target_include_directories(miracle-wm-config PUBLIC SYSTEM
     include
     ${MIRCORE_INCLUDE_DIRS})

@@ -480,8 +480,24 @@ void read_startup_apps(YAML::Node const& startup_apps, ParsingContext& context)
                 continue;
         }
 
+        bool no_startup_id = false;
+        if (node["no_startup_id"])
+        {
+            if (!try_parse_value(node, "no_startup_id", in_systemd_scope, context))
+                continue;
+        }
+
+        bool should_halt_compositor_on_death = false;
+        if (node["should_halt_compositor_on_death"])
+        {
+            if (!try_parse_value(node, "should_halt_compositor_on_death", in_systemd_scope, context))
+                continue;
+        }
+
         context.result.config.startup_apps.push_back({ .command = std::move(command),
             .restart_on_death = restart_on_death,
+            .no_startup_id = no_startup_id,
+            .should_halt_compositor_on_death = should_halt_compositor_on_death,
             .in_systemd_scope = in_systemd_scope });
     }
 }
@@ -720,7 +736,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<int>(override.default_key_command)];
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
             out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, override.key);
-            
+
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
             {
@@ -743,7 +759,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "command" << YAML::Value << action.command;
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
             out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, action.key);
-            
+
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
             {
@@ -777,6 +793,10 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "command" << YAML::Value << app.command;
             if (app.restart_on_death)
                 out << YAML::Key << "restart_on_death" << YAML::Value << app.restart_on_death;
+            if (app.no_startup_id)
+                out << YAML::Key << "no_startup_id" << YAML::Value << app.no_startup_id;
+            if (app.should_halt_compositor_on_death)
+                out << YAML::Key << "should_halt_compositor_on_death" << YAML::Value << app.should_halt_compositor_on_death;
             if (app.in_systemd_scope)
                 out << YAML::Key << "in_systemd_scope" << YAML::Value << app.in_systemd_scope;
             out << YAML::EndMap;
@@ -810,15 +830,13 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "border" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "size" << YAML::Value << config.border_config.size;
-        
+
         // Save colors as hex values
-        auto to_hex = [](glm::vec4 const& color) {
-            return ((int)(color.r * 255) << 24) |
-                   ((int)(color.g * 255) << 16) |
-                   ((int)(color.b * 255) << 8)  |
-                   ((int)(color.a * 255));
+        auto to_hex = [](glm::vec4 const& color)
+        {
+            return ((int)(color.r * 255) << 24) | ((int)(color.g * 255) << 16) | ((int)(color.b * 255) << 8) | ((int)(color.a * 255));
         };
-        
+
         out << YAML::Key << "color" << YAML::Value << YAML::Hex << to_hex(config.border_config.color);
         out << YAML::Key << "focus_color" << YAML::Value << YAML::Hex << to_hex(config.border_config.focus_color);
         out << YAML::EndMap;
@@ -903,13 +921,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save drag and drop
-    if (!config.drag_and_drop.enabled || 
-        config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
+    if (!config.drag_and_drop.enabled || config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
     {
         out << YAML::Key << "drag_and_drop" << YAML::Value << YAML::BeginMap;
         if (!config.drag_and_drop.enabled)
             out << YAML::Key << "enabled" << YAML::Value << config.drag_and_drop.enabled;
-        
+
         if (config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
         {
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
@@ -925,19 +942,20 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
 
     out << YAML::EndMap;
 
-    try {
+    try
+    {
         std::ofstream fout(path);
         fout.exceptions(std::ios::failbit | std::ios::badbit);
         if (fout.is_open())
             fout << out.c_str();
         else
             throw std::runtime_error("Error opening file");
-    } catch (std::exception const& e) {
+    }
+    catch (std::exception const& e)
+    {
         result.success = false;
-        result.errors.push_back({
-            -1, -1, ErrorLevel::error, path,
-            std::string("Failed to save config: ") + e.what()
-        });
+        result.errors.push_back({ -1, -1, ErrorLevel::error, path,
+            std::string("Failed to save config: ") + e.what() });
     }
 
     return result;
