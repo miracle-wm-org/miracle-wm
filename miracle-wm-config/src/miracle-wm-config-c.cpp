@@ -7,6 +7,12 @@
 
 extern "C"
 {
+    const char* miracle_config_path()
+    {
+        static thread_local std::string path;
+        path = miracle::get_config_path();
+        return path.c_str();
+    }
 
     miracle_config_load_result_t* miracle_config_load(const char* path)
     {

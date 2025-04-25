@@ -156,6 +156,8 @@ MIRACLE_WM_CONFIG_API ConfigLoadResult load_config(std::string const& path);
 /// \returns [ConfigSaveResult]
 MIRACLE_WM_CONFIG_API ConfigSaveResult save_config(std::string const& path, ConfigData const& config);
 
+MIRACLE_WM_CONFIG_API std::string get_config_path();
+
 }
 
 #endif // MIRACLE_WM_CONFIG_H

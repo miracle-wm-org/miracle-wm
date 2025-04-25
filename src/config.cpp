@@ -36,21 +36,6 @@ namespace
 {
 const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
 
-int program_exists(std::string const& name)
-{
-    std::stringstream out;
-    out << "command -v " << name << " > /dev/null 2>&1";
-    return !system(out.str().c_str());
-}
-
-std::string create_default_configuration_path()
-{
-    std::stringstream config_path_stream;
-    config_path_stream << g_get_user_config_dir();
-    config_path_stream << "/miracle-wm.yaml";
-    return config_path_stream.str();
-}
-
 std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& action)
 {
     if (action == "up")
@@ -75,7 +60,7 @@ uint Config::process_modifier(uint modifier) const
 }
 
 FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
-    FilesystemConfiguration { runner, create_default_configuration_path() }
+    FilesystemConfiguration { runner, get_config_path() }
 {
 }
 
