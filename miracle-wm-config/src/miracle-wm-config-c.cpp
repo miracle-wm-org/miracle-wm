@@ -708,7 +708,7 @@ extern "C"
         {
             for (int i = 0; i < 4; i++)
             {
-                data->border_config.focus_color[3 - i] = focus_color[i];
+                data->border_config.focus_color[i] = focus_color[i];
             }
         }
 
@@ -716,7 +716,7 @@ extern "C"
         {
             for (int i = 0; i < 4; i++)
             {
-                data->border_config.color[3 - i] = color[i];
+                data->border_config.color[i] = color[i];
             }
         }
     }
