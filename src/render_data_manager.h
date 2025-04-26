@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
+#include "shader_2d.h"
+
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
 #include <mutex>

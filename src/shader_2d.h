@@ -45,6 +45,15 @@ struct Mesh2d
     void destroy();
 };
 
+struct Model2d
+{
+    std::vector<Mesh2d> meshes;
+
+    void uploadToGPU();
+    void draw() const;
+    void destroy();
+};
+
 class Shader2d
 {
 public:
@@ -53,6 +62,7 @@ public:
     void use() const;
     GLuint getProgram() const;
     Mesh2d createRectangle(glm::vec2 position, glm::vec2 size, glm::vec4 color);
+    Model2d createBorders(glm::vec2 position, glm::vec2 size, float borderWidth, glm::vec4 color);
     void setViewport(float x, float y, float width, float height);
 
 private:

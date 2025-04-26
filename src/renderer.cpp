@@ -205,6 +205,10 @@ Renderer::Renderer(
 
     has_stencil_support = dbits > 0;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    shader.use();
+    model = shader.createBorders(glm::vec2(10, 10), glm::vec2(100, 100), 2, glm::vec4(1, 0, 0, 1));
+    model.uploadToGPU();
 }
 
 void Renderer::tessellate(
@@ -250,6 +254,9 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     ++frameno;
 
     auto const& render_data = compositor_state->render_data_manager()->get();
+
+    shader.use();
+    model.draw();
 
     for (auto const& r : renderables)
     {

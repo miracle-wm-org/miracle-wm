@@ -131,6 +131,44 @@ Mesh2d Shader2d::createRectangle(glm::vec2 position, glm::vec2 size, glm::vec4 c
     return mesh;
 }
 
+Model2d Shader2d::createBorders(glm::vec2 position, glm::vec2 size, float borderWidth, glm::vec4 color)
+{
+    Model2d model;
+
+    glm::vec2 pos = position;
+    glm::vec2 totalSize = size;
+
+    // Bottom border
+    model.meshes.push_back(createRectangle(
+        { pos.x, pos.y },
+        { totalSize.x, borderWidth },
+        color
+    ));
+
+    // Top border
+    model.meshes.push_back(createRectangle(
+        { pos.x, pos.y + totalSize.y - borderWidth },
+        { totalSize.x, borderWidth },
+        color
+    ));
+
+    // Left border
+    model.meshes.push_back(createRectangle(
+        { pos.x, pos.y + borderWidth },
+        { borderWidth, totalSize.y - 2 * borderWidth },
+        color
+    ));
+
+    // Right border
+    model.meshes.push_back(createRectangle(
+        { pos.x + totalSize.x - borderWidth, pos.y + borderWidth },
+        { borderWidth, totalSize.y - 2 * borderWidth },
+        color
+    ));
+
+    return model;
+}
+
 void Shader2d::setViewport(float x, float y, float width, float height)
 {
     glm::mat4 const projection = glm::ortho(
@@ -153,6 +191,9 @@ void Mesh2d::uploadToGPU()
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Mesh2d::draw() const
@@ -173,10 +214,37 @@ void Mesh2d::draw() const
     // Optionally disable attributes again (good practice)
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Mesh2d::destroy()
 {
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+}
+
+void Model2d::uploadToGPU()
+{
+    for (auto& mesh : meshes)
+    {
+        mesh.uploadToGPU();
+    }
+}
+
+void Model2d::draw() const
+{
+    for (const auto& mesh : meshes)
+    {
+        mesh.draw();
+    }
+}
+
+void Model2d::destroy()
+{
+    for (auto& mesh : meshes)
+    {
+        mesh.destroy();
+    }
 }

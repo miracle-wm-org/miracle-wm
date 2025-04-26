@@ -120,6 +120,7 @@ private:
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
     Shader2d shader;
+    Model2d model;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
 };
