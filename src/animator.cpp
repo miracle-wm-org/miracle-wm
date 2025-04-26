@@ -268,8 +268,7 @@ Animation::Animation(
     to { to },
     from { current },
     clip_area { current },
-    runtime_seconds { 0.f },
-    real_size { current.size }
+    runtime_seconds { 0.f }
 {
     switch (definition.type)
     {
@@ -313,8 +312,19 @@ AnimationStepResult Animation::init()
     {
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
-        auto result = slide(0, from, to, real_size);
-        return { handle, false, clip_area, result.position, to_vec2_size(to), result.transform };
+        const auto [position, clip_area_size, transform] = slide(0, from, to, real_size);
+        clip_area.top_left.x = geom::X { position.x };
+        clip_area.top_left.y = geom::Y { position.y };
+        clip_area.size.width = geom::Width { clip_area_size.x };
+        clip_area.size.height = geom::Height { clip_area_size.y };
+        return {
+            handle,
+            false,
+            clip_area,
+            position,
+            to_vec2_size(to),
+            transform
+        };
     }
     case AnimationType::fade_in:
         return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 0 };

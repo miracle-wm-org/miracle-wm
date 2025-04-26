@@ -323,8 +323,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 
     if (state == mir_window_state_fullscreen)
         window_controller->noclip(window_);
-    else
-        window_controller->clip(window_, visible_area);
+    // Otherwise, rely on the original constraint from being a leaf
 }
 
 void LeafContainer::handle_raise()

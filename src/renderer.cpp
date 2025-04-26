@@ -166,6 +166,7 @@ Renderer::DrawData Renderer::get_draw_data(
             - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
         glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
         clip_pos = display_transform * result.data.workspace_transform * clip_pos;
+        printf("%f\n", clip_area.value().size.width.as_int() * x_scale);
 
         result.clip_area = geom::Rectangle(
             geom::Point(
@@ -263,12 +264,6 @@ void Renderer::draw(
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
-            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * data.data.workspace_transform * clip_pos;
-
         glScissor(clip_area->top_left.x.as_int(), clip_area->top_left.y.as_int(), clip_area->size.width.as_int(), clip_area->size.height.as_int());
     }
 
@@ -423,7 +418,7 @@ void Renderer::draw(
         glDisableVertexAttribArray(prog->texcoord_attr);
 
     glDisableVertexAttribArray(prog->position_attr);
-    if (renderable.clip_area())
+    if (clip_area)
     {
         glDisable(GL_SCISSOR_TEST);
     }
