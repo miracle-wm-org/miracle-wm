@@ -52,6 +52,9 @@ struct Model2d
     void uploadToGPU();
     void draw(Shader2d const& shader) const;
     void destroy();
+    void set_color(glm::vec4 const& color);
+
+    glm::mat4 transform = glm::mat4(1.f);
 
     std::vector<Mesh2d> meshes;
 };

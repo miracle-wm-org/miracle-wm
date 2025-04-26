@@ -28,11 +28,12 @@ attribute vec4 aColor;
 
 uniform mat4 uProjection;
 uniform mat4 uModel;
+uniform mat4 uMesh;
 
 varying vec4 vertexColor;
 
 void main() {
-    gl_Position = uProjection * uModel * vec4(aPos, 0.0, 1.0);
+    gl_Position = uProjection * uModel * uMesh * vec4(aPos, 0.0, 1.0);
     vertexColor = aColor;
 }
 )";
@@ -178,9 +179,10 @@ Model2d Shader2d::createBorders(glm::vec2 position, glm::vec2 size, float border
 
 void Shader2d::setViewport(float x, float y, float width, float height)
 {
+    // TODO: Is this projection right?
     glm::mat4 const projection = glm::ortho(
         x, x + width, // Left, Right
-        y, y + height, // Bottom, Top
+        y + height, y, // Bottom, Top
         -1.0f, 1.0f // Near, Far
     );
     GLuint projectionLoc = glGetUniformLocation(programID, "uProjection");
@@ -193,7 +195,7 @@ void Mesh2d::uploadToGPU()
     glGenBuffers(1, &EBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2d), vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2d), vertices.data(), GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
@@ -204,8 +206,8 @@ void Mesh2d::uploadToGPU()
 
 void Mesh2d::draw(Shader2d const& shader) const
 {
-    GLuint const model_loc = glGetUniformLocation(shader.getProgram(), "uModel");
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, &transform[0][0]);
+    GLuint const mesh_loc = glGetUniformLocation(shader.getProgram(), "uMesh");
+    glUniformMatrix4fv(mesh_loc, 1, GL_FALSE, &transform[0][0]);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -244,6 +246,8 @@ void Model2d::uploadToGPU()
 
 void Model2d::draw(Shader2d const& shader) const
 {
+    GLuint const model_loc = glGetUniformLocation(shader.getProgram(), "uModel");
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, &transform[0][0]);
     for (const auto& mesh : meshes)
     {
         mesh.draw(shader);
@@ -255,5 +259,20 @@ void Model2d::destroy()
     for (auto& mesh : meshes)
     {
         mesh.destroy();
+    }
+}
+
+void Model2d::set_color(glm::vec4 const& color)
+{
+    for (auto& mesh : meshes)
+    {
+        for (auto& vertex : mesh.vertices)
+        {
+            vertex.color = color;
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, mesh.vertices.size() * sizeof(Vertex2d), mesh.vertices.data());
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 }
