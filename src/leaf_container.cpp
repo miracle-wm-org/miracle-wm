@@ -551,6 +551,7 @@ void LeafContainer::commit_changes()
     {
         window_controller->change_state(window_, next_state.value());
         next_state.reset();
+        constrain();
     }
 
     if (next_depth_layer)
@@ -576,8 +577,6 @@ void LeafContainer::commit_changes()
             next_with_animations = true;
         }
     }
-
-    constrain();
 }
 
 void LeafContainer::handle_request_move(MirInputEvent const* input_event)
