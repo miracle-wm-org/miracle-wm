@@ -188,8 +188,14 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
                 last_surface = surface.value();
                 outline_shader.use();
 
-                auto const pos = glm::vec2(last_surface->top_left().x.as_int(), last_surface->top_left().y.as_int());
-                auto const sz = glm::vec2(last_surface->window_size().width.as_int(), last_surface->window_size().height.as_int());
+                geom::Rectangle rect(last_surface->top_left(), last_surface->window_size());
+
+                // The outline renderable will (ideally) follow the
+                if (auto const clip_area = r->clip_area())
+                    rect = clip_area.value();
+
+                auto const pos = glm::vec2(rect.top_left.x.as_int(), rect.top_left.y.as_int());
+                auto const sz = glm::vec2(rect.size.width.as_int(), rect.size.height.as_int());
                 float const thickness = config->get_border_config().size;
 
                 // Top Border
@@ -208,8 +214,6 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
                 outline_model.meshes[3].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x + sz.x, pos.y, 0.0f))
                     * glm::scale(glm::mat4(1.0f), glm::vec3(thickness, sz.y, 1.0f));
             }
-
-            outline_model.transform = data.data.transform;
 
             outline_model.set_color(data.data.is_focused
                     ? config->get_border_config().focus_color
