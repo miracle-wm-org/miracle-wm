@@ -122,6 +122,7 @@ add_library(miracle-wm-implementation
     src/container_scope.h
     src/forwarding_surface.cpp src/forwarding_surface.h
     src/dying_surface_manager.cpp src/dying_surface_manager.h
+    src/shader_2d.cpp src/shader_2d.h
 )
 
 add_executable(miracle-wm

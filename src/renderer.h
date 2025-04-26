@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "primitive.h"
 #include "program_factory.h"
 #include "render_data_manager.h"
+#include "shader_2d.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -118,6 +119,7 @@ private:
     double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
+    Shader2d shader;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
 };

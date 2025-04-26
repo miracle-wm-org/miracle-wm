@@ -250,8 +250,13 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     ++frameno;
 
     auto const& render_data = compositor_state->render_data_manager()->get();
+
     for (auto const& r : renderables)
     {
+        // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
+        // check the first renderable in a group for its surface. We will sue that surface to figure
+        // out if the renderable needs outline metadata. If it does, we will render that first using the
+        // PrimitivesRenderer.
         auto data = draw(*r, get_draw_data(*r, render_data));
         if (data.enabled && data.outline_context.enabled)
         {
@@ -580,6 +585,7 @@ void Renderer::update_gl_viewport()
         GLint offset_y = (output_height - reduced_height) / 2;
 
         glViewport(offset_x, offset_y, reduced_width, reduced_height);
+        shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
     }
 }
 
