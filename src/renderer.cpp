@@ -124,9 +124,13 @@ Renderer::Renderer(
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    shader.use();
-    model = shader.createBorders(glm::vec2(10, 10), glm::vec2(100, 100), 2, glm::vec4(1, 0, 0, 1));
-    model.uploadToGPU();
+    outline_shader.use();
+    outline_model = outline_shader.createBorders(
+        glm::vec2(0, 0),
+        glm::vec2(1, 1),
+        1,
+        glm::vec4(1, 0, 0, 1));
+    outline_model.uploadToGPU();
 }
 
 void Renderer::tessellate(
@@ -173,11 +177,36 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
 
     auto const& render_data = compositor_state->render_data_manager()->get();
 
-    shader.use();
-    model.draw();
-
+    mir::scene::Surface const* last_surface = nullptr;
     for (auto const& r : renderables)
     {
+        if (auto const surface = r->surface_if_any())
+        {
+            if (last_surface != surface.value())
+            {
+                last_surface = surface.value();
+                outline_shader.use();
+
+                auto const pos = glm::vec2(last_surface->top_left().x.as_int(), last_surface->top_left().y.as_int());
+                auto const sz = glm::vec2(last_surface->window_size().width.as_int(), last_surface->window_size().height.as_int());
+                float const thickness = 2.f;
+
+                // Top Border
+                outline_model.meshes[0].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y + sz.y, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(sz.x + 2.0f * thickness, thickness, 1.0f));
+
+                // Bottom Border
+                outline_model.meshes[1].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y - thickness, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(sz.x + 2.0f * thickness, thickness, 1.0f));
+
+                // Left Border
+                outline_model.meshes[2].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(thickness, sz.y, 1.0f));
+
+                // Right Border
+                outline_model.meshes[3].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x + sz.x, pos.y, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(thickness, sz.y, 1.0f));
+            }
+
+            outline_model.draw(outline_shader);
+        }
+
         // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
         // check the first renderable in a group for its surface. We will sue that surface to figure
         // out if the renderable needs outline metadata. If it does, we will render that first using the
@@ -446,7 +475,7 @@ void Renderer::update_gl_viewport()
         GLint offset_y = (output_height - reduced_height) / 2;
 
         glViewport(offset_x, offset_y, reduced_width, reduced_height);
-        shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
+        outline_shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
     }
 }
 

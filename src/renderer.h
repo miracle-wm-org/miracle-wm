@@ -111,8 +111,8 @@ private:
     double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
-    Shader2d shader;
-    Model2d model;
+    Shader2d outline_shader;
+    mutable Model2d outline_model;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
 };

@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class Shader2d;
+
 struct Vertex2d
 {
     glm::vec2 position;
@@ -38,19 +40,20 @@ struct Mesh2d
 
     GLuint VBO = 0;
     GLuint EBO = 0;
+    glm::mat4 transform = glm::mat4(1.f);
 
     void uploadToGPU();
-    void draw() const;
+    void draw(Shader2d const& shader) const;
     void destroy();
 };
 
 struct Model2d
 {
-    std::vector<Mesh2d> meshes;
-
     void uploadToGPU();
-    void draw() const;
+    void draw(Shader2d const& shader) const;
     void destroy();
+
+    std::vector<Mesh2d> meshes;
 };
 
 class Shader2d

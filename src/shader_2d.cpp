@@ -27,11 +27,12 @@ attribute vec2 aPos;
 attribute vec4 aColor;
 
 uniform mat4 uProjection;
+uniform mat4 uModel;
 
 varying vec4 vertexColor;
 
 void main() {
-    gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
+    gl_Position = uProjection * uModel * vec4(aPos, 0.0, 1.0);
     vertexColor = aColor;
 }
 )";
@@ -201,8 +202,11 @@ void Mesh2d::uploadToGPU()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void Mesh2d::draw() const
+void Mesh2d::draw(Shader2d const& shader) const
 {
+    GLuint const model_loc = glGetUniformLocation(shader.getProgram(), "uModel");
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, &transform[0][0]);
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
@@ -238,11 +242,11 @@ void Model2d::uploadToGPU()
     }
 }
 
-void Model2d::draw() const
+void Model2d::draw(Shader2d const& shader) const
 {
     for (const auto& mesh : meshes)
     {
-        mesh.draw();
+        mesh.draw(shader);
     }
 }
 
