@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "shader_2d.h"
-#include <iostream>
 #include <glm/ext/matrix_clip_space.hpp>
+#include <iostream>
 
 using namespace miracle;
 
@@ -48,7 +48,8 @@ void main() {
 }
 )";
 
-Shader2d::Shader2d() {
+Shader2d::Shader2d()
+{
     GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
     GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
@@ -60,10 +61,12 @@ Shader2d::Shader2d() {
     // Check linking errors
     GLint success;
     glGetProgramiv(programID, GL_LINK_STATUS, &success);
-    if (!success) {
+    if (!success)
+    {
         GLchar infoLog[512];
         glGetProgramInfoLog(programID, 512, nullptr, infoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
+                  << infoLog << std::endl;
     }
 
     // Delete the shaders as they're linked into our program now and no longer needed
@@ -71,19 +74,23 @@ Shader2d::Shader2d() {
     glDeleteShader(fragmentShader);
 }
 
-Shader2d::~Shader2d() {
+Shader2d::~Shader2d()
+{
     glDeleteProgram(programID);
 }
 
-void Shader2d::use() const {
+void Shader2d::use() const
+{
     glUseProgram(programID);
 }
 
-GLuint Shader2d::getProgram() const {
+GLuint Shader2d::getProgram() const
+{
     return programID;
 }
 
-GLuint Shader2d::compileShader(GLenum type, const std::string& source) {
+GLuint Shader2d::compileShader(GLenum type, const std::string& source)
+{
     GLuint shader = glCreateShader(type);
     const char* src = source.c_str();
     glShaderSource(shader, 1, &src, nullptr);
@@ -94,12 +101,15 @@ GLuint Shader2d::compileShader(GLenum type, const std::string& source) {
     return shader;
 }
 
-void Shader2d::checkCompileErrors(GLuint shader, const std::string& type) {
+void Shader2d::checkCompileErrors(GLuint shader, const std::string& type)
+{
     GLint success;
     GLchar infoLog[512];
-    if (type != "PROGRAM") {
+    if (type != "PROGRAM")
+    {
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success) {
+        if (!success)
+        {
             glGetShaderInfoLog(shader, 512, nullptr, infoLog);
             std::cerr << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n"
                       << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
@@ -111,10 +121,10 @@ Mesh2d Shader2d::createRectangle(glm::vec2 position, glm::vec2 size, glm::vec4 c
 {
     Mesh2d mesh;
 
-    glm::vec2 bottomLeft  = position;
+    glm::vec2 bottomLeft = position;
     glm::vec2 bottomRight = position + glm::vec2(size.x, 0.0f);
-    glm::vec2 topLeft     = position + glm::vec2(0.0f, size.y);
-    glm::vec2 topRight    = position + size;
+    glm::vec2 topLeft = position + glm::vec2(0.0f, size.y);
+    glm::vec2 topRight = position + size;
 
     mesh.vertices = {
         { bottomLeft,  color },
@@ -125,7 +135,7 @@ Mesh2d Shader2d::createRectangle(glm::vec2 position, glm::vec2 size, glm::vec4 c
 
     mesh.indices = {
         0, 1, 2, // First triangle
-        2, 3, 0  // Second triangle
+        2, 3, 0 // Second triangle
     };
 
     return mesh;
@@ -142,29 +152,25 @@ Model2d Shader2d::createBorders(glm::vec2 position, glm::vec2 size, float border
     model.meshes.push_back(createRectangle(
         { pos.x, pos.y },
         { totalSize.x, borderWidth },
-        color
-    ));
+        color));
 
     // Top border
     model.meshes.push_back(createRectangle(
         { pos.x, pos.y + totalSize.y - borderWidth },
         { totalSize.x, borderWidth },
-        color
-    ));
+        color));
 
     // Left border
     model.meshes.push_back(createRectangle(
         { pos.x, pos.y + borderWidth },
         { borderWidth, totalSize.y - 2 * borderWidth },
-        color
-    ));
+        color));
 
     // Right border
     model.meshes.push_back(createRectangle(
         { pos.x + totalSize.x - borderWidth, pos.y + borderWidth },
         { borderWidth, totalSize.y - 2 * borderWidth },
-        color
-    ));
+        color));
 
     return model;
 }
@@ -172,14 +178,13 @@ Model2d Shader2d::createBorders(glm::vec2 position, glm::vec2 size, float border
 void Shader2d::setViewport(float x, float y, float width, float height)
 {
     glm::mat4 const projection = glm::ortho(
-        x, x + width,  // Left, Right
+        x, x + width, // Left, Right
         y, y + height, // Bottom, Top
-        -1.0f, 1.0f    // Near, Far
+        -1.0f, 1.0f // Near, Far
     );
     GLuint projectionLoc = glGetUniformLocation(programID, "uProjection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 }
-
 
 void Mesh2d::uploadToGPU()
 {

@@ -52,87 +52,6 @@ auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::
     output->make_current();
     return output;
 }
-
-class OutlineRenderable : public mir::graphics::Renderable
-{
-public:
-    OutlineRenderable(Renderable const& renderable, int outline_width_px, float alpha) :
-        renderable { renderable },
-        outline_width_px { outline_width_px },
-        _alpha { alpha }
-    {
-    }
-
-    [[nodiscard]] ID id() const override
-    {
-        return "";
-    }
-
-    [[nodiscard]] std::shared_ptr<mir::graphics::Buffer> buffer() const override
-    {
-        return renderable.buffer();
-    }
-
-    [[nodiscard]] geom::Rectangle screen_position() const override
-    {
-        auto surface = renderable.surface_if_any();
-        if (!surface)
-            return {};
-
-        return get_rectangle(renderable.screen_position());
-    }
-
-    [[nodiscard]] geom::RectangleD src_bounds() const override
-    {
-        return renderable.src_bounds();
-    }
-
-    [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
-    {
-        auto clip_area_rect = renderable.clip_area();
-        if (!clip_area_rect)
-            return clip_area_rect;
-        return get_rectangle(clip_area_rect.value());
-    }
-
-    [[nodiscard]] float alpha() const override
-    {
-        return _alpha;
-    }
-
-    [[nodiscard]] glm::mat4 transformation() const override
-    {
-        return renderable.transformation();
-    }
-
-    [[nodiscard]] bool shaped() const override
-    {
-        return renderable.shaped();
-    }
-
-    [[nodiscard]] std::optional<mir::scene::Surface const*> surface_if_any() const override
-    {
-        return {};
-    }
-
-private:
-    [[nodiscard]] geom::Rectangle get_rectangle(geom::Rectangle const& in) const
-    {
-        auto rectangle = in;
-        rectangle.top_left = {
-            rectangle.top_left.x.as_int() - outline_width_px,
-            rectangle.top_left.y.as_int() - outline_width_px
-        };
-        rectangle.size = {
-            rectangle.size.width.as_int() + 2 * outline_width_px,
-            rectangle.size.height.as_int() + 2 * outline_width_px
-        };
-        return rectangle;
-    }
-    mir::graphics::Renderable const& renderable;
-    int outline_width_px;
-    float _alpha;
-};
 }
 
 Renderer::Renderer(
@@ -203,7 +122,6 @@ Renderer::Renderer(
     mir::log_info("GL framebuffer bits: RGBA=%d%d%d%d, depth=%d, stencil=%d",
         rbits, gbits, bbits, abits, dbits, sbits);
 
-    has_stencil_support = dbits > 0;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     shader.use();
@@ -264,20 +182,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         // check the first renderable in a group for its surface. We will sue that surface to figure
         // out if the renderable needs outline metadata. If it does, we will render that first using the
         // PrimitivesRenderer.
-        auto data = draw(*r, get_draw_data(*r, render_data));
-        if (data.enabled && data.outline_context.enabled)
-        {
-            if (has_stencil_support)
-            {
-                OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
-                draw(outline, data);
-                glClear(GL_STENCIL_BUFFER_BIT);
-            }
-            else
-            {
-                mir::log_warning("Renderer::render: outlines are not supported for the provided surface");
-            }
-        }
+        draw(*r, get_draw_data(*r, render_data));
     }
 
     auto output = output_surface->commit();
@@ -289,7 +194,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     return output;
 }
 
-miracle::Renderer::DrawData Renderer::draw(
+void Renderer::draw(
     mg::Renderable const& renderable,
     DrawData const& data) const
 {
@@ -311,24 +216,6 @@ miracle::Renderer::DrawData Renderer::draw(
             clip_area.value().size.height.as_int() * y_scale);
     }
 
-    // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
-    if (data.outline_context.enabled)
-    {
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    }
-    else if (data.data.needs_outline)
-    {
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
-        glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-    }
-    else
-    {
-        glDisable(GL_STENCIL_TEST);
-    }
-
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
     float alpha = renderable.alpha() * data.data.alpha;
@@ -336,8 +223,6 @@ miracle::Renderer::DrawData Renderer::draw(
         [&](bool alpha) -> ProgramData const*
     {
         auto const& family = dynamic_cast<Program const&>(texture->shader(*program_factory));
-        if (data.outline_context.enabled)
-            return &family.outline;
         if (alpha)
             return &family.alpha;
         return &family.opaque;
@@ -399,16 +284,6 @@ miracle::Renderer::DrawData Renderer::draw(
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
-
-    if (prog->outline_color_uniform >= 0 && data.outline_context.enabled)
-    {
-        glUniform4f(
-            prog->outline_color_uniform,
-            data.outline_context.color.r,
-            data.outline_context.color.g,
-            data.outline_context.color.b,
-            data.outline_context.color.a);
-    }
 
     glEnableVertexAttribArray(prog->position_attr);
 
@@ -496,27 +371,6 @@ miracle::Renderer::DrawData Renderer::draw(
     {
         glDisable(GL_SCISSOR_TEST);
     }
-
-    // Next, draw the outline if we have container to facilitate it
-    if (data.data.needs_outline)
-    {
-        auto border_config = config->get_border_config();
-        if (border_config.size > 0)
-        {
-            auto color = data.data.is_focused ? border_config.focus_color : border_config.color;
-            if (data.data.alpha != 1.f)
-                color.a = data.data.alpha;
-            return DrawData {
-                true,
-                data.data,
-                { true,
-                       color,
-                       border_config.size }
-            };
-        }
-    }
-
-    return { false };
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)

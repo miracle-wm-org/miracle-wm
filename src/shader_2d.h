@@ -31,7 +31,6 @@ struct Vertex2d
     glm::vec4 color;
 };
 
-
 struct Mesh2d
 {
     std::vector<Vertex2d> vertices;
@@ -74,4 +73,4 @@ private:
 
 } // miracle
 
-#endif //MIRACLE_PRIMITIVE_RENDERER_H
+#endif // MIRACLE_PRIMITIVE_RENDERER_H

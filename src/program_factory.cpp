@@ -111,13 +111,11 @@ miracle::ProgramData::ProgramData(GLuint program_id)
 }
 
 miracle::Program::Program(
-    ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader, ProgramHandle&& outline_shader) :
+    ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader) :
     opaque_handle(std::move(opaque_shader)),
     alpha_handle(std::move(alpha_shader)),
-    outline_handle(std::move(outline_shader)),
     opaque { opaque_handle },
-    alpha { alpha_handle },
-    outline(outline_handle)
+    alpha { alpha_handle }
 {
 }
 
@@ -176,20 +174,6 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
            "    gl_FragColor = alpha * resolve_color(sample_to_rgba(v_texcoord));\n"
            "}\n";
 
-    std::stringstream outline_shader_src;
-    outline_shader_src
-        << "\n"
-        << "#ifdef GL_ES\n"
-           "precision mediump float;\n"
-           "#endif\n"
-        << "\n"
-        << mode_scale_integration
-        << "uniform float alpha;\n"
-        << "uniform vec4 outline_color;\n"
-        << "void main() {\n"
-        << "    gl_FragColor = alpha * resolve_color(outline_color);\n"
-        << "}\n";
-
     // GL shader compilation is *not* threadsafe, and requires external synchronisation
     std::lock_guard lock { compilation_mutex };
 
@@ -199,11 +183,8 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
     ShaderHandle const alpha_shader {
         compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())
     };
-    ShaderHandle const outline_shader {
-        compile_shader(GL_FRAGMENT_SHADER, outline_shader_src.str().c_str())
-    };
 
-    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, opaque_shader), link_shader(vertex_shader, alpha_shader), link_shader(vertex_shader, outline_shader)));
+    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, opaque_shader), link_shader(vertex_shader, alpha_shader)));
 
     return *programs.back().second;
 
