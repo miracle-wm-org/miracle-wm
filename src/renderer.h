@@ -93,6 +93,7 @@ private:
     {
         bool enabled = false;
         RenderData data;
+        std::optional<mir::geometry::Rectangle> clip_area;
     };
 
     DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;

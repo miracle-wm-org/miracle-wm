@@ -179,10 +179,9 @@ Model2d Shader2d::createBorders(glm::vec2 position, glm::vec2 size, float border
 
 void Shader2d::setViewport(float x, float y, float width, float height)
 {
-    // TODO: Is this projection right?
     glm::mat4 const projection = glm::ortho(
         x, x + width, // Left, Right
-        y + height, y, // Bottom, Top
+        y, y + height, // Bottom, Top
         -1.0f, 1.0f // Near, Far
     );
     GLuint projectionLoc = glGetUniformLocation(programID, "uProjection");
