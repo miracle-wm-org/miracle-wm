@@ -268,6 +268,7 @@ Animation::Animation(
     to { to },
     from { current },
     clip_area { current },
+    real_size { current.size },
     runtime_seconds { 0.f }
 {
     switch (definition.type)
