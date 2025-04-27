@@ -166,7 +166,6 @@ Renderer::DrawData Renderer::get_draw_data(
             - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
         glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
         clip_pos = display_transform * result.data.workspace_transform * clip_pos;
-        printf("%f\n", clip_area.value().size.width.as_int() * x_scale);
 
         result.clip_area = geom::Rectangle(
             geom::Point(
@@ -198,6 +197,9 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     mir::scene::Surface const* last_surface = nullptr;
     for (auto const& r : renderables)
     {
+        // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
+        // check the first renderable in a group for its surface. We will use that surface to figure
+        // out if the renderable needs to draw a border, and we will draw that first if that is the case.
         auto const data = get_draw_data(*r, render_data);
         if (auto const surface = r->surface_if_any())
         {
@@ -207,42 +209,35 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
                 outline_shader.use();
 
                 geom::Rectangle rect(last_surface->top_left(), last_surface->window_size());
-
                 if (auto const clip_area = data.clip_area)
                     rect = clip_area.value();
+                else
+                    printf("MEOW\n");
 
                 auto const pos = glm::vec2(rect.top_left.x.as_int(), rect.top_left.y.as_int());
                 auto const sz = glm::vec2(rect.size.width.as_int(), rect.size.height.as_int());
-                float const thickness = config->get_border_config().size;
+                auto const thickness = config->get_border_config().size;
 
-                // Top Border
-                outline_model.meshes[0].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y + sz.y, 0.0f))
-                    * glm::scale(glm::mat4(1.0f), glm::vec3(sz.x + 2.0f * thickness, thickness, 1.0f));
+                auto const make_transform = [](glm::vec2 position, glm::vec2 size)
+                {
+                    return glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
+                };
 
-                // Bottom Border
-                outline_model.meshes[1].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y - thickness, 0.0f))
-                    * glm::scale(glm::mat4(1.0f), glm::vec3(sz.x + 2.0f * thickness, thickness, 1.0f));
-
-                // Left Border
-                outline_model.meshes[2].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x - thickness, pos.y, 0.0f))
-                    * glm::scale(glm::mat4(1.0f), glm::vec3(thickness, sz.y, 1.0f));
-
-                // Right Border
-                outline_model.meshes[3].transform = glm::translate(glm::mat4(1.0f), glm::vec3(pos.x + sz.x, pos.y, 0.0f))
-                    * glm::scale(glm::mat4(1.0f), glm::vec3(thickness, sz.y, 1.0f));
+                outline_model.meshes[0].transform = make_transform({ pos.x - thickness, pos.y + sz.y }, { sz.x + 2.0f * thickness, thickness });
+                outline_model.meshes[1].transform = make_transform({ pos.x - thickness, pos.y - thickness }, { sz.x + 2.0f * thickness, thickness });
+                outline_model.meshes[2].transform = make_transform({ pos.x - thickness, pos.y }, { thickness, sz.y });
+                outline_model.meshes[3].transform = make_transform({ pos.x + sz.x, pos.y }, { thickness, sz.y });
             }
 
-            outline_model.set_color(data.data.is_focused
-                    ? config->get_border_config().focus_color
-                    : config->get_border_config().color);
+            auto color = data.data.is_focused
+                ? config->get_border_config().focus_color
+                : config->get_border_config().color;
+            color.a *= data.data.alpha;
+            outline_model.set_color(color);
 
             outline_model.draw(outline_shader);
         }
 
-        // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
-        // check the first renderable in a group for its surface. We will sue that surface to figure
-        // out if the renderable needs outline metadata. If it does, we will render that first using the
-        // PrimitivesRenderer.
         draw(*r, data);
     }
 

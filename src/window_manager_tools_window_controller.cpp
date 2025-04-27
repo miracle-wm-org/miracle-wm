@@ -234,25 +234,24 @@ void WindowManagerToolsWindowController::process_animation(
     if (result.opacity != std::nullopt)
         container->set_alpha(result.opacity.value());
 
-    if (needs_modify)
-    {
-        if (!container->window())
-            return;
+    if (!container->window())
+        return;
 
-        auto window = container->window().value();
-        if (!window)
-            return;
+    auto const window = container->window().value();
+    if (!window)
+        return;
+
+    if (needs_modify)
         tools.modify_window(window, spec);
 
-        if (result.is_complete)
-            container->constrain();
+    if (result.is_complete)
+        container->constrain();
+    else
+    {
+        if (container->get_type() == ContainerType::leaf)
+            clip(window, result.clip_area);
         else
-        {
-            if (container->get_type() == ContainerType::leaf)
-                clip(window, result.clip_area);
-            else
-                noclip(window);
-        }
+            noclip(window);
     }
 }
 
