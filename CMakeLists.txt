@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.12)
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
@@ -8,10 +8,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
@@ -178,17 +174,13 @@ endif()
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
 target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
 
-install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miracle-wm
+install(TARGETS miracle-wm
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
-
-add_custom_target(miracle-wm-sensible-terminal ALL
-    cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-sensible-terminal ${CMAKE_BINARY_DIR}/bin
-)
 
 install(PROGRAMS
     src/miracle-wm-sensible-terminal
@@ -197,9 +189,6 @@ install(PROGRAMS
 )
 
 if(SNAP_BUILD)
-    add_custom_target(miracle-wm-unsnap ALL
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-unsnap ${CMAKE_BINARY_DIR}/bin
-    )
     install(PROGRAMS
         src/miracle-wm-unsnap
         DESTINATION ${CMAKE_INSTALL_BINDIR}
