@@ -185,10 +185,8 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     output_surface->bind();
 
     glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
-    glClearStencil(0);
-    glStencilMask(0xFF);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     ++frameno;
 

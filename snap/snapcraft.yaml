@@ -58,7 +58,6 @@ parts:
     build-packages:
       - pkg-config
       - libmiral-dev
-      - libmiroil-dev
       - libmircommon-internal-dev
       - libmircommon-dev
       - libmirserver-internal-dev
@@ -84,7 +83,6 @@ parts:
       - libgmock-dev
     stage-packages:
       - libmiral7
-      - libmiroil7
       - mir-graphics-drivers-desktop
       - mir-platform-graphics-virtual
       - mir-graphics-drivers-nvidia

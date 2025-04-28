@@ -57,7 +57,6 @@ find_package(PkgConfig)
 set(MIR_MINIMUM_VERSION 2.18)
 
 pkg_check_modules(MIRAL REQUIRED miral>=5.1)
-pkg_check_modules(MIROIL REQUIRED miroil>=5.0)
 pkg_check_modules(MIRRENDERER REQUIRED mirrenderer>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRPLATFORM REQUIRED mirplatform>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON REQUIRED mircommon>=${MIR_MINIMUM_VERSION})
@@ -94,7 +93,6 @@ add_library(miracle-wm-implementation
     src/window_manager_tools_window_controller.cpp
     src/renderer.cpp
     src/tessellation_helpers.cpp
-    src/miracle_gl_config.cpp
     src/ipc_command.cpp
     src/ipc_command_executor.cpp
     src/render_data_manager.cpp
@@ -131,7 +129,6 @@ add_executable(miracle-wm
 
 target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRAL_INCLUDE_DIRS}
-    ${MIROIL_INCLUDE_DIRS}
     ${MIRCOMMON_INCLUDE_DIRS}
     ${MIRRENDERER_INCLUDE_DIRS}
     ${MIRPLATFORM_INCLUDE_DIRS}
@@ -143,7 +140,6 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
 
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
-    ${MIROIL_LDFLAGS}
     ${MIRRENDERER_LDFLAGS}
     ${MIRPLATFORM_LDFLAGS}
     ${MIRSERVER_LDFLAGS}
