@@ -47,10 +47,10 @@ jobs:
       run: sudo cmake --install ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Unit Tests
-      run: cd ${{github.workspace}}/build && ./bin/miracle-wm-tests
+      run: cd ${{github.workspace}}/build && ./tests/miracle-wm-tests
 
     - name: miracle-wm-config unit tests
-      run: cd ${{github.workspace}}/build && ./bin/test_miracle_wm_config_c_api
+      run: cd ${{github.workspace}}/build && ./miracle-wm-config/test_miracle_wm_config_c_api
 
     - name: IPC Tests
       if: false 

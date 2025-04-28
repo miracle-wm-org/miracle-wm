@@ -1,9 +1,3 @@
-cmake_minimum_required(VERSION 3.7)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(PkgConfig)
 pkg_check_modules(MIRCORE mircore REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
@@ -21,8 +15,9 @@ add_library(miracle-wm-config
     src/miracle-wm-config-c.cpp include/miracle/miracle-wm-config-c.h)
 
 set_target_properties(miracle-wm-config PROPERTIES
-    VERSION 0.0.1
-    SOVERSION 1
+    CXX_STANDARD 20
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 target_include_directories(miracle-wm-config PUBLIC SYSTEM
@@ -37,10 +32,10 @@ target_link_libraries(miracle-wm-config
 
 # Installation
 install(TARGETS miracle-wm-config
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    PUBLIC_HEADER DESTINATION include
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Tests
