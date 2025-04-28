@@ -211,8 +211,6 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
                 geom::Rectangle rect(last_surface->top_left(), last_surface->window_size());
                 if (auto const clip_area = data.clip_area)
                     rect = clip_area.value();
-                else
-                    printf("MEOW\n");
 
                 auto const pos = glm::vec2(rect.top_left.x.as_int(), rect.top_left.y.as_int());
                 auto const sz = glm::vec2(rect.size.width.as_int(), rect.size.height.as_int());
