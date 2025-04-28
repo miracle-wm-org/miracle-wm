@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
-#include "miracle_gl_config.h"
 #include "policy.h"
 #include "renderer.h"
 #include "version.h"
@@ -36,7 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
-#include <miroil/open_gl_context.h>
 
 #define PRINT_OPENING_MESSAGE(x) mir::log_info("Welcome to miracle-wm v%s", x);
 
@@ -115,6 +113,5 @@ int main(int argc, char const* argv[])
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
-    }),
-            miroil::OpenGLContext(new miracle::GLConfig()) });
+    }) });
 }

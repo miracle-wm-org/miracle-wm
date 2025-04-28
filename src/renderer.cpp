@@ -52,87 +52,6 @@ auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::
     output->make_current();
     return output;
 }
-
-class OutlineRenderable : public mir::graphics::Renderable
-{
-public:
-    OutlineRenderable(Renderable const& renderable, int outline_width_px, float alpha) :
-        renderable { renderable },
-        outline_width_px { outline_width_px },
-        _alpha { alpha }
-    {
-    }
-
-    [[nodiscard]] ID id() const override
-    {
-        return "";
-    }
-
-    [[nodiscard]] std::shared_ptr<mir::graphics::Buffer> buffer() const override
-    {
-        return renderable.buffer();
-    }
-
-    [[nodiscard]] geom::Rectangle screen_position() const override
-    {
-        auto surface = renderable.surface_if_any();
-        if (!surface)
-            return {};
-
-        return get_rectangle(renderable.screen_position());
-    }
-
-    [[nodiscard]] geom::RectangleD src_bounds() const override
-    {
-        return renderable.src_bounds();
-    }
-
-    [[nodiscard]] std::optional<geom::Rectangle> clip_area() const override
-    {
-        auto clip_area_rect = renderable.clip_area();
-        if (!clip_area_rect)
-            return clip_area_rect;
-        return get_rectangle(clip_area_rect.value());
-    }
-
-    [[nodiscard]] float alpha() const override
-    {
-        return _alpha;
-    }
-
-    [[nodiscard]] glm::mat4 transformation() const override
-    {
-        return renderable.transformation();
-    }
-
-    [[nodiscard]] bool shaped() const override
-    {
-        return renderable.shaped();
-    }
-
-    [[nodiscard]] std::optional<mir::scene::Surface const*> surface_if_any() const override
-    {
-        return {};
-    }
-
-private:
-    [[nodiscard]] geom::Rectangle get_rectangle(geom::Rectangle const& in) const
-    {
-        auto rectangle = in;
-        rectangle.top_left = {
-            rectangle.top_left.x.as_int() - outline_width_px,
-            rectangle.top_left.y.as_int() - outline_width_px
-        };
-        rectangle.size = {
-            rectangle.size.width.as_int() + 2 * outline_width_px,
-            rectangle.size.height.as_int() + 2 * outline_width_px
-        };
-        return rectangle;
-    }
-    mir::graphics::Renderable const& renderable;
-    int outline_width_px;
-    float _alpha;
-};
 }
 
 Renderer::Renderer(
@@ -203,8 +122,15 @@ Renderer::Renderer(
     mir::log_info("GL framebuffer bits: RGBA=%d%d%d%d, depth=%d, stencil=%d",
         rbits, gbits, bbits, abits, dbits, sbits);
 
-    has_stencil_support = dbits > 0;
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    outline_shader.use();
+    outline_model = outline_shader.createBorders(
+        glm::vec2(0, 0),
+        glm::vec2(1, 1),
+        1,
+        glm::vec4(1, 0, 0, 1));
+    outline_model.uploadToGPU();
 }
 
 void Renderer::tessellate(
@@ -233,6 +159,23 @@ Renderer::DrawData Renderer::get_draw_data(
         }
     }
 
+    if (auto const clip_area = renderable.clip_area())
+    {
+        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
+        auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
+            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
+        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
+        clip_pos = display_transform * result.data.workspace_transform * clip_pos;
+
+        result.clip_area = geom::Rectangle(
+            geom::Point(
+                (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
+                static_cast<int>(clip_pos.y * y_scale)),
+            geom::Size(
+                clip_area.value().size.width.as_int() * x_scale,
+                clip_area.value().size.height.as_int() * y_scale));
+    }
+
     return result;
 }
 
@@ -242,30 +185,56 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     output_surface->bind();
 
     glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
-    glClearStencil(0);
-    glStencilMask(0xFF);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     ++frameno;
 
     auto const& render_data = compositor_state->render_data_manager()->get();
+
+    mir::scene::Surface const* last_surface = nullptr;
     for (auto const& r : renderables)
     {
-        auto data = draw(*r, get_draw_data(*r, render_data));
-        if (data.enabled && data.outline_context.enabled)
+        // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
+        // check the first renderable in a group for its surface. We will use that surface to figure
+        // out if the renderable needs to draw a border, and we will draw that first if that is the case.
+        auto const data = get_draw_data(*r, render_data);
+        if (auto const surface = r->surface_if_any())
         {
-            if (has_stencil_support)
+            if (last_surface != surface.value())
             {
-                OutlineRenderable outline(*r, data.outline_context.size, data.outline_context.color.a);
-                draw(outline, data);
-                glClear(GL_STENCIL_BUFFER_BIT);
+                last_surface = surface.value();
+                outline_shader.use();
+
+                geom::Rectangle rect(last_surface->top_left(), last_surface->window_size());
+                if (auto const clip_area = data.clip_area)
+                    rect = clip_area.value();
+
+                auto const pos = glm::vec2(rect.top_left.x.as_int(), rect.top_left.y.as_int());
+                auto const sz = glm::vec2(rect.size.width.as_int(), rect.size.height.as_int());
+                auto const thickness = config->get_border_config().size;
+
+                auto const make_transform = [](glm::vec2 position, glm::vec2 size)
+                {
+                    return glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
+                };
+
+                outline_model.meshes[0].transform = make_transform({ pos.x - thickness, pos.y + sz.y }, { sz.x + 2.0f * thickness, thickness });
+                outline_model.meshes[1].transform = make_transform({ pos.x - thickness, pos.y - thickness }, { sz.x + 2.0f * thickness, thickness });
+                outline_model.meshes[2].transform = make_transform({ pos.x - thickness, pos.y }, { thickness, sz.y });
+                outline_model.meshes[3].transform = make_transform({ pos.x + sz.x, pos.y }, { thickness, sz.y });
             }
-            else
-            {
-                mir::log_warning("Renderer::render: outlines are not supported for the provided surface");
-            }
+
+            auto color = data.data.is_focused
+                ? config->get_border_config().focus_color
+                : config->get_border_config().color;
+            color.a *= data.data.alpha;
+            outline_model.set_color(color);
+
+            outline_model.draw(outline_shader);
         }
+
+        draw(*r, data);
     }
 
     auto output = output_surface->commit();
@@ -277,44 +246,16 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     return output;
 }
 
-miracle::Renderer::DrawData Renderer::draw(
+void Renderer::draw(
     mg::Renderable const& renderable,
     DrawData const& data) const
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
-    auto const clip_area = renderable.clip_area();
+    auto const clip_area = data.clip_area;
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
-            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * data.data.workspace_transform * clip_pos;
-
-        glScissor(
-            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
-            static_cast<int>(clip_pos.y * y_scale),
-            clip_area.value().size.width.as_int() * x_scale,
-            clip_area.value().size.height.as_int() * y_scale);
-    }
-
-    // Resource: https://stackoverflow.com/questions/48246302/writing-to-the-opengl-stencil-buffer
-    if (data.outline_context.enabled)
-    {
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    }
-    else if (data.data.needs_outline)
-    {
-        glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        glStencilMask(0xFF);
-        glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
-    }
-    else
-    {
-        glDisable(GL_STENCIL_TEST);
+        glScissor(clip_area->top_left.x.as_int(), clip_area->top_left.y.as_int(), clip_area->size.width.as_int(), clip_area->size.height.as_int());
     }
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
@@ -324,8 +265,6 @@ miracle::Renderer::DrawData Renderer::draw(
         [&](bool alpha) -> ProgramData const*
     {
         auto const& family = dynamic_cast<Program const&>(texture->shader(*program_factory));
-        if (data.outline_context.enabled)
-            return &family.outline;
         if (alpha)
             return &family.alpha;
         return &family.opaque;
@@ -387,16 +326,6 @@ miracle::Renderer::DrawData Renderer::draw(
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
-
-    if (prog->outline_color_uniform >= 0 && data.outline_context.enabled)
-    {
-        glUniform4f(
-            prog->outline_color_uniform,
-            data.outline_context.color.r,
-            data.outline_context.color.g,
-            data.outline_context.color.b,
-            data.outline_context.color.a);
-    }
 
     glEnableVertexAttribArray(prog->position_attr);
 
@@ -480,31 +409,10 @@ miracle::Renderer::DrawData Renderer::draw(
         glDisableVertexAttribArray(prog->texcoord_attr);
 
     glDisableVertexAttribArray(prog->position_attr);
-    if (renderable.clip_area())
+    if (clip_area)
     {
         glDisable(GL_SCISSOR_TEST);
     }
-
-    // Next, draw the outline if we have container to facilitate it
-    if (data.data.needs_outline)
-    {
-        auto border_config = config->get_border_config();
-        if (border_config.size > 0)
-        {
-            auto color = data.data.is_focused ? border_config.focus_color : border_config.color;
-            if (data.data.alpha != 1.f)
-                color.a = data.data.alpha;
-            return DrawData {
-                true,
-                data.data,
-                { true,
-                       color,
-                       border_config.size }
-            };
-        }
-    }
-
-    return { false };
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
@@ -580,6 +488,7 @@ void Renderer::update_gl_viewport()
         GLint offset_y = (output_height - reduced_height) / 2;
 
         glViewport(offset_x, offset_y, reduced_width, reduced_height);
+        outline_shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
     }
 }
 

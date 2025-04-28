@@ -268,8 +268,8 @@ Animation::Animation(
     to { to },
     from { current },
     clip_area { current },
-    runtime_seconds { 0.f },
-    real_size { current.size }
+    real_size { current.size },
+    runtime_seconds { 0.f }
 {
     switch (definition.type)
     {
@@ -313,8 +313,19 @@ AnimationStepResult Animation::init()
     {
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
-        auto result = slide(0, from, to, real_size);
-        return { handle, false, clip_area, result.position, to_vec2_size(to), result.transform };
+        const auto [position, clip_area_size, transform] = slide(0, from, to, real_size);
+        clip_area.top_left.x = geom::X { position.x };
+        clip_area.top_left.y = geom::Y { position.y };
+        clip_area.size.width = geom::Width { clip_area_size.x };
+        clip_area.size.height = geom::Height { clip_area_size.y };
+        return {
+            handle,
+            false,
+            clip_area,
+            position,
+            to_vec2_size(to),
+            transform
+        };
     }
     case AnimationType::fade_in:
         return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 0 };
@@ -370,7 +381,19 @@ AnimationStepResult Animation::step(float dt)
                 glm::translate(translate),
                 glm::vec3(p, p, 1.f)),
             inverse_translate);
-        return { handle, false, to, std::nullopt, std::nullopt, transform };
+
+        float center_x = to.top_left.x.as_value() + static_cast<float>(to.size.width.as_value()) / 2.f;
+        float center_y = to.top_left.y.as_value() + static_cast<float>(to.size.height.as_value()) / 2.f;
+        float new_width = static_cast<float>(from.size.width.as_value()) * p;
+        float new_height = static_cast<float>(from.size.height.as_value()) * p;
+        float new_x = center_x - new_width / 2.f;
+        float new_y = center_y - new_height / 2.f;
+        geom::Rectangle const clip_area {
+            geom::Point(new_x, new_y),
+            geom::Size(new_width, new_height)
+        };
+
+        return { handle, false, clip_area, std::nullopt, std::nullopt, transform };
     }
     case AnimationType::shrink:
     {
@@ -385,17 +408,28 @@ AnimationStepResult Animation::step(float dt)
                 glm::translate(translate),
                 glm::vec3(p, p, 1.f)),
             inverse_translate);
-        return { handle, false, to, std::nullopt, std::nullopt, transform };
+
+        float center_x = to.top_left.x.as_value() + static_cast<float>(to.size.width.as_value()) / 2.f;
+        float center_y = to.top_left.y.as_value() + static_cast<float>(to.size.height.as_value()) / 2.f;
+        float new_width = static_cast<float>(from.size.width.as_value()) * p;
+        float new_height = static_cast<float>(from.size.height.as_value()) * p;
+        float new_x = center_x - new_width / 2.f;
+        float new_y = center_y - new_height / 2.f;
+        geom::Rectangle const clip_area {
+            geom::Point(new_x, new_y),
+            geom::Size(new_width, new_height)
+        };
+        return { handle, false, clip_area, std::nullopt, std::nullopt, transform };
     }
     case AnimationType::fade_in:
     {
         auto const p = ease(definition, t);
-        return { .handle = handle, .is_complete = false, .opacity = p };
+        return { .handle = handle, .is_complete = false, .clip_area = to, .opacity = p };
     }
     case AnimationType::fade_out:
     {
         auto const p = 1.f - ease(definition, t);
-        return { .handle = handle, .is_complete = false, .opacity = p };
+        return { .handle = handle, .is_complete = false, .clip_area = to, .opacity = p };
     }
     case AnimationType::disabled:
     default:

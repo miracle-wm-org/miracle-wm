@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "primitive.h"
 #include "program_factory.h"
 #include "render_data_manager.h"
+#include "shader_2d.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -92,23 +93,16 @@ private:
     {
         bool enabled = false;
         RenderData data;
-
-        struct
-        {
-            bool enabled = false;
-            glm::vec4 color;
-            int size;
-        } outline_context;
+        std::optional<mir::geometry::Rectangle> clip_area;
     };
 
     DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;
     /// Draws the current renderable and returns a follow-up draw if required.
-    DrawData draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
+    void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void update_gl_viewport();
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
     GLfloat clear_color[4];
-    bool has_stencil_support = false;
     mutable long long frameno = 0;
     std::unique_ptr<ProgramFactory> const program_factory;
     mir::geometry::Rectangle viewport;
@@ -118,6 +112,8 @@ private:
     double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
+    Shader2d outline_shader;
+    mutable Model2d outline_model;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
 };

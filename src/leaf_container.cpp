@@ -309,6 +309,11 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             mods.top_left() = visible_area.top_left;
             mods.size() = visible_area.size;
         }
+
+        if (state == mir_window_state_fullscreen)
+            window_controller->noclip(window_);
+        else
+            window_controller->clip(window_, visible_area);
     }
 
     if (state == mir_window_state_restored)
@@ -320,11 +325,6 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     }
 
     window_controller->modify(window_, mods);
-
-    if (state == mir_window_state_fullscreen)
-        window_controller->noclip(window_);
-    else
-        window_controller->clip(window_, visible_area);
 }
 
 void LeafContainer::handle_raise()
@@ -551,6 +551,7 @@ void LeafContainer::commit_changes()
     {
         window_controller->change_state(window_, next_state.value());
         next_state.reset();
+        constrain();
     }
 
     if (next_depth_layer)
@@ -576,8 +577,6 @@ void LeafContainer::commit_changes()
             next_with_animations = true;
         }
     }
-
-    constrain();
 }
 
 void LeafContainer::handle_request_move(MirInputEvent const* input_event)
