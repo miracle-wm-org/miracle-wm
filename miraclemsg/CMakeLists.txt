@@ -11,7 +11,7 @@ target_include_directories(miraclemsg PUBLIC SYSTEM
 
 target_link_libraries(miraclemsg
     ${JSONC_LDFLAGS})
-                                   
+
 install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/miraclemsg
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
