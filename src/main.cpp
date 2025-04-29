@@ -19,13 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
+#include "output_listener.h"
 #include "policy.h"
 #include "renderer.h"
 #include "version.h"
+#include "wlr-output-management-unstable-v1_wrapper.h"
+#include "wlr-ouput-management-unstable-v1.h"
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
-#include <mir/server.h>
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
 #include <miral/display_configuration_option.h>
@@ -76,6 +78,7 @@ int main(int argc, char const* argv[])
     PRINT_OPENING_MESSAGE(MIRACLE_VERSION_STRING);
     MirRunner runner { argc, argv };
     auto compositor_state = std::make_shared<miracle::CompositorState>();
+    auto output_listener = std::make_shared<miracle::OutputListenerMultiplexer>();
 
     ExternalClientLauncher external_client_launcher;
     auto config = std::make_shared<miracle::FilesystemConfiguration>(runner);
@@ -97,6 +100,14 @@ int main(int argc, char const* argv[])
 
     for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);
+
+    wayland_extensions.add_extension({ .name = mir::wayland::OutputManagerV1::interface_name,
+        .build = [output_listener=output_listener](miral::WaylandExtensions::Context const* context)
+    {
+        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context->display());
+        output_listener->register_listener(extension);
+        return extension;
+    } });
 
     return runner.run_with(
         { PolicyLoader(runner, external_client_launcher, config, compositor_state),

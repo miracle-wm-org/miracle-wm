@@ -122,6 +122,8 @@ add_library(miracle-wm-implementation
     src/dying_surface_manager.cpp src/dying_surface_manager.h
     src/shader_2d.cpp src/shader_2d.h
     src/wlr-output-management-unstable-v1_wrapper.cpp src/wlr-output-management-unstable-v1_wrapper.h
+    src/wlr-ouput-management-unstable-v1.cpp src/wlr-ouput-management-unstable-v1.h
+    src/output_listener.cpp src/output_listener.h
 )
 
 add_executable(miracle-wm
