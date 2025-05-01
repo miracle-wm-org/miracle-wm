@@ -15,21 +15,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_WLR_OUPUT_MANAGEMENT_UNSTABLE_V1_H
 #define MIRACLE_WM_WLR_OUPUT_MANAGEMENT_UNSTABLE_V1_H
 
-#include "wlr-output-management-unstable-v1_wrapper.h"
 #include "output_listener.h"
+#include "wlr-output-management-unstable-v1_wrapper.h"
 
-#include <miral/output.h>
 #include <memory>
+#include <miral/output.h>
 
 namespace miracle
 {
 class WlrOutputManagerV1;
-class CompositorState;
+class DisplayConfig;
 
 class WlrOutputManagementUnstableV1 : public mir::wayland::OutputManagerV1::Global, public OutputListener
 {
 public:
-    WlrOutputManagementUnstableV1(wl_display*);
+    WlrOutputManagementUnstableV1(wl_display*, std::shared_ptr<DisplayConfig> const& config);
     void output_created(miral::Output const& output) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
     void output_deleted(miral::Output const& output) override;
@@ -38,6 +38,8 @@ private:
     void bind(wl_resource* new_zwlr_output_manager_v1) override;
 
     std::vector<WlrOutputManagerV1*> active_managers;
+    std::shared_ptr<DisplayConfig> config;
+    std::vector<miral::Output> outputs;
 };
 
 }

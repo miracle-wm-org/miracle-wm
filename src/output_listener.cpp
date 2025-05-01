@@ -34,12 +34,12 @@ void OutputListenerMultiplexer::output_deleted(miral::Output const& output)
         listener->output_deleted(output);
 }
 
-void OutputListenerMultiplexer::register_listener(OutputListener* listener)
+void OutputListenerMultiplexer::register_listener(std::shared_ptr<OutputListener> const& listener)
 {
     listeners.push_back(listener);
 }
 
-void OutputListenerMultiplexer::unregister_listener(OutputListener* listener)
+void OutputListenerMultiplexer::unregister_listener(std::shared_ptr<OutputListener> const& listener)
 {
-    listeners.push_back(listener);
+    std::erase(listeners, listener);
 }

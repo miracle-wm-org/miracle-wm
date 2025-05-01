@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_group_container.h"
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
-#include "forwarding_surface.h"
 #include "output_factory.h"
+#include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "workspace_manager.h"
@@ -107,10 +107,12 @@ Policy::Policy(
     miral::MirRunner& runner,
     miral::ExternalClientLauncher& external_client_launcher,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<CompositorState> const& state) :
+    std::shared_ptr<CompositorState> const& state,
+    std::shared_ptr<OutputListenerMultiplexer> const& output_listener) :
     tools { tools },
     config { config },
     state { state },
+    output_listener { output_listener },
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
@@ -559,18 +561,21 @@ void Policy::advise_output_create(miral::Output const& output)
 {
     std::lock_guard lock(self->mutex);
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
+    output_listener->output_created(output);
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
     std::lock_guard lock(self->mutex);
     output_manager->update(updated.id(), updated.extents());
+    output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
     std::lock_guard lock(self->mutex);
     output_manager->remove(output.id(), *workspace_manager);
+    output_listener->output_deleted(output);
 }
 
 void Policy::handle_modify_window(

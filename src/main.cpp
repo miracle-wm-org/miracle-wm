@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
-#include "output_listener.h"
 #include "display_config.h"
+#include "output_listener.h"
 #include "policy.h"
 #include "renderer.h"
 #include "version.h"
-#include "wlr-output-management-unstable-v1_wrapper.h"
 #include "wlr-ouput-management-unstable-v1.h"
+#include "wlr-output-management-unstable-v1_wrapper.h"
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
@@ -48,11 +48,13 @@ public:
     PolicyLoader(MirRunner& runner,
         ExternalClientLauncher& launcher,
         std::shared_ptr<miracle::Config> const& config,
-        std::shared_ptr<miracle::CompositorState> const& compositor_state) :
+        std::shared_ptr<miracle::CompositorState> const& compositor_state,
+        std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener) :
         runner(runner),
         launcher(launcher),
         config(config),
-        compositor_state(compositor_state)
+        compositor_state(compositor_state),
+        output_listener(output_listener)
     {
     }
 
@@ -60,7 +62,7 @@ public:
     {
         config->load(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, runner, launcher, config, compositor_state);
+            "tiling", server, runner, launcher, config, compositor_state, output_listener);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -71,6 +73,7 @@ private:
     std::shared_ptr<miracle::Config> config;
     std::shared_ptr<miracle::CompositorState> compositor_state;
     std::shared_ptr<WindowManagerOptions> options;
+    std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
 };
 
 int main(int argc, char const* argv[])
@@ -79,6 +82,7 @@ int main(int argc, char const* argv[])
     MirRunner runner { argc, argv };
     auto compositor_state = std::make_shared<miracle::CompositorState>();
     auto output_listener = std::make_shared<miracle::OutputListenerMultiplexer>();
+    auto display_config = std::make_shared<miracle::DisplayConfig>();
 
     ExternalClientLauncher external_client_launcher;
     auto config = std::make_shared<miracle::FilesystemConfiguration>(runner);
@@ -102,20 +106,20 @@ int main(int argc, char const* argv[])
         wayland_extensions.enable(extension);
 
     wayland_extensions.add_extension({ .name = mir::wayland::OutputManagerV1::interface_name,
-        .build = [output_listener=output_listener](miral::WaylandExtensions::Context const* context)
+        .build = [output_listener = output_listener, display_config = display_config](WaylandExtensions::Context const* context)
     {
-        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context->display());
+        auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context->display(), display_config);
         output_listener->register_listener(extension);
         return extension;
     } });
 
     return runner.run_with(
-        { PolicyLoader(runner, external_client_launcher, config, compositor_state),
+        { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
-            miracle::DisplayConfig(),
+            *display_config,
             AppendEventFilter([&config](MirEvent const*)
     {
         config->try_process_change();
