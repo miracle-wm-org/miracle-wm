@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "output_listener.h"
+#include "display_config.h"
 #include "policy.h"
 #include "renderer.h"
 #include "version.h"
@@ -30,7 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
-#include <miral/display_configuration_option.h>
 #include <miral/external_client.h>
 #include <miral/keymap.h>
 #include <miral/runner.h>
@@ -115,7 +115,7 @@ int main(int argc, char const* argv[])
             X11Support {}.default_to_enabled(),
             config_keymap,
             external_client_launcher,
-            display_configuration_options,
+            miracle::DisplayConfig(),
             AppendEventFilter([&config](MirEvent const*)
     {
         config->try_process_change();

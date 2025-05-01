@@ -982,3 +982,11 @@ std::string miracle::get_config_path()
     config_path_stream << "/miracle-wm/config.yaml";
     return config_path_stream.str();
 }
+
+std::string miracle::get_display_config_path()
+{
+    std::stringstream config_path_stream;
+    config_path_stream << g_get_user_config_dir();
+    config_path_stream << "/miracle-wm/display.yaml";
+    return config_path_stream.str();
+}
