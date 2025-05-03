@@ -118,8 +118,8 @@ int main(int argc, char const* argv[])
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             config_keymap,
-            external_client_launcher,
             *display_config,
+            external_client_launcher,
             AppendEventFilter([&config](MirEvent const*)
     {
         config->try_process_change();

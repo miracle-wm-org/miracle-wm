@@ -22,15 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/miracle-wm-config.h"
 #include "output.h"
 
+#include <filesystem>
+#include <fstream>
 #include <mir/graphics/display_configuration_policy.h>
 #include <mir/log.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
-#include <yaml-cpp/yaml.h>
-#include <filesystem>
-#include <fstream>
 #include <mutex>
+#include <yaml-cpp/yaml.h>
 
 namespace mg = mir::graphics;
 namespace geom = mir::geometry;
@@ -167,6 +167,7 @@ public:
     explicit Self(std::string const& path) :
         path(path)
     {
+        reload();
     }
 
     void apply_to(mg::DisplayConfiguration& conf) override
@@ -457,9 +458,9 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
 
     server.add_init_callback([self = self, &server]
     {
+        self->display_configuration_controller = server.the_display_configuration_controller();
         auto const server_opts = server.get_options();
         self->path = server_opts->get<std::string>(config_file_name_option);
-        self->display_configuration_controller = server.the_display_configuration_controller();
         self->reload();
     });
 }

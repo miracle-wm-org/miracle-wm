@@ -60,6 +60,9 @@ public:
 
     void send_inital()
     {
+        if (is_defunct)
+            return;
+
         send_size_event(size.width.as_int(), size.height.as_int());
         send_refresh_event(static_cast<int32_t>(hz_to_mhz(refresh)));
         if (preferred)
@@ -68,12 +71,21 @@ public:
 
     ~WlrOutputModeV1() override
     {
+        if (is_defunct)
+            return;
+
         send_finished_event();
+    }
+
+    void release() override
+    {
+        is_defunct = true;
     }
 
     geom::Size const size;
     double const refresh;
     bool const preferred;
+    bool is_defunct = false;
 };
 
 /// This object gets broadcasted by the [WlrOutputManagerV1] for each active output.
@@ -87,8 +99,6 @@ public:
     ~WlrOutputHeadV1() override;
     void send_initial();
     void update(miral::Output const& updated, mg::DisplayConfigurationOutput const& updated_config);
-    void enable();
-    void disable();
     std::string name() const;
 
     miral::Output output;
@@ -98,7 +108,6 @@ public:
 private:
     void release() override;
     bool is_defunct = false;
-    bool is_enabled = false;
 };
 
 class WlrOutputManagerV1 : public mir::wayland::OutputManagerV1
@@ -108,12 +117,13 @@ public:
         std::shared_ptr<DisplayConfig> const& config,
         std::vector<miral::Output> const& outputs);
     ~WlrOutputManagerV1() override;
-    WlrOutputHeadV1 const* head(wl_resource* resource) const;
+    WlrOutputHeadV1 const* head(wl_resource* resource);
     void advise_output_create(miral::Output const& output);
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);
 
     std::shared_ptr<DisplayConfig> const config;
+    std::mutex mutex;
 
 private:
     void create_output_internal(miral::Output const& output);
@@ -210,6 +220,7 @@ void WlrOutputConfigurationV1::apply()
                                          DisplayConfig::OutputConfig& card)
     {
         card.name = head_config->head->output.name();
+        card.enabled = true;
         if (head_config->position)
             card.position = *head_config->position;
         if (head_config->transform)
@@ -261,6 +272,8 @@ void WlrOutputConfigurationV1::apply()
         }
     };
 
+    /// First, we iterate over all of the heads that we have. We either update the existing head,
+    /// or we add a new head if the head wasn't previously configured.
     auto const existing_configs = manager->config->get_configs();
     for (auto const& wlr_output_config_head : heads)
     {
@@ -285,6 +298,29 @@ void WlrOutputConfigurationV1::apply()
         }
     }
 
+    /// Next, iterate over the existing configurations. If a head doesn't exist for the existing config,
+    /// this means that the user disabled it. In that case, mark it as disabled and push it to the new list.
+    for (auto const& output_config : existing_configs)
+    {
+        bool found = false;
+        for (auto const& wlr_output_config_head : heads)
+        {
+            if (output_config.name == wlr_output_config_head->head->name())
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            auto new_output_config = output_config;
+            new_output_config.enabled = false;
+            new_outputs.push_back(new_output_config);
+        }
+    }
+
+    /// Finally, we update all of the configs, write the config, and reload.
     for (auto const& output : new_outputs)
         manager->config->update(output);
     manager->config->write();
@@ -336,8 +372,9 @@ WlrOutputManagerV1::~WlrOutputManagerV1()
     send_finished_event();
 }
 
-WlrOutputHeadV1 const* WlrOutputManagerV1::head(wl_resource* resource) const
+WlrOutputHeadV1 const* WlrOutputManagerV1::head(wl_resource* resource)
 {
+    std::lock_guard lock(mutex);
     for (auto const& head : heads)
     {
         if (head->resource == resource)
@@ -370,12 +407,15 @@ void WlrOutputManagerV1::create_output_internal(miral::Output const& output)
 
 void WlrOutputManagerV1::advise_output_create(miral::Output const& output)
 {
+    std::lock_guard lock(mutex);
     create_output_internal(output);
+    send_done_event(serial++);
     heads.back()->send_initial();
 }
 
 void WlrOutputManagerV1::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
+    std::lock_guard lock(mutex);
     for (auto const& head : heads)
     {
         if (head->output.id() == original.id())
@@ -397,6 +437,7 @@ void WlrOutputManagerV1::advise_output_update(miral::Output const& updated, mira
 
 void WlrOutputManagerV1::advise_output_delete(miral::Output const& output)
 {
+    std::lock_guard lock(mutex);
     auto const it = std::find_if(heads.begin(), heads.end(), [&](auto const& head)
     {
         return head->output.id() == output.id();
@@ -495,16 +536,6 @@ void WlrOutputHeadV1::update(miral::Output const& updated, mg::DisplayConfigurat
     config = updated_config;
 }
 
-void WlrOutputHeadV1::enable()
-{
-    is_enabled = true;
-}
-
-void WlrOutputHeadV1::disable()
-{
-    is_enabled = false;
-}
-
 std::string WlrOutputHeadV1::name() const
 {
     return output.name();
@@ -512,6 +543,9 @@ std::string WlrOutputHeadV1::name() const
 
 void WlrOutputHeadV1::release()
 {
+    // This indicates that the client will no longer use this head. We do
+    // not remove the head in order to avoid re-adding it later. Instead,
+    // we mark it as defunct and disrespect any further changes to it.
     is_defunct = true;
 }
 
