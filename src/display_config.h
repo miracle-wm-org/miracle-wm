@@ -46,10 +46,10 @@ public:
 
     DisplayConfig();
     explicit DisplayConfig(std::string const& path);
-    void reload() const;
-    void write() const;
+    void reload();
+    void write();
     void update(OutputConfig const& card);
-    std::vector<OutputConfig> const& get_configs() const;
+    std::vector<OutputConfig> get_configs();
     [[nodiscard]] std::optional<mir::graphics::DisplayConfiguration const*> configuration() const;
     void operator()(mir::Server& server);
 

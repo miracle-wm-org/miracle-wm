@@ -22,14 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/miracle-wm-config.h"
 #include "output.h"
 
-#include <filesystem>
-#include <fstream>
 #include <mir/graphics/display_configuration_policy.h>
 #include <mir/log.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
 #include <yaml-cpp/yaml.h>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
 
 namespace mg = mir::graphics;
 namespace geom = mir::geometry;
@@ -279,6 +280,7 @@ public:
                 }
             }
 
+            std::lock_guard lock(mutex);
             mir::log_info("Loading display configuration from %s", path.c_str());
             YAML::Node const node = YAML::LoadFile(path);
             if (node["outputs"])
@@ -305,8 +307,9 @@ public:
         }
     }
 
-    void write() const
+    void write()
     {
+        std::lock_guard lock(mutex);
         YAML::Node node;
         for (const auto& config : configs)
             node.push_back(config);
@@ -319,6 +322,7 @@ public:
 
     void update(OutputConfig const& config)
     {
+        std::lock_guard lock(mutex);
         auto const output_it = std::ranges::find_if(configs, [&](OutputConfig const& o)
         {
             return o.name == config.name;
@@ -330,8 +334,9 @@ public:
             configs.push_back(config);
     }
 
-    std::vector<OutputConfig> const& get_configs() const
+    std::vector<OutputConfig> get_configs()
     {
+        std::lock_guard lock(mutex);
         return configs;
     }
 
@@ -344,6 +349,7 @@ public:
     }
 
     std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
+    std::mutex mutex;
     std::string path;
 
 private:
@@ -411,12 +417,12 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 {
 }
 
-void miracle::DisplayConfig::reload() const
+void miracle::DisplayConfig::reload()
 {
     self->reload();
 }
 
-void miracle::DisplayConfig::write() const
+void miracle::DisplayConfig::write()
 {
     self->write();
 }
@@ -426,7 +432,7 @@ void miracle::DisplayConfig::update(OutputConfig const& config)
     self->update(config);
 }
 
-std::vector<miracle::DisplayConfig::OutputConfig> const& miracle::DisplayConfig::get_configs() const
+std::vector<miracle::DisplayConfig::OutputConfig> miracle::DisplayConfig::get_configs()
 {
     return self->get_configs();
 }

@@ -253,6 +253,12 @@ void WlrOutputConfigurationV1::apply()
                 }
             }
         }
+
+        if (head_config->custom_mode)
+        {
+            card.size = head_config->custom_mode->size;
+            card.refresh = head_config->custom_mode->refresh;
+        }
     };
 
     auto const existing_configs = manager->config->get_configs();
