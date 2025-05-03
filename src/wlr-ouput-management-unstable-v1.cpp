@@ -27,6 +27,19 @@ using namespace miracle;
 namespace mg = mir::graphics;
 namespace geom = mir::geometry;
 
+namespace
+{
+double hz_to_mhz(double hz)
+{
+    return hz * 1000.0;
+}
+
+double mhz_to_hz(double mhz)
+{
+    return mhz / 1000.0;
+}
+}
+
 namespace miracle
 {
 /// This object represents an output mode that will be broadcasted by the [WlrOutputHeadV1].
@@ -48,7 +61,7 @@ public:
     void send_inital()
     {
         send_size_event(size.width.as_int(), size.height.as_int());
-        send_refresh_event(static_cast<int32_t>(refresh));
+        send_refresh_event(static_cast<int32_t>(hz_to_mhz(refresh)));
         if (preferred)
             send_preferred_event();
     }
@@ -58,10 +71,9 @@ public:
         send_finished_event();
     }
 
-private:
-    geom::Size size;
-    double refresh;
-    bool preferred;
+    geom::Size const size;
+    double const refresh;
+    bool const preferred;
 };
 
 /// This object gets broadcasted by the [WlrOutputManagerV1] for each active output.
@@ -75,6 +87,9 @@ public:
     ~WlrOutputHeadV1() override;
     void send_initial();
     void update(miral::Output const& updated, mg::DisplayConfigurationOutput const& updated_config);
+    void enable();
+    void disable();
+    std::string name() const;
 
     miral::Output output;
     mg::DisplayConfigurationOutput config;
@@ -83,6 +98,7 @@ public:
 private:
     void release() override;
     bool is_defunct = false;
+    bool is_enabled = false;
 };
 
 class WlrOutputManagerV1 : public mir::wayland::OutputManagerV1
@@ -97,14 +113,40 @@ public:
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);
 
+    std::shared_ptr<DisplayConfig> const config;
+
 private:
     void create_output_internal(miral::Output const& output);
     void create_configuration(struct wl_resource* id, uint32_t serial) override;
     void stop() override;
 
     std::vector<std::shared_ptr<WlrOutputHeadV1>> heads;
-    std::shared_ptr<DisplayConfig> config;
     uint32_t serial = 0;
+};
+
+class WlrOutputConfigurationHeadV1 : public mir::wayland::OutputConfigurationHeadV1
+{
+public:
+    WlrOutputConfigurationHeadV1(struct wl_resource* id, WlrOutputHeadV1 const*);
+    void set_mode(struct wl_resource* mode) override;
+    void set_custom_mode(int32_t width, int32_t height, int32_t refresh) override;
+    void set_position(int32_t x, int32_t y) override;
+    void set_transform(int32_t transform) override;
+    void set_scale(double scale) override;
+    void set_adaptive_sync(uint32_t state) override;
+
+    struct CustomMode
+    {
+        geom::Size size;
+        double refresh;
+    };
+
+    WlrOutputHeadV1 const* head;
+    std::optional<struct wl_resource*> mode;
+    std::optional<CustomMode> custom_mode;
+    std::optional<geom::Point> position;
+    std::optional<int32_t> transform;
+    std::optional<double> scale;
 };
 
 class WlrOutputConfigurationV1 : public mir::wayland::OutputConfigurationV1
@@ -120,21 +162,10 @@ private:
     void destroy() override;
 
     WlrOutputManagerV1* manager;
-};
-
-class WlrOutputConfigurationHeadV1 : public mir::wayland::OutputConfigurationHeadV1
-{
-public:
-    WlrOutputConfigurationHeadV1(struct wl_resource* id, WlrOutputHeadV1 const*);
-    void set_mode(struct wl_resource* mode) override;
-    void set_custom_mode(int32_t width, int32_t height, int32_t refresh) override;
-    void set_position(int32_t x, int32_t y) override;
-    void set_transform(int32_t transform) override;
-    void set_scale(double scale) override;
-    void set_adaptive_sync(uint32_t state) override;
+    std::vector<std::shared_ptr<WlrOutputConfigurationHeadV1>> heads;
 
 private:
-    WlrOutputHeadV1 const* head;
+    void discard_changes();
 };
 
 WlrOutputConfigurationV1::WlrOutputConfigurationV1(wl_resource* resource, WlrOutputManagerV1* manager) :
@@ -152,15 +183,107 @@ void WlrOutputConfigurationV1::enable_head(struct wl_resource* id, struct wl_res
         return;
     }
 
-    new WlrOutputConfigurationHeadV1(id, head_object);
+    heads.push_back(std::make_shared<WlrOutputConfigurationHeadV1>(id, head_object));
 }
 
 void WlrOutputConfigurationV1::disable_head(struct wl_resource* head)
 {
+    auto const it = std::find_if(this->heads.begin(), this->heads.end(), [&](std::shared_ptr<WlrOutputConfigurationHeadV1> const& other)
+    {
+        return other->head->resource == head;
+    });
+    if (it != heads.end())
+    {
+        heads.erase(it);
+    }
+    else
+    {
+        mir::log_error("Unable to disable_head because it cannot be found");
+    }
 }
 
 void WlrOutputConfigurationV1::apply()
 {
+    std::vector<DisplayConfig::OutputConfig> new_outputs;
+    auto constexpr apply_to_config = [&](
+                                         std::shared_ptr<WlrOutputConfigurationHeadV1> const& head_config,
+                                         DisplayConfig::OutputConfig& card)
+    {
+        card.name = head_config->head->output.name();
+        if (head_config->position)
+            card.position = *head_config->position;
+        if (head_config->transform)
+        {
+            switch (*head_config->transform)
+            {
+            case 0:
+                card.orientation = mir_orientation_normal;
+                break;
+            case 1:
+                card.orientation = mir_orientation_left;
+                break;
+            case 2:
+                card.orientation = mir_orientation_inverted;
+                break;
+            case 3:
+                card.orientation = mir_orientation_right;
+                break;
+            case 4:
+                card.orientation = mir_orientation_inverted;
+                break;
+            default:
+                mir::log_warning("Flipped orientations are not supported");
+                break;
+            }
+        }
+
+        if (head_config->scale)
+            card.scale = *head_config->scale;
+        if (head_config->mode)
+        {
+            auto const& modes = head_config->head->modes;
+            auto const& mode_resource = *head_config->mode;
+            for (auto const& mode : modes)
+            {
+                if (mode->resource == mode_resource)
+                {
+                    card.size = mode->size;
+                    card.refresh = mode->refresh;
+                    break;
+                }
+            }
+        }
+    };
+
+    auto const existing_configs = manager->config->get_configs();
+    for (auto const& wlr_output_config_head : heads)
+    {
+        bool is_new = true;
+        for (auto const& output_config : existing_configs)
+        {
+            if (output_config.name == wlr_output_config_head->head->name())
+            {
+                auto new_output_config = output_config;
+                apply_to_config(wlr_output_config_head, new_output_config);
+                new_outputs.push_back(new_output_config);
+                is_new = false;
+                break;
+            }
+        }
+
+        if (is_new)
+        {
+            DisplayConfig::OutputConfig new_output_config;
+            apply_to_config(wlr_output_config_head, new_output_config);
+            new_outputs.push_back(new_output_config);
+        }
+    }
+
+    for (auto const& output : new_outputs)
+        manager->config->update(output);
+    manager->config->write();
+    manager->config->reload();
+    send_succeeded_event();
 }
 
 void WlrOutputConfigurationV1::test()
@@ -169,6 +292,19 @@ void WlrOutputConfigurationV1::test()
 
 void WlrOutputConfigurationV1::destroy()
 {
+    discard_changes();
+}
+
+void WlrOutputConfigurationV1::discard_changes()
+{
+    for (auto const& head : heads)
+    {
+        head->mode.reset();
+        head->custom_mode.reset();
+        head->position.reset();
+        head->transform.reset();
+        head->scale.reset();
+    }
 }
 
 WlrOutputManagerV1::WlrOutputManagerV1(
@@ -353,6 +489,21 @@ void WlrOutputHeadV1::update(miral::Output const& updated, mg::DisplayConfigurat
     config = updated_config;
 }
 
+void WlrOutputHeadV1::enable()
+{
+    is_enabled = true;
+}
+
+void WlrOutputHeadV1::disable()
+{
+    is_enabled = false;
+}
+
+std::string WlrOutputHeadV1::name() const
+{
+    return output.name();
+}
+
 void WlrOutputHeadV1::release()
 {
     is_defunct = true;
@@ -402,31 +553,40 @@ void WlrOutputManagementUnstableV1::output_deleted(miral::Output const& output)
 
 WlrOutputConfigurationHeadV1::WlrOutputConfigurationHeadV1(
     struct wl_resource* id, WlrOutputHeadV1 const* head) :
-    mir::wayland::OutputConfigurationHeadV1(id, Version<4>()),
+    OutputConfigurationHeadV1(id, Version<4>()),
     head { head }
 {
 }
 
-void WlrOutputConfigurationHeadV1::set_mode(struct wl_resource* mode)
+void WlrOutputConfigurationHeadV1::set_mode(struct wl_resource* in)
 {
+    mode = in;
 }
 
 void WlrOutputConfigurationHeadV1::set_custom_mode(int32_t width, int32_t height, int32_t refresh)
 {
+    custom_mode = {
+        geom::Size(width, height),
+        mhz_to_hz(refresh)
+    };
 }
 
 void WlrOutputConfigurationHeadV1::set_position(int32_t x, int32_t y)
 {
+    position = geom::Point(x, y);
 }
 
-void WlrOutputConfigurationHeadV1::set_transform(int32_t transform)
+void WlrOutputConfigurationHeadV1::set_transform(int32_t in)
 {
+    transform = in;
 }
 
-void WlrOutputConfigurationHeadV1::set_scale(double scale)
+void WlrOutputConfigurationHeadV1::set_scale(double in)
 {
+    scale = in;
 }
 
 void WlrOutputConfigurationHeadV1::set_adaptive_sync(uint32_t state)
 {
+    mir::log_warning("set_adaptive_sync is not implemented");
 }

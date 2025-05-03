@@ -32,7 +32,7 @@ namespace miracle
 class DisplayConfig
 {
 public:
-    struct Card
+    struct OutputConfig
     {
         bool enabled = false;
         std::string name;
@@ -40,20 +40,16 @@ public:
         std::optional<mir::geometry::Size> size;
         std::optional<double> refresh;
         MirOrientation orientation;
-        float scale = 1.f;
+        double scale = 1.f;
         mir::graphics::DisplayConfigurationLogicalGroupId group_id;
-    };
-
-    struct Layout
-    {
-        std::string name;
-        std::vector<Card> cards;
     };
 
     DisplayConfig();
     explicit DisplayConfig(std::string const& path);
     void reload() const;
     void write() const;
+    void update(OutputConfig const& card);
+    std::vector<OutputConfig> const& get_configs() const;
     [[nodiscard]] std::optional<mir::graphics::DisplayConfiguration const*> configuration() const;
     void operator()(mir::Server& server);
 
