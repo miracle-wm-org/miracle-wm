@@ -160,7 +160,7 @@ TEST_F(WorkspaceTest, CanAddThreeWindowsHorizontallyWithoutBorderAndGaps)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(ceilf(OUTPUT_WIDTH / 3.f), 0));
 
     ASSERT_EQ(leaf3->get_logical_area().size, geom::Size(floorf(OUTPUT_WIDTH / 3.f), OUTPUT_HEIGHT));
-    ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(floorf(OUTPUT_WIDTH * (2.f / 3.f)) - 1, 0));
+    ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(floorf(OUTPUT_WIDTH * (2.f / 3.f)) + 1, 0));
 }
 
 TEST_F(WorkspaceTest, CanStartDraggingALeaf)

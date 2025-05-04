@@ -22,68 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
-#include "output_manager.h"
+#include "tiling_algorithms.h"
 #include "workspace_interface.h"
 #include <cmath>
 #include <mir/log.h>
 
 using namespace miracle;
-
-namespace
-{
-struct InsertNodeInternalResult
-{
-    int size;
-    int position;
-};
-
-InsertNodeInternalResult insert_node_internal(
-    int lane_size,
-    int lane_pos,
-    int index,
-    size_t node_count,
-    std::function<int(int)> const& get_node_size,
-    std::function<void(int, int, int)> const& set_node_size_position)
-{
-    int new_item_size = floor((double)lane_size / (double)(node_count + 1));
-    int new_item_position = lane_pos + index * new_item_size;
-
-    int size_lost = 0;
-    int prev_pos = lane_pos;
-    int prev_size = 0;
-    for (int i = 0; i < node_count; i++)
-    {
-        int node_size = get_node_size(i);
-
-        // Each node will lose a percentage of its width that corresponds to what it can give
-        // (meaning that larger nodes give more width, and lesser nodes give less width)
-        double percent_size_lost = ((double)node_size / (double)lane_size);
-        int width_to_lose = (int)floor(percent_size_lost * new_item_size);
-        size_lost += width_to_lose;
-
-        if (i == index)
-        {
-            prev_size = new_item_size;
-            prev_pos = new_item_position;
-        }
-
-        int changed_node_size = node_size - width_to_lose;
-        int changed_node_pos = prev_pos + prev_size;
-        set_node_size_position(i, changed_node_size, changed_node_pos);
-
-        prev_pos = changed_node_pos;
-        prev_size = changed_node_size;
-    }
-
-    if (node_count)
-    {
-        new_item_size += size_lost - new_item_size;
-        new_item_position -= size_lost - new_item_size;
-    }
-
-    return { new_item_size, new_item_position };
-}
-}
 
 ParentContainer::ParentContainer(
     std::shared_ptr<CompositorState> const& state,
@@ -137,71 +81,89 @@ size_t ParentContainer::num_nodes() const
 
 geom::Rectangle ParentContainer::create_space(int pending_index)
 {
-    // TODO: When making space, we should ask the currently
-    //  selected window if it wants to be a lane. If it does, we
-    //  will grant its request and create a new lane.
-
-    auto placement_area = get_logical_area();
+    auto const placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
+    std::vector<TilePosition> positions;
+    positions.reserve(sub_nodes.size());
     if (scheme == LayoutScheme::horizontal)
     {
-        auto result = insert_node_internal(
+        for (auto const& node : sub_nodes)
+            positions.push_back(TilePosition {
+                static_cast<double>(node->get_logical_area().size.width.as_int()),
+                static_cast<double>(node->get_logical_area().top_left.x.as_int()) });
+
+        auto const result = insert_node(positions,
             placement_area.size.width.as_int(),
             placement_area.top_left.x.as_int(),
-            pending_index,
-            sub_nodes.size(),
-            [&](int index)
-        { return sub_nodes[index]->get_logical_area().size.width.as_int(); },
-            [&](int index, int size, int pos)
+            pending_index);
+
+        size_t cursor = 0;
+        for (size_t i = 0; i < result.positions.size(); i++)
         {
-            sub_nodes[index]->set_logical_area({
-                geom::Point {
-                             pos,
-                             placement_area.top_left.y.as_int()  },
-                geom::Size {
-                             size,
-                             placement_area.size.height.as_int() }
-            });
-        });
-        geom::Rectangle new_node_logical_rect = {
-            geom::Point {
-                         result.position,
-                         placement_area.top_left.y.as_int()  },
-            geom::Size {
-                         result.size,
-                         placement_area.size.height.as_int() }
-        };
-        pending_logical_rect = new_node_logical_rect;
+            auto const& pos = result.positions[i];
+            if (i == pending_index)
+            {
+                pending_logical_rect = {
+                    geom::Point {
+                                 pos.position,
+                                 placement_area.top_left.y.as_int()  },
+                    geom::Size {
+                                 pos.size,
+                                 placement_area.size.height.as_int() }
+                };
+            }
+            else
+            {
+                sub_nodes[cursor++]->set_logical_area({
+                    geom::Point {
+                                 pos.position,
+                                 placement_area.top_left.y.as_int()  },
+                    geom::Size {
+                                 pos.size,
+                                 placement_area.size.height.as_int() }
+                });
+            }
+        }
     }
     else if (scheme == LayoutScheme::vertical)
     {
-        auto result = insert_node_internal(
+        for (auto const& node : sub_nodes)
+            positions.push_back(TilePosition {
+                static_cast<double>(node->get_logical_area().size.height.as_int()),
+                static_cast<double>(node->get_logical_area().top_left.y.as_int()) });
+
+        auto const result = insert_node(positions,
             placement_area.size.height.as_int(),
             placement_area.top_left.y.as_int(),
-            pending_index,
-            sub_nodes.size(),
-            [&](int index)
-        { return sub_nodes[index]->get_logical_area().size.height.as_int(); },
-            [&](int index, int size, int pos)
+            pending_index);
+
+        size_t cursor = 0;
+        for (size_t i = 0; i < result.positions.size(); i++)
         {
-            sub_nodes[index]->set_logical_area({
-                geom::Point {
-                             placement_area.top_left.x.as_int(),
-                             pos  },
-                geom::Size {
-                             placement_area.size.width.as_int(),
-                             size }
-            });
-        });
-        geom::Rectangle new_node_logical_rect = {
-            geom::Point {
-                         placement_area.top_left.x.as_int(),
-                         result.position },
-            geom::Size {
-                         placement_area.size.width.as_int(),
-                         result.size     }
-        };
-        pending_logical_rect = new_node_logical_rect;
+            auto const& pos = result.positions[i];
+            if (i == pending_index)
+            {
+                pending_logical_rect = {
+                    geom::Point {
+                                 placement_area.top_left.x.as_int(),
+                                 pos.position },
+                    geom::Size {
+                                 placement_area.size.width.as_int(),
+                                 pos.size     }
+                };
+            }
+            else
+            {
+                sub_nodes[cursor++]->set_logical_area({
+                    geom::Point {
+                                 placement_area.top_left.x.as_int(),
+                                 pos.position },
+                    geom::Size {
+                                 placement_area.size.width.as_int(),
+                                 pos.size     }
+                });
+            }
+        }
     }
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
     {
@@ -218,7 +180,18 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
 miral::WindowSpecification ParentContainer::place_new_window(
     miral::WindowSpecification const& requested_specification)
 {
-    auto container = create_space_for_window();
+    int index = -1;
+    for (size_t i = 0; i < sub_nodes.size(); i++)
+    {
+        auto const& node = sub_nodes[i];
+        if (node == state->focused_container())
+        {
+            index = i + 1;
+            break;
+        }
+    }
+
+    auto container = create_space_for_window(index);
     auto rect = container->get_visible_area();
 
     miral::WindowSpecification new_spec = requested_specification;
@@ -566,7 +539,7 @@ void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_pare
 
 void ParentContainer::relayout()
 {
-    auto placement_area = get_logical_area();
+    auto const placement_area = get_logical_area();
     if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
@@ -575,8 +548,8 @@ void ParentContainer::relayout()
             total_width += node->get_logical_area().size.width.as_int();
         }
 
-        int diff_width = placement_area.size.width.as_value() - total_width;
-        int diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
+        int const diff_width = placement_area.size.width.as_value() - total_width;
+        int const diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
@@ -593,8 +566,8 @@ void ParentContainer::relayout()
             total_height += node->get_logical_area().size.height.as_int();
         }
 
-        int diff_width = placement_area.size.height.as_value() - total_height;
-        int diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
+        int const diff_width = placement_area.size.height.as_value() - total_height;
+        int const diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
         for (auto const& node : sub_nodes)
         {
             auto rectangle = node->get_logical_area();
