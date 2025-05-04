@@ -47,6 +47,7 @@ public:
     DisplayConfig();
     explicit DisplayConfig(std::string const& path);
     void reload();
+    void test(std::vector<OutputConfig> const& configs);
     void write();
     void update(OutputConfig const& card);
     std::vector<OutputConfig> get_configs();

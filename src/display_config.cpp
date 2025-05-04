@@ -172,87 +172,7 @@ public:
 
     void apply_to(mg::DisplayConfiguration& conf) override
     {
-        conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
-        {
-            if (!output.connected || output.modes.empty())
-            {
-                output.used = false;
-                output.power_mode = mir_power_mode_off;
-                return;
-            }
-
-            auto const config_it = std::ranges::find_if(configs, [&](OutputConfig const& card)
-            {
-                return card.name == output.name;
-            });
-
-            if (config_it == configs.end())
-            {
-                output.used = false;
-                output.power_mode = mir_power_mode_off;
-                mir::log_info("Unused output with name and ID: %s, %d", output.name.c_str(), output.card_id.as_value());
-                return;
-            }
-
-            auto const& card = *config_it;
-            output.used = true;
-            output.power_mode = mir_power_mode_on;
-            output.orientation = mir_orientation_normal;
-
-            if (card.position)
-                output.top_left = card.position.value();
-            else
-                output.top_left = geom::Point(0, 0);
-
-            auto const& modes = output.modes;
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
-            output.current_mode_index = preferred_mode_index;
-
-            if (card.size)
-            {
-                bool matched_mode = false;
-
-                for (size_t i = 0; i < modes.size(); i++)
-                {
-                    const auto& [size, vrefresh_hz] = modes[i];
-                    if (size != card.size.value())
-                        continue;
-
-                    if (card.refresh.has_value())
-                    {
-                        if (std::abs(card.refresh.value() - vrefresh_hz) < 1.0)
-                        {
-                            output.current_mode_index = i;
-                            matched_mode = true;
-                        }
-                    }
-                    else if (output.modes[output.current_mode_index].size != card.size.value()
-                        || output.modes[output.current_mode_index].vrefresh_hz < card.refresh)
-                    {
-                        output.current_mode_index = i;
-                        matched_mode = true;
-                    }
-                }
-
-                if (!matched_mode)
-                {
-                    if (card.refresh.has_value())
-                    {
-                        mir::log_warning("Display config contains unmatched mode: '%dx%d@%2.1f'",
-                            card.size.value().width.as_int(), card.size.value().height.as_int(), card.refresh.value());
-                    }
-                    else
-                    {
-                        mir::log_warning("Display config contains unmatched mode: '%dx%d'",
-                            card.size.value().width.as_int(), card.size.value().height.as_int());
-                    }
-                }
-            }
-
-            output.scale = card.scale;
-            output.orientation = card.orientation;
-            output.logical_group_id = card.group_id;
-        });
+        apply_internal(conf, configs);
     }
 
     void confirm(mg::DisplayConfiguration const& conf) override
@@ -293,9 +213,11 @@ public:
 
             if (auto const dcc = display_configuration_controller.lock())
             {
+                mir::log_info("Applying display configuration");
                 auto const config = dcc->base_configuration();
                 apply_to(*config);
                 dcc->set_base_configuration(config);
+                mir::log_info("Display configuration applied");
             }
         }
         catch (const std::exception& e)
@@ -305,6 +227,18 @@ public:
         catch (...)
         {
             mir::log_error("Unknown exception during DisplayConfig reload");
+        }
+    }
+
+    void test(std::vector<OutputConfig> const& configs)
+    {
+        if (auto const dcc = display_configuration_controller.lock())
+        {
+            mir::log_info("Testing display configuration");
+            auto const config = dcc->base_configuration();
+            apply_internal(*config, configs);
+            dcc->set_base_configuration(config);
+            mir::log_info("Display configuration test applied");
         }
     }
 
@@ -406,6 +340,91 @@ private:
 
         return result;
     }
+
+    static void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs)
+    {
+        conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
+        {
+            if (!output.connected || output.modes.empty())
+            {
+                output.used = false;
+                output.power_mode = mir_power_mode_off;
+                return;
+            }
+
+            auto const config_it = std::ranges::find_if(configs, [&](OutputConfig const& card)
+            {
+                return card.name == output.name;
+            });
+
+            if (config_it == configs.end())
+            {
+                output.used = false;
+                output.power_mode = mir_power_mode_off;
+                mir::log_info("Unused output with name and ID: %s, %d", output.name.c_str(), output.card_id.as_value());
+                return;
+            }
+
+            auto const& card = *config_it;
+            output.used = true;
+            output.power_mode = mir_power_mode_on;
+            output.orientation = mir_orientation_normal;
+
+            if (card.position)
+                output.top_left = card.position.value();
+            else
+                output.top_left = geom::Point(0, 0);
+
+            auto const& modes = output.modes;
+            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
+            output.current_mode_index = preferred_mode_index;
+
+            if (card.size)
+            {
+                bool matched_mode = false;
+
+                for (size_t i = 0; i < modes.size(); i++)
+                {
+                    const auto& [size, vrefresh_hz] = modes[i];
+                    if (size != card.size.value())
+                        continue;
+
+                    if (card.refresh.has_value())
+                    {
+                        if (std::abs(card.refresh.value() - vrefresh_hz) < 1.0)
+                        {
+                            output.current_mode_index = i;
+                            matched_mode = true;
+                        }
+                    }
+                    else if (output.modes[output.current_mode_index].size != card.size.value()
+                        || output.modes[output.current_mode_index].vrefresh_hz < card.refresh)
+                    {
+                        output.current_mode_index = i;
+                        matched_mode = true;
+                    }
+                }
+
+                if (!matched_mode)
+                {
+                    if (card.refresh.has_value())
+                    {
+                        mir::log_warning("Display config contains unmatched mode: '%dx%d@%2.1f'",
+                            card.size.value().width.as_int(), card.size.value().height.as_int(), card.refresh.value());
+                    }
+                    else
+                    {
+                        mir::log_warning("Display config contains unmatched mode: '%dx%d'",
+                            card.size.value().width.as_int(), card.size.value().height.as_int());
+                    }
+                }
+            }
+
+            output.scale = card.scale;
+            output.orientation = card.orientation;
+            output.logical_group_id = card.group_id;
+        });
+    }
 };
 
 miracle::DisplayConfig::DisplayConfig() :
@@ -421,6 +440,11 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 void miracle::DisplayConfig::reload()
 {
     self->reload();
+}
+
+void miracle::DisplayConfig::test(std::vector<OutputConfig> const& configs)
+{
+    self->test(configs);
 }
 
 void miracle::DisplayConfig::write()

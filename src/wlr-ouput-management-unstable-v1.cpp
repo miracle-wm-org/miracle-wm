@@ -176,6 +176,7 @@ private:
 
 private:
     void discard_changes();
+    std::vector<DisplayConfig::OutputConfig> create_configs() const;
 };
 
 WlrOutputConfigurationV1::WlrOutputConfigurationV1(wl_resource* resource, WlrOutputManagerV1* manager) :
@@ -213,6 +214,17 @@ void WlrOutputConfigurationV1::disable_head(struct wl_resource* head)
 }
 
 void WlrOutputConfigurationV1::apply()
+{
+
+    /// Finally, we update all of the configs, write the config, and reload.
+    for (auto const& output : create_configs())
+        manager->config->update(output);
+    manager->config->write();
+    manager->config->reload();
+    send_succeeded_event();
+}
+
+std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_configs() const
 {
     std::vector<DisplayConfig::OutputConfig> new_outputs;
     auto constexpr apply_to_config = [&](
@@ -320,16 +332,12 @@ void WlrOutputConfigurationV1::apply()
         }
     }
 
-    /// Finally, we update all of the configs, write the config, and reload.
-    for (auto const& output : new_outputs)
-        manager->config->update(output);
-    manager->config->write();
-    manager->config->reload();
-    send_succeeded_event();
+    return new_outputs;
 }
 
 void WlrOutputConfigurationV1::test()
 {
+    manager->config->test(create_configs());
 }
 
 void WlrOutputConfigurationV1::destroy()
