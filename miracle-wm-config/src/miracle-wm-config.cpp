@@ -678,37 +678,67 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
 {
     ParsingContext context;
 
-    YAML::Node config = YAML::LoadFile(path);
-    if (config["action_key"])
-        read_action_key(config["action_key"], context);
-    if (config["default_action_overrides"])
-        read_default_action_overrides(config["default_action_overrides"], context);
-    if (config["custom_actions"])
-        read_custom_actions(config["custom_actions"], context);
-    if (config["inner_gaps"])
-        read_inner_gaps(config["inner_gaps"], context);
-    if (config["outer_gaps"])
-        read_outer_gaps(config["outer_gaps"], context);
-    if (config["startup_apps"])
-        read_startup_apps(config["startup_apps"], context);
-    if (config["terminal"])
-        read_terminal(config["terminal"], context);
-    if (config["resize_jump"])
-        read_resize_jump(config["resize_jump"], context);
-    if (config["environment_variables"])
-        read_environment_variables(config["environment_variables"], context);
-    if (config["border"])
-        read_border(config["border"], context);
-    if (config["workspaces"])
-        read_workspaces(config["workspaces"], context);
-    if (config["animations"])
-        read_animation_definitions(config["animations"], context);
-    if (config["enable_animations"])
-        read_enable_animations(config["enable_animations"], context);
-    if (config["move_modifier"])
-        read_move_modifier(config["move_modifier"], context);
-    if (config["drag_and_drop"])
-        read_drag_and_drop(config["drag_and_drop"], context);
+    try
+    {
+        YAML::Node config = YAML::LoadFile(path);
+        if (config["action_key"])
+            read_action_key(config["action_key"], context);
+        if (config["default_action_overrides"])
+            read_default_action_overrides(config["default_action_overrides"], context);
+        if (config["custom_actions"])
+            read_custom_actions(config["custom_actions"], context);
+        if (config["inner_gaps"])
+            read_inner_gaps(config["inner_gaps"], context);
+        if (config["outer_gaps"])
+            read_outer_gaps(config["outer_gaps"], context);
+        if (config["startup_apps"])
+            read_startup_apps(config["startup_apps"], context);
+        if (config["terminal"])
+            read_terminal(config["terminal"], context);
+        if (config["resize_jump"])
+            read_resize_jump(config["resize_jump"], context);
+        if (config["environment_variables"])
+            read_environment_variables(config["environment_variables"], context);
+        if (config["border"])
+            read_border(config["border"], context);
+        if (config["workspaces"])
+            read_workspaces(config["workspaces"], context);
+        if (config["animations"])
+            read_animation_definitions(config["animations"], context);
+        if (config["enable_animations"])
+            read_enable_animations(config["enable_animations"], context);
+        if (config["move_modifier"])
+            read_move_modifier(config["move_modifier"], context);
+        if (config["drag_and_drop"])
+            read_drag_and_drop(config["drag_and_drop"], context);
+    }
+    catch (YAML::Exception const& e)
+    {
+        context.builder << "Encountered exception during config load: " << e.what();
+        context.result.errors.push_back({ e.mark.line,
+            e.mark.column,
+            ErrorLevel::error,
+            path,
+            context.builder.str() });
+    }
+    catch (const std::exception& e)
+    {
+        context.builder << "Encountered exception during config load: " << e.what();
+        context.result.errors.push_back({ 0,
+            0,
+            ErrorLevel::error,
+            path,
+            context.builder.str() });
+    }
+    catch (...)
+    {
+        context.builder << "Encountered an unknown exception";
+        context.result.errors.push_back({ 0,
+            0,
+            ErrorLevel::error,
+            path,
+            context.builder.str() });
+    }
 
     return context.result;
 }
