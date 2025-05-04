@@ -49,12 +49,14 @@ public:
         ExternalClientLauncher& launcher,
         std::shared_ptr<miracle::Config> const& config,
         std::shared_ptr<miracle::CompositorState> const& compositor_state,
-        std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener) :
+        std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
+        std::shared_ptr<miracle::DisplayConfig> const& display_config) :
         runner(runner),
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
-        output_listener(output_listener)
+        output_listener(output_listener),
+        display_config(display_config)
     {
     }
 
@@ -62,7 +64,7 @@ public:
     {
         config->load(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, runner, launcher, config, compositor_state, output_listener);
+            "tiling", server, runner, launcher, config, compositor_state, output_listener, display_config);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -74,6 +76,7 @@ private:
     std::shared_ptr<miracle::CompositorState> compositor_state;
     std::shared_ptr<WindowManagerOptions> options;
     std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
+    std::shared_ptr<miracle::DisplayConfig> display_config;
 };
 
 int main(int argc, char const* argv[])
@@ -114,7 +117,7 @@ int main(int argc, char const* argv[])
     } });
 
     return runner.run_with(
-        { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener),
+        { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener, display_config),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             config_keymap,

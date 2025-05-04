@@ -41,6 +41,7 @@ Output::Output(
     std::string name,
     int id,
     geom::Rectangle const& area,
+    mir::graphics::DisplayConfigurationOutput const& raw_output_config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
@@ -49,6 +50,7 @@ Output::Output(
     name_ { std::move(name) },
     id_ { id },
     area { area },
+    raw_output_config { raw_output_config },
     state { state },
     config { config },
     window_controller { window_controller },
@@ -544,6 +546,7 @@ void Output::unset_defunct()
 
 nlohmann::json Output::to_json(bool is_focused) const
 {
+    auto active = raw_output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& workspace : workspaces)
     {
@@ -551,46 +554,90 @@ nlohmann::json Output::to_json(bool is_focused) const
             nodes.push_back(workspace->to_json(is_focused));
     }
 
+    nlohmann::json modes_node;
+    for (auto const& mode : raw_output_config.modes)
+    {
+        nlohmann::json mode_node;
+        mode_node["width"] = mode.size.width.as_int();
+        mode_node["height"] = mode.size.height.as_int();
+        mode_node["refresh"] = mode.vrefresh_hz * 1000;
+        modes_node.push_back(mode_node);
+    }
+
+    auto const& current_mode = raw_output_config.modes[raw_output_config.current_mode_index];
+    nlohmann::json current_mode_node;
+    current_mode_node["width"] = current_mode.size.width.as_int();
+    current_mode_node["height"] = current_mode.size.height.as_int();
+    current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+
+    nlohmann::json transform;
+    switch (raw_output_config.orientation)
+    {
+    case mir_orientation_normal:
+        transform = "normal";
+        break;
+    case mir_orientation_left:
+        transform = "90";
+        break;
+    case mir_orientation_inverted:
+        transform = "180";
+        break;
+    case mir_orientation_right:
+        transform = "270";
+        break;
+    }
+
     return {
-        { "id",                   reinterpret_cast<std::uintptr_t>(this) },
-        { "name",                 name_                                  },
-        { "type",                 "output"                               },
-        { "layout",               "output"                               },
-        { "orientation",          "none"                                 },
-        { "visible",              true                                   },
-        { "focused",              is_focused                             },
-        { "urgent",               false                                  },
-        { "border",               "none"                                 },
-        { "current_border_width", 0                                      },
+        { "id",                   reinterpret_cast<std::uintptr_t>(this)            },
+        { "name",                 name_                                             },
+        { "active",               active                                            },
+        { "dpms",                 raw_output_config.power_mode == mir_power_mode_on },
+        { "scale",                raw_output_config.scale                           },
+        { "scale_filter",         "linear"                                          }, // Deprecated
+        { "adaptive_sync_status", false                                             }, /// TODO: Supply this value
+        { "make",                 "Unknown"                                         }, // TODO: Supply this value
+        { "model",                "Unknown"                                         }, // TODO: Supply this value
+        { "serial",               "Unknown"                                         }, // TODO: Supply this value
+        { "transform",            transform                                         },
+        { "type",                 "output"                                          },
+        { "layout",               "output"                                          },
+        { "orientation",          "none"                                            },
+        { "visible",              true                                              },
+        { "focused",              is_focused                                        },
+        { "urgent",               false                                             },
+        { "border",               "none"                                            },
+        { "current_border_width", 0                                                 },
         { "window_rect",          {
                              { "x", 0 },
                              { "y", 0 },
                              { "width", 0 },
                              { "height", 0 },
-                         }                       },
+                         }                                  },
         { "deco_rect",            {
                            { "x", 0 },
                            { "y", 0 },
                            { "width", 0 },
                            { "height", 0 },
-                       }                           },
+                       }                                      },
         { "geometry",             {
                           { "x", 0 },
                           { "y", 0 },
                           { "width", 0 },
                           { "height", 0 },
-                      }                             },
+                      }                                        },
         { "rect",                 {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                                     },
-        { "nodes",                nodes                                  }
+                  }                                                },
+        { "nodes",                nodes                                             },
+        { "modes",                modes_node                                        },
+        { "current_mode",         current_mode_node                                 }
     };
 }
 
-nlohmann::json Output::to_json_for_output_list(bool is_focused) const
+nlohmann::json Output::to_json_for_output_list(bool) const
 {
     auto active_workspace = active();
     nlohmann::json workspace;
@@ -600,18 +647,42 @@ nlohmann::json Output::to_json_for_output_list(bool is_focused) const
     else
         workspace = { "current_workspace", nullptr };
 
+    auto active = raw_output_config.used;
+
+    nlohmann::json modes_node;
+    for (auto const& mode : raw_output_config.modes)
+    {
+        nlohmann::json mode_node;
+        mode_node["width"] = mode.size.width.as_int();
+        mode_node["height"] = mode.size.height.as_int();
+        mode_node["refresh"] = mode.vrefresh_hz * 1000;
+        modes_node.push_back(mode_node);
+    }
+
+    auto const& current_mode = raw_output_config.modes[raw_output_config.current_mode_index];
+    nlohmann::json current_mode_node;
+    current_mode_node["width"] = current_mode.size.width.as_int();
+    current_mode_node["height"] = current_mode.size.height.as_int();
+    current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+
     return {
-        { "name",   name_            },
-        { "active", is_focused       },
-        { "make",   "Unknown"        }, // TODO: Supply this value
-        { "model",  "Unknown"        }, // TODO: Supply this value
-        { "serial", "Unknown"        }, // TODO: Supply this value
+        { "name",                 name_                                             },
+        { "active",               active                                            },
+        { "dpms",                 raw_output_config.power_mode == mir_power_mode_on },
+        { "scale",                raw_output_config.scale                           },
+        { "scale_filter",         "linear"                                          }, // Deprecated
+        { "adaptive_sync_status", false                                             }, // TODO: Supply this value
+        { "make",                 "Unknown"                                         }, // TODO: Supply this value
+        { "model",                "Unknown"                                         }, // TODO: Supply this value
+        { "serial",               "Unknown"                                         }, // TODO: Supply this value
         workspace,
-        { "rect",   {
+        { "rect",                 {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  } },
+                  }                                                },
+        { "modes",                modes_node                                        },
+        { "current_mode",         current_mode_node                                 },
     };
 }

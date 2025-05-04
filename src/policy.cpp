@@ -108,7 +108,8 @@ Policy::Policy(
     miral::ExternalClientLauncher& external_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
-    std::shared_ptr<OutputListenerMultiplexer> const& output_listener) :
+    std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
+    std::shared_ptr<DisplayConfig> const& display_config) :
     tools { tools },
     config { config },
     state { state },
@@ -125,7 +126,8 @@ Policy::Policy(
             state,
             config,
             window_controller,
-            animator))),
+            animator,
+            display_config))),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this)),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
