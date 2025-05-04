@@ -26,7 +26,7 @@ class RenderableForwarder : public mir::graphics::Renderable
 public:
     explicit RenderableForwarder(
         std::shared_ptr<Renderable> const& r,
-        mir::scene::Surface const* surface) :
+        std::shared_ptr<mir::scene::Surface const> const& surface) :
         renderable(r),
         animating_surface(surface)
     {
@@ -74,12 +74,12 @@ public:
 
     auto surface_if_any() const -> std::optional<mir::scene::Surface const*> override
     {
-        return animating_surface;
+        return animating_surface.get();
     }
 
 private:
     std::shared_ptr<Renderable> renderable;
-    mir::scene::Surface const* animating_surface;
+    std::shared_ptr<mir::scene::Surface const> animating_surface;
 };
 }
 
@@ -182,7 +182,7 @@ mir::graphics::RenderableList ForwardingSurface::generate_renderables(mir::compo
     mir::graphics::RenderableList result;
 
     for (auto const& renderable : surface_->generate_renderables(id))
-        result.push_back(std::make_shared<RenderableForwarder>(renderable, this));
+        result.push_back(std::make_shared<RenderableForwarder>(renderable, shared_from_this()));
 
     return result;
 }

@@ -32,7 +32,7 @@ class CompositorState;
 ///
 /// This class is specifically useful with the [DyingSurfaceManager].
 /// Other than that, its use seems minimal at best.
-class ForwardingSurface : public mir::scene::Surface
+class ForwardingSurface : public mir::scene::Surface, public std::enable_shared_from_this<mir::scene::Surface>
 {
 public:
     explicit ForwardingSurface(std::shared_ptr<mir::scene::Surface> const&);
