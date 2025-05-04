@@ -121,8 +121,11 @@ add_library(miracle-wm-implementation
     src/forwarding_surface.cpp src/forwarding_surface.h
     src/dying_surface_manager.cpp src/dying_surface_manager.h
     src/shader_2d.cpp src/shader_2d.h
-        src/display_config.cpp
-        src/display_config.h
+    src/wlr-output-management-unstable-v1_wrapper.cpp src/wlr-output-management-unstable-v1_wrapper.h
+    src/wlr-ouput-management-unstable-v1.cpp src/wlr-ouput-management-unstable-v1.h
+    src/output_listener.cpp src/output_listener.h
+    src/display_config.cpp
+    src/display_config.h
 )
 
 add_executable(miracle-wm
@@ -137,6 +140,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
+    ${MIRWAYLAND_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/miracle-wm-config/include)
 
@@ -205,3 +209,4 @@ endif()
 add_subdirectory(tests/)
 add_subdirectory(miraclemsg/)
 add_subdirectory(miracle-wm-config/)
+add_subdirectory(protocols/)

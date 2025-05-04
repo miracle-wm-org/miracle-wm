@@ -53,6 +53,8 @@ class ContainerGroupContainer;
 class AnimatorLoop;
 class OutputManager;
 class DyingSurfaceManager;
+class OutputListenerMultiplexer;
+class DisplayConfig;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -63,7 +65,9 @@ public:
         miral::MirRunner&,
         miral::ExternalClientLauncher& external_client_launcher,
         std::shared_ptr<Config> const&,
-        std::shared_ptr<CompositorState> const& state);
+        std::shared_ptr<CompositorState> const& state,
+        std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
+        std::shared_ptr<DisplayConfig> const& display_config);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -116,6 +120,7 @@ private:
     miral::WindowManagerTools tools;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
+    std::shared_ptr<OutputListenerMultiplexer> output_listener;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::unique_ptr<AutoRestartingLauncher> launcher;

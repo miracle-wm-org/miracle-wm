@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "output_factory.h"
+#include "display_config.h"
 #include "output.h"
 
 using namespace miracle;
@@ -25,23 +26,37 @@ MiralOutputFactory::MiralOutputFactory(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<DisplayConfig> const& display_config) :
     policy { policy },
     state { state },
     config { config },
     window_controller { window_controller },
-    animator { animator }
+    animator { animator },
+    display_config { display_config }
 {
 }
 
 std::unique_ptr<OutputInterface> MiralOutputFactory::create(
     std::string name, int id, mir::geometry::Rectangle area)
 {
+    auto const current_config = display_config->configuration();
+    if (!current_config)
+        mir::fatal_error("DisplayConfiguration should be set by the time we create an output");
+
+    mir::graphics::DisplayConfigurationOutput raw_output_config;
+    current_config.value()->for_each_output([&, this](mir::graphics::DisplayConfigurationOutput const& output)
+    {
+        if (output.name == name || output.card_id.as_value() == id)
+            raw_output_config = output;
+    });
+
     return std::make_unique<Output>(
         policy,
         std::move(name),
         id,
         area,
+        raw_output_config,
         state,
         config,
         window_controller,

@@ -18,7 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "display_config"
 
 #include "display_config.h"
+
 #include "miracle/miracle-wm-config.h"
+#include "output.h"
 
 #include <filesystem>
 #include <fstream>
@@ -27,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
+#include <mutex>
 #include <yaml-cpp/yaml.h>
 
 namespace mg = mir::graphics;
@@ -91,9 +94,9 @@ struct convert<mir::geometry::Size>
 };
 
 template <>
-struct convert<miracle::DisplayConfig::Card>
+struct convert<miracle::DisplayConfig::OutputConfig>
 {
-    static Node encode(const miracle::DisplayConfig::Card& card)
+    static Node encode(const miracle::DisplayConfig::OutputConfig& card)
     {
         Node node;
         node["enabled"] = card.enabled;
@@ -124,7 +127,7 @@ struct convert<miracle::DisplayConfig::Card>
         return node;
     }
 
-    static bool decode(const Node& node, miracle::DisplayConfig::Card& card)
+    static bool decode(const Node& node, miracle::DisplayConfig::OutputConfig& card)
     {
         card.name = node["name"].as<std::string>();
         card.enabled = node["enabled"].as<bool>(false);
@@ -150,28 +153,9 @@ struct convert<miracle::DisplayConfig::Card>
         }
 
         if (node["scale"])
-            card.scale = node["scale"].as<float>(1.f);
+            card.scale = node["scale"].as<double>(1.0);
         if (node["group_id"])
             card.group_id = mg::DisplayConfigurationLogicalGroupId(node["group_id"].as<int>());
-        return true;
-    }
-};
-
-template <>
-struct convert<miracle::DisplayConfig::Layout>
-{
-    static Node encode(const miracle::DisplayConfig::Layout& layout)
-    {
-        Node node;
-        node["name"] = layout.name;
-        node["outputs"] = layout.cards;
-        return node;
-    }
-
-    static bool decode(const Node& node, miracle::DisplayConfig::Layout& layout)
-    {
-        layout.name = node["name"].as<std::string>();
-        layout.cards = node["outputs"].as<std::vector<miracle::DisplayConfig::Card>>();
         return true;
     }
 };
@@ -183,23 +167,182 @@ public:
     explicit Self(std::string const& path) :
         path(path)
     {
+        reload();
     }
 
     void apply_to(mg::DisplayConfiguration& conf) override
     {
-        auto const layout_it = std::ranges::find_if(available_layouts, [&](Layout const& layout)
+        apply_internal(conf, configs);
+    }
+
+    void confirm(mg::DisplayConfiguration const& conf) override
+    {
+        cached = conf.clone();
+    }
+
+    void reload()
+    {
+        try
         {
-            return layout.name == active_layout;
+            if (!std::filesystem::exists(path))
+            {
+                if (auto const dcc = display_configuration_controller.lock())
+                {
+                    auto const config = dcc->base_configuration();
+                    auto const configs_list = to_output_config_list(config);
+                    YAML::Node node;
+                    for (auto const& output_config : configs_list)
+                        node.push_back(output_config);
+
+                    YAML::Node container;
+                    container["outputs"] = node;
+                    std::ofstream output_file(path);
+                    output_file << container;
+                }
+            }
+
+            std::lock_guard lock(mutex);
+            mir::log_info("Loading display configuration from %s", path.c_str());
+            YAML::Node const node = YAML::LoadFile(path);
+            if (node["outputs"])
+                configs = node["outputs"].as<std::vector<OutputConfig>>();
+            else
+                configs.clear();
+
+            mir::log_info("Display configuration loaded.");
+
+            if (auto const dcc = display_configuration_controller.lock())
+            {
+                mir::log_info("Applying display configuration");
+                auto const config = dcc->base_configuration();
+                apply_to(*config);
+                dcc->set_base_configuration(config);
+                mir::log_info("Display configuration applied");
+            }
+        }
+        catch (const std::exception& e)
+        {
+            mir::log_error("Exception during DisplayConfig reload: %s", e.what());
+        }
+        catch (...)
+        {
+            mir::log_error("Unknown exception during DisplayConfig reload");
+        }
+    }
+
+    void test(std::vector<OutputConfig> const& configs)
+    {
+        if (auto const dcc = display_configuration_controller.lock())
+        {
+            mir::log_info("Testing display configuration");
+            auto const config = dcc->base_configuration();
+            apply_internal(*config, configs);
+            dcc->set_base_configuration(config);
+            mir::log_info("Display configuration test applied");
+        }
+    }
+
+    void write()
+    {
+        std::lock_guard lock(mutex);
+        YAML::Node node;
+        for (const auto& config : configs)
+            node.push_back(config);
+
+        YAML::Node container;
+        container["outputs"] = node;
+        std::ofstream output_file(path);
+        output_file << container;
+    }
+
+    void update(OutputConfig const& config)
+    {
+        std::lock_guard lock(mutex);
+        auto const output_it = std::ranges::find_if(configs, [&](OutputConfig const& o)
+        {
+            return o.name == config.name;
         });
 
-        if (layout_it == available_layouts.end())
-        {
-            mir::log_info("Invalid layout selected: %s. Selecting default", active_layout.c_str());
-            apply_default(conf);
-            return;
-        }
+        if (output_it != configs.end())
+            *output_it = config;
+        else
+            configs.push_back(config);
+    }
 
-        const auto [name, cards] = *layout_it;
+    std::vector<OutputConfig> get_configs()
+    {
+        std::lock_guard lock(mutex);
+        return configs;
+    }
+
+    [[nodiscard]] std::optional<mg::DisplayConfiguration const*> configuration() const
+    {
+        if (!cached)
+            return std::nullopt;
+
+        return cached.get();
+    }
+
+    std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
+    std::mutex mutex;
+    std::string path;
+
+private:
+    std::vector<OutputConfig> configs;
+    std::unique_ptr<mir::graphics::DisplayConfiguration> cached;
+    mg::DisplayConfigurationLogicalGroupId const empty_group_id = mg::DisplayConfigurationLogicalGroupId(0);
+
+    void apply_default(mg::DisplayConfiguration& conf) const
+    {
+        // By default, we place all displays next to each other horizontally.
+        geom::Point position(0, 0);
+
+        conf.for_each_output([&](mg::UserDisplayConfigurationOutput& output)
+        {
+            if (!output.connected || output.modes.empty())
+            {
+                output.used = false;
+                output.power_mode = mir_power_mode_off;
+                return;
+            }
+
+            output.used = true;
+            output.power_mode = mir_power_mode_on;
+            output.top_left = position;
+            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            output.current_mode_index = preferred_mode_index;
+            output.logical_group_id = empty_group_id;
+            output.orientation = mir_orientation_normal;
+            position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
+        });
+    }
+
+    static std::vector<OutputConfig> to_output_config_list(std::shared_ptr<mg::DisplayConfiguration> const& configuration)
+    {
+        std::vector<OutputConfig> result;
+        geom::Point position(0, 0);
+        configuration->for_each_output([&](mg::UserDisplayConfigurationOutput& output)
+        {
+            OutputConfig config;
+            config.enabled = output.connected && !output.modes.empty();
+            config.name = output.name;
+            config.position = position;
+            position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
+            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            auto const& mode = output.modes[preferred_mode_index];
+            config.size = mode.size;
+            config.refresh = mode.vrefresh_hz;
+            config.orientation = output.orientation;
+            config.scale = output.scale;
+            config.group_id = mg::DisplayConfigurationLogicalGroupId(0);
+            result.push_back(config);
+        });
+
+        return result;
+    }
+
+    static void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs)
+    {
         conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
         {
             if (!output.connected || output.modes.empty())
@@ -209,12 +352,12 @@ public:
                 return;
             }
 
-            auto const card_it = std::ranges::find_if(cards, [&](Card const& card)
+            auto const config_it = std::ranges::find_if(configs, [&](OutputConfig const& card)
             {
                 return card.name == output.name;
             });
 
-            if (card_it == cards.end())
+            if (config_it == configs.end())
             {
                 output.used = false;
                 output.power_mode = mir_power_mode_off;
@@ -222,7 +365,7 @@ public:
                 return;
             }
 
-            auto const& card = *card_it;
+            auto const& card = *config_it;
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.orientation = mir_orientation_normal;
@@ -282,161 +425,6 @@ public:
             output.logical_group_id = card.group_id;
         });
     }
-
-    void confirm(mg::DisplayConfiguration const& conf) override
-    {
-        cached = conf.clone();
-    }
-
-    void reload()
-    {
-        try
-        {
-            if (!std::filesystem::exists(path))
-            {
-                if (auto const dcc = display_configuration_controller.lock())
-                {
-                    auto const config = dcc->base_configuration();
-                    auto const default_layout = to_layout(config);
-                    YAML::Node node;
-                    node.push_back(default_layout);
-
-                    YAML::Node container;
-                    container["layouts"] = node;
-                    std::ofstream output_file(path);
-                    output_file << container;
-                }
-            }
-
-            mir::log_info("Loading display configuration from %s", path.c_str());
-            YAML::Node const node = YAML::LoadFile(path);
-            if (node["layouts"])
-                available_layouts = node["layouts"].as<std::vector<Layout>>();
-            else
-                available_layouts.clear();
-
-            if (!available_layouts.empty() && active_layout.empty())
-                select_layout(available_layouts[0].name);
-
-            mir::log_info("Display configuration loaded.");
-        }
-        catch (const std::exception& e)
-        {
-            mir::log_error("Exception during DisplayConfig reload: %s", e.what());
-        }
-        catch (...)
-        {
-            mir::log_error("Unknown exception during DisplayConfig reload");
-        }
-    }
-
-    void select_layout(std::string const& name)
-    {
-        active_layout = "";
-        for (auto const& layout : available_layouts)
-        {
-            if (layout.name == name)
-            {
-                active_layout = name;
-                break;
-            }
-        }
-
-        if (active_layout.empty())
-        {
-            mir::log_error("Invalid layout selected: %s", name.c_str());
-            return;
-        }
-
-        if (auto const dcc = display_configuration_controller.lock())
-        {
-            auto const config = dcc->base_configuration();
-            apply_to(*config);
-            dcc->set_base_configuration(config);
-        }
-    }
-
-    void write() const
-    {
-        YAML::Node node;
-        for (const auto& layout : available_layouts)
-        {
-            node.push_back(layout);
-        }
-
-        YAML::Node container;
-        container["layouts"] = node;
-        std::ofstream output_file(path);
-        output_file << container;
-    }
-
-    [[nodiscard]] std::optional<mg::DisplayConfiguration const*> configuration() const
-    {
-        if (!cached)
-            return std::nullopt;
-
-        return cached.get();
-    }
-
-    std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
-    std::string path;
-
-private:
-    std::vector<Layout> available_layouts;
-    std::string active_layout;
-    std::unique_ptr<mir::graphics::DisplayConfiguration> cached;
-    mg::DisplayConfigurationLogicalGroupId const empty_group_id = mg::DisplayConfigurationLogicalGroupId(0);
-
-    void apply_default(mg::DisplayConfiguration& conf) const
-    {
-        // By default, we place all displays next to each other horizontally.
-        geom::Point position(0, 0);
-
-        conf.for_each_output([&](mg::UserDisplayConfigurationOutput& output)
-        {
-            if (!output.connected || output.modes.empty())
-            {
-                output.used = false;
-                output.power_mode = mir_power_mode_off;
-                return;
-            }
-
-            output.used = true;
-            output.power_mode = mir_power_mode_on;
-            output.top_left = position;
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            output.current_mode_index = preferred_mode_index;
-            output.logical_group_id = empty_group_id;
-            output.orientation = mir_orientation_normal;
-            position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
-        });
-    }
-
-    static Layout to_layout(std::shared_ptr<mg::DisplayConfiguration> const& configuration)
-    {
-        Layout result;
-        result.name = "default";
-
-        geom::Point position(0, 0);
-        configuration->for_each_output([&](mg::UserDisplayConfigurationOutput& output)
-        {
-            Card card;
-            card.enabled = output.connected && !output.modes.empty();
-            card.name = output.name;
-            card.position = position;
-            position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            auto const& mode = output.modes[preferred_mode_index];
-            card.size = mode.size;
-            card.refresh = mode.vrefresh_hz;
-            card.orientation = output.orientation;
-            card.scale = output.scale;
-            card.group_id = mg::DisplayConfigurationLogicalGroupId(0);
-            result.cards.push_back(card);
-        });
-
-        return result;
-    }
 };
 
 miracle::DisplayConfig::DisplayConfig() :
@@ -449,14 +437,29 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 {
 }
 
-void miracle::DisplayConfig::reload() const
+void miracle::DisplayConfig::reload()
 {
     self->reload();
 }
 
-void miracle::DisplayConfig::write() const
+void miracle::DisplayConfig::test(std::vector<OutputConfig> const& configs)
+{
+    self->test(configs);
+}
+
+void miracle::DisplayConfig::write()
 {
     self->write();
+}
+
+void miracle::DisplayConfig::update(OutputConfig const& config)
+{
+    self->update(config);
+}
+
+std::vector<miracle::DisplayConfig::OutputConfig> miracle::DisplayConfig::get_configs()
+{
+    return self->get_configs();
 }
 
 std::optional<mir::graphics::DisplayConfiguration const*> miracle::DisplayConfig::configuration() const
@@ -479,9 +482,9 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
 
     server.add_init_callback([self = self, &server]
     {
+        self->display_configuration_controller = server.the_display_configuration_controller();
         auto const server_opts = server.get_options();
         self->path = server_opts->get<std::string>(config_file_name_option);
-        self->display_configuration_controller = server.the_display_configuration_controller();
         self->reload();
     });
 }

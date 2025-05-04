@@ -28,6 +28,7 @@ class CompositorState;
 class Config;
 class WindowController;
 class Animator;
+class DisplayConfig;
 
 class MiralOutputFactory : public OutputFactoryInterface
 {
@@ -37,7 +38,8 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
-        std::shared_ptr<Animator> const&);
+        std::shared_ptr<Animator> const&,
+        std::shared_ptr<DisplayConfig> const& display_config);
     std::unique_ptr<OutputInterface> create(
         std::string name,
         int id,
@@ -49,6 +51,7 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<DisplayConfig> display_config;
 };
 
 }

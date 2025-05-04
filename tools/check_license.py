@@ -53,6 +53,10 @@ args = parser.parse_args()
 fix = args.fix
 
 to_check = ["src", "miraclemsg"]
+to_exclude = [
+    "wlr-output-management-unstable-v1_wrapper.h",
+    "wlr-output-management-unstable-v1_wrapper.cpp"
+]
 
 for d in to_check:
     root_dir = Path(__file__).parent.parent / d
@@ -60,6 +64,9 @@ for d in to_check:
     error_data = []
     for x in os.listdir(root_dir.as_posix()):
         file = root_dir / x
+        if x in to_exclude:
+            continue
+
         if file.as_posix().endswith(".h") or file.as_posix().endswith(".cpp"):
             with open(file, 'r') as original:
                 content = original.read()
