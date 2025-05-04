@@ -126,6 +126,7 @@ add_library(miracle-wm-implementation
     src/output_listener.cpp src/output_listener.h
     src/display_config.cpp
     src/display_config.h
+    src/tilling_algorithms.cpp src/tiling_algorithms.h
 )
 
 add_executable(miracle-wm
