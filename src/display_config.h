@@ -51,7 +51,7 @@ public:
     void write();
     void update(OutputConfig const& card);
     std::vector<OutputConfig> get_configs();
-    [[nodiscard]] std::optional<mir::graphics::DisplayConfiguration const*> configuration() const;
+    [[nodiscard]] std::optional<std::unique_ptr<mir::graphics::DisplayConfiguration>> configuration() const;
     void operator()(mir::Server& server);
 
 private:
