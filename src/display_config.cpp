@@ -181,7 +181,33 @@ public:
 
     void confirm(mg::DisplayConfiguration const& conf) override
     {
+        std::lock_guard lock(mutex);
+
         cached = conf.clone();
+        if (!has_config())
+            try_create_default(*cached);
+    }
+
+    /// Attempts to write the default configuration to [path] if it does not exist.
+    bool try_create_default(mg::DisplayConfiguration& config) const noexcept
+    {
+        if (!std::filesystem::exists(path))
+        {
+            mir::log_info("Creating default display configuration at %s", path.c_str());
+            auto const configs_list = to_output_config_list(config);
+            YAML::Node node;
+            for (auto const& output_config : configs_list)
+                node.push_back(output_config);
+
+            YAML::Node container;
+            container["outputs"] = node;
+            std::ofstream output_file(path);
+            output_file << container;
+            mir::log_info("Default display configuration created");
+            return true;
+        }
+
+        return false;
     }
 
     bool has_config() const noexcept
@@ -281,12 +307,13 @@ public:
         return configs;
     }
 
-    [[nodiscard]] std::optional<mg::DisplayConfiguration const*> configuration() const
+    [[nodiscard]] std::optional<std::unique_ptr<mg::DisplayConfiguration>> configuration()
     {
+        std::lock_guard lock(mutex);
         if (!cached)
             return std::nullopt;
 
-        return cached.get();
+        return cached->clone();
     }
 
     std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
@@ -321,6 +348,35 @@ private:
             output.orientation = mir_orientation_normal;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
         });
+    }
+
+    static std::vector<OutputConfig> to_output_config_list(mg::DisplayConfiguration& configuration)
+    {
+        std::vector<OutputConfig> result;
+        geom::Point position(0, 0);
+        configuration.for_each_output([&](mg::UserDisplayConfigurationOutput& output)
+        {
+            if (!output.connected || output.modes.empty())
+                return;
+
+            OutputConfig config;
+            config.enabled = output.connected && !output.modes.empty();
+            config.name = output.name;
+            config.position = position;
+            position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
+            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            auto const& mode = preferred_mode_index < output.modes.size()
+                ? output.modes[preferred_mode_index]
+                : output.modes[0];
+            config.size = mode.size;
+            config.refresh = mode.vrefresh_hz;
+            config.orientation = output.orientation;
+            config.scale = output.scale;
+            config.group_id = mg::DisplayConfigurationLogicalGroupId(0);
+            result.push_back(config);
+        });
+
+        return result;
     }
 
     static void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs)
@@ -445,7 +501,7 @@ std::vector<miracle::DisplayConfig::OutputConfig> miracle::DisplayConfig::get_co
     return self->get_configs();
 }
 
-std::optional<mir::graphics::DisplayConfiguration const*> miracle::DisplayConfig::configuration() const
+std::optional<std::unique_ptr<mir::graphics::DisplayConfiguration>> miracle::DisplayConfig::configuration() const
 {
     return self->configuration();
 }
@@ -468,5 +524,4 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
         });
         return self;
     });
-
 }
