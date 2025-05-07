@@ -167,24 +167,28 @@ public:
     explicit Self(std::string const& path) :
         path(path)
     {
+        if (has_config_file())
+            try_load_from_file();
     }
 
+    /// Override from [mg::DisplayConfigurationPolicy]
     void apply_to(mg::DisplayConfiguration& conf) override
     {
         // If we have a configuration, we should load and apply it.
         // Otherwise, let's just apply the default.
-        if (has_config() && load_from_file())
+        if (has_config_file() && try_load_from_file())
             apply_internal(conf, configs);
         else
             apply_default(conf);
     }
 
+    /// Override from [mg::DisplayConfigurationPolicy]
     void confirm(mg::DisplayConfiguration const& conf) override
     {
         std::lock_guard lock(mutex);
 
         cached = conf.clone();
-        if (!has_config())
+        if (!has_config_file())
             try_create_default(*cached);
     }
 
@@ -193,7 +197,7 @@ public:
     {
         if (!std::filesystem::exists(path))
         {
-            mir::log_info("Creating default display configuration at %s", path.c_str());
+            mir::log_info("Writing default display configuration to %s", path.c_str());
             auto const configs_list = to_output_config_list(config);
             YAML::Node node;
             for (auto const& output_config : configs_list)
@@ -203,25 +207,22 @@ public:
             container["outputs"] = node;
             std::ofstream output_file(path);
             output_file << container;
-            mir::log_info("Default display configuration created");
+            mir::log_info("Default display configuration written");
             return true;
         }
 
         return false;
     }
 
-    bool has_config() const noexcept
+    /// Returns true if [path] exists, otherwise false;
+    [[nodiscard]] bool has_config_file() const noexcept
     {
-        if (!std::filesystem::exists(path))
-            return false;
-
-        return true;
+        return std::filesystem::exists(path);
     }
 
     /// Populates [configs] with whatever is in the file.
-    bool load_from_file()
+    bool try_load_from_file()
     {
-        mir::log_info("Reloading display configuration from %s", path.c_str());
         try
         {
             std::lock_guard lock(mutex);
@@ -235,45 +236,62 @@ public:
                 return false;
             }
 
-            mir::log_info("Display configuration loaded.");
+            mir::log_info("Display configuration loaded");
             return true;
         }
         catch (const std::exception& e)
         {
-            mir::log_error("Exception during DisplayConfig reload: %s", e.what());
+            mir::log_error("Exception during DisplayConfig load: %s", e.what());
         }
         catch (...)
         {
-            mir::log_error("Unknown exception during DisplayConfig reload");
+            mir::log_error("Unknown exception during DisplayConfig load");
         }
         return false;
     }
 
     /// Manually applies the configuration in [configs] to the base configuration.
-    void apply_configuration_manually()
+    void apply_configuration_manually() const
     {
         if (auto const dcc = display_configuration_controller.lock())
         {
             mir::log_info("Applying display configuration");
             auto const config = dcc->base_configuration();
+            if (configs.empty())
+            {
+                mir::log_error("Display configuration is empty");
+                return;
+            }
+
             apply_internal(*config, configs);
             dcc->set_base_configuration(config);
             mir::log_info("Display configuration applied");
         }
+        else
+        {
+            mir::log_error("Cannot apply display configuration: display configuration controller is not available");
+        }
     }
 
-    void test(std::vector<OutputConfig> const& configs)
+    /// Applies the config given by the parameters [test_configs].
+    /// This method does NOT write [test_configs] to file.
+    void test(std::vector<OutputConfig> const& test_configs) const
     {
         if (auto const dcc = display_configuration_controller.lock())
         {
             mir::log_info("Testing display configuration");
             auto const config = dcc->base_configuration();
-            apply_internal(*config, configs);
+            apply_internal(*config, test_configs);
             dcc->set_base_configuration(config);
             mir::log_info("Display configuration test applied");
         }
+        else
+        {
+            mir::log_error("Cannot test display configuration: display configuration controller is not available");
+        }
     }
 
+    /// Writes the configuration currently held in [configs] to file.
     void write()
     {
         std::lock_guard lock(mutex);
@@ -287,6 +305,7 @@ public:
         output_file << container;
     }
 
+    /// Inserts or updates the config provided by the parameter.
     void update(OutputConfig const& config)
     {
         std::lock_guard lock(mutex);
@@ -301,12 +320,14 @@ public:
             configs.push_back(config);
     }
 
+    /// Returns a copy of the [OutputConfig] list.
     std::vector<OutputConfig> get_configs()
     {
         std::lock_guard lock(mutex);
         return configs;
     }
 
+    /// Returns a copy of the set configuration, if it exists, otherwise std::nullopt.
     [[nodiscard]] std::optional<std::unique_ptr<mg::DisplayConfiguration>> configuration()
     {
         std::lock_guard lock(mutex);
@@ -327,6 +348,7 @@ private:
 
     void apply_default(mg::DisplayConfiguration& conf) const
     {
+        mir::log_info("Applying default display configuration");
         // By default, we place all displays next to each other horizontally.
         geom::Point position(0, 0);
 
@@ -348,6 +370,7 @@ private:
             output.orientation = mir_orientation_normal;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
         });
+        mir::log_info("Default display configuration applied");
     }
 
     static std::vector<OutputConfig> to_output_config_list(mg::DisplayConfiguration& configuration)
@@ -477,7 +500,7 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 
 void miracle::DisplayConfig::reload()
 {
-    if (self->has_config() && self->load_from_file())
+    if (self->has_config_file() && self->try_load_from_file())
         self->apply_configuration_manually();
 }
 
