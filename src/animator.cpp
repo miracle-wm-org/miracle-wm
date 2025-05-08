@@ -345,7 +345,8 @@ AnimationStepResult Animation::step(float dt)
 
     if (runtime_seconds >= definition.duration_seconds)
     {
-        return { handle, true, to, to_vec2_point(to), to_vec2_size(to), glm::mat4(1.f) };
+        return { handle, true, to, to_vec2_point(to), to_vec2_size(to), glm::mat4(1.f),
+            definition.type == AnimationType::fade_out ? 0.f : 1.f };
     }
 
     switch (definition.type)
