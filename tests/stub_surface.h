@@ -278,6 +278,11 @@ public:
     void set_focus_mode(MirFocusMode focus_mode) override
     {
     }
+
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+    auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
+    void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
+#endif
 };
 }
 
