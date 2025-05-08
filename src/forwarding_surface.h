@@ -95,6 +95,10 @@ public:
     void set_window_margins(mir::geometry::DeltaY top, mir::geometry::DeltaX left, mir::geometry::DeltaY bottom, mir::geometry::DeltaX right) override;
     auto focus_mode() const -> MirFocusMode override;
     void set_focus_mode(MirFocusMode focus_mode) override;
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+    auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
+    void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
+#endif
 
 private:
     std::shared_ptr<mir::scene::Surface> surface_;

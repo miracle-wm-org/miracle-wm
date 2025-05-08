@@ -86,6 +86,10 @@ namespace test
         MOCK_METHOD(void, set_window_margins, (mir::geometry::DeltaY, mir::geometry::DeltaX, mir::geometry::DeltaY, mir::geometry::DeltaX), (override));
         MOCK_METHOD(MirFocusMode, focus_mode, (), (const, override));
         MOCK_METHOD(void, set_focus_mode, (MirFocusMode), (override));
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+        MOCK_METHOD(mir::Flags<MirTiledEdge>, tiled_edges, (), (const, override));
+        MOCK_METHOD(void, set_tiled_edges, (mir::Flags<MirTiledEdge>), (override));
+#endif
     };
 
 }
