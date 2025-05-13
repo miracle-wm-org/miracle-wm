@@ -1,0 +1,47 @@
+name: Build & Test - Fedora
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build-and-test:
+    name: Fedora Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup Podman
+        run: |
+          sudo apt update
+          sudo apt-get -y install podman
+          podman pull fedora:41
+      - name: Get source
+        uses: actions/checkout@v3
+        with:
+          path: 'miracle-wm'
+      - name: Create container and run tests
+        run: |
+          {
+              echo 'FROM fedora:41'
+              echo '# set TZ to ensure the test using timestamp'
+              echo 'ENV TZ=America/New_York'
+              echo 'RUN dnf -y update'
+              echo 'RUN dnf -y install cmake gcc-c++ git-core mir-devel mir-internal-devel glib-devel yaml-cpp-devel json-devel libevdev-devel json-c-devel libnotify-devel gtest-devel gmock-devel libxkbcommon-devel desktop-file-utils pcre2 libglvnd-gles libglvnd-egl libglvnd-devel glm-devel boost-devel mesa-libgbm-devel'
+              echo 'RUN dnf clean all'
+              echo 'COPY miracle-wm miracle-wm'
+              echo 'WORKDIR /miracle-wm'
+              echo 'RUN cmake -Bbuild'
+              echo 'RUN cmake --build build'
+              echo 'WORKDIR /miracle-wm/build'
+              echo 'RUN make install'
+              echo 'WORKDIR /miracle-wm'
+              echo 'RUN ./build/tests/miracle-wm-tests'
+              echo 'WORKDIR /miracle-wm/build'
+              echo 'RUN ./miracle-wm-config/test_miracle_wm_config_c_api'
+          } > podmanfile
+          podman build --tag fedora41miraclewm -f ./podmanfile
