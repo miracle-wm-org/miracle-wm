@@ -119,7 +119,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
     // that the target_lane was melted into another lane. Hence, we need to return it
     auto to_update = handle_remove_container(node);
     auto target_parent = Container::as_parent(to->get_parent().lock());
-    auto index = target_parent->get_index_of_node(to);
+    auto const index = target_parent->get_index_of_node(to).value();
     target_parent->graft_existing(node, index + 1);
     node->set_workspace(target_parent->get_workspace());
 
@@ -760,7 +760,7 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
     do
     {
         auto grandparent_direction = parent->get_direction();
-        int index = parent->get_index_of_node(current_node);
+        auto index = parent->get_index_of_node(current_node).value();
         if (is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking)
             || !is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing))
         {

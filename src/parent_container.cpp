@@ -269,8 +269,8 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
 
 std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_ptr<Container> const& container)
 {
-    auto index = get_index_of_node(container);
-    if (index < 0)
+    auto const index = get_index_of_node(container);
+    if (!index.has_value())
     {
         mir::fatal_error("Attempting to convert a node to lane with an incorrect parent");
         return nullptr;
@@ -286,7 +286,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
         true);
     new_parent_node->sub_nodes.push_back(container);
     container->set_parent(new_parent_node);
-    sub_nodes[index] = new_parent_node;
+    sub_nodes[index.value()] = new_parent_node;
     return new_parent_node;
 }
 
@@ -453,8 +453,8 @@ std::vector<std::shared_ptr<Container>> const& ParentContainer::get_sub_nodes() 
 
 void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
-    auto first_index = get_index_of_node(first);
-    auto second_index = get_index_of_node(second);
+    auto const first_index = get_index_of_node(first).value();
+    auto const second_index = get_index_of_node(second).value();
     sub_nodes[second_index] = first;
     sub_nodes[first_index] = second;
     relayout();
@@ -486,21 +486,21 @@ void ParentContainer::remove(const std::shared_ptr<Container>& node)
     relayout();
 }
 
-int ParentContainer::get_index_of_node(miracle::Container const* node) const
+std::optional<size_t> ParentContainer::get_index_of_node(Container const* node) const
 {
-    for (int i = 0; i < sub_nodes.size(); i++)
+    for (size_t i = 0; i < sub_nodes.size(); i++)
         if (sub_nodes[i].get() == node)
             return i;
 
-    return -1;
+    return std::nullopt;
 }
 
-int ParentContainer::get_index_of_node(std::shared_ptr<Container> const& node) const
+std::optional<size_t> ParentContainer::get_index_of_node(std::shared_ptr<Container> const& node) const
 {
     return get_index_of_node(node.get());
 }
 
-int ParentContainer::get_index_of_node(Container const& node) const
+std::optional<size_t> ParentContainer::get_index_of_node(Container const& node) const
 {
     return get_index_of_node(node.shared_from_this().get());
 }
