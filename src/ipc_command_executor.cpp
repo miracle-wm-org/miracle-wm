@@ -263,35 +263,37 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
         policy->try_select_child(command_list.scope);
     else if (arg == "prev")
     {
-        auto container = state->focused_container();
+        // TODO: Move this to the policy because this is racy
+        auto const container = state->focused_container();
         if (!container)
             return parse_error("Active container does not exist");
 
         if (container->get_type() != ContainerType::leaf)
             return parse_error("Cannot focus prev when a tiling window is not selected");
 
-        if (auto parent = Container::as_parent(container->get_parent().lock()))
+        if (auto const parent = Container::as_parent(container->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(container);
+            auto const index = parent->get_index_of_node(container).value();
             if (index != 0)
             {
-                auto node_to_select = parent->get_nth_window(index - 1);
+                auto const node_to_select = parent->get_nth_window(index - 1);
                 window_controller->select_active_window(node_to_select->window().value());
             }
         }
     }
     else if (arg == "next")
     {
-        auto container = state->focused_container();
+        // TODO: Move this to the policy because this is racy
+        auto const container = state->focused_container();
         if (!container)
             return parse_error("No container is selected");
 
         if (container->get_type() != ContainerType::leaf)
             return parse_error("Cannot focus prev when a tiling window is not selected");
 
-        if (auto parent = Container::as_parent(container->get_parent().lock()))
+        if (auto const parent = Container::as_parent(container->get_parent().lock()))
         {
-            auto index = parent->get_index_of_node(container);
+            auto const index = parent->get_index_of_node(container).value();
             if (index != parent->num_nodes() - 1)
             {
                 auto node_to_select = parent->get_nth_window(index + 1);

@@ -67,9 +67,9 @@ public:
     std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
     LayoutScheme get_direction() { return scheme; }
     std::vector<std::shared_ptr<Container>> const& get_sub_nodes() const;
-    [[nodiscard]] int get_index_of_node(Container const* node) const;
-    [[nodiscard]] int get_index_of_node(std::shared_ptr<Container> const& node) const;
-    [[nodiscard]] int get_index_of_node(Container const&) const;
+    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const* node) const;
+    [[nodiscard]] std::optional<size_t> get_index_of_node(std::shared_ptr<Container> const& node) const;
+    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const&) const;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;

@@ -137,8 +137,8 @@ bool has_neighbor(Container const* container, LayoutScheme direction, size_t can
     if (parent_container->get_direction() != direction)
         return has_neighbor(parent_container.get(), direction, cannot_be_index);
 
-    auto index = parent_container->get_index_of_node(container);
-    return (parent_container->num_nodes() > 1 && index != cannot_be_index)
+    auto const index = parent_container->get_index_of_node(container);
+    return (parent_container->num_nodes() > 1 && (index != cannot_be_index))
         || has_neighbor(parent_container.get(), direction, cannot_be_index);
 }
 
