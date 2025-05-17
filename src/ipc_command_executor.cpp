@@ -115,60 +115,57 @@ IpcCommandExecutor::IpcCommandExecutor(
 {
 }
 
-IpcValidationResult IpcCommandExecutor::process(miracle::IpcParseResult const& command_list)
+std::vector<IpcValidationResult> IpcCommandExecutor::process(miracle::IpcParseResult const& command_list)
 {
-    IpcValidationResult result;
+    std::vector<IpcValidationResult> result;
     for (auto const& command : command_list.commands)
     {
         switch (command.type)
         {
         case IpcCommandType::exec:
-            result = process_exec(command, command_list);
+            result.push_back(process_exec(command, command_list));
             break;
         case IpcCommandType::split:
-            result = process_split(command, command_list);
+            result.push_back(process_split(command, command_list));
             break;
         case IpcCommandType::focus:
-            result = process_focus(command, command_list);
+            result.push_back(process_focus(command, command_list));
             break;
         case IpcCommandType::move:
-            result = process_move(command, command_list);
+            result.push_back(process_move(command, command_list));
             break;
         case IpcCommandType::sticky:
-            result = process_sticky(command, command_list);
+            result.push_back(process_sticky(command, command_list));
             break;
         case IpcCommandType::exit:
             policy->quit();
-            result = {};
+            result.push_back({ .success = true });
             break;
         case IpcCommandType::input:
-            result = process_input(command, command_list);
+            result.push_back(process_input(command, command_list));
             break;
         case IpcCommandType::workspace:
-            result = process_workspace(command, command_list);
+            result.push_back(process_workspace(command, command_list));
             break;
         case IpcCommandType::layout:
-            result = process_layout(command, command_list);
+            result.push_back(process_layout(command, command_list));
             break;
         case IpcCommandType::scratchpad:
-            result = process_scratchpad(command, command_list);
+            result.push_back(process_scratchpad(command, command_list));
             break;
         case IpcCommandType::resize:
-            result = process_resize(command, command_list);
+            result.push_back(process_resize(command, command_list));
             break;
         case IpcCommandType::reload:
-            result = process_reload(command, command_list);
+            result.push_back(process_reload(command, command_list));
             break;
         default:
-            result = parse_error(std::format("Unsupported command type: {}", (int)command.type));
+            result.push_back(parse_error(std::format("Unsupported command type: {}", command.raw_command)));
             break;
         }
-
-        if (!result.success)
-            return result;
     }
 
-    return {};
+    return result;
 }
 
 IpcValidationResult IpcCommandExecutor::parse_error(std::string error)

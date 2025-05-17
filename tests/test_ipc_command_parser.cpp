@@ -146,3 +146,26 @@ TEST_F(IpcCommandParserTest, CanParseThreeCommands)
     ASSERT_EQ(commands.commands[2].options[0], "--opt2");
     ASSERT_EQ(commands.commands[2].arguments[0], "splitv");
 }
+
+TEST_F(IpcCommandParserTest, InvlaidCommandIsNone)
+{
+    const char* v = "meow 5";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 1);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::none);
+    ASSERT_EQ(commands.commands[0].raw_command, "meow");
+    ASSERT_EQ(commands.commands[0].arguments[0], "5");
+}
+
+TEST_F(IpcCommandParserTest, CanParseOneValidAndOneInvalidCommand)
+{
+    const char* v = "meow 5; workspace 1";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 2);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::none);
+    ASSERT_EQ(commands.commands[0].raw_command, "meow");
+    ASSERT_EQ(commands.commands[1].type, IpcCommandType::workspace);
+    ASSERT_EQ(commands.commands[1].raw_command, "workspace");
+}

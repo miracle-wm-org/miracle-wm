@@ -44,30 +44,29 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     case IpcType::IPC_COMMAND:
     {
         mir::log_debug("Processing miracle command: %s", payload);
-        auto const result = parse_i3_command(payload);
-        if (result.success)
+        auto const result = process_ipc_command(payload);
+        json j = json::array();
+        for (auto const& command_result : result)
         {
-            const std::string msg = "[{\"success\": true}]";
-            return {
-                .fatal = false,
-                .type = payload_type,
-                .payload = msg
-            };
+            if (command_result.success)
+            {
+                j.push_back({
+                    { "success", true }
+                });
+            }
+            else
+            {
+                j.push_back({
+                    { "success",     false                      },
+                    { "parse_error", command_result.parse_error },
+                    { "error",       command_result.error       },
+                });
+            }
         }
-        else
-        {
-            json j = json::array();
-            j.push_back({
-                { "success",     false              },
-                { "parse_error", result.parse_error },
-                { "error",       result.error       },
-            });
-            const std::string msg = to_string(j);
-            return {
-                .type = payload_type,
-                .payload = msg
-            };
-        }
+        return {
+            .type = payload_type,
+            .payload = to_string(j)
+        };
     }
     case IpcType::IPC_GET_WORKSPACES:
     {
@@ -193,7 +192,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     }
 }
 
-IpcValidationResult IpcMessageHandler::parse_i3_command(const char* command)
+std::vector<IpcValidationResult> IpcMessageHandler::process_ipc_command(const char* command)
 {
     IpcCommandParser parser(command);
     auto const pending_commands = parser.parse();

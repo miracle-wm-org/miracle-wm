@@ -276,7 +276,9 @@ IpcParseResult IpcCommandParser::parse()
                 if (ss.str().empty())
                     break;
 
-                retval.commands.push_back({ command_from_string(ss.str()) });
+                retval.commands.push_back({ command_from_string(ss.str()),
+                    ss.str(),
+                    {}, {} });
                 ss = std::stringstream();
                 stack.pop_back();
                 can_parse_options = true;
@@ -339,7 +341,9 @@ IpcParseResult IpcCommandParser::parse()
             retval.commands.back().arguments.push_back(ss.str());
             break;
         case ParseState::command:
-            retval.commands.push_back({ command_from_string(ss.str()) });
+            retval.commands.push_back({ command_from_string(ss.str()),
+                ss.str(),
+                {}, {} });
             break;
         case ParseState::scope_key:
             retval.scope.push_back({ scope_from_string(ss.str()) });

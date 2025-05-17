@@ -48,7 +48,7 @@ public:
         std::shared_ptr<CompositorState> const&,
         AutoRestartingLauncher&,
         std::shared_ptr<WindowController> const&);
-    IpcValidationResult process(IpcParseResult const&);
+    std::vector<IpcValidationResult> process(IpcParseResult const&);
 
 private:
     std::shared_ptr<CommandController> policy;

@@ -91,7 +91,7 @@ private:
     std::unique_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
 
-    IpcValidationResult parse_i3_command(const char* command);
+    std::vector<IpcValidationResult> process_ipc_command(const char* command);
 };
 }
 
