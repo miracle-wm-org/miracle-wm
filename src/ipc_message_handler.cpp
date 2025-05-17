@@ -154,9 +154,8 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     case IpcType::IPC_GET_BINDING_MODES:
     {
         json response;
-        response.push_back("default");
-        response.push_back("resize");
-        response.push_back("selecting");
+        for (auto const& str : BINDING_MODE_STRINGS)
+            response.push_back(str);
         return {
             .type = payload_type,
             .payload = to_string(response)

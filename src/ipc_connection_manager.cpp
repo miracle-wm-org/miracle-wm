@@ -73,39 +73,10 @@ bool fd_is_valid(int fd)
 
 json mode_event_to_json(WindowManagerMode mode)
 {
-    switch (mode)
-    {
-    case WindowManagerMode::normal:
-        return {
-            { "change",       "default" },
-            { "pango_markup", true      }
-        };
-    case WindowManagerMode::resizing:
-        return {
-            { "change",       "resize" },
-            { "pango_markup", true     }
-        };
-    case WindowManagerMode::selecting:
-        return {
-            { "change",       "selecting" },
-            { "pango_markup", true        }
-        };
-    case WindowManagerMode::dragging:
-        return {
-            { "change",       "dragging" },
-            { "pango_markup", true       }
-        };
-    case WindowManagerMode::moving:
-        return {
-            { "change",       "moving" },
-            { "pango_markup", true     }
-        };
-    default:
-    {
-        mir::log_error("mode_event_to_json: unknown binding state: %d", static_cast<int>(mode));
-        return {};
-    }
-    }
+    return {
+        { "change",       BINDING_MODE_STRINGS[static_cast<int>(mode)] },
+        { "pango_markup", true                                         }
+    };
 }
 }
 
