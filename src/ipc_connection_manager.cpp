@@ -114,7 +114,7 @@ IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<CommandController> const& command_controller,
     std::unique_ptr<IpcCommandExecutor> command_executor,
     std::shared_ptr<Config> const& config) :
-    policy(command_controller),
+    command_controller(command_controller),
     ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, std::move(command_executor), config))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -257,7 +257,7 @@ void IpcConnectionManager::on_created(uint32_t id)
     json j = {
         { "change",  "init"                        },
         { "old",     nullptr                       },
-        { "current", policy->workspace_to_json(id) }
+        { "current", command_controller->workspace_to_json(id) }
     };
 
     auto const serialized_value = to_string(j);
@@ -276,7 +276,7 @@ void IpcConnectionManager::on_removed(uint32_t id)
 {
     json j = {
         { "change",  "empty"                       },
-        { "current", policy->workspace_to_json(id) }
+        { "current", command_controller->workspace_to_json(id) }
     };
 
     auto const serialized_value = to_string(j);
@@ -297,11 +297,11 @@ void IpcConnectionManager::on_focused(
 {
     json j = {
         { "change",  "focus"                               },
-        { "current", policy->workspace_to_json(current_id) }
+        { "current", command_controller->workspace_to_json(current_id) }
     };
 
     if (previous_id)
-        j["old"] = policy->workspace_to_json(previous_id.value());
+        j["old"] = command_controller->workspace_to_json(previous_id.value());
     else
         j["old"] = nullptr;
 

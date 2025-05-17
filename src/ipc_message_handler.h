@@ -87,8 +87,8 @@ public:
         uint32_t payload_length);
 
 private:
-    std::shared_ptr<CommandController> policy;
-    std::unique_ptr<IpcCommandExecutor> executor;
+    std::shared_ptr<CommandController> command_controller;
+    std::unique_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
 
     IpcValidationResult parse_i3_command(const char* command);

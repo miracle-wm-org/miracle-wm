@@ -28,11 +28,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using json = nlohmann::json;
 using namespace miracle;
 
-IpcMessageHandler::IpcMessageHandler(std::shared_ptr<CommandController> const& policy,
-    std::unique_ptr<IpcCommandExecutor> executor,
+IpcMessageHandler::IpcMessageHandler(std::shared_ptr<CommandController> const& command_controller,
+    std::unique_ptr<IpcCommandExecutor> ipc_command_executor,
     std::shared_ptr<Config> const& config) :
-    policy { policy },
-    executor { std::move(executor) },
+    command_controller { command_controller },
+    ipc_command_executor { std::move(ipc_command_executor) },
     config { config }
 {
 }
@@ -71,7 +71,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     }
     case IpcType::IPC_GET_WORKSPACES:
     {
-        auto json_string = to_string(policy->workspaces_json());
+        auto json_string = to_string(command_controller->workspaces_json());
         return {
             .type = payload_type,
             .payload = json_string
@@ -79,7 +79,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     }
     case IpcType::IPC_GET_OUTPUTS:
     {
-        auto json_string = to_string(policy->outputs_json());
+        auto json_string = to_string(command_controller->outputs_json());
         return {
             .type = payload_type,
             .payload = json_string
@@ -134,7 +134,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     {
         return {
             .type = payload_type,
-            .payload = to_string(policy->to_json())
+            .payload = to_string(command_controller->to_json())
         };
     }
     case IpcType::IPC_GET_VERSION:
@@ -166,7 +166,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     {
         return {
             .type = payload_type,
-            .payload = to_string(policy->mode_to_json())
+            .payload = to_string(command_controller->mode_to_json())
         };
     }
     case IpcType::IPC_SEND_TICK:
@@ -191,5 +191,5 @@ IpcValidationResult IpcMessageHandler::parse_i3_command(const char* command)
 {
     IpcCommandParser parser(command);
     auto const pending_commands = parser.parse();
-    return executor->process(pending_commands);
+    return ipc_command_executor->process(pending_commands);
 }

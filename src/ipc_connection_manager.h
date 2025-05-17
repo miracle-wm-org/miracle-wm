@@ -56,7 +56,7 @@ private:
         int subscribed_events = 0;
     };
 
-    std::shared_ptr<CommandController> policy;
+    std::shared_ptr<CommandController> command_controller;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
