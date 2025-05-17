@@ -33,7 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using json = nlohmann::json;
 using namespace miracle;
 
-static const char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
+static constexpr char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
 
 #define IPC_HEADER_SIZE (sizeof(ipc_magic) + 8)
 
@@ -41,7 +41,7 @@ namespace
 {
 struct sockaddr_un* ipc_user_sockaddr()
 {
-    auto ipc_sockaddr = (sockaddr_un*)malloc(sizeof(struct sockaddr_un));
+    auto const ipc_sockaddr = static_cast<sockaddr_un*>(malloc(sizeof(struct sockaddr_un)));
     if (ipc_sockaddr == nullptr)
     {
         mir::log_error("Can't allocate ipc_sockaddr");
@@ -49,7 +49,7 @@ struct sockaddr_un* ipc_user_sockaddr()
     }
 
     ipc_sockaddr->sun_family = AF_UNIX;
-    int path_size = sizeof(ipc_sockaddr->sun_path);
+    int constexpr path_size = sizeof(ipc_sockaddr->sun_path);
 
     // Env var typically set by logind, e.g. "/run/user/<user-id>"
     const char* dir = getenv("XDG_RUNTIME_DIR");
@@ -102,7 +102,7 @@ json mode_event_to_json(WindowManagerMode mode)
         };
     default:
     {
-        mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
+        mir::log_error("mode_event_to_json: unknown binding state: %d", static_cast<int>(mode));
         return {};
     }
     }
@@ -117,7 +117,7 @@ IpcConnectionManager::IpcConnectionManager(
     policy(command_controller),
     ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, std::move(command_executor), config))
 {
-    auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
+    auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
     {
         mir::log_error("Unable to create ipc socket");
@@ -136,9 +136,9 @@ IpcConnectionManager::IpcConnectionManager(
     }
 
     ipc_sockaddr = ipc_user_sockaddr();
-    if (getenv("SWAYSOCK") != nullptr && access(getenv("SWAYSOCK"), F_OK) == -1)
+    if (getenv("MIRACLESOCK") != nullptr && access(getenv("MIRACLESOCK"), F_OK) == -1)
     {
-        strncpy(ipc_sockaddr->sun_path, getenv("SWAYSOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
+        strncpy(ipc_sockaddr->sun_path, getenv("MIRACLESOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
         ipc_sockaddr->sun_path[sizeof(ipc_sockaddr->sun_path) - 1] = 0;
     }
 
@@ -155,7 +155,6 @@ IpcConnectionManager::IpcConnectionManager(
         exit(1);
     }
 
-    // Set i3 IPC socket path so that i3-msg works out of the box
     setenv("I3SOCK", ipc_sockaddr->sun_path, 1);
     setenv("SWAYSOCK", ipc_sockaddr->sun_path, 1);
     setenv("MIRACLESOCK", ipc_sockaddr->sun_path, 1);
@@ -188,13 +187,13 @@ IpcConnectionManager::IpcConnectionManager(
             return;
         }
 
-        auto mir_fd = mir::Fd { client_fd };
+        auto const mir_fd = mir::Fd { client_fd };
         clients.push_back({ mir_fd,
-            runner.register_fd_handler(mir_fd, [this](int fd)
+            runner.register_fd_handler(mir_fd, [this](int const fd)
         {
             auto& client = get_client(fd);
 
-            int read_available;
+            uint32_t read_available;
             if (ioctl(client.client_fd, FIONREAD, &read_available) == -1)
             {
                 mir::log_error("Unable to read IPC socket buffer size");
@@ -204,25 +203,25 @@ IpcConnectionManager::IpcConnectionManager(
 
             if (client.pending_read_length > 0)
             {
-                if ((uint32_t)read_available >= client.pending_read_length)
+                if (read_available >= client.pending_read_length)
                 {
                     // Reset pending values.
-                    uint32_t pending_length = client.pending_read_length;
-                    IpcType pending_type = client.pending_type;
+                    uint32_t const pending_length = client.pending_read_length;
+                    IpcType const pending_type = client.pending_type;
                     client.pending_read_length = 0;
                     handle_command(client, pending_length, pending_type);
                 }
                 return;
             }
 
-            if (read_available < (int)IPC_HEADER_SIZE)
+            if (read_available < IPC_HEADER_SIZE)
             {
                 return;
             }
 
             uint8_t buf[IPC_HEADER_SIZE];
             // Should be fully available, because read_available >= IPC_HEADER_SIZE
-            ssize_t received = recv(client.client_fd, buf, IPC_HEADER_SIZE, 0);
+            ssize_t const received = recv(client.client_fd, buf, IPC_HEADER_SIZE, 0);
             if (received == -1)
             {
                 mir::log_error("Unable to receive header from IPC client");
@@ -241,11 +240,11 @@ IpcConnectionManager::IpcConnectionManager(
             memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
             mir::log_debug("Received request from IPC client: %d", (int)client.pending_type);
 
-            if (read_available - received >= (long)client.pending_read_length)
+            if (read_available - received >= static_cast<long>(client.pending_read_length))
             {
                 // Reset pending values.
-                uint32_t pending_length = client.pending_read_length;
-                IpcType pending_type = client.pending_type;
+                uint32_t const pending_length = client.pending_read_length;
+                IpcType const pending_type = client.pending_type;
                 client.pending_read_length = 0;
                 handle_command(client, pending_length, pending_type);
             }
@@ -261,7 +260,7 @@ void IpcConnectionManager::on_created(uint32_t id)
         { "current", policy->workspace_to_json(id) }
     };
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -280,7 +279,7 @@ void IpcConnectionManager::on_removed(uint32_t id)
         { "current", policy->workspace_to_json(id) }
     };
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -306,7 +305,7 @@ void IpcConnectionManager::on_focused(
     else
         j["old"] = nullptr;
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -320,7 +319,7 @@ void IpcConnectionManager::on_focused(
 
 void IpcConnectionManager::on_changed(WindowManagerMode mode)
 {
-    auto response = to_string(mode_event_to_json(mode));
+    auto const response = to_string(mode_event_to_json(mode));
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
@@ -334,7 +333,7 @@ void IpcConnectionManager::on_changed(WindowManagerMode mode)
 
 void IpcConnectionManager::on_shutdown()
 {
-    auto response = to_string(json({
+    auto const response = to_string(json({
         { "change", "exit" }
     }));
     for (auto& client : clients)
@@ -364,7 +363,7 @@ IpcConnectionManager::IpcClient& IpcConnectionManager::get_client(int fd)
 
 void IpcConnectionManager::disconnect(IpcClient& client)
 {
-    auto it = std::find_if(clients.begin(), clients.end(), [&](IpcClient const& other)
+    auto const it = std::ranges::find_if(clients, [&](IpcClient const& other)
     {
         return other.client_fd.operator int() == client.client_fd.operator int();
     });
@@ -383,7 +382,7 @@ void IpcConnectionManager::disconnect(IpcClient& client)
 
 void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type)
 {
-    char* buf = (char*)malloc(payload_length + 1);
+    auto const buf = static_cast<char*>(malloc(payload_length + 1));
     if (!buf)
     {
         mir::log_error("Unable to allocate IPC payload");
@@ -465,8 +464,9 @@ void IpcConnectionManager::send_reply(IpcClient& client, IpcType command_type, c
         new_buffer_size *= 2;
     }
 
-    if (new_buffer_size > 4e6)
-    { // 4 MB
+    size_t constexpr MAX_BUFFER_SIZE = 4e6; // 4 MB
+    if (new_buffer_size > MAX_BUFFER_SIZE)
+    {
         mir::log_error("Client write buffer too big (%zu), disconnecting client", client.buffer.size());
         disconnect(client);
         return;
@@ -509,7 +509,7 @@ void IpcConnectionManager::handle_writeable(miracle::IpcConnectionManager::IpcCl
 {
     while (client.write_buffer_len > 0)
     {
-        ssize_t written = write_nosigpipe(client.client_fd, client.buffer.data(), client.write_buffer_len);
+        ssize_t const written = write_nosigpipe(client.client_fd, client.buffer.data(), client.write_buffer_len);
         if (written == -1 && errno == EAGAIN)
         {
             return;

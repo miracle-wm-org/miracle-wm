@@ -52,7 +52,7 @@ private:
         uint32_t pending_read_length = 0;
         IpcType pending_type;
         std::vector<char> buffer;
-        int write_buffer_len = 0;
+        uint32_t write_buffer_len = 0;
         int subscribed_events = 0;
     };
 
