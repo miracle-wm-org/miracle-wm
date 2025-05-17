@@ -32,9 +32,35 @@ class OutputManager;
 
 struct IpcValidationResult
 {
-    bool success = true;
-    bool parse_error = false;
-    std::string error;
+private:
+    IpcValidationResult(bool success, bool parse_error, std::string error) :
+        success(success),
+        parse_error(parse_error),
+        error(std::move(error))
+    {
+    }
+
+public:
+    IpcValidationResult() = delete;
+    static IpcValidationResult create_success()
+    {
+        return IpcValidationResult(
+            true,
+            false,
+            "");
+    }
+
+    static IpcValidationResult create_failure(std::string error, bool parse_error)
+    {
+        return IpcValidationResult(
+            false,
+            parse_error,
+            std::move(error));
+    }
+
+    bool const success;
+    bool const parse_error;
+    std::string const error;
 };
 
 /// Processes all commands coming from i3 IPC. This class is mostly for organizational
@@ -68,8 +94,6 @@ private:
     IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);
-
-    IpcValidationResult parse_error(std::string error);
 };
 
 } // miracle
