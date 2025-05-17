@@ -566,11 +566,11 @@ IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command
 
     auto const& arg0 = command.arguments[0];
     if (arg0 == "enable")
-        policy->set_is_pinned(true);
+        policy->set_is_pinned(true, {});
     else if (arg0 == "disable")
-        policy->set_is_pinned(false);
+        policy->set_is_pinned(false, {});
     else if (arg0 == "toggle")
-        policy->toggle_pinned_to_workspace();
+        policy->toggle_pinned_to_workspace({});
     else
         mir::log_warning("process_sticky: unknown arguments: %s", arg0.c_str());
 
@@ -688,15 +688,15 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
     // https://i3wm.org/docs/userguide.html#manipulating_layout
     std::string const& arg0 = command.arguments[0];
     if (arg0 == "default")
-        policy->set_layout_default();
+        policy->set_layout_default({});
     else if (arg0 == "tabbed")
-        policy->set_layout(LayoutScheme::tabbing);
+        policy->set_layout(LayoutScheme::tabbing, {});
     else if (arg0 == "stacking")
-        policy->set_layout(LayoutScheme::stacking);
+        policy->set_layout(LayoutScheme::stacking, {});
     else if (arg0 == "splitv")
-        policy->set_layout(LayoutScheme::vertical);
+        policy->set_layout(LayoutScheme::vertical, {});
     else if (arg0 == "splith")
-        policy->set_layout(LayoutScheme::horizontal);
+        policy->set_layout(LayoutScheme::horizontal, {});
     else if (arg0 == "toggle")
     {
         if (command.arguments.size() == 1)
@@ -775,13 +775,13 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
             if (target == "split")
                 policy->try_toggle_layout(false, command_list.scope);
             else if (target == "tabbed")
-                policy->set_layout(LayoutScheme::tabbing);
+                policy->set_layout(LayoutScheme::tabbing, {});
             else if (target == "stacking")
-                policy->set_layout(LayoutScheme::stacking);
+                policy->set_layout(LayoutScheme::stacking, {});
             else if (target == "splitv")
-                policy->set_layout(LayoutScheme::vertical);
+                policy->set_layout(LayoutScheme::vertical, {});
             else if (target == "splith")
-                policy->set_layout(LayoutScheme::horizontal);
+                policy->set_layout(LayoutScheme::horizontal, {});
         }
     }
 

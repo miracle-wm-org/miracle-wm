@@ -241,53 +241,53 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case DefaultKeyCommand::Fullscreen:
             return command_controller->try_toggle_fullscreen(empty_scope);
         case DefaultKeyCommand::SelectWorkspace1:
-            return command_controller->select_workspace(1);
+            return command_controller->select_workspace(1, true);
         case DefaultKeyCommand::SelectWorkspace2:
-            return command_controller->select_workspace(2);
+            return command_controller->select_workspace(2, true);
         case DefaultKeyCommand::SelectWorkspace3:
-            return command_controller->select_workspace(3);
+            return command_controller->select_workspace(3, true);
         case DefaultKeyCommand::SelectWorkspace4:
-            return command_controller->select_workspace(4);
+            return command_controller->select_workspace(4, true);
         case DefaultKeyCommand::SelectWorkspace5:
-            return command_controller->select_workspace(5);
+            return command_controller->select_workspace(5, true);
         case DefaultKeyCommand::SelectWorkspace6:
-            return command_controller->select_workspace(6);
+            return command_controller->select_workspace(6, true);
         case DefaultKeyCommand::SelectWorkspace7:
-            return command_controller->select_workspace(7);
+            return command_controller->select_workspace(7, true);
         case DefaultKeyCommand::SelectWorkspace8:
-            return command_controller->select_workspace(8);
+            return command_controller->select_workspace(8, true);
         case DefaultKeyCommand::SelectWorkspace9:
-            return command_controller->select_workspace(9);
+            return command_controller->select_workspace(9, true);
         case DefaultKeyCommand::SelectWorkspace0:
-            return command_controller->select_workspace(0);
+            return command_controller->select_workspace(0, true);
         case DefaultKeyCommand::MoveToWorkspace1:
-            return command_controller->move_active_to_workspace(1);
+            return command_controller->move_active_to_workspace(1, true);
         case DefaultKeyCommand::MoveToWorkspace2:
-            return command_controller->move_active_to_workspace(2);
+            return command_controller->move_active_to_workspace(2, true);
         case DefaultKeyCommand::MoveToWorkspace3:
-            return command_controller->move_active_to_workspace(3);
+            return command_controller->move_active_to_workspace(3, true);
         case DefaultKeyCommand::MoveToWorkspace4:
-            return command_controller->move_active_to_workspace(4);
+            return command_controller->move_active_to_workspace(4, true);
         case DefaultKeyCommand::MoveToWorkspace5:
-            return command_controller->move_active_to_workspace(5);
+            return command_controller->move_active_to_workspace(5, true);
         case DefaultKeyCommand::MoveToWorkspace6:
-            return command_controller->move_active_to_workspace(6);
+            return command_controller->move_active_to_workspace(6, true);
         case DefaultKeyCommand::MoveToWorkspace7:
-            return command_controller->move_active_to_workspace(7);
+            return command_controller->move_active_to_workspace(7, true);
         case DefaultKeyCommand::MoveToWorkspace8:
-            return command_controller->move_active_to_workspace(8);
+            return command_controller->move_active_to_workspace(8, true);
         case DefaultKeyCommand::MoveToWorkspace9:
-            return command_controller->move_active_to_workspace(9);
+            return command_controller->move_active_to_workspace(9, true);
         case DefaultKeyCommand::MoveToWorkspace0:
-            return command_controller->move_active_to_workspace(0);
+            return command_controller->move_active_to_workspace(0, true);
         case DefaultKeyCommand::ToggleFloating:
-            return command_controller->toggle_floating();
+            return command_controller->toggle_floating({});
         case DefaultKeyCommand::TogglePinnedToWorkspace:
-            return command_controller->toggle_pinned_to_workspace();
+            return command_controller->toggle_pinned_to_workspace({});
         case DefaultKeyCommand::ToggleTabbing:
-            return command_controller->toggle_tabbing();
+            return command_controller->toggle_tabbing({});
         case DefaultKeyCommand::ToggleStacking:
-            return command_controller->toggle_stacking();
+            return command_controller->toggle_stacking({});
         default:
             std::cerr << "Unknown key_command: " << static_cast<int>(key_command) << std::endl;
             break;

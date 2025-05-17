@@ -255,8 +255,8 @@ IpcConnectionManager::IpcConnectionManager(
 void IpcConnectionManager::on_created(uint32_t id)
 {
     json j = {
-        { "change",  "init"                        },
-        { "old",     nullptr                       },
+        { "change",  "init"                                    },
+        { "old",     nullptr                                   },
         { "current", command_controller->workspace_to_json(id) }
     };
 
@@ -275,7 +275,7 @@ void IpcConnectionManager::on_created(uint32_t id)
 void IpcConnectionManager::on_removed(uint32_t id)
 {
     json j = {
-        { "change",  "empty"                       },
+        { "change",  "empty"                                   },
         { "current", command_controller->workspace_to_json(id) }
     };
 
@@ -296,7 +296,7 @@ void IpcConnectionManager::on_focused(
     uint32_t current_id)
 {
     json j = {
-        { "change",  "focus"                               },
+        { "change",  "focus"                                           },
         { "current", command_controller->workspace_to_json(current_id) }
     };
 
