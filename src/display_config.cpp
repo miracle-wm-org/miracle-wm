@@ -101,6 +101,8 @@ struct convert<miracle::DisplayConfig::OutputConfig>
         Node node;
         node["enabled"] = card.enabled;
         node["name"] = card.name;
+        if (card.primary)
+            node["primary"] = card.primary;
         if (card.position)
             node["position"] = *card.position;
         if (card.size)
@@ -132,6 +134,8 @@ struct convert<miracle::DisplayConfig::OutputConfig>
         card.name = node["name"].as<std::string>();
         card.enabled = node["enabled"].as<bool>(false);
 
+        if (node["primary"])
+            card.primary = node["primary"].as<bool>();
         if (node["position"])
             card.position = node["position"].as<mir::geometry::Point>();
         if (node["size"])
@@ -377,6 +381,7 @@ private:
     {
         std::vector<OutputConfig> result;
         geom::Point position(0, 0);
+        bool enconutered_first = false;
         configuration.for_each_output([&](mg::UserDisplayConfigurationOutput& output)
         {
             if (!output.connected || output.modes.empty())
@@ -384,6 +389,7 @@ private:
 
             OutputConfig config;
             config.enabled = output.connected && !output.modes.empty();
+            config.primary = !enconutered_first;
             config.name = output.name;
             config.position = position;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
@@ -396,6 +402,7 @@ private:
             config.orientation = output.orientation;
             config.scale = output.scale;
             config.group_id = mg::DisplayConfigurationLogicalGroupId(0);
+            enconutered_first = true;
             result.push_back(config);
         });
 
@@ -404,6 +411,7 @@ private:
 
     static void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs)
     {
+        bool has_had_primary = false;
         conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
         {
             if (!output.connected || output.modes.empty())
@@ -430,6 +438,15 @@ private:
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.orientation = mir_orientation_normal;
+
+            bool primary = false;
+            if (card.primary && !has_had_primary)
+            {
+                has_had_primary = true;
+                primary = true;
+            }
+
+            output.custom_attribute["primary"] = primary ? "true" : "false";
 
             if (card.position)
                 output.top_left = card.position.value();

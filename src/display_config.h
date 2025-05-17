@@ -35,6 +35,7 @@ public:
     struct OutputConfig
     {
         bool enabled = false;
+        bool primary = false;
         std::string name;
         std::optional<mir::geometry::Point> position;
         std::optional<mir::geometry::Size> size;

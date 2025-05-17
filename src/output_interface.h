@@ -104,7 +104,7 @@ public:
     [[nodiscard]] virtual nlohmann::json to_json(bool is_focused) const = 0;
 
     /// This method should implement https://i3wm.org/docs/ipc.html#_outputs_reply
-    [[nodiscard]] virtual nlohmann::json to_json_for_output_list(bool is_focused) const = 0;
+    [[nodiscard]] virtual nlohmann::json get_outputs_json(bool is_focused) const = 0;
 };
 
 }
