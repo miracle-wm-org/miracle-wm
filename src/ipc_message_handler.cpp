@@ -177,6 +177,13 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
             .send_tick_event = true
         };
     }
+    case IpcType::IPC_SYNC:
+    {
+        return {
+            .type = payload_type,
+            .payload = "{\"name\": \"default\"}",
+        };
+    }
     default:
         mir::log_warning("Unknown payload type: %d", payload_type);
         return {
