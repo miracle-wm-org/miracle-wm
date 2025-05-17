@@ -1320,7 +1320,7 @@ nlohmann::json CommandController::workspaces_json() const
         if (workspace->get_output()->is_defunct())
             continue;
 
-        j.push_back(workspace->to_json(output_manager->focused() == workspace->get_output()));
+        j.push_back(workspace->get_workspaces_json(output_manager->focused() == workspace->get_output()));
     }
     return j;
 }

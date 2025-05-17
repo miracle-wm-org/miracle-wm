@@ -30,11 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gtest/gtest.h>
 
 using namespace miracle;
+using namespace testing;
 
 namespace
 {
-const float OUTPUT_WIDTH = 1280;
-const float OUTPUT_HEIGHT = 720;
+const int OUTPUT_WIDTH = 1280;
+const int OUTPUT_HEIGHT = 720;
 
 const geom::Rectangle OUTPUT_SIZE {
     geom::Point(0, 0),
@@ -49,9 +50,9 @@ const geom::Rectangle OTHER_OUTPUT_SIZE {
 std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
 std::vector<miral::Zone> empty_app_zones;
 
-std::unique_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
+std::shared_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
 {
-    auto output = std::make_unique<testing::NiceMock<test::MockOutput>>();
+    auto output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     ON_CALL(*output, get_area())
         .WillByDefault(testing::ReturnRef(bounds));
     ON_CALL(*output, get_workspaces())
@@ -69,14 +70,14 @@ public:
         state(std::make_shared<CompositorState>()),
         output(create_output(OUTPUT_SIZE)),
         window_controller(std::make_shared<StubWindowController>(pairs)),
-        workspace(
+        workspace(std::make_shared<Workspace>(
             output.get(),
             0,
             0,
             "0",
             std::make_shared<test::StubConfiguration>(),
             window_controller,
-            state)
+            state))
     {
     }
 
@@ -85,7 +86,7 @@ public:
         WorkspaceInterface* target_workspace = nullptr)
     {
         if (target_workspace == nullptr)
-            target_workspace = &workspace;
+            target_workspace = workspace.get();
         miral::WindowSpecification spec;
         miral::ApplicationInfo app_info;
         auto hint = target_workspace->allocate_position(app_info, spec, { ContainerType::leaf, parent });
@@ -111,8 +112,8 @@ public:
     std::vector<std::shared_ptr<test::StubSurface>> surfaces;
     std::vector<StubWindowData> pairs;
     std::shared_ptr<StubWindowController> window_controller;
-    std::unique_ptr<test::MockOutput> output;
-    Workspace workspace;
+    std::shared_ptr<test::MockOutput> output;
+    std::shared_ptr<Workspace> workspace;
 };
 
 TEST_F(WorkspaceTest, CanAddSingleWindowWithoutBorderAndGaps)
@@ -214,7 +215,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToDifferentParent)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(0, 0));
     ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT / 3.f)));
     ASSERT_EQ(leaf1->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT * (2.f / 3.f))));
-    ASSERT_EQ(workspace.get_root()->num_nodes(), 3);
+    ASSERT_EQ(workspace->get_root()->num_nodes(), 3);
 }
 
 TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
@@ -231,7 +232,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf(std::nullopt, &other);
 
-    ASSERT_EQ(leaf1->get_workspace(), &workspace);
+    ASSERT_EQ(leaf1->get_workspace(), workspace.get());
     ASSERT_EQ(leaf2->get_workspace(), &other);
 
     ASSERT_TRUE(leaf1->move_to(*leaf2));
@@ -252,7 +253,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         state);
     auto leaf1 = create_leaf();
 
-    ASSERT_EQ(leaf1->get_workspace(), &workspace);
+    ASSERT_EQ(leaf1->get_workspace(), workspace.get());
     ASSERT_TRUE(other.add_to_root(*leaf1));
     ASSERT_EQ(leaf1->get_workspace(), &other);
     ASSERT_EQ(leaf1->get_logical_area(), OTHER_OUTPUT_SIZE);
@@ -282,7 +283,7 @@ TEST_F(WorkspaceTest, DraggedWindowsAreUnconstrained)
 TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToOutputSizeWhenNoAppZonesArePresent)
 {
     // Assert that the first tree (w/o app zones) is equal to the output size.
-    ASSERT_EQ(workspace.get_root()->get_logical_area(), OUTPUT_SIZE);
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
 }
 
 TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesArePresent)
@@ -310,4 +311,25 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
 
     // Assert that the first tree (w/o app zones) is equal to the output size.
     ASSERT_EQ(other.get_root()->get_logical_area(), zone_bounds);
+}
+
+TEST_F(WorkspaceTest, GetWorkspaceJson)
+{
+    std::string const output_name = "test";
+    EXPECT_CALL(*output, name)
+        .WillOnce(testing::ReturnRef(output_name));
+    EXPECT_CALL(*output, active)
+        .WillOnce(testing::Return(workspace));
+
+    auto const json = workspace->get_workspaces_json(true);
+    EXPECT_THAT(json["num"], Eq(0));
+    EXPECT_THAT(json["name"], Eq("0:0"));
+    EXPECT_THAT(json["visible"], Eq(true));
+    EXPECT_THAT(json["focused"], Eq(true));
+    EXPECT_THAT(json["urgent"], Eq(false));
+    EXPECT_THAT(json["output"], Eq("test"));
+    EXPECT_THAT(json["rect"]["x"], Eq(0));
+    EXPECT_THAT(json["rect"]["y"], Eq(0));
+    EXPECT_THAT(json["rect"]["width"], Eq(OUTPUT_WIDTH));
+    EXPECT_THAT(json["rect"]["height"], Eq(OUTPUT_HEIGHT));
 }
