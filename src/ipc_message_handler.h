@@ -20,13 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ipc_command.h"
 #include "ipc_command_executor.h"
-#include "mode_observer.h"
-#include "workspace_manager.h"
-#include "workspace_observer.h"
-#include <mir/fd.h>
-#include <miral/runner.h>
-#include <shared_mutex>
-#include <vector>
+
+#define event_mask(ev) (1 << (static_cast<int>(ev) & 0x7F))
 
 struct sockaddr_un;
 
@@ -35,8 +30,8 @@ namespace miracle
 
 class CommandController;
 
-/// This it taken directly from SWAY
-enum IpcType
+/// This it taken directly from sway
+enum class IpcType
 {
     // i3 command types - see i3's I3_REPLY_TYPE constants
     IPC_COMMAND = 0,
@@ -72,49 +67,30 @@ enum IpcType
     IPC_EVENT_INPUT = ((1 << 31) | 21),
 };
 
-/// Inter process communication for compositor clients (e.g. waybar).
-/// This class will implement I3's interface: https://i3wm.org/docs/ipc.html
-/// plus some of the sway-specific items.
-/// It may be extended in the future.
-class Ipc : public virtual WorkspaceObserver, public virtual ModeObserver
+struct MessageHandlerResult
+{
+    bool fatal = false;
+    IpcType type;
+    std::string payload;
+    int subscribed_events = 0;
+    bool send_tick_event = false;
+};
+
+class IpcMessageHandler
 {
 public:
-    Ipc(miral::MirRunner& runner,
-        std::shared_ptr<CommandController> const&,
+    IpcMessageHandler(std::shared_ptr<CommandController> const&,
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
-
-    void on_created(uint32_t id) override;
-    void on_removed(uint32_t id) override;
-    void on_focused(std::optional<uint32_t>, uint32_t) override;
-    void on_changed(WindowManagerMode mode) override;
-    void on_shutdown();
+    MessageHandlerResult handle_msg(IpcType payload_type,
+        char* payload,
+        uint32_t payload_length);
 
 private:
-    struct IpcClient
-    {
-        mir::Fd client_fd;
-        std::unique_ptr<miral::FdHandle> handle;
-        uint32_t pending_read_length = 0;
-        IpcType pending_type;
-        std::vector<char> buffer;
-        int write_buffer_len = 0;
-        int subscribed_events = 0;
-    };
-
     std::shared_ptr<CommandController> policy;
-    mir::Fd ipc_socket;
-    std::unique_ptr<miral::FdHandle> socket_handle;
-    sockaddr_un* ipc_sockaddr = nullptr;
-    std::vector<IpcClient> clients;
     std::unique_ptr<IpcCommandExecutor> executor;
     std::shared_ptr<Config> config;
 
-    void disconnect(IpcClient& client);
-    IpcClient& get_client(int fd);
-    void handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type);
-    void send_reply(IpcClient& client, IpcType command_type, std::string const& payload);
-    void handle_writeable(IpcClient& client);
     IpcValidationResult parse_i3_command(const char* command);
 };
 }

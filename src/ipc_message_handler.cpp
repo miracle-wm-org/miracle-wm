@@ -1,0 +1,195 @@
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
+#define MIR_LOG_COMPONENT "ipc_message_handler"
+
+#include "ipc_message_handler.h"
+#include "command_controller.h"
+#include "config.h"
+#include "ipc_command_executor.h"
+#include "version.h"
+#include <mir/log.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+using namespace miracle;
+
+IpcMessageHandler::IpcMessageHandler(std::shared_ptr<CommandController> const& policy,
+    std::unique_ptr<IpcCommandExecutor> executor,
+    std::shared_ptr<Config> const& config) :
+    policy { policy },
+    executor { std::move(executor) },
+    config { config }
+{
+}
+
+MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* payload, uint32_t)
+{
+    switch (payload_type)
+    {
+    case IpcType::IPC_COMMAND:
+    {
+        mir::log_debug("Processing miracle command: %s", payload);
+        auto const result = parse_i3_command(payload);
+        if (result.success)
+        {
+            const std::string msg = "[{\"success\": true}]";
+            return {
+                .fatal = false,
+                .type = payload_type,
+                .payload = msg
+            };
+        }
+        else
+        {
+            json j = json::array();
+            j.push_back({
+                { "success",     false              },
+                { "parse_error", result.parse_error },
+                { "error",       result.error       },
+            });
+            const std::string msg = to_string(j);
+            return {
+                .type = payload_type,
+                .payload = msg
+            };
+        }
+    }
+    case IpcType::IPC_GET_WORKSPACES:
+    {
+        auto json_string = to_string(policy->workspaces_json());
+        return {
+            .type = payload_type,
+            .payload = json_string
+        };
+    }
+    case IpcType::IPC_GET_OUTPUTS:
+    {
+        auto json_string = to_string(policy->outputs_json());
+        return {
+            .type = payload_type,
+            .payload = json_string
+        };
+    }
+    case IpcType::IPC_SUBSCRIBE:
+    {
+        json j = json::parse(payload);
+        bool success = true;
+        std::string error;
+        MessageHandlerResult result = { .type = payload_type };
+        for (auto const& i : j)
+        {
+            std::string event_type = i.template get<std::string>();
+            mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
+            if (event_type == "workspace")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WORKSPACE);
+            else if (event_type == "window")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WINDOW);
+            else if (event_type == "input")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_INPUT);
+            else if (event_type == "mode")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_MODE);
+            else if (event_type == "tick")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_TICK);
+            else if (event_type == "shutdown")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_SHUTDOWN);
+            else
+            {
+                mir::log_warning("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
+                error = "Invalid IPC subscription event: " + event_type;
+                success = false;
+                break;
+            }
+        }
+
+        if (success)
+        {
+            result.payload = "{\"success\": true}";
+        }
+        else
+        {
+            json const response = {
+                { "success", false },
+                { "error",   error }
+            };
+            result.payload = to_string(response);
+        }
+        return result;
+    }
+    case IpcType::IPC_GET_TREE:
+    {
+        return {
+            .type = payload_type,
+            .payload = to_string(policy->to_json())
+        };
+    }
+    case IpcType::IPC_GET_VERSION:
+    {
+        json response = {
+            { "major",                   MIRACLE_WM_MAJOR       },
+            { "minor",                   MIRACLE_WM_MINOR       },
+            { "patch",                   MIRACLE_WM_PATCH       },
+            { "human_readable",          MIRACLE_VERSION_STRING },
+            { "loaded_config_file_name", config->get_filename() }
+        };
+        return {
+            .type = payload_type,
+            .payload = to_string(response)
+        };
+    }
+    case IpcType::IPC_GET_BINDING_MODES:
+    {
+        json response;
+        response.push_back("default");
+        response.push_back("resize");
+        response.push_back("selecting");
+        return {
+            .type = payload_type,
+            .payload = to_string(response)
+        };
+    }
+    case IpcType::IPC_GET_BINDING_STATE:
+    {
+        return {
+            .type = payload_type,
+            .payload = to_string(policy->mode_to_json())
+        };
+    }
+    case IpcType::IPC_SEND_TICK:
+    {
+        const std::string msg = "{\"success\": true}";
+        return {
+            .type = payload_type,
+            .payload = "{\"success\": true}",
+            .send_tick_event = true
+        };
+    }
+    default:
+        mir::log_warning("Unknown payload type: %d", payload_type);
+        return {
+            .fatal = true,
+            .type = payload_type
+        };
+    }
+}
+
+IpcValidationResult IpcMessageHandler::parse_i3_command(const char* command)
+{
+    IpcCommandParser parser(command);
+    auto const pending_commands = parser.parse();
+    return executor->process(pending_commands);
+}

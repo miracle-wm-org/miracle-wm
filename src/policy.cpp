@@ -138,7 +138,7 @@ Policy::Policy(
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
-    ipc(std::make_shared<Ipc>(
+    ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         runner,
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, output_manager, state, *launcher, window_controller),
@@ -153,26 +153,26 @@ Policy::Policy(
         config,
         animator))
 {
-    workspace_observer_registrar->register_interest(ipc);
+    workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
-    mode_observer_registrar->register_interest(ipc);
+    mode_observer_registrar->register_interest(ipc_connection_manager);
     animator_loop->start();
 
     // TODO: This is a hack until we figure out what is happening with
     //  https://github.com/canonical/mir/issues/3823.
     runner.add_stop_callback([&]
     {
-        ipc->on_shutdown();
+        ipc_connection_manager->on_shutdown();
     });
 }
 
 Policy::~Policy()
 {
-    ipc->on_shutdown();
+    ipc_connection_manager->on_shutdown();
     animator_loop->stop();
-    workspace_observer_registrar->unregister_interest(ipc.get());
+    workspace_observer_registrar->unregister_interest(ipc_connection_manager.get());
     workspace_observer_registrar->unregister_interest(self.get());
-    mode_observer_registrar->unregister_interest(ipc.get());
+    mode_observer_registrar->unregister_interest(ipc_connection_manager.get());
 }
 
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)

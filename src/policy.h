@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "drag_and_drop_service.h"
-#include "ipc.h"
 #include "ipc_command_executor.h"
+#include "ipc_connection_manager.h"
 #include "mode_observer.h"
 #include "move_service.h"
 #include "output.h"
@@ -135,7 +135,7 @@ private:
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;
     std::unique_ptr<ResizeService> resize_service;
-    std::shared_ptr<Ipc> ipc;
+    std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
