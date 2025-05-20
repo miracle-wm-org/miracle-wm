@@ -141,7 +141,7 @@ Policy::Policy(
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         runner,
         command_controller,
-        std::make_unique<IpcCommandExecutor>(command_controller, output_manager, state, *launcher, window_controller),
+        std::make_unique<IpcCommandExecutor>(command_controller, *launcher, window_controller),
         config)),
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),

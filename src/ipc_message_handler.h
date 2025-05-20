@@ -29,6 +29,7 @@ namespace miracle
 {
 
 class CommandController;
+class Config;
 
 /// This it taken directly from sway
 enum class IpcType

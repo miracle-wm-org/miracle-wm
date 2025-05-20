@@ -19,11 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "command_controller.h"
 #include "config.h"
+#include "leaf_container.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "scratchpad.h"
-#include "window_helpers.h"
 #include "workspace_manager.h"
 
 #include <mir/log.h>
@@ -194,7 +194,7 @@ bool CommandController::try_request_horizontal(std::vector<ContainerScope> const
     return true;
 }
 
-bool CommandController::try_resize(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
+bool CommandController::try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     auto containers = resolve_scope(scope);
@@ -210,16 +210,64 @@ bool CommandController::try_resize(miracle::Direction direction, int pixels, std
     return result;
 }
 
-bool CommandController::try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope)
+bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
     bool result = true;
     for (auto const& container : containers)
     {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            result = false;
+            continue;
+        }
+
+        float total_size = 0;
+        switch (direction)
+        {
+        case Direction::down:
+        case Direction::up:
+            total_size = output->get_area().size.height.as_value();
+            break;
+        default:
+            total_size = output->get_area().size.width.as_value();
+            break;
+        }
+
+        if (!container->resize(direction, ppt * total_size))
+            result = false;
+    }
+    return result;
+}
+
+bool CommandController::try_set_size(
+    std::optional<int> const& width,
+    bool is_width_ppt,
+    std::optional<int> const& height,
+    bool is_height_ppt,
+    std::vector<ContainerScope> const& scope)
+{
+    // TODO: Account for ppt here
+    std::lock_guard lock(mutex);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            result = false;
+            continue;
+        }
+
         if (!container->set_size(width, height))
             result = false;
     }
@@ -305,7 +353,6 @@ bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vec
     return result;
 }
 
-
 bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
@@ -371,7 +418,6 @@ bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> 
     float const y_pos = y / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
     return try_move_to(static_cast<int>(x_pos), false, static_cast<int>(y_pos), false, scope);
 }
-
 
 bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& scope)
 {
@@ -538,7 +584,6 @@ bool CommandController::try_select_next(std::vector<ContainerScope> const& scope
         }
     }
 }
-
 
 bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
 {

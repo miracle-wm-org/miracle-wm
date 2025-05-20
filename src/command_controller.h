@@ -63,7 +63,8 @@ public:
     virtual bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) = 0;
     virtual void try_toggle_resize_mode() = 0;
     virtual bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
-    virtual bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_set_size(std::optional<int> const& width, bool is_width_ppt, std::optional<int> const& height, bool is_height_ppt, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move(Direction direction, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) = 0;
@@ -153,7 +154,8 @@ public:
     bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) override;
     void try_toggle_resize_mode() override;
     bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
-    bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope) override;
+    bool try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_set_size(std::optional<int> const& width, bool is_width_ppt, std::optional<int> const& height, bool is_height_ppt, std::vector<ContainerScope> const& scope) override;
     bool try_move(Direction direction, std::vector<ContainerScope> const& scope) override;
     bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
     bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) override;

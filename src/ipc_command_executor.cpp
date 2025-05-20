@@ -101,7 +101,8 @@ public:
             // The 'next' item wasn't ppt or px, so let's pop out of it.
             if (!has_type_label)
                 prev();
-            return ParseMoveResult(true, move_type, amount);;
+            return ParseMoveResult(true, move_type, amount);
+            ;
         }
         catch (std::invalid_argument const& e)
         {
@@ -280,8 +281,8 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     }
     else if (arg == "prev")
     {
-       if (!policy->try_select_prev(command_list.scope))
-           return IpcValidationResult::create_failure("Failed to select prev", false);
+        if (!policy->try_select_prev(command_list.scope))
+            return IpcValidationResult::create_failure("Failed to select prev", false);
 
         return IpcValidationResult::create_success();
     }
@@ -350,12 +351,11 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
 namespace
 {
 
-
 ParseMoveResult parse_move_distance(std::vector<std::string> const& arguments, int& index)
 {
     auto const size = arguments.size() - index;
     if (size <= 1)
-        return ParseMoveResult{false, ParseMoveResult::MoveType::invalid, 0};
+        return ParseMoveResult { false, ParseMoveResult::MoveType::invalid, 0 };
 
     try
     {
@@ -377,12 +377,12 @@ ParseMoveResult parse_move_distance(std::vector<std::string> const& arguments, i
             }
         }
 
-        return ParseMoveResult{true, move_type, amount};
+        return ParseMoveResult { true, move_type, amount };
     }
     catch (std::invalid_argument const& e)
     {
         mir::log_error("Invalid argument: %s", arguments[index].c_str());
-        return ParseMoveResult{false, ParseMoveResult::MoveType::invalid, 0};
+        return ParseMoveResult { false, ParseMoveResult::MoveType::invalid, 0 };
     }
 }
 }
@@ -793,35 +793,22 @@ ResizeAdjust parse_resize(ArgumentsIndexer& indexer, int multiplier)
     if (!indexer.next())
         return { .success = false, .error = "process_resize: expected argument after 'resize grow'" };
 
-    Direction direction;;
+    Direction direction;
+    ;
     if (indexer.current() == "width" || indexer.current() == "horizontal")
-    {
         direction = Direction::right;
-    }
     else if (indexer.current() == "height" || indexer.current() == "vertical")
-    {
         direction = Direction::down;
-    }
     else if (indexer.current() == "up")
-    {
         direction = Direction::up;
-    }
     else if (indexer.current() == "down")
-    {
         direction = Direction::down;
-    }
     else if (indexer.current() == "left")
-    {
         direction = Direction::left;
-    }
     else if (indexer.current() == "right")
-    {
         direction = Direction::right;
-    }
     else
-    {
         return { .success = false, .error = std::format("Unknown direction value: {}", indexer.current().c_str()) };
-    }
 
     auto const first_move_distance = indexer.parse_move_distance();
     if (!first_move_distance.success)
@@ -872,7 +859,13 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!adjust.success)
             return IpcValidationResult::create_failure(adjust.error, true);
 
-        policy->try_resize(adjust.direction, adjust.first, command_list.scope);
+        if (!adjust.first.has_value())
+            return IpcValidationResult::create_failure("Expected a value after 'grow'", true);
+
+        if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
+            policy->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+        else
+            policy->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "shrink")
@@ -881,7 +874,13 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!adjust.success)
             return IpcValidationResult::create_failure(adjust.error, true);
 
-        policy->try_resize(adjust.direction, adjust.first, command_list.scope);
+        if (!adjust.first.has_value())
+            return IpcValidationResult::create_failure("Expected a value after 'shrink'", true);
+
+        if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
+            policy->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+        else
+            policy->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "set")
@@ -890,7 +889,12 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!result.success)
             return IpcValidationResult::create_failure(result.error, true);
 
-        policy->try_set_size(result.width, result.height, command_list.scope);
+        policy->try_set_size(
+            result.width.amount,
+            result.width.move_type == ParseMoveResult::MoveType::ppt,
+            result.height.amount,
+            result.height.move_type == ParseMoveResult::MoveType::ppt,
+            command_list.scope);
         return IpcValidationResult::create_success();
     }
     else

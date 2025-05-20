@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc_command.h"
 #include "ipc_message_handler.h"
 
+#include <cassert>
 #include <cctype>
 #include <mir/log.h>
 #include <sstream>
