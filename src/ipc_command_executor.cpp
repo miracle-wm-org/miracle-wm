@@ -36,6 +36,18 @@ using namespace miracle;
 
 namespace
 {
+struct ParseMoveResult
+{
+    bool const success;
+    enum class MoveType
+    {
+        pixel,
+        ppt,
+        invalid
+    } const move_type;
+    float const amount;
+};
+
 class ArgumentsIndexer
 {
 public:
@@ -61,37 +73,40 @@ public:
         return command.arguments[index];
     }
 
-    bool parse_move_distance(int available_area, int& out)
+    ParseMoveResult parse_move_distance()
     {
         if (!next())
-            return false;
+            return ParseMoveResult(false, ParseMoveResult::MoveType::invalid, 0);
 
         try
         {
-            out = std::stoi(current());
+            auto move_type = ParseMoveResult::MoveType::pixel;
+            float amount = std::stoi(current());
+            bool has_type_label = false;
             if (next())
             {
                 // We default to assuming the value is in pixels
                 if (current() == "ppt")
                 {
-                    float ppt = static_cast<float>(out) / 100.f;
-                    out = static_cast<float>(available_area) * ppt;
-                    return true;
+                    amount = amount / 100.f;
+                    move_type = ParseMoveResult::MoveType::pixel;
+                    has_type_label = true;
                 }
                 else if (current() == "px")
                 {
-                    return true;
+                    has_type_label = true;
                 }
             }
 
             // The 'next' item wasn't ppt or px, so let's pop out of it.
-            prev();
-            return true;
+            if (!has_type_label)
+                prev();
+            return ParseMoveResult(true, move_type, amount);;
         }
         catch (std::invalid_argument const& e)
         {
             mir::log_error("Invalid argument: %s", command.arguments[index].c_str());
-            return false;
+            return ParseMoveResult(false, ParseMoveResult::MoveType::invalid, 0);
         }
     }
 
@@ -103,13 +118,9 @@ protected:
 
 IpcCommandExecutor::IpcCommandExecutor(
     std::shared_ptr<CommandController> const& policy,
-    std::shared_ptr<OutputManager> const& output_manager,
-    std::shared_ptr<CompositorState> const& state,
     AutoRestartingLauncher& launcher,
     std::shared_ptr<WindowController> const& window_controller) :
     policy { policy },
-    output_manager { output_manager },
-    state { state },
     launcher { launcher },
     window_controller { window_controller }
 {
@@ -235,58 +246,51 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
             return IpcValidationResult::create_failure("Focus 'workspace' command expected scope but none was provided", false);
 
         policy->select_workspace_with_scope(command_list.scope);
+        return IpcValidationResult::create_success();
     }
     else if (arg == "left")
+    {
         policy->try_select(Direction::left, command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "right")
+    {
         policy->try_select(Direction::right, command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "up")
+    {
         policy->try_select(Direction::up, command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "down")
+    {
         policy->try_select(Direction::down, command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "parent")
+    {
         policy->try_select_parent(command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "child")
+    {
         policy->try_select_child(command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "prev")
     {
-        // TODO: Move this to the policy because this is racy
-        auto const container = state->focused_container();
-        if (!container)
-            return IpcValidationResult::create_failure("Active container does not exist", false);
+       if (!policy->try_select_prev(command_list.scope))
+           return IpcValidationResult::create_failure("Failed to select prev", false);
 
-        if (container->get_type() != ContainerType::leaf)
-            return IpcValidationResult::create_failure("Cannot focus prev when a tiling window is not selected", false);
-
-        if (auto const parent = Container::as_parent(container->get_parent().lock()))
-        {
-            auto const index = parent->get_index_of_node(container).value();
-            if (index != 0)
-            {
-                auto const node_to_select = parent->get_nth_window(index - 1);
-                window_controller->select_active_window(node_to_select->window().value());
-            }
-        }
+        return IpcValidationResult::create_success();
     }
     else if (arg == "next")
     {
-        // TODO: Move this to the policy because this is racy
-        auto const container = state->focused_container();
-        if (!container)
-            return IpcValidationResult::create_failure("No container is selected", false);
+        if (!policy->try_select_next(command_list.scope))
+            return IpcValidationResult::create_failure("Failed to select prev", false);
 
-        if (container->get_type() != ContainerType::leaf)
-            return IpcValidationResult::create_failure("Cannot focus prev when a tiling window is not selected", false);
-
-        if (auto const parent = Container::as_parent(container->get_parent().lock()))
-        {
-            auto const index = parent->get_index_of_node(container).value();
-            if (index != parent->num_nodes() - 1)
-            {
-                auto node_to_select = parent->get_nth_window(index + 1);
-                window_controller->select_active_window(node_to_select->window().value());
-            }
-        }
+        return IpcValidationResult::create_success();
     }
     else if (arg == "floating")
         policy->try_select_floating(command_list.scope);
@@ -301,98 +305,117 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
 
         auto const& arg1 = command.arguments[1];
         if (arg1 == "next")
+        {
             policy->try_select_next_output();
+            return IpcValidationResult::create_success();
+        }
         else if (arg1 == "prev")
+        {
             policy->try_select_prev_output();
+            return IpcValidationResult::create_success();
+        }
         else if (arg1 == "left")
+        {
             policy->try_select_output(Direction::left);
+            return IpcValidationResult::create_success();
+        }
         else if (arg1 == "right")
+        {
             policy->try_select_output(Direction::right);
+            return IpcValidationResult::create_success();
+        }
         else if (arg1 == "up")
+        {
             policy->try_select_output(Direction::up);
+            return IpcValidationResult::create_success();
+        }
         else if (arg1 == "down")
+        {
             policy->try_select_output(Direction::down);
+            return IpcValidationResult::create_success();
+        }
         else
         {
-            auto names = std::vector<std::string>(command.arguments.begin() + 1, command.arguments.end());
+            auto const names = std::vector<std::string>(command.arguments.begin() + 1, command.arguments.end());
             policy->try_select_output(names);
+            return IpcValidationResult::create_success();
         }
     }
-
-    return IpcValidationResult::create_success();
+    else
+    {
+        return IpcValidationResult::create_failure(std::format("Unknown argument to 'focus' command: {}", arg.c_str()), true);
+    }
 }
 
 namespace
 {
-bool parse_move_distance(std::vector<std::string> const& arguments, int& index, int total_size, int& out)
+
+
+ParseMoveResult parse_move_distance(std::vector<std::string> const& arguments, int& index)
 {
     auto const size = arguments.size() - index;
     if (size <= 1)
-        return false;
+        return ParseMoveResult{false, ParseMoveResult::MoveType::invalid, 0};
 
     try
     {
-        out = std::stoi(arguments[index]);
+        float amount = std::stoi(arguments[index]);
+        auto move_type = ParseMoveResult::MoveType::pixel;
         if (size == 2)
         {
             // We default to assuming the value is in pixels
             if (arguments[index + 1] == "ppt")
             {
-                float const ppt = static_cast<float>(out) / 100.f;
-                out = static_cast<float>(total_size) * ppt;
+                move_type = ParseMoveResult::MoveType::pixel;
+                amount = amount / 100.f;
+                index++;
+            }
+            else if (arguments[index + 1] == "px")
+            {
+                move_type = ParseMoveResult::MoveType::pixel;
+                index++;
             }
         }
 
-        return true;
+        return ParseMoveResult{true, move_type, amount};
     }
     catch (std::invalid_argument const& e)
     {
         mir::log_error("Invalid argument: %s", arguments[index].c_str());
-        return false;
+        return ParseMoveResult{false, ParseMoveResult::MoveType::invalid, 0};
     }
 }
 }
 
 IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, IpcParseResult const& command_list)
 {
-    auto const& active_output = output_manager->focused();
-    if (!active_output)
-        return IpcValidationResult::create_failure("process_move: output is not set", false);
-
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("process_move: move command expects arguments", false);
 
     int index = 0;
     auto const& arg0 = command.arguments[index++];
-    Direction direction = Direction::MAX;
-    int total_size = 0;
+    auto direction = Direction::MAX;
+
     if (arg0 == "left")
-    {
         direction = Direction::left;
-        total_size = active_output->get_area().size.width.as_int();
-    }
     else if (arg0 == "right")
-    {
         direction = Direction::right;
-        total_size = active_output->get_area().size.width.as_int();
-    }
     else if (arg0 == "up")
-    {
         direction = Direction::up;
-        total_size = active_output->get_area().size.height.as_int();
-    }
     else if (arg0 == "down")
-    {
         direction = Direction::down;
-        total_size = active_output->get_area().size.height.as_int();
-    }
 
     if (direction < Direction::MAX)
     {
-        int move_distance;
-        if (parse_move_distance(command.arguments, index, total_size, move_distance))
-            policy->try_move_by(direction, move_distance, command_list.scope);
+        const auto [success, move_type, amount] = parse_move_distance(command.arguments, index);
+        if (success)
+        {
+            if (move_type == ParseMoveResult::MoveType::ppt)
+                policy->try_move_by_ppt(direction, amount, command_list.scope);
+            else
+                policy->try_move_by_pixels(direction, static_cast<int>(amount), command_list.scope);
+        }
         else
             policy->try_move(direction, command_list.scope);
         return IpcValidationResult::create_success();
@@ -406,29 +429,30 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            auto const active = state->focused_container().get();
-            auto const area = active_output->get_area();
-            float const x = static_cast<float>(area.size.width.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
-            float const y = static_cast<float>(area.size.height.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
-            policy->try_move_to(static_cast<int>(x), static_cast<int>(y), command_list.scope);
+            policy->try_move_to_center_of_active_output(command_list.scope);
+            return IpcValidationResult::create_success();
         }
         else if (arg1 == "mouse")
         {
-            auto const& position = state->cursor_position;
-            policy->try_move_to((int)position.x.as_int(), (int)position.y.as_int(), command_list.scope);
+            policy->try_move_to_cursor(command_list.scope);
+            return IpcValidationResult::create_success();
         }
         else
         {
-            int move_distance_x;
-            int move_distance_y;
-
-            if (!parse_move_distance(command.arguments, index, total_size, move_distance_x))
+            auto x_move_distance = parse_move_distance(command.arguments, index);
+            if (!x_move_distance.success)
                 return IpcValidationResult::create_failure("move position <x> <y>: unable to parse x", true);
 
-            if (!parse_move_distance(command.arguments, index, total_size, move_distance_y))
+            auto y_move_distance = parse_move_distance(command.arguments, index);
+            if (!y_move_distance.success)
                 return IpcValidationResult::create_failure("move position <x> <y>: unable to parse y", true);
 
-            policy->try_move_to(move_distance_x, move_distance_y, command_list.scope);
+            policy->try_move_to(
+                x_move_distance.amount,
+                x_move_distance.move_type == ParseMoveResult::MoveType::ppt,
+                y_move_distance.amount,
+                y_move_distance.move_type == ParseMoveResult::MoveType::ppt,
+                command_list.scope);
         }
 
         return IpcValidationResult::create_success();
@@ -438,27 +462,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         auto const& arg1 = command.arguments[index++];
         auto const& arg2 = command.arguments[index++];
         if (arg1 != "position")
-            return IpcValidationResult::create_failure("move [absolute] ... expected 'position' as the third argument", true);
+            return IpcValidationResult::create_failure("move absolute ... expected 'position' as the third argument", true);
 
         if (arg2 != "center")
-            return IpcValidationResult::create_failure("move absolute position ... expected 'center' as the third argument", true);
+            return IpcValidationResult::create_failure("move absolute position ... expected 'center' as the fourth argument", true);
 
-        float x = 0, y = 0;
-        for (auto const& output : output_manager->outputs())
-        {
-            auto area = output->get_area();
-            float const end_x = static_cast<float>(area.size.width.as_int() + area.top_left.x.as_int());
-            float const end_y = static_cast<float>(area.size.height.as_int() + area.top_left.y.as_int());
-            if (end_x > x)
-                x = end_x;
-            if (end_y > y)
-                y = end_y;
-        }
-
-        auto const active = state->focused_container();
-        float const x_pos = x / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
-        float const y_pos = y / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
-        policy->try_move_to(static_cast<int>(x_pos), static_cast<int>(y_pos), command_list.scope);
+        policy->try_move_to_absolute_center(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "window" || arg0 == "container")
@@ -634,21 +643,15 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
     }
     else if (arg0 == "next_on_output")
     {
-        if (auto const& output = output_manager->focused())
-        {
-            policy->next_workspace_on_output(*output);
+        if (policy->next_workspace_on_output())
             return IpcValidationResult::create_success();
-        }
         else
             return IpcValidationResult::create_failure("'workspace next_on_output' has no output to go next on", false);
     }
     else if (arg0 == "prev_on_output")
     {
-        if (auto const& output = output_manager->focused())
-        {
-            policy->prev_workspace_on_output(*output);
+        if (policy->prev_workspace_on_output())
             return IpcValidationResult::create_success();
-        }
         else
             return IpcValidationResult::create_failure("'workspace prev_on_output' has no output to go prev on", false);
     }
@@ -735,91 +738,24 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
             return IpcValidationResult::create_failure("Expected split/all after 'layout toggle X'", true);
         }
 
-        auto const container = state->focused_container();
-        if (!container)
-            return IpcValidationResult::create_failure("Container unavailable during 'layout'", false);
-
-        auto const current_type = container->get_layout();
-        size_t index = 0;
+        std::vector<LayoutRequestType> request_types;
         for (size_t i = 1; i < command.arguments.size(); i++)
         {
             auto const& argn = command.arguments[i];
             if (argn == "split")
-            {
-                if (current_type == LayoutScheme::horizontal || current_type == LayoutScheme::vertical)
-                {
-                    index = i;
-                    break;
-                }
-            }
+                request_types.push_back(LayoutRequestType::split);
             else if (argn == "tabbed")
-            {
-                if (current_type == LayoutScheme::tabbing)
-                {
-                    index = i;
-                    break;
-                }
-            }
+                request_types.push_back(LayoutRequestType::tabbed);
             else if (argn == "stacking")
-            {
-                if (current_type == LayoutScheme::stacking)
-                {
-                    index = i;
-                    break;
-                }
-            }
+                request_types.push_back(LayoutRequestType::stacking);
             else if (argn == "splitv")
-            {
-                if (current_type == LayoutScheme::vertical)
-                {
-                    index = i;
-                    break;
-                }
-            }
+                request_types.push_back(LayoutRequestType::splitv);
             else if (argn == "splith")
-            {
-                if (current_type == LayoutScheme::horizontal)
-                {
-                    index = i;
-                    break;
-                }
-            }
+                request_types.push_back(LayoutRequestType::splith);
         }
 
-        index++;
-        if (index == command.arguments.size())
-            index = 1;
-
-        auto const& target = command.arguments[index];
-        if (target == "split")
-        {
-            policy->try_toggle_layout(false, command_list.scope);
-            return IpcValidationResult::create_success();
-        }
-        else if (target == "tabbed")
-        {
-            policy->set_layout(LayoutScheme::tabbing, {});
-            return IpcValidationResult::create_success();
-        }
-        else if (target == "stacking")
-        {
-            policy->set_layout(LayoutScheme::stacking, {});
-            return IpcValidationResult::create_success();
-        }
-        else if (target == "splitv")
-        {
-            policy->set_layout(LayoutScheme::vertical, {});
-            return IpcValidationResult::create_success();
-        }
-        else if (target == "splith")
-        {
-            policy->set_layout(LayoutScheme::horizontal, {});
-            return IpcValidationResult::create_success();
-        }
-        else
-        {
-            return IpcValidationResult::create_failure(std::format("Unknown argument to 'layout' command, {}", target), true);
-        }
+        policy->try_cycle_through_request_types(request_types, command_list.scope);
+        return IpcValidationResult::create_success();
     }
     else
     {
@@ -847,63 +783,48 @@ struct ResizeAdjust
     bool success = true;
     std::string error;
     Direction direction = Direction::MAX;
-    int first = 0;
-    int second = 0;
+    int multiplier = 1;
+    std::optional<ParseMoveResult> first;
+    std::optional<ParseMoveResult> second;
 };
 
-ResizeAdjust parse_resize(std::shared_ptr<CompositorState> const& state, ArgumentsIndexer& indexer, int multiplier)
+ResizeAdjust parse_resize(ArgumentsIndexer& indexer, int multiplier)
 {
     if (!indexer.next())
         return { .success = false, .error = "process_resize: expected argument after 'resize grow'" };
 
-    auto const& container = state->focused_container();
-    if (!container)
-        return { .success = false, .error = "No container is selcted" };
-
-    ResizeAdjust result;
+    Direction direction;;
     if (indexer.current() == "width" || indexer.current() == "horizontal")
     {
-        result.direction = Direction::right;
+        direction = Direction::right;
     }
     else if (indexer.current() == "height" || indexer.current() == "vertical")
     {
-        result.direction = Direction::down;
+        direction = Direction::down;
     }
     else if (indexer.current() == "up")
     {
-        result.direction = Direction::up;
+        direction = Direction::up;
     }
     else if (indexer.current() == "down")
     {
-        result.direction = Direction::down;
+        direction = Direction::down;
     }
     else if (indexer.current() == "left")
     {
-        result.direction = Direction::left;
+        direction = Direction::left;
     }
     else if (indexer.current() == "right")
     {
-        result.direction = Direction::right;
+        direction = Direction::right;
     }
     else
     {
         return { .success = false, .error = std::format("Unknown direction value: {}", indexer.current().c_str()) };
     }
 
-    int available_space = 0;
-    switch (result.direction)
-    {
-    case Direction::up:
-    case Direction::down:
-        available_space = container->get_output()->get_area().size.height.as_value();
-        break;
-    default:
-        available_space = container->get_output()->get_area().size.width.as_value();
-        break;
-    }
-
-    int first = 0;
-    if (!indexer.parse_move_distance(available_space, first))
+    auto const first_move_distance = indexer.parse_move_distance();
+    if (!first_move_distance.success)
         return { .success = false, .error = "cannot parse the first value" };
 
     if (indexer.next())
@@ -912,41 +833,29 @@ ResizeAdjust parse_resize(std::shared_ptr<CompositorState> const& state, Argumen
             return { .success = false, .error = "expected 'or' after first value" };
     }
 
-    int second = 0;
-    indexer.parse_move_distance(available_space, second);
-    result.first = first * multiplier;
-    result.second = second * multiplier;
-    return result;
+    auto const second_move_distance = indexer.parse_move_distance();
+    return ResizeAdjust(true, "", direction, multiplier, first_move_distance, second_move_distance);
 }
 
 struct SetResizeResult
 {
     bool success = true;
     std::string error;
-    std::optional<int> width;
-    std::optional<int> height;
+    ParseMoveResult width;
+    ParseMoveResult height;
 };
 
-SetResizeResult parse_set_resize(std::shared_ptr<CompositorState> const& state, ArgumentsIndexer& indexer)
+SetResizeResult parse_set_resize(ArgumentsIndexer& indexer)
 {
-    auto const& container = state->focused_container();
-    if (!container)
-        return { .success = false, .error = "Container is not selected" };
-
-    SetResizeResult result;
-    int width = 0, height = 0;
-    if (!indexer.parse_move_distance(container->get_output()->get_area().size.width.as_value(), width))
+    ParseMoveResult const width_result = indexer.parse_move_distance();
+    if (!width_result.success)
         return { .success = false, .error = "invalid width" };
 
-    if (!indexer.parse_move_distance(container->get_output()->get_area().size.height.as_value(), height))
+    ParseMoveResult const height_result = indexer.parse_move_distance();
+    if (!height_result.success)
         return { .success = false, .error = "invalid height" };
 
-    if (width != 0)
-        result.width = width;
-    if (height != 0)
-        result.height = height;
-
-    return result;
+    return SetResizeResult(true, "", width_result, height_result);
 }
 }
 
@@ -959,7 +868,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
     auto const& arg0 = indexer.current();
     if (arg0 == "grow")
     {
-        auto const adjust = parse_resize(state, indexer, 1);
+        auto const adjust = parse_resize(indexer, 1);
         if (!adjust.success)
             return IpcValidationResult::create_failure(adjust.error, true);
 
@@ -968,7 +877,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
     }
     else if (arg0 == "shrink")
     {
-        auto const adjust = parse_resize(state, indexer, -1);
+        auto const adjust = parse_resize(indexer, -1);
         if (!adjust.success)
             return IpcValidationResult::create_failure(adjust.error, true);
 
@@ -977,7 +886,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
     }
     else if (arg0 == "set")
     {
-        auto const result = parse_set_resize(state, indexer);
+        auto const result = parse_set_resize(indexer);
         if (!result.success)
             return IpcValidationResult::create_failure(result.error, true);
 

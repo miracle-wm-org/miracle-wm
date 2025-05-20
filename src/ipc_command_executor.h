@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_I_3_COMMAND_EXECUTOR_H
 #define MIRACLEWM_I_3_COMMAND_EXECUTOR_H
 
-#include "compositor_state.h"
 #include "ipc_command.h"
 #include <mir/glib_main_loop.h>
 
@@ -70,16 +69,12 @@ class IpcCommandExecutor
 public:
     IpcCommandExecutor(
         std::shared_ptr<CommandController> const&,
-        std::shared_ptr<OutputManager> const&,
-        std::shared_ptr<CompositorState> const&,
         AutoRestartingLauncher&,
         std::shared_ptr<WindowController> const&);
     std::vector<IpcValidationResult> process(IpcParseResult const&);
 
 private:
     std::shared_ptr<CommandController> policy;
-    std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<CompositorState> state;
     AutoRestartingLauncher& launcher;
     std::shared_ptr<WindowController> window_controller;
 

@@ -104,6 +104,82 @@ bool CommandController::try_toggle_layout(bool cycle_thru_all, std::vector<Conta
     return true;
 }
 
+bool CommandController::try_cycle_through_request_types(
+    std::vector<LayoutRequestType> const& request_types,
+    std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    if (request_types.empty())
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    for (auto const& container : containers)
+    {
+        auto const current_type = container->get_layout();
+        size_t i = -1;
+        bool found = false;
+        for (; i < request_types.size(); i++)
+        {
+            switch (request_types[i])
+            {
+            case LayoutRequestType::split:
+                if (current_type == LayoutScheme::horizontal || current_type == LayoutScheme::vertical)
+                    found = true;
+                break;
+            case LayoutRequestType::tabbed:
+                if (current_type == LayoutScheme::tabbing)
+                    found = true;
+                break;
+            case LayoutRequestType::stacking:
+                if (current_type == LayoutScheme::stacking)
+                    found = true;
+                break;
+            case LayoutRequestType::splith:
+                if (current_type == LayoutScheme::horizontal)
+                    found = true;
+                break;
+            case LayoutRequestType::splitv:
+                if (current_type == LayoutScheme::vertical)
+                    found = true;
+                break;
+            }
+
+            if (found)
+                break;
+        }
+
+        i++;
+        if (i == request_types.size())
+            i = 0;
+        switch (request_types[i])
+        {
+        case LayoutRequestType::split:
+            container->toggle_layout(false);
+            break;
+        case LayoutRequestType::splitv:
+            container->set_layout(LayoutScheme::vertical);
+            break;
+        case LayoutRequestType::splith:
+            container->set_layout(LayoutScheme::horizontal);
+            break;
+        case LayoutRequestType::stacking:
+            container->set_layout(LayoutScheme::stacking);
+            break;
+        case LayoutRequestType::tabbed:
+            container->set_layout(LayoutScheme::tabbing);
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool CommandController::try_request_horizontal(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
@@ -169,7 +245,7 @@ bool CommandController::try_move(miracle::Direction direction, std::vector<Conta
     return result;
 }
 
-bool CommandController::try_move_by(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
+bool CommandController::try_move_by_pixels(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
@@ -188,23 +264,120 @@ bool CommandController::try_move_by(miracle::Direction direction, int pixels, st
     return result;
 }
 
-bool CommandController::try_move_to(int x, int y, std::vector<ContainerScope> const& scope)
+bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move_to(x, y))
+        auto const output = container->get_output();
+        if (!output)
+        {
+            mir::log_error("try_move_by_ppt: container does not have an output");
+            result = false;
+            continue;
+        }
+
+        float total_size = 0;
+        switch (direction)
+        {
+        case Direction::up:
+        case Direction::down:
+            total_size = output->get_area().size.height.as_value();
+            break;
+        case Direction::left:
+        case Direction::right:
+        default:
+            total_size = output->get_area().size.width.as_value();
+            break;
+        }
+
+        if (!container->move_by(direction, total_size * ppt))
             result = false;
     }
     return result;
+}
+
+
+bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            mir::log_error("try_move_to: container does not have an output");
+            result = false;
+            continue;
+        }
+
+        float resolved_x = x;
+        float resolved_y = y;
+        if (is_x_ppt)
+            resolved_x = output->get_area().size.width.as_value() * x;
+        if (is_y_ppt)
+            resolved_y = output->get_area().size.height.as_value() * y;
+
+        if (!container->move_to(resolved_x, resolved_y))
+            result = false;
+    }
+    return result;
+}
+
+bool CommandController::try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const& active_output = output_manager->focused();
+    auto const active = state->focused_container().get();
+    auto const area = active_output->get_area();
+    float const x = static_cast<float>(area.size.width.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
+    float const y = static_cast<float>(area.size.height.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
+    return try_move_to(static_cast<int>(x), false, static_cast<int>(y), false, scope);
+}
+
+bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    float x = 0, y = 0;
+    for (auto const& output : output_manager->outputs())
+    {
+        auto area = output->get_area();
+        float const end_x = static_cast<float>(area.size.width.as_int() + area.top_left.x.as_int());
+        float const end_y = static_cast<float>(area.size.height.as_int() + area.top_left.y.as_int());
+        if (end_x > x)
+            x = end_x;
+        if (end_y > y)
+            y = end_y;
+    }
+
+    auto const active = state->focused_container();
+    float const x_pos = x / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
+    float const y_pos = y / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
+    return try_move_to(static_cast<int>(x_pos), false, static_cast<int>(y_pos), false, scope);
+}
+
+
+bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const& position = state->cursor_position;
+    return try_move_to(position.x.as_int(), false, position.y.as_int(), false, scope);
 }
 
 void CommandController::select_container(std::shared_ptr<Container> const& container)
@@ -323,6 +496,49 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
     }
     return result;
 }
+
+bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const container = state->focused_container();
+    if (!container)
+        return false;
+
+    if (container->get_type() != ContainerType::leaf)
+        return false;
+
+    if (auto const parent = Container::as_parent(container->get_parent().lock()))
+    {
+        auto const index = parent->get_index_of_node(container).value();
+        if (index != 0)
+        {
+            auto const node_to_select = parent->get_nth_window(index - 1);
+            window_controller->select_active_window(node_to_select->window().value());
+        }
+    }
+}
+
+bool CommandController::try_select_next(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const container = state->focused_container();
+    if (!container)
+        return false;
+
+    if (container->get_type() != ContainerType::leaf)
+        return false;
+
+    if (auto const parent = Container::as_parent(container->get_parent().lock()))
+    {
+        auto const index = parent->get_index_of_node(container).value();
+        if (index != parent->num_nodes() - 1)
+        {
+            auto node_to_select = parent->get_nth_window(index + 1);
+            window_controller->select_active_window(node_to_select->window().value());
+        }
+    }
+}
+
 
 bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
 {
@@ -520,22 +736,28 @@ bool CommandController::back_and_forth_workspace()
     return true;
 }
 
-bool CommandController::next_workspace_on_output(miracle::OutputInterface const& output)
+bool CommandController::next_workspace_on_output()
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    return workspace_manager->request_next_on_output(output);
+    if (auto const focused = output_manager->focused())
+        return workspace_manager->request_next_on_output(*focused);
+
+    return false;
 }
 
-bool CommandController::prev_workspace_on_output(miracle::OutputInterface const& output)
+bool CommandController::prev_workspace_on_output()
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    return workspace_manager->request_prev_on_output(output);
+    if (auto const focused = output_manager->focused())
+        return workspace_manager->request_prev_on_output(*focused);
+
+    return false;
 }
 
 bool CommandController::move_active_to_workspace(int number, bool back_and_forth)

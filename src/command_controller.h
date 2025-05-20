@@ -37,6 +37,15 @@ class Scratchpad;
 class ModeObserverRegistrar;
 class OutputManager;
 
+enum class LayoutRequestType
+{
+    split,
+    tabbed,
+    stacking,
+    splitv,
+    splith
+};
+
 /// Responsible for fielding requests from the system and forwarding
 /// them to an appropriate handler. Requests can come from any thread
 /// (e.g. the keyboard input thread, the ipc thread, etc.).
@@ -51,16 +60,23 @@ public:
     virtual bool try_request_horizontal(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_request_vertical(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) = 0;
     virtual void try_toggle_resize_mode() = 0;
     virtual bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move(Direction direction, std::vector<ContainerScope> const& scope) = 0;
-    virtual bool try_move_by(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
-    virtual bool try_move_to(int x, int y, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_cursor(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select(Direction direction, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_parent(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_child(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_prev(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_next(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_floating(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_tiling(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_toggle(std::vector<ContainerScope> const& scope) = 0;
@@ -73,8 +89,8 @@ public:
     virtual bool next_workspace() = 0;
     virtual bool prev_workspace() = 0;
     virtual bool back_and_forth_workspace() = 0;
-    virtual bool next_workspace_on_output(OutputInterface const&) = 0;
-    virtual bool prev_workspace_on_output(OutputInterface const&) = 0;
+    virtual bool next_workspace_on_output() = 0;
+    virtual bool prev_workspace_on_output() = 0;
     virtual bool move_active_to_workspace(int number, bool back_and_forth) = 0;
     virtual bool move_active_to_workspace_named(std::string const&, bool back_and_forth) = 0;
     virtual bool move_active_to_next_workspace() = 0;
@@ -134,16 +150,23 @@ public:
     bool try_request_horizontal(std::vector<ContainerScope> const& scope) override;
     bool try_request_vertical(std::vector<ContainerScope> const& scope) override;
     bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) override;
+    bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) override;
     void try_toggle_resize_mode() override;
     bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
     bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope) override;
     bool try_move(Direction direction, std::vector<ContainerScope> const& scope) override;
-    bool try_move_by(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
-    bool try_move_to(int x, int y, std::vector<ContainerScope> const& scope) override;
+    bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
+    bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_cursor(std::vector<ContainerScope> const& scope) override;
     bool try_select(std::vector<ContainerScope> const& scope) override;
     bool try_select(Direction direction, std::vector<ContainerScope> const& scope) override;
     bool try_select_parent(std::vector<ContainerScope> const& scope) override;
     bool try_select_child(std::vector<ContainerScope> const& scope) override;
+    bool try_select_prev(std::vector<ContainerScope> const& scope) override;
+    bool try_select_next(std::vector<ContainerScope> const& scope) override;
     bool try_select_floating(std::vector<ContainerScope> const& scope) override;
     bool try_select_tiling(std::vector<ContainerScope> const& scope) override;
     bool try_select_toggle(std::vector<ContainerScope> const& scope) override;
@@ -156,8 +179,8 @@ public:
     bool next_workspace() override;
     bool prev_workspace() override;
     bool back_and_forth_workspace() override;
-    bool next_workspace_on_output(OutputInterface const&) override;
-    bool prev_workspace_on_output(OutputInterface const&) override;
+    bool next_workspace_on_output() override;
+    bool prev_workspace_on_output() override;
     bool move_active_to_workspace(int number, bool back_and_forth) override;
     bool move_active_to_workspace_named(std::string const&, bool back_and_forth) override;
     bool move_active_to_next_workspace() override;
