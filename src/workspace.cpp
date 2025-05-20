@@ -511,6 +511,36 @@ std::string Workspace::display_name() const
     return ss.str();
 }
 
+nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
+{
+    bool const is_active_on_output = output->active().get() == this;
+
+    // Note: The reported workspace area appears to be the placement
+    // area of the root tree.
+    //   See: https://i3wm.org/docs/ipc.html#_tree_reply
+    auto const area = root->get_logical_area();
+    auto const workspace_name = display_name();
+    auto const output_name = output->name();
+
+    return {
+        {
+         "num",
+         num_ ? num_.value() : -1,
+         },
+        { "name", workspace_name },
+        { "visible", is_active_on_output },
+        { "focused", is_output_focused && is_active_on_output },
+        { "urgent", false },
+        { "output", output_name },
+        { "rect", {
+                      { "x", area.top_left.x.as_int() },
+                      { "y", area.top_left.y.as_int() },
+                      { "width", area.size.width.as_int() },
+                      { "height", area.size.height.as_int() },
+                  } }
+    };
+}
+
 nlohmann::json Workspace::to_json(bool is_output_focused) const
 {
     bool const is_active_on_output = output->active().get() == this;

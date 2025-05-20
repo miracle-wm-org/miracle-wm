@@ -30,11 +30,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <memory>
+#include <mir/graphics/edid.h>
 #include <mir/log.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
 
 using namespace miracle;
+namespace mg = mir::graphics;
 
 Output::Output(
     Policy* policy,
@@ -637,7 +639,7 @@ nlohmann::json Output::to_json(bool is_focused) const
     };
 }
 
-nlohmann::json Output::to_json_for_output_list(bool) const
+nlohmann::json Output::get_outputs_json(bool) const
 {
     auto active_workspace = active();
     nlohmann::json workspace;
@@ -665,24 +667,67 @@ nlohmann::json Output::to_json_for_output_list(bool) const
     current_mode_node["height"] = current_mode.size.height.as_int();
     current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
 
+    auto const primary = raw_output_config.custom_attribute.contains("primary")
+        ? raw_output_config.custom_attribute.at("primary") == "true"
+        : false;
+
+    std::string subpixel_hinting;
+    switch (raw_output_config.current_format)
+    {
+    case mir_pixel_format_abgr_8888:
+    case mir_pixel_format_xbgr_8888:
+    case mir_pixel_format_bgr_888:
+        subpixel_hinting = "bgr";
+        break;
+    case mir_pixel_format_argb_8888:
+    case mir_pixel_format_xrgb_8888:
+    case mir_pixel_format_rgb_888:
+    case mir_pixel_format_rgb_565:
+    case mir_pixel_format_rgba_5551:
+    case mir_pixel_format_rgba_4444:
+    default:
+        subpixel_hinting = "rgb";
+        break;
+    }
+
+    std::string make = "Unknown";
+    std::string model = "Unknown";
+    std::string serial = "0x00000000";
+    if (raw_output_config.edid.size() >= mg::Edid::minimum_size)
+    {
+        auto const edid = reinterpret_cast<mg::Edid const*>(raw_output_config.edid.data());
+        mg::Edid::Manufacturer man;
+        edid->get_manufacturer(man);
+        mg::Edid::MonitorName name;
+        edid->get_monitor_name(name);
+
+        make = man;
+        model = name;
+        // TODO: Transform the serial number to a string
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+        serial = edid->serial_number();
+#endif
+    }
+
     return {
-        { "name",                 name_                                             },
-        { "active",               active                                            },
-        { "dpms",                 raw_output_config.power_mode == mir_power_mode_on },
-        { "scale",                raw_output_config.scale                           },
-        { "scale_filter",         "linear"                                          }, // Deprecated
-        { "adaptive_sync_status", false                                             }, // TODO: Supply this value
-        { "make",                 "Unknown"                                         }, // TODO: Supply this value
-        { "model",                "Unknown"                                         }, // TODO: Supply this value
-        { "serial",               "Unknown"                                         }, // TODO: Supply this value
+        { "name",             name_                                             },
+        { "make",             make                                              },
+        { "model",            model                                             },
+        { "serial",           serial                                            },
+        { "active",           active                                            },
+        { "dpms",             raw_output_config.power_mode == mir_power_mode_on },
+        { "power",            raw_output_config.power_mode == mir_power_mode_on },
+        { "primary",          primary                                           },
+        { "scale",            active ? raw_output_config.scale : -1             },
+        { "subpixel_hinting", subpixel_hinting                                  },
         workspace,
-        { "rect",                 {
+        { "rect",             {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                                                },
-        { "modes",                modes_node                                        },
-        { "current_mode",         current_mode_node                                 },
+                  }                                            },
+        { "modes",            modes_node                                        },
+        { "current_mode",     current_mode_node                                 },
     };
 }

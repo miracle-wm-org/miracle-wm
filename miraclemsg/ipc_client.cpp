@@ -35,6 +35,12 @@ static const char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
 
 char* get_socketpath(void)
 {
+    const char* miraclesock = getenv("MIRACLESOCK");
+    if (miraclesock)
+    {
+        return strdup(miraclesock);
+    }
+
     const char* swaysock = getenv("SWAYSOCK");
     if (swaysock)
     {

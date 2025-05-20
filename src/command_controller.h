@@ -37,11 +37,13 @@ class Scratchpad;
 class ModeObserverRegistrar;
 class OutputManager;
 
-class CommandControllerInterface
+enum class LayoutRequestType
 {
-public:
-    virtual ~CommandControllerInterface() = default;
-    virtual void quit() = 0;
+    split,
+    tabbed,
+    stacking,
+    splitv,
+    splith
 };
 
 /// Responsible for fielding requests from the system and forwarding
@@ -51,7 +53,88 @@ public:
 /// whereby requests are made on the controller that are then sent
 /// to the proper subsystem for processing. In this case, the subsystem
 /// may be anything from the tiles in the grid, the scratchpad, etc.
-class CommandController
+class AbstractCommandController
+{
+public:
+    virtual ~AbstractCommandController() = default;
+    virtual bool try_request_horizontal(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_request_vertical(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) = 0;
+    virtual void try_toggle_resize_mode() = 0;
+    virtual bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_set_size(std::optional<int> const& width, bool is_width_ppt, std::optional<int> const& height, bool is_height_ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move(Direction direction, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_cursor(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select(Direction direction, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_parent(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_child(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_prev(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_next(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_floating(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_tiling(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_select_toggle(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_close_window(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool quit() = 0;
+    virtual bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool select_workspace(int number, bool back_and_forth) = 0;
+    virtual bool select_workspace(std::string const& name, bool back_and_forth) = 0;
+    virtual bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool next_workspace() = 0;
+    virtual bool prev_workspace() = 0;
+    virtual bool back_and_forth_workspace() = 0;
+    virtual bool next_workspace_on_output() = 0;
+    virtual bool prev_workspace_on_output() = 0;
+    virtual bool move_active_to_workspace(int number, bool back_and_forth) = 0;
+    virtual bool move_active_to_workspace_named(std::string const&, bool back_and_forth) = 0;
+    virtual bool move_active_to_next_workspace() = 0;
+    virtual bool move_active_to_prev_workspace() = 0;
+    virtual bool move_active_to_back_and_forth() = 0;
+    virtual bool move_to_scratchpad() = 0;
+    virtual bool show_scratchpad() = 0;
+    virtual bool toggle_floating(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool set_is_pinned(bool, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool toggle_tabbing(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool toggle_stacking(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool set_layout_default(std::vector<ContainerScope> const& scope) = 0;
+    virtual void move_cursor_to_output(OutputInterface const&) = 0;
+    virtual bool try_select_next_output() = 0;
+    virtual bool try_select_prev_output() = 0;
+    virtual bool try_select_output(Direction direction) = 0;
+    virtual bool try_select_output(std::vector<std::string> const& names) = 0;
+    virtual bool try_move_active_to_output(Direction direction) = 0;
+    virtual bool try_move_active_to_current() = 0;
+    virtual bool try_move_active_to_primary() = 0;
+    virtual bool try_move_active_to_nonprimary() = 0;
+    virtual bool try_move_active_to_next() = 0;
+    virtual bool try_move_active(std::vector<std::string> const& names) = 0;
+    virtual bool reload_config() = 0;
+    virtual void set_mode(WindowManagerMode mode) = 0;
+    virtual void select_container(std::shared_ptr<Container> const&) = 0;
+    [[nodiscard]] virtual nlohmann::json to_json() const = 0;
+    [[nodiscard]] virtual nlohmann::json outputs_json() const = 0;
+    [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
+    [[nodiscard]] virtual nlohmann::json workspace_to_json(uint32_t) const = 0;
+    [[nodiscard]] virtual nlohmann::json mode_to_json() const = 0;
+};
+
+class CommandControllerInterface
+{
+public:
+    virtual ~CommandControllerInterface() = default;
+    virtual void quit() = 0;
+};
+
+class CommandController : public AbstractCommandController
 {
 public:
     CommandController(
@@ -65,66 +148,74 @@ public:
         std::shared_ptr<Scratchpad> const& scratchpad,
         std::shared_ptr<OutputManager> const& output_manager);
 
-    bool try_request_horizontal(std::vector<ContainerScope> const& scope);
-    bool try_request_vertical(std::vector<ContainerScope> const& scope);
-    bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope);
-    void try_toggle_resize_mode();
-    bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope);
-    bool try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope);
-    bool try_move(Direction direction, std::vector<ContainerScope> const& scope);
-    bool try_move_by(Direction direction, int pixels, std::vector<ContainerScope> const& scope);
-    bool try_move_to(int x, int y, std::vector<ContainerScope> const& scope);
-    bool try_select(std::vector<ContainerScope> const& scope);
-    bool try_select(Direction direction, std::vector<ContainerScope> const& scope);
-    bool try_select_parent(std::vector<ContainerScope> const& scope);
-    bool try_select_child(std::vector<ContainerScope> const& scope);
-    bool try_select_floating(std::vector<ContainerScope> const& scope);
-    bool try_select_tiling(std::vector<ContainerScope> const& scope);
-    bool try_select_toggle(std::vector<ContainerScope> const& scope);
-    bool try_close_window(std::vector<ContainerScope> const& scope);
-    bool quit();
-    bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope);
-    bool select_workspace(int number, bool back_and_forth = true);
-    bool select_workspace(std::string const& name, bool back_and_forth);
-    bool select_workspace_with_scope(std::vector<ContainerScope> const& scope);
-    bool next_workspace();
-    bool prev_workspace();
-    bool back_and_forth_workspace();
-    bool next_workspace_on_output(OutputInterface const&);
-    bool prev_workspace_on_output(OutputInterface const&);
-    bool move_active_to_workspace(int number, bool back_and_forth = true);
-    bool move_active_to_workspace_named(std::string const&, bool back_and_forth);
-    bool move_active_to_next_workspace();
-    bool move_active_to_prev_workspace();
-    bool move_active_to_back_and_forth();
-    bool move_to_scratchpad();
-    bool show_scratchpad();
-    bool toggle_floating(std::vector<ContainerScope> const& scope = {});
-    bool toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope = {});
-    bool set_is_pinned(bool, std::vector<ContainerScope> const& scope = {});
-    bool toggle_tabbing(std::vector<ContainerScope> const& scope = {});
-    bool toggle_stacking(std::vector<ContainerScope> const& scope = {});
-    bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope = {});
-    bool set_layout_default(std::vector<ContainerScope> const& scope = {});
-    void move_cursor_to_output(OutputInterface const&);
-    bool try_select_next_output();
-    bool try_select_prev_output();
-    bool try_select_output(Direction direction);
-    bool try_select_output(std::vector<std::string> const& names);
-    bool try_move_active_to_output(Direction direction);
-    bool try_move_active_to_current();
-    bool try_move_active_to_primary();
-    bool try_move_active_to_nonprimary();
-    bool try_move_active_to_next();
-    bool try_move_active(std::vector<std::string> const& names);
-    bool reload_config();
-    void set_mode(WindowManagerMode mode);
-    void select_container(std::shared_ptr<Container> const&);
-    [[nodiscard]] nlohmann::json to_json() const;
-    [[nodiscard]] nlohmann::json outputs_json() const;
-    [[nodiscard]] nlohmann::json workspaces_json() const;
-    [[nodiscard]] nlohmann::json workspace_to_json(uint32_t) const;
-    [[nodiscard]] nlohmann::json mode_to_json() const;
+    bool try_request_horizontal(std::vector<ContainerScope> const& scope) override;
+    bool try_request_vertical(std::vector<ContainerScope> const& scope) override;
+    bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) override;
+    bool try_cycle_through_request_types(std::vector<LayoutRequestType> const& request_types, std::vector<ContainerScope> const& scope) override;
+    void try_toggle_resize_mode() override;
+    bool try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
+    bool try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_set_size(std::optional<int> const& width, bool is_width_ppt, std::optional<int> const& height, bool is_height_ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_move(Direction direction, std::vector<ContainerScope> const& scope) override;
+    bool try_move_by_pixels(Direction direction, int pixels, std::vector<ContainerScope> const& scope) override;
+    bool try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_cursor(std::vector<ContainerScope> const& scope) override;
+    bool try_select(std::vector<ContainerScope> const& scope) override;
+    bool try_select(Direction direction, std::vector<ContainerScope> const& scope) override;
+    bool try_select_parent(std::vector<ContainerScope> const& scope) override;
+    bool try_select_child(std::vector<ContainerScope> const& scope) override;
+    bool try_select_prev(std::vector<ContainerScope> const& scope) override;
+    bool try_select_next(std::vector<ContainerScope> const& scope) override;
+    bool try_select_floating(std::vector<ContainerScope> const& scope) override;
+    bool try_select_tiling(std::vector<ContainerScope> const& scope) override;
+    bool try_select_toggle(std::vector<ContainerScope> const& scope) override;
+    bool try_close_window(std::vector<ContainerScope> const& scope) override;
+    bool quit() override;
+    bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) override;
+    bool select_workspace(int number, bool back_and_forth) override;
+    bool select_workspace(std::string const& name, bool back_and_forth) override;
+    bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) override;
+    bool next_workspace() override;
+    bool prev_workspace() override;
+    bool back_and_forth_workspace() override;
+    bool next_workspace_on_output() override;
+    bool prev_workspace_on_output() override;
+    bool move_active_to_workspace(int number, bool back_and_forth) override;
+    bool move_active_to_workspace_named(std::string const&, bool back_and_forth) override;
+    bool move_active_to_next_workspace() override;
+    bool move_active_to_prev_workspace() override;
+    bool move_active_to_back_and_forth() override;
+    bool move_to_scratchpad() override;
+    bool show_scratchpad() override;
+    bool toggle_floating(std::vector<ContainerScope> const& scope) override;
+    bool toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope) override;
+    bool set_is_pinned(bool, std::vector<ContainerScope> const& scope) override;
+    bool toggle_tabbing(std::vector<ContainerScope> const& scope) override;
+    bool toggle_stacking(std::vector<ContainerScope> const& scope) override;
+    bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope) override;
+    bool set_layout_default(std::vector<ContainerScope> const& scope) override;
+    void move_cursor_to_output(OutputInterface const&) override;
+    bool try_select_next_output() override;
+    bool try_select_prev_output() override;
+    bool try_select_output(Direction direction) override;
+    bool try_select_output(std::vector<std::string> const& names) override;
+    bool try_move_active_to_output(Direction direction) override;
+    bool try_move_active_to_current() override;
+    bool try_move_active_to_primary() override;
+    bool try_move_active_to_nonprimary() override;
+    bool try_move_active_to_next() override;
+    bool try_move_active(std::vector<std::string> const& names) override;
+    bool reload_config() override;
+    void set_mode(WindowManagerMode mode) override;
+    void select_container(std::shared_ptr<Container> const&) override;
+    [[nodiscard]] nlohmann::json to_json() const override;
+    [[nodiscard]] nlohmann::json outputs_json() const override;
+    [[nodiscard]] nlohmann::json workspaces_json() const override;
+    [[nodiscard]] nlohmann::json workspace_to_json(uint32_t) const override;
+    [[nodiscard]] nlohmann::json mode_to_json() const override;
 
 private:
     std::shared_ptr<Config> config;

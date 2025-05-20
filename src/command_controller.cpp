@@ -19,11 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "command_controller.h"
 #include "config.h"
+#include "leaf_container.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "scratchpad.h"
-#include "window_helpers.h"
 #include "workspace_manager.h"
 
 #include <mir/log.h>
@@ -104,6 +104,82 @@ bool CommandController::try_toggle_layout(bool cycle_thru_all, std::vector<Conta
     return true;
 }
 
+bool CommandController::try_cycle_through_request_types(
+    std::vector<LayoutRequestType> const& request_types,
+    std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    if (request_types.empty())
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    for (auto const& container : containers)
+    {
+        auto const current_type = container->get_layout();
+        size_t i = -1;
+        bool found = false;
+        for (; i < request_types.size(); i++)
+        {
+            switch (request_types[i])
+            {
+            case LayoutRequestType::split:
+                if (current_type == LayoutScheme::horizontal || current_type == LayoutScheme::vertical)
+                    found = true;
+                break;
+            case LayoutRequestType::tabbed:
+                if (current_type == LayoutScheme::tabbing)
+                    found = true;
+                break;
+            case LayoutRequestType::stacking:
+                if (current_type == LayoutScheme::stacking)
+                    found = true;
+                break;
+            case LayoutRequestType::splith:
+                if (current_type == LayoutScheme::horizontal)
+                    found = true;
+                break;
+            case LayoutRequestType::splitv:
+                if (current_type == LayoutScheme::vertical)
+                    found = true;
+                break;
+            }
+
+            if (found)
+                break;
+        }
+
+        i++;
+        if (i == request_types.size())
+            i = 0;
+        switch (request_types[i])
+        {
+        case LayoutRequestType::split:
+            container->toggle_layout(false);
+            break;
+        case LayoutRequestType::splitv:
+            container->set_layout(LayoutScheme::vertical);
+            break;
+        case LayoutRequestType::splith:
+            container->set_layout(LayoutScheme::horizontal);
+            break;
+        case LayoutRequestType::stacking:
+            container->set_layout(LayoutScheme::stacking);
+            break;
+        case LayoutRequestType::tabbed:
+            container->set_layout(LayoutScheme::tabbing);
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool CommandController::try_request_horizontal(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
@@ -118,7 +194,7 @@ bool CommandController::try_request_horizontal(std::vector<ContainerScope> const
     return true;
 }
 
-bool CommandController::try_resize(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
+bool CommandController::try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     auto containers = resolve_scope(scope);
@@ -134,16 +210,64 @@ bool CommandController::try_resize(miracle::Direction direction, int pixels, std
     return result;
 }
 
-bool CommandController::try_set_size(std::optional<int> const& width, std::optional<int> const& height, std::vector<ContainerScope> const& scope)
+bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
     bool result = true;
     for (auto const& container : containers)
     {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            result = false;
+            continue;
+        }
+
+        float total_size = 0;
+        switch (direction)
+        {
+        case Direction::down:
+        case Direction::up:
+            total_size = output->get_area().size.height.as_value();
+            break;
+        default:
+            total_size = output->get_area().size.width.as_value();
+            break;
+        }
+
+        if (!container->resize(direction, ppt * total_size))
+            result = false;
+    }
+    return result;
+}
+
+bool CommandController::try_set_size(
+    std::optional<int> const& width,
+    bool is_width_ppt,
+    std::optional<int> const& height,
+    bool is_height_ppt,
+    std::vector<ContainerScope> const& scope)
+{
+    // TODO: Account for ppt here
+    std::lock_guard lock(mutex);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            result = false;
+            continue;
+        }
+
         if (!container->set_size(width, height))
             result = false;
     }
@@ -169,7 +293,7 @@ bool CommandController::try_move(miracle::Direction direction, std::vector<Conta
     return result;
 }
 
-bool CommandController::try_move_by(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
+bool CommandController::try_move_by_pixels(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
@@ -188,23 +312,118 @@ bool CommandController::try_move_by(miracle::Direction direction, int pixels, st
     return result;
 }
 
-bool CommandController::try_move_to(int x, int y, std::vector<ContainerScope> const& scope)
+bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move_to(x, y))
+        auto const output = container->get_output();
+        if (!output)
+        {
+            mir::log_error("try_move_by_ppt: container does not have an output");
+            result = false;
+            continue;
+        }
+
+        float total_size = 0;
+        switch (direction)
+        {
+        case Direction::up:
+        case Direction::down:
+            total_size = output->get_area().size.height.as_value();
+            break;
+        case Direction::left:
+        case Direction::right:
+        default:
+            total_size = output->get_area().size.width.as_value();
+            break;
+        }
+
+        if (!container->move_by(direction, total_size * ppt))
             result = false;
     }
     return result;
+}
+
+bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal)
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    bool result = true;
+    for (auto const& container : containers)
+    {
+        auto const output = container->get_output();
+        if (!output)
+        {
+            mir::log_error("try_move_to: container does not have an output");
+            result = false;
+            continue;
+        }
+
+        float resolved_x = x;
+        float resolved_y = y;
+        if (is_x_ppt)
+            resolved_x = output->get_area().size.width.as_value() * x;
+        if (is_y_ppt)
+            resolved_y = output->get_area().size.height.as_value() * y;
+
+        if (!container->move_to(resolved_x, resolved_y))
+            result = false;
+    }
+    return result;
+}
+
+bool CommandController::try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const& active_output = output_manager->focused();
+    auto const active = state->focused_container().get();
+    auto const area = active_output->get_area();
+    float const x = static_cast<float>(area.size.width.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
+    float const y = static_cast<float>(area.size.height.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
+    return try_move_to(static_cast<int>(x), false, static_cast<int>(y), false, scope);
+}
+
+bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    float x = 0, y = 0;
+    for (auto const& output : output_manager->outputs())
+    {
+        auto area = output->get_area();
+        float const end_x = static_cast<float>(area.size.width.as_int() + area.top_left.x.as_int());
+        float const end_y = static_cast<float>(area.size.height.as_int() + area.top_left.y.as_int());
+        if (end_x > x)
+            x = end_x;
+        if (end_y > y)
+            y = end_y;
+    }
+
+    auto const active = state->focused_container();
+    float const x_pos = x / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
+    float const y_pos = y / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
+    return try_move_to(static_cast<int>(x_pos), false, static_cast<int>(y_pos), false, scope);
+}
+
+bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const& position = state->cursor_position;
+    return try_move_to(position.x.as_int(), false, position.y.as_int(), false, scope);
 }
 
 void CommandController::select_container(std::shared_ptr<Container> const& container)
@@ -322,6 +541,48 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
         }
     }
     return result;
+}
+
+bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const container = state->focused_container();
+    if (!container)
+        return false;
+
+    if (container->get_type() != ContainerType::leaf)
+        return false;
+
+    if (auto const parent = Container::as_parent(container->get_parent().lock()))
+    {
+        auto const index = parent->get_index_of_node(container).value();
+        if (index != 0)
+        {
+            auto const node_to_select = parent->get_nth_window(index - 1);
+            window_controller->select_active_window(node_to_select->window().value());
+        }
+    }
+}
+
+bool CommandController::try_select_next(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const container = state->focused_container();
+    if (!container)
+        return false;
+
+    if (container->get_type() != ContainerType::leaf)
+        return false;
+
+    if (auto const parent = Container::as_parent(container->get_parent().lock()))
+    {
+        auto const index = parent->get_index_of_node(container).value();
+        if (index != parent->num_nodes() - 1)
+        {
+            auto node_to_select = parent->get_nth_window(index + 1);
+            window_controller->select_active_window(node_to_select->window().value());
+        }
+    }
 }
 
 bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
@@ -520,22 +781,28 @@ bool CommandController::back_and_forth_workspace()
     return true;
 }
 
-bool CommandController::next_workspace_on_output(miracle::OutputInterface const& output)
+bool CommandController::next_workspace_on_output()
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    return workspace_manager->request_next_on_output(output);
+    if (auto const focused = output_manager->focused())
+        return workspace_manager->request_next_on_output(*focused);
+
+    return false;
 }
 
-bool CommandController::prev_workspace_on_output(miracle::OutputInterface const& output)
+bool CommandController::prev_workspace_on_output()
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    return workspace_manager->request_prev_on_output(output);
+    if (auto const focused = output_manager->focused())
+        return workspace_manager->request_prev_on_output(*focused);
+
+    return false;
 }
 
 bool CommandController::move_active_to_workspace(int number, bool back_and_forth)
@@ -1306,7 +1573,7 @@ nlohmann::json CommandController::outputs_json() const
         if (output->is_defunct())
             continue;
 
-        j.push_back(output->to_json_for_output_list(output_manager->focused() == output.get()));
+        j.push_back(output->get_outputs_json(output_manager->focused() == output.get()));
     }
     return j;
 }
@@ -1320,7 +1587,7 @@ nlohmann::json CommandController::workspaces_json() const
         if (workspace->get_output()->is_defunct())
             continue;
 
-        j.push_back(workspace->to_json(output_manager->focused() == workspace->get_output()));
+        j.push_back(workspace->get_workspaces_json(output_manager->focused() == workspace->get_output()));
     }
     return j;
 }

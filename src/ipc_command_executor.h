@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_I_3_COMMAND_EXECUTOR_H
 #define MIRACLEWM_I_3_COMMAND_EXECUTOR_H
 
-#include "compositor_state.h"
 #include "ipc_command.h"
 #include <mir/glib_main_loop.h>
 
@@ -32,9 +31,35 @@ class OutputManager;
 
 struct IpcValidationResult
 {
-    bool success = true;
-    bool parse_error = false;
-    std::string error;
+private:
+    IpcValidationResult(bool success, bool parse_error, std::string error) :
+        success(success),
+        parse_error(parse_error),
+        error(std::move(error))
+    {
+    }
+
+public:
+    IpcValidationResult() = delete;
+    static IpcValidationResult create_success()
+    {
+        return IpcValidationResult(
+            true,
+            false,
+            "");
+    }
+
+    static IpcValidationResult create_failure(std::string error, bool parse_error)
+    {
+        return IpcValidationResult(
+            false,
+            parse_error,
+            std::move(error));
+    }
+
+    bool const success;
+    bool const parse_error;
+    std::string const error;
 };
 
 /// Processes all commands coming from i3 IPC. This class is mostly for organizational
@@ -44,16 +69,12 @@ class IpcCommandExecutor
 public:
     IpcCommandExecutor(
         std::shared_ptr<CommandController> const&,
-        std::shared_ptr<OutputManager> const&,
-        std::shared_ptr<CompositorState> const&,
         AutoRestartingLauncher&,
         std::shared_ptr<WindowController> const&);
-    IpcValidationResult process(IpcParseResult const&);
+    std::vector<IpcValidationResult> process(IpcParseResult const&);
 
 private:
     std::shared_ptr<CommandController> policy;
-    std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<CompositorState> state;
     AutoRestartingLauncher& launcher;
     std::shared_ptr<WindowController> window_controller;
 
@@ -68,8 +89,6 @@ private:
     IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);
-
-    IpcValidationResult parse_error(std::string error);
 };
 
 } // miracle

@@ -65,7 +65,7 @@ namespace test
         MOCK_METHOD(geom::Rectangle, get_workspace_rectangle, (size_t i), (const, override));
         MOCK_METHOD(WorkspaceInterface const*, workspace, (uint32_t id), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
-        MOCK_METHOD(nlohmann::json, to_json_for_output_list, (bool), (const, override));
+        MOCK_METHOD(nlohmann::json, get_outputs_json, (bool), (const, override));
         MOCK_METHOD(void, set_info, (int id, std::string name), (override));
         MOCK_METHOD(void, set_defunct, (), (override));
         MOCK_METHOD(void, unset_defunct, (), (override));

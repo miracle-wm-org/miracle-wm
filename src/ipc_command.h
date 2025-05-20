@@ -59,7 +59,8 @@ enum class IpcCommandType
 
 struct IpcCommand
 {
-    IpcCommandType type;
+    IpcCommandType const type;
+    std::string const raw_command;
     std::vector<std::string> options;
     std::vector<std::string> arguments;
 };

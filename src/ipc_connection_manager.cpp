@@ -15,14 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#define MIR_LOG_COMPONENT "miracle_ipc"
+#define MIR_LOG_COMPONENT "ipc_connection_manager"
 
-#include "ipc.h"
+#include "ipc_connection_manager.h"
 #include "command_controller.h"
 #include "config.h"
 #include "ipc_command_executor.h"
-#include "version.h"
-#include "workspace_interface.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -35,17 +33,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using json = nlohmann::json;
 using namespace miracle;
 
-static const char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
+static constexpr char ipc_magic[] = { 'i', '3', '-', 'i', 'p', 'c' };
 
 #define IPC_HEADER_SIZE (sizeof(ipc_magic) + 8)
-#define event_mask(ev) (1 << (ev & 0x7F))
 
 namespace
 {
-
 struct sockaddr_un* ipc_user_sockaddr()
 {
-    auto ipc_sockaddr = (sockaddr_un*)malloc(sizeof(struct sockaddr_un));
+    auto const ipc_sockaddr = static_cast<sockaddr_un*>(malloc(sizeof(struct sockaddr_un)));
     if (ipc_sockaddr == nullptr)
     {
         mir::log_error("Can't allocate ipc_sockaddr");
@@ -53,7 +49,7 @@ struct sockaddr_un* ipc_user_sockaddr()
     }
 
     ipc_sockaddr->sun_family = AF_UNIX;
-    int path_size = sizeof(ipc_sockaddr->sun_path);
+    int constexpr path_size = sizeof(ipc_sockaddr->sun_path);
 
     // Env var typically set by logind, e.g. "/run/user/<user-id>"
     const char* dir = getenv("XDG_RUNTIME_DIR");
@@ -77,51 +73,22 @@ bool fd_is_valid(int fd)
 
 json mode_event_to_json(WindowManagerMode mode)
 {
-    switch (mode)
-    {
-    case WindowManagerMode::normal:
-        return {
-            { "change",       "default" },
-            { "pango_markup", true      }
-        };
-    case WindowManagerMode::resizing:
-        return {
-            { "change",       "resize" },
-            { "pango_markup", true     }
-        };
-    case WindowManagerMode::selecting:
-        return {
-            { "change",       "selecting" },
-            { "pango_markup", true        }
-        };
-    case WindowManagerMode::dragging:
-        return {
-            { "change",       "dragging" },
-            { "pango_markup", true       }
-        };
-    case WindowManagerMode::moving:
-        return {
-            { "change",       "moving" },
-            { "pango_markup", true     }
-        };
-    default:
-    {
-        mir::fatal_error("handle_command: unknown binding state: %d", (int)mode);
-        return {};
-    }
-    }
+    return {
+        { "change",       BINDING_MODE_STRINGS[static_cast<int>(mode)] },
+        { "pango_markup", true                                         }
+    };
 }
 }
 
-Ipc::Ipc(miral::MirRunner& runner,
-    std::shared_ptr<CommandController> const& policy,
-    std::unique_ptr<IpcCommandExecutor> executor,
+IpcConnectionManager::IpcConnectionManager(
+    miral::MirRunner& runner,
+    std::shared_ptr<CommandController> const& command_controller,
+    std::unique_ptr<IpcCommandExecutor> command_executor,
     std::shared_ptr<Config> const& config) :
-    policy { policy },
-    executor { std::move(executor) },
-    config { config }
+    command_controller(command_controller),
+    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, std::move(command_executor), config))
 {
-    auto ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
+    auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
     {
         mir::log_error("Unable to create ipc socket");
@@ -140,9 +107,9 @@ Ipc::Ipc(miral::MirRunner& runner,
     }
 
     ipc_sockaddr = ipc_user_sockaddr();
-    if (getenv("SWAYSOCK") != nullptr && access(getenv("SWAYSOCK"), F_OK) == -1)
+    if (getenv("MIRACLESOCK") != nullptr && access(getenv("MIRACLESOCK"), F_OK) == -1)
     {
-        strncpy(ipc_sockaddr->sun_path, getenv("SWAYSOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
+        strncpy(ipc_sockaddr->sun_path, getenv("MIRACLESOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
         ipc_sockaddr->sun_path[sizeof(ipc_sockaddr->sun_path) - 1] = 0;
     }
 
@@ -159,9 +126,9 @@ Ipc::Ipc(miral::MirRunner& runner,
         exit(1);
     }
 
-    // Set i3 IPC socket path so that i3-msg works out of the box
     setenv("I3SOCK", ipc_sockaddr->sun_path, 1);
     setenv("SWAYSOCK", ipc_sockaddr->sun_path, 1);
+    setenv("MIRACLESOCK", ipc_sockaddr->sun_path, 1);
 
     mir::log_info("Listening to IPC socket on path: %s", ipc_sockaddr->sun_path);
 
@@ -191,13 +158,13 @@ Ipc::Ipc(miral::MirRunner& runner,
             return;
         }
 
-        auto mir_fd = mir::Fd { client_fd };
+        auto const mir_fd = mir::Fd { client_fd };
         clients.push_back({ mir_fd,
-            runner.register_fd_handler(mir_fd, [this](int fd)
+            runner.register_fd_handler(mir_fd, [this](int const fd)
         {
             auto& client = get_client(fd);
 
-            int read_available;
+            uint32_t read_available;
             if (ioctl(client.client_fd, FIONREAD, &read_available) == -1)
             {
                 mir::log_error("Unable to read IPC socket buffer size");
@@ -207,25 +174,25 @@ Ipc::Ipc(miral::MirRunner& runner,
 
             if (client.pending_read_length > 0)
             {
-                if ((uint32_t)read_available >= client.pending_read_length)
+                if (read_available >= client.pending_read_length)
                 {
                     // Reset pending values.
-                    uint32_t pending_length = client.pending_read_length;
-                    IpcType pending_type = client.pending_type;
+                    uint32_t const pending_length = client.pending_read_length;
+                    IpcType const pending_type = client.pending_type;
                     client.pending_read_length = 0;
                     handle_command(client, pending_length, pending_type);
                 }
                 return;
             }
 
-            if (read_available < (int)IPC_HEADER_SIZE)
+            if (read_available < IPC_HEADER_SIZE)
             {
                 return;
             }
 
             uint8_t buf[IPC_HEADER_SIZE];
             // Should be fully available, because read_available >= IPC_HEADER_SIZE
-            ssize_t received = recv(client.client_fd, buf, IPC_HEADER_SIZE, 0);
+            ssize_t const received = recv(client.client_fd, buf, IPC_HEADER_SIZE, 0);
             if (received == -1)
             {
                 mir::log_error("Unable to receive header from IPC client");
@@ -244,11 +211,11 @@ Ipc::Ipc(miral::MirRunner& runner,
             memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
             mir::log_debug("Received request from IPC client: %d", (int)client.pending_type);
 
-            if (read_available - received >= (long)client.pending_read_length)
+            if (read_available - received >= static_cast<long>(client.pending_read_length))
             {
                 // Reset pending values.
-                uint32_t pending_length = client.pending_read_length;
-                IpcType pending_type = client.pending_type;
+                uint32_t const pending_length = client.pending_read_length;
+                IpcType const pending_type = client.pending_type;
                 client.pending_read_length = 0;
                 handle_command(client, pending_length, pending_type);
             }
@@ -256,105 +223,105 @@ Ipc::Ipc(miral::MirRunner& runner,
     });
 }
 
-void Ipc::on_created(uint32_t id)
+void IpcConnectionManager::on_created(uint32_t id)
 {
     json j = {
-        { "change",  "init"                        },
-        { "old",     nullptr                       },
-        { "current", policy->workspace_to_json(id) }
+        { "change",  "init"                                    },
+        { "old",     nullptr                                   },
+        { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0)
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
-void Ipc::on_removed(uint32_t id)
+void IpcConnectionManager::on_removed(uint32_t id)
 {
     json j = {
-        { "change",  "empty"                       },
-        { "current", policy->workspace_to_json(id) }
+        { "change",  "empty"                                   },
+        { "current", command_controller->workspace_to_json(id) }
     };
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0)
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
-void Ipc::on_focused(
+void IpcConnectionManager::on_focused(
     std::optional<uint32_t> previous_id,
     uint32_t current_id)
 {
     json j = {
-        { "change",  "focus"                               },
-        { "current", policy->workspace_to_json(current_id) }
+        { "change",  "focus"                                           },
+        { "current", command_controller->workspace_to_json(current_id) }
     };
 
     if (previous_id)
-        j["old"] = policy->workspace_to_json(previous_id.value());
+        j["old"] = command_controller->workspace_to_json(previous_id.value());
     else
         j["old"] = nullptr;
 
-    auto serialized_value = to_string(j);
+    auto const serialized_value = to_string(j);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_WORKSPACE)) == 0)
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
-void Ipc::on_changed(WindowManagerMode mode)
+void IpcConnectionManager::on_changed(WindowManagerMode mode)
 {
-    auto response = to_string(mode_event_to_json(mode));
+    auto const response = to_string(mode_event_to_json(mode));
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_MODE)) == 0)
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IPC_EVENT_MODE, response);
+        send_reply(client, IpcType::IPC_EVENT_MODE, response);
     }
 }
 
-void Ipc::on_shutdown()
+void IpcConnectionManager::on_shutdown()
 {
-    auto response = to_string(json({
+    auto const response = to_string(json({
         { "change", "exit" }
     }));
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IPC_EVENT_SHUTDOWN)) == 0)
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IPC_EVENT_SHUTDOWN, response);
+        send_reply(client, IpcType::IPC_EVENT_SHUTDOWN, response);
     }
 
     for (auto& client : clients)
         disconnect(client);
 }
 
-Ipc::IpcClient& Ipc::get_client(int fd)
+IpcConnectionManager::IpcClient& IpcConnectionManager::get_client(int fd)
 {
     for (auto& client : clients)
     {
@@ -365,9 +332,9 @@ Ipc::IpcClient& Ipc::get_client(int fd)
     throw std::runtime_error("Could not find IPC client");
 }
 
-void Ipc::disconnect(Ipc::IpcClient& client)
+void IpcConnectionManager::disconnect(IpcClient& client)
 {
-    auto it = std::find_if(clients.begin(), clients.end(), [&](IpcClient const& other)
+    auto const it = std::ranges::find_if(clients, [&](IpcClient const& other)
     {
         return other.client_fd.operator int() == client.client_fd.operator int();
     });
@@ -384,9 +351,9 @@ void Ipc::disconnect(Ipc::IpcClient& client)
     }
 }
 
-void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_length, miracle::IpcType payload_type)
+void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type)
 {
-    char* buf = (char*)malloc(payload_length + 1);
+    auto const buf = static_cast<char*>(malloc(payload_length + 1));
     if (!buf)
     {
         mir::log_error("Unable to allocate IPC payload");
@@ -407,133 +374,27 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
         }
     }
     buf[payload_length] = '\0';
+    auto const result = ipc_message_handler->handle_msg(payload_type, buf, payload_length);
+    if (result.fatal)
+        disconnect(client);
+    else
+        send_reply(client, result.type, result.payload);
 
-    switch (payload_type)
+    client.subscribed_events |= result.subscribed_events;
+    if (result.subscribed_events & event_mask(IpcType::IPC_EVENT_TICK))
     {
-    case IPC_COMMAND:
-    {
-        mir::log_debug("Processing i3_command: %s", buf);
-        auto result = parse_i3_command(buf);
-        if (result.success)
-        {
-            const std::string msg = "[{\"success\": true}]";
-            send_reply(client, payload_type, msg);
-        }
-        else
-        {
-            json j = json::array();
-            j.push_back({
-                { "success",     false              },
-                { "parse_error", result.parse_error },
-                { "error",       result.error       },
-            });
-            const std::string msg = to_string(j);
-            send_reply(client, payload_type, msg);
-        }
-        break;
-    }
-    case IPC_GET_WORKSPACES:
-    {
-        auto json_string = to_string(policy->workspaces_json());
-        send_reply(client, payload_type, json_string);
-        break;
-    }
-    case IPC_GET_OUTPUTS:
-    {
-        auto json_string = to_string(policy->outputs_json());
-        send_reply(client, payload_type, json_string);
-        break;
-    }
-    case IPC_SUBSCRIBE:
-    {
-        json j = json::parse(buf);
-        bool success = true;
-        bool send_event_tick = false;
-        for (auto const& i : j)
-        {
-            std::string event_type = i.template get<std::string>();
-            mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
-            if (event_type == "workspace")
-                client.subscribed_events |= event_mask(IPC_EVENT_WORKSPACE);
-            else if (event_type == "window")
-                client.subscribed_events |= event_mask(IPC_EVENT_WINDOW);
-            else if (event_type == "input")
-                client.subscribed_events |= event_mask(IPC_EVENT_INPUT);
-            else if (event_type == "mode")
-                client.subscribed_events |= event_mask(IPC_EVENT_MODE);
-            else if (event_type == "tick")
-            {
-                client.subscribed_events |= event_mask(IPC_EVENT_TICK);
-                send_event_tick = true;
-            }
-            else if (event_type == "shutdown")
-                client.subscribed_events |= event_mask(IPC_EVENT_SHUTDOWN);
-            else
-            {
-                mir::log_error("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
-                disconnect(client);
-                success = false;
-                break;
-            }
-        }
-
-        if (success)
-        {
-            const std::string msg = "{\"success\": true}";
-            send_reply(client, payload_type, msg);
-        }
-
-        if (send_event_tick)
-        {
-            json response = {
-                { "first",   true },
-                { "payload", ""   }
-            };
-            send_reply(client, IPC_EVENT_TICK, to_string(response));
-        }
-
-        break;
-    }
-    case IPC_GET_TREE:
-    {
-        auto json_string = to_string(policy->to_json());
-        send_reply(client, payload_type, json_string);
-        break;
-    }
-    case IPC_GET_VERSION:
-    {
-        json response = {
-            { "major",                   MIRACLE_WM_MAJOR       },
-            { "minor",                   MIRACLE_WM_MINOR       },
-            { "patch",                   MIRACLE_WM_PATCH       },
-            { "human_readable",          MIRACLE_VERSION_STRING },
-            { "loaded_config_file_name", config->get_filename() }
+        json const response = {
+            { "first",   true },
+            { "payload", ""   }
         };
-        send_reply(client, payload_type, to_string(response));
-        break;
+        send_reply(client, IpcType::IPC_EVENT_TICK, to_string(response));
     }
-    case IPC_GET_BINDING_MODES:
-    {
-        json response;
-        response.push_back("default");
-        response.push_back("resize");
-        response.push_back("selecting");
-        send_reply(client, payload_type, to_string(response));
-        break;
-    }
-    case IPC_GET_BINDING_STATE:
-    {
-        send_reply(client, payload_type, to_string(policy->mode_to_json()));
-        break;
-    }
-    case IPC_SEND_TICK:
-    {
-        const std::string msg = "{\"success\": true}";
-        send_reply(client, payload_type, msg);
 
+    if (result.send_tick_event)
+    {
         for (auto& other_client : clients)
         {
-            if ((other_client.subscribed_events & event_mask(IPC_EVENT_TICK)) == 0)
+            if ((other_client.subscribed_events & event_mask(IpcType::IPC_EVENT_TICK)) == 0)
             {
                 continue;
             }
@@ -542,20 +403,14 @@ void Ipc::handle_command(miracle::Ipc::IpcClient& client, uint32_t payload_lengt
                 { "first",   false            },
                 { "payload", std::string(buf) }
             };
-            send_reply(other_client, IPC_EVENT_TICK, to_string(response));
+            send_reply(other_client, IpcType::IPC_EVENT_TICK, to_string(response));
         }
-        break;
-    }
-    default:
-        mir::log_warning("Unknown payload type: %d", payload_type);
-        disconnect(client);
-        break;
     }
 
     free(buf);
 }
 
-void Ipc::send_reply(miracle::Ipc::IpcClient& client, miracle::IpcType command_type, const std::string& payload)
+void IpcConnectionManager::send_reply(IpcClient& client, IpcType command_type, const std::string& payload)
 {
     if (!fd_is_valid(client.client_fd.operator int()))
     {
@@ -580,8 +435,9 @@ void Ipc::send_reply(miracle::Ipc::IpcClient& client, miracle::IpcType command_t
         new_buffer_size *= 2;
     }
 
-    if (new_buffer_size > 4e6)
-    { // 4 MB
+    size_t constexpr MAX_BUFFER_SIZE = 4e6; // 4 MB
+    if (new_buffer_size > MAX_BUFFER_SIZE)
+    {
         mir::log_error("Client write buffer too big (%zu), disconnecting client", client.buffer.size());
         disconnect(client);
         return;
@@ -620,11 +476,11 @@ ssize_t write_nosigpipe(int fd, void* buf, size_t len)
 }
 }
 
-void Ipc::handle_writeable(miracle::Ipc::IpcClient& client)
+void IpcConnectionManager::handle_writeable(miracle::IpcConnectionManager::IpcClient& client)
 {
     while (client.write_buffer_len > 0)
     {
-        ssize_t written = write_nosigpipe(client.client_fd, client.buffer.data(), client.write_buffer_len);
+        ssize_t const written = write_nosigpipe(client.client_fd, client.buffer.data(), client.write_buffer_len);
         if (written == -1 && errno == EAGAIN)
         {
             return;
@@ -641,11 +497,4 @@ void Ipc::handle_writeable(miracle::Ipc::IpcClient& client)
     }
 
     client.write_buffer_len = 0;
-}
-
-IpcValidationResult Ipc::parse_i3_command(const char* command)
-{
-    IpcCommandParser parser(command);
-    auto const pending_commands = parser.parse();
-    return executor->process(pending_commands);
 }

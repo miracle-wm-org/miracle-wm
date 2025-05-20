@@ -79,7 +79,8 @@ add_library(miracle-wm-implementation
     src/config.h
     src/output.cpp
     src/workspace_manager.cpp
-    src/ipc.cpp
+    src/ipc_message_handler.cpp
+    src/ipc_connection_manager.cpp
     src/auto_restarting_launcher.cpp
     src/workspace_interface.h
     src/workspace_observer.cpp

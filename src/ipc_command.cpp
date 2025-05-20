@@ -18,9 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_scope.h"
 #define MIR_LOG_COMPONENT "ipc_command"
 
-#include "ipc.h"
 #include "ipc_command.h"
+#include "ipc_message_handler.h"
 
+#include <cassert>
 #include <cctype>
 #include <mir/log.h>
 #include <sstream>
@@ -276,7 +277,9 @@ IpcParseResult IpcCommandParser::parse()
                 if (ss.str().empty())
                     break;
 
-                retval.commands.push_back({ command_from_string(ss.str()) });
+                retval.commands.push_back({ command_from_string(ss.str()),
+                    ss.str(),
+                    {}, {} });
                 ss = std::stringstream();
                 stack.pop_back();
                 can_parse_options = true;
@@ -339,7 +342,9 @@ IpcParseResult IpcCommandParser::parse()
             retval.commands.back().arguments.push_back(ss.str());
             break;
         case ParseState::command:
-            retval.commands.push_back({ command_from_string(ss.str()) });
+            retval.commands.push_back({ command_from_string(ss.str()),
+                ss.str(),
+                {}, {} });
             break;
         case ParseState::scope_key:
             retval.scope.push_back({ scope_from_string(ss.str()) });

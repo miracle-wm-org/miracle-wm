@@ -86,7 +86,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     EXPECT_CALL(*workspace, num())
         .WillOnce(testing::Return(1));
 
-    ASSERT_FALSE(command_controller->move_active_to_workspace(1));
+    ASSERT_FALSE(command_controller->move_active_to_workspace(1, true));
 }
 
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)

@@ -71,6 +71,7 @@ public:
     void on_animation_end() override;
     [[nodiscard]] uint32_t id() const override { return id_; }
     [[nodiscard]] std::optional<int> num() const override { return num_; }
+    [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
     [[nodiscard]] std::string display_name() const override;

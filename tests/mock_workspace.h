@@ -69,6 +69,7 @@ namespace test
 
         MOCK_METHOD(uint32_t, id, (), (const, override));
         MOCK_METHOD(std::optional<int>, num, (), (const, override));
+        MOCK_METHOD(nlohmann::json, get_workspaces_json, (bool), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
         MOCK_METHOD(std::optional<std::string> const&, name, (), (const, override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
