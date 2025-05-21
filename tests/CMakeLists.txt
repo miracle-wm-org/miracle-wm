@@ -14,8 +14,10 @@ find_package(GTest REQUIRED)
 
 add_executable(miracle-wm-tests
     mock_animation.h
+    mock_command_controller.h
     mock_configuration.h
     mock_container.h
+    mock_ipc_command_executor.h
     mock_output.h
     mock_output_factory.h
     mock_surface_stack.h
@@ -35,6 +37,7 @@ add_executable(miracle-wm-tests
     test_resize_service.cpp
     test_tiling_algorithms.cpp
     test_parent_container.cpp
+    test_ipc_message_handler.cpp
     stub_configuration.h
     stub_session.h
     stub_surface.h

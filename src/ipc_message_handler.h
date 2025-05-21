@@ -27,8 +27,7 @@ struct sockaddr_un;
 
 namespace miracle
 {
-
-class CommandController;
+class AbstractCommandController;
 class Config;
 
 /// This it taken directly from sway
@@ -80,16 +79,16 @@ struct MessageHandlerResult
 class IpcMessageHandler
 {
 public:
-    IpcMessageHandler(std::shared_ptr<CommandController> const&,
-        std::unique_ptr<IpcCommandExecutor>,
+    IpcMessageHandler(std::shared_ptr<AbstractCommandController> const&,
+        std::unique_ptr<AbstractIpcCommandExecutor>,
         std::shared_ptr<Config> const&);
     MessageHandlerResult handle_msg(IpcType payload_type,
-        char* payload,
+        const char* payload,
         uint32_t payload_length);
 
 private:
-    std::shared_ptr<CommandController> command_controller;
-    std::unique_ptr<IpcCommandExecutor> ipc_command_executor;
+    std::shared_ptr<AbstractCommandController> command_controller;
+    std::unique_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
 
     std::vector<IpcValidationResult> process_ipc_command(const char* command);
