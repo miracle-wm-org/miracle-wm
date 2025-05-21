@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using json = nlohmann::json;
 using namespace miracle;
 
-IpcMessageHandler::IpcMessageHandler(std::shared_ptr<CommandController> const& command_controller,
-    std::unique_ptr<IpcCommandExecutor> ipc_command_executor,
+IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> const& command_controller,
+    std::unique_ptr<AbstractIpcCommandExecutor> ipc_command_executor,
     std::shared_ptr<Config> const& config) :
     command_controller { command_controller },
     ipc_command_executor { std::move(ipc_command_executor) },
@@ -37,7 +37,10 @@ IpcMessageHandler::IpcMessageHandler(std::shared_ptr<CommandController> const& c
 {
 }
 
-MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* payload, uint32_t)
+MessageHandlerResult IpcMessageHandler::handle_msg(
+    IpcType payload_type,
+    const char* payload,
+    uint32_t)
 {
     switch (payload_type)
     {
@@ -125,6 +128,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
                 { "success", false },
                 { "error",   error }
             };
+            result.subscribed_events = 0;
             result.payload = to_string(response);
         }
         return result;
@@ -169,7 +173,6 @@ MessageHandlerResult IpcMessageHandler::handle_msg(IpcType payload_type, char* p
     }
     case IpcType::IPC_SEND_TICK:
     {
-        const std::string msg = "{\"success\": true}";
         return {
             .type = payload_type,
             .payload = "{\"success\": true}",

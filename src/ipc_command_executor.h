@@ -62,16 +62,23 @@ public:
     std::string const error;
 };
 
+class AbstractIpcCommandExecutor
+{
+public:
+    virtual ~AbstractIpcCommandExecutor() = default;
+    virtual std::vector<IpcValidationResult> process(IpcParseResult const&) = 0;
+};
+
 /// Processes all commands coming from i3 IPC. This class is mostly for organizational
 /// purposes, as a lot of logic is associated with processing these operations.
-class IpcCommandExecutor
+class IpcCommandExecutor : public AbstractIpcCommandExecutor
 {
 public:
     IpcCommandExecutor(
         std::shared_ptr<CommandController> const&,
         AutoRestartingLauncher&,
         std::shared_ptr<WindowController> const&);
-    std::vector<IpcValidationResult> process(IpcParseResult const&);
+    std::vector<IpcValidationResult> process(IpcParseResult const&) override;
 
 private:
     std::shared_ptr<CommandController> policy;
