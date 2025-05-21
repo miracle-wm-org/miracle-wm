@@ -21,21 +21,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include <map>
 #include <miral/external_client.h>
-#include <miral/runner.h>
-#include <string>
 
 namespace miracle
 {
+class Launcher
+{
+public:
+    virtual ~Launcher() = default;
+    virtual void launch(StartupApp const&) = 0;
+    virtual void kill_all() = 0;
+};
 
-class AutoRestartingLauncher
+class AutoRestartingLauncher : public Launcher
 {
 public:
     AutoRestartingLauncher(miral::MirRunner&, miral::ExternalClientLauncher&);
-    void launch(miracle::StartupApp const&);
-    void kill_all();
+    void launch(StartupApp const&) override;
+    void kill_all() override;
 
 private:
-    std::map<pid_t, miracle::StartupApp> pid_to_command_map;
+    std::map<pid_t, StartupApp> pid_to_command_map;
     miral::MirRunner& runner;
     miral::ExternalClientLauncher& launcher;
     std::mutex mutable mutex;

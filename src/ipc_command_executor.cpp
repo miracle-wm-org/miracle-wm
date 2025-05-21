@@ -119,11 +119,9 @@ protected:
 
 IpcCommandExecutor::IpcCommandExecutor(
     std::shared_ptr<CommandController> const& policy,
-    AutoRestartingLauncher& launcher,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<Launcher> const& launcher) :
     policy { policy },
-    launcher { launcher },
-    window_controller { window_controller }
+    launcher { launcher }
 {
 }
 
@@ -199,7 +197,7 @@ IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, 
     }
 
     StartupApp const app { exec_cmd, false, no_startup_id };
-    launcher.launch(app);
+    launcher->launch(app);
     return IpcValidationResult::create_success();
 }
 

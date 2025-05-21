@@ -117,7 +117,7 @@ Policy::Policy(
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
-    launcher { std::make_unique<AutoRestartingLauncher>(runner, external_client_launcher) },
+    launcher { std::make_shared<AutoRestartingLauncher>(runner, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
     output_manager(std::make_shared<OutputManager>(
@@ -141,7 +141,7 @@ Policy::Policy(
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         runner,
         command_controller,
-        std::make_unique<IpcCommandExecutor>(command_controller, *launcher, window_controller),
+        std::make_unique<IpcCommandExecutor>(command_controller, launcher),
         config)),
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),

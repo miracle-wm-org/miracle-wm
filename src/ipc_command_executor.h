@@ -25,7 +25,7 @@ namespace miracle
 {
 
 class CommandController;
-class AutoRestartingLauncher;
+class Launcher;
 class WindowController;
 class OutputManager;
 
@@ -76,14 +76,12 @@ class IpcCommandExecutor : public AbstractIpcCommandExecutor
 public:
     IpcCommandExecutor(
         std::shared_ptr<CommandController> const&,
-        AutoRestartingLauncher&,
-        std::shared_ptr<WindowController> const&);
+        std::shared_ptr<Launcher> const&);
     std::vector<IpcValidationResult> process(IpcParseResult const&) override;
 
 private:
     std::shared_ptr<CommandController> policy;
-    AutoRestartingLauncher& launcher;
-    std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<Launcher> launcher;
 
     IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&);

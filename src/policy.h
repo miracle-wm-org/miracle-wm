@@ -123,7 +123,7 @@ private:
     std::shared_ptr<OutputListenerMultiplexer> output_listener;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
-    std::unique_ptr<AutoRestartingLauncher> launcher;
+    std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
     std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar;
     std::shared_ptr<OutputManager> output_manager;
