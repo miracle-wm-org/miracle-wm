@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "AutoRestartingLauncher"
 #include "auto_restarting_launcher.h"
 #include <mir/log.h>
-#include <sys/wait.h>
 #include <miral/runner.h>
+#include <sys/wait.h>
 
 using namespace miracle;
 

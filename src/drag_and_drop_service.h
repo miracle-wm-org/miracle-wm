@@ -27,7 +27,7 @@ namespace miracle
 class Container;
 class Config;
 class CompositorState;
-class CommandController;
+class AbstractCommandController;
 class OutputManager;
 class WorkspaceInterface;
 
@@ -35,13 +35,13 @@ class DragAndDropService
 {
 public:
     DragAndDropService(
-        std::shared_ptr<CommandController> const& command_controller,
+        std::shared_ptr<AbstractCommandController> const& command_controller,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<OutputManager> const& output_manager);
     bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers, MirPointerButtons buttons);
 
 private:
-    std::shared_ptr<CommandController> command_controller;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Config> config;
     std::shared_ptr<OutputManager> output_manager;
 

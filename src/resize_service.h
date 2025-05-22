@@ -30,7 +30,7 @@ class ResizeService
 {
 public:
     ResizeService(
-        std::shared_ptr<CommandController> const& command_controller,
+        std::shared_ptr<AbstractCommandController> const& command_controller,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<OutputManager> const& output_manager);
@@ -41,7 +41,7 @@ public:
 private:
     void stop();
 
-    std::shared_ptr<CommandController> command_controller;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<OutputManager> output_manager;

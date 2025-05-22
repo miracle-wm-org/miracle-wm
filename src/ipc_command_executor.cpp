@@ -118,9 +118,9 @@ protected:
 }
 
 IpcCommandExecutor::IpcCommandExecutor(
-    std::shared_ptr<CommandController> const& policy,
+    std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<Launcher> const& launcher) :
-    policy { policy },
+    command_controller { command_controller },
     launcher { launcher }
 {
 }
@@ -148,7 +148,7 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
             result.push_back(process_sticky(command, command_list));
             break;
         case IpcCommandType::exit:
-            policy->quit();
+            command_controller->quit();
             result.push_back(IpcValidationResult::create_success());
             break;
         case IpcCommandType::input:
@@ -181,14 +181,11 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
 IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, IpcParseResult const&)
 {
     if (command.arguments.empty())
-        return IpcValidationResult::create_failure("No arguments were supplied", false);
+        return IpcValidationResult::create_failure("No arguments were supplied", true);
 
     bool no_startup_id = false;
     if (!command.options.empty() && command.options[0] == "--no-startup-id")
         no_startup_id = true;
-
-    if (command.arguments.empty())
-        return IpcValidationResult::create_failure("Argument does not have a command to run", false);
 
     std::string exec_cmd;
     for (auto const& arg : command.arguments)
@@ -208,15 +205,15 @@ IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command,
 
     if (command.arguments.front() == "vertical")
     {
-        policy->try_request_vertical(command_list.scope);
+        command_controller->try_request_vertical(command_list.scope);
     }
     else if (command.arguments.front() == "horizontal")
     {
-        policy->try_request_horizontal(command_list.scope);
+        command_controller->try_request_horizontal(command_list.scope);
     }
     else if (command.arguments.front() == "toggle")
     {
-        policy->try_toggle_layout(false, command_list.scope);
+        command_controller->try_toggle_layout(false, command_list.scope);
     }
     else
     {
@@ -234,7 +231,7 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
         if (command_list.scope.empty())
             return IpcValidationResult::create_failure("Focus command expected scope but none was provided", false);
 
-        policy->try_select(command_list.scope);
+        command_controller->try_select(command_list.scope);
         return IpcValidationResult::create_success();
     }
 
@@ -244,59 +241,59 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
         if (command_list.scope.empty())
             return IpcValidationResult::create_failure("Focus 'workspace' command expected scope but none was provided", false);
 
-        policy->select_workspace_with_scope(command_list.scope);
+        command_controller->select_workspace_with_scope(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "left")
     {
-        policy->try_select(Direction::left, command_list.scope);
+        command_controller->try_select(Direction::left, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "right")
     {
-        policy->try_select(Direction::right, command_list.scope);
+        command_controller->try_select(Direction::right, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "up")
     {
-        policy->try_select(Direction::up, command_list.scope);
+        command_controller->try_select(Direction::up, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "down")
     {
-        policy->try_select(Direction::down, command_list.scope);
+        command_controller->try_select(Direction::down, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "parent")
     {
-        policy->try_select_parent(command_list.scope);
+        command_controller->try_select_parent(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "child")
     {
-        policy->try_select_child(command_list.scope);
+        command_controller->try_select_child(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "prev")
     {
-        if (!policy->try_select_prev(command_list.scope))
+        if (!command_controller->try_select_prev(command_list.scope))
             return IpcValidationResult::create_failure("Failed to select prev", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "next")
     {
-        if (!policy->try_select_next(command_list.scope))
+        if (!command_controller->try_select_next(command_list.scope))
             return IpcValidationResult::create_failure("Failed to select prev", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "floating")
-        policy->try_select_floating(command_list.scope);
+        command_controller->try_select_floating(command_list.scope);
     else if (arg == "tiling")
-        policy->try_select_tiling(command_list.scope);
+        command_controller->try_select_tiling(command_list.scope);
     else if (arg == "mode_toggle")
-        policy->try_select_toggle(command_list.scope);
+        command_controller->try_select_toggle(command_list.scope);
     else if (arg == "output")
     {
         if (command.arguments.size() < 2)
@@ -305,38 +302,38 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
         auto const& arg1 = command.arguments[1];
         if (arg1 == "next")
         {
-            policy->try_select_next_output();
+            command_controller->try_select_next_output();
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "prev")
         {
-            policy->try_select_prev_output();
+            command_controller->try_select_prev_output();
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "left")
         {
-            policy->try_select_output(Direction::left);
+            command_controller->try_select_output(Direction::left);
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "right")
         {
-            policy->try_select_output(Direction::right);
+            command_controller->try_select_output(Direction::right);
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "up")
         {
-            policy->try_select_output(Direction::up);
+            command_controller->try_select_output(Direction::up);
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "down")
         {
-            policy->try_select_output(Direction::down);
+            command_controller->try_select_output(Direction::down);
             return IpcValidationResult::create_success();
         }
         else
         {
             auto const names = std::vector<std::string>(command.arguments.begin() + 1, command.arguments.end());
-            policy->try_select_output(names);
+            command_controller->try_select_output(names);
             return IpcValidationResult::create_success();
         }
     }
@@ -410,12 +407,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (success)
         {
             if (move_type == ParseMoveResult::MoveType::ppt)
-                policy->try_move_by_ppt(direction, amount, command_list.scope);
+                command_controller->try_move_by_ppt(direction, amount, command_list.scope);
             else
-                policy->try_move_by_pixels(direction, static_cast<int>(amount), command_list.scope);
+                command_controller->try_move_by_pixels(direction, static_cast<int>(amount), command_list.scope);
         }
         else
-            policy->try_move(direction, command_list.scope);
+            command_controller->try_move(direction, command_list.scope);
         return IpcValidationResult::create_success();
     }
 
@@ -427,12 +424,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         auto const& arg1 = command.arguments[index++];
         if (arg1 == "center")
         {
-            policy->try_move_to_center_of_active_output(command_list.scope);
+            command_controller->try_move_to_center_of_active_output(command_list.scope);
             return IpcValidationResult::create_success();
         }
         else if (arg1 == "mouse")
         {
-            policy->try_move_to_cursor(command_list.scope);
+            command_controller->try_move_to_cursor(command_list.scope);
             return IpcValidationResult::create_success();
         }
         else
@@ -445,7 +442,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             if (!y_move_distance.success)
                 return IpcValidationResult::create_failure("move position <x> <y>: unable to parse y", true);
 
-            policy->try_move_to(
+            command_controller->try_move_to(
                 x_move_distance.amount,
                 x_move_distance.move_type == ParseMoveResult::MoveType::ppt,
                 y_move_distance.amount,
@@ -465,7 +462,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (arg2 != "center")
             return IpcValidationResult::create_failure("move absolute position ... expected 'center' as the fourth argument", true);
 
-        policy->try_move_to_absolute_center(command_list.scope);
+        command_controller->try_move_to_absolute_center(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "window" || arg0 == "container")
@@ -486,17 +483,17 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             if (try_get_number(arg3, number))
             {
                 // TODO: Do we need to care about the name here?
-                policy->move_active_to_workspace(number, back_and_forth);
+                command_controller->move_active_to_workspace(number, back_and_forth);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "next")
             {
-                policy->move_active_to_next_workspace();
+                command_controller->move_active_to_next_workspace();
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "prev")
             {
-                policy->move_active_to_prev_workspace();
+                command_controller->move_active_to_prev_workspace();
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "current")
@@ -505,12 +502,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             }
             else if (arg3 == "back_and_forth")
             {
-                policy->move_active_to_back_and_forth();
+                command_controller->move_active_to_back_and_forth();
                 return IpcValidationResult::create_success();
             }
             else
             {
-                policy->move_active_to_workspace_named(arg3, back_and_forth);
+                command_controller->move_active_to_workspace_named(arg3, back_and_forth);
                 return IpcValidationResult::create_success();
             }
         }
@@ -521,25 +518,25 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
 
             auto const& arg3 = command.arguments[index++];
             if (arg3 == "left")
-                policy->try_move_active_to_output(Direction::left);
+                command_controller->try_move_active_to_output(Direction::left);
             else if (arg3 == "right")
-                policy->try_move_active_to_output(Direction::right);
+                command_controller->try_move_active_to_output(Direction::right);
             else if (arg3 == "down")
-                policy->try_move_active_to_output(Direction::down);
+                command_controller->try_move_active_to_output(Direction::down);
             else if (arg3 == "up")
-                policy->try_move_active_to_output(Direction::up);
+                command_controller->try_move_active_to_output(Direction::up);
             else if (arg3 == "current")
-                policy->try_move_active_to_current();
+                command_controller->try_move_active_to_current();
             else if (arg3 == "primary")
-                policy->try_move_active_to_primary();
+                command_controller->try_move_active_to_primary();
             else if (arg3 == "nonprimary")
-                policy->try_move_active_to_nonprimary();
+                command_controller->try_move_active_to_nonprimary();
             else if (arg3 == "next")
-                policy->try_move_active_to_next();
+                command_controller->try_move_active_to_next();
             else
             {
                 auto names = std::vector<std::string>(command.arguments.begin() + index - 1, command.arguments.end());
-                policy->try_move_active(names);
+                command_controller->try_move_active(names);
             }
             return IpcValidationResult::create_success();
         }
@@ -548,7 +545,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     }
     else if (arg0 == "scratchpad")
     {
-        policy->move_to_scratchpad();
+        command_controller->move_to_scratchpad();
         return IpcValidationResult::create_success();
     }
 
@@ -562,11 +559,11 @@ IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command
 
     auto const& arg0 = command.arguments[0];
     if (arg0 == "enable")
-        policy->set_is_pinned(true, {});
+        command_controller->set_is_pinned(true, {});
     else if (arg0 == "disable")
-        policy->set_is_pinned(false, {});
+        command_controller->set_is_pinned(false, {});
     else if (arg0 == "toggle")
-        policy->toggle_pinned_to_workspace({});
+        command_controller->toggle_pinned_to_workspace({});
     else
         return IpcValidationResult::create_failure("Expected enable/disable/toggle after 'sticky'", true);
 
@@ -631,31 +628,31 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
     std::string const& arg0 = command.arguments[0];
     if (arg0 == "next")
     {
-        policy->next_workspace();
+        command_controller->next_workspace();
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "prev")
     {
-        policy->prev_workspace();
+        command_controller->prev_workspace();
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "next_on_output")
     {
-        if (policy->next_workspace_on_output())
+        if (command_controller->next_workspace_on_output())
             return IpcValidationResult::create_success();
         else
             return IpcValidationResult::create_failure("'workspace next_on_output' has no output to go next on", false);
     }
     else if (arg0 == "prev_on_output")
     {
-        if (policy->prev_workspace_on_output())
+        if (command_controller->prev_workspace_on_output())
             return IpcValidationResult::create_success();
         else
             return IpcValidationResult::create_failure("'workspace prev_on_output' has no output to go prev on", false);
     }
     else if (arg0 == "back_and_forth")
     {
-        policy->back_and_forth_workspace();
+        command_controller->back_and_forth_workspace();
         return IpcValidationResult::create_success();
     }
 
@@ -668,19 +665,19 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
         // Check if we just have "workspace number"
         if (command.arguments.size() < 3)
         {
-            policy->select_workspace(number, back_and_forth);
+            command_controller->select_workspace(number, back_and_forth);
             return IpcValidationResult::create_success();
         }
 
         // We have "workspace number <name>"
         arg1 = &command.arguments[2];
-        policy->select_workspace(*arg1, back_and_forth);
+        command_controller->select_workspace(*arg1, back_and_forth);
         return IpcValidationResult::create_success();
     }
     else
     {
         // We have "workspace <name>"
-        policy->select_workspace(*arg1, back_and_forth);
+        command_controller->select_workspace(*arg1, back_and_forth);
         return IpcValidationResult::create_success();
     }
 }
@@ -691,27 +688,27 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
     std::string const& arg0 = command.arguments[0];
     if (arg0 == "default")
     {
-        policy->set_layout_default({});
+        command_controller->set_layout_default({});
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "tabbed")
     {
-        policy->set_layout(LayoutScheme::tabbing, {});
+        command_controller->set_layout(LayoutScheme::tabbing, {});
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "stacking")
     {
-        policy->set_layout(LayoutScheme::stacking, {});
+        command_controller->set_layout(LayoutScheme::stacking, {});
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splitv")
     {
-        policy->set_layout(LayoutScheme::vertical, {});
+        command_controller->set_layout(LayoutScheme::vertical, {});
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splith")
     {
-        policy->set_layout(LayoutScheme::horizontal, {});
+        command_controller->set_layout(LayoutScheme::horizontal, {});
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "toggle")
@@ -724,12 +721,12 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
             auto const& arg1 = command.arguments[1];
             if (arg1 == "split")
             {
-                policy->try_toggle_layout(false, command_list.scope);
+                command_controller->try_toggle_layout(false, command_list.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg1 == "all")
             {
-                policy->try_toggle_layout(true, command_list.scope);
+                command_controller->try_toggle_layout(true, command_list.scope);
                 return IpcValidationResult::create_success();
             }
 
@@ -752,7 +749,7 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
                 request_types.push_back(LayoutRequestType::splith);
         }
 
-        policy->try_cycle_through_request_types(request_types, command_list.scope);
+        command_controller->try_cycle_through_request_types(request_types, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else
@@ -770,7 +767,7 @@ IpcValidationResult IpcCommandExecutor::process_scratchpad(IpcCommand const& com
     if (arg0 != "show")
         return IpcValidationResult::create_failure("Expected 'show' after 'scratchpad'", true);
 
-    policy->show_scratchpad();
+    command_controller->show_scratchpad();
     return IpcValidationResult::create_success();
 }
 
@@ -861,9 +858,9 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             return IpcValidationResult::create_failure("Expected a value after 'grow'", true);
 
         if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
-            policy->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
         else
-            policy->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "shrink")
@@ -876,9 +873,9 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             return IpcValidationResult::create_failure("Expected a value after 'shrink'", true);
 
         if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
-            policy->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
         else
-            policy->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "set")
@@ -887,7 +884,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (!result.success)
             return IpcValidationResult::create_failure(result.error, true);
 
-        policy->try_set_size(
+        command_controller->try_set_size(
             result.width.amount,
             result.width.move_type == ParseMoveResult::MoveType::ppt,
             result.height.amount,
@@ -904,6 +901,6 @@ IpcValidationResult IpcCommandExecutor::process_reload(IpcCommand const& command
     if (!command.arguments.empty())
         return IpcValidationResult::create_failure("'reload' command expects no arguments", true);
 
-    policy->reload_config();
+    command_controller->reload_config();
     return IpcValidationResult::create_success();
 }

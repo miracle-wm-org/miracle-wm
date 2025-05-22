@@ -130,7 +130,7 @@ private:
     std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<Self> self;
     std::shared_ptr<Scratchpad> scratchpad_;
-    std::shared_ptr<CommandController> command_controller;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::vector<ContainerScope> empty_scope;
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;

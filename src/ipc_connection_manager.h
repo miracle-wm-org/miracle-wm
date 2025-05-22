@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class AbstractCommandController;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver, public virtual ModeObserver
@@ -35,7 +36,7 @@ class IpcConnectionManager : public virtual WorkspaceObserver, public virtual Mo
 public:
     IpcConnectionManager(
         miral::MirRunner& runner,
-        std::shared_ptr<CommandController> const&,
+        std::shared_ptr<AbstractCommandController> const&,
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
     void on_created(uint32_t id) override;
@@ -56,7 +57,7 @@ private:
         int subscribed_events = 0;
     };
 
-    std::shared_ptr<CommandController> command_controller;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
