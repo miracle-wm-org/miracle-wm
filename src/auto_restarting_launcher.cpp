@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "auto_restarting_launcher.h"
 #include <mir/log.h>
 #include <sys/wait.h>
+#include <miral/runner.h>
 
 using namespace miracle;
 
