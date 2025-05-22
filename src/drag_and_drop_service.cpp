@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 DragAndDropService::DragAndDropService(
-    std::shared_ptr<CommandController> const& command_controller,
+    std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<OutputManager> const& output_manager) :
     command_controller { command_controller },

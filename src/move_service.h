@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class CommandController;
+class AbstractCommandController;
 class Config;
 class CompositorState;
 class OutputManager;
@@ -31,11 +31,11 @@ class OutputManager;
 class MoveService
 {
 public:
-    MoveService(std::shared_ptr<CommandController> const&, std::shared_ptr<Config> const&, std::shared_ptr<OutputManager> const& output_manager);
+    MoveService(std::shared_ptr<AbstractCommandController> const&, std::shared_ptr<Config> const&, std::shared_ptr<OutputManager> const& output_manager);
     bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers, MirPointerButtons buttons);
 
 private:
-    std::shared_ptr<CommandController> command_controller;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Config> config;
     std::shared_ptr<OutputManager> output_manager;
 

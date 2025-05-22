@@ -82,7 +82,7 @@ json mode_event_to_json(WindowManagerMode mode)
 
 IpcConnectionManager::IpcConnectionManager(
     miral::MirRunner& runner,
-    std::shared_ptr<CommandController> const& command_controller,
+    std::shared_ptr<AbstractCommandController> const& command_controller,
     std::unique_ptr<IpcCommandExecutor> command_executor,
     std::shared_ptr<Config> const& config) :
     command_controller(command_controller),

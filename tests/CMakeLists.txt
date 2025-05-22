@@ -38,6 +38,7 @@ add_executable(miracle-wm-tests
     test_tiling_algorithms.cpp
     test_parent_container.cpp
     test_ipc_message_handler.cpp
+    test_ipc_command_executor.cpp
     stub_configuration.h
     stub_session.h
     stub_surface.h

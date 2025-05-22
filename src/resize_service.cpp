@@ -23,7 +23,7 @@ namespace miracle
 {
 
 ResizeService::ResizeService(
-    std::shared_ptr<CommandController> const& command_controller,
+    std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<OutputManager> const& output_manager) :

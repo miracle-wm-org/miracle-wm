@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 
-class CommandController;
+class AbstractCommandController;
 class Launcher;
 class WindowController;
 class OutputManager;
@@ -75,12 +75,12 @@ class IpcCommandExecutor : public AbstractIpcCommandExecutor
 {
 public:
     IpcCommandExecutor(
-        std::shared_ptr<CommandController> const&,
+        std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<Launcher> const&);
     std::vector<IpcValidationResult> process(IpcParseResult const&) override;
 
 private:
-    std::shared_ptr<CommandController> policy;
+    std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Launcher> launcher;
 
     IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&);
