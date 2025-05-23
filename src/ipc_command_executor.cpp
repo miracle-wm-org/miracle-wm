@@ -201,7 +201,7 @@ IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, 
 IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command, IpcParseResult const& command_list)
 {
     if (command.arguments.empty())
-        return IpcValidationResult::create_failure("No arguments were supplied", false);
+        return IpcValidationResult::create_failure("No arguments were supplied", true);
 
     if (command.arguments.front() == "vertical")
     {
@@ -217,7 +217,7 @@ IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command,
     }
     else
     {
-        return IpcValidationResult::create_failure(std::format("Unknown argument {}", command.arguments.front().c_str()), false);
+        return IpcValidationResult::create_failure(std::format("Unknown argument {}", command.arguments.front()), true);
     }
 
     return IpcValidationResult::create_success();
