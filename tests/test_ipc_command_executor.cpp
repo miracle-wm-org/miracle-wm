@@ -39,10 +39,10 @@ public:
 TEST_F(IpcCommandExecutorTest, ExecCommandWorksForSimpleCase)
 {
     IpcParseResult parse_result;
-    IpcCommand command(IpcCommandType::exec, "exec ls", {}, { "exec", "ls" });
+    IpcCommand command(IpcCommandType::exec, "exec ls", {}, { "ls" });
     parse_result.commands.push_back(command);
 
-    EXPECT_CALL(*launcher, launch(AllOf(Field(&StartupApp::command, Eq("exec ls ")), Field(&StartupApp::restart_on_death, Eq(false)), Field(&StartupApp::no_startup_id, Eq(false)), Field(&StartupApp::should_halt_compositor_on_death, Eq(false)), Field(&StartupApp::in_systemd_scope, Eq(false)))));
+    EXPECT_CALL(*launcher, launch(AllOf(Field(&StartupApp::command, Eq("ls ")), Field(&StartupApp::restart_on_death, Eq(false)), Field(&StartupApp::no_startup_id, Eq(false)), Field(&StartupApp::should_halt_compositor_on_death, Eq(false)), Field(&StartupApp::in_systemd_scope, Eq(false)))));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -53,10 +53,10 @@ TEST_F(IpcCommandExecutorTest, ExecCommandWorksWithNoStartupIdFlag)
     IpcParseResult parse_result;
     IpcCommand command(IpcCommandType::exec, "exec ls",
         { "--no-startup-id" },
-        { "exec", "ls" });
+        { "ls" });
     parse_result.commands.push_back(command);
 
-    EXPECT_CALL(*launcher, launch(AllOf(Field(&StartupApp::command, Eq("exec ls ")), Field(&StartupApp::restart_on_death, Eq(false)), Field(&StartupApp::no_startup_id, Eq(true)), Field(&StartupApp::should_halt_compositor_on_death, Eq(false)), Field(&StartupApp::in_systemd_scope, Eq(false)))));
+    EXPECT_CALL(*launcher, launch(AllOf(Field(&StartupApp::command, Eq("ls ")), Field(&StartupApp::restart_on_death, Eq(false)), Field(&StartupApp::no_startup_id, Eq(true)), Field(&StartupApp::should_halt_compositor_on_death, Eq(false)), Field(&StartupApp::in_systemd_scope, Eq(false)))));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -72,4 +72,69 @@ TEST_F(IpcCommandExecutorTest, ExecCommandFailsIfArgumentsAreEmpty)
     EXPECT_THAT(validation_result[0].success, Eq(false));
     EXPECT_THAT(validation_result[0].error, Eq("No arguments were supplied"));
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SplitCommandVerticalWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::split, "split vertical", {}, { "vertical" });
+
+    EXPECT_CALL(*controller, try_request_vertical);
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SplitCommandHorizontalWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::split, "split vertical", {}, { "horizontal" });
+
+    EXPECT_CALL(*controller, try_request_horizontal);
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SplitCommandToggleWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::split, "split vertical", {}, { "toggle" });
+
+    EXPECT_CALL(*controller, try_toggle_layout);
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SplitCommandNoArgsResultsinError)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::split, "split vertical", {}, {});
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("No arguments were supplied"));
+}
+
+TEST_F(IpcCommandExecutorTest, SplitCommandInvalidArgsResultsinError)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::split, "split vertical", {}, { "meow" });
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Unknown argument meow"));
 }
