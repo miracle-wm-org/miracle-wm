@@ -138,3 +138,148 @@ TEST_F(IpcCommandExecutorTest, SplitCommandInvalidArgsResultsinError)
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
     EXPECT_THAT(validation_result[0].error, Eq("Unknown argument meow"));
 }
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandWithoutArgsResultsInError)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout", {}, {});
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("No arguments were supplied"));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandDefaultWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout default", {}, { "default" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_layout_default);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandTabbedWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout tabbed", {}, { "tabbed" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_layout(LayoutScheme::tabbing, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandStackingWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout stacking", {}, { "stacking" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_layout(LayoutScheme::stacking, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandSplitvWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout splitv", {}, { "splitv" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_layout(LayoutScheme::vertical, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandSplithWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout splith", {}, { "splith" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_layout(LayoutScheme::horizontal, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandToggleWithoutArgResultsInError)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout toggle", {}, { "toggle" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected argument after 'layout toggle ...'"));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandToggleWithSplit)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout toggle split", {}, { "toggle", "split" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, try_toggle_layout(false, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandToggleWithAll)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout toggle all", {}, { "toggle", "all" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, try_toggle_layout(true, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandToggleWithCycle)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout toggle split tabbed stacking splitv splith", {}, { "toggle", "split", "tabbed", "stacking", "splitv", "splith" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_cycle_through_request_types(ElementsAre(LayoutRequestType::split, LayoutRequestType::tabbed, LayoutRequestType::stacking, LayoutRequestType::splitv, LayoutRequestType::splith), testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandToggleWithCycleErrorsWhenInvalid)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout toggle split tabbed stacking splitv splith unknown", {}, { "toggle", "split", "tabbed", "stacking", "splitv", "splith", "unknown" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Unknown layout type in 'layout toggle': unknown"));
+}
+
+TEST_F(IpcCommandExecutorTest, LayoutCommandWithInvalidArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::layout, "layout unknown", {}, { "unknown" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected default/tabbed/stacking/splitv/splith/toggle after 'layout'"));
+}

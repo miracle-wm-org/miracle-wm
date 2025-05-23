@@ -73,6 +73,11 @@ public:
         return command.arguments[index];
     }
 
+    [[nodiscard]] bool has_current() const
+    {
+        return index < command.arguments.size();
+    }
+
     ParseMoveResult parse_move_distance()
     {
         if (!next())
@@ -685,40 +690,44 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
 IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command, IpcParseResult const& command_list)
 {
     // https://i3wm.org/docs/userguide.html#manipulating_layout
-    std::string const& arg0 = command.arguments[0];
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
+        return IpcValidationResult::create_failure("No arguments were supplied", true);
+
+    std::string const& arg0 = indexer.current();
     if (arg0 == "default")
     {
-        command_controller->set_layout_default({});
+        command_controller->set_layout_default(command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "tabbed")
     {
-        command_controller->set_layout(LayoutScheme::tabbing, {});
+        command_controller->set_layout(LayoutScheme::tabbing, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "stacking")
     {
-        command_controller->set_layout(LayoutScheme::stacking, {});
+        command_controller->set_layout(LayoutScheme::stacking, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splitv")
     {
-        command_controller->set_layout(LayoutScheme::vertical, {});
+        command_controller->set_layout(LayoutScheme::vertical, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splith")
     {
-        command_controller->set_layout(LayoutScheme::horizontal, {});
+        command_controller->set_layout(LayoutScheme::horizontal, command_list.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "toggle")
     {
-        if (command.arguments.size() == 1)
+        if (!indexer.next())
             return IpcValidationResult::create_failure("Expected argument after 'layout toggle ...'", true);
 
         if (command.arguments.size() == 2)
         {
-            auto const& arg1 = command.arguments[1];
+            auto const& arg1 = indexer.current();
             if (arg1 == "split")
             {
                 command_controller->try_toggle_layout(false, command_list.scope);
@@ -729,14 +738,12 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
                 command_controller->try_toggle_layout(true, command_list.scope);
                 return IpcValidationResult::create_success();
             }
-
-            return IpcValidationResult::create_failure("Expected split/all after 'layout toggle X'", true);
         }
 
         std::vector<LayoutRequestType> request_types;
-        for (size_t i = 1; i < command.arguments.size(); i++)
+        do
         {
-            auto const& argn = command.arguments[i];
+            auto const& argn = indexer.current();
             if (argn == "split")
                 request_types.push_back(LayoutRequestType::split);
             else if (argn == "tabbed")
@@ -747,7 +754,9 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
                 request_types.push_back(LayoutRequestType::splitv);
             else if (argn == "splith")
                 request_types.push_back(LayoutRequestType::splith);
-        }
+            else
+                return IpcValidationResult::create_failure(std::format("Unknown layout type in 'layout toggle': {}", argn.c_str()), true);
+        } while (indexer.next());
 
         command_controller->try_cycle_through_request_types(request_types, command_list.scope);
         return IpcValidationResult::create_success();
