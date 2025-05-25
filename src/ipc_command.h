@@ -36,6 +36,7 @@ enum class IpcCommandType
     split,
     layout,
     fullscreen,
+    floating,
     focus,
     move,
     swap,

@@ -318,3 +318,38 @@ TEST_F(IpcCommandExecutorTest, FullscreenToggleResultsInToggleRequested)
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
 }
+
+TEST_F(IpcCommandExecutorTest, FloatingToggleFailsWithoutArguments)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::fullscreen, "floating", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("No arguments were supplied"));
+}
+
+TEST_F(IpcCommandExecutorTest, FloatingToggleFailsWithNonLayoutArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::floating, "floating meow", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'toggle' after 'floating', but got 'meow'"));
+}
+
+TEST_F(IpcCommandExecutorTest, FloatingToggleResultsInToggleRequested)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::floating, "floating toggle", {}, { "toggle" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, toggle_floating(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
