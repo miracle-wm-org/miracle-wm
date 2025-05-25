@@ -180,3 +180,14 @@ TEST_F(IpcCommandParserTest, CanParseFullscreenCommand)
     ASSERT_EQ(commands.commands[0].arguments[0], "toggle");
     ASSERT_EQ(commands.commands[0].raw_command, "fullscreen");
 }
+
+TEST_F(IpcCommandParserTest, CanParseFloatingCommand)
+{
+    const char* v = "floating toggle";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 1);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::floating);
+    ASSERT_EQ(commands.commands[0].arguments[0], "toggle");
+    ASSERT_EQ(commands.commands[0].raw_command, "floating");
+}

@@ -95,6 +95,8 @@ IpcCommandType command_from_string(const std::string& str)
         return IpcCommandType::layout;
     else if (str == "fullscreen")
         return IpcCommandType::fullscreen;
+    else if (str == "floating")
+        return IpcCommandType::floating;
     else if (str == "focus")
         return IpcCommandType::focus;
     else if (str == "move")

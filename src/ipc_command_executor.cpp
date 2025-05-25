@@ -168,6 +168,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         case IpcCommandType::fullscreen:
             result.push_back(process_fullscreen(command, command_list));
             break;
+        case IpcCommandType::floating:
+            result.push_back(process_floating(command, command_list));
+            break;
         case IpcCommandType::scratchpad:
             result.push_back(process_scratchpad(command, command_list));
             break;
@@ -781,6 +784,20 @@ IpcValidationResult IpcCommandExecutor::process_fullscreen(IpcCommand const& com
         return IpcValidationResult::create_failure(std::format("Expected 'toggle' after 'fullscreen', but got '{}'", indexer.current()), true);
 
     command_controller->try_toggle_fullscreen(parse_result.scope);
+    return IpcValidationResult::create_success();
+}
+
+IpcValidationResult IpcCommandExecutor::process_floating(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    // https://i3wm.org/docs/userguide.html#manipulating_layout
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
+        return IpcValidationResult::create_failure("No arguments were supplied", true);
+
+    if (indexer.current() != "toggle")
+        return IpcValidationResult::create_failure(std::format("Expected 'toggle' after 'floating', but got '{}'", indexer.current()), true);
+
+    command_controller->toggle_floating(parse_result.scope);
     return IpcValidationResult::create_success();
 }
 
