@@ -91,6 +91,7 @@ private:
     IpcValidationResult process_input(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_workspace(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_layout(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_fullscreen(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);

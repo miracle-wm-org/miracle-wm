@@ -283,3 +283,38 @@ TEST_F(IpcCommandExecutorTest, LayoutCommandWithInvalidArg)
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
     EXPECT_THAT(validation_result[0].error, Eq("Expected default/tabbed/stacking/splitv/splith/toggle after 'layout'"));
 }
+
+TEST_F(IpcCommandExecutorTest, FullscreenToggleFailsWithoutArguments)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::fullscreen, "fullscreen", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("No arguments were supplied"));
+}
+
+TEST_F(IpcCommandExecutorTest, FullscreenToggleFailsWithNonLayoutArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::fullscreen, "fullscreen meow", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'toggle' after 'fullscreen', but got 'meow'"));
+}
+
+TEST_F(IpcCommandExecutorTest, FullscreenToggleResultsInToggleRequested)
+{
+    IpcParseResult parse_result;
+    IpcCommand command(IpcCommandType::fullscreen, "fullscreen toggle", {}, { "toggle" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_toggle_fullscreen(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}

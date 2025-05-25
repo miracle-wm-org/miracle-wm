@@ -93,6 +93,8 @@ IpcCommandType command_from_string(const std::string& str)
         return IpcCommandType::split;
     else if (str == "layout")
         return IpcCommandType::layout;
+    else if (str == "fullscreen")
+        return IpcCommandType::fullscreen;
     else if (str == "focus")
         return IpcCommandType::focus;
     else if (str == "move")

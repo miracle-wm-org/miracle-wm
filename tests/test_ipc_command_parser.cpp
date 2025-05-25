@@ -169,3 +169,14 @@ TEST_F(IpcCommandParserTest, CanParseOneValidAndOneInvalidCommand)
     ASSERT_EQ(commands.commands[1].type, IpcCommandType::workspace);
     ASSERT_EQ(commands.commands[1].raw_command, "workspace");
 }
+
+TEST_F(IpcCommandParserTest, CanParseFullscreenCommand)
+{
+    const char* v = "fullscreen toggle";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 1);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::fullscreen);
+    ASSERT_EQ(commands.commands[0].arguments[0], "toggle");
+    ASSERT_EQ(commands.commands[0].raw_command, "fullscreen");
+}

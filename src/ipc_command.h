@@ -35,6 +35,7 @@ enum class IpcCommandType
     exec,
     split,
     layout,
+    fullscreen,
     focus,
     move,
     swap,
