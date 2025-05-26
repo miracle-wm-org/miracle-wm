@@ -240,7 +240,7 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     if (command.arguments.empty())
     {
         if (command_list.scope.empty())
-            return IpcValidationResult::create_failure("Focus command expected scope but none was provided", false);
+            return IpcValidationResult::create_failure("'focus' command expected scope but none was provided", true);
 
         command_controller->try_select(command_list.scope);
         return IpcValidationResult::create_success();
@@ -250,7 +250,7 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     if (arg == "workspace")
     {
         if (command_list.scope.empty())
-            return IpcValidationResult::create_failure("Focus 'workspace' command expected scope but none was provided", false);
+            return IpcValidationResult::create_failure("'focus workspace' command expected scope but none was provided", true);
 
         command_controller->select_workspace_with_scope(command_list.scope);
         return IpcValidationResult::create_success();
@@ -288,23 +288,32 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     else if (arg == "prev")
     {
         if (!command_controller->try_select_prev(command_list.scope))
-            return IpcValidationResult::create_failure("Failed to select prev", false);
+            return IpcValidationResult::create_failure("Failed to select previous container", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "next")
     {
         if (!command_controller->try_select_next(command_list.scope))
-            return IpcValidationResult::create_failure("Failed to select prev", false);
+            return IpcValidationResult::create_failure("Failed to select next container", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "floating")
+    {
         command_controller->try_select_floating(command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "tiling")
+    {
         command_controller->try_select_tiling(command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "mode_toggle")
+    {
         command_controller->try_select_toggle(command_list.scope);
+        return IpcValidationResult::create_success();
+    }
     else if (arg == "output")
     {
         if (command.arguments.size() < 2)
