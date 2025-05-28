@@ -656,3 +656,143 @@ TEST_F(IpcCommandExecutorTest, FocusAnythingElseResultsInFailure)
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
     EXPECT_THAT(validation_result[0].error, Eq("Unknown argument to 'focus' command: meow"));
 }
+
+TEST_F(IpcCommandExecutorTest, MoveFailsWithoutArguments)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move' command expects arguments"));
+}
+
+class IpcCommandExecutorDirectionTest : public IpcCommandExecutorTest, public WithParamInterface<Direction>
+{
+};
+
+TEST_P(IpcCommandExecutorDirectionTest, MoveInDirectionWithoutQualifier)
+{
+    auto const direction = GetParam();
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { to_string(direction), "50" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_by_pixels(direction, 50, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_P(IpcCommandExecutorDirectionTest, MoveInDirectionWithPxQualifier)
+{
+    auto const direction = GetParam();
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { to_string(direction), "50", "px" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_by_pixels(direction, 50, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_P(IpcCommandExecutorDirectionTest, MoveInDirectionWithPptQualifier)
+{
+    auto const direction = GetParam();
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { to_string(direction), "50", "ppt" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_by_ppt(direction, 0.5, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    IpcCommandExecutorDirectionTest,
+    IpcCommandExecutorDirectionTest,
+    ::testing::Values(
+        Direction::up,
+        Direction::left,
+        Direction::down,
+        Direction::right));
+
+TEST_F(IpcCommandExecutorTest, MovePositionFailsWithNoArguments)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "position" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move position' expected a third argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MovePositionCenter)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "position", "center" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_center_of_active_output(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MovePositionMouse)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "position", "mouse" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_cursor(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+struct PositionTestData
+{
+    std::optional<std::string> x_qualifier;
+    std::optional<std::string> y_qualifier;
+};
+
+class IpcCommandExecutorPositionTest : public IpcCommandExecutorTest, public WithParamInterface<PositionTestData>
+{
+};
+
+TEST_P(IpcCommandExecutorPositionTest, MovePositionXY)
+{
+    auto param = GetParam();
+    std::vector<std::string> args;
+    args.push_back("position");
+    args.push_back("50");
+    if (param.x_qualifier)
+        args.push_back(param.x_qualifier.value());
+    args.push_back("100");
+    if (param.y_qualifier)
+        args.push_back(param.y_qualifier.value());
+
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, args);
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to(param.x_qualifier == "ppt" ? 0.5 : 50, param.x_qualifier == "ppt", param.y_qualifier == "ppt" ? 1.0 : 100, param.y_qualifier == "ppt", testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    IpcCommandExecutorPositionTest,
+    IpcCommandExecutorPositionTest,
+    ::testing::Values(
+        PositionTestData(std::nullopt, std::nullopt),
+        PositionTestData(std::nullopt, "px"),
+        PositionTestData("px", std::nullopt),
+        PositionTestData("px", "px"),
+        PositionTestData(std::nullopt, "ppt"),
+        PositionTestData("ppt", std::nullopt),
+        PositionTestData("ppt", "ppt"),
+        PositionTestData("px", "ppt"),
+        PositionTestData("ppt", "px")));
