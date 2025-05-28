@@ -440,17 +440,17 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     {
         if (!indexer.next())
             return IpcValidationResult::create_failure("'move absolute' expected a third argument", true);
-        auto const& arg1 = indexer.current();
 
+        auto const& arg1 = indexer.current();
         if (!indexer.next())
             return IpcValidationResult::create_failure("'move absolute position' expected a fourth argument", true);
 
         auto const& arg2 = indexer.current();
         if (arg1 != "position")
-            return IpcValidationResult::create_failure("move absolute ... expected 'position' as the third argument", true);
+            return IpcValidationResult::create_failure("'move absolute' ... expected 'position' as the third argument", true);
 
         if (arg2 != "center")
-            return IpcValidationResult::create_failure("move absolute position ... expected 'center' as the fourth argument", true);
+            return IpcValidationResult::create_failure("'move absolute position' ... expected 'center' as the fourth argument", true);
 
         command_controller->try_move_to_absolute_center(command_list.scope);
         return IpcValidationResult::create_success();
@@ -465,42 +465,46 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (arg1 != "to")
             return IpcValidationResult::create_failure("Expected 'to' after 'move window/container ...'", true);
 
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'move window/container to' expected another argument", true);
+
         auto const& arg2 = indexer.current();
         if (arg2 == "workspace")
         {
-            if (command.arguments.size() <= 3)
-                return IpcValidationResult::create_failure("Expected another argument after 'move container/window to output...'", true);
+            if (!indexer.next())
+                return IpcValidationResult::create_failure("Expected another argument after 'move container/window to workspace...'", true);
 
             auto const& arg3 = indexer.current();
             int number = -1;
             if (try_get_number(arg3, number))
             {
                 // TODO: Do we need to care about the name here?
-                command_controller->move_active_to_workspace(number, back_and_forth);
+                command_controller->move_to_workspace(command_list.scope, number, back_and_forth);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "next")
             {
-                command_controller->move_active_to_next_workspace();
+                command_controller->move_to_next_workspace(command_list.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "prev")
             {
-                command_controller->move_active_to_prev_workspace();
+                command_controller->move_to_prev_workspace(command_list.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "current")
             {
-                // TODO: Support window selection
+                command_controller->move_to_current_workspace(command_list.scope);
+                return IpcValidationResult::create_success();
             }
             else if (arg3 == "back_and_forth")
             {
-                command_controller->move_active_to_back_and_forth();
+                command_controller->move_to_back_and_forth(command_list.scope);
                 return IpcValidationResult::create_success();
             }
             else
             {
-                command_controller->move_active_to_workspace_named(arg3, back_and_forth);
+                command_controller->move_to_workspace_named(command_list.scope, arg3, back_and_forth);
                 return IpcValidationResult::create_success();
             }
         }
@@ -537,7 +541,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     }
     else if (indexer.current() == "scratchpad")
     {
-        command_controller->move_to_scratchpad();
+        command_controller->move_to_scratchpad(command_list.scope);
         return IpcValidationResult::create_success();
     }
 

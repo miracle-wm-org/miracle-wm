@@ -796,3 +796,188 @@ INSTANTIATE_TEST_SUITE_P(
         PositionTestData("ppt", "ppt"),
         PositionTestData("px", "ppt"),
         PositionTestData("ppt", "px")));
+
+TEST_F(IpcCommandExecutorTest, MoveAbsoluteWithoutArgsResultsInFailure)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "absolute" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move absolute' expected a third argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveAbsolutePositionWithoutArgsResultsInFailure)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "absolute", "position" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move absolute position' expected a fourth argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveAbsoluteWithInvalidSecondArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "absolute", "meow", "center" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move absolute' ... expected 'position' as the third argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveAbsoluteWithInvalidThirdArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "absolute", "position", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move absolute position' ... expected 'center' as the fourth argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveAbsolutePositionCenterWorks)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "absolute", "position", "center" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_absolute_center(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerFailsWithoutArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move window/container' expected a third argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerFailsIfSecondArgIsntTo)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'to' after 'move window/container ...'"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToFailsWithoutNextArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'move window/container to' expected another argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceFailsWithoutNextArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected another argument after 'move container/window to workspace...'"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceByNumber)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "1" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_workspace(testing::_, 1, true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceByNumberNoAutoBackandForth)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move",
+        { "--no-auto-back-and-forth" }, { "window", "to", "workspace", "1" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_workspace(testing::_, 1, false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceNext)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "next" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_next_workspace(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspacePrev)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "prev" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_prev_workspace(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceCurrent)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "current" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_current_workspace(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceBackAndForth)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "back_and_forth" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_back_and_forth(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceNamed)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "name" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, move_to_workspace_named(testing::_, "name", true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}

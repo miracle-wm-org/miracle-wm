@@ -805,119 +805,173 @@ bool CommandController::prev_workspace_on_output()
     return false;
 }
 
-bool CommandController::move_active_to_workspace(int number, bool back_and_forth)
+bool CommandController::move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool back_and_forth)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
-    auto container = state->focused_container();
-    if (container->get_workspace()->num() == number)
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    container->get_output()->delete_container(container);
-    state->unfocus_container(container);
-
-    if (workspace_manager->request_workspace(
-            output_manager->focused(), number, back_and_forth))
+    for (auto const& container : containers)
     {
-        output_manager->focused()->graft(container);
-        if (container->window().value())
-            window_controller->select_active_window(container->window().value());
-        return true;
+        if (container->get_workspace()->num() == number)
+            continue;
+
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_workspace(
+                output_manager->focused(), number, back_and_forth))
+        {
+            output_manager->focused()->graft(container);
+            if (container->window().value())
+                window_controller->select_active_window(container->window().value());
+        }
     }
 
-    return false;
+    return true;
 }
 
-bool CommandController::move_active_to_workspace_named(std::string const& name, bool back_and_forth)
+bool CommandController::move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool back_and_forth)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
-    auto container = state->focused_container();
-    if (container->get_workspace()->name() == name)
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
         return false;
 
-    container->get_output()->delete_container(container);
-    state->unfocus_container(container);
-
-    if (workspace_manager->request_workspace(output_manager->focused(), name, back_and_forth))
+    for (auto const& container : containers)
     {
-        output_manager->focused()->graft(container);
-        return true;
+        if (container->get_workspace()->name() == name)
+            return false;
+
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_workspace(output_manager->focused(), name, back_and_forth))
+            output_manager->focused()->graft(container);
     }
 
-    return false;
+    return true;
 }
 
-bool CommandController::move_active_to_next_workspace()
+bool CommandController::move_to_current_workspace(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
-    auto container = state->focused_container();
-    container->get_output()->delete_container(container);
-    state->unfocus_container(container);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
 
-    if (workspace_manager->request_next(output_manager->focused()))
+    if (!output_manager->focused())
+        return false;
+
+    for (auto const& container : containers)
     {
-        output_manager->focused()->graft(container);
-        return true;
+        if (container->get_workspace() == output_manager->focused()->active().get())
+            continue;
+
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_next(output_manager->focused()))
+            output_manager->focused()->graft(container);
     }
 
-    return false;
+    return true;
 }
 
-bool CommandController::move_active_to_prev_workspace()
+bool CommandController::move_to_next_workspace(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
-    auto container = state->focused_container();
-    container->get_output()->delete_container(container);
-    state->unfocus_container(container);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
 
-    if (workspace_manager->request_prev(output_manager->focused()))
+    for (auto const& container : containers)
     {
-        output_manager->focused()->graft(container);
-        return true;
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_next(output_manager->focused()))
+            output_manager->focused()->graft(container);
     }
 
-    return false;
+    return true;
 }
 
-bool CommandController::move_active_to_back_and_forth()
+bool CommandController::move_to_prev_workspace(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
-    auto container = state->focused_container();
-    container->get_output()->delete_container(container);
-    state->unfocus_container(container);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
 
-    if (workspace_manager->request_back_and_forth())
+    for (auto const& container : containers)
     {
-        output_manager->focused()->graft(container);
-        return true;
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_prev(output_manager->focused()))
+            output_manager->focused()->graft(container);
     }
 
-    return false;
+    return true;
 }
 
-bool CommandController::move_to_scratchpad()
+bool CommandController::move_to_back_and_forth(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (!can_move_container())
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    for (auto const& container : containers)
+    {
+        container->get_output()->delete_container(container);
+        state->unfocus_container(container);
+
+        if (workspace_manager->request_back_and_forth())
+            output_manager->focused()->graft(container);
+    }
+
+    return true;
+}
+
+bool CommandController::move_to_scratchpad(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (!can_move_container())
         return false;
 
     // Only floating or tiled windows can be moved to the scratchpad
-    auto container = state->focused_container();
-    return scratchpad_->move_to(container);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    for (auto const& container : containers)
+    {
+        if (!scratchpad_->move_to(container))
+            return false;
+    }
+
+    return true;
 }
 
 bool CommandController::show_scratchpad()
