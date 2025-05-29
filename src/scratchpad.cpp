@@ -37,7 +37,7 @@ bool Scratchpad::move_to(std::shared_ptr<Container> const& container)
 {
     if (container->get_type() != ContainerType::leaf)
     {
-        mir::log_error("move_to_scratchpad: cannot move window to scratchpad: %d", static_cast<int>(container->get_type()));
+        mir::log_error("try_move_to_scratchpad: cannot move window to scratchpad: %d", static_cast<int>(container->get_type()));
         return false;
     }
 

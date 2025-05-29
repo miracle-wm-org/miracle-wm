@@ -909,7 +909,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceByNumber)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "1" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_workspace(testing::_, 1, true));
+    EXPECT_CALL(*controller, try_move_to_workspace(testing::_, 1, true));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -921,7 +921,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceByNumberNoAutoBack
     IpcCommand const command(IpcCommandType::move, "move",
         { "--no-auto-back-and-forth" }, { "window", "to", "workspace", "1" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_workspace(testing::_, 1, false));
+    EXPECT_CALL(*controller, try_move_to_workspace(testing::_, 1, false));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -932,7 +932,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceNext)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "next" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_next_workspace(testing::_));
+    EXPECT_CALL(*controller, try_move_to_next_workspace(testing::_));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -943,7 +943,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspacePrev)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "prev" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_prev_workspace(testing::_));
+    EXPECT_CALL(*controller, try_move_to_prev_workspace(testing::_));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -954,7 +954,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceCurrent)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "current" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_current_workspace(testing::_));
+    EXPECT_CALL(*controller, try_move_to_current_workspace(testing::_));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -965,7 +965,7 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceBackAndForth)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "back_and_forth" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_back_and_forth(testing::_));
+    EXPECT_CALL(*controller, try_move_to_back_and_forth(testing::_));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
@@ -976,8 +976,20 @@ TEST_F(IpcCommandExecutorTest, MoveWinowOrContainerToWorkspaceNamed)
     IpcParseResult parse_result;
     IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "workspace", "name" });
     parse_result.commands.push_back(command);
-    EXPECT_CALL(*controller, move_to_workspace_named(testing::_, "name", true));
+    EXPECT_CALL(*controller, try_move_to_workspace_named(testing::_, "name", true));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputWithoutArgsFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected another argument after 'move container/window to output...'"));
 }
