@@ -86,7 +86,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     EXPECT_CALL(*workspace, num())
         .WillOnce(testing::Return(1));
 
-    ASSERT_FALSE(command_controller->move_active_to_workspace(1, true));
+    ASSERT_TRUE(command_controller->try_move_to_workspace({}, 1, true));
 }
 
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
@@ -103,5 +103,5 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
         .WillOnce(testing::ReturnRef(name));
 
     std::string expected = "Test";
-    ASSERT_FALSE(command_controller->move_active_to_workspace_named(expected, false));
+    ASSERT_FALSE(command_controller->try_move_to_workspace_named({}, expected, false));
 }
