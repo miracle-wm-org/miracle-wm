@@ -993,3 +993,105 @@ TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputWithoutArgsFails)
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
     EXPECT_THAT(validation_result[0].error, Eq("Expected another argument after 'move container/window to output...'"));
 }
+
+TEST_P(IpcCommandExecutorDirectionTest, MoveWindowOrContainerToOutputByDirection)
+{
+    auto param = GetParam();
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", to_string(param) });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_output_by_direction(param, testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputCurrent)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", "current" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_current_output(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputPrimary)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", "primary" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_primary_output(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputNonPrimary)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", "nonprimary" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_nonprimary_output(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputNext)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", "next" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_next_output(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToOutputNamedList)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "output", "name1", "name2" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_output_by_name_list(ElementsAre("name1", "name2"), testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveWindowOrContainerToSomethingElseFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "window", "to", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected workspace/output after 'move container/window to ...'"));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveScratchpad)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "scratchpad" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_scratchpad(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MoveAnythingElseFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'"));
+}

@@ -396,7 +396,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
                 command_controller->try_move_by_pixels(direction, static_cast<int>(amount), command_list.scope);
         }
         else
-            command_controller->try_move_to_output_by_name_list(direction, command_list.scope);
+            command_controller->try_move_by_direction(direction, command_list.scope);
         return IpcValidationResult::create_success();
     }
 
@@ -515,26 +515,50 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
 
             auto const& arg3 = indexer.current();
             if (arg3 == "left")
+            {
                 command_controller->try_move_to_output_by_direction(Direction::left, command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "right")
+            {
                 command_controller->try_move_to_output_by_direction(Direction::right, command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "down")
+            {
                 command_controller->try_move_to_output_by_direction(Direction::down, command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "up")
+            {
                 command_controller->try_move_to_output_by_direction(Direction::up, command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "current")
+            {
                 command_controller->try_move_to_current_output(command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "primary")
+            {
                 command_controller->try_move_to_primary_output(command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "nonprimary")
+            {
                 command_controller->try_move_to_nonprimary_output(command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else if (arg3 == "next")
+            {
                 command_controller->try_move_to_next_output(command_list.scope);
+                return IpcValidationResult::create_success();
+            }
             else
             {
                 command_controller->try_move_to_output_by_name_list(indexer.current_remaining(), command_list.scope);
+                return IpcValidationResult::create_success();
             }
-            return IpcValidationResult::create_success();
         }
 
         return IpcValidationResult::create_failure("Expected workspace/output after 'move container/window to ...'", true);

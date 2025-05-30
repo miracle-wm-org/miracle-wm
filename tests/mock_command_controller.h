@@ -36,7 +36,7 @@ namespace test
         MOCK_METHOD(bool, try_resize, (Direction, int, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_resize_ppt, (Direction, float, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_set_size, (std::optional<int> const&, bool, std::optional<int> const&, bool, std::vector<ContainerScope> const&), (override));
-        MOCK_METHOD(bool, try_move_to_output_by_name_list, (Direction, std::vector<ContainerScope> const&), (override));
+        MOCK_METHOD(bool, try_move_by_direction, (Direction, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_by_pixels, (Direction, int, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_by_ppt, (Direction, float, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_to, (float, bool, float, bool, std::vector<ContainerScope> const&), (override));

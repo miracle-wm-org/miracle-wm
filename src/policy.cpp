@@ -219,13 +219,13 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case DefaultKeyCommand::ResizeRight:
             return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::right, config->get_resize_jump(), empty_scope);
         case DefaultKeyCommand::MoveUp:
-            return command_controller->try_move_to_output_by_name_list(Direction::up, empty_scope);
+            return command_controller->try_move_by_direction(Direction::up, empty_scope);
         case DefaultKeyCommand::MoveDown:
-            return command_controller->try_move_to_output_by_name_list(Direction::down, empty_scope);
+            return command_controller->try_move_by_direction(Direction::down, empty_scope);
         case DefaultKeyCommand::MoveLeft:
-            return command_controller->try_move_to_output_by_name_list(Direction::left, empty_scope);
+            return command_controller->try_move_by_direction(Direction::left, empty_scope);
         case DefaultKeyCommand::MoveRight:
-            return command_controller->try_move_to_output_by_name_list(Direction::right, empty_scope);
+            return command_controller->try_move_by_direction(Direction::right, empty_scope);
         case DefaultKeyCommand::SelectUp:
             return command_controller->try_select(Direction::up, empty_scope);
         case DefaultKeyCommand::SelectDown:

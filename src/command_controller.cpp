@@ -274,7 +274,7 @@ bool CommandController::try_set_size(
     return result;
 }
 
-bool CommandController::try_move_to_output_by_name_list(miracle::Direction direction, std::vector<ContainerScope> const& scope)
+bool CommandController::try_move_by_direction(Direction direction, std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
     if (state->mode() != WindowManagerMode::normal)
