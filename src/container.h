@@ -123,6 +123,14 @@ public:
     virtual bool anchored() const = 0;
     virtual void scratchpad_state(ScratchpadState) = 0;
     virtual ScratchpadState scratchpad_state() const = 0;
+    // Marks the [container] with [mark]. By default, this
+    /// will replace any mark that is currently on the window
+    /// unless [add] is specified. [toggle] will toggle the
+    /// mark on the window.
+    virtual void mark(std::string const& mark, bool add, bool toggle);
+    virtual void unmark(std::string const& mark);
+    virtual void unmark_all();
+    virtual std::vector<std::string> const& get_marks() const;
     virtual LayoutScheme get_layout() const = 0;
     virtual bool matches(ContainerScope const&) const = 0;
     virtual nlohmann::json to_json(bool is_workspace_visible) const = 0;
@@ -137,6 +145,7 @@ public:
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
+    std::vector<std::string> marks;
 };
 
 }

@@ -1608,6 +1608,45 @@ void CommandController::set_mode(WindowManagerMode mode)
     mode_observer_registrar->advise_changed(state->mode());
 }
 
+void CommandController::mark(
+    std::vector<ContainerScope> const& scope,
+    std::string const& mark,
+    bool add,
+    bool toggle)
+{
+    std::lock_guard lock(mutex);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return;
+
+    for (auto const& container : containers)
+        container->mark(mark, add, toggle);
+}
+
+void CommandController::unmark(
+    std::vector<ContainerScope> const& scope,
+    std::string const& mark)
+{
+    std::lock_guard lock(mutex);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return;
+
+    for (auto const& container : containers)
+        container->unmark(mark);
+}
+
+void CommandController::unmark_all(std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return;
+
+    for (auto const& container : containers)
+        container->unmark_all();
+}
+
 nlohmann::json CommandController::to_json() const
 {
     std::lock_guard lock(mutex);

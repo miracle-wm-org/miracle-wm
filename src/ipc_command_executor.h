@@ -96,6 +96,8 @@ private:
     IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_mark(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_unmark(IpcCommand const&, IpcParseResult const&);
 };
 
 } // miracle

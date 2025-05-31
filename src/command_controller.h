@@ -121,6 +121,17 @@ public:
     virtual bool reload_config() = 0;
     virtual void set_mode(WindowManagerMode mode) = 0;
     virtual void select_container(std::shared_ptr<Container> const&) = 0;
+    virtual void mark(
+        std::vector<ContainerScope> const& scope,
+        std::string const& mark,
+        bool add,
+        bool toggle)
+        = 0;
+    virtual void unmark(
+        std::vector<ContainerScope> const& scope,
+        std::string const& mark)
+        = 0;
+    virtual void unmark_all(std::vector<ContainerScope> const& scope) = 0;
     [[nodiscard]] virtual nlohmann::json to_json() const = 0;
     [[nodiscard]] virtual nlohmann::json outputs_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
@@ -213,6 +224,15 @@ public:
     bool reload_config() override;
     void set_mode(WindowManagerMode mode) override;
     void select_container(std::shared_ptr<Container> const&) override;
+    void mark(
+        std::vector<ContainerScope> const& scope,
+        std::string const& mark,
+        bool add,
+        bool toggle) override;
+    void unmark(
+        std::vector<ContainerScope> const& scope,
+        std::string const& mark) override;
+    void unmark_all(std::vector<ContainerScope> const& scope) override;
     [[nodiscard]] nlohmann::json to_json() const override;
     [[nodiscard]] nlohmann::json outputs_json() const override;
     [[nodiscard]] nlohmann::json workspaces_json() const override;

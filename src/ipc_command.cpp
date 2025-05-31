@@ -109,6 +109,8 @@ IpcCommandType command_from_string(const std::string& str)
         return IpcCommandType::workspace;
     else if (str == "mark")
         return IpcCommandType::mark;
+    else if (str == "unmark")
+        return IpcCommandType::unmark;
     else if (str == "title_format")
         return IpcCommandType::title_format;
     else if (str == "title_window_icon")

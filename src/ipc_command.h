@@ -43,6 +43,7 @@ enum class IpcCommandType
     sticky,
     workspace,
     mark,
+    unmark,
     title_format,
     title_window_icon,
     border,
