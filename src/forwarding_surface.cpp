@@ -116,10 +116,12 @@ mir::geometry::Displacement ForwardingSurface::content_offset() const
     return surface_->content_offset();
 }
 
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
 std::shared_ptr<mir::frontend::BufferStream> ForwardingSurface::primary_buffer_stream() const
 {
     return surface_->primary_buffer_stream();
 }
+#endif
 
 const mir::wayland::Weak<mir::frontend::WlSurface>& ForwardingSurface::wayland_surface()
 {
@@ -296,6 +298,13 @@ void ForwardingSurface::set_streams(const std::list<mir::scene::StreamInfo>& str
 {
     surface_->set_streams(streams);
 }
+
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+std::list<mir::scene::StreamInfo> ForwardingSurface::get_streams() const
+{
+    return surface_->get_streams();
+}
+#endif
 
 void ForwardingSurface::set_confine_pointer_state(MirPointerConfinementState state)
 {
