@@ -33,11 +33,12 @@ public:
     {
         return mir::geometry::Displacement();
     }
-
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
     auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override
     {
         return std::shared_ptr<mir::frontend::BufferStream>();
     }
+#endif
 
     auto wayland_surface() -> mir::wayland::Weak<mir::frontend::WlSurface> const& override
     {
@@ -282,6 +283,10 @@ public:
 #if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
+    std::list<mir::scene::StreamInfo> get_streams() const override
+    {
+        return std::list<mir::scene::StreamInfo>();
+    }
 #endif
 };
 }

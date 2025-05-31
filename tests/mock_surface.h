@@ -32,7 +32,9 @@ namespace test
         MOCK_METHOD(void, initial_placement_done, (), (override));
 #endif
         MOCK_METHOD(mir::geometry::Displacement, content_offset, (), (const, override));
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
         MOCK_METHOD(std::shared_ptr<mir::frontend::BufferStream>, primary_buffer_stream, (), (const, override));
+#endif
         MOCK_METHOD((mir::wayland::Weak<mir::frontend::WlSurface> const&), wayland_surface, (), (override));
         MOCK_METHOD(bool, input_area_contains, (mir::geometry::Point const&), (const, override));
         MOCK_METHOD(mir::input::InputReceptionMode, reception_mode, (), (const, override));
@@ -89,6 +91,7 @@ namespace test
 #if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
         MOCK_METHOD(mir::Flags<MirTiledEdge>, tiled_edges, (), (const, override));
         MOCK_METHOD(void, set_tiled_edges, (mir::Flags<MirTiledEdge>), (override));
+        MOCK_METHOD(std::list<mir::scene::StreamInfo>, get_streams, (), (const, override));
 #endif
     };
 

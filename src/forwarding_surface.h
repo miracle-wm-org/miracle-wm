@@ -42,7 +42,9 @@ public:
     void consume(const std::shared_ptr<MirEvent const>& event) override;
     auto visible_on_lock_screen() const -> bool override;
     auto content_offset() const -> mir::geometry::Displacement override;
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
     auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override;
+#endif
     auto wayland_surface() -> const mir::wayland::Weak<mir::frontend::WlSurface>& override;
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer) override;
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
@@ -79,6 +81,9 @@ public:
     int query(MirWindowAttrib attrib) const override;
     void rename(const std::string& title) override;
     void set_streams(const std::list<mir::scene::StreamInfo>& streams) override;
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+    std::list<mir::scene::StreamInfo> get_streams() const override;
+#endif
     void set_confine_pointer_state(MirPointerConfinementState state) override;
     MirPointerConfinementState confine_pointer_state() const override;
     void placed_relative(const mir::geometry::Rectangle& placement) override;
