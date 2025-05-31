@@ -184,6 +184,12 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         case IpcCommandType::reload:
             result.push_back(process_reload(command, command_list));
             break;
+        case IpcCommandType::mark:
+            result.push_back(process_mark(command, command_list));
+            break;
+        case IpcCommandType::unmark:
+            result.push_back(process_unmark(command, command_list));
+            break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
             break;
@@ -954,5 +960,32 @@ IpcValidationResult IpcCommandExecutor::process_reload(IpcCommand const& command
         return IpcValidationResult::create_failure("'reload' command expects no arguments", true);
 
     command_controller->reload_config();
+    return IpcValidationResult::create_success();
+}
+
+IpcValidationResult IpcCommandExecutor::process_mark(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
+        return IpcValidationResult::create_failure("'mark' command expects <identifier>", true);
+
+    auto const& identifier = indexer.current();
+    auto const is_adding = std::ranges::find(command.options, "--add") != command.options.end();
+    auto const is_replacing = std::ranges::find(command.options, "--replace") != command.options.end();
+    if (is_adding && is_replacing)
+        return IpcValidationResult::create_failure("'mark' command expects either --add or --replace, not both", true);
+
+    auto const is_toggling = std::ranges::find(command.options, "--toggle") != command.options.end();
+    command_controller->mark(parse_result.scope, identifier, is_adding, is_toggling);
+    return IpcValidationResult::create_success();
+}
+
+IpcValidationResult IpcCommandExecutor::process_unmark(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    ArgumentsIndexer indexer(command);
+    if (indexer.has_current())
+        command_controller->unmark(parse_result.scope, indexer.current());
+    else
+        command_controller->unmark_all(parse_result.scope);
     return IpcValidationResult::create_success();
 }

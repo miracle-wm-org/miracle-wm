@@ -194,3 +194,45 @@ std::array<bool, (size_t)Direction::MAX> Container::get_neighbors() const
         has_right_neighbor(this)
     };
 }
+
+void Container::mark(
+    std::string const& mark,
+    bool add,
+    bool toggle)
+{
+    if (toggle)
+    {
+        // If we're toggling and the mark is already available,
+        // we can erase it and return. If we are toggling and
+        // the mark is not available, we can drop through to
+        // see whether or not we are adding the new mark.
+        auto const it = std::ranges::find(marks, mark);
+        if (it != marks.end())
+        {
+            marks.erase(it);
+            return;
+        }
+    }
+
+    if (add)
+        marks.push_back(mark);
+    else
+        marks = { mark };
+}
+
+void Container::unmark(std::string const& mark)
+{
+    auto const it = std::ranges::find(marks, mark);
+    if (it != marks.end())
+        marks.erase(it);
+}
+
+void Container::unmark_all()
+{
+    marks.clear();
+}
+
+std::vector<std::string> const& Container::get_marks() const
+{
+    return marks;
+}

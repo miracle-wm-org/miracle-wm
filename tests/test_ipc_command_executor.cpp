@@ -1095,3 +1095,91 @@ TEST_F(IpcCommandExecutorTest, MoveAnythingElseFails)
     EXPECT_THAT(validation_result[0].parse_error, Eq(true));
     EXPECT_THAT(validation_result[0].error, Eq("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'"));
 }
+
+TEST_F(IpcCommandExecutorTest, MarkFailsWithoutArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'mark' command expects <identifier>"));
+}
+
+TEST_F(IpcCommandExecutorTest, MarkWithoutOptions)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, mark(testing::_, "meow", false, false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MarkWithAddOption)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", { "--add" }, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, mark(testing::_, "meow", true, false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MarkWithReplaceOption)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", { "--replace" }, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, mark(testing::_, "meow", false, false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, MarkWithBothAddAndReplaceOptionFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", { "--replace", "--add" }, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'mark' command expects either --add or --replace, not both"));
+}
+
+TEST_F(IpcCommandExecutorTest, MarkWithToggleOption)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::mark, "mark", { "--toggle" }, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, mark(testing::_, "meow", false, true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, UnmarkWithArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::unmark, "unmark", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, unmark(testing::_, "meow"));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+}
+
+TEST_F(IpcCommandExecutorTest, UnmarkWithoutArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::unmark, "unmark", {}, {});
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, unmark_all(testing::_));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+}

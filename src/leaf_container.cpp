@@ -1106,14 +1106,23 @@ bool LeafContainer::matches(ContainerScope const& scope) const
         return !anchored();
     case ContainerScopeType::tiling:
         return anchored();
-    case ContainerScopeType::urgent:
     case ContainerScopeType::con_mark:
-        mir::log_warning("TODO: Unimplemented");
+    {
+        jp::Regex re;
+        re.setPattern(scope.value).compile();
+        for (auto const& mark : get_marks())
+        {
+            if (re.match(mark))
+                return true;
+        }
+
         return false;
+    }
     case ContainerScopeType::floating_from:
     case ContainerScopeType::tiling_from:
         mir::log_error("Unsupported because these are mostly useless");
         return false;
+    case ContainerScopeType::urgent:
     case ContainerScopeType::class_:
     case ContainerScopeType::id:
     case ContainerScopeType::window_role:

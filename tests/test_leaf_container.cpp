@@ -503,3 +503,82 @@ TEST_F(LeafContainerTest, CanSetAlpha)
     EXPECT_EQ(data.size(), 1);
     EXPECT_EQ(data[0].alpha, 0.5f);
 }
+
+TEST_F(LeafContainerTest, CanAddReplacingMark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    EXPECT_THAT(leaf_container->get_marks(), testing::ElementsAre("meow"));
+}
+
+TEST_F(LeafContainerTest, CanAddNonReplacingMark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    leaf_container->mark(
+        "woof",
+        true,
+        false);
+    EXPECT_THAT(leaf_container->get_marks(), testing::ElementsAre("meow", "woof"));
+}
+
+TEST_F(LeafContainerTest, CanToggleMark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    leaf_container->mark(
+        "meow",
+        false,
+        true);
+    EXPECT_THAT(leaf_container->get_marks(), testing::ElementsAre());
+}
+
+TEST_F(LeafContainerTest, CanUnmark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    leaf_container->unmark("meow");
+    EXPECT_THAT(leaf_container->get_marks(), testing::ElementsAre());
+}
+
+TEST_F(LeafContainerTest, CanUnmarkAll)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    leaf_container->unmark_all();
+    EXPECT_THAT(leaf_container->get_marks(), testing::ElementsAre());
+}
+
+TEST_F(LeafContainerTest, CanMatchMark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    ContainerScope scope;
+    scope.type = ContainerScopeType::con_mark;
+    scope.value = "meow";
+    EXPECT_THAT(leaf_container->matches(scope), testing::Eq(true));
+}
+
+TEST_F(LeafContainerTest, CanFailToMatchMark)
+{
+    leaf_container->mark(
+        "meow",
+        false,
+        false);
+    ContainerScope scope;
+    scope.type = ContainerScopeType::con_mark;
+    scope.value = "meow2";
+    EXPECT_THAT(leaf_container->matches(scope), testing::Eq(false));
+}
