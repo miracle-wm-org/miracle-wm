@@ -27,8 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
-#include <miral/window_manager_tools.h>
 #include <mir/version.h>
+#include <miral/window_manager_tools.h>
 #include <vector>
 
 namespace mir

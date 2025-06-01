@@ -1647,6 +1647,22 @@ void CommandController::unmark_all(std::vector<ContainerScope> const& scope)
         container->unmark_all();
 }
 
+std::unordered_set<std::string> CommandController::get_all_marks() const
+{
+    std::lock_guard lock(mutex);
+    std::unordered_set<std::string> marks;
+    for (auto const& container : state->containers())
+    {
+        if (auto const locked = container.lock())
+        {
+            for (auto const& mark : locked->get_marks())
+                marks.insert(mark);
+        }
+    }
+
+    return marks;
+}
+
 nlohmann::json CommandController::to_json() const
 {
     std::lock_guard lock(mutex);

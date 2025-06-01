@@ -105,3 +105,24 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
     std::string expected = "Test";
     ASSERT_FALSE(command_controller->try_move_to_workspace_named({}, expected, false));
 }
+
+TEST_F(CommandControllerTest, CanGetAllMarks)
+{
+    auto const container1 = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    auto const first_result = std::vector<std::string> { "a", "b", "c" };
+    state->add(container1);
+    state->focus_container(container1);
+    EXPECT_CALL(*container1, get_marks())
+        .WillOnce(testing::ReturnRef(first_result));
+
+    auto const container2 = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    state->add(container2);
+    state->focus_container(container2);
+    auto const second_result = std::vector<std::string> { "a", "d", "e" };
+    EXPECT_CALL(*container2, get_marks())
+        .WillOnce(testing::ReturnRef(second_result));
+
+    auto const result = command_controller->get_all_marks();
+    std::unordered_set<std::string> expected = { "a", "b", "c", "d", "e" };
+    EXPECT_THAT(result, testing::Eq(expected));
+}

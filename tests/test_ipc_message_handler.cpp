@@ -220,8 +220,22 @@ INSTANTIATE_TEST_SUITE_P(
     UnsupportedIpcMessageHandlerTest,
     UnsupportedIpcMessageHandlerTest,
     ::Values(
-        IpcType::IPC_GET_MARKS,
         IpcType::IPC_GET_BAR_CONFIG,
         IpcType::IPC_GET_CONFIG,
         IpcType::IPC_GET_INPUTS,
         IpcType::IPC_GET_SEATS));
+
+TEST_F(IpcMessageHandlerTest, CanGetAllMark)
+{
+    std::unordered_set<std::string> marks = { "first", "second" };
+    EXPECT_CALL(*command_controller, get_all_marks)
+        .WillOnce(Return(marks));
+    auto const result = message_handler.handle_msg(IpcType::IPC_GET_MARKS, "", 0);
+    EXPECT_THAT(result.type, Eq(IpcType::IPC_GET_MARKS));
+    nlohmann::json const result_json = nlohmann::json::parse(result.payload);
+
+    std::unordered_set<std::string> result_marks;
+    for (auto const& mark : result_json)
+        result_marks.insert(mark);
+    EXPECT_THAT(result_marks, Eq(marks));
+}

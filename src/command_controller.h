@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <unordered_set>
 
 namespace miral
 {
@@ -132,6 +133,7 @@ public:
         std::string const& mark)
         = 0;
     virtual void unmark_all(std::vector<ContainerScope> const& scope) = 0;
+    virtual std::unordered_set<std::string> get_all_marks() const = 0;
     [[nodiscard]] virtual nlohmann::json to_json() const = 0;
     [[nodiscard]] virtual nlohmann::json outputs_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
@@ -233,6 +235,7 @@ public:
         std::vector<ContainerScope> const& scope,
         std::string const& mark) override;
     void unmark_all(std::vector<ContainerScope> const& scope) override;
+    std::unordered_set<std::string> get_all_marks() const override;
     [[nodiscard]] nlohmann::json to_json() const override;
     [[nodiscard]] nlohmann::json outputs_json() const override;
     [[nodiscard]] nlohmann::json workspaces_json() const override;
