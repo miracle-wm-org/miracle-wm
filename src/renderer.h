@@ -65,7 +65,7 @@ public:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
     auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
     void set_output_filter(MirOutputFilter filter) override { }
 #endif
 
