@@ -140,6 +140,18 @@ MessageHandlerResult IpcMessageHandler::handle_msg(
             .payload = to_string(command_controller->to_json())
         };
     }
+    case IpcType::IPC_GET_MARKS:
+    {
+        auto const marks = command_controller->get_all_marks();
+        json j = json::array();
+        for (auto const& mark : marks)
+            j.push_back(mark);
+
+        return {
+            .type = payload_type,
+            .payload = to_string(j)
+        };
+    }
     case IpcType::IPC_GET_VERSION:
     {
         json response = {

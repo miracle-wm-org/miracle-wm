@@ -95,6 +95,7 @@ namespace test
         MOCK_METHOD(void, mark, (std::vector<ContainerScope> const&, std::string const&, bool, bool), (override));
         MOCK_METHOD(void, unmark, (std::vector<ContainerScope> const&, std::string const&), (override));
         MOCK_METHOD(void, unmark_all, (std::vector<ContainerScope> const&), (override));
+        MOCK_METHOD(std::unordered_set<std::string>, get_all_marks, (), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (), (const, override));
         MOCK_METHOD(nlohmann::json, outputs_json, (), (const, override));
         MOCK_METHOD(nlohmann::json, workspaces_json, (), (const, override));
