@@ -1182,4 +1182,117 @@ TEST_F(IpcCommandExecutorTest, UnmarkWithoutArgument)
     EXPECT_CALL(*controller, unmark_all(testing::_));
     auto const validation_result = executor.process(parse_result);
     EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapNoArgumentsFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'swap' expects arguments"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapWrongFirstArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'container' after 'swap'"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerNoSecondArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'swap container' expects a second argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerWrongSecondArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'with' after 'swap container'"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerWithNoThirdArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "with" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'swap container with' expects a third argument"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerWrongThirdArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "with", "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected 'con_id' or 'mark' after 'swap container with'"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerNoFourthArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "with", "mark" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'swap container with con_id/mark' expects a fourth argument, <arg>"));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerWithMarkArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "with", "mark", "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_swap(testing::_, Truly([](ContainerScope const& scope)
+    {
+        return scope.type == ContainerScopeType::con_mark && scope.value == "meow";
+    })));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, SwapContainerWithConIdArg)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::swap, "swap", {}, { "container", "with", "con_id", "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_swap(testing::_, Truly([](ContainerScope const& scope)
+    {
+        return scope.type == ContainerScopeType::con_id && scope.value == "meow";
+    })));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
 }

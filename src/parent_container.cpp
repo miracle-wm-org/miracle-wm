@@ -76,7 +76,7 @@ geom::Rectangle ParentContainer::get_visible_area() const
 
 size_t ParentContainer::num_nodes() const
 {
-    return sub_nodes.size();
+    return container_list.size();
 }
 
 geom::Rectangle ParentContainer::create_space(int pending_index)
@@ -84,10 +84,10 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
     auto const placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
     std::vector<TilePosition> positions;
-    positions.reserve(sub_nodes.size());
+    positions.reserve(container_list.size());
     if (scheme == LayoutScheme::horizontal)
     {
-        for (auto const& node : sub_nodes)
+        for (auto const& node : container_list)
             positions.push_back(TilePosition {
                 static_cast<double>(node->get_logical_area().size.width.as_int()),
                 static_cast<double>(node->get_logical_area().top_left.x.as_int()) });
@@ -114,7 +114,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
             }
             else
             {
-                sub_nodes[cursor++]->set_logical_area({
+                container_list[cursor++]->set_logical_area({
                     geom::Point {
                                  pos.position,
                                  placement_area.top_left.y.as_int()  },
@@ -127,7 +127,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
     }
     else if (scheme == LayoutScheme::vertical)
     {
-        for (auto const& node : sub_nodes)
+        for (auto const& node : container_list)
             positions.push_back(TilePosition {
                 static_cast<double>(node->get_logical_area().size.height.as_int()),
                 static_cast<double>(node->get_logical_area().top_left.y.as_int()) });
@@ -154,7 +154,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
             }
             else
             {
-                sub_nodes[cursor++]->set_logical_area({
+                container_list[cursor++]->set_logical_area({
                     geom::Point {
                                  placement_area.top_left.x.as_int(),
                                  pos.position },
@@ -181,9 +181,9 @@ miral::WindowSpecification ParentContainer::place_new_window(
     miral::WindowSpecification const& requested_specification)
 {
     int index = -1;
-    for (size_t i = 0; i < sub_nodes.size(); i++)
+    for (size_t i = 0; i < container_list.size(); i++)
     {
-        auto const& node = sub_nodes[i];
+        auto const& node = container_list[i];
         if (node == state->focused_container())
         {
             index = i + 1;
@@ -237,7 +237,7 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pend
         config,
         as_parent(shared_from_this()),
         state);
-    sub_nodes.insert(sub_nodes.begin() + pending_index, pending_node);
+    container_list.insert(container_list.begin() + pending_index, pending_node);
     return pending_node;
 }
 
@@ -262,7 +262,7 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
     auto rectangle = create_space(index);
     node->set_parent(as_parent(shared_from_this()));
     node->set_logical_area(rectangle);
-    sub_nodes.insert(sub_nodes.begin() + index, node);
+    container_list.insert(container_list.begin() + index, node);
     relayout();
     constrain();
 }
@@ -284,9 +284,9 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
         workspace,
         Container::as_parent(shared_from_this()),
         true);
-    new_parent_node->sub_nodes.push_back(container);
+    new_parent_node->container_list.push_back(container);
     container->set_parent(new_parent_node);
-    sub_nodes[index.value()] = new_parent_node;
+    container_list[index.value()] = new_parent_node;
     return new_parent_node;
 }
 
@@ -301,13 +301,13 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     logical_area = target_rect;
     auto target_placement_area = get_logical_area();
     std::vector<geom::Rectangle> pending_size_updates;
-    pending_size_updates.reserve(sub_nodes.size());
+    pending_size_updates.reserve(container_list.size());
     if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
-        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        for (size_t idx = 0; idx < container_list.size(); idx++)
         {
-            auto item = sub_nodes[idx];
+            auto item = container_list[idx];
             auto item_rect = item->get_logical_area();
             double percent_width_taken = (double)item_rect.size.width.as_int() / (double)current_logical_area.size.width.as_int();
             int new_width = (int)ceil((double)target_placement_area.size.width.as_int() * percent_width_taken);
@@ -346,9 +346,9 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
-        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        for (size_t idx = 0; idx < container_list.size(); idx++)
         {
-            auto item = sub_nodes[idx];
+            auto item = container_list[idx];
             auto item_rect = item->get_logical_area();
             double percent_height_taken = static_cast<double>(item_rect.size.height.as_int()) / current_logical_area.size.height.as_int();
             int new_height = (int)floor((double)target_placement_area.size.height.as_int() * percent_height_taken);
@@ -386,7 +386,7 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     }
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
     {
-        for (size_t idx = 0; idx < sub_nodes.size(); idx++)
+        for (size_t idx = 0; idx < container_list.size(); idx++)
         {
             pending_size_updates.push_back(target_placement_area);
         }
@@ -396,15 +396,15 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
         mir::log_error("Cannot set_logical_area with invalid scheme");
     }
 
-    for (size_t i = 0; i < sub_nodes.size(); i++)
+    for (size_t i = 0; i < container_list.size(); i++)
     {
-        sub_nodes[i]->set_logical_area(pending_size_updates[i], with_animations);
+        container_list[i]->set_logical_area(pending_size_updates[i], with_animations);
     }
 }
 
 void ParentContainer::commit_changes()
 {
-    for (auto& node : sub_nodes)
+    for (auto& node : container_list)
         node->commit_changes();
 }
 
@@ -413,28 +413,28 @@ std::shared_ptr<Container> ParentContainer::at(size_t i) const
     if (i >= num_nodes())
         return nullptr;
 
-    return sub_nodes[i];
+    return container_list[i];
 }
 
 std::shared_ptr<LeafContainer> ParentContainer::get_nth_window(size_t i) const
 {
-    if (i >= sub_nodes.size())
+    if (i >= container_list.size())
         return nullptr;
 
-    if (sub_nodes[i]->is_leaf())
-        return as_leaf(sub_nodes[i]);
+    if (container_list[i]->is_leaf())
+        return as_leaf(container_list[i]);
 
     // The lane is correct, so let's get the first window in that lane.
-    return as_parent(sub_nodes[i])->get_nth_window(0);
+    return as_parent(container_list[i])->get_nth_window(0);
 }
 
 std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const
 {
-    for (auto node : sub_nodes)
+    for (auto node : container_list)
         if (func(node))
             return node;
 
-    for (auto const& node : sub_nodes)
+    for (auto const& node : container_list)
     {
         if (node->is_lane())
         {
@@ -448,36 +448,51 @@ std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::s
 
 std::vector<std::shared_ptr<Container>> const& ParentContainer::get_sub_nodes() const
 {
-    return sub_nodes;
+    return container_list;
 }
 
-void ParentContainer::swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
+void ParentContainer::swap_within_container(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second)
 {
-    auto const first_index = get_index_of_node(first).value();
-    auto const second_index = get_index_of_node(second).value();
-    sub_nodes[second_index] = first;
-    sub_nodes[first_index] = second;
+    auto const first_opt = get_index_of_node(first);
+    if (!first_opt)
+    {
+        mir::log_error("Cannot find first index of container to swap with, meaning that it is not in this container");
+        return;
+    }
+
+    auto const second_opt = get_index_of_node(second);
+    if (!second_opt)
+    {
+        mir::log_error("Cannot find second index of container to swap with, meaning that it is not in this container");
+        return;
+    }
+
+    auto const first_index = first_opt.value();
+    auto const second_index = second_opt.value();
+
+    container_list[second_index] = first;
+    container_list[first_index] = second;
     relayout();
     constrain();
 }
 
 void ParentContainer::remove(const std::shared_ptr<Container>& node)
 {
-    sub_nodes.erase(
-        std::remove_if(sub_nodes.begin(), sub_nodes.end(), [&](std::shared_ptr<Container> const& content)
+    container_list.erase(
+        std::remove_if(container_list.begin(), container_list.end(), [&](std::shared_ptr<Container> const& content)
     {
         return content == node;
     }),
-        sub_nodes.end());
+        container_list.end());
 
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
-    if (sub_nodes.size() == 1 && sub_nodes[0]->is_lane())
+    if (container_list.size() == 1 && container_list[0]->is_lane())
     {
-        auto dying_lane = as_parent(sub_nodes[0]);
-        sub_nodes.clear();
+        auto dying_lane = as_parent(container_list[0]);
+        container_list.clear();
         for (auto const& sub_node : dying_lane->get_sub_nodes())
         {
-            sub_nodes.push_back(sub_node);
+            container_list.push_back(sub_node);
             sub_node->set_parent(as_parent(shared_from_this()));
         }
         set_layout(dying_lane->get_direction());
@@ -488,8 +503,8 @@ void ParentContainer::remove(const std::shared_ptr<Container>& node)
 
 std::optional<size_t> ParentContainer::get_index_of_node(Container const* node) const
 {
-    for (size_t i = 0; i < sub_nodes.size(); i++)
-        if (sub_nodes[i].get() == node)
+    for (size_t i = 0; i < container_list.size(); i++)
+        if (container_list[i].get() == node)
             return i;
 
     return std::nullopt;
@@ -507,14 +522,14 @@ std::optional<size_t> ParentContainer::get_index_of_node(Container const& node) 
 
 void ParentContainer::constrain()
 {
-    for (auto& node : sub_nodes)
+    for (auto& node : container_list)
         node->constrain();
 }
 
 size_t ParentContainer::get_min_width() const
 {
     size_t size = 0;
-    for (auto const& node : sub_nodes)
+    for (auto const& node : container_list)
         size += node->get_min_width();
     return size;
 }
@@ -522,7 +537,7 @@ size_t ParentContainer::get_min_width() const
 size_t ParentContainer::get_min_height() const
 {
     size_t size = 0;
-    for (auto const& node : sub_nodes)
+    for (auto const& node : container_list)
         size += node->get_min_height();
     return size;
 }
@@ -543,14 +558,14 @@ void ParentContainer::relayout()
     if (scheme == LayoutScheme::horizontal)
     {
         int total_width = 0;
-        for (auto const& node : sub_nodes)
+        for (auto const& node : container_list)
         {
             total_width += node->get_logical_area().size.width.as_int();
         }
 
         int const diff_width = placement_area.size.width.as_value() - total_width;
-        int const diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
-        for (auto const& node : sub_nodes)
+        int const diff_per_node = floor((double)diff_width / (double)container_list.size());
+        for (auto const& node : container_list)
         {
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width { rectangle.size.width.as_int() + diff_per_node };
@@ -561,14 +576,14 @@ void ParentContainer::relayout()
     else if (scheme == LayoutScheme::vertical)
     {
         int total_height = 0;
-        for (auto const& node : sub_nodes)
+        for (auto const& node : container_list)
         {
             total_height += node->get_logical_area().size.height.as_int();
         }
 
         int const diff_width = placement_area.size.height.as_value() - total_height;
-        int const diff_per_node = floor((double)diff_width / (double)sub_nodes.size());
-        for (auto const& node : sub_nodes)
+        int const diff_per_node = floor((double)diff_width / (double)container_list.size());
+        for (auto const& node : container_list)
         {
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width { placement_area.size.width };
@@ -578,7 +593,7 @@ void ParentContainer::relayout()
     }
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
     {
-        for (auto const& node : sub_nodes)
+        for (auto const& node : container_list)
             node->set_logical_area(placement_area);
     }
     else
@@ -608,7 +623,7 @@ void ParentContainer::handle_request_resize(MirInputEvent const* input_event, Mi
 
 void ParentContainer::handle_raise()
 {
-    for (auto const& node : sub_nodes)
+    for (auto const& node : container_list)
         node->handle_raise();
 }
 
@@ -666,7 +681,7 @@ void ParentContainer::on_focus_gained()
 {
     if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
     {
-        for (auto const& container : sub_nodes)
+        for (auto const& container : container_list)
         {
             if (container != state->focused_container() && container->window())
                 window_controller->send_to_back(container->window().value());
@@ -699,14 +714,18 @@ ContainerType ParentContainer::get_type() const
 
 void ParentContainer::show()
 {
-    for (auto const& c : sub_nodes)
+    for (auto const& c : container_list)
         c->show();
+
+    is_shown = true;
 }
 
 void ParentContainer::hide()
 {
-    for (auto const& c : sub_nodes)
+    for (auto const& c : container_list)
         c->hide();
+
+    is_shown = false;
 }
 
 void ParentContainer::on_open()
@@ -721,7 +740,7 @@ WorkspaceInterface* ParentContainer::get_workspace() const
 void ParentContainer::set_workspace(WorkspaceInterface* next)
 {
     workspace = next;
-    for (auto const& node : sub_nodes)
+    for (auto const& node : container_list)
         node->set_workspace(workspace);
 }
 
@@ -926,11 +945,9 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
     auto const visible_area = get_visible_area();
     auto const logical_area = get_logical_area();
     nlohmann::json containers_json;
-    for (auto const& container : sub_nodes)
-
+    for (auto const& container : container_list)
         containers_json.push_back(container->to_json(is_workspace_visible));
-    auto workspace = get_workspace();
-    auto output = get_output();
+
     auto locked_parent = parent.lock();
     bool visible = true;
 
@@ -988,4 +1005,53 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "window_properties",    {}                                                                                                                                                                                                                                                 }, // TODO
         { "nodes",                containers_json                                                                                                                                                                                                                                    }
     };
+}
+
+void ParentContainer::swap(
+    std::shared_ptr<ParentContainer> const& first_parent,
+    int first_index,
+    std::shared_ptr<ParentContainer> const& second_parent,
+    int second_index)
+{
+    // First, swap the two containers at a positional and tree level
+    auto const first_container = first_parent->container_list[first_index];
+    auto const second_container = second_parent->container_list[second_index];
+    if (first_parent == second_parent)
+    {
+        first_parent->swap_within_container(first_container, second_container);
+        first_parent->commit_changes();
+        return;
+    }
+
+    auto const first_logical_area = first_container->get_logical_area();
+
+    // TODO: We can probably split some of this out and make it more accessible
+    first_parent->container_list[first_index] = second_container;
+    second_parent->container_list[second_index] = first_container;
+    first_container->set_parent(second_parent);
+    first_container->set_workspace(second_parent->get_workspace());
+    second_container->set_parent(first_parent);
+    second_container->set_workspace(first_parent->get_workspace());
+    first_container->set_logical_area(second_container->get_logical_area());
+    second_container->set_logical_area(first_logical_area);
+    first_parent->commit_changes();
+    second_parent->commit_changes();
+
+    // Next, apply the proper visibility to each window
+    if (first_parent->is_shown)
+        first_parent->show();
+    else
+        first_parent->hide();
+
+    if (second_parent->is_shown)
+        second_parent->show();
+    else
+        second_parent->hide();
+
+    // Finally, we need to notify that the workspace transform changed
+    if (first_parent->get_workspace() != second_parent->get_workspace())
+    {
+        first_container->on_workspace_transform();
+        second_container->on_workspace_transform();
+    }
 }

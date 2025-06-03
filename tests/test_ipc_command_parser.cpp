@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "ipc_command.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -190,4 +191,24 @@ TEST_F(IpcCommandParserTest, CanParseFloatingCommand)
     ASSERT_EQ(commands.commands[0].type, IpcCommandType::floating);
     ASSERT_EQ(commands.commands[0].arguments[0], "toggle");
     ASSERT_EQ(commands.commands[0].raw_command, "floating");
+}
+
+TEST_F(IpcCommandParserTest, CanParseConMarkScope)
+{
+    const char* v = "[con_mark=hi] focus";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    EXPECT_THAT(commands.scope.size(), testing::Eq(1));
+    EXPECT_THAT(commands.scope[0].type, testing::Eq(ContainerScopeType::con_mark));
+    EXPECT_THAT(commands.scope[0].value, testing::Eq("hi"));
+}
+
+TEST_F(IpcCommandParserTest, CanParseConIdScope)
+{
+    const char* v = "[con_id=hi] focus";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    EXPECT_THAT(commands.scope.size(), testing::Eq(1));
+    EXPECT_THAT(commands.scope[0].type, testing::Eq(ContainerScopeType::con_id));
+    EXPECT_THAT(commands.scope[0].value, testing::Eq("hi"));
 }

@@ -73,6 +73,7 @@ public:
     virtual bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_to_cursor(std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_swap(std::vector<ContainerScope> const& scope, ContainerScope swap_with_scope) = 0;
     virtual bool try_select(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select(Direction direction, std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_select_parent(std::vector<ContainerScope> const& scope) = 0;
@@ -177,6 +178,7 @@ public:
     bool try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope) override;
     bool try_move_to_absolute_center(std::vector<ContainerScope> const& scope) override;
     bool try_move_to_cursor(std::vector<ContainerScope> const& scope) override;
+    bool try_swap(std::vector<ContainerScope> const& scope, ContainerScope swap_with_scope) override;
     bool try_select(std::vector<ContainerScope> const& scope) override;
     bool try_select(Direction direction, std::vector<ContainerScope> const& scope) override;
     bool try_select_parent(std::vector<ContainerScope> const& scope) override;

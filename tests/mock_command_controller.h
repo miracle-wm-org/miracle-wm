@@ -42,6 +42,7 @@ namespace test
         MOCK_METHOD(bool, try_move_to, (float, bool, float, bool, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_to_center_of_active_output, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_to_absolute_center, (std::vector<ContainerScope> const&), (override));
+        MOCK_METHOD(bool, try_swap, (std::vector<ContainerScope> const&, ContainerScope), (override));
         MOCK_METHOD(bool, try_move_to_cursor, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_select, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_select, (Direction, std::vector<ContainerScope> const&), (override));

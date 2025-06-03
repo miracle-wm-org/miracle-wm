@@ -87,6 +87,7 @@ private:
     IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_focus(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_move(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_swap(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_sticky(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_input(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_workspace(IpcCommand const&, IpcParseResult const&);
