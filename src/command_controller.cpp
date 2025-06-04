@@ -426,6 +426,35 @@ bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& sc
     return try_move_to(position.x.as_int(), false, position.y.as_int(), false, scope);
 }
 
+bool CommandController::try_swap(std::vector<ContainerScope> const& scope, ContainerScope swap_with_scope)
+{
+    auto const first_containers = resolve_scope(scope);
+    if (first_containers.empty())
+        return false;
+
+    auto const second_containers = resolve_scope({ swap_with_scope });
+    if (second_containers.empty())
+        return false;
+
+    auto const first_container = first_containers.front();
+    auto const second_container = second_containers.front();
+    if (first_container == second_container)
+        return false;
+
+    auto const first_parent = first_container->get_parent().lock();
+    if (!first_parent)
+        return false;
+
+    auto const second_parent = second_container->get_parent().lock();
+    if (!second_parent)
+        return false;
+
+    auto const first_index = first_parent->get_index_of_node(first_container).value();
+    auto const second_index = second_parent->get_index_of_node(second_container).value();
+    ParentContainer::swap(first_parent, first_index, second_parent, second_index);
+    return true;
+}
+
 void CommandController::select_container(std::shared_ptr<Container> const& container)
 {
     std::lock_guard lock(mutex);

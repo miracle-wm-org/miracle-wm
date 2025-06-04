@@ -59,7 +59,10 @@ public:
     void graft_existing(std::shared_ptr<Container> const& node, int index);
     std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
     void set_logical_area(geom::Rectangle const& target_rect, bool with_animations = true) override;
-    void swap_nodes(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
+
+    /// Swaps two containers within this parent. Both containers MUST have this parent as their direct
+    /// ancestor or else nothing happens.
+    void swap_within_container(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
     void remove(std::shared_ptr<Container> const& node);
     void commit_changes() override;
     std::shared_ptr<Container> at(size_t i) const;
@@ -132,6 +135,11 @@ public:
     bool matches(ContainerScope const&) const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
     [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
+    static void swap(
+        std::shared_ptr<ParentContainer> const& first_parent,
+        int first_index,
+        std::shared_ptr<ParentContainer> const& second_parent,
+        int second_index);
 
 private:
     std::shared_ptr<CompositorState> state;
@@ -143,9 +151,10 @@ private:
     bool is_anchored;
     bool pinned_ = false;
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
+    bool is_shown = false;
 
     LayoutScheme scheme = LayoutScheme::horizontal;
-    std::vector<std::shared_ptr<Container>> sub_nodes;
+    std::vector<std::shared_ptr<Container>> container_list;
     std::shared_ptr<LeafContainer> pending_node;
 
     geom::Rectangle create_space(int pending_index);

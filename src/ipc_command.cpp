@@ -81,6 +81,10 @@ ContainerScopeType scope_from_string(const std::string& s)
         return ContainerScopeType::pid;
     else if (s == APP_ID_STRING)
         return ContainerScopeType::app_id;
+    else if (s == "con_mark")
+        return ContainerScopeType::con_mark;
+    else if (s == "con_id")
+        return ContainerScopeType::con_id;
     else
         return ContainerScopeType::none;
 }

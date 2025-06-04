@@ -153,6 +153,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         case IpcCommandType::move:
             result.push_back(process_move(command, command_list));
             break;
+        case IpcCommandType::swap:
+            result.push_back(process_swap(command, command_list));
+            break;
         case IpcCommandType::sticky:
             result.push_back(process_sticky(command, command_list));
             break;
@@ -576,6 +579,38 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     }
 
     return IpcValidationResult::create_failure("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'", true);
+}
+
+IpcValidationResult IpcCommandExecutor::process_swap(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
+        return IpcValidationResult::create_failure("'swap' expects arguments", true);
+
+    if (indexer.current() != "container")
+        return IpcValidationResult::create_failure("Expected 'container' after 'swap'", true);
+
+    if (!indexer.next())
+        return IpcValidationResult::create_failure("'swap container' expects a second argument", true);
+
+    if (indexer.current() != "with")
+        return IpcValidationResult::create_failure("Expected 'with' after 'swap container'", true);
+
+    if (!indexer.next())
+        return IpcValidationResult::create_failure("'swap container with' expects a third argument", true);
+
+    if (indexer.current() != "con_id" && indexer.current() != "mark")
+        return IpcValidationResult::create_failure("Expected 'con_id' or 'mark' after 'swap container with'", true);
+
+    ContainerScope swap_scope;
+    swap_scope.type = indexer.current() == "con_id" ? ContainerScopeType::con_id : ContainerScopeType::con_mark;
+
+    if (!indexer.next())
+        return IpcValidationResult::create_failure("'swap container with con_id/mark' expects a fourth argument, <arg>", true);
+
+    swap_scope.value = indexer.current();
+    command_controller->try_swap(parse_result.scope, swap_scope);
+    return IpcValidationResult::create_success();
 }
 
 IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command, IpcParseResult const& command_list)

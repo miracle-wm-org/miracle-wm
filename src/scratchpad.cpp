@@ -49,6 +49,7 @@ bool Scratchpad::move_to(std::shared_ptr<Container> const& container)
     container->scratchpad_state(ScratchpadState::fresh);
     container->set_workspace(nullptr);
     container->hide();
+    container->set_parent(nullptr);
     return true;
 }
 

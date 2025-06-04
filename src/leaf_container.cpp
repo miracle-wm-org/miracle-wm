@@ -828,7 +828,7 @@ bool LeafContainer::move_to(Container& target)
     auto active_parent = Container::as_parent(get_parent().lock());
     if (active_parent == target_parent)
     {
-        active_parent->swap_nodes(shared_from_this(), target.shared_from_this());
+        active_parent->swap_within_container(shared_from_this(), target.shared_from_this());
         active_parent->commit_changes();
         return true;
     }

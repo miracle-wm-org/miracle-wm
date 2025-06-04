@@ -16,15 +16,11 @@
 
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
-#include "container_scope.h"
 #include "leaf_container.h"
 #include "mir/geometry/forward.h"
 #include "mir_toolkit/common.h"
-#include "miral/application_info.h"
-#include "miral/window_specification.h"
+#include "mock_container.h"
 #include "mock_output_factory.h"
-#include "mock_parent_container.h"
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
@@ -37,22 +33,135 @@
 #include <memory>
 
 using namespace miracle;
+using namespace testing;
 namespace geom = mir::geometry;
 
-class ParentContainerTest : public testing::Test
+class ParentContainerData
 {
 public:
-    ParentContainerTest() :
-        area(geom::Rectangle({ 0, 0 }, { 800, 600 })),
-        container(state, window_controller, config, area, workspace.get(), nullptr, true)
+    ParentContainerData(
+        std::shared_ptr<CompositorState> const& state,
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<Config> const& config,
+        geom::Rectangle const& area) :
+        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace.get(), nullptr, true))
     {
+    }
+
+    std::unique_ptr<test::MockWorkspace> workspace = std::make_unique<test::MockWorkspace>();
+    geom::Rectangle area;
+    std::shared_ptr<ParentContainer> parent;
+};
+
+class ParentContainerTest : public Test
+{
+public:
+    [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area) const
+    {
+        return { state, window_controller, config, area };
     }
 
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
-    std::unique_ptr<OutputManager> output_manager = std::make_unique<OutputManager>(std::make_unique<test::MockOutputFactory>());
     std::unique_ptr<test::MockWorkspace> workspace = std::make_unique<test::MockWorkspace>();
-    geom::Rectangle area;
-    ParentContainer container;
 };
+
+class ParentContainerSwapTest : public ParentContainerTest
+{
+public:
+    ParentContainerSwapTest()
+    {
+        first_parent_data.parent->graft_existing(container1, 0);
+        second_parent_data.parent->graft_existing(container2, 0);
+        second_parent_data.parent->graft_existing(container3, 1);
+    }
+
+    ParentContainerData const first_parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
+    ParentContainerData const second_parent_data = make_parent(geom::Rectangle({ 800, 0 }, { 1200, 800 }));
+    std::shared_ptr<test::MockContainer> const container1 = std::make_shared<NiceMock<test::MockContainer>>();
+    std::shared_ptr<test::MockContainer> const container2 = std::make_shared<NiceMock<test::MockContainer>>();
+    std::shared_ptr<test::MockContainer> const container3 = std::make_shared<NiceMock<test::MockContainer>>();
+};
+
+TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsSetsParents)
+{
+    // We're allowing the leak because GMock is mad for a reason that
+    // we don't currently care much about
+    Mock::AllowLeak(container1.get());
+    Mock::AllowLeak(container2.get());
+    Mock::AllowLeak(container3.get());
+
+    // Act: Swap the containers on different parent
+    EXPECT_CALL(*container1, set_parent(Eq(second_parent_data.parent)));
+    EXPECT_CALL(*container2, set_parent(Eq(first_parent_data.parent)));
+
+    ParentContainer::swap(
+        first_parent_data.parent,
+        0,
+        second_parent_data.parent,
+        0);
+}
+
+TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsSetsWorkspaces)
+{
+    // We're allowing the leak because GMock is mad for a reason that
+    // we don't currently care much about
+    Mock::AllowLeak(container1.get());
+    Mock::AllowLeak(container2.get());
+    Mock::AllowLeak(container3.get());
+
+    // Act: Swap the containers on different parent
+    EXPECT_CALL(*container1, set_workspace(Eq(second_parent_data.workspace.get())));
+    EXPECT_CALL(*container2, set_workspace(Eq(first_parent_data.workspace.get())));
+
+    ParentContainer::swap(
+        first_parent_data.parent,
+        0,
+        second_parent_data.parent,
+        0);
+}
+
+TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsSetsLogicalArea)
+{
+    // We're allowing the leak because GMock is mad for a reason that
+    // we don't currently care much about
+    Mock::AllowLeak(container1.get());
+    Mock::AllowLeak(container2.get());
+    Mock::AllowLeak(container3.get());
+
+    // Act: Swap the containers on different parent
+    geom::Rectangle first_rectangle({ 0, 0 }, { 800, 800 });
+    geom::Rectangle second_rectangle({ 800, 0 }, { 600, 800 });
+    EXPECT_CALL(*container1, get_logical_area)
+        .WillOnce(Return(first_rectangle));
+    EXPECT_CALL(*container2, get_logical_area)
+        .WillOnce(Return(second_rectangle));
+    EXPECT_CALL(*container1, set_logical_area(Eq(second_rectangle), testing::_));
+    EXPECT_CALL(*container2, set_logical_area(Eq(first_rectangle), testing::_));
+
+    ParentContainer::swap(
+        first_parent_data.parent,
+        0,
+        second_parent_data.parent,
+        0);
+}
+
+TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsOnDifferentWorkspacesCausesTransformChange)
+{
+    // We're allowing the leak because GMock is mad for a reason that
+    // we don't currently care much about
+    Mock::AllowLeak(container1.get());
+    Mock::AllowLeak(container2.get());
+    Mock::AllowLeak(container3.get());
+
+    // Act: Swap the containers on different parent
+    EXPECT_CALL(*container1, on_workspace_transform());
+    EXPECT_CALL(*container2, on_workspace_transform());
+
+    ParentContainer::swap(
+        first_parent_data.parent,
+        0,
+        second_parent_data.parent,
+        0);
+}
