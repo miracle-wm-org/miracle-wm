@@ -620,11 +620,11 @@ IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command
 
     auto const& arg0 = command.arguments[0];
     if (arg0 == "enable")
-        command_controller->set_is_pinned(true, {});
+        command_controller->set_is_pinned(true, command_list.scope);
     else if (arg0 == "disable")
-        command_controller->set_is_pinned(false, {});
+        command_controller->set_is_pinned(false, command_list.scope);
     else if (arg0 == "toggle")
-        command_controller->toggle_pinned_to_workspace({});
+        command_controller->toggle_pinned_to_workspace(command_list.scope);
     else
         return IpcValidationResult::create_failure("Expected enable/disable/toggle after 'sticky'", true);
 

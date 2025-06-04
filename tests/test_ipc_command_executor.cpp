@@ -1296,3 +1296,63 @@ TEST_F(IpcCommandExecutorTest, SwapContainerWithConIdArg)
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
 }
+
+TEST_F(IpcCommandExecutorTest, StickyNoArgumentsFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::sticky, "sticky", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("'sticky' expects arguments"));
+}
+
+TEST_F(IpcCommandExecutorTest, StickyInvalidArgumentFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::sticky, "sticky", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected enable/disable/toggle after 'sticky'"));
+}
+
+TEST_F(IpcCommandExecutorTest, StickyEnable)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::sticky, "sticky", {}, { "enable" });
+    EXPECT_CALL(*controller, set_is_pinned(true, testing::_));
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, StickyDisable)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::sticky, "sticky", {}, { "disable" });
+    EXPECT_CALL(*controller, set_is_pinned(false, testing::_));
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, StickyToggle)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::sticky, "sticky", {}, { "toggle" });
+    EXPECT_CALL(*controller, toggle_pinned_to_workspace(testing::_));
+
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
