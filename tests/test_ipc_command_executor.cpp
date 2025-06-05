@@ -1356,3 +1356,149 @@ TEST_F(IpcCommandExecutorTest, StickyToggle)
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
 }
+
+TEST_F(IpcCommandExecutorTest, WorkspaceFailsWithoutArgs)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, {});
+    parse_result.commands.push_back(command);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+    EXPECT_THAT(validation_result[0].error, Eq("Expected arguments for 'workspace' command"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNext)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "next" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, next_workspace);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePrev)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "prev" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, prev_workspace);
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNextOnOutputSuccess)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "next_on_output" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, next_workspace_on_output)
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNextOnOutputFailure)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "next_on_output" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, next_workspace_on_output)
+        .WillOnce(Return(false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(false));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace next_on_output' has no output to go next on"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePrevOnOutputSuccess)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "prev_on_output" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, prev_workspace_on_output)
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspacePrevOnOutputFailure)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "prev_on_output" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, prev_workspace_on_output)
+        .WillOnce(Return(false));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(false));
+    EXPECT_THAT(validation_result[0].error, Eq("'workspace prev_on_output' has no output to go prev on"));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceBackAndForth)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "back_and_forth" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, back_and_forth_workspace)
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNumber)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "1" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, select_workspace(1, true))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNumberNoAutoBackAndForth)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", { "--no-auto-back-and-forth" }, { "1" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, select_workspace(1, false))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceNumberName)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "1", "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, select_workspace("meow", true))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, WorkspaceName)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::workspace, "workspace", {}, { "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, select_workspace("meow", true))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}

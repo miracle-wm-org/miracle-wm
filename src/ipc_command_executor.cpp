@@ -683,10 +683,11 @@ IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command,
 
 IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& command, IpcParseResult const&)
 {
-    if (command.arguments.empty())
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
         return IpcValidationResult::create_failure("Expected arguments for 'workspace' command", true);
 
-    std::string const& arg0 = command.arguments[0];
+    std::string const& arg0 = indexer.current();
     if (arg0 == "next")
     {
         command_controller->next_workspace();
@@ -717,28 +718,26 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
         return IpcValidationResult::create_success();
     }
 
-    std::string const* arg1 = &arg0;
     auto const back_and_forth = std::ranges::find(command.options, "--no-auto-back-and-forth") == command.options.end();
 
-    int number = -1;
-    if (try_get_number(*arg1, number))
+    if (int number; try_get_number(arg0, number))
     {
         // Check if we just have "workspace number"
-        if (command.arguments.size() < 3)
+        if (!indexer.next())
         {
             command_controller->select_workspace(number, back_and_forth);
             return IpcValidationResult::create_success();
         }
 
         // We have "workspace number <name>"
-        arg1 = &command.arguments[2];
+        auto const& arg1 = &indexer.current();
         command_controller->select_workspace(*arg1, back_and_forth);
         return IpcValidationResult::create_success();
     }
     else
     {
         // We have "workspace <name>"
-        command_controller->select_workspace(*arg1, back_and_forth);
+        command_controller->select_workspace(arg0, back_and_forth);
         return IpcValidationResult::create_success();
     }
 }
