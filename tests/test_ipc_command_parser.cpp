@@ -212,3 +212,12 @@ TEST_F(IpcCommandParserTest, CanParseConIdScope)
     EXPECT_THAT(commands.scope[0].type, testing::Eq(ContainerScopeType::con_id));
     EXPECT_THAT(commands.scope[0].value, testing::Eq("hi"));
 }
+
+TEST_F(IpcCommandParserTest, CanParseArgumentWithSpaceInIt)
+{
+    const char* v = "rename workspace to \"2: hi\"";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    EXPECT_THAT(commands.commands.size(), testing::Eq(1));
+    EXPECT_THAT(commands.commands[0].arguments[2], testing::Eq("2: hi"));
+}

@@ -57,7 +57,8 @@ enum class IpcCommandType
     i3_bar,
     gaps,
     input,
-    resize
+    resize,
+    rename
 };
 
 struct IpcCommand

@@ -88,11 +88,13 @@ public:
 
     [[nodiscard]] virtual uint32_t id() const = 0;
     [[nodiscard]] virtual std::optional<int> num() const = 0;
+    virtual void num(std::optional<int> n) = 0;
+    [[nodiscard]] virtual std::optional<std::string> const& name() const = 0;
+    virtual void name(std::optional<std::string> const&) = 0;
 
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_output_focused) const = 0;
-    [[nodiscard]] virtual std::optional<std::string> const& name() const = 0;
     [[nodiscard]] virtual std::string display_name() const = 0;
     [[nodiscard]] virtual std::shared_ptr<ParentContainer> get_root() const = 0;
 };

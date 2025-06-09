@@ -69,9 +69,11 @@ namespace test
 
         MOCK_METHOD(uint32_t, id, (), (const, override));
         MOCK_METHOD(std::optional<int>, num, (), (const, override));
+        MOCK_METHOD(void, num, (std::optional<int>), (override));
         MOCK_METHOD(nlohmann::json, get_workspaces_json, (bool), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
         MOCK_METHOD(std::optional<std::string> const&, name, (), (const, override));
+        MOCK_METHOD(void, name, (std::optional<std::string> const&), (override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
         MOCK_METHOD(void, on_animation_start, (), (override));

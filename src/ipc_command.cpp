@@ -143,6 +143,8 @@ IpcCommandType command_from_string(const std::string& str)
         return IpcCommandType::input;
     else if (str == "resize")
         return IpcCommandType::resize;
+    else if (str == "rename")
+        return IpcCommandType::rename;
     else
     {
         mir::log_error("Invalid i3 command type: %s", str.c_str());

@@ -99,6 +99,7 @@ private:
     IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_mark(IpcCommand const&, IpcParseResult const&);
     IpcValidationResult process_unmark(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_rename(IpcCommand const&, IpcParseResult const&);
 };
 
 } // miracle

@@ -328,3 +328,49 @@ void WorkspaceManager::move_workspace_to_output(uint32_t id, OutputInterface* hi
 
     hint->move_workspace_to(*this, w);
 }
+
+bool WorkspaceManager::set_workspace_num(uint32_t id, std::optional<int> const& num)
+{
+    std::shared_ptr<WorkspaceInterface> workspace_to_set;
+    for (auto const& workspace : workspaces())
+    {
+        if (workspace->id() == id)
+        {
+            workspace_to_set = workspace;
+            if (workspace_to_set->num() == num)
+                return true; // Already set
+        }
+        else if (workspace->num() == num)
+        {
+            mir::log_error("set_workspace_num: Cannot steal another workspace's number");
+            return false;
+        }
+    }
+
+    workspace_to_set->num(num);
+    registry->advise_renamed(id);
+    return true;
+}
+
+bool WorkspaceManager::set_workspace_name(uint32_t id, std::optional<std::string> const& name)
+{
+    std::shared_ptr<WorkspaceInterface> workspace_to_set;
+    for (auto const& workspace : workspaces())
+    {
+        if (workspace->id() == id)
+        {
+            workspace_to_set = workspace;
+            if (workspace_to_set->name() == name)
+                return true; // Already set
+        }
+        else if (workspace->name() == name)
+        {
+            mir::log_error("set_workspace_name: Cannot steal another workspace's name");
+            return false;
+        }
+    }
+
+    workspace_to_set->name(name);
+    registry->advise_renamed(id);
+    return true;
+}

@@ -96,6 +96,7 @@ public:
                 policy.command_controller->move_cursor_to_output(*next_workspace->get_output());
         }
     }
+    void on_workspace_renamed(uint32_t) override { }
 
     Policy& policy;
     std::recursive_mutex mutex;

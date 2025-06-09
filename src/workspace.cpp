@@ -456,6 +456,17 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
     container->set_workspace(this);
 }
 
+void Workspace::num(std::optional<int> n)
+{
+    num_ = n;
+    workspace_transform_change_hack();
+}
+
+void Workspace::name(std::optional<std::string> const& name)
+{
+    name_ = name;
+}
+
 void Workspace::on_animation_start()
 {
     if (auto const sh_last_selected = last_selected_container.lock())

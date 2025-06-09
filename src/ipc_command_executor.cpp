@@ -24,13 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc_command.h"
 #include "leaf_container.h"
 #include "output_manager.h"
-#include "parent_container.h"
+#include "string_extensions.h"
 #include "utility_general.h"
-#include "window_controller.h"
 
 #include <format>
 #include <mir/log.h>
-#include <miral/application_info.h>
 
 using namespace miracle;
 
@@ -192,6 +190,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
             break;
         case IpcCommandType::unmark:
             result.push_back(process_unmark(command, command_list));
+            break;
+        case IpcCommandType::rename:
+            result.push_back(process_rename(command, command_list));
             break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
@@ -1021,5 +1022,95 @@ IpcValidationResult IpcCommandExecutor::process_unmark(IpcCommand const& command
         command_controller->unmark(parse_result.scope, indexer.current());
     else
         command_controller->unmark_all(parse_result.scope);
+    return IpcValidationResult::create_success();
+}
+
+namespace
+{
+
+std::optional<WorkspaceIdentifier> split_and_trim_workspace_name(const std::string& input)
+{
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string item;
+
+    while (std::getline(ss, item, ':'))
+    {
+        trim(item);
+        result.push_back(item);
+    }
+
+    if (result.size() == 1)
+    {
+        try
+        {
+            return WorkspaceIdentifier { std::stoi(result[0]), std::nullopt };
+        }
+        catch (...)
+        {
+            return WorkspaceIdentifier { std::nullopt, result[0] };
+        }
+    }
+    else if (result.size() == 2)
+    {
+        try
+        {
+            int val = std::stoi(result[0]);
+            return WorkspaceIdentifier { val, result[1] };
+        }
+        catch (...)
+        {
+            mir::log_error("Failed to parse integer from: '%s'", result[0].c_str());
+            return std::nullopt;
+        }
+    }
+    else
+    {
+        mir::log_error("Invalid number of components: %lu", result.size());
+        return std::nullopt;
+    }
+}
+}
+
+IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current() || indexer.current() != "workspace")
+        return IpcValidationResult::create_failure("'rename' expected 'workspace'", true);
+
+    if (!indexer.next())
+        return IpcValidationResult::create_failure("'rename workspace' expected arguments", true);
+
+    auto const& first = indexer.current();
+    if (first == "to")
+    {
+        // We are renaming the current workspace
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'rename workspace to' expected argument", true);
+
+        auto const workspace_name_ret = split_and_trim_workspace_name(indexer.current());
+        if (!workspace_name_ret)
+            return IpcValidationResult::create_failure("'rename workspace to' received invalid name", true);
+
+        command_controller->rename_selected_workspace(workspace_name_ret.value());
+        return IpcValidationResult::create_success();
+    }
+
+    if (!indexer.next() || indexer.current() != "to")
+        return IpcValidationResult::create_failure("'rename workspace <name>' expected 'to'", true);
+
+    if (!indexer.next())
+        return IpcValidationResult::create_failure("'rename workspace <first> to' expected argument", true);
+
+    auto const& second = indexer.current();
+    auto const first_workspace_id = split_and_trim_workspace_name(first);
+    if (!first_workspace_id)
+        return IpcValidationResult::create_failure("'rename workspace <first> to <second>': <first> is invalid", true);
+
+    auto const second_workspace_id = split_and_trim_workspace_name(second);
+    if (!second_workspace_id)
+        return IpcValidationResult::create_failure("'rename workspace <first> to <second>': <second> is invalid", true);
+
+    command_controller->rename_existing_workspace(first_workspace_id.value(), second_workspace_id.value());
     return IpcValidationResult::create_success();
 }

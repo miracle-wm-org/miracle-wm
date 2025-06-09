@@ -1692,6 +1692,46 @@ std::unordered_set<std::string> CommandController::get_all_marks() const
     return marks;
 }
 
+bool CommandController::rename_selected_workspace(WorkspaceIdentifier const& new_identifier)
+{
+    std::lock_guard lock(mutex);
+    auto const selected_workspace = output_manager->focused()->active();
+    if (!selected_workspace)
+    {
+        mir::log_error("rename_selected_workspace: could not find selected workspace");
+        return false;
+    }
+
+    workspace_manager->set_workspace_num(selected_workspace->id(), new_identifier.number);
+    workspace_manager->set_workspace_name(selected_workspace->id(), new_identifier.name);
+    workspace_manager->request_focus(selected_workspace->id());
+    return true;
+}
+
+bool CommandController::rename_existing_workspace(
+    WorkspaceIdentifier const& existing_identifier,
+    WorkspaceIdentifier const& new_identifier)
+{
+    std::lock_guard lock(mutex);
+    auto const selected_workspace = output_manager->focused()->active();
+    for (auto const& workspace : workspace_manager->workspaces())
+    {
+        if (workspace->num() == existing_identifier.number
+            && workspace->name() == existing_identifier.name)
+        {
+            if (selected_workspace == workspace)
+                return rename_selected_workspace(new_identifier);
+
+            workspace_manager->set_workspace_num(workspace->id(), new_identifier.number);
+            workspace_manager->set_workspace_name(workspace->id(), new_identifier.name);
+            return true;
+        }
+    }
+
+    mir::log_error("rename_existing_workspace: could not find requested workspace");
+    return false;
+}
+
 nlohmann::json CommandController::to_json() const
 {
     std::lock_guard lock(mutex);
