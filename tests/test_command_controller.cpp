@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "drag_and_drop_service.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
+#include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
@@ -32,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mutex>
 
 using namespace miracle;
+using namespace testing;
 
 class StubCommandControllerInterface : public CommandControllerInterface
 {
@@ -44,8 +46,8 @@ class CommandControllerTest : public testing::Test
 public:
     CommandControllerTest() :
         output_manager(std::make_shared<OutputManager>(std::unique_ptr<test::MockOutputFactory>(output_factory))),
-        config(std::make_shared<test::MockConfig>()),
-        window_controller(std::make_shared<test::MockWindowController>()),
+        config(std::make_shared<NiceMock<test::MockConfig>>()),
+        window_controller(std::make_shared<NiceMock<test::MockWindowController>>()),
         workspace_manager(std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager)),
         scratchpad(std::make_shared<Scratchpad>(window_controller, output_manager)),
         command_controller(std::make_shared<CommandController>(
@@ -62,7 +64,7 @@ public:
     }
 
     std::recursive_mutex mutex;
-    test::MockOutputFactory* output_factory = new test::MockOutputFactory();
+    test::MockOutputFactory* output_factory = new NiceMock<test::MockOutputFactory>();
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<test::MockWindowController> window_controller;
@@ -125,4 +127,77 @@ TEST_F(CommandControllerTest, CanGetAllMarks)
     auto const result = command_controller->get_all_marks();
     std::unordered_set<std::string> expected = { "a", "b", "c", "d", "e" };
     EXPECT_THAT(result, testing::Eq(expected));
+}
+
+TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)
+{
+    // Setup: Add an output to the output manager and mock a workspace such
+    // that it is associated with the output
+    auto const output = new NiceMock<test::MockOutput>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output_factory, create)
+        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    EXPECT_CALL(*workspace, id)
+        .WillRepeatedly(Return(5));
+    EXPECT_CALL(*workspace, num())
+        .WillOnce(Return(1));
+    std::optional<std::string> name = "hello";
+    EXPECT_CALL(*workspace, name())
+        .WillOnce(ReturnRef(name));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(workspace));
+    workspaces.push_back(workspace);
+
+    // Act: Rename the workspace and assert that it is getting the new name
+    std::optional<std::string> const new_name = "hi";
+    std::optional<int> constexpr new_num = 2;
+    EXPECT_CALL(*workspace, num(new_num));
+    EXPECT_CALL(*workspace, name(new_name));
+    command_controller->rename_selected_workspace({ .number = 2,
+        .name = "hi" });
+}
+
+TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
+{
+    // Setup: Add an output to the output manager and mock a workspace such
+    // that it is associated with the output
+    auto const output = new NiceMock<test::MockOutput>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output_factory, create)
+        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    EXPECT_CALL(*workspace, id)
+        .WillRepeatedly(Return(5));
+    EXPECT_CALL(*workspace, num())
+        .WillRepeatedly(Return(1));
+    std::optional<std::string> name = "hello";
+    EXPECT_CALL(*workspace, name())
+        .WillRepeatedly(ReturnRef(name));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    // Act: Rename the workspace and assert that it is getting the new name
+    std::optional<std::string> const new_name = "hi";
+    std::optional<int> constexpr new_num = 2;
+    EXPECT_CALL(*workspace, num(new_num));
+    EXPECT_CALL(*workspace, name(new_name));
+    command_controller->rename_existing_workspace(
+        { .number = 1,
+            .name = "hello" },
+        { .number = 2,
+            .name = "hi" });
 }
