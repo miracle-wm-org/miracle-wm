@@ -42,6 +42,7 @@ public:
     void on_created(uint32_t id) override;
     void on_removed(uint32_t id) override;
     void on_focused(std::optional<uint32_t>, uint32_t) override;
+    void on_workspace_renamed(uint32_t) override;
     void on_changed(WindowManagerMode mode) override;
     void on_shutdown();
 

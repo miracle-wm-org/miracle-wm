@@ -47,3 +47,12 @@ void WorkspaceObserverRegistrar::advise_focused(
             observer.lock()->on_focused(previous_id, current_id);
     }
 }
+
+void WorkspaceObserverRegistrar::advise_renamed(uint32_t id)
+{
+    for (auto& observer : observers)
+    {
+        if (!observer.expired())
+            observer.lock()->on_workspace_renamed(id);
+    }
+}

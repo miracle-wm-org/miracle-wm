@@ -333,3 +333,15 @@ TEST_F(WorkspaceTest, GetWorkspaceJson)
     EXPECT_THAT(json["rect"]["width"], Eq(OUTPUT_WIDTH));
     EXPECT_THAT(json["rect"]["height"], Eq(OUTPUT_HEIGHT));
 }
+
+TEST_F(WorkspaceTest, CanSetNum)
+{
+    workspace->num(2);
+    EXPECT_THAT(workspace->num(), Eq(2));
+}
+
+TEST_F(WorkspaceTest, CanSetName)
+{
+    workspace->name("meow");
+    EXPECT_THAT(workspace->name(), Eq("meow"));
+}

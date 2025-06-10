@@ -135,6 +135,8 @@ public:
         = 0;
     virtual void unmark_all(std::vector<ContainerScope> const& scope) = 0;
     virtual std::unordered_set<std::string> get_all_marks() const = 0;
+    virtual bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) = 0;
+    virtual bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) = 0;
     [[nodiscard]] virtual nlohmann::json to_json() const = 0;
     [[nodiscard]] virtual nlohmann::json outputs_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
@@ -238,6 +240,8 @@ public:
         std::string const& mark) override;
     void unmark_all(std::vector<ContainerScope> const& scope) override;
     std::unordered_set<std::string> get_all_marks() const override;
+    bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) override;
+    bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) override;
     [[nodiscard]] nlohmann::json to_json() const override;
     [[nodiscard]] nlohmann::json outputs_json() const override;
     [[nodiscard]] nlohmann::json workspaces_json() const override;

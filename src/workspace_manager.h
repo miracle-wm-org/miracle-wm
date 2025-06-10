@@ -94,6 +94,9 @@ public:
     /// Moves the workspace associated with [id] to the [hint].
     void move_workspace_to_output(uint32_t id, OutputInterface* hint);
 
+    bool set_workspace_num(uint32_t id, std::optional<int> const& num);
+    bool set_workspace_name(uint32_t id, std::optional<std::string> const& name);
+
     /// The number of default workspaces
     static constexpr int NUM_DEFAULT_WORKSPACES = 10;
 

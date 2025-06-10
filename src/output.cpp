@@ -247,9 +247,6 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
         if (workspace->id() == id)
         {
-            if (!active_workspace.expired() && active_workspace.lock()->id() == id)
-                return true;
-
             to = workspace;
             to_index = i;
         }
