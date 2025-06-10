@@ -1502,3 +1502,109 @@ TEST_F(IpcCommandExecutorTest, WorkspaceName)
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
 }
+
+TEST_F(IpcCommandExecutorTest, RenameNoArgsFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, {});
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameNoWorkspaceArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameWorkspaceNoArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameWorkspaceToNoArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace", "to" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameWorkspaceToNameSucceeds)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace", "to", "1: name" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, rename_selected_workspace(Truly([](WorkspaceIdentifier const& identifier)
+    {
+        return identifier.name == "name" && identifier.number == 1;
+    })));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameNamedWorkspaceNoArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace", "1" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameNamedWorkspaceNoToArgFails)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace", "1", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+    EXPECT_THAT(validation_result[0].parse_error, Eq(true));
+}
+
+TEST_F(IpcCommandExecutorTest, RenameNamedWorkspaceNoNamedWorkspaceSucceeds)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::rename, "rename", {}, { "workspace", "1: hi", "to", "2: hello" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, rename_existing_workspace(Truly([](WorkspaceIdentifier const& identifier)
+    {
+        return identifier.name == "hi" && identifier.number == 1;
+    }),
+                                 Truly([](WorkspaceIdentifier const& identifier)
+    {
+        return identifier.name == "hello" && identifier.number == 2;
+    })));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
