@@ -263,15 +263,8 @@ void Renderer::draw(
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
-    float alpha = renderable.alpha() * data.data.alpha;
-    auto const* const prog =
-        [&](bool alpha) -> ProgramData const*
-    {
-        auto const& family = dynamic_cast<Program const&>(texture->shader(*program_factory));
-        if (alpha)
-            return &family.alpha;
-        return &family.opaque;
-    }(alpha < 1.0f);
+    float const alpha = renderable.alpha() * data.data.alpha;
+    auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).alpha;
 
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)
@@ -313,9 +306,7 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
-
-    if (prog->alpha_uniform >= 0)
-        glUniform1f(prog->alpha_uniform, alpha);
+    glUniform1f(prog->alpha_uniform, alpha);
 
     switch (compositor_state->mode())
     {
