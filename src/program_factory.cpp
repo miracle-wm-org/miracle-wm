@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "program_factory"
 
 #include "program_factory.h"
+#include <format>
 #include <mir/graphics/egl_error.h>
 #include <mir/log.h>
-#include <sstream>
 
 namespace
 {
@@ -41,20 +41,6 @@ void main() {
    vec4 transformed = (transform * (vec4(position, 1.0) - p)) + p;
    gl_Position = display_transform * screen_to_gl_coords * workspace_transform * transformed;
    v_texcoord = texcoord;
-}
-)";
-
-const GLchar* const mode_scale_integration = R"(
-uniform int mode;
-
-vec4 resolve_color(vec4 v) {
-    if (mode == 1) {
-        float color =  0.299 * v.x + 0.587 * v.y + 0.114 * v.z;
-        return vec4(color, color, color, v.w);
-    }
-    else {
-        return v;
-    }
 }
 )";
 
@@ -110,11 +96,8 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         mir::log_warning("Program is missing outline_color_uniform");
 }
 
-miracle::Program::Program(
-    ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader) :
-    opaque_handle(std::move(opaque_shader)),
+miracle::Program::Program(ProgramHandle&& alpha_shader) :
     alpha_handle(std::move(alpha_shader)),
-    opaque { opaque_handle },
     alpha { alpha_handle }
 {
 }
@@ -141,50 +124,44 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
         }
     }
 
-    std::stringstream opaque_fragment;
-    opaque_fragment
-        << extension_fragment
-        << "\n"
-        << "#ifdef GL_ES\n"
-           "precision mediump float;\n"
-           "#endif\n"
-        << "\n"
-        << fragment_fragment
-        << "\n"
-        << mode_scale_integration
-        << "varying vec2 v_texcoord;\n"
-           "void main() {\n"
-           "    gl_FragColor = resolve_color(sample_to_rgba(v_texcoord));\n"
-           "}\n";
+    std::string fragment_src = std::string(extension_fragment) +
+        R"(
 
-    std::stringstream alpha_fragment;
-    alpha_fragment
-        << extension_fragment
-        << "\n"
-        << "#ifdef GL_ES\n"
-           "precision mediump float;\n"
-           "#endif\n"
-        << "\n"
-        << fragment_fragment
-        << "\n"
-        << mode_scale_integration
-        << "varying vec2 v_texcoord;\n"
-           "uniform float alpha;\n"
-           "void main() {\n"
-           "    gl_FragColor = alpha * resolve_color(sample_to_rgba(v_texcoord));\n"
-           "}\n";
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+)" + std::string(fragment_fragment)
+        +
+        R"(
+
+uniform int mode;
+uniform float alpha;
+varying vec2 v_texcoord;
+
+vec4 resolve_color(vec4 v) {
+    if (mode == 1) {
+        float color =  0.299 * v.x + 0.587 * v.y + 0.114 * v.z;
+        return vec4(color, color, color, v.w);
+    }
+    else {
+        return v;
+    }
+}
+
+void main() {
+   gl_FragColor = alpha * resolve_color(sample_to_rgba(v_texcoord));
+}
+)";
 
     // GL shader compilation is *not* threadsafe, and requires external synchronisation
     std::lock_guard lock { compilation_mutex };
 
-    ShaderHandle const opaque_shader {
-        compile_shader(GL_FRAGMENT_SHADER, opaque_fragment.str().c_str())
-    };
     ShaderHandle const alpha_shader {
-        compile_shader(GL_FRAGMENT_SHADER, alpha_fragment.str().c_str())
+        compile_shader(GL_FRAGMENT_SHADER, fragment_src.c_str())
     };
 
-    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, opaque_shader), link_shader(vertex_shader, alpha_shader)));
+    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, alpha_shader)));
 
     return *programs.back().second;
 

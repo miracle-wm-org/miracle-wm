@@ -91,9 +91,9 @@ struct ProgramData
 struct Program : public mir::graphics::gl::Program
 {
 public:
-    Program(ProgramHandle&& opaque_shader, ProgramHandle&& alpha_shader);
-    ProgramHandle opaque_handle, alpha_handle;
-    ProgramData opaque, alpha;
+    explicit Program(ProgramHandle&& alpha_shader);
+    ProgramHandle alpha_handle;
+    ProgramData alpha;
 };
 
 class ProgramFactory : public mir::graphics::gl::ProgramFactory
