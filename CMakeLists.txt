@@ -162,10 +162,13 @@ if(SYSTEMD_INTEGRATION)
     # Install systemd files
     install(FILES session/usr/lib/systemd/user/miracle-wm-session.target
         session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
+        session/usr/lib/systemd/user/miracle-wm-xdg-autostart.target
         DESTINATION /usr/lib/systemd/user/)
 
     # Install the setup script
     install(PROGRAMS session/usr/bin/libexec/miracle-wm-session-setup
+        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
+    install(PROGRAMS session/usr/bin/libexec/wait-sni-ready
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
