@@ -260,6 +260,7 @@ void Renderer::draw(
         glEnable(GL_SCISSOR_TEST);
         glScissor(clip_area->top_left.x.as_int(), clip_area->top_left.y.as_int(), clip_area->size.width.as_int(), clip_area->size.height.as_int());
     }
+    auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
@@ -307,6 +308,7 @@ void Renderer::draw(
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
     glUniform1f(prog->alpha_uniform, alpha);
+    glUniform2f(prog->surface_size_uniform, surface_size.width.as_value(), surface_size.height.as_value());
 
     switch (compositor_state->mode())
     {

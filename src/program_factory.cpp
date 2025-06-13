@@ -91,9 +91,9 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     if (mode_uniform < 0)
         mir::log_warning("Program is missing mode_uniform");
 
-    outline_color_uniform = glGetUniformLocation(id, "outline_color");
-    if (outline_color_uniform < 0)
-        mir::log_warning("Program is missing outline_color_uniform");
+    surface_size_uniform = glGetUniformLocation(id, "surfaceSize");
+    if (surface_size_uniform < 0)
+        mir::log_warning("Program is missing surfaceSize");
 }
 
 miracle::Program::Program(ProgramHandle&& alpha_shader) :
@@ -137,7 +137,11 @@ precision mediump float;
 
 uniform int mode;
 uniform float alpha;
-varying vec2 v_texcoord;
+uniform vec2 surfaceSize;
+
+varying vec2 v_texcoord;  // This is going to be [0, 1]
+
+float radius = 10.0;
 
 vec4 resolve_color(vec4 v) {
     if (mode == 1) {
@@ -149,8 +153,23 @@ vec4 resolve_color(vec4 v) {
     }
 }
 
+float roundedRectSDF(vec2 p, vec2 size, float r) {
+    vec2 halfSize = size * 0.5;
+    vec2 d = abs(p - halfSize) - (halfSize - vec2(r));
+    return length(max(d, 0.0)) - r;
+}
+
 void main() {
-   gl_FragColor = alpha * resolve_color(sample_to_rgba(v_texcoord));
+    vec2 pixelPos = v_texcoord * surfaceSize;
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, radius);
+    float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
+
+    vec4 contentColor = alpha * resolve_color(sample_to_rgba(v_texcoord));
+    contentColor *= shapeMask;
+    if (contentColor.a < 0.01)
+        discard;
+
+   gl_FragColor = contentColor;
 }
 )";
 
