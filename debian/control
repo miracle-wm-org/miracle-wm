@@ -16,7 +16,9 @@ Build-Depends: cmake,
                libmircommon-dev,
                libmirserver-internal-dev,
                libmirrenderer-dev,
-               pcre2-utils
+               pcre2-utils,
+               python3-tenacity,
+               python3-dbus-next
 Homepage: https://github.com/mattkae/miracle-wm
 
 Package: miracle-wm
