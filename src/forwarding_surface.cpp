@@ -77,6 +77,10 @@ public:
         return animating_surface.get();
     }
 
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+    MirOrientation orientation() const override { return mir_orientation_normal; }
+#endif
+
 private:
     std::shared_ptr<Renderable> renderable;
     std::shared_ptr<mir::scene::Surface const> animating_surface;

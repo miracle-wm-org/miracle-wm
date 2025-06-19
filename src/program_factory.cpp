@@ -44,6 +44,43 @@ void main() {
 }
 )";
 
+// TODO: Pass the color through
+const GLchar* const fragment_border_src = R"(
+
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+uniform float alpha;
+uniform vec2 surfaceSize;
+
+varying vec2 v_texcoord;  // This is going to be [0, 1]
+
+float radius = 10.0;
+float borderWidth = 2.0;
+
+float roundedRectSDF(vec2 p, vec2 size, float r) {
+    vec2 halfSize = size * 0.5;
+    vec2 d = abs(p - halfSize) - (halfSize - vec2(r));
+    return length(max(d, 0.0)) - r;
+}
+
+void main() {
+    vec2 pixelPos = v_texcoord * surfaceSize;
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, radius);
+
+    float halfBorder = borderWidth * 0.5;
+    float alpha = smoothstep(halfBorder + 1.0, halfBorder, abs(sdf));
+
+    vec4 contentColor = vec4(1, 0, 0, 1);
+    contentColor *= alpha;
+    if (contentColor.a < 0.01)
+        discard;
+
+    gl_FragColor = contentColor;
+}
+)";
+
 }
 
 miracle::ProgramData::ProgramData(GLuint program_id)
@@ -53,7 +90,7 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     if (position_attr < 0)
         mir::log_warning("Program is missing position_attr");
     texcoord_attr = glGetAttribLocation(id, "texcoord");
-    if (position_attr < 0)
+    if (texcoord_attr < 0)
         mir::log_warning("Program is missing texcoord_attr");
     for (auto i = 0u; i < tex_uniforms.size(); ++i)
     {
@@ -96,14 +133,16 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         mir::log_warning("Program is missing surfaceSize");
 }
 
-miracle::Program::Program(ProgramHandle&& alpha_shader) :
-    alpha_handle(std::move(alpha_shader)),
-    alpha { alpha_handle }
+miracle::Program::Program(ProgramHandle&& program) :
+    program_handle(std::move(program)),
+    data { program_handle }
 {
 }
 
 miracle::ProgramFactory::ProgramFactory() :
-    vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) }
+    vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) },
+    border_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
+    border_program { Program(link_shader(vertex_shader, border_shader)) }
 {
 }
 
@@ -124,7 +163,7 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
         }
     }
 
-    std::string fragment_src = std::string(extension_fragment) +
+    std::string const fragment_src = std::string(extension_fragment) +
         R"(
 
 #ifdef GL_ES
@@ -180,11 +219,11 @@ void main() {
         compile_shader(GL_FRAGMENT_SHADER, fragment_src.c_str())
     };
 
-    programs.emplace_back(id, std::make_unique<miracle::Program>(link_shader(vertex_shader, alpha_shader)));
+    programs.emplace_back(id, std::make_unique<Program>(link_shader(vertex_shader, alpha_shader)));
 
     return *programs.back().second;
 
-    // We delete opaque_shader and alpha_shader here. This is fine; it only marks them
+    // We delete the shaders here. This is fine; it only marks them
     // for deletion. GL will only delete them once the GL Program they're linked in is destroyed.
 }
 

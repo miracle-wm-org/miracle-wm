@@ -88,22 +88,29 @@ struct ProgramData
     ProgramData(GLuint program_id);
 };
 
-struct Program : public mir::graphics::gl::Program
+class Program : public mir::graphics::gl::Program
 {
 public:
-    explicit Program(ProgramHandle&& alpha_shader);
-    ProgramHandle alpha_handle;
-    ProgramData alpha;
+    explicit Program(ProgramHandle&& program);
+    ProgramHandle program_handle;
+    ProgramData data;
 };
 
 class ProgramFactory : public mir::graphics::gl::ProgramFactory
 {
 public:
     ProgramFactory();
+
+    /// Creates a fragment shader for the given [id] that appends
+    /// the [extension_fragment] to the top, and expects [fragment_fragment]
+    /// to implement [sample_to_rgba] for that texture.
     mir::graphics::gl::Program& compile_fragment_shader(
         void const* id,
         char const* extension_fragment,
         char const* fragment_fragment) override;
+
+    /// Retrieves the border shader
+    Program const& border() const { return border_program; }
 
 private:
     static GLuint compile_shader(GLenum type, GLchar const* src);
@@ -112,6 +119,9 @@ private:
         ShaderHandle const& fragment_shader);
 
     ShaderHandle const vertex_shader;
+
+    ShaderHandle const border_shader;
+    Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
