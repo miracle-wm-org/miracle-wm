@@ -548,19 +548,17 @@ void read_environment_variables(YAML::Node const& env, ParsingContext& context)
 
 void read_border(YAML::Node const& border, ParsingContext& context)
 {
-    int size;
-    if (!try_parse_value(border, "size", size, context))
-        return;
+    int size = 0;
+    try_parse_value(border, "size", size, context, true);
 
-    glm::vec4 color;
-    if (!try_parse_color(border, "color", color, context))
-        return;
+    float radius = 8.f;
+    try_parse_value(border, "radius", radius, context, true);
 
-    glm::vec4 focus_color;
-    if (!try_parse_color(border, "focus_color", focus_color, context))
-        return;
-
-    context.result.config.border_config = { size, focus_color, color };
+    glm::vec4 color = glm::vec4(0);
+    try_parse_color(border, "color", color, context);
+    glm::vec4 focus_color = glm::vec4(0);
+    try_parse_color(border, "focus_color", focus_color, context);
+    context.result.config.border_config = { size, radius, focus_color, color };
 }
 
 void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)

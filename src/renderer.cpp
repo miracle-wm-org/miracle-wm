@@ -279,6 +279,7 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
+    glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, surface_size.width.as_value(), surface_size.height.as_value());
 
@@ -391,13 +392,16 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     border_rect.size.width = geom::Width(border_rect.size.width.as_value() + 2 * border_config.size);
     border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
 
-    // Next, we update the uniforms for the context, including global transforms, mode, etc.
+    // Next, we update the uniforms for the context, including global transforms
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(display_transform));
     glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
         glm::value_ptr(screen_to_gl_coords));
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
+    glUniform4f(prog->border_color_uniform, border_config.color.r, border_config.color.g, border_config.color.b, border_config.color.a);
+    glUniform1f(prog->border_radius_uniform, border_config.radius);
+    glUniform1f(prog->border_width_uniform, border_config.size);
 
     // Next, we set model-specific transforms
     float const alpha = data.data.alpha;

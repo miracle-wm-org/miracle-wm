@@ -53,11 +53,11 @@ precision mediump float;
 
 uniform float alpha;
 uniform vec2 surfaceSize;
+uniform vec4 borderColor;
+uniform float borderRadius;
+uniform float borderWidth;
 
 varying vec2 v_texcoord;  // This is going to be [0, 1]
-
-float radius = 10.0;
-float borderWidth = 2.0;
 
 float roundedRectSDF(vec2 p, vec2 size, float r) {
     vec2 halfSize = size * 0.5;
@@ -67,12 +67,12 @@ float roundedRectSDF(vec2 p, vec2 size, float r) {
 
 void main() {
     vec2 pixelPos = v_texcoord * surfaceSize;
-    float sdf = roundedRectSDF(pixelPos, surfaceSize, radius);
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
 
     float halfBorder = borderWidth * 0.5;
     float alpha = smoothstep(halfBorder + 1.0, halfBorder, abs(sdf));
 
-    vec4 contentColor = vec4(1, 0, 0, 1);
+    vec4 contentColor = borderColor;
     contentColor *= alpha;
     if (contentColor.a < 0.01)
         discard;
@@ -131,6 +131,18 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     surface_size_uniform = glGetUniformLocation(id, "surfaceSize");
     if (surface_size_uniform < 0)
         mir::log_warning("Program is missing surfaceSize");
+
+    border_color_uniform = glGetUniformLocation(id, "borderColor");
+    if (border_color_uniform < 0)
+        mir::log_warning("Program is missing borderColor");
+
+    border_radius_uniform = glGetUniformLocation(id, "borderRadius");
+    if (border_radius_uniform < 0)
+        mir::log_warning("Program is missing borderRadius");
+
+    border_width_uniform = glGetUniformLocation(id, "borderWidth");
+    if (border_width_uniform < 0)
+        mir::log_warning("Program is missing borderWidth");
 }
 
 miracle::Program::Program(ProgramHandle&& program) :
@@ -177,10 +189,9 @@ precision mediump float;
 uniform int mode;
 uniform float alpha;
 uniform vec2 surfaceSize;
+uniform float borderRadius;
 
 varying vec2 v_texcoord;  // This is going to be [0, 1]
-
-float radius = 10.0;
 
 vec4 resolve_color(vec4 v) {
     if (mode == 1) {
@@ -200,7 +211,7 @@ float roundedRectSDF(vec2 p, vec2 size, float r) {
 
 void main() {
     vec2 pixelPos = v_texcoord * surfaceSize;
-    float sdf = roundedRectSDF(pixelPos, surfaceSize, radius);
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
     float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
 
     vec4 contentColor = alpha * resolve_color(sample_to_rgba(v_texcoord));

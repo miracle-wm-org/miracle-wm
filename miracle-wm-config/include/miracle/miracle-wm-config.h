@@ -70,6 +70,7 @@ struct MIRACLE_WM_CONFIG_API EnvironmentVariable
 struct MIRACLE_WM_CONFIG_API BorderConfig
 {
     int size = 0;
+    float radius = 8.f;
     glm::vec4 focus_color = glm::vec4(0);
     glm::vec4 color = glm::vec4(0);
 };

@@ -83,6 +83,9 @@ struct ProgramData
     GLint alpha_uniform = -1;
     GLint mode_uniform = -1;
     GLint surface_size_uniform = -1;
+    GLint border_color_uniform = -1;
+    GLint border_width_uniform = -1;
+    GLint border_radius_uniform = -1;
     mutable long long last_used_frameno = 0;
 
     ProgramData(GLuint program_id);
