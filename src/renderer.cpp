@@ -393,8 +393,14 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
 
     // Next, we update the uniforms for the context, including global transforms
+    auto const inverse_y_transform = glm::mat4 {
+        1.0, 0.0, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    };
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(display_transform));
+        glm::value_ptr(inverse_y_transform));
     glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
         glm::value_ptr(screen_to_gl_coords));
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
@@ -405,12 +411,11 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     // Next, we set model-specific transforms
     float const alpha = data.data.alpha;
-    glm::mat4 transform = data.data.transform
-        * glm::scale(
-            glm::translate(
-                glm::mat4(1.0),
-                glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
-            glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
+    glm::mat4 transform = glm::scale(
+        glm::translate(
+            glm::mat4(1.0),
+            glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
+        glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
 
     glUniform2f(prog->topleft_uniform, -0.5, -0.5);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
