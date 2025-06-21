@@ -861,6 +861,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "border" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "size" << YAML::Value << config.border_config.size;
+        out << YAML::Key << "radius" << YAML::Value << config.border_config.radius;
 
         // Save colors as hex values
         auto to_hex = [](glm::vec4 const& color)
