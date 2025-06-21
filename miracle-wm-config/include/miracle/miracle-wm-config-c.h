@@ -258,6 +258,7 @@ extern "C"
     typedef struct
     {
         int size;
+        float radius;
         float focus_color[4]; // RGBA
         float color[4]; // RGBA
     } miracle_border_config_t;
@@ -266,6 +267,7 @@ extern "C"
     void miracle_config_set_border_config(
         miracle_config_data_t* config,
         int size,
+        float radius,
         const float focus_color[4],
         const float color[4]);
 

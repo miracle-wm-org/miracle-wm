@@ -688,6 +688,7 @@ extern "C"
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
         miracle_border_config_t result;
         result.size = data->border_config.size;
+        result.radius = data->border_config.radius;
 
         // Copy glm::vec4 to float[4]
         for (int i = 0; i < 4; i++)
@@ -702,12 +703,14 @@ extern "C"
     void miracle_config_set_border_config(
         miracle_config_data_t* config,
         int size,
+        float radius,
         const float focus_color[4],
         const float color[4])
     {
 
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         data->border_config.size = size;
+        data->border_config.radius = radius;
 
         // Copy float[4] to glm::vec4
         if (focus_color)

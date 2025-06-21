@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdexcept>
 
 namespace mg = mir::graphics;
+namespace ms = mir::scene;
 namespace mgl = mir::gl;
 namespace geom = mir::geometry;
 using namespace miracle;
@@ -66,7 +67,8 @@ Renderer::Renderer(
     screen_to_gl_coords(1),
     gl_interface { std::move(gl_interface) },
     config { config },
-    compositor_state { compositor_state }
+    compositor_state { compositor_state },
+    border_model(Mesh::rectangle(glm::vec3(-0.5, -0.5, 0), glm::vec2(1, 1)))
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -124,13 +126,9 @@ Renderer::Renderer(
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    outline_shader.use();
-    outline_model = outline_shader.createBorders(
-        glm::vec2(0, 0),
-        glm::vec2(1, 1),
-        1,
-        glm::vec4(1, 0, 0, 1));
-    outline_model.uploadToGPU();
+    auto const& prog = program_factory->border();
+    glUseProgram(prog.data.id);
+    border_model.upload_to_gpu();
 }
 
 void Renderer::tessellate(
@@ -206,34 +204,8 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
                 if (last_surface != surface.value())
                 {
                     last_surface = surface.value();
-                    outline_shader.use();
-
-                    geom::Rectangle rect(last_surface->top_left(), last_surface->window_size());
-                    if (auto const clip_area = data.clip_area)
-                        rect = clip_area.value();
-
-                    auto const pos = glm::vec2(rect.top_left.x.as_int(), rect.top_left.y.as_int());
-                    auto const sz = glm::vec2(rect.size.width.as_int(), rect.size.height.as_int());
-                    auto const thickness = config->get_border_config().size;
-
-                    auto const make_transform = [](glm::vec2 position, glm::vec2 size)
-                    {
-                        return glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
-                    };
-
-                    outline_model.meshes[0].transform = make_transform({ pos.x - thickness, pos.y + sz.y }, { sz.x + 2.0f * thickness, thickness });
-                    outline_model.meshes[1].transform = make_transform({ pos.x - thickness, pos.y - thickness }, { sz.x + 2.0f * thickness, thickness });
-                    outline_model.meshes[2].transform = make_transform({ pos.x - thickness, pos.y }, { thickness, sz.y });
-                    outline_model.meshes[3].transform = make_transform({ pos.x + sz.x, pos.y }, { thickness, sz.y });
+                    draw_border(*surface.value(), data);
                 }
-
-                auto color = data.data.is_focused
-                    ? config->get_border_config().focus_color
-                    : config->get_border_config().color;
-                color.a *= data.data.alpha;
-                outline_model.set_color(color);
-
-                outline_model.draw(outline_shader);
             }
         }
 
@@ -260,11 +232,12 @@ void Renderer::draw(
         glEnable(GL_SCISSOR_TEST);
         glScissor(clip_area->top_left.x.as_int(), clip_area->top_left.y.as_int(), clip_area->size.width.as_int(), clip_area->size.height.as_int());
     }
+    auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
     float const alpha = renderable.alpha() * data.data.alpha;
-    auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).alpha;
+    auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
 
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)
@@ -306,7 +279,9 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
+    glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
     glUniform1f(prog->alpha_uniform, alpha);
+    glUniform2f(prog->surface_size_uniform, surface_size.width.as_value(), surface_size.height.as_value());
 
     switch (compositor_state->mode())
     {
@@ -322,10 +297,7 @@ void Renderer::draw(
         glm::value_ptr(data.data.workspace_transform));
 
     glEnableVertexAttribArray(prog->position_attr);
-
-    bool has_texcoord_attr = prog->texcoord_attr >= 0;
-    if (has_texcoord_attr)
-        glEnableVertexAttribArray(prog->texcoord_attr);
+    glEnableVertexAttribArray(prog->texcoord_attr);
 
     primitives.clear();
     tessellate(primitives, renderable);
@@ -370,13 +342,9 @@ void Renderer::draw(
             glVertexAttribPointer(prog->position_attr, 3, GL_FLOAT,
                 GL_FALSE, sizeof(mgl::Vertex),
                 &p.vertices[0].position);
-
-            if (has_texcoord_attr)
-            {
-                glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT,
-                    GL_FALSE, sizeof(mgl::Vertex),
-                    &p.vertices[0].texcoord);
-            }
+            glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT,
+                GL_FALSE, sizeof(mgl::Vertex),
+                &p.vertices[0].texcoord);
 
             if (blend.dst_rgb == GL_ZERO)
             {
@@ -399,14 +367,83 @@ void Renderer::draw(
     {
     }
 
-    if (has_texcoord_attr)
-        glDisableVertexAttribArray(prog->texcoord_attr);
-
+    glDisableVertexAttribArray(prog->texcoord_attr);
     glDisableVertexAttribArray(prog->position_attr);
     if (clip_area)
     {
         glDisable(GL_SCISSOR_TEST);
     }
+}
+
+void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
+{
+    if (!data.clip_area)
+        return;
+
+    // First, we select the border shader as our shader
+    auto const* const prog = &program_factory->border().data;
+    glUseProgram(prog->id);
+
+    // Next, we use the clip area as our rendering size
+    auto border_rect = data.clip_area.value();
+    auto const border_config = config->get_border_config();
+    border_rect.top_left.x = geom::X(border_rect.top_left.x.as_value() - border_config.size / 2.f);
+    border_rect.top_left.y = geom::Y(border_rect.top_left.y.as_value() - border_config.size / 2.f);
+    border_rect.size.width = geom::Width(border_rect.size.width.as_value() + 2 * border_config.size);
+    border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
+
+    // Next, we update the uniforms for the context, including global transforms
+    auto const inverse_y_transform = glm::mat4 {
+        1.0, 0.0, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    };
+    glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
+        glm::value_ptr(inverse_y_transform));
+    glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
+        glm::value_ptr(screen_to_gl_coords));
+    glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
+        glm::value_ptr(data.data.workspace_transform));
+
+    auto const color = data.data.is_focused ? border_config.focus_color : border_config.color;
+    glUniform4f(prog->border_color_uniform, color.r, color.g, color.b, color.a);
+    glUniform1f(prog->border_radius_uniform, border_config.radius);
+    glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
+
+    // Next, we set model-specific transforms
+    float const alpha = data.data.alpha;
+    glm::mat4 transform = glm::scale(
+        glm::translate(
+            glm::mat4(1.0),
+            glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
+        glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
+
+    glUniform2f(prog->topleft_uniform, -0.5, -0.5);
+    glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
+        glm::value_ptr(transform));
+    glUniform1f(prog->alpha_uniform, alpha);
+    printf("%f\n", alpha);
+    glUniform2f(prog->surface_size_uniform, border_rect.size.width.as_value(), border_rect.size.height.as_value());
+
+    // Now we can render our model. This should be as easy
+    glBindBuffer(GL_ARRAY_BUFFER, border_model.vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, border_model.ebo);
+
+    glEnableVertexAttribArray(prog->position_attr);
+    glEnableVertexAttribArray(prog->texcoord_attr);
+    glVertexAttribPointer(prog->position_attr, 3, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), (void*)offsetof(Vertex, position));
+    glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
+
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(border_model.indices.size()), GL_UNSIGNED_INT, 0);
+
+    glDisableVertexAttribArray(prog->position_attr);
+    glDisableVertexAttribArray(prog->texcoord_attr);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
@@ -482,7 +519,8 @@ void Renderer::update_gl_viewport()
         GLint offset_y = (output_height - reduced_height) / 2;
 
         glViewport(offset_x, offset_y, reduced_width, reduced_height);
-        outline_shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
+
+        // outline_shader.setViewport(offset_x, offset_y, reduced_width, reduced_height);
     }
 }
 

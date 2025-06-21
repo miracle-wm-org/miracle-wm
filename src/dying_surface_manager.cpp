@@ -68,7 +68,10 @@ public:
         }
 
         if (result.opacity)
+        {
+            compositor_state->render_data_manager()->alpha_change(id, result.opacity.value());
             surface_->set_alpha(result.opacity.value());
+        }
 
         if (result.is_complete)
             on_finish();

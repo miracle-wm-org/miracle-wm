@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "primitive.h"
 #include "program_factory.h"
 #include "render_data_manager.h"
-#include "shader_2d.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -97,9 +96,74 @@ private:
         std::optional<mir::geometry::Rectangle> clip_area;
     };
 
+    struct Vertex
+    {
+        glm::vec3 position;
+        glm::vec2 texcoord;
+    };
+
+    class Mesh
+    {
+    public:
+        Mesh(std::vector<Vertex>&& vertices, std::vector<unsigned int>&& indices) :
+            vertices(std::move(vertices)),
+            indices(std::move(indices))
+        {
+        }
+
+        static Mesh rectangle(glm::vec3 position, glm::vec2 size)
+        {
+            glm::vec3 bottomLeft = position;
+            glm::vec3 bottomRight = position + glm::vec3(size.x, 0.f, 0.f);
+            glm::vec3 topLeft = position + glm::vec3(0.0f, size.y, 0.f);
+            glm::vec3 topRight = position + glm::vec3(size.x, size.y, 0.f);
+            std::vector<Vertex> vertices = {
+                { bottomLeft,  glm::vec2(0.0f, 0.0f) },
+                { bottomRight, glm::vec2(1,    0)    },
+                { topRight,    glm::vec2(1,    1)    },
+                { topLeft,     glm::vec2(0,    1)    }
+            };
+
+            std::vector<unsigned int> indices = {
+                0, 1, 2, // First triangle
+                2, 3, 0 // Second triangle
+            };
+
+            return Mesh(std::move(vertices), std::move(indices));
+        }
+
+        void upload_to_gpu()
+        {
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ebo);
+
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_DYNAMIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        }
+
+        void destroy()
+        {
+            glDeleteBuffers(1, &vbo);
+            glDeleteBuffers(1, &ebo);
+        }
+
+        std::vector<Vertex> const vertices;
+        std::vector<unsigned int> const indices;
+
+        GLuint vbo = 0;
+        GLuint ebo = 0;
+    };
+
     DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
+    void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
     void update_gl_viewport();
 
     std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
@@ -113,8 +177,7 @@ private:
     double y_scale = 1.f;
     std::vector<mir::gl::Primitive> mutable primitives;
     std::shared_ptr<mir::graphics::GLRenderingProvider> const gl_interface;
-    Shader2d outline_shader;
-    mutable Model2d outline_model;
+    mutable Mesh border_model;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
 };
