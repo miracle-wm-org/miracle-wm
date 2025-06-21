@@ -70,10 +70,11 @@ void main() {
     float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
 
     float halfBorder = borderWidth * 0.5;
-    float alpha = smoothstep(halfBorder + 1.0, halfBorder, abs(sdf));
+    float borderAlpha = smoothstep(halfBorder + 1.0, halfBorder, abs(sdf));
 
     vec4 contentColor = borderColor;
     contentColor *= alpha;
+    contentColor *= borderAlpha;
     if (contentColor.a < 0.01)
         discard;
 

@@ -405,9 +405,11 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
         glm::value_ptr(screen_to_gl_coords));
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
-    glUniform4f(prog->border_color_uniform, border_config.color.r, border_config.color.g, border_config.color.b, border_config.color.a);
+
+    auto const color = data.data.is_focused ? border_config.focus_color : border_config.color;
+    glUniform4f(prog->border_color_uniform, color.r, color.g, color.b, color.a);
     glUniform1f(prog->border_radius_uniform, border_config.radius);
-    glUniform1f(prog->border_width_uniform, border_config.size);
+    glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
 
     // Next, we set model-specific transforms
     float const alpha = data.data.alpha;
@@ -421,6 +423,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
     glUniform1f(prog->alpha_uniform, alpha);
+    printf("%f\n", alpha);
     glUniform2f(prog->surface_size_uniform, border_rect.size.width.as_value(), border_rect.size.height.as_value());
 
     // Now we can render our model. This should be as easy
