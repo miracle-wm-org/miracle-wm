@@ -727,7 +727,7 @@ void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 
 void Policy::advise_end()
 {
-    if (is_starting_)
+    if (is_starting_ && output_manager->focused())
     {
         is_starting_ = false;
         for (auto const& app : config->get_startup_apps())

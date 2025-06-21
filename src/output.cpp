@@ -152,7 +152,7 @@ std::shared_ptr<Container> Output::create_container(
     return active()->create_container(window_info, hint);
 }
 
-void Output::delete_container(std::shared_ptr<miracle::Container> const& container)
+void Output::delete_container(std::shared_ptr<Container> const& container)
 {
     auto workspace = container->get_workspace();
     if (!workspace)
@@ -250,6 +250,12 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
             to = workspace;
             to_index = i;
         }
+    }
+
+    if (from == to)
+    {
+        active_workspace = to;
+        return true;
     }
 
     if (!to)
