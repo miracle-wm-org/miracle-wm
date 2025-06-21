@@ -477,11 +477,13 @@ TEST_F(CAPIWrapperTest, BorderConfig)
     miracle_config_set_border_config(
         &wrapper->config,
         2,
+        3.f,
         focus_color,
         color);
 
     auto border = miracle_config_get_border_config(&wrapper->config);
     EXPECT_EQ(border.size, 2);
+    EXPECT_THAT(border.radius, Eq(3.f));
     EXPECT_THAT(border.focus_color, ElementsAre(1.0f, 0.0f, 0.0f, 1.0f));
     EXPECT_THAT(border.color, ElementsAre(0.5f, 0.5f, 0.5f, 1.0f));
 }
