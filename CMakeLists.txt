@@ -166,7 +166,8 @@ if(SYSTEMD_INTEGRATION)
         DESTINATION /usr/lib/systemd/user/)
 
     # Install the setup script
-    install(PROGRAMS session/usr/bin/libexec/miracle-wm-session-setup
+    configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
+    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
     install(PROGRAMS session/usr/bin/libexec/wait-sni-ready
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
