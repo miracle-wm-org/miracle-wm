@@ -77,7 +77,7 @@ public:
         return animating_surface.get();
     }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
     MirOrientation orientation() const override { return mir_orientation_normal; }
 #endif
 
