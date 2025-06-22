@@ -144,14 +144,19 @@ Renderer::DrawData Renderer::get_draw_data(
     std::vector<RenderData> const& data) const
 {
     DrawData result = { true };
-    auto surface = renderable.surface_if_any();
-    if (surface)
+    if (auto const surface = renderable.surface_if_any())
     {
         for (auto const& item : data)
         {
             if (item.surface == surface.value())
             {
                 result.data = item;
+
+                if (item.output_area != viewport)
+                {
+                    result.enabled = false;
+                    return result;
+                }
                 break;
             }
         }
@@ -197,6 +202,9 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         // check the first renderable in a group for its surface. We will use that surface to figure
         // out if the renderable needs to draw a border, and we will draw that first if that is the case.
         auto const data = get_draw_data(*r, render_data);
+        if (!data.enabled)
+            continue;
+
         if (data.data.needs_outline)
         {
             if (auto const surface = r->surface_if_any())
@@ -393,7 +401,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
 
     // Next, we update the uniforms for the context, including global transforms
-    auto const inverse_y_transform = glm::mat4 {
+    auto constexpr inverse_y_transform = glm::mat4 {
         1.0, 0.0, 0.0, 0.0,
         0.0, -1.0, 0.0, 0.0,
         0.0, 0.0, 1.0, 0.0,
@@ -423,7 +431,6 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
     glUniform1f(prog->alpha_uniform, alpha);
-    printf("%f\n", alpha);
     glUniform2f(prog->surface_size_uniform, border_rect.size.width.as_value(), border_rect.size.height.as_value());
 
     // Now we can render our model. This should be as easy

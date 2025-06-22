@@ -170,7 +170,8 @@ void LeafContainer::associate_to_window(miral::Window const& in_window)
                     .needs_outline = needs_outline(*this),
                     .is_focused = is_focused(),
                     .transform = get_transform(),
-                    .workspace_transform = workspace_transform(*this) }
+                    .workspace_transform = workspace_transform(*this),
+                    .output_area = get_output()->get_area() }
     });
 }
 
@@ -624,8 +625,14 @@ WorkspaceInterface* LeafContainer::get_workspace() const
     return workspace;
 }
 
-void LeafContainer::set_workspace(miracle::WorkspaceInterface* in)
+void LeafContainer::set_workspace(WorkspaceInterface* in)
 {
+    if (workspace == nullptr || workspace->get_output() != in->get_output())
+    {
+        state->render_data_manager()->output_area_change(
+            id,
+            in ? in->get_output()->get_area() : mir::geometry::Rectangle {});
+    }
     workspace = in;
 }
 
@@ -654,7 +661,8 @@ void LeafContainer::set_transform(glm::mat4 transform_)
 
 void LeafContainer::on_workspace_transform()
 {
-    state->render_data_manager()->workspace_transform_change(id, workspace_transform(*this));
+    auto const& rdm = state->render_data_manager();
+    rdm->workspace_transform_change(id, workspace_transform(*this));
     auto surface = window_.operator std::shared_ptr<mir::scene::Surface>();
     if (surface)
     {

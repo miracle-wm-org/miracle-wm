@@ -409,15 +409,14 @@ void Workspace::set_output(OutputInterface* new_output)
 
 void Workspace::workspace_transform_change_hack()
 {
-    // TODO: This is extra extra slow, especially for animation purposes.
-    //  We should have the [LeafContainer]s in a row and we should probably
-    //  set all container transforms at the same time to avoid taking
-    //  the lock over and over again.
-    for_each_window([&](std::shared_ptr<Container> const& container)
+    for (auto const& container : state->containers())
     {
-        container->on_workspace_transform();
-        return false;
-    });
+        if (auto const locked = container.lock())
+        {
+            if (locked->get_workspace() == this)
+                locked->on_workspace_transform();
+        }
+    }
 }
 
 bool Workspace::is_empty() const
