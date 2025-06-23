@@ -24,13 +24,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mir_toolkit/common.h"
 #include "miral/application_info.h"
 #include "miral/window_specification.h"
+#include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
-#include "output_manager.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -50,7 +50,7 @@ class LeafContainerTest : public ::testing::Test
 {
 public:
     LeafContainerTest() :
-        workspace(std::make_unique<test::MockWorkspace>()),
+        workspace(std::make_shared<testing::NiceMock<test::MockWorkspace>>()),
         parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>(
             state,
             window_controller,
@@ -69,11 +69,20 @@ public:
             config,
             parent,
             state)),
-        session(std::make_shared<test::MockSession>()),
-        surface(std::make_shared<test::MockSurface>()),
+        session(std::make_shared<testing::NiceMock<test::MockSession>>()),
+        surface(std::make_shared<testing::NiceMock<test::MockSurface>>()),
         app(session),
         window(app, surface)
     {
+        workspaces.push_back(workspace);
+
+        ON_CALL(*workspace, get_output())
+            .WillByDefault(testing::Return(output.get()));
+        ON_CALL(*output, get_area())
+            .WillByDefault(testing::ReturnRef(parent_area));
+        ON_CALL(*output, get_workspaces())
+            .WillByDefault(testing::ReturnRef(workspaces));
+
         state->add(leaf_container);
         leaf_container->associate_to_window(window);
     }
@@ -82,8 +91,9 @@ protected:
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
-    std::unique_ptr<OutputManager> output_manager = std::make_unique<OutputManager>(std::make_unique<test::MockOutputFactory>());
-    std::unique_ptr<test::MockWorkspace> workspace;
+    std::shared_ptr<test::MockWorkspace> workspace;
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::shared_ptr<test::MockOutput> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     std::shared_ptr<test::MockParentContainer> parent;
     std::shared_ptr<LeafContainer> leaf_container;
     std::shared_ptr<test::MockSession> session;
@@ -125,6 +135,9 @@ TEST_F(LeafContainerTest, SetsAndGetsStateCorrectly)
 TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 {
     auto new_workspace = std::make_unique<test::MockWorkspace>();
+    EXPECT_CALL(*new_workspace, get_output())
+        .WillOnce(testing::Return(output.get()));
+
     leaf_container->set_workspace(new_workspace.get());
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace.get());
 }

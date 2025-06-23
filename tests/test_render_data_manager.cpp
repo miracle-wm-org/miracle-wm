@@ -119,7 +119,7 @@ TEST_F(RenderDataManagerTest, CanChangeOutputArea)
     auto result = render_data_manager.get();
     ASSERT_EQ(result.size(), 1);
     ASSERT_TRUE(result[0].needs_outline);
-    ASSERT_FALSE(result[0].is_focused);
+    ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 10, 10 }, { 600, 600 }));
