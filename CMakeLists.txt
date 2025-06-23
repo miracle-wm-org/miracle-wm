@@ -169,7 +169,7 @@ if(SYSTEMD_INTEGRATION)
     configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
-    install(PROGRAMS session/usr/bin/libexec/wait-sni-ready
+    install(PROGRAMS session/usr/bin/libexec/miracle-wm-wait-sni-ready
         DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
