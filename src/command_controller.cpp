@@ -840,6 +840,11 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
     if (!can_move_container())
         return false;
 
+    if (!select_workspace(number, back_and_forth))
+        return false;
+
+    auto const o = output_manager->focused();
+
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
@@ -850,15 +855,9 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
             continue;
 
         container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_workspace(
-                output_manager->focused(), number, back_and_forth))
-        {
-            output_manager->focused()->graft(container);
-            if (container->window().value())
-                window_controller->select_active_window(container->window().value());
-        }
+        o->graft(container);
+        if (container->window().value())
+            window_controller->select_active_window(container->window().value());
     }
 
     return true;
@@ -1237,6 +1236,7 @@ void CommandController::move_cursor_to_output(OutputInterface const& output)
     window_controller->move_cursor_to(
         extents.top_left.x.as_int() + extents.size.width.as_int() / 2.f,
         extents.top_left.y.as_int() + extents.size.height.as_int() / 2.f);
+    output_manager->focus(output.id());
 }
 
 bool CommandController::try_select_next_output()
