@@ -87,6 +87,8 @@ parts:
       - mir-platform-graphics-virtual
       - mir-graphics-drivers-nvidia
       - pcre2-utils
+      - python3-tenacity
+      - python3-dbus-next
       - libgl1-mesa-dri
       - libdrm-nouveau2
     prime:
