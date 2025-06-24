@@ -409,9 +409,10 @@ private:
         return result;
     }
 
-    static void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs)
+    void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs) const
     {
         bool has_had_primary = false;
+        bool has_applied_any = false;
         conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
         {
             if (!output.connected || output.modes.empty())
@@ -501,7 +502,14 @@ private:
             output.scale = card.scale;
             output.orientation = card.orientation;
             output.logical_group_id = card.group_id;
+            has_applied_any = true;
         });
+
+        if (!has_applied_any)
+        {
+            mir::log_warning("No output configurations were applied, we will apply the default so that the system is usable");
+            apply_default(conf);
+        }
     }
 };
 

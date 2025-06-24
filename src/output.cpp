@@ -152,7 +152,7 @@ std::shared_ptr<Container> Output::create_container(
     return active()->create_container(window_info, hint);
 }
 
-void Output::delete_container(std::shared_ptr<miracle::Container> const& container)
+void Output::delete_container(std::shared_ptr<Container> const& container)
 {
     auto workspace = container->get_workspace();
     if (!workspace)
@@ -232,6 +232,10 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInt
 
 bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id)
 {
+    // When the workspace becomes active, we try to move this output to the new
+    // workspace transform, which may involve an animation.
+
+    // First, we find where we're coming from and where we're going to.
     std::shared_ptr<WorkspaceInterface> from = nullptr;
     std::shared_ptr<WorkspaceInterface> to = nullptr;
     size_t from_index = 0;
@@ -258,12 +262,20 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         return false;
     }
 
+    // If we're allready there, then there's nothing to do
+    if (from == to)
+    {
+        active_workspace = to;
+        return true;
+    }
+
+    // If we're not coming from anywhere, then we can immediately jump to our destination.
     if (!from)
     {
         active_workspace = to;
         to->show();
 
-        auto to_rectangle = get_workspace_rectangle(to_index);
+        auto const to_rectangle = get_workspace_rectangle(to_index);
         set_position(glm::vec2(
             -to_rectangle.top_left.x.as_int(),
             -to_rectangle.top_left.y.as_int()));
@@ -274,23 +286,25 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         return true;
     }
 
+    // If we have a 'from' and a 'to', we want to animate between them.
+
     // Note: It is very important that [active_workspace] be modified before notifications
     // are sent out.
     active_workspace = to;
 
-    auto from_src = get_workspace_rectangle(from_index);
+    auto const from_src = get_workspace_rectangle(from_index);
+    auto const to_src = get_workspace_rectangle(to_index);
     from->transfer_pinned_windows_to(to);
 
-    geom::Rectangle real {
+    geom::Rectangle const real {
         { geom::X { position_offset.x }, geom::Y { position_offset.y } },
         area.size
     };
-    auto to_src = get_workspace_rectangle(to_index);
-    geom::Rectangle src {
+    geom::Rectangle const src {
         { geom::X { -from_src.top_left.x.as_int() }, geom::Y { from_src.top_left.y.as_int() } },
         area.size
     };
-    geom::Rectangle dest {
+    geom::Rectangle const dest {
         { geom::X { -to_src.top_left.x.as_int() }, geom::Y { to_src.top_left.y.as_int() } },
         area.size
     };
@@ -317,7 +331,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         return true;
     }
 
-    auto animation = std::make_shared<WorkspaceAnimation>(
+    auto const animation = std::make_shared<WorkspaceAnimation>(
         handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
         src,
