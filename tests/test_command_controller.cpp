@@ -82,6 +82,16 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     state->add(container);
     state->focus_container(container);
 
+    auto output = new NiceMock<test::MockOutput>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    EXPECT_CALL(*output, get_workspaces())
+        .WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output_factory, create)
+        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+    output_manager->focus(output->id());
+
     auto workspace = std::make_shared<testing::NiceMock<test::MockWorkspace>>();
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(testing::Return(workspace.get()));

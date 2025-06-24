@@ -262,15 +262,8 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         return false;
     }
 
-    // If we're allready there, then there's nothing to do
-    if (from == to)
-    {
-        active_workspace = to;
-        return true;
-    }
-
     // If we're not coming from anywhere, then we can immediately jump to our destination.
-    if (!from)
+    if (!from || to == from)
     {
         active_workspace = to;
         to->show();
