@@ -395,18 +395,13 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     // Next, we use the clip area as our rendering size
     auto border_rect = data.clip_area.value();
     auto const border_config = config->get_border_config();
-    border_rect.top_left.x = geom::X(border_rect.top_left.x.as_value() - border_config.size / 2.f);
-    border_rect.top_left.y = geom::Y(border_rect.top_left.y.as_value() - border_config.size / 2.f);
+    border_rect.top_left.x = geom::X(viewport.left().as_value() + border_rect.top_left.x.as_value() - border_config.size / 2.f);
+    border_rect.top_left.y = geom::Y(viewport.top().as_value() + border_rect.top_left.y.as_value() - border_config.size / 2.f);
     border_rect.size.width = geom::Width(border_rect.size.width.as_value() + 2 * border_config.size);
     border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
 
     // Next, we update the uniforms for the context, including global transforms
-    auto constexpr inverse_y_transform = glm::mat4 {
-        1.0, 0.0, 0.0, 0.0,
-        0.0, -1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    };
+    auto const inverse_y_transform = display_transform * glm::mat4 { 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(inverse_y_transform));
     glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
