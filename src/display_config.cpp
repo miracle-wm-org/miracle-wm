@@ -435,6 +435,7 @@ private:
                 return;
             }
 
+            mir::log_info("Applying output with name and ID: %s, %d", output.name.c_str(), output.card_id.as_value());
             auto const& card = *config_it;
             output.used = true;
             output.power_mode = mir_power_mode_on;
@@ -453,6 +454,8 @@ private:
                 output.top_left = card.position.value();
             else
                 output.top_left = geom::Point(0, 0);
+
+            mir::log_info("Output position is (%d, %d)", output.top_left.x.as_int(), output.top_left.y.as_int());
 
             auto const& modes = output.modes;
             size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };

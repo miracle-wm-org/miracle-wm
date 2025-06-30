@@ -1,4 +1,3 @@
 #!/bin/sh
 systemd-cat --identifier=miracle-wm @CMAKE_INSTALL_FULL_BINDIR@/miracle-wm \
-    --systemd-session-configure=@CMAKE_INSTALL_FULL_LIBEXECDIR@/miracle-wm-session-setup \
-    --display-config=static=$(systemd-path user-configuration)/miracle-wm-display.yaml
+    --systemd-session-configure=@CMAKE_INSTALL_FULL_LIBEXECDIR@/miracle-wm-session-setup
