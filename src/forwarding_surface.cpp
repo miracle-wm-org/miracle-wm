@@ -79,6 +79,10 @@ public:
 
 #if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
     MirOrientation orientation() const override { return mir_orientation_normal; }
+    auto mirror_mode() const -> MirMirrorMode override
+    {
+        return renderable ? renderable->mirror_mode() : mir_mirror_mode_none;
+    }
 #endif
 
 private:
