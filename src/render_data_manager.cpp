@@ -101,6 +101,19 @@ void RenderDataManager::alpha_change(RenderDataManagerId id, float const alpha)
     }
 }
 
+void RenderDataManager::needs_outline_change(RenderDataManagerId id, bool needs_outline)
+{
+    std::lock_guard lock(mutex);
+    for (auto& data : render_data)
+    {
+        if (data.id == id)
+        {
+            data.needs_outline = needs_outline;
+            return;
+        }
+    }
+}
+
 void RenderDataManager::remove(RenderDataManagerId id)
 {
     std::lock_guard lock(mutex);

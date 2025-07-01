@@ -149,3 +149,23 @@ INSTANTIATE_TEST_SUITE_P(
     RenderDataManagerParameterizedTest,
     RenderDataManagerParameterizedTest,
     ::testing::Values(1, 2, 8, 64, 128, 256, 512, 1024));
+
+TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
+{
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f),
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
+
+    render_data_manager.needs_outline_change(id, false);
+
+    auto result = render_data_manager.get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_FALSE(result[0].needs_outline);
+    ASSERT_TRUE(result[0].is_focused);
+    ASSERT_EQ(result[0].transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
+}
