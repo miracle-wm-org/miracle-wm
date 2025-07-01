@@ -341,6 +341,13 @@ public:
         return cached->clone();
     }
 
+    void on_stop()
+    {
+        // WARNING: This gets around a deinitialization problem in Mir that would
+        // causes us to crash on deallocation.
+        cached.reset();
+    }
+
     std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
     std::mutex mutex;
     std::string path;
@@ -574,5 +581,10 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
             self->display_configuration_controller = server.the_display_configuration_controller();
         });
         return self;
+    });
+
+    server.add_stop_callback([this]
+    {
+        self->on_stop();
     });
 }

@@ -48,7 +48,7 @@ public:
     void unregister_listener(std::shared_ptr<OutputListener> const&);
 
 private:
-    std::vector<std::shared_ptr<OutputListener>> listeners;
+    std::vector<std::weak_ptr<OutputListener>> listeners;
 };
 
 }
