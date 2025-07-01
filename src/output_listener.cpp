@@ -22,19 +22,28 @@ using namespace miracle;
 void OutputListenerMultiplexer::output_created(miral::Output const& output)
 {
     for (auto const& listener : listeners)
-        listener->output_created(output);
+    {
+        if (auto const locked = listener.lock())
+            locked->output_created(output);
+    }
 }
 
 void OutputListenerMultiplexer::output_updated(miral::Output const& updated, miral::Output const& original)
 {
     for (auto const& listener : listeners)
-        listener->output_updated(updated, original);
+    {
+        if (auto const locked = listener.lock())
+            locked->output_updated(updated, original);
+    }
 }
 
 void OutputListenerMultiplexer::output_deleted(miral::Output const& output)
 {
     for (auto const& listener : listeners)
-        listener->output_deleted(output);
+    {
+        if (auto const locked = listener.lock())
+            locked->output_deleted(output);
+    }
 }
 
 void OutputListenerMultiplexer::register_listener(std::shared_ptr<OutputListener> const& listener)
@@ -44,5 +53,14 @@ void OutputListenerMultiplexer::register_listener(std::shared_ptr<OutputListener
 
 void OutputListenerMultiplexer::unregister_listener(std::shared_ptr<OutputListener> const& listener)
 {
-    std::erase(listeners, listener);
+    for (auto it = listeners.begin(); it != listeners.end(); ++it)
+    {
+        if (it->expired())
+            it = listeners.erase(it);
+        else if (auto locked = it->lock())
+        {
+            if (locked.get() == listener.get())
+                it = listeners.erase(it);
+        }
+    }
 }

@@ -115,6 +115,7 @@ int main(int argc, char const* argv[])
         output_listener->register_listener(extension);
         return extension;
     } });
+    wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
         { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener, display_config),
