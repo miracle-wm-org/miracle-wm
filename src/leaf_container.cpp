@@ -551,6 +551,7 @@ void LeafContainer::commit_changes()
     if (next_state)
     {
         window_controller->change_state(window_, next_state.value());
+        state->render_data_manager()->needs_outline_change(id, next_state != mir_window_state_fullscreen);
         next_state.reset();
         constrain();
     }
