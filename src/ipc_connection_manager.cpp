@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "command_controller.h"
 #include "config.h"
 #include "ipc_command_executor.h"
+#include "ipc_connection_manager.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -160,29 +161,27 @@ IpcConnectionManager::IpcConnectionManager(
 
         auto const mir_fd = mir::Fd { client_fd };
         std::lock_guard lock(clients_mutex);
-        clients.push_back({ mir_fd,
-            runner.register_fd_handler(mir_fd, [this](int const fd)
+        auto client = std::make_shared<IpcClient>();
+        client->client_fd = mir_fd;
+        client->handle = runner.register_fd_handler(mir_fd, [client = client, this](int const fd)
         {
-            std::lock_guard lock(clients_mutex);
-            auto& client = get_client(fd);
-
             uint32_t read_available;
-            if (ioctl(client.client_fd, FIONREAD, &read_available) == -1)
+            if (ioctl(client->client_fd, FIONREAD, &read_available) == -1)
             {
                 mir::log_error("Unable to read IPC socket buffer size");
-                disconnect(client);
+                disconnect(*client);
                 return;
             }
 
-            if (client.pending_read_length > 0)
+            if (client->pending_read_length > 0)
             {
-                if (read_available >= client.pending_read_length)
+                if (read_available >= client->pending_read_length)
                 {
                     // Reset pending values.
-                    uint32_t const pending_length = client.pending_read_length;
-                    IpcType const pending_type = client.pending_type;
-                    client.pending_read_length = 0;
-                    handle_command(client, pending_length, pending_type);
+                    uint32_t const pending_length = client->pending_read_length;
+                    IpcType const pending_type = client->pending_type;
+                    client->pending_read_length = 0;
+                    handle_command(*client, pending_length, pending_type);
                 }
                 return;
             }
@@ -194,34 +193,36 @@ IpcConnectionManager::IpcConnectionManager(
 
             uint8_t buf[IPC_HEADER_SIZE];
             // Should be fully available, because read_available >= IPC_HEADER_SIZE
-            ssize_t const received = recv(client.client_fd, buf, IPC_HEADER_SIZE, 0);
+            ssize_t const received = recv(client->client_fd, buf, IPC_HEADER_SIZE, 0);
             if (received == -1)
             {
                 mir::log_error("Unable to receive header from IPC client");
-                disconnect(client);
+                disconnect(*client);
                 return;
             }
 
             if (memcmp(buf, ipc_magic, sizeof(ipc_magic)) != 0)
             {
                 mir::log_error("IPC header check failed");
-                disconnect(client);
+                disconnect(*client);
                 return;
             }
 
-            memcpy(&client.pending_read_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
-            memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
-            mir::log_debug("Received request from IPC client: %d", static_cast<int>(client.pending_type));
+            memcpy(&client->pending_read_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
+            memcpy(&client->pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
+            mir::log_debug("Received request from IPC client: %d", static_cast<int>(client->pending_type));
 
-            if (read_available - received >= static_cast<long>(client.pending_read_length))
+            if (read_available - received >= static_cast<long>(client->pending_read_length))
             {
                 // Reset pending values.
-                uint32_t const pending_length = client.pending_read_length;
-                IpcType const pending_type = client.pending_type;
-                client.pending_read_length = 0;
-                handle_command(client, pending_length, pending_type);
+                uint32_t const pending_length = client->pending_read_length;
+                IpcType const pending_type = client->pending_type;
+                client->pending_read_length = 0;
+                handle_command(*client, pending_length, pending_type);
             }
-        }) });
+        });
+
+        clients.push_back(client);
     });
 }
 
@@ -238,12 +239,12 @@ void IpcConnectionManager::on_workspace_created(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
@@ -258,12 +259,12 @@ void IpcConnectionManager::on_workspace_removed(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
@@ -285,12 +286,12 @@ void IpcConnectionManager::on_workspace_focused(
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
@@ -305,12 +306,12 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
     }
 }
 
@@ -320,12 +321,12 @@ void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_MODE, response);
+        send_reply(*client, IpcType::IPC_EVENT_MODE, response);
     }
 }
 
@@ -337,16 +338,16 @@ void IpcConnectionManager::on_shutdown()
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_SHUTDOWN, response);
+        send_reply(*client, IpcType::IPC_EVENT_SHUTDOWN, response);
     }
 
     for (auto& client : clients)
-        disconnect(client);
+        disconnect(*client);
 }
 
 void IpcConnectionManager::send_window_event(const char* event, Container const& container)
@@ -360,12 +361,12 @@ void IpcConnectionManager::send_window_event(const char* event, Container const&
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
         {
             continue;
         }
 
-        send_reply(client, IpcType::IPC_EVENT_WINDOW, str);
+        send_reply(*client, IpcType::IPC_EVENT_WINDOW, str);
     }
 }
 
@@ -404,22 +405,12 @@ void IpcConnectionManager::on_window_marked(Container const& container)
     send_window_event("mark", container);
 }
 
-IpcConnectionManager::IpcClient& IpcConnectionManager::get_client(int fd)
-{
-    for (auto& client : clients)
-    {
-        if (client.client_fd == fd)
-            return client;
-    }
-
-    throw std::runtime_error("Could not find IPC client");
-}
-
 void IpcConnectionManager::disconnect(IpcClient& client)
 {
-    auto const it = std::ranges::find_if(clients, [&](IpcClient const& other)
+    std::lock_guard lock(clients_mutex);
+    auto const it = std::ranges::find_if(clients, [&](std::shared_ptr<IpcClient> const& other)
     {
-        return other.client_fd.operator int() == client.client_fd.operator int();
+        return other->client_fd.operator int() == client.client_fd.operator int();
     });
     if (it != clients.end())
     {
@@ -477,7 +468,7 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
     {
         for (auto& other_client : clients)
         {
-            if ((other_client.subscribed_events & event_mask(IpcType::IPC_EVENT_TICK)) == 0)
+            if ((other_client->subscribed_events & event_mask(IpcType::IPC_EVENT_TICK)) == 0)
             {
                 continue;
             }
@@ -486,7 +477,7 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
                 { "first",   false            },
                 { "payload", std::string(buf) }
             };
-            send_reply(other_client, IpcType::IPC_EVENT_TICK, to_string(response));
+            send_reply(*other_client, IpcType::IPC_EVENT_TICK, to_string(response));
         }
     }
 

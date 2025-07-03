@@ -74,21 +74,18 @@ private:
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
-    std::vector<IpcClient> clients;
+    std::vector<std::shared_ptr<IpcClient>> clients;
 
-    /// Retrieves the client by [fd]. Must be called under lock.
-    IpcClient& get_client(int fd);
-
-    /// Disconnects the provided client. Must be called under lock.
+    /// Disconnects the provided client.
     void disconnect(IpcClient& client);
 
-    /// Handles a command for the client. Must be called under lock.
+    /// Handles a command for the client.
     void handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type);
 
-    /// Sends a reply to the client. Must be called under lock.
+    /// Sends a reply to the client.
     void send_reply(IpcClient& client, IpcType command_type, std::string const& payload);
 
-    /// Handles writeable for the client. Must be called under lock.
+    /// Handles writeable for the client.
     void handle_writeable(IpcClient& client);
 
     void send_window_event(const char* event, Container const&);
