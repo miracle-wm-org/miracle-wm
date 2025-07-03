@@ -234,11 +234,21 @@ void Renderer::draw(
     DrawData const& data) const
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
-    auto const clip_area = data.clip_area;
+    auto const clip_area = renderable.clip_area();
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        glScissor(clip_area->top_left.x.as_int(), clip_area->top_left.y.as_int(), clip_area->size.width.as_int(), clip_area->size.height.as_int());
+        auto clip_x = clip_area.value().top_left.x.as_int();
+        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
+        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int() - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
+        glm::vec4 clip_pos(clip_x, clip_y, 0, 1);
+        clip_pos = display_transform * clip_pos;
+
+        glScissor(
+            (int)clip_pos.x - viewport.top_left.x.as_int(),
+            (int)clip_pos.y,
+            clip_area.value().size.width.as_int(),
+            clip_area.value().size.height.as_int());
     }
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
@@ -259,6 +269,7 @@ void Renderer::draw(
                 glUniform1i(prog->tex_uniforms[i], (int)i);
             }
         }
+
         glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
             glm::value_ptr(display_transform));
         glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
@@ -268,9 +279,9 @@ void Renderer::draw(
     glActiveTexture(GL_TEXTURE0);
 
     auto const& rect = renderable.screen_position();
-    GLfloat const top_left_x = (float)rect.top_left.x.as_int();
-    GLfloat const top_left_y = (float)rect.top_left.y.as_int();
-    glUniform2f(prog->topleft_uniform, top_left_x, top_left_y);
+    GLfloat centrex = rect.top_left.x.as_int() + rect.size.width.as_int() / 2.0f;
+    GLfloat centrey = rect.top_left.y.as_int() + rect.size.height.as_int() / 2.0f;
+    glUniform2f(prog->center_uniform, centrex, centrey);
 
     glm::mat4 transform = data.data.transform;
     if (texture->layout() == mg::gl::Texture::Layout::TopRowFirst)
@@ -395,8 +406,8 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     // Next, we use the clip area as our rendering size
     auto border_rect = data.clip_area.value();
     auto const border_config = config->get_border_config();
-    border_rect.top_left.x = geom::X(viewport.left().as_value() + border_rect.top_left.x.as_value() - border_config.size / 2.f);
-    border_rect.top_left.y = geom::Y(viewport.top().as_value() + border_rect.top_left.y.as_value() - border_config.size / 2.f);
+    border_rect.top_left.x = geom::X(viewport.left().as_value() + border_rect.top_left.x.as_value());
+    border_rect.top_left.y = geom::Y(viewport.top().as_value() + border_rect.top_left.y.as_value());
     border_rect.size.width = geom::Width(border_rect.size.width.as_value() + 2 * border_config.size);
     border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
 
@@ -422,7 +433,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
             glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
         glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
 
-    glUniform2f(prog->topleft_uniform, -0.5, -0.5);
+    glUniform2f(prog->center_uniform, -0.5, -0.5);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(transform));
     glUniform1f(prog->alpha_uniform, alpha);
