@@ -960,7 +960,7 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
     auto const id = reinterpret_cast<std::uintptr_t>(this);
     return {
         { "id",                   id                                                                                                                                                                                                                                                 },
-        { "name",                 "Parent #" + std::to_string(id)                                                                                                                                                                                                                    },
+        { "name",                 to_string(scheme)                                                                                                                                                                                                                                  },
         { "rect",                 {
                       { "x", logical_area.top_left.x.as_int() },
                       { "y", logical_area.top_left.y.as_int() },
@@ -1002,7 +1002,7 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "shell",                "miracle-wm"                                                                                                                                                                                                                                       }, // TODO
         { "inhibit_idle",         false                                                                                                                                                                                                                                              },
         { "idle_inhibitors",      {}                                                                                                                                                                                                                                                 },
-        { "window_properties",    {}                                                                                                                                                                                                                                                 }, // TODO
+        { "window_properties",    nlohmann::json::object()                                                                                                                                                                                                                           }, // TODO
         { "nodes",                containers_json                                                                                                                                                                                                                                    }
     };
 }
