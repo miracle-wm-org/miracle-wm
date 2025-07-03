@@ -39,11 +39,11 @@ public:
         std::shared_ptr<AbstractCommandController> const&,
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
-    void on_created(uint32_t id) override;
-    void on_removed(uint32_t id) override;
-    void on_focused(std::optional<uint32_t>, uint32_t) override;
+    void on_workspace_created(uint32_t id) override;
+    void on_workspace_removed(uint32_t id) override;
+    void on_workspace_focused(std::optional<uint32_t>, uint32_t) override;
     void on_workspace_renamed(uint32_t) override;
-    void on_changed(WindowManagerMode mode) override;
+    void on_mode_changed(WindowManagerMode mode) override;
     void on_shutdown();
 
 private:
@@ -58,6 +58,7 @@ private:
         int subscribed_events = 0;
     };
 
+    std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
@@ -65,11 +66,19 @@ private:
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<IpcClient> clients;
 
-    void disconnect(IpcClient& client);
+    /// Retrieves the client by [fd]. Must be called under lock.
     IpcClient& get_client(int fd);
 
+    /// Disconnects the provided client. Must be called under lock.
+    void disconnect(IpcClient& client);
+
+    /// Handles a command for the client. Must be called under lock.
     void handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type);
+
+    /// Sends a reply to the client. Must be called under lock.
     void send_reply(IpcClient& client, IpcType command_type, std::string const& payload);
+
+    /// Handles writeable for the client. Must be called under lock.
     void handle_writeable(IpcClient& client);
 };
 }

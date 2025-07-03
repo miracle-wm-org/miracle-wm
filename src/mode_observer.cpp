@@ -24,6 +24,6 @@ void ModeObserverRegistrar::advise_changed(WindowManagerMode mode)
     for (auto& observer : observers)
     {
         if (!observer.expired())
-            observer.lock()->on_changed(mode);
+            observer.lock()->on_mode_changed(mode);
     }
 }

@@ -72,9 +72,9 @@ public:
     {
     }
 
-    void on_created(uint32_t) override { }
-    void on_removed(uint32_t) override { }
-    void on_focused(std::optional<uint32_t> old, uint32_t next) override
+    void on_workspace_created(uint32_t) override { }
+    void on_workspace_removed(uint32_t) override { }
+    void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
         if (old)
         {

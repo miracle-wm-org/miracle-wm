@@ -159,9 +159,11 @@ IpcConnectionManager::IpcConnectionManager(
         }
 
         auto const mir_fd = mir::Fd { client_fd };
+        std::lock_guard lock(clients_mutex);
         clients.push_back({ mir_fd,
             runner.register_fd_handler(mir_fd, [this](int const fd)
         {
+            std::lock_guard lock(clients_mutex);
             auto& client = get_client(fd);
 
             uint32_t read_available;
@@ -209,7 +211,7 @@ IpcConnectionManager::IpcConnectionManager(
 
             memcpy(&client.pending_read_length, buf + sizeof(ipc_magic), sizeof(uint32_t));
             memcpy(&client.pending_type, buf + sizeof(ipc_magic) + sizeof(uint32_t), sizeof(uint32_t));
-            mir::log_debug("Received request from IPC client: %d", (int)client.pending_type);
+            mir::log_debug("Received request from IPC client: %d", static_cast<int>(client.pending_type));
 
             if (read_available - received >= static_cast<long>(client.pending_read_length))
             {
@@ -223,15 +225,17 @@ IpcConnectionManager::IpcConnectionManager(
     });
 }
 
-void IpcConnectionManager::on_created(uint32_t id)
+void IpcConnectionManager::on_workspace_created(uint32_t id)
 {
-    json j = {
+    json const j = {
         { "change",  "init"                                    },
         { "old",     nullptr                                   },
         { "current", command_controller->workspace_to_json(id) }
     };
 
     auto const serialized_value = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -243,14 +247,15 @@ void IpcConnectionManager::on_created(uint32_t id)
     }
 }
 
-void IpcConnectionManager::on_removed(uint32_t id)
+void IpcConnectionManager::on_workspace_removed(uint32_t id)
 {
-    json j = {
+    json const j = {
         { "change",  "empty"                                   },
         { "current", command_controller->workspace_to_json(id) }
     };
 
     auto const serialized_value = to_string(j);
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -262,7 +267,7 @@ void IpcConnectionManager::on_removed(uint32_t id)
     }
 }
 
-void IpcConnectionManager::on_focused(
+void IpcConnectionManager::on_workspace_focused(
     std::optional<uint32_t> previous_id,
     uint32_t current_id)
 {
@@ -277,6 +282,7 @@ void IpcConnectionManager::on_focused(
         j["old"] = nullptr;
 
     auto const serialized_value = to_string(j);
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -290,12 +296,13 @@ void IpcConnectionManager::on_focused(
 
 void IpcConnectionManager::on_workspace_renamed(uint32_t id)
 {
-    json j = {
+    json const j = {
         { "change",  "rename"                                  },
         { "current", command_controller->workspace_to_json(id) }
     };
 
     auto const serialized_value = to_string(j);
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
@@ -307,9 +314,10 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
     }
 }
 
-void IpcConnectionManager::on_changed(WindowManagerMode mode)
+void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
 {
     auto const response = to_string(mode_event_to_json(mode));
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
@@ -326,6 +334,7 @@ void IpcConnectionManager::on_shutdown()
     auto const response = to_string(json({
         { "change", "exit" }
     }));
+    std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
         if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
@@ -495,7 +504,7 @@ ssize_t write_nosigpipe(int fd, void* buf, size_t len)
 }
 }
 
-void IpcConnectionManager::handle_writeable(miracle::IpcConnectionManager::IpcClient& client)
+void IpcConnectionManager::handle_writeable(IpcClient& client)
 {
     while (client.write_buffer_len > 0)
     {

@@ -15,29 +15,22 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLEWM_MODE_OBSERVER_H
-#define MIRACLEWM_MODE_OBSERVER_H
+#ifndef WINDOW_OBSERVER_H
+#define WINDOW_OBSERVER_H
 
-#include "compositor_state.h"
-#include "observer_registrar.h"
+#include <memory>
 
 namespace miracle
 {
+class LeafContainer;
 
-class ModeObserver
+class WindowObserver
 {
 public:
-    virtual ~ModeObserver() = default;
-    virtual void on_mode_changed(WindowManagerMode mode) = 0;
-};
-
-class ModeObserverRegistrar : public ObserverRegistrar<ModeObserver>
-{
-public:
-    ModeObserverRegistrar() = default;
-    void advise_changed(WindowManagerMode mode);
+    virtual ~WindowObserver() = default;
+    virtual void on_window_created(std::shared_ptr<LeafContainer> const&);
 };
 
 }
 
-#endif
+#endif // WINDOW_OBSERVER_H

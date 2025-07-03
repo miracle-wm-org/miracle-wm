@@ -24,7 +24,7 @@ void WorkspaceObserverRegistrar::advise_created(uint32_t id)
     for (auto& observer : observers)
     {
         if (!observer.expired())
-            observer.lock()->on_created(id);
+            observer.lock()->on_workspace_created(id);
     }
 }
 
@@ -33,7 +33,7 @@ void WorkspaceObserverRegistrar::advise_removed(uint32_t id)
     for (auto& observer : observers)
     {
         if (!observer.expired())
-            observer.lock()->on_removed(id);
+            observer.lock()->on_workspace_removed(id);
     }
 }
 
@@ -44,7 +44,7 @@ void WorkspaceObserverRegistrar::advise_focused(
     for (auto& observer : observers)
     {
         if (!observer.expired())
-            observer.lock()->on_focused(previous_id, current_id);
+            observer.lock()->on_workspace_focused(previous_id, current_id);
     }
 }
 
