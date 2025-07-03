@@ -32,19 +32,18 @@ uniform mat4 screen_to_gl_coords;
 uniform mat4 display_transform;
 uniform mat4 workspace_transform;
 uniform mat4 transform;
-uniform vec2 top_left;
+uniform vec2 center;
 
 varying vec2 v_texcoord;
 
 void main() {
-   vec4 p = vec4(top_left, 0.0, 0.0);
+   vec4 p = vec4(center, 0.0, 0.0);
    vec4 transformed = (transform * (vec4(position, 1.0) - p)) + p;
    gl_Position = display_transform * screen_to_gl_coords * workspace_transform * transformed;
    v_texcoord = texcoord;
 }
 )";
 
-// TODO: Pass the color through
 const GLchar* const fragment_border_src = R"(
 
 #ifdef GL_ES
@@ -101,8 +100,8 @@ miracle::ProgramData::ProgramData(GLuint program_id)
         auto const uniform_name = std::string { "tex[" } + std::to_string(i) + "]";
         tex_uniforms[i] = glGetUniformLocation(id, uniform_name.c_str());
     }
-    topleft_uniform = glGetUniformLocation(id, "top_left");
-    if (topleft_uniform < 0)
+    center_uniform = glGetUniformLocation(id, "center");
+    if (center_uniform < 0)
         mir::log_warning("Program is missing centre_uniform");
 
     display_transform_uniform = glGetUniformLocation(id, "display_transform");
