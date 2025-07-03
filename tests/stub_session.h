@@ -18,6 +18,7 @@
 #define MIRACLE_WM_STUB_SESSION_H
 
 #include <mir/scene/session.h>
+#include <mir/version.h>
 
 namespace miracle::test
 {
@@ -43,18 +44,21 @@ public:
     {
     }
 
-    void send_input_config(MirInputConfig const& config) override
-    {
-    }
-
     [[nodiscard]] auto default_surface() const -> std::shared_ptr<mir::scene::Surface> override
     {
         return std::shared_ptr<mir::scene::Surface>();
     }
 
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION < 22)
     void set_lifecycle_state(MirLifecycleState state) override
     {
     }
+
+    void send_input_config(MirInputConfig const& config) override
+    {
+    }
+
+#endif
 
     void hide() override
     {

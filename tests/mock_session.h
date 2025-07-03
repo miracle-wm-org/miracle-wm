@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <mir/scene/session.h>
 #include <mir/shell/surface_specification.h>
+#include <mir/version.h>
 
 namespace miracle
 {
@@ -32,9 +33,11 @@ namespace test
         MOCK_METHOD(mir::Fd, socket_fd, (), (const, override));
         MOCK_METHOD(std::string, name, (), (const, override));
         MOCK_METHOD(void, send_error, (mir::ClientVisibleError const& error), (override));
-        MOCK_METHOD(void, send_input_config, (MirInputConfig const& config), (override));
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, default_surface, (), (const, override));
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION < 22)
+        MOCK_METHOD(void, send_input_config, (MirInputConfig const& config), (override));
         MOCK_METHOD(void, set_lifecycle_state, (MirLifecycleState state), (override));
+#endif
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, start_prompt_session, (), (override));
