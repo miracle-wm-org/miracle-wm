@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_group_container.h"
+#include "container_listener.h"
 #include "layout_scheme.h"
 #include "leaf_container.h"
 #include "output_interface.h"
@@ -218,6 +219,11 @@ void Container::mark(
         marks.push_back(mark);
     else
         marks = { mark };
+
+    for_each_observer([this](ContainerListener* listener)
+    {
+        listener->on_container_mark(*this);
+    });
 }
 
 void Container::unmark(std::string const& mark)
@@ -225,11 +231,21 @@ void Container::unmark(std::string const& mark)
     auto const it = std::ranges::find(marks, mark);
     if (it != marks.end())
         marks.erase(it);
+
+    for_each_observer([this](ContainerListener* listener)
+    {
+        listener->on_container_mark(*this);
+    });
 }
 
 void Container::unmark_all()
 {
     marks.clear();
+
+    for_each_observer([this](ContainerListener* listener)
+    {
+        listener->on_container_mark(*this);
+    });
 }
 
 std::vector<std::string> const& Container::get_marks() const

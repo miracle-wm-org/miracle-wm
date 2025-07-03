@@ -18,17 +18,49 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef WINDOW_OBSERVER_H
 #define WINDOW_OBSERVER_H
 
-#include <memory>
+#include "observer_registrar.h"
 
 namespace miracle
 {
-class LeafContainer;
+class Container;
 
+/// This observer implements a general interface for:
+/// https://i3wm.org/docs/ipc.html#_window_event
 class WindowObserver
 {
 public:
     virtual ~WindowObserver() = default;
-    virtual void on_window_created(std::shared_ptr<LeafContainer> const&);
+    virtual void on_window_created(Container const&) = 0;
+    virtual void on_window_closed(Container const&) = 0;
+    virtual void on_window_focused(Container const&) = 0;
+    virtual void on_window_fullscreen(Container const&) = 0;
+    virtual void on_window_move(Container const&) = 0;
+    virtual void on_window_float(Container const&) = 0;
+    virtual void on_window_marked(Container const&) = 0;
+};
+
+class NullWindowObserver : public WindowObserver
+{
+public:
+    void on_window_created(Container const&) override { }
+    void on_window_closed(Container const&) override { }
+    void on_window_focused(Container const&) override { }
+    void on_window_fullscreen(Container const&) override { }
+    void on_window_move(Container const&) override { }
+    void on_window_float(Container const&) override { }
+    void on_window_marked(Container const&) override { }
+};
+
+class WindowObserverRegistrar : public ObserverRegistrar<WindowObserver>
+{
+public:
+    void advise_created(Container const&) const;
+    void advise_closed(Container const&) const;
+    void advise_window_focused(Container const&) const;
+    void advise_window_fullscreen(Container const&) const;
+    void advise_window_move(Container const&) const;
+    void advise_window_float(Container const&) const;
+    void advise_window_marked(Container const&) const;
 };
 
 }

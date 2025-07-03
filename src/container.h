@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_CONTAINER_H
 
 #include "direction.h"
+#include "observer_registrar.h"
 #include "scratchpad_state.h"
 
 #include "layout_scheme.h"
@@ -42,6 +43,7 @@ class ContainerGroupContainer;
 class WorkspaceInterface;
 class OutputInterface;
 class ContainerScope;
+class ContainerListener;
 
 ContainerType container_type_from_string(std::string const& str);
 
@@ -50,7 +52,7 @@ ContainerType container_type_from_string(std::string const& str);
 /// as a logical rectangle on a [Workspace] upon which you can perform some
 /// actions. Depending on the type of [Container], particular actions may
 /// result in noops.
-class Container : public std::enable_shared_from_this<Container>
+class Container : public std::enable_shared_from_this<Container>, public ObserverRegistrar<ContainerListener>
 {
 public:
     virtual ~Container() = default;

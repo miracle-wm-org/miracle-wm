@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container_group_container.h"
+#include "container_listener.h"
 #include "container_scope.h"
 #include "jpcre2.h"
 #include "output_interface.h"
@@ -40,8 +41,8 @@ using namespace miracle;
 namespace
 {
 std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
-    std::shared_ptr<Container> node,
-    miracle::Direction direction)
+    std::shared_ptr<Container> const& node,
+    Direction direction)
 {
     // This function attempts to get the first window within a node provided the direction that we are coming
     // from as a hint. If the node that we want to move to has the same direction as that which we are coming
@@ -311,6 +312,15 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             mods.size() = visible_area.size;
         }
 
+        if (state == mir_window_state_fullscreen
+            || window_controller->get_state(window_) == mir_window_state_fullscreen)
+        {
+            for_each_observer([this](ContainerListener* observer)
+            {
+                observer->on_container_fullscreen(*this);
+            });
+        }
+
         if (state == mir_window_state_fullscreen)
             window_controller->noclip(window_);
         else
@@ -550,7 +560,17 @@ void LeafContainer::commit_changes()
 {
     if (next_state)
     {
+        if (next_state.value() == mir_window_state_fullscreen
+            || window_controller->get_state(window_) == mir_window_state_fullscreen)
+        {
+            for_each_observer([this](ContainerListener* observer)
+            {
+                observer->on_container_fullscreen(*this);
+            });
+        }
+
         window_controller->change_state(window_, next_state.value());
+
         state->render_data_manager()->needs_outline_change(id, next_state != mir_window_state_fullscreen);
         next_state.reset();
         constrain();
@@ -577,6 +597,11 @@ void LeafContainer::commit_changes()
 
             window_controller->set_rectangle(window_, previous, next_visible_area, next_with_animations);
             next_with_animations = true;
+
+            for_each_observer([this](ContainerListener* observer)
+            {
+                observer->on_container_moved(*this);
+            });
         }
     }
 }
@@ -910,6 +935,10 @@ bool LeafContainer::drag_stop()
     auto visible_area = get_visible_area();
     geom::Rectangle previous = { dragged_position, visible_area.size };
     window_controller->set_rectangle(window_, previous, visible_area);
+    for_each_observer([&](ContainerListener* observer)
+    {
+        observer->on_container_moved(*this);
+    });
     constrain();
     return true;
 }

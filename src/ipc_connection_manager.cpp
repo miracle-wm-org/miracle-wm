@@ -349,6 +349,61 @@ void IpcConnectionManager::on_shutdown()
         disconnect(client);
 }
 
+void IpcConnectionManager::send_window_event(const char* event, Container const& container)
+{
+    auto const j = json({
+        { "change",    event                    },
+        { "container", container.to_json(false) }  // TODO: Handle workspace visibility
+    });
+    auto const str = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client.subscribed_events & event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(client, IpcType::IPC_EVENT_WINDOW, str);
+    }
+}
+
+void IpcConnectionManager::on_window_created(Container const& container)
+{
+    send_window_event("new", container);
+}
+
+void IpcConnectionManager::on_window_closed(Container const& container)
+{
+    send_window_event("close", container);
+}
+
+void IpcConnectionManager::on_window_focused(Container const& container)
+{
+    send_window_event("focus", container);
+}
+
+void IpcConnectionManager::on_window_fullscreen(Container const& container)
+{
+    send_window_event("fullscreen_mode", container);
+}
+
+void IpcConnectionManager::on_window_move(Container const& container)
+{
+    send_window_event("move", container);
+}
+
+void IpcConnectionManager::on_window_float(Container const& container)
+{
+    send_window_event("floating", container);
+}
+
+void IpcConnectionManager::on_window_marked(Container const& container)
+{
+    send_window_event("mark", container);
+}
+
 IpcConnectionManager::IpcClient& IpcConnectionManager::get_client(int fd)
 {
     for (auto& client : clients)

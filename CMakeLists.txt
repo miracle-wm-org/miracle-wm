@@ -124,6 +124,7 @@ add_library(miracle-wm-implementation
     src/display_config.cpp
     src/display_config.h
     src/tilling_algorithms.cpp src/tiling_algorithms.h
+    src/window_observer.h src/window_observer.cpp
 )
 
 add_executable(miracle-wm
