@@ -325,8 +325,9 @@ nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
                                                             { "application", "none" },
                                                             { "user", "visible" },
                                                         }                                                                                                                                      },
-        { "window_properties",    {}                                                                                                                                                                                       }, // TODO
-        { "nodes",                std::vector<int>()                                                                                                                                                                       }
+        { "window_properties",    nlohmann::json::object()                                                                                                                                                                 }, // TODO
+        { "nodes",                std::vector<int>()                                                                                                                                                                       },
+        { "window_properties",    nlohmann::json::object()                                                                                                                                                                 }
     };
 }
 

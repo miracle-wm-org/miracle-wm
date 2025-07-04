@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "resize_service.h"
 #include "scratchpad.h"
 #include "window_manager_tools_window_controller.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 
 #include <memory>
@@ -55,6 +56,7 @@ class OutputManager;
 class DyingSurfaceManager;
 class OutputListenerMultiplexer;
 class DisplayConfig;
+class WindowObserverRegistrar;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -140,6 +142,7 @@ private:
     std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
+    std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

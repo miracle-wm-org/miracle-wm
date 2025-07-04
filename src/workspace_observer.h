@@ -32,9 +32,9 @@ class WorkspaceObserver
 {
 public:
     virtual ~WorkspaceObserver() = default;
-    virtual void on_created(uint32_t) = 0;
-    virtual void on_removed(uint32_t) = 0;
-    virtual void on_focused(std::optional<uint32_t>, uint32_t) = 0;
+    virtual void on_workspace_created(uint32_t) = 0;
+    virtual void on_workspace_removed(uint32_t) = 0;
+    virtual void on_workspace_focused(std::optional<uint32_t>, uint32_t) = 0;
     virtual void on_workspace_renamed(uint32_t) = 0;
 };
 

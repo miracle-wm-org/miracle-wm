@@ -22,12 +22,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "constants.h"
 #include "container_group_container.h"
+#include "container_listener.h"
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
 #include "output_factory.h"
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 
 #include <iostream>
@@ -64,7 +66,7 @@ private:
 };
 }
 
-class Policy::Self : public WorkspaceObserver
+class Policy::Self : public WorkspaceObserver, public virtual ContainerListener
 {
 public:
     explicit Self(Policy& policy) :
@@ -72,9 +74,9 @@ public:
     {
     }
 
-    void on_created(uint32_t) override { }
-    void on_removed(uint32_t) override { }
-    void on_focused(std::optional<uint32_t> old, uint32_t next) override
+    void on_workspace_created(uint32_t) override { }
+    void on_workspace_removed(uint32_t) override { }
+    void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
         if (old)
         {
@@ -97,6 +99,26 @@ public:
         }
     }
     void on_workspace_renamed(uint32_t) override { }
+
+    void on_container_fullscreen(Container const& container) override
+    {
+        policy.window_observer_registrar->advise_window_fullscreen(container);
+    }
+
+    void on_container_moved(Container const& container) override
+    {
+        policy.window_observer_registrar->advise_window_move(container);
+    }
+
+    void on_container_float(Container const& container) override
+    {
+        policy.window_observer_registrar->advise_window_float(container);
+    }
+
+    void on_container_mark(Container const& container) override
+    {
+        policy.window_observer_registrar->advise_window_marked(container);
+    }
 
     Policy& policy;
     std::recursive_mutex mutex;
@@ -152,11 +174,13 @@ Policy::Policy(
         state,
         window_controller,
         config,
-        animator))
+        animator)),
+    window_observer_registrar(std::make_unique<WindowObserverRegistrar>())
 {
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
+    window_observer_registrar->register_interest(ipc_connection_manager);
     animator_loop->start();
 
     // TODO: This is a hack until we figure out what is happening with
@@ -417,6 +441,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     container->on_open();
     state->add(container);
 
+    window_observer_registrar->advise_created(*container);
+    container->register_interest(self);
     pending_allocation.container_type = ContainerType::none;
 }
 
@@ -484,6 +510,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         container->on_focus_gained();
         if (workspace)
             workspace->advise_focus_gained(container);
+        window_observer_registrar->advise_window_focused(*container);
         break;
     }
     }
@@ -520,6 +547,10 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         return;
     }
 
+    // Important: We advise closed before the window has been removed so that it
+    // still has valid references inside of it which consumers can use (e.g.
+    // a valid parent container)
+    window_observer_registrar->advise_closed(*container);
     if (auto output = container->get_output())
         output->delete_container(container);
     else
@@ -532,6 +563,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     state->remove(container);
 
     dying_surface_manager->animate_dying_surface(container);
+    container->unregister_interest(self.get());
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "command_controller.h"
 #include "config.h"
+#include "container_listener.h"
 #include "leaf_container.h"
 #include "mode_observer.h"
 #include "output_manager.h"
@@ -1040,7 +1041,7 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
             parent = parent->get_parent().lock();
 
         // Remove the container from whatever workspace it is on.
-        auto workspace = container->get_workspace();
+        auto const workspace = container->get_workspace();
         workspace->delete_container(container);
 
         // If the parent is anchored, we move [container] to a new floating tree.
@@ -1088,6 +1089,13 @@ bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope
     {
         if (!toggle_floating_internal(container))
             result = false;
+        else
+        {
+            container->for_each_observer([container](ContainerListener* listener)
+            {
+                listener->on_container_float(*container);
+            });
+        }
     }
     return result;
 }

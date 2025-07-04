@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_OBSERVER_REGISTRAR_H
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -43,6 +44,15 @@ public:
 
             return other.lock().get() == observer;
         }));
+    }
+
+    void for_each_observer(std::function<void(T*)> const& f)
+    {
+        for (auto const& observer : observers)
+        {
+            if (auto ptr = observer.lock())
+                f(ptr.get());
+        }
     }
 
 protected:

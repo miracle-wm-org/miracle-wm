@@ -28,7 +28,7 @@ class ModeObserver
 {
 public:
     virtual ~ModeObserver() = default;
-    virtual void on_changed(WindowManagerMode mode) = 0;
+    virtual void on_mode_changed(WindowManagerMode mode) = 0;
 };
 
 class ModeObserverRegistrar : public ObserverRegistrar<ModeObserver>

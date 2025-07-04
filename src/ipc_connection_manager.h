@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ipc_message_handler.h"
 #include "mode_observer.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
@@ -31,7 +32,9 @@ namespace miracle
 class AbstractCommandController;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
-class IpcConnectionManager : public virtual WorkspaceObserver, public virtual ModeObserver
+class IpcConnectionManager : public virtual WorkspaceObserver,
+                             public virtual ModeObserver,
+                             public virtual WindowObserver
 {
 public:
     IpcConnectionManager(
@@ -39,12 +42,19 @@ public:
         std::shared_ptr<AbstractCommandController> const&,
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
-    void on_created(uint32_t id) override;
-    void on_removed(uint32_t id) override;
-    void on_focused(std::optional<uint32_t>, uint32_t) override;
+    void on_workspace_created(uint32_t id) override;
+    void on_workspace_removed(uint32_t id) override;
+    void on_workspace_focused(std::optional<uint32_t>, uint32_t) override;
     void on_workspace_renamed(uint32_t) override;
-    void on_changed(WindowManagerMode mode) override;
+    void on_mode_changed(WindowManagerMode mode) override;
     void on_shutdown();
+    void on_window_created(Container const&) override;
+    void on_window_closed(Container const&) override;
+    void on_window_focused(Container const&) override;
+    void on_window_fullscreen(Container const&) override;
+    void on_window_move(Container const&) override;
+    void on_window_float(Container const&) override;
+    void on_window_marked(Container const&);
 
 private:
     struct IpcClient
@@ -58,19 +68,27 @@ private:
         int subscribed_events = 0;
     };
 
+    std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
     std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
-    std::vector<IpcClient> clients;
+    std::vector<std::shared_ptr<IpcClient>> clients;
 
+    /// Disconnects the provided client.
     void disconnect(IpcClient& client);
-    IpcClient& get_client(int fd);
 
+    /// Handles a command for the client.
     void handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type);
+
+    /// Sends a reply to the client.
     void send_reply(IpcClient& client, IpcType command_type, std::string const& payload);
+
+    /// Handles writeable for the client.
     void handle_writeable(IpcClient& client);
+
+    void send_window_event(const char* event, Container const&);
 };
 }
 
