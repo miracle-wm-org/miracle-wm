@@ -33,6 +33,14 @@ public:
     virtual void on_container_mark(Container const&) = 0;
 };
 
+class NullContainerListener : public ContainerListener
+{
+    void on_container_fullscreen(Container const&) override { }
+    void on_container_moved(Container const&) override { }
+    void on_container_float(Container const&) override { }
+    void on_container_mark(Container const&) override { }
+};
+
 } // miracle
 
 #endif // MIRACLE_CONTAINER_LISTENER_H

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container_group_container.h"
+#include "container_listener.h"
 #include "container_scope.h"
 #include "leaf_container.h"
 #include "mir/geometry/forward.h"
@@ -594,4 +595,57 @@ TEST_F(LeafContainerTest, CanFailToMatchMark)
     scope.type = ContainerScopeType::con_mark;
     scope.value = "meow2";
     EXPECT_THAT(leaf_container->matches(scope), testing::Eq(false));
+}
+
+TEST_F(LeafContainerTest, SetLogicalAreaTriggersListener)
+{
+    class Listener : public NullContainerListener
+    {
+    public:
+        MOCK_METHOD(void, on_container_moved, (Container const&), (override));
+    };
+
+    auto const listener = std::make_shared<Listener>();
+    EXPECT_CALL(*listener, on_container_moved(testing::_));
+    leaf_container->register_interest(listener);
+
+    geom::Rectangle constexpr new_area {
+        { 10,  10  },
+        { 200, 200 }
+    };
+    leaf_container->set_logical_area(new_area);
+    leaf_container->commit_changes();
+}
+
+TEST_F(LeafContainerTest, HandleModifyChangeStateToFullscreenTriggersObserver)
+{
+    class Listener : public NullContainerListener
+    {
+    public:
+        MOCK_METHOD(void, on_container_fullscreen, (Container const&), (override));
+    };
+
+    auto const listener = std::make_shared<Listener>();
+    EXPECT_CALL(*listener, on_container_fullscreen(testing::_));
+    leaf_container->register_interest(listener);
+
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+    leaf_container->handle_modify(spec);
+}
+
+TEST_F(LeafContainerTest, SetStateToFullscreenTriggersObserver)
+{
+    class Listener : public NullContainerListener
+    {
+    public:
+        MOCK_METHOD(void, on_container_fullscreen, (Container const&), (override));
+    };
+
+    auto const listener = std::make_shared<Listener>();
+    EXPECT_CALL(*listener, on_container_fullscreen(testing::_));
+    leaf_container->register_interest(listener);
+
+    leaf_container->set_state(mir_window_state_fullscreen);
+    leaf_container->commit_changes();
 }
