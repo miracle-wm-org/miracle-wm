@@ -547,6 +547,10 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         return;
     }
 
+    // Important: We advise closed before the window has been removed so that it
+    // still has valid references inside of it which consumers can use (e.g.
+    // a valid parent container)
+    window_observer_registrar->advise_closed(*container);
     if (auto output = container->get_output())
         output->delete_container(container);
     else
@@ -559,7 +563,6 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     state->remove(container);
 
     dying_surface_manager->animate_dying_surface(container);
-    window_observer_registrar->advise_closed(*container);
     container->unregister_interest(self.get());
 }
 
