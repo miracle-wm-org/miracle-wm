@@ -209,49 +209,63 @@ void WindowManagerToolsWindowController::process_animation(
     AnimationStepResult const& result,
     std::shared_ptr<Container> const& container)
 {
-    bool needs_modify = false;
-    miral::WindowSpecification spec;
-
-    if (result.position)
+    // TODO (hack): we really need to refactor the entire animation system. The issue
+    //  here is that our current system relies on us enqueuing animation processing
+    //  onto the main loop for animations. However, this may cause a situation where
+    //  a window is deleted, but we still have an animation pending to it. When we
+    //  try to modify that windows, things blow up on us. The solution here is temporary
+    //  but the real solution is to refactor how we're doing animations so that it is
+    //  less generic and makes more sense. The "hack" is the try/catch block
+    try
     {
-        spec.top_left() = mir::geometry::Point(
-            result.position.value().x,
-            result.position.value().y);
-        needs_modify = true;
-    }
+        bool needs_modify = false;
+        miral::WindowSpecification spec;
 
-    if (result.size)
-    {
-        spec.size() = mir::geometry::Size(
-            result.size.value().x,
-            result.size.value().y);
-        needs_modify = true;
-    }
+        if (result.position)
+        {
+            spec.top_left() = mir::geometry::Point(
+                result.position.value().x,
+                result.position.value().y);
+            needs_modify = true;
+        }
 
-    if (result.transform)
-        container->set_transform(result.transform.value());
+        if (result.size)
+        {
+            spec.size() = mir::geometry::Size(
+                result.size.value().x,
+                result.size.value().y);
+            needs_modify = true;
+        }
 
-    if (result.opacity != std::nullopt)
-        container->set_alpha(result.opacity.value());
+        if (!container->window())
+            return;
 
-    if (!container->window())
-        return;
+        auto const window = container->window().value();
+        if (!window)
+            return;
 
-    auto const window = container->window().value();
-    if (!window)
-        return;
+        // TODO: Modify window can throw an exception, which we are catching
+        if (needs_modify)
+            tools.modify_window(window, spec);
 
-    if (needs_modify)
-        tools.modify_window(window, spec);
+        if (result.transform)
+            container->set_transform(result.transform.value());
 
-    if (result.is_complete)
-        container->constrain();
-    else
-    {
-        if (container->get_type() == ContainerType::leaf)
-            clip(window, result.clip_area);
+        if (result.opacity != std::nullopt)
+            container->set_alpha(result.opacity.value());
+
+        if (result.is_complete)
+            container->constrain();
         else
-            noclip(window);
+        {
+            if (container->get_type() == ContainerType::leaf)
+                clip(window, result.clip_area);
+            else
+                noclip(window);
+        }
+    }
+    catch (std::out_of_range const&)
+    {
     }
 }
 
