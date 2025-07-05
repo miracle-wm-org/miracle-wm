@@ -154,7 +154,7 @@ std::shared_ptr<Container> Output::create_container(
 
 void Output::delete_container(std::shared_ptr<Container> const& container)
 {
-    auto workspace = container->get_workspace();
+    auto const workspace = container->get_workspace();
     if (!workspace)
         return;
 

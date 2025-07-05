@@ -202,7 +202,7 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
     {
     case ContainerType::leaf:
     {
-        auto parent = handle_remove_container(container);
+        auto const parent = handle_remove_container(container);
         parent->commit_changes();
 
         // If we're deleting a container and it is the final container in a

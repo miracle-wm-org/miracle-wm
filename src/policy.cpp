@@ -540,7 +540,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
     std::lock_guard lock(self->mutex);
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
         mir::log_error("delete_container: container is not provided");
@@ -551,7 +551,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     // still has valid references inside of it which consumers can use (e.g.
     // a valid parent container)
     window_observer_registrar->advise_closed(*container);
-    if (auto output = container->get_output())
+    if (auto const output = container->get_output())
         output->delete_container(container);
     else
         scratchpad_->remove(container);
