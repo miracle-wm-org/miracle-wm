@@ -162,23 +162,6 @@ Renderer::DrawData Renderer::get_draw_data(
         }
     }
 
-    if (auto const clip_area = renderable.clip_area())
-    {
-        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
-            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * result.data.workspace_transform * clip_pos;
-
-        result.clip_area = geom::Rectangle(
-            geom::Point(
-                (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
-                static_cast<int>(clip_pos.y * y_scale)),
-            geom::Size(
-                clip_area.value().size.width.as_int() * x_scale,
-                clip_area.value().size.height.as_int() * y_scale));
-    }
-
     return result;
 }
 
@@ -238,17 +221,17 @@ void Renderer::draw(
     if (clip_area)
     {
         glEnable(GL_SCISSOR_TEST);
-        auto clip_x = clip_area.value().top_left.x.as_int();
         // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int() - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_x, clip_y, 0, 1);
-        clip_pos = display_transform * clip_pos;
+        auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
+            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
+        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
+        clip_pos = display_transform * data.data.workspace_transform * clip_pos;
 
         glScissor(
-            (int)clip_pos.x - viewport.top_left.x.as_int(),
-            (int)clip_pos.y,
-            clip_area.value().size.width.as_int(),
-            clip_area.value().size.height.as_int());
+            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
+            static_cast<int>(clip_pos.y * y_scale),
+            clip_area.value().size.width.as_int() * x_scale,
+            clip_area.value().size.height.as_int() * y_scale);
     }
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
@@ -396,15 +379,30 @@ void Renderer::draw(
 
 void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
 {
-    if (!data.clip_area)
+    auto clip_area_opt = surface.clip_area();
+    if (!clip_area_opt)
         return;
+
+    // Calculate the border rectangle
+    // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
+    auto border_rect = clip_area_opt.value();
+    auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
+        - border_rect.top_left.y.as_int() - border_rect.size.height.as_int();
+    glm::vec4 clip_pos(border_rect.top_left.x.as_int(), clip_y, 0, 1);
+
+    border_rect = geom::Rectangle(
+        geom::Point(
+            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
+            static_cast<int>(clip_pos.y * y_scale)),
+        geom::Size(
+            border_rect.size.width.as_int() * x_scale,
+            border_rect.size.height.as_int() * y_scale));
 
     // First, we select the border shader as our shader
     auto const* const prog = &program_factory->border().data;
     glUseProgram(prog->id);
 
     // Next, we use the clip area as our rendering size
-    auto border_rect = data.clip_area.value();
     auto const border_config = config->get_border_config();
     border_rect.top_left.x = geom::X(viewport.left().as_value() + border_rect.top_left.x.as_value());
     border_rect.top_left.y = geom::Y(viewport.top().as_value() + border_rect.top_left.y.as_value());
