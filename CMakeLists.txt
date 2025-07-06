@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
-project(miracle-wm VERSION 0.5.2)
+project(miracle-wm VERSION 0.6.0)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 23)
