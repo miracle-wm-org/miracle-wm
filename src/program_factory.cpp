@@ -45,7 +45,6 @@ void main() {
 )";
 
 const GLchar* const fragment_border_src = R"(
-
 #ifdef GL_ES
 precision mediump float;
 #endif
@@ -56,7 +55,7 @@ uniform vec4 borderColor;
 uniform float borderRadius;
 uniform float borderWidth;
 
-varying vec2 v_texcoord;  // This is going to be [0, 1]
+varying vec2 v_texcoord;
 
 float roundedRectSDF(vec2 p, vec2 size, float r) {
     vec2 halfSize = size * 0.5;
@@ -66,19 +65,27 @@ float roundedRectSDF(vec2 p, vec2 size, float r) {
 
 void main() {
     vec2 pixelPos = v_texcoord * surfaceSize;
-    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
 
-    float halfBorder = borderWidth * 0.5;
-    float borderAlpha = smoothstep(halfBorder + 1.0, halfBorder, abs(sdf));
+    vec2 center = surfaceSize * 0.5;
 
-    vec4 contentColor = borderColor;
-    contentColor *= alpha;
-    contentColor *= borderAlpha;
-    if (contentColor.a < 0.01)
+    float outerSDF = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
+    vec2 innerSize = surfaceSize - vec2(borderWidth * 2.0);
+    float innerRadius = max(borderRadius - borderWidth, 0.0);
+    vec2 innerPos = pixelPos - center + (innerSize * 0.5);  // recenter coordinates
+    float innerSDF = roundedRectSDF(innerPos, innerSize, innerRadius);
+
+    float borderAlpha =
+        smoothstep(0.5, -0.5, outerSDF) *
+        (1.0 - smoothstep(0.5, -0.5, innerSDF));
+
+    vec4 color = borderColor * alpha * borderAlpha;
+
+    if (color.a < 0.01)
         discard;
 
-    gl_FragColor = contentColor;
+    gl_FragColor = color;
 }
+
 )";
 
 }
