@@ -995,20 +995,27 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
 
 std::string miracle::get_config_path()
 {
-    std::stringstream legacy_config_path_stream;
-    legacy_config_path_stream << g_get_user_config_dir();
-    legacy_config_path_stream << "/miracle-wm.yaml";
-    if (std::filesystem::exists(legacy_config_path_stream.str()))
-    {
-        std::cerr << "Using the legacy file path: " << legacy_config_path_stream.str().c_str()
-                  << ". Consider migrating to the new filepath at ~/.config/miracle-wm/config.yaml."
-                  << std::endl;
-        return legacy_config_path_stream.str();
-    }
-
+    // $XDG_CONFIG_HOME/miracle-wm/config.yaml is where the configuration lives,
+    // but $XDG_CONFIG_HOME/miracle-wm.yaml is the legacy file path. We first
+    // check if the new path exists. If it does not, then we fall back to the old
+    // path and only return it if it has contents written to it.
     std::stringstream config_path_stream;
     config_path_stream << g_get_user_config_dir();
     config_path_stream << "/miracle-wm/config.yaml";
+    if (!std::filesystem::exists(config_path_stream.str()))
+    {
+        std::stringstream legacy_config_path_stream;
+        legacy_config_path_stream << g_get_user_config_dir();
+        legacy_config_path_stream << "/miracle-wm.yaml";
+        if (std::filesystem::exists(legacy_config_path_stream.str()))
+        {
+            std::cerr << "Using the legacy file path: " << legacy_config_path_stream.str().c_str()
+                      << ". Consider migrating to the new filepath at ~/.config/miracle-wm/config.yaml."
+                      << std::endl;
+            return legacy_config_path_stream.str();
+        }
+    }
+
     return config_path_stream.str();
 }
 
