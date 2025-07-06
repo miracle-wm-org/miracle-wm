@@ -93,7 +93,6 @@ private:
     {
         bool enabled = false;
         RenderData data;
-        std::optional<mir::geometry::Rectangle> clip_area;
     };
 
     struct Vertex
