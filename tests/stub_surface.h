@@ -288,6 +288,12 @@ public:
         return std::list<mir::scene::StreamInfo>();
     }
 #endif
+
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+    void set_mirror_mode(MirMirrorMode) override
+    {
+    }
+#endif
 };
 }
 
