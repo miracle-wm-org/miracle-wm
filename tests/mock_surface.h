@@ -93,6 +93,9 @@ namespace test
         MOCK_METHOD(void, set_tiled_edges, (mir::Flags<MirTiledEdge>), (override));
         MOCK_METHOD(std::list<mir::scene::StreamInfo>, get_streams, (), (const, override));
 #endif
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+        MOCK_METHOD(void, set_mirror_mode, (MirMirrorMode), (override));
+#endif
     };
 
 }

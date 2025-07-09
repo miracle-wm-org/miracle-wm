@@ -104,6 +104,9 @@ public:
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
 #endif
+#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+    void set_mirror_mode(MirMirrorMode mirror_mode) { surface_->set_mirror_mode(mirror_mode); }
+#endif
 
 private:
     std::shared_ptr<mir::scene::Surface> surface_;
