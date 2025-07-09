@@ -30,12 +30,28 @@ target_link_libraries(miracle-wm-config
     PkgConfig::LIBEVDEV
     PkgConfig::GLIB)
 
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/miracle-wm-config.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-config.pc
+    @ONLY
+)
+
 # Installation
 install(TARGETS miracle-wm-config
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY include/miracle
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h"
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-config.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 
 # Tests
