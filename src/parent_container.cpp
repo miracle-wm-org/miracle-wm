@@ -746,6 +746,8 @@ void ParentContainer::set_workspace(WorkspaceInterface* next)
 
 void ParentContainer::on_workspace_transform()
 {
+    for (auto const& node : container_list)
+        node->on_workspace_transform();
 }
 
 OutputInterface* ParentContainer::get_output() const

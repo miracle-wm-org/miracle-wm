@@ -134,6 +134,7 @@ Workspace::~Workspace()
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
+    root->on_workspace_transform();
     root->set_logical_area(area);
     root->commit_changes();
 }

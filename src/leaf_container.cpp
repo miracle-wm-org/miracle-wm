@@ -653,13 +653,8 @@ WorkspaceInterface* LeafContainer::get_workspace() const
 
 void LeafContainer::set_workspace(WorkspaceInterface* in)
 {
-    if (workspace == nullptr || workspace->get_output() != in->get_output())
-    {
-        state->render_data_manager()->output_area_change(
-            id,
-            in ? in->get_output()->get_area() : mir::geometry::Rectangle {});
-    }
     workspace = in;
+    on_workspace_transform();
 }
 
 OutputInterface* LeafContainer::get_output() const
@@ -688,8 +683,12 @@ void LeafContainer::set_transform(glm::mat4 transform_)
 void LeafContainer::on_workspace_transform()
 {
     auto const& rdm = state->render_data_manager();
+    state->render_data_manager()->output_area_change(
+        id,
+        workspace->get_output()->get_area());
+
     rdm->workspace_transform_change(id, workspace_transform(*this));
-    auto surface = window_.operator std::shared_ptr<mir::scene::Surface>();
+    auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>();
     if (surface)
     {
         // While we don't use this transform in rendering, we do need it
