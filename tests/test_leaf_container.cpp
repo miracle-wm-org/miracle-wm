@@ -137,7 +137,7 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 {
     auto new_workspace = std::make_unique<test::MockWorkspace>();
     EXPECT_CALL(*new_workspace, get_output())
-        .WillOnce(testing::Return(output.get()));
+        .WillRepeatedly(testing::Return(output.get()));
 
     leaf_container->set_workspace(new_workspace.get());
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace.get());
