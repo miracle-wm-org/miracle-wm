@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace.h"
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "shell_component_container.h"
+#include "workspace_observer.h"
 
 #include <cassert>
 #include <mir/log.h>
@@ -110,13 +110,15 @@ Workspace::Workspace(
     std::optional<std::string> name,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<CompositorState> const& state) :
+    std::shared_ptr<CompositorState> const& state,
+    std::shared_ptr<WorkspaceObserverRegistrar> const& registry) :
     output { output },
     id_ { id },
     num_ { num },
     name_ { name },
     window_controller { window_controller },
     state { state },
+    registry { registry },
     config { config },
     root(std::make_shared<ParentContainer>(
         state, window_controller, config, get_output_area(output), this, nullptr, true))
@@ -220,6 +222,9 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
         mir::log_error("Unsupported window type: %d", (int)container->get_type());
         return;
     }
+
+    if (is_empty())
+        registry->advise_empty(id());
 }
 
 void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)

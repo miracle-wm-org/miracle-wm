@@ -30,6 +30,7 @@ class OutputManager;
 class WindowController;
 class Config;
 class CompositorState;
+class WorkspaceObserverRegistrar;
 
 struct WorkspaceIdentifier
 {
@@ -47,7 +48,8 @@ public:
         std::optional<std::string> name,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<CompositorState> const& state);
+        std::shared_ptr<CompositorState> const& state,
+        std::shared_ptr<WorkspaceObserverRegistrar> const& registry);
     ~Workspace() override;
 
     void set_area(mir::geometry::Rectangle const&) override;
@@ -106,7 +108,8 @@ private:
     std::shared_ptr<ParentContainer> root;
     std::vector<std::shared_ptr<ParentContainer>> floating_trees;
     std::shared_ptr<WindowController> window_controller;
-    std::shared_ptr<CompositorState> const& state;
+    std::shared_ptr<CompositorState> state;
+    std::shared_ptr<WorkspaceObserverRegistrar> registry;
     std::shared_ptr<Config> config;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;

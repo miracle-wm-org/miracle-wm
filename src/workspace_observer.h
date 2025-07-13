@@ -33,9 +33,20 @@ class WorkspaceObserver
 public:
     virtual ~WorkspaceObserver() = default;
     virtual void on_workspace_created(uint32_t) = 0;
+    virtual void on_workspace_empty(uint32_t) = 0;
     virtual void on_workspace_removed(uint32_t) = 0;
     virtual void on_workspace_focused(std::optional<uint32_t>, uint32_t) = 0;
     virtual void on_workspace_renamed(uint32_t) = 0;
+};
+
+class NullWorkspaceObserver : public WorkspaceObserver
+{
+public:
+    void on_workspace_created(uint32_t) override { }
+    void on_workspace_empty(uint32_t) override { }
+    void on_workspace_removed(uint32_t) override { }
+    void on_workspace_focused(std::optional<uint32_t>, uint32_t) override { }
+    void on_workspace_renamed(uint32_t) override { }
 };
 
 class WorkspaceObserverRegistrar : public ObserverRegistrar<WorkspaceObserver>
@@ -43,6 +54,7 @@ class WorkspaceObserverRegistrar : public ObserverRegistrar<WorkspaceObserver>
 public:
     WorkspaceObserverRegistrar() = default;
     void advise_created(uint32_t);
+    void advise_empty(uint32_t);
     void advise_removed(uint32_t);
     void advise_focused(std::optional<uint32_t>, uint32_t);
     void advise_renamed(uint32_t);
