@@ -15,9 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define MIR_LOG_COMPONENT "output_factory"
+
 #include "output_factory.h"
 #include "display_config.h"
 #include "output.h"
+
+#include <mir/log.h>
 
 using namespace miracle;
 
@@ -41,15 +45,15 @@ std::unique_ptr<OutputInterface> MiralOutputFactory::create(
     std::string name, int id, mir::geometry::Rectangle area)
 {
     auto const current_config = display_config->configuration();
-    if (!current_config)
-        mir::fatal_error("DisplayConfiguration should be set by the time we create an output");
-
     mir::graphics::DisplayConfigurationOutput raw_output_config;
-    current_config.value()->for_each_output([&, this](mir::graphics::DisplayConfigurationOutput const& output)
-    {
-        if (output.name == name || output.card_id.as_value() == id)
-            raw_output_config = output;
-    });
+    if (!current_config)
+        mir::log_warning("DisplayConfiguration should be set by the time we create an output");
+    else
+        current_config.value()->for_each_output([&, this](mir::graphics::DisplayConfigurationOutput const& output)
+        {
+            if (output.name == name || output.card_id.as_value() == id)
+                raw_output_config = output;
+        });
 
     return std::make_unique<Output>(
         policy,
