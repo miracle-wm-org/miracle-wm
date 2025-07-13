@@ -9,10 +9,13 @@ include_directories(
 find_package(PkgConfig)
 pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(MIRSERVER mirserver REQUIRED)
+pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 find_package(GTest REQUIRED)
 
-add_executable(miracle-wm-tests
+option(END_TO_END_TESTS "Include end-to-end tests?" OFF)
+
+set(SOURCES
     mock_animation.h
     mock_command_controller.h
     mock_configuration.h
@@ -45,10 +48,17 @@ add_executable(miracle-wm-tests
     stub_window_controller.h
     stub_container.h)
 
+if (END_TO_END_TESTS)
+    list(APPEND SOURCES test_policy.cpp)
+endif()
+
+add_executable(miracle-wm-tests ${SOURCES})
+
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM
     ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
     ${MIRAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
+    ${MIRTEST_INCLUDE_DIRS}
     ${GTEST_INCLUDE_DIRS}
     ${GMOCK_INCLUDE_DIRS})
 
@@ -58,6 +68,7 @@ target_link_libraries(miracle-wm-tests
     ${GTEST_LIBRARIES}
     ${MIRAL_LDFLAGS}
     ${MIRSERVER_LDFLAGS}
+    ${MIRTEST_LDFLAGS}
     PkgConfig::YAML
     pthread
     GTest::GTest GTest::Main GTest::gmock)

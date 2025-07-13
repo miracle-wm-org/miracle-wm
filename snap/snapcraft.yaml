@@ -61,6 +61,8 @@ parts:
       - libmircommon-internal-dev
       - libmircommon-dev
       - libmirserver-internal-dev
+      - mirtest-dev
+      - mirtest-internal-dev
       - libfreetype6-dev
       - libwayland-dev
       - libxkbcommon-dev
