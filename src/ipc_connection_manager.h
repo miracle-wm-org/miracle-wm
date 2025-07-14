@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef IPC_CONNECTION_H
 #define IPC_CONNECTION_H
 
+#include "config_observer.h"
 #include "ipc_message_handler.h"
 #include "mode_observer.h"
 #include "window_observer.h"
@@ -34,7 +35,8 @@ class AbstractCommandController;
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver,
                              public virtual ModeObserver,
-                             public virtual WindowObserver
+                             public virtual WindowObserver,
+                             public virtual ConfigObserver
 {
 public:
     IpcConnectionManager(
@@ -47,6 +49,7 @@ public:
     void on_workspace_removed(uint32_t id) override;
     void on_workspace_focused(std::optional<uint32_t>, uint32_t) override;
     void on_workspace_renamed(uint32_t) override;
+    void on_config_changed(Config const&) override;
     void on_mode_changed(WindowManagerMode mode) override;
     void on_shutdown();
     void on_window_created(Container const&) override;

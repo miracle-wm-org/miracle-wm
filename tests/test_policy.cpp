@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "config_observer.h"
 #include "display_config.h"
 #include "output_listener.h"
 #include "policy.h"
@@ -70,7 +71,8 @@ public:
                 std::make_shared<miracle::test::StubConfiguration>(),
                 compositor_state,
                 std::make_shared<miracle::OutputListenerMultiplexer>(),
-                std::make_shared<miracle::DisplayConfig>());
+                std::make_shared<miracle::DisplayConfig>(),
+                std::make_shared<miracle::ConfigObserverRegistrar>());
         };
     }
 

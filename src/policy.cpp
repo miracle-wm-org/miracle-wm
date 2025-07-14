@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "animator_loop.h"
 #include "config.h"
+#include "config_observer.h"
 #include "constants.h"
 #include "container_group_container.h"
 #include "container_listener.h"
@@ -66,7 +67,9 @@ private:
 };
 }
 
-class Policy::Self : public WorkspaceObserver, public virtual ContainerListener
+class Policy::Self : public virtual WorkspaceObserver,
+                     public virtual ContainerListener,
+                     public virtual ConfigObserver
 {
 public:
     explicit Self(Policy& policy) :
@@ -121,6 +124,18 @@ public:
         policy.window_observer_registrar->advise_window_marked(container);
     }
 
+    void on_config_changed(Config const&) override
+    {
+        // Note: We need to grab the lock because this notification comes from
+        // a different thread.
+        std::lock_guard lock(mutex);
+        for (auto const& output : policy.output_manager->outputs())
+        {
+            for (auto const& workspace : output->get_workspaces())
+                workspace->recalculate_area();
+        }
+    }
+
     Policy& policy;
     std::recursive_mutex mutex;
 };
@@ -133,11 +148,13 @@ Policy::Policy(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
-    std::shared_ptr<DisplayConfig> const& display_config) :
+    std::shared_ptr<DisplayConfig> const& display_config,
+    std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar) :
     tools { tools },
     config { config },
     state { state },
     output_listener { output_listener },
+    config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
@@ -182,6 +199,8 @@ Policy::Policy(
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
     window_observer_registrar->register_interest(ipc_connection_manager);
+    config_observer_registrar->register_interest(ipc_connection_manager);
+    config_observer_registrar->register_interest(self);
     animator_loop->start();
 
     // TODO: This is a hack until we figure out what is happening with
@@ -199,6 +218,8 @@ Policy::~Policy()
     workspace_observer_registrar->unregister_interest(ipc_connection_manager.get());
     workspace_observer_registrar->unregister_interest(self.get());
     mode_observer_registrar->unregister_interest(ipc_connection_manager.get());
+    config_observer_registrar->unregister_interest(ipc_connection_manager.get());
+    config_observer_registrar->unregister_interest(self.get());
 }
 
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
