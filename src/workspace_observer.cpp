@@ -28,6 +28,15 @@ void WorkspaceObserverRegistrar::advise_created(uint32_t id)
     }
 }
 
+void WorkspaceObserverRegistrar::advise_empty(uint32_t id)
+{
+    for (auto& observer : observers)
+    {
+        if (!observer.expired())
+            observer.lock()->on_workspace_empty(id);
+    }
+}
+
 void WorkspaceObserverRegistrar::advise_removed(uint32_t id)
 {
     for (auto& observer : observers)

@@ -248,6 +248,28 @@ void IpcConnectionManager::on_workspace_created(uint32_t id)
     }
 }
 
+void IpcConnectionManager::on_workspace_empty(uint32_t id)
+{
+    json const j = {
+        { "change",  "empty"                                   },
+        { "old",     nullptr                                   },
+        { "current", command_controller->workspace_to_json(id) }
+    };
+
+    auto const serialized_value = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+    }
+}
+
 void IpcConnectionManager::on_workspace_removed(uint32_t id)
 {
     json const j = {

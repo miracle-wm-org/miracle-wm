@@ -70,7 +70,8 @@ bool WorkspaceManager::request_workspace(
     auto const& workspace_config = config->get_workspace_config(num, std::nullopt);
     output_hint->advise_new_workspace({ .id = id,
         .num = num,
-        .name = workspace_config.name });
+        .name = workspace_config.name,
+        .registrar = registry });
     registry->advise_created(id);
     request_focus(id);
     return true;
@@ -86,7 +87,9 @@ bool WorkspaceManager::request_workspace(
 
     uint32_t id = next_id++;
     output_hint->advise_new_workspace({ .id = id,
-        .name = name });
+        .num = std::nullopt,
+        .name = name,
+        .registrar = registry });
     request_focus(id);
     registry->advise_created(id);
     return true;

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_window_controller.h"
 #include "window_controller.h"
 #include "workspace.h"
+#include "workspace_observer.h"
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -77,7 +78,8 @@ public:
             "0",
             std::make_shared<test::StubConfiguration>(),
             window_controller,
-            state))
+            state,
+            registry))
     {
     }
 
@@ -113,6 +115,7 @@ public:
     std::vector<StubWindowData> pairs;
     std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<test::MockOutput> output;
+    std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
     std::shared_ptr<Workspace> workspace;
 };
 
@@ -228,7 +231,8 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
         "1",
         std::make_shared<test::StubConfiguration>(),
         window_controller,
-        state);
+        state,
+        registry);
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf(std::nullopt, &other);
 
@@ -250,7 +254,8 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         "1",
         std::make_shared<test::StubConfiguration>(),
         window_controller,
-        state);
+        state,
+        registry);
     auto leaf1 = create_leaf();
 
     ASSERT_EQ(leaf1->get_workspace(), workspace.get());
@@ -307,7 +312,8 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
         "1",
         std::make_shared<test::StubConfiguration>(),
         window_controller,
-        state);
+        state,
+        registry);
 
     // Assert that the first tree (w/o app zones) is equal to the output size.
     ASSERT_EQ(other.get_root()->get_logical_area(), zone_bounds);
@@ -344,4 +350,19 @@ TEST_F(WorkspaceTest, CanSetName)
 {
     workspace->name("meow");
     EXPECT_THAT(workspace->name(), Eq("meow"));
+}
+
+TEST_F(WorkspaceTest, NotifiesWhenEmpty)
+{
+    class Observer : public NullWorkspaceObserver
+    {
+    public:
+        MOCK_METHOD(void, on_workspace_empty, (uint32_t), (override));
+    };
+
+    auto const observer = std::make_shared<Observer>();
+    registry->register_interest(observer);
+    auto const leaf = create_leaf();
+    EXPECT_CALL(*observer, on_workspace_empty);
+    workspace->delete_container(leaf);
 }

@@ -43,6 +43,7 @@ public:
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
     void on_workspace_created(uint32_t id) override;
+    void on_workspace_empty(uint32_t id) override;
     void on_workspace_removed(uint32_t id) override;
     void on_workspace_focused(std::optional<uint32_t>, uint32_t) override;
     void on_workspace_renamed(uint32_t) override;

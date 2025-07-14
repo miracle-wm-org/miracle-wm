@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class WorkspaceManager;
+class WorkspaceObserverRegistrar;
 class Config;
 class WindowManagerToolsWindowController;
 class CompositorState;
@@ -37,9 +38,10 @@ class Animator;
 
 struct WorkspaceCreationData
 {
-    uint32_t id;
-    std::optional<int> num;
-    std::optional<std::string> name;
+    uint32_t const id;
+    std::optional<int> const num;
+    std::optional<std::string> const name;
+    std::shared_ptr<WorkspaceObserverRegistrar> const registrar;
 };
 
 class OutputInterface

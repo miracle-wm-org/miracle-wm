@@ -76,6 +76,7 @@ public:
 
     void on_workspace_created(uint32_t) override { }
     void on_workspace_removed(uint32_t) override { }
+    void on_workspace_empty(uint32_t) override { }
     void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
         if (old)
