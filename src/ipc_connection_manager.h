@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config_observer.h"
 #include "ipc_message_handler.h"
 #include "mode_observer.h"
+#include "output_listener.h"
 #include "window_observer.h"
-#include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
 #include <miral/runner.h>
@@ -36,7 +36,8 @@ class AbstractCommandController;
 class IpcConnectionManager : public virtual WorkspaceObserver,
                              public virtual ModeObserver,
                              public virtual WindowObserver,
-                             public virtual ConfigObserver
+                             public virtual ConfigObserver,
+                             public virtual OutputListener
 {
 public:
     IpcConnectionManager(
@@ -59,6 +60,9 @@ public:
     void on_window_move(Container const&) override;
     void on_window_float(Container const&) override;
     void on_window_marked(Container const&);
+    void output_created(miral::Output const&) override;
+    void output_deleted(miral::Output const&) override;
+    void output_updated(miral::Output const& updated, miral::Output const& original) override;
 
 private:
     struct IpcClient
@@ -93,6 +97,7 @@ private:
     void handle_writeable(IpcClient& client);
 
     void send_window_event(const char* event, Container const&);
+    void send_output_event();
 };
 }
 
