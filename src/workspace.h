@@ -50,7 +50,6 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WorkspaceObserverRegistrar> const& registry);
-    ~Workspace() override;
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
@@ -113,7 +112,6 @@ private:
     std::shared_ptr<Config> config;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
-    int config_handle = 0;
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

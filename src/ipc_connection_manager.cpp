@@ -337,6 +337,25 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
     }
 }
 
+void IpcConnectionManager::on_config_changed(Config const&)
+{
+    json const j = {
+        { "change", "reload" }
+    };
+
+    auto const serialized_value = to_string(j);
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+    }
+}
+
 void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
 {
     auto const response = to_string(mode_event_to_json(mode));

@@ -43,6 +43,8 @@ class FdHandle;
 }
 namespace miracle
 {
+class ConfigObserverRegistrar;
+
 class Config
 {
 public:
@@ -69,12 +71,6 @@ public:
     [[nodiscard]] virtual DragAndDropConfiguration drag_and_drop() const = 0;
     [[nodiscard]] virtual uint move_modifier() const = 0;
 
-    virtual int register_listener(std::function<void(Config&)> const&) = 0;
-    /// Register a listener on configuration change. A lower "priority" number signifies that the
-    /// listener should be triggered earlier. A higher priority means later
-    virtual int register_listener(std::function<void(Config&)> const&, int priority) = 0;
-    virtual void unregister_listener(int handle) = 0;
-    virtual void try_process_change() = 0;
     [[nodiscard]] virtual uint get_primary_modifier() const = 0;
     [[nodiscard]] virtual uint get_primary_button() const = 0;
     uint process_modifier(uint modifier) const;
@@ -83,9 +79,8 @@ public:
 class FilesystemConfiguration : public Config
 {
 public:
-    explicit FilesystemConfiguration(miral::MirRunner&);
-    FilesystemConfiguration(miral::MirRunner&, std::string const&, bool load_immediately = false);
-    ~FilesystemConfiguration() override = default;
+    explicit FilesystemConfiguration(miral::MirRunner&, std::shared_ptr<ConfigObserverRegistrar> const&);
+    FilesystemConfiguration(miral::MirRunner&, std::shared_ptr<ConfigObserverRegistrar> const&, std::string const&, bool load_immediately = false);
     FilesystemConfiguration(FilesystemConfiguration const&) = delete;
     auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = delete;
 
@@ -110,34 +105,23 @@ public:
     [[nodiscard]] LayoutScheme get_default_layout_scheme() const override;
     [[nodiscard]] DragAndDropConfiguration drag_and_drop() const override;
     [[nodiscard]] uint move_modifier() const override;
-    int register_listener(std::function<void(Config&)> const&) override;
-    int register_listener(std::function<void(Config&)> const&, int priority) override;
-    void unregister_listener(int handle) override;
-    void try_process_change() override;
     [[nodiscard]] uint get_primary_modifier() const override;
     [[nodiscard]] uint get_primary_button() const override;
 
 private:
-    struct ChangeListener
-    {
-        std::function<void(Config&)> listener;
-        int priority;
-        int handle;
-    };
-
+    uint process_modifier_internal(uint modifier) const;
     void _init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app);
     void _watch(miral::MirRunner& runner);
     miral::MirRunner& runner;
+    std::shared_ptr<ConfigObserverRegistrar> observer_registrar;
     int next_listener_handle = 0;
-    std::vector<ChangeListener> on_change_listeners;
     std::string default_config_path;
     std::string config_path;
     bool no_config = false;
     mir::Fd inotify_fd;
     std::unique_ptr<miral::FdHandle> watch_handle;
     int file_watch = 0;
-    std::mutex mutex;
-    std::atomic<bool> has_changes = false;
+    std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
 };

@@ -48,10 +48,6 @@ namespace test
         MOCK_METHOD(WorkspaceConfig, get_workspace_config, (std::optional<int> const& num, std::optional<std::string> const& name), (const, override));
         MOCK_METHOD(LayoutScheme, get_default_layout_scheme, (), (const, override));
         MOCK_METHOD(DragAndDropConfiguration, drag_and_drop, (), (const, override));
-        MOCK_METHOD(int, register_listener, (std::function<void(miracle::Config&)> const&), (override));
-        MOCK_METHOD(int, register_listener, (std::function<void(miracle::Config&)> const&, int priority), (override));
-        MOCK_METHOD(void, unregister_listener, (int handle), (override));
-        MOCK_METHOD(void, try_process_change, (), (override));
         MOCK_METHOD(uint, get_primary_modifier, (), (const, override));
         MOCK_METHOD(uint, move_modifier, (), (const, override));
         MOCK_METHOD(uint, get_primary_button, (), (const, override));

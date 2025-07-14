@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "config"
 
 #include "config.h"
+#include "config_observer.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -27,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <miral/runner.h>
-#include <sstream>
 #include <sys/inotify.h>
 
 using namespace miracle;
@@ -35,21 +35,6 @@ using namespace miracle;
 namespace
 {
 const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
-
-std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& action)
-{
-    if (action == "up")
-        return MirKeyboardAction::mir_keyboard_action_up;
-    else if (action == "down")
-        return MirKeyboardAction::mir_keyboard_action_down;
-    else if (action == "repeat")
-        return MirKeyboardAction::mir_keyboard_action_repeat;
-    else if (action == "modifiers")
-        return MirKeyboardAction::mir_keyboard_action_modifiers;
-    else
-        return std::nullopt;
-}
-
 }
 
 uint Config::process_modifier(uint modifier) const
@@ -59,14 +44,15 @@ uint Config::process_modifier(uint modifier) const
     return modifier;
 }
 
-FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner) :
-    FilesystemConfiguration { runner, get_config_path() }
+FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner, std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar) :
+    FilesystemConfiguration { runner, observer_registrar, get_config_path() }
 {
 }
 
 FilesystemConfiguration::FilesystemConfiguration(
-    miral::MirRunner& runner, std::string const& path, bool load_immediately) :
+    miral::MirRunner& runner, std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar, std::string const& path, bool load_immediately) :
     runner { runner },
+    observer_registrar { observer_registrar },
     default_config_path { path }
 {
     if (load_immediately)
@@ -187,28 +173,32 @@ void FilesystemConfiguration::_init(
 
 void FilesystemConfiguration::reload()
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
-    if (no_config)
     {
-        mir::log_info("No configuration was specified, so the config will not load.");
-        options = ConfigData();
-        return;
+        std::lock_guard lock(mutex);
+
+        if (no_config)
+        {
+            mir::log_info("No configuration was specified, so the config will not load.");
+            options = ConfigData();
+            return;
+        }
+
+        mir::log_info("Configuration is loading...");
+        auto const [config, errors] = load_config(config_path);
+        options = config;
+
+        if (!errors.empty())
+        {
+            for (auto const& error : errors)
+                mir::log_error("Configuration parsing error: %s (%s::L%d:%d)",
+                    error.message.c_str(),
+                    error.filename.c_str(),
+                    error.line,
+                    error.column);
+        }
     }
 
-    mir::log_info("Configuration is loading...");
-    auto const [config, errors] = load_config(config_path);
-    options = config;
-
-    if (!errors.empty())
-    {
-        for (auto const& error : errors)
-            mir::log_error("Configuration parsing error: %s (%s::L%d:%d)",
-                error.message.c_str(),
-                error.filename.c_str(),
-                error.line,
-                error.column);
-    }
+    observer_registrar->advise_config_changed(*this);
 }
 
 void FilesystemConfiguration::_watch(miral::MirRunner& runner)
@@ -238,31 +228,19 @@ void FilesystemConfiguration::_watch(miral::MirRunner& runner)
         if (inotify_buffer.event.mask & (IN_MODIFY))
         {
             reload();
-            has_changes = true;
         }
     });
 }
 
-void FilesystemConfiguration::try_process_change()
-{
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!has_changes)
-        return;
-
-    has_changes = false;
-    for (auto const& on_change : on_change_listeners)
-    {
-        on_change.listener(*this);
-    }
-}
-
 uint FilesystemConfiguration::get_primary_modifier() const
 {
+    std::lock_guard lock(mutex);
     return options.primary_modifier;
 }
 
 uint FilesystemConfiguration::get_primary_button() const
 {
+    std::lock_guard lock(mutex);
     return options.primary_button;
 }
 
@@ -273,19 +251,21 @@ std::string const& FilesystemConfiguration::get_filename() const
 
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
 {
+    std::lock_guard lock(mutex);
     return static_cast<MirInputEventModifier>(options.primary_modifier);
 }
 
 CustomKeyCommand const*
 FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
 {
+    std::lock_guard lock(mutex);
     // TODO: Copy & paste
     for (auto const& command : options.custom_key_commands)
     {
         if (action != command.action)
             continue;
 
-        auto command_modifiers = process_modifier(command.modifiers);
+        auto command_modifiers = process_modifier_internal(command.modifiers);
         if (command_modifiers != modifiers)
             continue;
 
@@ -303,133 +283,133 @@ bool FilesystemConfiguration::matches_key_command(
     std::function<bool(DefaultKeyCommand)> const& f) const
 {
     constexpr KeyCommand default_key_commands[static_cast<int>(DefaultKeyCommand::MAX)] = {
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_ENTER },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_V     },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_H     },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_R     },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_UP    },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_DOWN  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_LEFT  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_RIGHT },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_UP    },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_DOWN  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_LEFT  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_RIGHT },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_UP    },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_DOWN  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_LEFT  },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_RIGHT },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_Q     },
-        { MirKeyboardAction::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_E     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_F     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_1     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_2     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_3     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_4     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_5     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_6     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_7     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_8     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_9     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_0     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_1     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_2     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_3     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_4     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_5     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_6     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_7     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_8     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_9     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_0     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_SPACE },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          KEY_P     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_W     },
-        { MirKeyboardAction ::mir_keyboard_action_down,
+        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          KEY_S     }
     };
@@ -452,9 +432,17 @@ bool FilesystemConfiguration::matches_key_command(
         return false;
     };
 
-    for (size_t i = 0; i < options.built_in_key_command_overrides.size(); i++)
+    // TODO: This copy may be somewhat expensive. This helps avoid
+    //  a deadlock for now, but at a cost.
+    std::vector<BuiltInKeyCommandOverride> overrides;
     {
-        if (try_run_key_command(options.built_in_key_command_overrides[i], options.built_in_key_command_overrides[i].default_key_command))
+        std::lock_guard lock(mutex);
+        overrides = options.built_in_key_command_overrides;
+    }
+
+    for (auto& override : overrides)
+    {
+        if (try_run_key_command(override, override.default_key_command))
             return true;
     }
 
@@ -469,95 +457,73 @@ bool FilesystemConfiguration::matches_key_command(
 
 int FilesystemConfiguration::get_inner_gaps_x() const
 {
+    std::lock_guard lock(mutex);
     return options.inner_gaps_x;
 }
 
 int FilesystemConfiguration::get_inner_gaps_y() const
 {
+    std::lock_guard lock(mutex);
     return options.inner_gaps_y;
 }
 
 int FilesystemConfiguration::get_outer_gaps_x() const
 {
+    std::lock_guard lock(mutex);
     return options.outer_gaps_x;
 }
 
 int FilesystemConfiguration::get_outer_gaps_y() const
 {
+    std::lock_guard lock(mutex);
     return options.outer_gaps_y;
 }
 
 const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const
 {
+    std::lock_guard lock(mutex);
     return options.startup_apps;
-}
-
-int FilesystemConfiguration::register_listener(std::function<void(Config&)> const& func)
-{
-    return register_listener(func, 5);
-}
-
-int FilesystemConfiguration::register_listener(std::function<void(Config&)> const& func, int priority)
-{
-    int handle = next_listener_handle++;
-
-    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
-    {
-        if (it->priority >= priority)
-        {
-            on_change_listeners.insert(it, { func, priority, handle });
-            return handle;
-        }
-    }
-
-    on_change_listeners.push_back({ func, priority, handle });
-    return handle;
-}
-
-void FilesystemConfiguration::unregister_listener(int handle)
-{
-    for (auto it = on_change_listeners.begin(); it != on_change_listeners.end(); it++)
-    {
-        if (it->handle == handle)
-        {
-            on_change_listeners.erase(it);
-            return;
-        }
-    }
 }
 
 std::optional<std::string> const& FilesystemConfiguration::get_terminal_command() const
 {
+    std::lock_guard lock(mutex);
     return options.terminal;
 }
 
 int FilesystemConfiguration::get_resize_jump() const
 {
+    std::lock_guard lock(mutex);
     return options.resize_jump;
 }
 
 std::vector<EnvironmentVariable> const& FilesystemConfiguration::get_env_variables() const
 {
+    std::lock_guard lock(mutex);
     return options.environment_variables;
 }
 
 BorderConfig const& FilesystemConfiguration::get_border_config() const
 {
+    std::lock_guard lock(mutex);
     return options.border_config;
 }
 
 AnimationDefinition const& FilesystemConfiguration::get_animation_definition(AnimateableEvent event) const
 {
+    std::lock_guard lock(mutex);
     return options.animation_definitions[static_cast<int>(event)];
 }
 
 bool FilesystemConfiguration::are_animations_enabled() const
 {
+    std::lock_guard lock(mutex);
     return options.animations_enabled;
 }
 
 WorkspaceConfig FilesystemConfiguration::get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const
 {
+    std::lock_guard lock(mutex);
     for (auto const& config : options.workspace_configs)
     {
         if (num && config.num == num.value())
@@ -571,15 +537,25 @@ WorkspaceConfig FilesystemConfiguration::get_workspace_config(std::optional<int>
 
 LayoutScheme FilesystemConfiguration::get_default_layout_scheme() const
 {
+    std::lock_guard lock(mutex);
     return LayoutScheme::horizontal;
 }
 
 DragAndDropConfiguration FilesystemConfiguration::drag_and_drop() const
 {
+    std::lock_guard lock(mutex);
     return options.drag_and_drop;
 }
 
 uint FilesystemConfiguration::move_modifier() const
 {
+    std::lock_guard lock(mutex);
     return options.move_modifier;
+}
+
+uint FilesystemConfiguration::process_modifier_internal(uint modifier) const
+{
+    if (modifier & miracle_input_event_modifier_default)
+        modifier = modifier & ~miracle_input_event_modifier_default | static_cast<MirInputEventModifier>(options.primary_modifier);
+    return modifier;
 }

@@ -49,6 +49,7 @@ class ExternalClientLauncher;
 namespace miracle
 {
 
+class ConfigObserverRegistrar;
 class Container;
 class ContainerGroupContainer;
 class AnimatorLoop;
@@ -69,7 +70,8 @@ public:
         std::shared_ptr<Config> const&,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
-        std::shared_ptr<DisplayConfig> const& display_config);
+        std::shared_ptr<DisplayConfig> const& display_config,
+        std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -123,6 +125,7 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<OutputListenerMultiplexer> output_listener;
+    std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::shared_ptr<AutoRestartingLauncher> launcher;

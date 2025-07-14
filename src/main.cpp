@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
+#include "config_observer.h"
 #include "display_config.h"
 #include "output_listener.h"
 #include "policy.h"
@@ -50,13 +51,15 @@ public:
         std::shared_ptr<miracle::Config> const& config,
         std::shared_ptr<miracle::CompositorState> const& compositor_state,
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
-        std::shared_ptr<miracle::DisplayConfig> const& display_config) :
+        std::shared_ptr<miracle::DisplayConfig> const& display_config,
+        std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar) :
         runner(runner),
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
         output_listener(output_listener),
-        display_config(display_config)
+        display_config(display_config),
+        config_observer_registrar(config_observer_registrar)
     {
     }
 
@@ -64,7 +67,7 @@ public:
     {
         config->load(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, runner, launcher, config, compositor_state, output_listener, display_config);
+            "tiling", server, runner, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -77,6 +80,7 @@ private:
     std::shared_ptr<WindowManagerOptions> options;
     std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
     std::shared_ptr<miracle::DisplayConfig> display_config;
+    std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
 };
 
 int main(int argc, char const* argv[])
@@ -88,7 +92,8 @@ int main(int argc, char const* argv[])
     auto display_config = std::make_shared<miracle::DisplayConfig>();
 
     ExternalClientLauncher external_client_launcher;
-    auto config = std::make_shared<miracle::FilesystemConfiguration>(runner);
+    auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
+    auto config = std::make_shared<miracle::FilesystemConfiguration>(runner, config_observer_registrar);
     for (auto const& env : config->get_env_variables())
     {
         setenv(env.key.c_str(), env.value.c_str(), 1);
@@ -118,17 +123,12 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener, display_config),
+        { PolicyLoader(runner, external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             config_keymap,
             *display_config,
             external_client_launcher,
-            AppendEventFilter([&config](MirEvent const*)
-    {
-        config->try_process_change();
-        return false;
-    }),
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);

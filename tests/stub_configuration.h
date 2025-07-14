@@ -101,24 +101,6 @@ namespace test
             return { num, ContainerType::leaf, name };
         }
 
-        int register_listener(std::function<void(miracle::Config&)> const&) override
-        {
-            return -1;
-        }
-
-        /// Register a listener on configuration change. A lower "priority" number signifies that the
-        /// listener should be triggered earlier. A higher priority means later
-        int register_listener(std::function<void(miracle::Config&)> const&, int priority) override
-        {
-            return -1;
-        }
-
-        void unregister_listener(int handle) override
-        {
-        }
-
-        void try_process_change() override { }
-
         [[nodiscard]] uint get_primary_modifier() const override
         {
             return 0;

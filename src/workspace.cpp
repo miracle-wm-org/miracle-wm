@@ -123,15 +123,6 @@ Workspace::Workspace(
     root(std::make_shared<ParentContainer>(
         state, window_controller, config, get_output_area(output), this, nullptr, true))
 {
-    config_handle = config->register_listener([this](auto const&)
-    {
-        recalculate_area();
-    });
-}
-
-Workspace::~Workspace()
-{
-    config->unregister_listener(config_handle);
 }
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
