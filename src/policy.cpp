@@ -200,6 +200,7 @@ Policy::Policy(
     mode_observer_registrar->register_interest(ipc_connection_manager);
     window_observer_registrar->register_interest(ipc_connection_manager);
     config_observer_registrar->register_interest(ipc_connection_manager);
+    output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     animator_loop->start();
 
@@ -219,6 +220,7 @@ Policy::~Policy()
     workspace_observer_registrar->unregister_interest(self.get());
     mode_observer_registrar->unregister_interest(ipc_connection_manager.get());
     config_observer_registrar->unregister_interest(ipc_connection_manager.get());
+    output_listener->unregister_listener(ipc_connection_manager);
     config_observer_registrar->unregister_interest(self.get());
 }
 

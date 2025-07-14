@@ -411,6 +411,40 @@ void IpcConnectionManager::send_window_event(const char* event, Container const&
     }
 }
 
+void IpcConnectionManager::output_created(miral::Output const&)
+{
+    send_output_event();
+}
+
+void IpcConnectionManager::output_deleted(miral::Output const&)
+{
+    send_output_event();
+}
+
+void IpcConnectionManager::output_updated(miral::Output const&, miral::Output const&)
+{
+    send_output_event();
+}
+
+void IpcConnectionManager::send_output_event()
+{
+    auto const j = json({
+        { "change", "unspecified" }
+    });
+    auto const str = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_OUTPUT)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(*client, IpcType::IPC_EVENT_OUTPUT, str);
+    }
+}
+
 void IpcConnectionManager::on_window_created(Container const& container)
 {
     send_window_event("new", container);
