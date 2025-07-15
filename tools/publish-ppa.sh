@@ -9,6 +9,6 @@ distro=$2
 dir=$(dirname $0)
 cd $dir/..
 rm -rf build
-debuild -S -sd
+debuild -S -sd -d
 cd $dir/../..
 dput ppa:matthew-kosarek/miracle-wm miracle-wm_${version}-${distro}_source.changes
