@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "ipc_connection_manager"
 
 #include "ipc_connection_manager.h"
+#include "binding_event.h"
 #include "command_controller.h"
 #include "config.h"
 #include "ipc_command_executor.h"
-#include "ipc_connection_manager.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -447,6 +447,23 @@ void IpcConnectionManager::send_output_event()
         }
 
         send_reply(*client, IpcType::IPC_EVENT_OUTPUT, str);
+    }
+}
+
+void IpcConnectionManager::on_binding_event(BindingEvent const& binding_event)
+{
+    auto const j = binding_event.to_json();
+    auto const str = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_BINDING)) == 0)
+        {
+            continue;
+        }
+
+        send_reply(*client, IpcType::IPC_EVENT_BINDING, str);
     }
 }
 

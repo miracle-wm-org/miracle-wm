@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "policy.h"
 #include "animator_loop.h"
+#include "binding_event.h"
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
@@ -229,6 +230,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
+    auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
     state->modifiers = modifiers;
 
     auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
@@ -242,6 +244,14 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;
+
+        BindingEvent binding_event(
+            BINDING_MODE_STRINGS[std::to_underlying(state->mode())],
+            default_key_command_strings[std::to_underlying(key_command)],
+            modifiers,
+            keysym,
+            BindingEventType::keyboard);
+        ipc_connection_manager->on_binding_event(binding_event);
 
         switch (key_command)
         {

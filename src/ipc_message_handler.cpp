@@ -99,16 +99,20 @@ MessageHandlerResult IpcMessageHandler::handle_msg(
             mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
             if (event_type == "workspace")
                 result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WORKSPACE);
-            else if (event_type == "window")
-                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WINDOW);
-            else if (event_type == "input")
-                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_INPUT);
+            else if (event_type == "output")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_OUTPUT);
             else if (event_type == "mode")
                 result.subscribed_events |= event_mask(IpcType::IPC_EVENT_MODE);
-            else if (event_type == "tick")
-                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_TICK);
+            else if (event_type == "window")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WINDOW);
+            else if (event_type == "binding")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_BINDING);
             else if (event_type == "shutdown")
                 result.subscribed_events |= event_mask(IpcType::IPC_EVENT_SHUTDOWN);
+            else if (event_type == "tick")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_TICK);
+            else if (event_type == "input")
+                result.subscribed_events |= event_mask(IpcType::IPC_EVENT_INPUT);
             else
             {
                 mir::log_warning("Cannot process IPC subscription event for event_type: %s", event_type.c_str());

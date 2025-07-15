@@ -62,6 +62,7 @@ pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 
 include(GNUInstallDirs)
 
@@ -122,6 +123,7 @@ add_library(miracle-wm-implementation
     src/tilling_algorithms.cpp src/tiling_algorithms.h
     src/window_observer.h src/window_observer.cpp
     src/config_observer.h src/config_observer.cpp
+    src/binding_event.h src/binding_event.cpp
 )
 
 add_executable(miracle-wm
@@ -138,7 +140,8 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
     ${MIRSERVER_INCLUDE_DIRS}
     ${MIRWAYLAND_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include)
+    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
+    ${XKBCOMMON_INCLUDE_DIRS})
 
 target_link_libraries(miracle-wm-implementation
     ${MIRAL_LDFLAGS}
@@ -147,6 +150,7 @@ target_link_libraries(miracle-wm-implementation
     ${MIRSERVER_LDFLAGS}
     ${MIRSERVER_INTERNAL_LDFLAGS}
     ${MIRWAYLAND_LDFLAGS}
+    ${XKBCOMMON_LIBRARIES}
     PkgConfig::YAML
     PkgConfig::GLIB
     PkgConfig::LIBEVDEV

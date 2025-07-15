@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class AbstractCommandController;
+class BindingEvent;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver,
@@ -63,6 +64,7 @@ public:
     void output_created(miral::Output const&) override;
     void output_deleted(miral::Output const&) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
+    void on_binding_event(BindingEvent const& binding_event);
 
 private:
     struct IpcClient
