@@ -1,3 +1,8 @@
+miracle-wm (0.6.1-noble) noble; urgency=medium
+  - Update to version 0.6.1
+
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Sat, 14 Jul 2025 09:35:00 -0400
+
 miracle-wm (0.5.2-noble) noble; urgency=medium
   - Update to version 0.5.2
 
