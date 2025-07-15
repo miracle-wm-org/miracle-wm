@@ -31,11 +31,7 @@ add_compile_options(
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     add_compile_options(
         -g                         # Debug symbols
-        #-fsanitize=address,undefined # Address and Undefined Behavior Sanitizer
         -fno-omit-frame-pointer     # Improve debugging accuracy
-    )
-    add_link_options(
-        -fsanitize=address,undefined
     )
 endif()
 
