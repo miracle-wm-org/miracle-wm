@@ -62,5 +62,8 @@ void OutputListenerMultiplexer::unregister_listener(std::shared_ptr<OutputListen
             if (locked.get() == listener.get())
                 it = listeners.erase(it);
         }
+
+        if (it == listeners.end())
+            break;
     }
 }
