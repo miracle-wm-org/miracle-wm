@@ -841,14 +841,17 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
     if (!can_move_container())
         return false;
 
+    // Note: it is important that we resolve the scope before we select
+    // the workspace, as selecting a workspace may cause the selected
+    // container to change.
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
     if (!select_workspace(number, back_and_forth))
         return false;
 
     auto const o = output_manager->focused();
-
-    auto const containers = resolve_scope(scope);
-    if (containers.empty())
-        return false;
 
     for (auto const& container : containers)
     {
