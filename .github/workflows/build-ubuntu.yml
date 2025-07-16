@@ -60,7 +60,6 @@ jobs:
       run: cd ${{github.workspace}}/build && ./miracle-wm-config/test_miracle_wm_config_c_api
 
     - name: IPC Tests
-      if: false 
       run: |
         cd ${{github.workspace}}/tests/ipc
         python -m venv venv

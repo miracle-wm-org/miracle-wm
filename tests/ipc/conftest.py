@@ -31,7 +31,10 @@ def server():
         yield Server(os.environ["SWAYSOCK"], os.environ["WAYLAND_DISPLAY"])
         return
     
-    (process, env) = _create_server(['--platform-display-libs', 'mir:virtual', '--virtual-output', '800x600', '--no-config', '1'])
+    (process, env) = _create_server([
+        '--platform-display-libs', 'mir:virtual',
+        '--platform-rendering-libs', 'mir:virtual',
+        '--virtual-output', '800x600', '--no-config', '1'])
     socket = ""
     to_find = "Listening to IPC socket on path: "   
     with process.stdout:
