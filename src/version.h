@@ -22,6 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_MINOR 6
 #define MIRACLE_WM_PATCH 1
 
-#define MIRACLE_VERSION_STRING "0.6.1"
+#define MIRACLE_VERSION_STRING "0.6.2"
 
 #endif // MIRACLE_WM_VERSION_H
