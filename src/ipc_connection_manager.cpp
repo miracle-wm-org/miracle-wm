@@ -163,8 +163,13 @@ IpcConnectionManager::IpcConnectionManager(
         std::lock_guard lock(clients_mutex);
         auto client = std::make_shared<IpcClient>();
         client->client_fd = mir_fd;
-        client->handle = runner.register_fd_handler(mir_fd, [client = client, this](int const fd)
+        std::weak_ptr<IpcClient> weak_client = client;
+        client->handle = runner.register_fd_handler(mir_fd, [weak_client = weak_client, this](int const fd)
         {
+            auto const client = weak_client.lock();
+            if (!client)
+                return;
+
             uint32_t read_available;
             if (ioctl(client->client_fd, FIONREAD, &read_available) == -1)
             {
