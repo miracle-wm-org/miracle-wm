@@ -103,7 +103,7 @@ namespace test
 
         [[nodiscard]] uint get_primary_modifier() const override
         {
-            return 0;
+            return mir_input_event_modifier_meta;
         }
 
         [[nodiscard]] LayoutScheme get_default_layout_scheme() const override
