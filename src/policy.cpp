@@ -53,18 +53,18 @@ namespace
 class MirRunnerCommandControllerInterface : public CommandControllerInterface
 {
 public:
-    explicit MirRunnerCommandControllerInterface(miral::MirRunner& runner) :
-        runner { runner }
+    explicit MirRunnerCommandControllerInterface(std::shared_ptr<mir::MainLoop> const& main_loop) :
+        main_loop { main_loop }
     {
     }
 
     void quit() override
     {
-        runner.stop();
+        main_loop->stop();
     }
 
 private:
-    miral::MirRunner& runner;
+    std::shared_ptr<mir::MainLoop> main_loop;
 };
 }
 
@@ -143,8 +143,7 @@ public:
 
 Policy::Policy(
     miral::WindowManagerTools const& tools,
-    mir::Server const& server,
-    miral::MirRunner& runner,
+    mir::Server& server,
     miral::ExternalClientLauncher& external_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
@@ -159,7 +158,7 @@ Policy::Policy(
     animator(std::make_shared<Animator>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, state, config, server.the_main_loop(), this)),
-    launcher { std::make_shared<AutoRestartingLauncher>(runner, external_client_launcher) },
+    launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
     output_manager(std::make_shared<OutputManager>(
@@ -176,12 +175,12 @@ Policy::Policy(
     command_controller(std::make_shared<CommandController>(
         config, self->mutex, state, window_controller,
         workspace_manager, mode_observer_registrar,
-        std::make_unique<MirRunnerCommandControllerInterface>(runner), scratchpad_, output_manager)),
+        std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager)),
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
-        runner,
+        server.the_main_loop(),
         command_controller,
         std::make_unique<IpcCommandExecutor>(command_controller, launcher),
         config)),
@@ -204,13 +203,6 @@ Policy::Policy(
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     animator_loop->start();
-
-    // TODO: This is a hack until we figure out what is happening with
-    //  https://github.com/canonical/mir/issues/3823.
-    runner.add_stop_callback([&]
-    {
-        ipc_connection_manager->on_shutdown();
-    });
 }
 
 Policy::~Policy()
@@ -233,9 +225,16 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
     state->modifiers = modifiers;
 
-    auto custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers);
-    if (custom_key_command != nullptr)
+    if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
     {
+        BindingEvent const binding_event(
+            BINDING_MODE_STRINGS[std::to_underlying(state->mode())],
+            custom_key_command->command,
+            modifiers,
+            keysym,
+            BindingEventType::keyboard);
+        ipc_connection_manager->on_binding_event(binding_event);
+
         launcher->launch({ custom_key_command->command });
         return true;
     }
@@ -245,7 +244,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         if (key_command == DefaultKeyCommand::MAX)
             return false;
 
-        BindingEvent binding_event(
+        BindingEvent const binding_event(
             BINDING_MODE_STRINGS[std::to_underlying(state->mode())],
             default_key_command_strings[std::to_underlying(key_command)],
             modifiers,
@@ -257,8 +256,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         {
         case DefaultKeyCommand::Terminal:
         {
-            auto terminal_command = config->get_terminal_command();
-            if (terminal_command)
+            if (auto const terminal_command = config->get_terminal_command())
                 launcher->launch({ terminal_command.value() });
             return true;
         }
@@ -348,7 +346,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case DefaultKeyCommand::ToggleStacking:
             return command_controller->toggle_stacking({});
         default:
-            std::cerr << "Unknown key_command: " << static_cast<int>(key_command) << std::endl;
+            mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
             break;
         }
         return false;

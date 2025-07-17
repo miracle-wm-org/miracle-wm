@@ -41,11 +41,6 @@ const std::string path = std::filesystem::current_path() / "test.yaml";
 class FilesystemConfigurationTest : public testing::Test
 {
 public:
-    FilesystemConfigurationTest() :
-        runner(argc, argv)
-    {
-    }
-
     void SetUp() override
     {
         std::ofstream ofs;
@@ -70,47 +65,46 @@ public:
         file << node;
     }
 
-    miral::MirRunner runner;
     std::shared_ptr<ConfigObserverRegistrar> registrar = std::make_shared<ConfigObserverRegistrar>();
 };
 
 TEST_F(FilesystemConfigurationTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotExist)
 {
     std::filesystem::remove(path.c_str());
-    EXPECT_NO_THROW(FilesystemConfiguration config(runner, registrar, path, true));
+    EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
 }
 
 TEST_F(FilesystemConfigurationTest, ConfigurationLoadingDoesNotFailWhenFileDoesNotContainYaml)
 {
     std::fstream file(path, std::ios::app);
     file << "Hello my name is Matthew { \"fifteen\": 15 } Goodbye then!";
-    EXPECT_NO_THROW(FilesystemConfiguration config(runner, registrar, path, true));
+    EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
 }
 
 TEST_F(FilesystemConfigurationTest, DefaultModifierIsMeta)
 {
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_meta);
 }
 
 TEST_F(FilesystemConfigurationTest, CanWriteDefaultModifier)
 {
     write_kvp("action_key", "alt");
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_alt);
 }
 
 TEST_F(FilesystemConfigurationTest, UnknownModifiersResultsInMeta)
 {
     write_kvp("action_key", "unknown");
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     ASSERT_EQ(config.get_input_event_modifier(), mir_input_event_modifier_meta);
 }
 
 TEST_F(FilesystemConfigurationTest, WhenDefaultActionOverridesIsNotArrayThenWeDoNotFail)
 {
     write_kvp("default_action_overrides", "hello");
-    EXPECT_NO_THROW(FilesystemConfiguration config(runner, registrar, path, true));
+    EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
 }
 
 TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
@@ -124,7 +118,7 @@ TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -147,7 +141,7 @@ TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidN
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_ENTER,
@@ -170,7 +164,7 @@ TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidM
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_ENTER,
@@ -193,7 +187,7 @@ TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -215,7 +209,7 @@ TEST_F(FilesystemConfigurationTest, CustomActionsInSnapIncludeUnsnapCommand)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -235,7 +229,7 @@ TEST_F(FilesystemConfigurationTest, CustomActionWithInvalidCommandIsNotAdded)
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
         KEY_X,
@@ -252,7 +246,7 @@ TEST_F(FilesystemConfigurationTest, InvalidInnerGapsResolveToDefault)
     node["inner_gaps"] = vec;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_inner_gaps_x(), 10);
     EXPECT_EQ(config.get_inner_gaps_y(), 10);
 }
@@ -266,7 +260,7 @@ TEST_F(FilesystemConfigurationTest, ValidInnerGapsAreSetCorrectly)
     node["inner_gaps"] = vec;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_inner_gaps_x(), 33);
     EXPECT_EQ(config.get_inner_gaps_y(), 44);
 }
@@ -280,7 +274,7 @@ TEST_F(FilesystemConfigurationTest, InvalidOuterGapsResolveToDefault)
     node["outer_gaps"] = vec;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_outer_gaps_x(), 10);
     EXPECT_EQ(config.get_outer_gaps_y(), 10);
 }
@@ -294,7 +288,7 @@ TEST_F(FilesystemConfigurationTest, ValidOuterGapsAreSetCorrectly)
     node["outer_gaps"] = vec;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_outer_gaps_x(), 33);
     EXPECT_EQ(config.get_outer_gaps_y(), 44);
 }
@@ -308,7 +302,7 @@ TEST_F(FilesystemConfigurationTest, ValidStartupAppsAreParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_startup_apps().size(), 1);
     EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     EXPECT_EQ(config.get_startup_apps()[0].restart_on_death, true);
@@ -324,7 +318,7 @@ TEST_F(FilesystemConfigurationTest, StartupAppsInSnapIncludeUnsnapCommand)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_startup_apps()[0].command, "echo Hi");
     unsetenv("SNAP");
 }
@@ -336,7 +330,7 @@ TEST_F(FilesystemConfigurationTest, StartupAppsThatIsNotAnArrayIsNotParsed)
     node["startup_apps"] = "Hello";
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
@@ -349,7 +343,7 @@ TEST_F(FilesystemConfigurationTest, StartupAppsInvalidCommandIsNotParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
@@ -362,7 +356,7 @@ TEST_F(FilesystemConfigurationTest, StartupAppsInvalidRestartOnDeathIsNotParsed)
     node["startup_apps"].push_back(startup_app);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_startup_apps().size(), 0);
 }
 
@@ -374,7 +368,7 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableInvalidWhenKeyIsMissing)
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_env_variables().size(), 0);
 }
 
@@ -386,7 +380,7 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableInvalidWhenValueIsMissing
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_env_variables().size(), 0);
 }
 
@@ -399,7 +393,7 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableCanBeParsed)
     node["environment_variables"].push_back(environment_variable);
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_env_variables().size(), 1);
 }
 
@@ -426,7 +420,7 @@ TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithArrayColors)
     node["border"] = border;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_border_config().size, 2);
     EXPECT_EQ(config.get_border_config().color.r, 1.f);
     EXPECT_EQ(config.get_border_config().color.g, 155.f / 255.f);
@@ -456,7 +450,7 @@ TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithHexColor)
     node["border"] = border;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_border_config().color.r, 221.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.g, 137.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.b, 221.f / 255.f);
@@ -484,7 +478,7 @@ TEST_F(FilesystemConfigurationTest, BorderCanBeParsedObjectColor)
     node["border"] = border;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_border_config().color.r, 15.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.g, 25.f / 255.f);
     EXPECT_EQ(config.get_border_config().color.b, 30.f / 255.f);
@@ -501,7 +495,7 @@ TEST_F(FilesystemConfigurationTest, DragAndDropAllValues)
     node["drag_and_drop"] = drag_and_drop;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.drag_and_drop().enabled, true);
     EXPECT_EQ(config.drag_and_drop().modifiers, mir_input_event_modifier_alt);
 }
@@ -515,7 +509,7 @@ TEST_F(FilesystemConfigurationTest, DragAndDropMissingEnabled)
     node["drag_and_drop"] = drag_and_drop;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.drag_and_drop().enabled, true);
     EXPECT_EQ(config.drag_and_drop().modifiers, miracle_input_event_modifier_default);
 }
@@ -529,7 +523,7 @@ TEST_F(FilesystemConfigurationTest, DragAndDropMissingModifiers)
     node["drag_and_drop"] = drag_and_drop;
     write_yaml_node(node);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.drag_and_drop().enabled, true);
     EXPECT_EQ(config.drag_and_drop().modifiers, miracle_input_event_modifier_default | mir_input_event_modifier_shift);
 }
@@ -558,7 +552,7 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
     root["animations"] = animations_node;
     write_yaml_node(root);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
     auto def = config.get_animation_definition(AnimateableEvent::window_open);
     EXPECT_EQ(def.type, param.expected);
 }
@@ -586,5 +580,5 @@ TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
     registrar->register_interest(observer);
     EXPECT_CALL(*observer, on_config_changed).Times(1);
 
-    FilesystemConfiguration config(runner, registrar, path, true);
+    FilesystemConfiguration config(registrar, path, true);
 }

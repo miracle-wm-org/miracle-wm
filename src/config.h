@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include <miracle/miracle-wm-config.h>
 
-#include <atomic>
 #include <functional>
 #include <linux/input.h>
 #include <memory>
@@ -34,11 +33,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace mir
 {
 class Server;
+class MainLoop;
 }
 
 namespace miral
 {
-class MirRunner;
 class FdHandle;
 }
 namespace miracle
@@ -79,8 +78,9 @@ public:
 class FilesystemConfiguration : public Config
 {
 public:
-    explicit FilesystemConfiguration(miral::MirRunner&, std::shared_ptr<ConfigObserverRegistrar> const&);
-    FilesystemConfiguration(miral::MirRunner&, std::shared_ptr<ConfigObserverRegistrar> const&, std::string const&, bool load_immediately = false);
+    explicit FilesystemConfiguration(std::shared_ptr<ConfigObserverRegistrar> const&);
+    FilesystemConfiguration(std::shared_ptr<ConfigObserverRegistrar> const&, std::string const&, bool load_immediately = false);
+    ~FilesystemConfiguration() override;
     FilesystemConfiguration(FilesystemConfiguration const&) = delete;
     auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = delete;
 
@@ -111,8 +111,8 @@ public:
 private:
     uint process_modifier_internal(uint modifier) const;
     void _init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app);
-    void _watch(miral::MirRunner& runner);
-    miral::MirRunner& runner;
+    void _watch(std::shared_ptr<mir::MainLoop> const& main_loop);
+    std::shared_ptr<mir::MainLoop> main_loop;
     std::shared_ptr<ConfigObserverRegistrar> observer_registrar;
     int next_listener_handle = 0;
     std::string default_config_path;

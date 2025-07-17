@@ -82,10 +82,11 @@ json mode_event_to_json(WindowManagerMode mode)
 }
 
 IpcConnectionManager::IpcConnectionManager(
-    miral::MirRunner& runner,
+    std::shared_ptr<mir::MainLoop> const& main_loop_,
     std::shared_ptr<AbstractCommandController> const& command_controller,
     std::unique_ptr<IpcCommandExecutor> command_executor,
     std::shared_ptr<Config> const& config) :
+    main_loop(main_loop_),
     command_controller(command_controller),
     ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, std::move(command_executor), config))
 {
@@ -134,7 +135,7 @@ IpcConnectionManager::IpcConnectionManager(
     mir::log_info("Listening to IPC socket on path: %s", ipc_sockaddr->sun_path);
 
     ipc_socket = mir::Fd { ipc_socket_raw };
-    socket_handle = runner.register_fd_handler(ipc_socket, [&](int fd)
+    main_loop->register_fd_handler({ ipc_socket }, this, [this](int fd)
     {
         int client_fd = accept(ipc_socket, NULL, NULL);
         if (client_fd == -1)
@@ -159,12 +160,12 @@ IpcConnectionManager::IpcConnectionManager(
             return;
         }
 
-        auto const mir_fd = mir::Fd { client_fd };
+        auto mir_fd = mir::Fd { client_fd };
         std::lock_guard lock(clients_mutex);
         auto client = std::make_shared<IpcClient>();
         client->client_fd = mir_fd;
         std::weak_ptr<IpcClient> weak_client = client;
-        client->handle = runner.register_fd_handler(mir_fd, [weak_client = weak_client, this](int const fd)
+        main_loop->register_fd_handler({ mir_fd }, (void*)client.get(), [weak_client = weak_client, this](int const fd)
         {
             auto const client = weak_client.lock();
             if (!client)
@@ -229,6 +230,11 @@ IpcConnectionManager::IpcConnectionManager(
 
         clients.push_back(client);
     });
+}
+
+IpcConnectionManager::~IpcConnectionManager()
+{
+    main_loop->unregister_fd_handler(this);
 }
 
 void IpcConnectionManager::on_workspace_created(uint32_t id)
@@ -393,7 +399,8 @@ void IpcConnectionManager::on_shutdown()
     }
 
     for (auto& client : clients)
-        disconnect(*client);
+        disconnect_internal(client.get());
+    clients.clear();
 }
 
 void IpcConnectionManager::send_window_event(const char* event, Container const& container)
@@ -511,15 +518,21 @@ void IpcConnectionManager::disconnect(IpcClient& client)
     });
     if (it != clients.end())
     {
-        if (fd_is_valid(client.client_fd))
-            shutdown(client.client_fd, SHUT_RDWR);
-        mir::log_info("Disconnected client: %d", (int)client.client_fd);
+        disconnect_internal(it->get());
         clients.erase(it);
     }
     else
     {
         mir::log_error("Unable to disconnect client");
     }
+}
+
+void IpcConnectionManager::disconnect_internal(IpcClient* client)
+{
+    main_loop->unregister_fd_handler(client);
+    if (fd_is_valid(client->client_fd))
+        shutdown(client->client_fd, SHUT_RDWR);
+    mir::log_info("Disconnected client: %d", (int)client->client_fd);
 }
 
 void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type)

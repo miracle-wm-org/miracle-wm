@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_observer.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
-#include <miral/runner.h>
+#include <mir/main_loop.h>
 #include <vector>
 
 namespace miracle
@@ -42,10 +42,11 @@ class IpcConnectionManager : public virtual WorkspaceObserver,
 {
 public:
     IpcConnectionManager(
-        miral::MirRunner& runner,
+        std::shared_ptr<mir::MainLoop> const& main_loop,
         std::shared_ptr<AbstractCommandController> const&,
         std::unique_ptr<IpcCommandExecutor>,
         std::shared_ptr<Config> const&);
+    ~IpcConnectionManager() override;
     void on_workspace_created(uint32_t id) override;
     void on_workspace_empty(uint32_t id) override;
     void on_workspace_removed(uint32_t id) override;
@@ -70,7 +71,6 @@ private:
     struct IpcClient
     {
         mir::Fd client_fd;
-        std::unique_ptr<miral::FdHandle> handle;
         uint32_t pending_read_length = 0;
         IpcType pending_type;
         std::vector<char> buffer;
@@ -78,16 +78,18 @@ private:
         int subscribed_events = 0;
     };
 
+    std::shared_ptr<mir::MainLoop> main_loop;
     std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
-    std::unique_ptr<miral::FdHandle> socket_handle;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<std::shared_ptr<IpcClient>> clients;
 
     /// Disconnects the provided client.
     void disconnect(IpcClient& client);
+
+    void disconnect_internal(IpcClient* client);
 
     /// Handles a command for the client.
     void handle_command(IpcClient& client, uint32_t payload_length, IpcType payload_type);

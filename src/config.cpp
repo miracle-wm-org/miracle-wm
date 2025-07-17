@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glib-2.0/glib.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <mir/log.h>
+#include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <miral/runner.h>
@@ -44,14 +45,12 @@ uint Config::process_modifier(uint modifier) const
     return modifier;
 }
 
-FilesystemConfiguration::FilesystemConfiguration(miral::MirRunner& runner, std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar) :
-    FilesystemConfiguration { runner, observer_registrar, get_config_path() }
+FilesystemConfiguration::FilesystemConfiguration(std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar) :
+    FilesystemConfiguration { observer_registrar, get_config_path() }
 {
 }
 
-FilesystemConfiguration::FilesystemConfiguration(
-    miral::MirRunner& runner, std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar, std::string const& path, bool load_immediately) :
-    runner { runner },
+FilesystemConfiguration::FilesystemConfiguration(std::shared_ptr<ConfigObserverRegistrar> const& observer_registrar, std::string const& path, bool load_immediately) :
     observer_registrar { observer_registrar },
     default_config_path { path }
 {
@@ -62,6 +61,12 @@ FilesystemConfiguration::FilesystemConfiguration(
         config_path = default_config_path;
         _init(std::nullopt, std::nullopt);
     }
+}
+
+FilesystemConfiguration::~FilesystemConfiguration()
+{
+    if (main_loop)
+        main_loop->unregister_fd_handler(this);
 }
 
 void FilesystemConfiguration::load(mir::Server& server)
@@ -93,6 +98,7 @@ void FilesystemConfiguration::load(mir::Server& server)
 
     server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
     {
+        main_loop = server.the_main_loop();
         auto const server_opts = server.get_options();
         no_config = server_opts->get<bool>(no_config_option);
         config_path = server_opts->get<std::string>(config_file_name_option);
@@ -168,7 +174,11 @@ void FilesystemConfiguration::_init(
     }
 
     is_loaded_ = true;
-    _watch(runner);
+
+    if (main_loop != nullptr)
+        _watch(main_loop);
+    else
+        mir::log_warning("Cannot watch for configuration changes because main_loop is not set");
 }
 
 void FilesystemConfiguration::reload()
@@ -201,7 +211,7 @@ void FilesystemConfiguration::reload()
     observer_registrar->advise_config_changed(*this);
 }
 
-void FilesystemConfiguration::_watch(miral::MirRunner& runner)
+void FilesystemConfiguration::_watch(std::shared_ptr<mir::MainLoop> const& main_loop)
 {
     if (no_config)
     {
@@ -214,7 +224,7 @@ void FilesystemConfiguration::_watch(miral::MirRunner& runner)
     if (file_watch < 0)
         mir::fatal_error("Unable to watch the config file");
 
-    watch_handle = runner.register_fd_handler(inotify_fd, [&](int file_fd)
+    main_loop->register_fd_handler({ inotify_fd }, this, [&](int file_fd)
     {
         union
         {
