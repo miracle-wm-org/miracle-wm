@@ -24,14 +24,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 AutoRestartingLauncher::AutoRestartingLauncher(
-    miral::MirRunner& runner,
+    mir::Server& server,
     miral::ExternalClientLauncher& launcher) :
-    runner { runner },
+    main_loop { server.the_main_loop() },
     launcher { launcher }
 {
-    runner.add_start_callback([&]
-    { runner.register_signal_handler({ SIGCHLD }, [this](int)
-      { reap(); }); });
+    server.add_init_callback([&]
+    {
+        main_loop->register_signal_handler({ SIGCHLD }, [this](int)
+        { reap(); });
+    });
 }
 
 std::vector<std::string_view> split(std::string_view str, char delim)
@@ -127,7 +129,7 @@ void AutoRestartingLauncher::reap()
 
             if (cmd.should_halt_compositor_on_death)
             {
-                runner.stop();
+                main_loop->stop();
                 return;
             }
 

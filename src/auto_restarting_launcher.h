@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include <map>
+#include <mir/main_loop.h>
+#include <mir/server.h>
 #include <miral/external_client.h>
 
 namespace miracle
@@ -35,13 +37,13 @@ public:
 class AutoRestartingLauncher : public Launcher
 {
 public:
-    AutoRestartingLauncher(miral::MirRunner&, miral::ExternalClientLauncher&);
+    AutoRestartingLauncher(mir::Server& server, miral::ExternalClientLauncher&);
     void launch(StartupApp const&) override;
     void kill_all() override;
 
 private:
     std::map<pid_t, StartupApp> pid_to_command_map;
-    miral::MirRunner& runner;
+    std::shared_ptr<mir::MainLoop> main_loop;
     miral::ExternalClientLauncher& launcher;
     std::mutex mutable mutex;
 

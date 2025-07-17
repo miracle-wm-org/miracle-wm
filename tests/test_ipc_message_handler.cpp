@@ -125,7 +125,9 @@ INSTANTIATE_TEST_SUITE_P(
         SubscriptionTestParams("input", IpcType::IPC_EVENT_INPUT),
         SubscriptionTestParams("mode", IpcType::IPC_EVENT_MODE),
         SubscriptionTestParams("tick", IpcType::IPC_EVENT_TICK),
-        SubscriptionTestParams("shutdown", IpcType::IPC_EVENT_SHUTDOWN)));
+        SubscriptionTestParams("shutdown", IpcType::IPC_EVENT_SHUTDOWN),
+        SubscriptionTestParams("binding", IpcType::IPC_EVENT_BINDING),
+        SubscriptionTestParams("output", IpcType::IPC_EVENT_OUTPUT)));
 
 TEST_F(IpcMessageHandlerTest, CanFailToSubscribeToEvent)
 {

@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config_observer.h"
 #include "display_config.h"
+#include "ipc_client.h"
 #include "output_listener.h"
 #include "policy.h"
 #include "stub_configuration.h"
@@ -27,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
+#include <sys/socket.h>
 
 namespace mg = mir::graphics;
 
@@ -42,8 +45,7 @@ const char* argv[] = { "miracle-wm" };
 class PolicyTest : public mir_test_framework::WindowManagementTestHarness
 {
 public:
-    explicit PolicyTest() :
-        runner(argc, const_cast<const char**>(argv))
+    explicit PolicyTest()
     {
         server.wrap_display_configuration_policy([&](std::shared_ptr<mg::DisplayConfigurationPolicy> const&)
                                                      -> std::shared_ptr<mg::DisplayConfigurationPolicy>
@@ -59,7 +61,6 @@ public:
     }
 
     miral::ExternalClientLauncher launcher;
-    miral::MirRunner runner;
     std::shared_ptr<CompositorState> compositor_state = std::make_shared<CompositorState>();
 };
 
@@ -69,7 +70,6 @@ public:
     SingleWindowPolicyTest() :
         config_path { std::filesystem::temp_directory_path() / "policy_test.yaml" },
         config { std::make_shared<FilesystemConfiguration>(
-            runner,
             registrar,
             config_path,
             true) }
@@ -88,7 +88,6 @@ public:
             return std::make_unique<Policy>(
                 tools,
                 server,
-                runner,
                 launcher,
                 config,
                 compositor_state,
@@ -126,7 +125,6 @@ public:
             return std::make_unique<Policy>(
                 tools,
                 server,
-                runner,
                 launcher,
                 config,
                 compositor_state,
@@ -288,4 +286,62 @@ TEST_F(SingleWindowPolicyTest, can_move_container_to_workspace_that_doesnt_have_
     {
         EXPECT_THAT(container.lock()->get_workspace()->num(), Eq(2));
     }
+}
+
+TEST_F(SingleWindowPolicyTest, can_open_ipc_client)
+{
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    EXPECT_THAT(socket_fd, Ne(-1));
+}
+
+TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
+{
+    // Setup: Open a client and subscribe to binding events
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    nlohmann::json payload_json;
+    payload_json.push_back("binding");
+    auto const payload = to_string(payload_json);
+    uint32_t response_len = payload.size();
+    ipc_single_command(socket_fd, IPC_SUBSCRIBE, payload.c_str(), &response_len);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    auto thread = std::thread([&]()
+    {
+        ipc_response* reply = ipc_recv_response(socket_fd);
+        EXPECT_THAT(reply, Ne(nullptr));
+
+        std::string json_str;
+        json_str.assign(reply->payload, reply->size);
+
+        nlohmann::json json = nlohmann::json::parse(json_str);
+        EXPECT_THAT(json["change"], Eq("run"));
+        EXPECT_THAT(json["binding"]["command"], Eq("select_workspace_2"));
+        EXPECT_THAT(json["binding"]["event_state_mask"][0], Eq("meta"));
+        EXPECT_THAT(json["binding"]["input_code"], Eq(XKB_KEY_2));
+        EXPECT_THAT(json["binding"]["symbol"], Eq("2"));
+        EXPECT_THAT(json["binding"]["type"], Eq("keyboard"));
+    });
+
+    // Action: issue a key command (e.g. move to workspace 2)
+    {
+        // Move to workspace 2
+        std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
+        MirKeyboardAction const action { mir_keyboard_action_down };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
+        int const scan_code { KEY_2 };
+        MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
+        auto const event = mir::events::make_key_event(
+            mir_input_event_type_key,
+            event_timestamp,
+            action,
+            keysym,
+            scan_code,
+            modifiers);
+        publish_event(*event);
+    }
+
+    thread.join();
 }

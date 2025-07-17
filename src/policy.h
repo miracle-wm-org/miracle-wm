@@ -42,7 +42,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miral
 {
-class MirRunner;
 class ExternalClientLauncher;
 }
 
@@ -64,8 +63,7 @@ class Policy : public miral::WindowManagementPolicy
 public:
     Policy(
         miral::WindowManagerTools const&,
-        mir::Server const&,
-        miral::MirRunner&,
+        mir::Server&,
         miral::ExternalClientLauncher& external_client_launcher,
         std::shared_ptr<Config> const&,
         std::shared_ptr<CompositorState> const& state,

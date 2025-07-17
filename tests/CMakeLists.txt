@@ -12,6 +12,7 @@ pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 find_package(GTest REQUIRED)
+find_package(nlohmann_json 3.2.0 REQUIRED)
 
 option(END_TO_END_TESTS "Include end-to-end tests?" OFF)
 
@@ -56,6 +57,7 @@ add_executable(miracle-wm-tests ${SOURCES})
 
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM
     ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
+    ${PROJECT_SOURCE_DIR}/miraclemsg
     ${MIRAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
     ${MIRTEST_INCLUDE_DIRS}
@@ -65,11 +67,13 @@ target_include_directories(miracle-wm-tests PUBLIC SYSTEM
 target_link_libraries(miracle-wm-tests
     miracle-wm-implementation
     miracle-wm-config
+    miracle-ipc
     ${GTEST_LIBRARIES}
     ${MIRAL_LDFLAGS}
     ${MIRSERVER_LDFLAGS}
     ${MIRTEST_LDFLAGS}
     PkgConfig::YAML
+    nlohmann_json::nlohmann_json
     pthread
     GTest::GTest GTest::Main GTest::gmock)
 
