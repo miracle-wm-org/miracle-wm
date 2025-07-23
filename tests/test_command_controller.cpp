@@ -41,7 +41,7 @@ public:
     void quit() override { }
 };
 
-class CommandControllerTest : public testing::Test
+class CommandControllerTest : public Test
 {
 public:
     CommandControllerTest() :
@@ -76,9 +76,113 @@ public:
     std::shared_ptr<CommandController> command_controller;
 };
 
+MATCHER_P(GapsEq, expected, "")
+{
+    return arg == expected;
+}
+
+TEST_F(CommandControllerTest, SetInnerGapsSetsGlobalGaps)
+{
+    size_t constexpr TEST_GAP = 10;
+    auto const gaps = Gaps { TEST_GAP, TEST_GAP, TEST_GAP, TEST_GAP };
+    EXPECT_CALL(*config, override_inner_gaps(GapsEq(gaps)));
+    command_controller->set_inner_gaps(TEST_GAP, GapsChangeType::set, false);
+}
+
+TEST_F(CommandControllerTest, SetInnerGapsAddsToGlobalGaps)
+{
+    size_t constexpr TEST_GAP = 5;
+    Gaps constexpr initial_gaps { 10, 10, 10, 10 };
+    EXPECT_CALL(*config, get_inner_gaps()).WillOnce(Return(initial_gaps));
+    auto constexpr result = Gaps { 15, 15, 15, 15 };
+    EXPECT_CALL(*config, override_inner_gaps(GapsEq(result))).Times(1);
+    command_controller->set_inner_gaps(TEST_GAP, GapsChangeType::plus, false);
+}
+
+TEST_F(CommandControllerTest, SetInnerGapsSubtractsFromGlobalGaps)
+{
+    size_t constexpr TEST_GAP = 3;
+    Gaps constexpr initial_gaps { 10, 10, 10, 10 };
+    EXPECT_CALL(*config, get_inner_gaps()).WillOnce(Return(initial_gaps));
+
+    auto constexpr result = Gaps { 7, 7, 7, 7 };
+    EXPECT_CALL(*config, override_inner_gaps(GapsEq(result))).Times(1);
+    command_controller->set_inner_gaps(TEST_GAP, GapsChangeType::minus, false);
+}
+
+TEST_F(CommandControllerTest, SetInnerGapsSetsWorkspaceGaps)
+{
+    size_t constexpr TEST_GAP = 8;
+    auto const output = new NiceMock<test::MockOutput>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
+    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+
+    output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+    output_manager->focus(output->id());
+
+    auto constexpr result = Gaps { TEST_GAP, TEST_GAP, TEST_GAP, TEST_GAP };
+    EXPECT_CALL(*workspace, inner_gaps(GapsEq(result)));
+    command_controller->set_inner_gaps(TEST_GAP, GapsChangeType::set, true);
+}
+
+TEST_F(CommandControllerTest, SetOuterGapsSetsGlobalGaps)
+{
+    size_t constexpr TEST_GAP = 10;
+    auto constexpr result = Gaps { TEST_GAP, TEST_GAP, TEST_GAP, TEST_GAP };
+    EXPECT_CALL(*config, override_outer_gaps(GapsEq(result)));
+    command_controller->set_outer_gaps(TEST_GAP, OuterGapsChange::outer, GapsChangeType::set, false);
+}
+
+TEST_F(CommandControllerTest, SetOuterGapsSetsHorizontalGaps)
+{
+    size_t constexpr TEST_GAP = 5;
+    Gaps constexpr initial_gaps { 10, 10, 10, 10 };
+    EXPECT_CALL(*config, get_outer_gaps()).WillOnce(Return(initial_gaps));
+    auto constexpr result = Gaps { 10, 10, 5, 5 };
+    EXPECT_CALL(*config, override_outer_gaps(GapsEq(result))).Times(1);
+    command_controller->set_outer_gaps(TEST_GAP, OuterGapsChange::horizontal, GapsChangeType::set, false);
+}
+
+TEST_F(CommandControllerTest, SetOuterGapsAddsToVerticalGaps)
+{
+    size_t constexpr TEST_GAP = 3;
+    Gaps constexpr initial_gaps { 10, 10, 10, 10 };
+    EXPECT_CALL(*config, get_outer_gaps()).WillOnce(Return(initial_gaps));
+    auto constexpr result = Gaps { 13, 13, 10, 10 };
+    EXPECT_CALL(*config, override_outer_gaps(GapsEq(result))).Times(1);
+    command_controller->set_outer_gaps(TEST_GAP, OuterGapsChange::vertical, GapsChangeType::plus, false);
+}
+
+TEST_F(CommandControllerTest, SetOuterGapsSetsWorkspaceGaps)
+{
+    size_t constexpr TEST_GAP = 8;
+    auto const output = new NiceMock<test::MockOutput>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
+    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+
+    output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+    output_manager->focus(output->id());
+
+    auto constexpr result = Gaps { TEST_GAP, TEST_GAP, TEST_GAP, TEST_GAP };
+    EXPECT_CALL(*workspace, outer_gaps(GapsEq(result)));
+    command_controller->set_outer_gaps(TEST_GAP, OuterGapsChange::outer, GapsChangeType::set, true);
+}
+
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 {
-    auto container = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
     state->add(container);
     state->focus_container(container);
 
@@ -92,27 +196,27 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
     output_manager->focus(output->id());
 
-    auto workspace = std::make_shared<testing::NiceMock<test::MockWorkspace>>();
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     EXPECT_CALL(*container, get_workspace())
-        .WillOnce(testing::Return(workspace.get()));
+        .WillOnce(Return(workspace.get()));
     EXPECT_CALL(*workspace, num())
-        .WillOnce(testing::Return(1));
+        .WillOnce(Return(1));
 
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 1, true));
 }
 
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 {
-    auto container = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
     state->add(container);
     state->focus_container(container);
 
-    auto workspace = std::make_shared<testing::NiceMock<test::MockWorkspace>>();
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     EXPECT_CALL(*container, get_workspace())
-        .WillOnce(testing::Return(workspace.get()));
+        .WillOnce(Return(workspace.get()));
     std::optional<std::string> const name = "Test";
     EXPECT_CALL(*workspace, name())
-        .WillOnce(testing::ReturnRef(name));
+        .WillOnce(ReturnRef(name));
 
     std::string expected = "Test";
     ASSERT_FALSE(command_controller->try_move_to_workspace_named({}, expected, false));
@@ -120,23 +224,23 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 
 TEST_F(CommandControllerTest, CanGetAllMarks)
 {
-    auto const container1 = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    auto const container1 = std::make_shared<NiceMock<test::MockContainer>>();
     auto const first_result = std::vector<std::string> { "a", "b", "c" };
     state->add(container1);
     state->focus_container(container1);
     EXPECT_CALL(*container1, get_marks())
-        .WillOnce(testing::ReturnRef(first_result));
+        .WillOnce(ReturnRef(first_result));
 
-    auto const container2 = std::make_shared<testing::NiceMock<test::MockContainer>>();
+    auto const container2 = std::make_shared<NiceMock<test::MockContainer>>();
     state->add(container2);
     state->focus_container(container2);
     auto const second_result = std::vector<std::string> { "a", "d", "e" };
     EXPECT_CALL(*container2, get_marks())
-        .WillOnce(testing::ReturnRef(second_result));
+        .WillOnce(ReturnRef(second_result));
 
     auto const result = command_controller->get_all_marks();
     std::unordered_set<std::string> expected = { "a", "b", "c", "d", "e" };
-    EXPECT_THAT(result, testing::Eq(expected));
+    EXPECT_THAT(result, Eq(expected));
 }
 
 TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)

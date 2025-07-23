@@ -41,25 +41,18 @@ namespace test
             return false;
         }
 
-        [[nodiscard]] int get_inner_gaps_x() const override
+        [[nodiscard]] Gaps get_inner_gaps() const override
         {
-            return 0;
+            return Gaps {};
         }
 
-        [[nodiscard]] int get_inner_gaps_y() const override
+        [[nodiscard]] Gaps get_outer_gaps() const override
         {
-            return 0;
+            return Gaps {};
         }
 
-        [[nodiscard]] int get_outer_gaps_x() const override
-        {
-            return 0;
-        }
-
-        [[nodiscard]] int get_outer_gaps_y() const override
-        {
-            return 0;
-        }
+        void override_inner_gaps(Gaps const&) override { }
+        void override_outer_gaps(Gaps const&) override { }
 
         [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const override
         {

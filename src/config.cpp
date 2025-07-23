@@ -465,28 +465,38 @@ bool FilesystemConfiguration::matches_key_command(
     return false;
 }
 
-int FilesystemConfiguration::get_inner_gaps_x() const
+Gaps FilesystemConfiguration::get_inner_gaps() const
 {
-    std::lock_guard lock(mutex);
-    return options.inner_gaps_x;
+    {
+        std::lock_guard lock(mutex);
+        return options.inner_gaps;
+    }
 }
 
-int FilesystemConfiguration::get_inner_gaps_y() const
+void FilesystemConfiguration::override_inner_gaps(Gaps const& gaps)
 {
-    std::lock_guard lock(mutex);
-    return options.inner_gaps_y;
+    {
+        std::lock_guard lock(mutex);
+        options.inner_gaps = gaps;
+    }
+
+    observer_registrar->advise_config_changed(*this);
 }
 
-int FilesystemConfiguration::get_outer_gaps_x() const
+Gaps FilesystemConfiguration::get_outer_gaps() const
 {
     std::lock_guard lock(mutex);
-    return options.outer_gaps_x;
+    return options.outer_gaps;
 }
 
-int FilesystemConfiguration::get_outer_gaps_y() const
+void FilesystemConfiguration::override_outer_gaps(Gaps const& gaps)
 {
-    std::lock_guard lock(mutex);
-    return options.outer_gaps_y;
+    {
+        std::lock_guard lock(mutex);
+        options.outer_gaps = gaps;
+    }
+
+    observer_registrar->advise_config_changed(*this);
 }
 
 const std::vector<StartupApp>& FilesystemConfiguration::get_startup_apps() const

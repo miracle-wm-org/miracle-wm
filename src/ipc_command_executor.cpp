@@ -81,6 +81,22 @@ public:
         return std::vector(command.arguments.begin() + index, command.arguments.end());
     }
 
+    std::optional<int> parse_int()
+    {
+        if (!next())
+            return std::nullopt;
+
+        try
+        {
+            return std::stoi(current());
+        }
+        catch (std::invalid_argument const& e)
+        {
+            mir::log_error("Invalid argument: %s", current().c_str());
+            return std::nullopt;
+        }
+    }
+
     ParseMoveResult parse_move_distance()
     {
         if (!next())
@@ -193,6 +209,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
             break;
         case IpcCommandType::rename:
             result.push_back(process_rename(command, command_list));
+            break;
+        case IpcCommandType::gaps:
+            result.push_back(process_gap(command, command_list));
             break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
@@ -1113,4 +1132,92 @@ IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command
 
     command_controller->rename_existing_workspace(first_workspace_id.value(), second_workspace_id.value());
     return IpcValidationResult::create_success();
+}
+
+IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, IpcParseResult const& parse_result)
+{
+    ArgumentsIndexer indexer(command);
+    if (!indexer.has_current())
+        return IpcValidationResult::create_failure("'gaps' expected 'inner|outer|horizontal|vertical|top|right|bottom|left'", true);
+
+    if (indexer.current() == "inner")
+    {
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'gaps inner' expected 'current|all'", true);
+
+        if (indexer.current() != "all" && indexer.current() != "current")
+            return IpcValidationResult::create_failure(std::format("'gaps inner' expected 'current|all', but got {}", indexer.current()), true);
+
+        auto const& raw_all_specifier = indexer.current();
+        if (!indexer.next())
+            return IpcValidationResult::create_failure(std::format("'gaps inner {}' expected set|plus|minus|toggle", raw_all_specifier), true);
+
+        GapsChangeType change_type;
+        if (indexer.current() == "set")
+            change_type = GapsChangeType::set;
+        else if (indexer.current() == "plus")
+            change_type = GapsChangeType::plus;
+        else if (indexer.current() == "minus")
+            change_type = GapsChangeType::minus;
+        else
+            return IpcValidationResult::create_failure(std::format("'gaps inner {}' expected set|plus|minus|toggle but got '{}'", raw_all_specifier, indexer.current()), true);
+
+        auto const& raw_change_type = indexer.current();
+        auto const px = indexer.parse_int();
+        if (!px)
+            return IpcValidationResult::create_failure(std::format("'gaps inner {} {}' expected <px>", raw_all_specifier, raw_change_type), true);
+
+        command_controller->set_inner_gaps(px.value(), change_type, raw_all_specifier == "current");
+        return IpcValidationResult::create_success();
+    }
+    else
+    {
+        OuterGapsChange outer_gaps_change;
+        if (indexer.current() == "outer")
+            outer_gaps_change = OuterGapsChange::outer;
+        else if (indexer.current() == "horizontal")
+            outer_gaps_change = OuterGapsChange::horizontal;
+        else if (indexer.current() == "vertical")
+            outer_gaps_change = OuterGapsChange::vertical;
+        else if (indexer.current() == "top")
+            outer_gaps_change = OuterGapsChange::top;
+        else if (indexer.current() == "right")
+            outer_gaps_change = OuterGapsChange::right;
+        else if (indexer.current() == "bottom")
+            outer_gaps_change = OuterGapsChange::bottom;
+        else if (indexer.current() == "left")
+            outer_gaps_change = OuterGapsChange::left;
+        else
+            return IpcValidationResult::create_failure(std::format("'gaps' expected outer|horizontal|vertical|top|right|bottom|left but got '{}'", indexer.current()), true);
+
+        auto const& raw_outer_gaps_change = indexer.current();
+        if (!indexer.next())
+            return IpcValidationResult::create_failure(std::format("'gaps {}' current|all", raw_outer_gaps_change), true);
+
+        if (indexer.current() != "all" && indexer.current() != "current")
+            return IpcValidationResult::create_failure(std::format("'gaps {}' expected 'current|all', but got {}", raw_outer_gaps_change, indexer.current()), true);
+
+        auto const& raw_all_specifier = indexer.current();
+
+        if (!indexer.next())
+            return IpcValidationResult::create_failure(std::format("'gaps {}' expected set|plus|minus|toggle", raw_outer_gaps_change), true);
+
+        GapsChangeType change_type;
+        if (indexer.current() == "set")
+            change_type = GapsChangeType::set;
+        else if (indexer.current() == "plus")
+            change_type = GapsChangeType::plus;
+        else if (indexer.current() == "minus")
+            change_type = GapsChangeType::minus;
+        else
+            return IpcValidationResult::create_failure(std::format("'gaps {}' expected set|plus|minus|toggle but got '{}'", raw_outer_gaps_change, indexer.current()), true);
+
+        auto const& raw_change_type = indexer.current();
+        auto const px = indexer.parse_int();
+        if (!px)
+            return IpcValidationResult::create_failure(std::format("'gaps {} {}' expected <px>", raw_outer_gaps_change, raw_change_type), true);
+
+        command_controller->set_outer_gaps(px.value(), outer_gaps_change, change_type, raw_all_specifier == "current");
+        return IpcValidationResult::create_success();
+    }
 }

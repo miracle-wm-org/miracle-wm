@@ -279,7 +279,7 @@ extern "C"
     int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        return data->inner_gaps_x;
+        return data->inner_gaps.left;
     }
 
     void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value)
@@ -287,13 +287,14 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         if (value < 0)
             value = 0;
-        data->inner_gaps_x = value;
+        data->inner_gaps.left = value;
+        data->inner_gaps.right = value;
     }
 
     int miracle_config_get_inner_gaps_y(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        return data->inner_gaps_y;
+        return data->inner_gaps.top;
     }
 
     void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value)
@@ -301,13 +302,14 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         if (value < 0)
             value = 0;
-        data->inner_gaps_y = value;
+        data->inner_gaps.top = value;
+        data->inner_gaps.bottom = value;
     }
 
     int miracle_config_get_outer_gaps_x(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        return data->outer_gaps_x;
+        return data->outer_gaps.left;
     }
 
     void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value)
@@ -315,13 +317,14 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         if (value < 0)
             value = 0;
-        data->outer_gaps_x = value;
+        data->outer_gaps.left = value;
+        data->outer_gaps.right = value;
     }
 
     int miracle_config_get_outer_gaps_y(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
-        return data->outer_gaps_y;
+        return data->outer_gaps.top;
     }
 
     void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value)
@@ -329,7 +332,8 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         if (value < 0)
             value = 0;
-        data->outer_gaps_y = value;
+        data->outer_gaps.top = value;
+        data->outer_gaps.bottom = value;
     }
 
     int miracle_config_get_resize_jump(const miracle_config_data_t* config)

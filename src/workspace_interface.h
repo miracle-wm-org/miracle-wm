@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "direction.h"
 
-#include <glm/glm.hpp>
 #include <memory>
+#include <miracle/gaps.h>
 #include <miral/window_manager_tools.h>
 
 namespace miracle
@@ -91,6 +91,12 @@ public:
     virtual void num(std::optional<int> n) = 0;
     [[nodiscard]] virtual std::optional<std::string> const& name() const = 0;
     virtual void name(std::optional<std::string> const&) = 0;
+
+    [[nodiscard]] virtual std::optional<Gaps> outer_gaps() const = 0;
+    virtual void outer_gaps(std::optional<Gaps> const& gaps) = 0;
+
+    [[nodiscard]] virtual std::optional<Gaps> inner_gaps() const = 0;
+    virtual void inner_gaps(std::optional<Gaps> const& gaps) = 0;
 
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;

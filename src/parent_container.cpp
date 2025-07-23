@@ -58,12 +58,16 @@ geom::Rectangle ParentContainer::get_logical_area() const
     // Unanchored parents should not employ outer gaps in their layout.
     if (parent.lock() == nullptr && is_anchored)
     {
-        auto const x = config->get_outer_gaps_x();
-        auto const y = config->get_outer_gaps_y();
+        auto outer_gaps = config->get_outer_gaps();
+        if (workspace)
+        {
+            if (auto const workspace_outer_gaps = workspace->outer_gaps())
+                outer_gaps = *workspace_outer_gaps;
+        }
 
         return geom::Rectangle(
-            geom::Point(logical_area.top_left.x.as_int() + x, logical_area.top_left.y.as_int() + y),
-            geom::Size(logical_area.size.width.as_int() - 2 * x, logical_area.size.height.as_int() - 2 * y));
+            geom::Point(logical_area.top_left.x.as_int() + outer_gaps.left, logical_area.top_left.y.as_int() + outer_gaps.top),
+            geom::Size(logical_area.size.width.as_int() - (outer_gaps.left + outer_gaps.right), logical_area.size.height.as_int() - (outer_gaps.top + outer_gaps.bottom)));
     }
 
     return logical_area;
