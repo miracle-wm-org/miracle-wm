@@ -613,6 +613,8 @@ bool CommandController::try_select_next(std::vector<ContainerScope> const& scope
             window_controller->select_active_window(node_to_select->window().value());
         }
     }
+
+    return true;
 }
 
 bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
@@ -1741,6 +1743,166 @@ bool CommandController::rename_existing_workspace(
 
     mir::log_error("rename_existing_workspace: could not find requested workspace");
     return false;
+}
+
+bool CommandController::set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only)
+{
+    std::unique_lock lock(mutex);
+    auto const gaps_opt = [&]() -> std::optional<Gaps>
+    {
+        if (current_workspace_only)
+        {
+            auto const output = output_manager->focused();
+            if (!output)
+                return std::nullopt;
+
+            auto const workspace = output->active();
+            if (!workspace)
+                return std::nullopt;
+
+            if (auto const inner_gaps = workspace->inner_gaps())
+                return inner_gaps;
+
+            return Gaps();
+        }
+
+        return config->get_inner_gaps();
+    }();
+
+    if (!gaps_opt)
+        return false;
+
+    auto const current_inner_gaps = gaps_opt.value();
+    auto const gaps_change = Gaps { px, px, px, px };
+    Gaps next_inner_gaps;
+    switch (type)
+    {
+    case GapsChangeType::set:
+        next_inner_gaps = gaps_change;
+        break;
+    case GapsChangeType::plus:
+        next_inner_gaps = current_inner_gaps + gaps_change;
+        break;
+    case GapsChangeType::minus:
+        next_inner_gaps = current_inner_gaps - gaps_change;
+        break;
+    }
+
+    lock.unlock();
+    if (current_workspace_only)
+        output_manager->focused()->active()->inner_gaps(next_inner_gaps);
+    else
+        config->override_inner_gaps(next_inner_gaps);
+    return true;
+}
+
+bool CommandController::set_outer_gaps(
+    size_t px,
+    OuterGapsChange outer_gaps_change,
+    GapsChangeType type,
+    bool current_workspace_only)
+{
+    std::unique_lock lock(mutex);
+    auto const gaps_opt = [&]() -> std::optional<Gaps>
+    {
+        if (current_workspace_only)
+        {
+            auto const output = output_manager->focused();
+            if (!output)
+                return std::nullopt;
+
+            auto const workspace = output->active();
+            if (!workspace)
+                return std::nullopt;
+
+            if (auto const outer_gaps = workspace->outer_gaps())
+                return outer_gaps;
+            return Gaps();
+        }
+
+        return config->get_outer_gaps();
+    }();
+
+    if (!gaps_opt)
+        return false;
+
+    Gaps gaps_change;
+    switch (outer_gaps_change)
+    {
+    case OuterGapsChange::outer:
+        gaps_change = Gaps { px, px, px, px };
+        break;
+    case OuterGapsChange::horizontal:
+        gaps_change.left = px;
+        gaps_change.right = px;
+        break;
+    case OuterGapsChange::vertical:
+        gaps_change.top = px;
+        gaps_change.bottom = px;
+        break;
+    case OuterGapsChange::top:
+        gaps_change.top = px;
+        break;
+    case OuterGapsChange::right:
+        gaps_change.right = px;
+        break;
+    case OuterGapsChange::bottom:
+        gaps_change.bottom = px;
+        break;
+    case OuterGapsChange::left:
+        gaps_change.left = px;
+        break;
+    }
+
+    Gaps next_outer_gaps;
+    switch (type)
+    {
+    case GapsChangeType::set:
+    {
+        next_outer_gaps = gaps_opt.value();
+        switch (outer_gaps_change)
+        {
+        case OuterGapsChange::outer:
+            next_outer_gaps = gaps_change;
+            break;
+        case OuterGapsChange::horizontal:
+            next_outer_gaps.left = gaps_change.left;
+            next_outer_gaps.right = gaps_change.right;
+            break;
+        case OuterGapsChange::vertical:
+            next_outer_gaps.top = gaps_change.top;
+            next_outer_gaps.bottom = gaps_change.bottom;
+            break;
+        case OuterGapsChange::top:
+            next_outer_gaps.top = gaps_change.top;
+            break;
+        case OuterGapsChange::right:
+            next_outer_gaps.right = gaps_change.right;
+            break;
+        case OuterGapsChange::bottom:
+            next_outer_gaps.bottom = gaps_change.bottom;
+            break;
+        case OuterGapsChange::left:
+            next_outer_gaps.left = gaps_change.left;
+            break;
+        }
+        break;
+    }
+    case GapsChangeType::plus:
+        next_outer_gaps = gaps_opt.value() + gaps_change;
+        break;
+    case GapsChangeType::minus:
+        next_outer_gaps = gaps_opt.value() - gaps_change;
+        break;
+    }
+
+    lock.unlock();
+
+    if (current_workspace_only)
+        output_manager->focused()->active()->outer_gaps(next_outer_gaps);
+    else
+        config->override_outer_gaps(next_outer_gaps);
+    return true;
 }
 
 nlohmann::json CommandController::to_json() const

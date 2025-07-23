@@ -247,8 +247,8 @@ TEST_F(FilesystemConfigurationTest, InvalidInnerGapsResolveToDefault)
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
-    EXPECT_EQ(config.get_inner_gaps_x(), 10);
-    EXPECT_EQ(config.get_inner_gaps_y(), 10);
+    EXPECT_EQ(config.get_inner_gaps().left, 10);
+    EXPECT_EQ(config.get_inner_gaps().top, 10);
 }
 
 TEST_F(FilesystemConfigurationTest, ValidInnerGapsAreSetCorrectly)
@@ -261,8 +261,8 @@ TEST_F(FilesystemConfigurationTest, ValidInnerGapsAreSetCorrectly)
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
-    EXPECT_EQ(config.get_inner_gaps_x(), 33);
-    EXPECT_EQ(config.get_inner_gaps_y(), 44);
+    EXPECT_EQ(config.get_inner_gaps().left, 33);
+    EXPECT_EQ(config.get_inner_gaps().top, 44);
 }
 
 TEST_F(FilesystemConfigurationTest, InvalidOuterGapsResolveToDefault)
@@ -275,8 +275,8 @@ TEST_F(FilesystemConfigurationTest, InvalidOuterGapsResolveToDefault)
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
-    EXPECT_EQ(config.get_outer_gaps_x(), 10);
-    EXPECT_EQ(config.get_outer_gaps_y(), 10);
+    EXPECT_EQ(config.get_outer_gaps().left, 10);
+    EXPECT_EQ(config.get_outer_gaps().top, 10);
 }
 
 TEST_F(FilesystemConfigurationTest, ValidOuterGapsAreSetCorrectly)
@@ -289,8 +289,8 @@ TEST_F(FilesystemConfigurationTest, ValidOuterGapsAreSetCorrectly)
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
-    EXPECT_EQ(config.get_outer_gaps_x(), 33);
-    EXPECT_EQ(config.get_outer_gaps_y(), 44);
+    EXPECT_EQ(config.get_outer_gaps().left, 33);
+    EXPECT_EQ(config.get_outer_gaps().top, 44);
 }
 
 TEST_F(FilesystemConfigurationTest, ValidStartupAppsAreParsed)

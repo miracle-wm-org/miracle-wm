@@ -211,28 +211,37 @@ void LeafContainer::set_state(MirWindowState state)
 geom::Rectangle LeafContainer::get_visible_area() const
 {
     // TODO: Could cache these half values in the config
-    int const half_gap_x = (int)(ceil((double)config->get_inner_gaps_x() / 2.0));
-    int const half_gap_y = (int)(ceil((double)config->get_inner_gaps_y() / 2.0));
-    auto neighbors = get_neighbors();
+    // TODO: Inner gaps only support X and Y for now, but the data model has support
+    //  for different gaps on all sides. That is a bit too much trouble to implement
+    //  for now though.
+    auto gaps = config->get_inner_gaps();
+    if (workspace)
+    {
+        if (auto const workspace_gaps = workspace->inner_gaps())
+            gaps = *workspace_gaps;
+    }
+    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
+    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    auto const neighbors = get_neighbors();
     int x = logical_area.top_left.x.as_int();
     int y = logical_area.top_left.y.as_int();
     int width = logical_area.size.width.as_int();
     int height = logical_area.size.height.as_int();
-    if (neighbors[(int)Direction::left])
+    if (neighbors[std::to_underlying(Direction::left)])
     {
         x += half_gap_x;
         width -= half_gap_x;
     }
-    if (neighbors[(int)Direction::right])
+    if (neighbors[std::to_underlying(Direction::right)])
     {
         width -= half_gap_x;
     }
-    if (neighbors[(int)Direction::up])
+    if (neighbors[std::to_underlying(Direction::up)])
     {
         y += half_gap_y;
         height -= half_gap_y;
     }
-    if (neighbors[(int)Direction::down])
+    if (neighbors[std::to_underlying(Direction::down)])
     {
         height -= half_gap_y;
     }

@@ -1608,3 +1608,213 @@ TEST_F(IpcCommandExecutorTest, RenameNamedWorkspaceNoNamedWorkspaceSucceeds)
     EXPECT_THAT(validation_result.size(), Eq(1));
     EXPECT_THAT(validation_result[0].success, Eq(true));
 }
+
+TEST_F(IpcCommandExecutorTest, GapsNeedsArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, {});
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsInnerNeedsArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsInnerNeedsCorrectArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsInnerAllNeedsArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "all" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsInnerAllNeedsValidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "all", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+class GapsChangeIpcCommandExecutorTest : public IpcCommandExecutorTest,
+                                         public WithParamInterface<std::pair<std::string, GapsChangeType>>
+{
+};
+
+TEST_P(GapsChangeIpcCommandExecutorTest, GapsInnerAllChangeNeedsArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "all", GetParam().first });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_P(GapsChangeIpcCommandExecutorTest, GapsInnerAllChangeNeedsValidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "all", GetParam().first, "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_P(GapsChangeIpcCommandExecutorTest, GapsInnerAllChangeWorksWithValidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "inner", "all", GetParam().first, "10" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_inner_gaps(10, GetParam().second, false));
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    GapsChangeIpcCommandExecutorTest,
+    GapsChangeIpcCommandExecutorTest,
+    testing::Values(
+        std::pair("set", GapsChangeType::set),
+        std::pair("plus", GapsChangeType::plus),
+        std::pair("minus", GapsChangeType::minus)));
+
+class OuterGapsChangeIpcCommandExecutorTest : public IpcCommandExecutorTest,
+                                              public WithParamInterface<std::pair<std::string, OuterGapsChange>>
+{
+};
+
+TEST_F(IpcCommandExecutorTest, GapsFailsWithInvalidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterFailsWithNoArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterFailsWithInvalidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterAllFailsWithNoArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer", "all" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterAllFailsWithInvalidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer", "all", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterAllSetFailsWithNoArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer", "all", "set" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_F(IpcCommandExecutorTest, GapsOuterAllSetFailsWithInvalidArgument)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { "outer", "all", "set", "meow" });
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(false));
+}
+
+TEST_P(OuterGapsChangeIpcCommandExecutorTest, CanSucceed)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::gaps, "gaps", {}, { GetParam().first, "all", "set", "10" });
+    parse_result.commands.push_back(command);
+
+    EXPECT_CALL(*controller, set_outer_gaps(10, GetParam().second, GapsChangeType::set, false));
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    OuterGapsChangeIpcCommandExecutorTest,
+    OuterGapsChangeIpcCommandExecutorTest,
+    testing::Values(
+        std::pair("outer", OuterGapsChange::outer),
+        std::pair("horizontal", OuterGapsChange::horizontal),
+        std::pair("vertical", OuterGapsChange::vertical),
+        std::pair("top", OuterGapsChange::top),
+        std::pair("right", OuterGapsChange::right),
+        std::pair("bottom", OuterGapsChange::bottom),
+        std::pair("left", OuterGapsChange::left)));

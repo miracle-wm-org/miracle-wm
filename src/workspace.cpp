@@ -463,6 +463,28 @@ void Workspace::name(std::optional<std::string> const& name)
     name_ = name;
 }
 
+std::optional<Gaps> Workspace::outer_gaps() const
+{
+    return workspace_outer_gaps;
+}
+
+void Workspace::outer_gaps(std::optional<Gaps> const& gaps)
+{
+    workspace_outer_gaps = gaps;
+    recalculate_area();
+}
+
+std::optional<Gaps> Workspace::inner_gaps() const
+{
+    return workspace_inner_gaps;
+}
+
+void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
+{
+    workspace_inner_gaps = gaps;
+    recalculate_area();
+}
+
 void Workspace::on_animation_start()
 {
     if (auto const sh_last_selected = last_selected_container.lock())

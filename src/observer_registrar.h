@@ -32,11 +32,13 @@ public:
     virtual ~ObserverRegistrar() = default;
     void register_interest(std::weak_ptr<T> observer)
     {
+        std::lock_guard lock(mutex);
         observers.push_back(observer);
     }
 
     void unregister_interest(T* observer)
     {
+        std::lock_guard lock(mutex);
         observers.erase(std::remove_if(observers.begin(), observers.end(), [&observer](std::weak_ptr<T> const& other)
         {
             if (other.expired())
@@ -48,7 +50,12 @@ public:
 
     void for_each_observer(std::function<void(T*)> const& f)
     {
-        for (auto const& observer : observers)
+        std::vector<std::weak_ptr<T>> observers_copy;
+        {
+            std::lock_guard lock(mutex);
+            observers_copy = observers;
+        }
+        for (auto const& observer : observers_copy)
         {
             if (auto ptr = observer.lock())
                 f(ptr.get());
@@ -56,6 +63,7 @@ public:
     }
 
 protected:
+    std::mutex mutex;
     std::vector<std::weak_ptr<T>> observers;
 };
 }

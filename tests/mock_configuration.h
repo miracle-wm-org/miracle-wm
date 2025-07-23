@@ -34,10 +34,10 @@ namespace test
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
         MOCK_METHOD(CustomKeyCommand const*, matches_custom_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers), (const, override));
         MOCK_METHOD(bool, matches_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f), (const, override));
-        MOCK_METHOD(int, get_inner_gaps_x, (), (const, override));
-        MOCK_METHOD(int, get_inner_gaps_y, (), (const, override));
-        MOCK_METHOD(int, get_outer_gaps_x, (), (const, override));
-        MOCK_METHOD(int, get_outer_gaps_y, (), (const, override));
+        MOCK_METHOD(Gaps, get_inner_gaps, (), (const, override));
+        MOCK_METHOD(Gaps, get_outer_gaps, (), (const, override));
+        MOCK_METHOD(void, override_inner_gaps, (Gaps const&), (override));
+        MOCK_METHOD(void, override_outer_gaps, (Gaps const&), (override));
         MOCK_METHOD(std::vector<StartupApp> const&, get_startup_apps, (), (const, override));
         MOCK_METHOD(std::optional<std::string> const&, get_terminal_command, (), (const, override));
         MOCK_METHOD(int, get_resize_jump, (), (const, override));

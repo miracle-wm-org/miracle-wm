@@ -78,6 +78,12 @@ namespace test
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
         MOCK_METHOD(void, on_animation_start, (), (override));
         MOCK_METHOD(void, on_animation_end, (), (override));
+
+        MOCK_METHOD(std::optional<Gaps>, outer_gaps, (), (const, override));
+        MOCK_METHOD(void, outer_gaps, (std::optional<Gaps> const&), (override));
+
+        MOCK_METHOD(std::optional<Gaps>, inner_gaps, (), (const, override));
+        MOCK_METHOD(void, inner_gaps, (std::optional<Gaps> const&), (override));
     };
 }
 }

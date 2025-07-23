@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_type.h"
 #include "default_key_command.h"
 #include "export.h"
+#include "gaps.h"
 #include "keyboard.h"
 #include "modifiers.h"
 
@@ -104,10 +105,8 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     uint primary_button = mir_pointer_button_primary;
     std::vector<CustomKeyCommand> custom_key_commands;
     std::vector<BuiltInKeyCommandOverride> built_in_key_command_overrides;
-    int inner_gaps_x = 10;
-    int inner_gaps_y = 10;
-    int outer_gaps_x = 10;
-    int outer_gaps_y = 10;
+    Gaps inner_gaps = { .top = 10, .bottom = 10, .left = 10, .right = 10 };
+    Gaps outer_gaps = { .top = 10, .bottom = 10, .left = 10, .right = 10 };
     std::vector<StartupApp> startup_apps;
     std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
     int resize_jump = 50;

@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace_interface.h"
 
-#include <glm/glm.hpp>
 #include <memory>
 #include <miral/window_manager_tools.h>
 
@@ -81,6 +80,10 @@ public:
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
     void num(std::optional<int> n) override;
     void name(std::optional<std::string> const&) override;
+    [[nodiscard]] std::optional<Gaps> outer_gaps() const override;
+    void outer_gaps(std::optional<Gaps> const& gaps) override;
+    [[nodiscard]] std::optional<Gaps> inner_gaps() const override;
+    void inner_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
@@ -112,6 +115,8 @@ private:
     std::shared_ptr<Config> config;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
+    std::optional<Gaps> workspace_outer_gaps;
+    std::optional<Gaps> workspace_inner_gaps;
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

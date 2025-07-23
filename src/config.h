@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_CONFIG_H
 #define MIRACLEWM_CONFIG_H
 
+#include "../miracle-wm-config/include/miracle/gaps.h"
 #include "container.h"
 #include <miracle/miracle-wm-config.h>
 
@@ -54,10 +55,10 @@ public:
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
-    [[nodiscard]] virtual int get_inner_gaps_x() const = 0;
-    [[nodiscard]] virtual int get_inner_gaps_y() const = 0;
-    [[nodiscard]] virtual int get_outer_gaps_x() const = 0;
-    [[nodiscard]] virtual int get_outer_gaps_y() const = 0;
+    [[nodiscard]] virtual Gaps get_inner_gaps() const = 0;
+    virtual void override_inner_gaps(Gaps const&) = 0;
+    [[nodiscard]] virtual Gaps get_outer_gaps() const = 0;
+    virtual void override_outer_gaps(Gaps const&) = 0;
     [[nodiscard]] virtual std::vector<StartupApp> const& get_startup_apps() const = 0;
     [[nodiscard]] virtual std::optional<std::string> const& get_terminal_command() const = 0;
     [[nodiscard]] virtual int get_resize_jump() const = 0;
@@ -90,10 +91,10 @@ public:
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
-    [[nodiscard]] int get_inner_gaps_x() const override;
-    [[nodiscard]] int get_inner_gaps_y() const override;
-    [[nodiscard]] int get_outer_gaps_x() const override;
-    [[nodiscard]] int get_outer_gaps_y() const override;
+    [[nodiscard]] Gaps get_inner_gaps() const override;
+    void override_inner_gaps(Gaps const&) override;
+    [[nodiscard]] Gaps get_outer_gaps() const override;
+    void override_outer_gaps(Gaps const&) override;
     [[nodiscard]] std::vector<StartupApp> const& get_startup_apps() const override;
     [[nodiscard]] std::optional<std::string> const& get_terminal_command() const override;
     [[nodiscard]] int get_resize_jump() const override;

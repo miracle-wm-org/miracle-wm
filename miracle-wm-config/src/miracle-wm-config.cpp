@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle/miracle-wm-config.h"
 #include "miracle/animation_definition_internal.h"
+#include "miracle/gaps.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -440,18 +441,30 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
 
 void read_inner_gaps(YAML::Node const& node, ParsingContext& context)
 {
-    if (!try_parse_value(node, "x", context.result.config.inner_gaps_x, context))
+    size_t x = 0, y = 0;
+    if (!try_parse_value(node, "x", x, context))
         return;
-    if (!try_parse_value(node, "y", context.result.config.inner_gaps_y, context))
+    if (!try_parse_value(node, "y", y, context))
         return;
+
+    context.result.config.inner_gaps.top = y;
+    context.result.config.inner_gaps.bottom = y;
+    context.result.config.inner_gaps.left = x;
+    context.result.config.inner_gaps.right = x;
 }
 
 void read_outer_gaps(YAML::Node const& node, ParsingContext& context)
 {
-    if (!try_parse_value(node, "x", context.result.config.outer_gaps_x, context))
+    size_t x = 0, y = 0;
+    if (!try_parse_value(node, "x", x, context))
         return;
-    if (!try_parse_value(node, "y", context.result.config.outer_gaps_y, context))
+    if (!try_parse_value(node, "y", y, context))
         return;
+
+    context.result.config.outer_gaps.top = y;
+    context.result.config.outer_gaps.bottom = y;
+    context.result.config.outer_gaps.left = x;
+    context.result.config.outer_gaps.right = x;
 }
 
 void read_startup_apps(YAML::Node const& startup_apps, ParsingContext& context)
@@ -805,13 +818,13 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
 
     // Save gaps
     out << YAML::Key << "inner_gaps" << YAML::Value << YAML::BeginMap
-        << YAML::Key << "x" << YAML::Value << config.inner_gaps_x
-        << YAML::Key << "y" << YAML::Value << config.inner_gaps_y
+        << YAML::Key << "x" << YAML::Value << config.inner_gaps.left
+        << YAML::Key << "y" << YAML::Value << config.inner_gaps.top
         << YAML::EndMap;
 
     out << YAML::Key << "outer_gaps" << YAML::Value << YAML::BeginMap
-        << YAML::Key << "x" << YAML::Value << config.outer_gaps_x
-        << YAML::Key << "y" << YAML::Value << config.outer_gaps_y
+        << YAML::Key << "x" << YAML::Value << config.outer_gaps.left
+        << YAML::Key << "y" << YAML::Value << config.outer_gaps.top
         << YAML::EndMap;
 
     // Save startup apps
