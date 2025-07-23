@@ -58,23 +58,40 @@ enum class ContainerScopeType
 /// Provided to methods in the [CommandController] to
 /// describe which container(s) the command should act
 /// on.
-struct ContainerScope
+class ContainerScope
 {
-    ContainerScopeType type;
-    std::string value;
-    std::weak_ptr<Container> container;
+public:
+    explicit ContainerScope(ContainerScopeType type)
+        : ContainerScope(type, "")
+    {}
+
+    ContainerScope(ContainerScopeType type, std::string const& value)
+        : ContainerScope(type, value, {})
+    {}
+
+    ContainerScope(
+        ContainerScopeType type,
+        std::string const& value,
+        std::weak_ptr<Container> const& container)
+        : type(type), value(value), container(container)
+    {
+    }
 
     /// Create a scope that targets a specific container
     static ContainerScope from_container(std::shared_ptr<Container> const& container)
     {
-        return { ContainerScopeType::none, "", container };
+        return ContainerScope(ContainerScopeType::none, "", container);
     }
 
     /// Create a scope that matches all containers
     static ContainerScope all()
     {
-        return { ContainerScopeType::all, "" };
+        return ContainerScope(ContainerScopeType::all, "");
     }
+
+    ContainerScopeType type = ContainerScopeType::none;
+    std::string value;
+    std::weak_ptr<Container> container;
 };
 
 }

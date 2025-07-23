@@ -217,7 +217,7 @@ IpcParseResult IpcCommandParser::parse()
                     break;
                 }
 
-                retval.scope.push_back({ scope_from_string(ss.str()) });
+                retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
                 ss = std::stringstream();
                 stack.pop_back();
             }
@@ -234,7 +234,7 @@ IpcParseResult IpcCommandParser::parse()
                     break;
                 }
 
-                retval.scope.push_back({ scope_from_string(ss.str()) });
+                retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
                 ss = std::stringstream();
                 stack.pop_back();
                 stack.push_back(ParseState::scope_value);
@@ -359,7 +359,7 @@ IpcParseResult IpcCommandParser::parse()
                 {}, {} });
             break;
         case ParseState::scope_key:
-            retval.scope.push_back({ scope_from_string(ss.str()) });
+            retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
             break;
         case ParseState::scope_value:
             retval.scope.back().value = ss.str();
