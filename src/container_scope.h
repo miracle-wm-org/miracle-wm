@@ -61,19 +61,23 @@ enum class ContainerScopeType
 class ContainerScope
 {
 public:
-    explicit ContainerScope(ContainerScopeType type)
-        : ContainerScope(type, "")
-    {}
+    explicit ContainerScope(ContainerScopeType type) :
+        ContainerScope(type, "")
+    {
+    }
 
-    ContainerScope(ContainerScopeType type, std::string const& value)
-        : ContainerScope(type, value, {})
-    {}
+    ContainerScope(ContainerScopeType type, std::string const& value) :
+        ContainerScope(type, value, {})
+    {
+    }
 
     ContainerScope(
         ContainerScopeType type,
         std::string const& value,
-        std::weak_ptr<Container> const& container)
-        : type(type), value(value), container(container)
+        std::weak_ptr<Container> const& container) :
+        type(type),
+        value(value),
+        container(container)
     {
     }
 
@@ -92,6 +96,7 @@ public:
     ContainerScopeType type = ContainerScopeType::none;
     std::string value;
     std::weak_ptr<Container> container;
+    bool for_window = false;
 };
 
 }

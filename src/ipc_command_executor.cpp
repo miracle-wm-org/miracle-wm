@@ -622,9 +622,7 @@ IpcValidationResult IpcCommandExecutor::process_swap(IpcCommand const& command, 
     if (indexer.current() != "con_id" && indexer.current() != "mark")
         return IpcValidationResult::create_failure("Expected 'con_id' or 'mark' after 'swap container with'", true);
 
-    ContainerScope swap_scope;
-    swap_scope.type = indexer.current() == "con_id" ? ContainerScopeType::con_id : ContainerScopeType::con_mark;
-
+    ContainerScope swap_scope(indexer.current() == "con_id" ? ContainerScopeType::con_id : ContainerScopeType::con_mark);
     if (!indexer.next())
         return IpcValidationResult::create_failure("'swap container with con_id/mark' expects a fourth argument, <arg>", true);
 

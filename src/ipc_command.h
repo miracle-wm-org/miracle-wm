@@ -90,7 +90,8 @@ private:
         literal,
         command,
         option,
-        argument
+        argument,
+        for_window
     };
 
     std::string data;
@@ -98,6 +99,7 @@ private:
     size_t index = 0;
     bool has_parsed_command = false;
     bool can_parse_options = true;
+    size_t scope_num_before = 0;
 };
 }
 

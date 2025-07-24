@@ -313,9 +313,7 @@ TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenGroupIsFocused)
 
 TEST_F(LeafContainerTest, MatchWithAppId)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::app_id;
-    scope.value = "foo";
+    ContainerScope scope(ContainerScopeType::app_id, "foo");
 
     miral::WindowSpecification spec;
     miral::WindowInfo info(window, spec);
@@ -330,9 +328,7 @@ TEST_F(LeafContainerTest, MatchWithAppId)
 
 TEST_F(LeafContainerTest, MatchAll)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::all;
-
+    ContainerScope scope(ContainerScopeType::all);
     EXPECT_TRUE(leaf_container->matches(scope));
 }
 
@@ -349,9 +345,7 @@ class LeafContainerMatchTypeTest : public LeafContainerTest, public ::testing::W
 TEST_P(LeafContainerMatchTypeTest, MatchWindowType)
 {
     auto param = GetParam();
-    ContainerScope scope;
-    scope.type = ContainerScopeType::window_type;
-    scope.value = param.scope_value;
+    ContainerScope scope(ContainerScopeType::window_type, param.scope_value);
 
     miral::WindowSpecification spec;
     spec.type() = param.required;
@@ -380,10 +374,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(LeafContainerTest, MatchTitle)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::title;
-    scope.value = "foo";
-
+    ContainerScope scope(ContainerScopeType::title, "foo");
     miral::WindowSpecification spec;
     spec.name() = "foo";
     miral::WindowInfo info(window, spec);
@@ -396,10 +387,7 @@ TEST_F(LeafContainerTest, MatchTitle)
 
 TEST_F(LeafContainerTest, MatchTitleWithSpecialFocusedKeyword)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::title;
-    scope.value = "__focused__";
-
+    ContainerScope scope(ContainerScopeType::title, "__focused__");
     state->focus_container(leaf_container);
 
     miral::WindowSpecification spec;
@@ -412,10 +400,7 @@ TEST_F(LeafContainerTest, MatchTitleWithSpecialFocusedKeyword)
 
 TEST_F(LeafContainerTest, MatchPid)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::pid;
-    scope.value = "123";
-
+    ContainerScope scope(ContainerScopeType::pid, "123");
     miral::ApplicationInfo info(session);
     EXPECT_CALL(*window_controller, app_info(window))
         .WillRepeatedly(testing::ReturnRef(info));
@@ -428,19 +413,16 @@ TEST_F(LeafContainerTest, MatchPid)
 
 TEST_F(LeafContainerTest, MatchConId)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::con_id;
-    scope.value = std::to_string(reinterpret_cast<std::uintptr_t>(leaf_container.get()));
+    ContainerScope scope(
+        ContainerScopeType::con_id,
+        std::to_string(reinterpret_cast<std::uintptr_t>(leaf_container.get())));
 
     EXPECT_TRUE(leaf_container->matches(scope));
 }
 
 TEST_F(LeafContainerTest, MatchConIdWithFocusedSpecialValue)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::con_id;
-    scope.value = "__focused__";
-
+    ContainerScope scope(ContainerScopeType::con_id, "__focused__");
     state->focus_container(leaf_container);
 
     EXPECT_TRUE(leaf_container->matches(scope));
@@ -448,10 +430,7 @@ TEST_F(LeafContainerTest, MatchConIdWithFocusedSpecialValue)
 
 TEST_F(LeafContainerTest, MatchWorkspaceName)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::workspace;
-    scope.value = "foo";
-
+    ContainerScope scope(ContainerScopeType::workspace, "foo");
     std::optional<std::string> const name = "foo";
     EXPECT_CALL(*workspace, name())
         .WillRepeatedly(testing::ReturnRef(name));
@@ -462,9 +441,7 @@ TEST_F(LeafContainerTest, MatchWorkspaceName)
 
 TEST_F(LeafContainerTest, MatchFloating)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::floating;
-
+    ContainerScope scope(ContainerScopeType::floating);
     EXPECT_CALL(*parent, anchored())
         .WillRepeatedly(testing::Return(false));
 
@@ -473,9 +450,7 @@ TEST_F(LeafContainerTest, MatchFloating)
 
 TEST_F(LeafContainerTest, MatchTiling)
 {
-    ContainerScope scope;
-    scope.type = ContainerScopeType::tiling;
-
+    ContainerScope scope(ContainerScopeType::tiling);
     EXPECT_CALL(*parent, anchored())
         .WillRepeatedly(testing::Return(true));
 
@@ -488,9 +463,7 @@ class LeafContainerMatchNotSupportedTest : public LeafContainerTest, public ::te
 
 TEST_P(LeafContainerMatchNotSupportedTest, MatchWindowType)
 {
-    auto param = GetParam();
-    ContainerScope scope;
-    scope.type = param;
+    ContainerScope scope(GetParam());
     EXPECT_FALSE(leaf_container->matches(scope));
 }
 
@@ -579,9 +552,7 @@ TEST_F(LeafContainerTest, CanMatchMark)
         "meow",
         false,
         false);
-    ContainerScope scope;
-    scope.type = ContainerScopeType::con_mark;
-    scope.value = "meow";
+    ContainerScope scope(ContainerScopeType::con_mark, "meow");
     EXPECT_THAT(leaf_container->matches(scope), testing::Eq(true));
 }
 
@@ -591,9 +562,7 @@ TEST_F(LeafContainerTest, CanFailToMatchMark)
         "meow",
         false,
         false);
-    ContainerScope scope;
-    scope.type = ContainerScopeType::con_mark;
-    scope.value = "meow2";
+    ContainerScope scope(ContainerScopeType::con_mark, "meow2");
     EXPECT_THAT(leaf_container->matches(scope), testing::Eq(false));
 }
 
