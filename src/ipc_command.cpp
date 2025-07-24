@@ -217,7 +217,7 @@ IpcParseResult IpcCommandParser::parse()
                     break;
                 }
 
-                retval.scope.push_back({ scope_from_string(ss.str()) });
+                retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
                 ss = std::stringstream();
                 stack.pop_back();
             }
@@ -234,7 +234,7 @@ IpcParseResult IpcCommandParser::parse()
                     break;
                 }
 
-                retval.scope.push_back({ scope_from_string(ss.str()) });
+                retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
                 ss = std::stringstream();
                 stack.pop_back();
                 stack.push_back(ParseState::scope_value);
@@ -289,6 +289,15 @@ IpcParseResult IpcCommandParser::parse()
                 if (ss.str().empty())
                     break;
 
+                if (ss.str() == "for_window")
+                {
+                    stack.pop_back();
+                    scope_num_before = retval.scope.size();
+                    ss = std::stringstream();
+                    stack.push_back(ParseState::for_window);
+                    break;
+                }
+
                 retval.commands.push_back({ command_from_string(ss.str()),
                     ss.str(),
                     {}, {} });
@@ -340,6 +349,27 @@ IpcParseResult IpcCommandParser::parse()
             ss << c;
             break;
         }
+        case ParseState::for_window:
+        {
+            if (c == COMMAND_DELIM)
+                break;
+
+            if (c == SCOPE_OPEN)
+                stack.push_back(ParseState::scope_key);
+            else
+            {
+                if (retval.scope.size() == scope_num_before)
+                    mir::log_error("Expected scope key after 'for_window', ignoring for window");
+                else
+                {
+                    for (size_t i = scope_num_before; i < retval.scope.size(); i++)
+                        retval.scope[i].for_window = true;
+                }
+                stack.pop_back();
+            }
+
+            break;
+        }
         }
     }
 
@@ -359,7 +389,7 @@ IpcParseResult IpcCommandParser::parse()
                 {}, {} });
             break;
         case ParseState::scope_key:
-            retval.scope.push_back({ scope_from_string(ss.str()) });
+            retval.scope.push_back(ContainerScope(scope_from_string(ss.str())));
             break;
         case ParseState::scope_value:
             retval.scope.back().value = ss.str();

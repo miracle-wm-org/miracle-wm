@@ -230,3 +230,28 @@ TEST_F(IpcCommandParserTest, CanParseArgumentWithSpaceInIt)
     EXPECT_THAT(commands.commands.size(), testing::Eq(1));
     EXPECT_THAT(commands.commands[0].arguments[2], testing::Eq("2: hi"));
 }
+
+TEST_F(IpcCommandParserTest, CanParseForWindow)
+{
+    const char* v = "for_window [class=\"Firefox\"] focus";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    EXPECT_THAT(commands.scope.size(), testing::Eq(1));
+    EXPECT_THAT(commands.scope[0].type, testing::Eq(ContainerScopeType::class_));
+    EXPECT_THAT(commands.scope[0].value, testing::Eq("Firefox"));
+    EXPECT_THAT(commands.scope[0].for_window, testing::Eq(true));
+}
+
+TEST_F(IpcCommandParserTest, CanParseForWindowMultipleScopes)
+{
+    const char* v = "for_window [class=\"Firefox\" window_role=\"About\"] focus";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    EXPECT_THAT(commands.scope.size(), testing::Eq(2));
+    EXPECT_THAT(commands.scope[0].type, testing::Eq(ContainerScopeType::class_));
+    EXPECT_THAT(commands.scope[0].value, testing::Eq("Firefox"));
+    EXPECT_THAT(commands.scope[0].for_window, testing::Eq(true));
+    EXPECT_THAT(commands.scope[1].type, testing::Eq(ContainerScopeType::window_role));
+    EXPECT_THAT(commands.scope[1].value, testing::Eq("About"));
+    EXPECT_THAT(commands.scope[1].for_window, testing::Eq(true));
+}
