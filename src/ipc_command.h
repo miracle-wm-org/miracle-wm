@@ -71,6 +71,7 @@ struct IpcCommand
 
 struct IpcParseResult
 {
+    bool for_window = false;
     std::vector<ContainerScope> scope;
     std::vector<IpcCommand> commands;
 };

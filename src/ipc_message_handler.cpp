@@ -29,10 +29,10 @@ using json = nlohmann::json;
 using namespace miracle;
 
 IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> const& command_controller,
-    std::unique_ptr<AbstractIpcCommandExecutor> ipc_command_executor,
+    std::shared_ptr<AbstractIpcCommandExecutor> const& ipc_command_executor,
     std::shared_ptr<Config> const& config) :
     command_controller { command_controller },
-    ipc_command_executor { std::move(ipc_command_executor) },
+    ipc_command_executor { ipc_command_executor },
     config { config }
 {
 }

@@ -345,3 +345,17 @@ TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
 
     thread.join();
 }
+
+TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
+{
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const payload = "for_window [workspace=\"1\"] fullscreen toggle";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    EXPECT_THAT(tools().info_for(window).state(), Eq(mir_window_state_fullscreen));
+}

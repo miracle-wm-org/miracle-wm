@@ -1112,7 +1112,7 @@ bool LeafContainer::matches(ContainerScope const& scope) const
 
         jp::Regex re;
         re.setPattern(scope.value).compile();
-        return workspace != nullptr && workspace->name() != std::nullopt && re.match(workspace->name().value());
+        return workspace != nullptr && re.match(workspace->display_name());
     }
     case ContainerScopeType::con_id:
     {

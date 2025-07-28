@@ -148,70 +148,70 @@ IpcCommandExecutor::IpcCommandExecutor(
 {
 }
 
-std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult const& command_list)
+std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult const& parse_result)
 {
     std::vector<IpcValidationResult> result;
-    for (auto const& command : command_list.commands)
+    for (auto const& command : parse_result.commands)
     {
         switch (command.type)
         {
         case IpcCommandType::exec:
-            result.push_back(process_exec(command, command_list));
+            result.push_back(process_exec(command, parse_result));
             break;
         case IpcCommandType::split:
-            result.push_back(process_split(command, command_list));
+            result.push_back(process_split(command, parse_result));
             break;
         case IpcCommandType::focus:
-            result.push_back(process_focus(command, command_list));
+            result.push_back(process_focus(command, parse_result));
             break;
         case IpcCommandType::move:
-            result.push_back(process_move(command, command_list));
+            result.push_back(process_move(command, parse_result));
             break;
         case IpcCommandType::swap:
-            result.push_back(process_swap(command, command_list));
+            result.push_back(process_swap(command, parse_result));
             break;
         case IpcCommandType::sticky:
-            result.push_back(process_sticky(command, command_list));
+            result.push_back(process_sticky(command, parse_result));
             break;
         case IpcCommandType::exit:
             command_controller->quit();
             result.push_back(IpcValidationResult::create_success());
             break;
         case IpcCommandType::input:
-            result.push_back(process_input(command, command_list));
+            result.push_back(process_input(command, parse_result));
             break;
         case IpcCommandType::workspace:
-            result.push_back(process_workspace(command, command_list));
+            result.push_back(process_workspace(command, parse_result));
             break;
         case IpcCommandType::layout:
-            result.push_back(process_layout(command, command_list));
+            result.push_back(process_layout(command, parse_result));
             break;
         case IpcCommandType::fullscreen:
-            result.push_back(process_fullscreen(command, command_list));
+            result.push_back(process_fullscreen(command, parse_result));
             break;
         case IpcCommandType::floating:
-            result.push_back(process_floating(command, command_list));
+            result.push_back(process_floating(command, parse_result));
             break;
         case IpcCommandType::scratchpad:
-            result.push_back(process_scratchpad(command, command_list));
+            result.push_back(process_scratchpad(command, parse_result));
             break;
         case IpcCommandType::resize:
-            result.push_back(process_resize(command, command_list));
+            result.push_back(process_resize(command, parse_result));
             break;
         case IpcCommandType::reload:
-            result.push_back(process_reload(command, command_list));
+            result.push_back(process_reload(command, parse_result));
             break;
         case IpcCommandType::mark:
-            result.push_back(process_mark(command, command_list));
+            result.push_back(process_mark(command, parse_result));
             break;
         case IpcCommandType::unmark:
-            result.push_back(process_unmark(command, command_list));
+            result.push_back(process_unmark(command, parse_result));
             break;
         case IpcCommandType::rename:
-            result.push_back(process_rename(command, command_list));
+            result.push_back(process_rename(command, parse_result));
             break;
         case IpcCommandType::gaps:
-            result.push_back(process_gap(command, command_list));
+            result.push_back(process_gap(command, parse_result));
             break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
@@ -219,7 +219,38 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         }
     }
 
+    if (parse_result.for_window)
+        apply_on_startup.lock()->push_back(parse_result);
+
     return result;
+}
+
+void IpcCommandExecutor::apply_startup_commands_to(std::shared_ptr<Container> const& container)
+{
+    for (auto const& command : *apply_on_startup.lock())
+    {
+        bool match = true;
+        for (auto const& scope : command.scope)
+        {
+            if (!container->matches(scope))
+            {
+                match = false;
+                break;
+            }
+        }
+
+        if (!match)
+            continue;
+
+        // If the startup command matches, then we re-process the command, only this
+        // time with a scope that strictly matches the container that we're interested
+        // in.
+        auto command_copy = command;
+        command_copy.scope.clear();
+        command_copy.for_window = false;
+        command_copy.scope.push_back(ContainerScope::from_container(container));
+        process(command_copy);
+    }
 }
 
 IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, IpcParseResult const&)

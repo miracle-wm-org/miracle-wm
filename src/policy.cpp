@@ -179,10 +179,11 @@ Policy::Policy(
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
+    ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher)),
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         server.the_main_loop(),
         command_controller,
-        std::make_unique<IpcCommandExecutor>(command_controller, launcher),
+        ipc_command_executor,
         config)),
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
@@ -468,7 +469,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    auto container = output_manager->focused()->create_container(window_info, pending_allocation);
+    auto const container = output_manager->focused()->create_container(window_info, pending_allocation);
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);
@@ -481,7 +482,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
     std::lock_guard lock(self->mutex);
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_window_ready: container is not provided");
@@ -489,6 +490,7 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
     }
 
     container->handle_ready();
+    ipc_command_executor->apply_startup_commands_to(container);
 }
 
 mir::geometry::Rectangle

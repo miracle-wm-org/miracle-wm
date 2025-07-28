@@ -29,6 +29,7 @@ namespace test
     {
     public:
         MOCK_METHOD(std::vector<IpcValidationResult>, process, (IpcParseResult const&), (override));
+        MOCK_METHOD(void, apply_startup_commands_to, (std::shared_ptr<Container> const&), (override));
     };
 }
 }
