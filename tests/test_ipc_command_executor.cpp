@@ -1096,6 +1096,18 @@ TEST_F(IpcCommandExecutorTest, MoveAnythingElseFails)
     EXPECT_THAT(validation_result[0].error, Eq("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'"));
 }
 
+TEST_F(IpcCommandExecutorTest, MoveContainerToMark)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::move, "move", {}, { "container", "to", "mark", "meow" });
+    parse_result.commands.push_back(command);
+    EXPECT_CALL(*controller, try_move_to_mark("meow", testing::_))
+        .WillOnce(Return(true));
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
+
 TEST_F(IpcCommandExecutorTest, MarkFailsWithoutArgument)
 {
     IpcParseResult parse_result;

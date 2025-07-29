@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "display_config.h"
 #include "ipc_client.h"
 #include "output_listener.h"
+#include "parent_container.h"
 #include "policy.h"
 #include "stub_configuration.h"
 
@@ -358,4 +359,33 @@ TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
     miral::WindowSpecification const spec;
     auto const window = create_window(app, spec);
     EXPECT_THAT(tools().info_for(window).state(), Eq(mir_window_state_fullscreen));
+}
+
+TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
+{
+    // Open up the connection
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+
+    // Open a first window and mark it
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const windowA = create_window(app, spec);
+    std::string const mark_payload = "mark meow";
+    uint32_t mark_payload_len = static_cast<uint32_t>(mark_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, mark_payload.c_str(), &mark_payload_len);
+
+    // Open a second and third window
+    auto const windowB = create_window(app, spec);
+    auto const windowC = create_window(app, spec);
+
+    // Move the third window to the mark
+    std::string const move_payload = "move container to mark meow";
+    uint32_t move_payload_len = static_cast<uint32_t>(move_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, move_payload.c_str(), &move_payload_len);
+
+    // Assert that the third window is in the second position on its parent
+    auto const container = compositor_state->focused_container();
+    EXPECT_THAT(container->window(), Eq(windowC));
+    EXPECT_THAT(container->get_parent().lock()->get_index_of_node(container), Eq(1));
 }

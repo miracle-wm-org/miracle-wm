@@ -90,6 +90,7 @@ namespace test
         MOCK_METHOD(bool, try_move_to_nonprimary_output, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_to_next_output, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_move_to_output_by_name_list, (std::vector<std::string> const&, std::vector<ContainerScope> const&), (override));
+        MOCK_METHOD(bool, try_move_to_mark, (std::string const&, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, reload_config, (), (override));
         MOCK_METHOD(void, set_mode, (WindowManagerMode), (override));
         MOCK_METHOD(void, select_container, (std::shared_ptr<Container> const&), (override));

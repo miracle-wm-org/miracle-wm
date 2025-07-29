@@ -1629,6 +1629,45 @@ bool CommandController::try_move_to_output_by_name_list(std::vector<std::string>
     return true;
 }
 
+bool CommandController::try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope)
+{
+    std::lock_guard lock(mutex);
+    if (!can_move_container())
+        return false;
+
+    auto const containers = resolve_scope(scope);
+    if (containers.empty())
+        return false;
+
+    // Find the first container matching the mark
+    std::shared_ptr<Container> marked_container;
+    for (auto const& container : state->containers())
+    {
+        if (auto const sh = container.lock())
+        {
+            if (std::ranges::find(sh->get_marks(), mark) != sh->get_marks().end())
+            {
+                marked_container = sh;
+                break;
+            }
+        }
+    }
+
+    if (!marked_container)
+        return false;
+
+    // Graft the container onto the parent
+    auto const parent = marked_container->get_parent().lock();
+    auto const index = parent->get_index_of_node(marked_container);
+    for (auto const& container : containers)
+    {
+        container->get_output()->delete_container(container);
+        parent->graft_existing(container, static_cast<int>(index.value_or(-1) + 1)); // Insert at the position after!
+    }
+
+    return true;
+}
+
 bool CommandController::can_set_layout() const
 {
     if (state->mode() != WindowManagerMode::normal)
