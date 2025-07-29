@@ -96,7 +96,6 @@ public:
     ContainerScopeType type = ContainerScopeType::none;
     std::string value;
     std::weak_ptr<Container> container;
-    bool for_window = false;
 };
 
 }

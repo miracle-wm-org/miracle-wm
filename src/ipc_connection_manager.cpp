@@ -84,11 +84,11 @@ json mode_event_to_json(WindowManagerMode mode)
 IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<mir::MainLoop> const& main_loop_,
     std::shared_ptr<AbstractCommandController> const& command_controller,
-    std::unique_ptr<IpcCommandExecutor> command_executor,
+    std::shared_ptr<IpcCommandExecutor> const& command_executor,
     std::shared_ptr<Config> const& config) :
     main_loop(main_loop_),
     command_controller(command_controller),
-    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, std::move(command_executor), config))
+    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)

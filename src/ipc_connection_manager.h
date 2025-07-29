@@ -44,7 +44,7 @@ public:
     IpcConnectionManager(
         std::shared_ptr<mir::MainLoop> const& main_loop,
         std::shared_ptr<AbstractCommandController> const&,
-        std::unique_ptr<IpcCommandExecutor>,
+        std::shared_ptr<IpcCommandExecutor> const&,
         std::shared_ptr<Config> const&);
     ~IpcConnectionManager() override;
     void on_workspace_created(uint32_t id) override;

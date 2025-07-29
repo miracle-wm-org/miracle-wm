@@ -351,20 +351,19 @@ IpcParseResult IpcCommandParser::parse()
         }
         case ParseState::for_window:
         {
-            if (c == COMMAND_DELIM)
-                break;
-
             if (c == SCOPE_OPEN)
                 stack.push_back(ParseState::scope_key);
             else
             {
                 if (retval.scope.size() == scope_num_before)
-                    mir::log_error("Expected scope key after 'for_window', ignoring for window");
-                else
                 {
-                    for (size_t i = scope_num_before; i < retval.scope.size(); i++)
-                        retval.scope[i].for_window = true;
+                    if (c == COMMAND_DELIM)
+                        break;
+
+                    mir::log_error("Expected scope key after 'for_window', ignoring for window");
                 }
+                else
+                    retval.for_window = true;
                 stack.pop_back();
             }
 

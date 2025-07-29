@@ -80,7 +80,7 @@ class IpcMessageHandler
 {
 public:
     IpcMessageHandler(std::shared_ptr<AbstractCommandController> const&,
-        std::unique_ptr<AbstractIpcCommandExecutor>,
+        std::shared_ptr<AbstractIpcCommandExecutor> const&,
         std::shared_ptr<Config> const&);
     MessageHandlerResult handle_msg(IpcType payload_type,
         const char* payload,
@@ -88,7 +88,7 @@ public:
 
 private:
     std::shared_ptr<AbstractCommandController> command_controller;
-    std::unique_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
+    std::shared_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
 
     std::vector<IpcValidationResult> process_ipc_command(const char* command);

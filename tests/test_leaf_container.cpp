@@ -431,9 +431,8 @@ TEST_F(LeafContainerTest, MatchConIdWithFocusedSpecialValue)
 TEST_F(LeafContainerTest, MatchWorkspaceName)
 {
     ContainerScope scope(ContainerScopeType::workspace, "foo");
-    std::optional<std::string> const name = "foo";
-    EXPECT_CALL(*workspace, name())
-        .WillRepeatedly(testing::ReturnRef(name));
+    EXPECT_CALL(*workspace, display_name())
+        .WillRepeatedly(testing::Return(std::string("foo")));
     EXPECT_TRUE(leaf_container->matches(scope));
     scope.value = "bar";
     EXPECT_FALSE(leaf_container->matches(scope));
