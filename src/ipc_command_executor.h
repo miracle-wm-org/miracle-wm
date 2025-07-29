@@ -44,18 +44,20 @@ public:
     IpcValidationResult() = delete;
     static IpcValidationResult create_success()
     {
-        return IpcValidationResult(
+        return {
             true,
             false,
-            "");
+            ""
+        };
     }
 
     static IpcValidationResult create_failure(std::string error, bool parse_error)
     {
-        return IpcValidationResult(
+        return {
             false,
             parse_error,
-            std::move(error));
+            std::move(error)
+        };
     }
 
     bool const success;
@@ -89,24 +91,24 @@ private:
     std::shared_ptr<Launcher> launcher;
     mir::Synchronised<std::vector<IpcParseResult>> apply_on_startup;
 
-    IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_focus(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_move(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_swap(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_sticky(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_input(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_workspace(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_layout(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_fullscreen(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_floating(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_mark(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_unmark(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_rename(IpcCommand const&, IpcParseResult const&);
-    IpcValidationResult process_gap(IpcCommand const&, IpcParseResult const&);
+    IpcValidationResult process_exec(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_split(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_focus(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_move(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_swap(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_sticky(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_input(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_workspace(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_layout(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_fullscreen(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_floating(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_scratchpad(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_resize(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_reload(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_mark(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_unmark(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_rename(IpcCommand const&, IpcParseResult const&) const;
+    IpcValidationResult process_gap(IpcCommand const&, IpcParseResult const&) const;
 };
 
 } // miracle

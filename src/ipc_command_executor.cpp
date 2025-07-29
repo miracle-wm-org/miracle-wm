@@ -90,7 +90,7 @@ public:
         {
             return std::stoi(current());
         }
-        catch (std::invalid_argument const& e)
+        catch (std::invalid_argument const&)
         {
             mir::log_error("Invalid argument: %s", current().c_str());
             return std::nullopt;
@@ -127,7 +127,7 @@ public:
                 prev();
             return ParseMoveResult(true, move_type, amount);
         }
-        catch (std::invalid_argument const& e)
+        catch (std::invalid_argument const&)
         {
             mir::log_error("Invalid argument: %s", command.arguments[index].c_str());
             return ParseMoveResult(false, ParseMoveResult::MoveType::invalid, 0);
@@ -253,7 +253,7 @@ void IpcCommandExecutor::apply_startup_commands_to(std::shared_ptr<Container> co
     }
 }
 
-IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, IpcParseResult const&)
+IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, IpcParseResult const&) const
 {
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("No arguments were supplied", true);
@@ -273,22 +273,22 @@ IpcValidationResult IpcCommandExecutor::process_exec(IpcCommand const& command, 
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("No arguments were supplied", true);
 
     if (command.arguments.front() == "vertical")
     {
-        command_controller->try_request_vertical(command_list.scope);
+        command_controller->try_request_vertical(parse_result.scope);
     }
     else if (command.arguments.front() == "horizontal")
     {
-        command_controller->try_request_horizontal(command_list.scope);
+        command_controller->try_request_horizontal(parse_result.scope);
     }
     else if (command.arguments.front() == "toggle")
     {
-        command_controller->try_toggle_layout(false, command_list.scope);
+        command_controller->try_toggle_layout(false, parse_result.scope);
     }
     else
     {
@@ -298,84 +298,84 @@ IpcValidationResult IpcCommandExecutor::process_split(IpcCommand const& command,
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
     {
-        if (command_list.scope.empty())
+        if (parse_result.scope.empty())
             return IpcValidationResult::create_failure("'focus' command expected scope but none was provided", true);
 
-        command_controller->try_select(command_list.scope);
+        command_controller->try_select(parse_result.scope);
         return IpcValidationResult::create_success();
     }
 
     auto const& arg = command.arguments.front();
     if (arg == "workspace")
     {
-        if (command_list.scope.empty())
+        if (parse_result.scope.empty())
             return IpcValidationResult::create_failure("'focus workspace' command expected scope but none was provided", true);
 
-        command_controller->select_workspace_with_scope(command_list.scope);
+        command_controller->select_workspace_with_scope(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "left")
     {
-        command_controller->try_select(Direction::left, command_list.scope);
+        command_controller->try_select(Direction::left, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "right")
     {
-        command_controller->try_select(Direction::right, command_list.scope);
+        command_controller->try_select(Direction::right, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "up")
     {
-        command_controller->try_select(Direction::up, command_list.scope);
+        command_controller->try_select(Direction::up, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "down")
     {
-        command_controller->try_select(Direction::down, command_list.scope);
+        command_controller->try_select(Direction::down, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "parent")
     {
-        command_controller->try_select_parent(command_list.scope);
+        command_controller->try_select_parent(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "child")
     {
-        command_controller->try_select_child(command_list.scope);
+        command_controller->try_select_child(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "prev")
     {
-        if (!command_controller->try_select_prev(command_list.scope))
+        if (!command_controller->try_select_prev(parse_result.scope))
             return IpcValidationResult::create_failure("Failed to select previous container", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "next")
     {
-        if (!command_controller->try_select_next(command_list.scope))
+        if (!command_controller->try_select_next(parse_result.scope))
             return IpcValidationResult::create_failure("Failed to select next container", false);
 
         return IpcValidationResult::create_success();
     }
     else if (arg == "floating")
     {
-        command_controller->try_select_floating(command_list.scope);
+        command_controller->try_select_floating(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "tiling")
     {
-        command_controller->try_select_tiling(command_list.scope);
+        command_controller->try_select_tiling(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "mode_toggle")
     {
-        command_controller->try_select_toggle(command_list.scope);
+        command_controller->try_select_toggle(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg == "output")
@@ -423,11 +423,11 @@ IpcValidationResult IpcCommandExecutor::process_focus(IpcCommand const& command,
     }
     else
     {
-        return IpcValidationResult::create_failure(std::format("Unknown argument to 'focus' command: {}", arg.c_str()), true);
+        return IpcValidationResult::create_failure(std::format("Unknown argument to 'focus' command: {}", arg), true);
     }
 }
 
-IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // https://i3wm.org/docs/userguide.html#_focusing_moving_containers
     if (command.arguments.empty())
@@ -451,12 +451,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (success)
         {
             if (move_type == ParseMoveResult::MoveType::ppt)
-                command_controller->try_move_by_ppt(direction, amount, command_list.scope);
+                command_controller->try_move_by_ppt(direction, amount, parse_result.scope);
             else
-                command_controller->try_move_by_pixels(direction, static_cast<int>(amount), command_list.scope);
+                command_controller->try_move_by_pixels(direction, static_cast<int>(amount), parse_result.scope);
         }
         else
-            command_controller->try_move_by_direction(direction, command_list.scope);
+            command_controller->try_move_by_direction(direction, parse_result.scope);
         return IpcValidationResult::create_success();
     }
 
@@ -467,12 +467,12 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
 
         if (indexer.current() == "center")
         {
-            command_controller->try_move_to_center_of_active_output(command_list.scope);
+            command_controller->try_move_to_center_of_active_output(parse_result.scope);
             return IpcValidationResult::create_success();
         }
         else if (indexer.current() == "mouse")
         {
-            command_controller->try_move_to_cursor(command_list.scope);
+            command_controller->try_move_to_cursor(parse_result.scope);
             return IpcValidationResult::create_success();
         }
         else
@@ -491,7 +491,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
                 x_move_distance.move_type == ParseMoveResult::MoveType::ppt,
                 y_move_distance.amount,
                 y_move_distance.move_type == ParseMoveResult::MoveType::ppt,
-                command_list.scope);
+                parse_result.scope);
         }
 
         return IpcValidationResult::create_success();
@@ -512,7 +512,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (arg2 != "center")
             return IpcValidationResult::create_failure("'move absolute position' ... expected 'center' as the fourth argument", true);
 
-        command_controller->try_move_to_absolute_center(command_list.scope);
+        command_controller->try_move_to_absolute_center(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (indexer.current() == "window" || indexer.current() == "container")
@@ -520,7 +520,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (!indexer.next())
             return IpcValidationResult::create_failure("'move window/container' expected a third argument", true);
 
-        auto const back_and_forth = std::find(command.options.begin(), command.options.end(), "--no-auto-back-and-forth") == command.options.end();
+        auto const back_and_forth = std::ranges::find(command.options, "--no-auto-back-and-forth") == command.options.end();
         auto const& arg1 = indexer.current();
         if (arg1 != "to")
             return IpcValidationResult::create_failure("Expected 'to' after 'move window/container ...'", true);
@@ -539,32 +539,32 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             if (try_get_number(arg3, number))
             {
                 // TODO: Do we need to care about the name here?
-                command_controller->try_move_to_workspace(command_list.scope, number, back_and_forth);
+                command_controller->try_move_to_workspace(parse_result.scope, number, back_and_forth);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "next")
             {
-                command_controller->try_move_to_next_workspace(command_list.scope);
+                command_controller->try_move_to_next_workspace(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "prev")
             {
-                command_controller->try_move_to_prev_workspace(command_list.scope);
+                command_controller->try_move_to_prev_workspace(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "current")
             {
-                command_controller->try_move_to_current_workspace(command_list.scope);
+                command_controller->try_move_to_current_workspace(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "back_and_forth")
             {
-                command_controller->try_move_to_back_and_forth(command_list.scope);
+                command_controller->try_move_to_back_and_forth(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else
             {
-                command_controller->try_move_to_workspace_named(command_list.scope, arg3, back_and_forth);
+                command_controller->try_move_to_workspace_named(parse_result.scope, arg3, back_and_forth);
                 return IpcValidationResult::create_success();
             }
         }
@@ -576,47 +576,47 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
             auto const& arg3 = indexer.current();
             if (arg3 == "left")
             {
-                command_controller->try_move_to_output_by_direction(Direction::left, command_list.scope);
+                command_controller->try_move_to_output_by_direction(Direction::left, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "right")
             {
-                command_controller->try_move_to_output_by_direction(Direction::right, command_list.scope);
+                command_controller->try_move_to_output_by_direction(Direction::right, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "down")
             {
-                command_controller->try_move_to_output_by_direction(Direction::down, command_list.scope);
+                command_controller->try_move_to_output_by_direction(Direction::down, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "up")
             {
-                command_controller->try_move_to_output_by_direction(Direction::up, command_list.scope);
+                command_controller->try_move_to_output_by_direction(Direction::up, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "current")
             {
-                command_controller->try_move_to_current_output(command_list.scope);
+                command_controller->try_move_to_current_output(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "primary")
             {
-                command_controller->try_move_to_primary_output(command_list.scope);
+                command_controller->try_move_to_primary_output(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "nonprimary")
             {
-                command_controller->try_move_to_nonprimary_output(command_list.scope);
+                command_controller->try_move_to_nonprimary_output(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg3 == "next")
             {
-                command_controller->try_move_to_next_output(command_list.scope);
+                command_controller->try_move_to_next_output(parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else
             {
-                command_controller->try_move_to_output_by_name_list(indexer.current_remaining(), command_list.scope);
+                command_controller->try_move_to_output_by_name_list(indexer.current_remaining(), parse_result.scope);
                 return IpcValidationResult::create_success();
             }
         }
@@ -625,14 +625,14 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
     }
     else if (indexer.current() == "scratchpad")
     {
-        command_controller->try_move_to_scratchpad(command_list.scope);
+        command_controller->try_move_to_scratchpad(parse_result.scope);
         return IpcValidationResult::create_success();
     }
 
     return IpcValidationResult::create_failure("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'", true);
 }
 
-IpcValidationResult IpcCommandExecutor::process_swap(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_swap(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current())
@@ -662,25 +662,25 @@ IpcValidationResult IpcCommandExecutor::process_swap(IpcCommand const& command, 
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_sticky(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("'sticky' expects arguments", true);
 
     auto const& arg0 = command.arguments[0];
     if (arg0 == "enable")
-        command_controller->set_is_pinned(true, command_list.scope);
+        command_controller->set_is_pinned(true, parse_result.scope);
     else if (arg0 == "disable")
-        command_controller->set_is_pinned(false, command_list.scope);
+        command_controller->set_is_pinned(false, parse_result.scope);
     else if (arg0 == "toggle")
-        command_controller->toggle_pinned_to_workspace(command_list.scope);
+        command_controller->toggle_pinned_to_workspace(parse_result.scope);
     else
         return IpcValidationResult::create_failure("Expected enable/disable/toggle after 'sticky'", true);
 
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // Payloads appear in the following format:
     //    [type:X, xkb_Y, Z]
@@ -730,7 +730,7 @@ IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command,
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& command, IpcParseResult const&)
+IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& command, IpcParseResult const&) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current())
@@ -791,7 +791,7 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
     }
 }
 
-IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // https://i3wm.org/docs/userguide.html#manipulating_layout
     ArgumentsIndexer indexer(command);
@@ -801,27 +801,27 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
     std::string const& arg0 = indexer.current();
     if (arg0 == "default")
     {
-        command_controller->set_layout_default(command_list.scope);
+        command_controller->set_layout_default(parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "tabbed")
     {
-        command_controller->set_layout(LayoutScheme::tabbing, command_list.scope);
+        command_controller->set_layout(LayoutScheme::tabbing, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "stacking")
     {
-        command_controller->set_layout(LayoutScheme::stacking, command_list.scope);
+        command_controller->set_layout(LayoutScheme::stacking, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splitv")
     {
-        command_controller->set_layout(LayoutScheme::vertical, command_list.scope);
+        command_controller->set_layout(LayoutScheme::vertical, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "splith")
     {
-        command_controller->set_layout(LayoutScheme::horizontal, command_list.scope);
+        command_controller->set_layout(LayoutScheme::horizontal, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "toggle")
@@ -834,12 +834,12 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
             auto const& arg1 = indexer.current();
             if (arg1 == "split")
             {
-                command_controller->try_toggle_layout(false, command_list.scope);
+                command_controller->try_toggle_layout(false, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
             else if (arg1 == "all")
             {
-                command_controller->try_toggle_layout(true, command_list.scope);
+                command_controller->try_toggle_layout(true, parse_result.scope);
                 return IpcValidationResult::create_success();
             }
         }
@@ -862,7 +862,7 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
                 return IpcValidationResult::create_failure(std::format("Unknown layout type in 'layout toggle': {}", argn.c_str()), true);
         } while (indexer.next());
 
-        command_controller->try_cycle_through_request_types(request_types, command_list.scope);
+        command_controller->try_cycle_through_request_types(request_types, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else
@@ -871,7 +871,7 @@ IpcValidationResult IpcCommandExecutor::process_layout(IpcCommand const& command
     }
 }
 
-IpcValidationResult IpcCommandExecutor::process_fullscreen(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_fullscreen(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // https://i3wm.org/docs/userguide.html#manipulating_layout
     ArgumentsIndexer indexer(command);
@@ -885,7 +885,7 @@ IpcValidationResult IpcCommandExecutor::process_fullscreen(IpcCommand const& com
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_floating(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_floating(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     // https://i3wm.org/docs/userguide.html#manipulating_layout
     ArgumentsIndexer indexer(command);
@@ -899,7 +899,7 @@ IpcValidationResult IpcCommandExecutor::process_floating(IpcCommand const& comma
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_scratchpad(IpcCommand const& command, IpcParseResult const&)
+IpcValidationResult IpcCommandExecutor::process_scratchpad(IpcCommand const& command, IpcParseResult const&) const
 {
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("No arguments provided to 'scratchpad' command", true);
@@ -930,7 +930,6 @@ ResizeAdjust parse_resize(ArgumentsIndexer& indexer, int multiplier)
         return { .success = false, .error = "process_resize: expected argument after 'resize grow'" };
 
     Direction direction;
-    ;
     if (indexer.current() == "width" || indexer.current() == "horizontal")
         direction = Direction::right;
     else if (indexer.current() == "height" || indexer.current() == "vertical")
@@ -982,7 +981,7 @@ SetResizeResult parse_set_resize(ArgumentsIndexer& indexer)
 }
 }
 
-IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command, IpcParseResult const& command_list)
+IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     if (command.arguments.empty())
         return IpcValidationResult::create_failure("Expected arguments to be provided to 'resize'", true);
@@ -999,9 +998,9 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             return IpcValidationResult::create_failure("Expected a value after 'grow'", true);
 
         if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
-            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, parse_result.scope);
         else
-            command_controller->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize(adjust.direction, static_cast<int>(adjust.first->amount), parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "shrink")
@@ -1014,9 +1013,9 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             return IpcValidationResult::create_failure("Expected a value after 'shrink'", true);
 
         if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
-            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, parse_result.scope);
         else
-            command_controller->try_resize(adjust.direction, adjust.first->amount, command_list.scope);
+            command_controller->try_resize(adjust.direction, adjust.first->amount, parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "set")
@@ -1030,14 +1029,14 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             result.width.move_type == ParseMoveResult::MoveType::ppt,
             result.height.amount,
             result.height.move_type == ParseMoveResult::MoveType::ppt,
-            command_list.scope);
+            parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else
-        return IpcValidationResult::create_failure(std::format("Encountered unexpected argument during 'resize': {}", arg0.c_str()), true);
+        return IpcValidationResult::create_failure(std::format("Encountered unexpected argument during 'resize': {}", arg0), true);
 }
 
-IpcValidationResult IpcCommandExecutor::process_reload(IpcCommand const& command, IpcParseResult const&)
+IpcValidationResult IpcCommandExecutor::process_reload(IpcCommand const& command, IpcParseResult const&) const
 {
     if (!command.arguments.empty())
         return IpcValidationResult::create_failure("'reload' command expects no arguments", true);
@@ -1046,7 +1045,7 @@ IpcValidationResult IpcCommandExecutor::process_reload(IpcCommand const& command
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_mark(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_mark(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current())
@@ -1063,7 +1062,7 @@ IpcValidationResult IpcCommandExecutor::process_mark(IpcCommand const& command, 
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_unmark(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_unmark(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     ArgumentsIndexer indexer(command);
     if (indexer.has_current())
@@ -1120,7 +1119,7 @@ std::optional<WorkspaceIdentifier> split_and_trim_workspace_name(const std::stri
 }
 }
 
-IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current() || indexer.current() != "workspace")
@@ -1163,7 +1162,7 @@ IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command
     return IpcValidationResult::create_success();
 }
 
-IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, IpcParseResult const& parse_result)
+IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, IpcParseResult const& parse_result) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current())
