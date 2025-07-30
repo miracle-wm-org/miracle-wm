@@ -16,18 +16,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define MIR_LOG_COMPONENT "output_content"
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include "output.h"
 #include "animator.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "mir_version_manager.h"
 #include "policy.h"
 #include "vector_helpers.h"
-
 #include "workspace.h"
 #include "workspace_manager.h"
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <memory>
 #include <mir/graphics/edid.h>
@@ -694,6 +694,11 @@ nlohmann::json Output::get_outputs_json(bool) const
         break;
     }
 
+#ifdef MIR_VERSION_2_22_OR_GREATER
+    auto const make = raw_output_config.display_info.vendor.value_or("Unknown");
+    auto const model = raw_output_config.display_info.model.value_or("Unknown");
+    auto const serial = raw_output_config.display_info.serial.value_or("0x00000000");
+#else
     std::string make = "Unknown";
     std::string model = "Unknown";
     std::string serial = "0x00000000";
@@ -707,11 +712,11 @@ nlohmann::json Output::get_outputs_json(bool) const
 
         make = man;
         model = name;
-        // TODO: Transform the serial number to a string
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
         serial = edid->serial_number();
 #endif
     }
+#endif
 
     return {
         { "name",             name_                                             },

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIR_RENDERER_GL_RENDERER_H_
 #define MIR_RENDERER_GL_RENDERER_H_
 
+#include "mir_version_manager.h"
 #include "primitive.h"
 #include "program_factory.h"
 #include "render_data_manager.h"
@@ -26,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
-#include <mir/version.h>
 #include <miral/window_manager_tools.h>
 #include <vector>
 
@@ -62,7 +62,7 @@ public:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
     auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
     void set_output_filter(MirOutputFilter filter) override { }
 #endif
 

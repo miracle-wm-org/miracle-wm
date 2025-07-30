@@ -17,15 +17,15 @@
 #ifndef MIRACLE_WM_STUB_SURFACE_H
 #define MIRACLE_WM_STUB_SURFACE_H
 
+#include "mir_version_manager.h"
 #include <mir/scene/surface.h>
-#include <mir/version.h>
 
 namespace miracle::test
 {
 class StubSurface : public mir::scene::Surface
 {
 public:
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 19)
+#ifdef MIR_VERSION_2_19_OR_GREATER
     void initial_placement_done() override { }
 #endif
 
@@ -33,7 +33,7 @@ public:
     {
         return mir::geometry::Displacement();
     }
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
+#ifdef MIR_VERSION_2_20_OR_LESSER
     auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override
     {
         return std::shared_ptr<mir::frontend::BufferStream>();
@@ -280,7 +280,7 @@ public:
     {
     }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
     std::list<mir::scene::StreamInfo> get_streams() const override
@@ -289,7 +289,7 @@ public:
     }
 #endif
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+#ifdef MIR_VERSION_2_22_OR_GREATER
     void set_mirror_mode(MirMirrorMode) override
     {
     }
