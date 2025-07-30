@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef ANIMATING_SURFACE_H
 #define ANIMATING_SURFACE_H
 
+#include "mir_version_manager.h"
 #include <mir/scene/surface.h>
-#include <mir/version.h>
 
 namespace miracle
 {
@@ -42,7 +42,7 @@ public:
     void consume(const std::shared_ptr<MirEvent const>& event) override;
     auto visible_on_lock_screen() const -> bool override;
     auto content_offset() const -> mir::geometry::Displacement override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
+#ifdef MIR_VERSION_2_20_OR_LESSER
     auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override;
 #endif
     auto wayland_surface() -> const mir::wayland::Weak<mir::frontend::WlSurface>& override;
@@ -50,7 +50,7 @@ public:
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void register_early_observer(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void unregister_interest(const mir::scene::SurfaceObserver& observer) override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 19)
+#ifdef MIR_VERSION_2_19_OR_GREATER
     void initial_placement_done() override;
 #endif
     std::string name() const override;
@@ -81,7 +81,7 @@ public:
     int query(MirWindowAttrib attrib) const override;
     void rename(const std::string& title) override;
     void set_streams(const std::list<mir::scene::StreamInfo>& streams) override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
     std::list<mir::scene::StreamInfo> get_streams() const override;
 #endif
     void set_confine_pointer_state(MirPointerConfinementState state) override;
@@ -100,11 +100,11 @@ public:
     void set_window_margins(mir::geometry::DeltaY top, mir::geometry::DeltaX left, mir::geometry::DeltaY bottom, mir::geometry::DeltaX right) override;
     auto focus_mode() const -> MirFocusMode override;
     void set_focus_mode(MirFocusMode focus_mode) override;
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
 #endif
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+#ifdef MIR_VERSION_2_22_OR_GREATER
     void set_mirror_mode(MirMirrorMode mirror_mode) { surface_->set_mirror_mode(mirror_mode); }
 #endif
 

@@ -124,6 +124,7 @@ add_library(miracle-wm-implementation
     src/window_observer.h src/window_observer.cpp
     src/config_observer.h src/config_observer.cpp
     src/binding_event.h src/binding_event.cpp
+    src/mir_version_manager.h
 )
 
 add_executable(miracle-wm

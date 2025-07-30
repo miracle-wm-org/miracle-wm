@@ -17,9 +17,9 @@
 #ifndef MOCK_SURFACE_H
 #define MOCK_SURFACE_H
 
+#include "mir_version_manager.h"
 #include <gmock/gmock.h>
 #include <mir/scene/surface.h>
-#include <mir/version.h>
 
 namespace miracle
 {
@@ -88,12 +88,12 @@ namespace test
         MOCK_METHOD(void, set_window_margins, (mir::geometry::DeltaY, mir::geometry::DeltaX, mir::geometry::DeltaY, mir::geometry::DeltaX), (override));
         MOCK_METHOD(MirFocusMode, focus_mode, (), (const, override));
         MOCK_METHOD(void, set_focus_mode, (MirFocusMode), (override));
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
         MOCK_METHOD(mir::Flags<MirTiledEdge>, tiled_edges, (), (const, override));
         MOCK_METHOD(void, set_tiled_edges, (mir::Flags<MirTiledEdge>), (override));
         MOCK_METHOD(std::list<mir::scene::StreamInfo>, get_streams, (), (const, override));
 #endif
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
+#ifdef MIR_VERSION_2_22_OR_GREATER
         MOCK_METHOD(void, set_mirror_mode, (MirMirrorMode), (override));
 #endif
     };

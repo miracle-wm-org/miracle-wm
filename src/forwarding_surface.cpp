@@ -307,7 +307,7 @@ void ForwardingSurface::set_streams(const std::list<mir::scene::StreamInfo>& str
     surface_->set_streams(streams);
 }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 21)
+#ifdef MIR_VERSION_2_21_OR_GREATER
 std::list<mir::scene::StreamInfo> ForwardingSurface::get_streams() const
 {
     return surface_->get_streams();
