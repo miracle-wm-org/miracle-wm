@@ -263,8 +263,9 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
 
 void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int index)
 {
-    auto rectangle = create_space(index);
+    auto const rectangle = create_space(index);
     node->set_parent(as_parent(shared_from_this()));
+    node->set_workspace(workspace);
     node->set_logical_area(rectangle);
     container_list.insert(container_list.begin() + index, node);
     relayout();

@@ -138,6 +138,7 @@ public:
     virtual bool try_move_to_nonprimary_output(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_to_next_output(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_move_to_output_by_name_list(std::vector<std::string> const& names, std::vector<ContainerScope> const& scope) = 0;
+    virtual bool try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope) = 0;
     virtual bool reload_config() = 0;
     virtual void set_mode(WindowManagerMode mode) = 0;
     virtual void select_container(std::shared_ptr<Container> const&) = 0;
@@ -247,6 +248,7 @@ public:
     bool try_move_to_nonprimary_output(std::vector<ContainerScope> const& scope) override;
     bool try_move_to_next_output(std::vector<ContainerScope> const& scope) override;
     bool try_move_to_output_by_name_list(std::vector<std::string> const& names, std::vector<ContainerScope> const& scope) override;
+    bool try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope) override;
     bool reload_config() override;
     void set_mode(WindowManagerMode mode) override;
     void select_container(std::shared_ptr<Container> const&) override;

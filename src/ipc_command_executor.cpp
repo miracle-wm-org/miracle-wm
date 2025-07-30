@@ -620,6 +620,17 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
                 return IpcValidationResult::create_success();
             }
         }
+        else if (arg2 == "mark")
+        {
+            if (!indexer.next())
+                return IpcValidationResult::create_failure("Expected another argument after 'move container/window to mark...'", true);
+
+            auto const& mark = indexer.current();
+            if (command_controller->try_move_to_mark(mark, parse_result.scope))
+                return IpcValidationResult::create_success();
+            else
+                return IpcValidationResult::create_failure(std::format("Failed to move container to mark: {}", mark), false);
+        }
 
         return IpcValidationResult::create_failure("Expected workspace/output after 'move container/window to ...'", true);
     }
