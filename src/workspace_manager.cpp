@@ -39,6 +39,7 @@ WorkspaceManager::WorkspaceManager(
 
 bool WorkspaceManager::focus_existing(WorkspaceInterface const* existing, bool back_and_forth)
 {
+    mir::log_info("focus_existing: %s focused", existing->display_name().c_str());
     auto const& active_workspace = output_manager->focused()->active();
     if (active_workspace.get() == existing)
     {
@@ -66,6 +67,7 @@ bool WorkspaceManager::request_workspace(
     if (auto const& existing = workspace(num))
         return focus_existing(existing, back_and_forth);
 
+    mir::log_info("request_workspace: %d being created", num);
     uint32_t id = next_id++;
     auto const& workspace_config = config->get_workspace_config(num, std::nullopt);
     output_hint->advise_new_workspace({ .id = id,
@@ -85,6 +87,7 @@ bool WorkspaceManager::request_workspace(
     if (auto const& existing = workspace(name))
         return focus_existing(existing, back_and_forth);
 
+    mir::log_info("request_workspace: %s being created", name.c_str());
     uint32_t id = next_id++;
     output_hint->advise_new_workspace({ .id = id,
         .num = std::nullopt,
@@ -230,9 +233,12 @@ bool WorkspaceManager::request_focus(uint32_t id)
 {
     auto const& existing = workspace(id);
     if (!existing)
+    {
+        mir::log_error("request_focus: cannot find workspace with id %d", id);
         return false;
+    }
 
-    auto active_screen = output_manager->focused();
+    auto const active_screen = output_manager->focused();
     if (active_screen)
     {
         if (auto current = active_screen->active())
@@ -322,7 +328,7 @@ std::vector<std::shared_ptr<WorkspaceInterface>> WorkspaceManager::workspaces() 
 
 void WorkspaceManager::move_workspace_to_output(uint32_t id, OutputInterface* hint)
 {
-    auto w = workspace(id);
+    auto const w = workspace(id);
     if (!w)
     {
         mir::log_error("move_workspace_to_output: cannot find workspace with id %d", id);

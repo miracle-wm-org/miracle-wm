@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_OUTPUT_MANAGER_H
 #define MIRACLE_WM_OUTPUT_MANAGER_H
 
+#include "direction.h"
 #include "output_factory_interface.h"
 
 #include <memory>
@@ -29,6 +30,13 @@ namespace miracle
 class OutputInterface;
 class WorkspaceManager;
 
+/// Manages the collection of outputs that exist in the compositor.
+///
+/// Each of these outputs contains a list of workspaces, which in turn contains
+/// a list trees of containers.
+///
+/// See also:
+///  - [miracle::OutputInterface], the interface held in this manager
 class OutputManager
 {
 public:
@@ -46,6 +54,11 @@ public:
     bool focus(int id);
     bool unfocus(int id);
     OutputInterface* focused();
+    OutputInterface* primary();
+    OutputInterface* non_primary();
+    OutputInterface* next();
+    OutputInterface* next(Direction direction);
+    OutputInterface* next_in_list(std::vector<std::string> const& names);
 
 private:
     std::unique_ptr<OutputFactoryInterface> output_factory;

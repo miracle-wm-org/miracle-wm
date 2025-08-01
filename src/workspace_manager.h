@@ -20,11 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "workspace_observer.h"
 
-#include <functional>
-#include <list>
-#include <map>
 #include <memory>
-#include <miral/window_manager_tools.h>
 #include <vector>
 
 namespace miracle
@@ -34,8 +30,15 @@ class OutputInterface;
 class Config;
 class OutputManager;
 
-/// A central place to request operations on workspaces.
-/// [Workspace] objects are held in their [Output] containers.
+/// A helper class for performing operations on workspaces.
+///
+/// True references to [WorkspaceInterface]s are held by their respective
+/// [OutputInterface]s. This class is a helper that allows the caller
+/// to tread workspaces as a uniform list of workspace objects.
+///
+/// See also:
+///  - [miracle::WorkspaceInterface], the interface for workspaces
+///  - [miracle::Workspace], the primary implementation of this workspace
 class WorkspaceManager
 {
 public:
@@ -46,10 +49,13 @@ public:
     WorkspaceManager(WorkspaceManager const&) = delete;
     virtual ~WorkspaceManager() = default;
 
-    /// Request workspace by number. If it does not yet exist, then one
-    /// is created on the provided output. If it does exist, we navigate
-    /// to the screen containing that workspace and show it if it
+    /// Request workspace by number.
+    ///
+    /// If it does not yet exist, then one is created on the provided output.
+    ///
+    /// If it does exist, we navigate  to the screen containing that workspace and show it if it
     /// isn't already shown.
+    ///
     /// \param output_hint output that we want to show on if creating a new workspace
     /// \param key workspace number that we want to create
     /// \param back_and_forth
@@ -60,6 +66,11 @@ public:
         bool back_and_forth = true);
 
     /// Request the workspace by name.
+    ///
+    /// If it does not yet exist, then one is created on the provided output.
+    ///
+    /// If the workspace does exist, then we navigate to the screen containing
+    /// the workspace and show the workspace.
     bool request_workspace(
         OutputInterface* output_hint,
         std::string const& name,
@@ -92,6 +103,11 @@ public:
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces() const;
 
     /// Moves the workspace associated with [id] to the [hint].
+    ///
+    /// If the workspace is already on the output, then nothing happens.
+    ///
+    /// If the workspace is the final workspace on its previous output,
+    /// then that output will have a new workspace assigned to it.
     void move_workspace_to_output(uint32_t id, OutputInterface* hint);
 
     bool set_workspace_num(uint32_t id, std::optional<int> const& num);

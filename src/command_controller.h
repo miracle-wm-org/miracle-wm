@@ -65,6 +65,18 @@ enum class OuterGapsChange
     left
 };
 
+enum class OutputSelection
+{
+    left,
+    right,
+    down,
+    up,
+    current,
+    primary,
+    nonprimary,
+    next
+};
+
 /// Responsible for fielding requests from the system and forwarding
 /// them to an appropriate handler. Requests can come from any thread
 /// (e.g. the keyboard input thread, the ipc thread, etc.).
@@ -158,6 +170,8 @@ public:
     virtual bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) = 0;
     virtual bool set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only) = 0;
     virtual bool set_outer_gaps(size_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) = 0;
+    virtual bool try_move_workspace_to_output(OutputSelection selection) = 0;
+    virtual bool try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs) = 0;
     [[nodiscard]] virtual nlohmann::json to_json() const = 0;
     [[nodiscard]] virtual nlohmann::json outputs_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
@@ -266,6 +280,8 @@ public:
     bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) override;
     bool set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only) override;
     bool set_outer_gaps(size_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) override;
+    bool try_move_workspace_to_output(OutputSelection selection) override;
+    bool try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs) override;
     [[nodiscard]] nlohmann::json to_json() const override;
     [[nodiscard]] nlohmann::json outputs_json() const override;
     [[nodiscard]] nlohmann::json workspaces_json() const override;
@@ -291,9 +307,6 @@ private:
 
     /// Floats the container and returns the new [ParentContainer] of that container.
     std::shared_ptr<ParentContainer> toggle_floating_internal(std::shared_ptr<Container> const& container);
-
-    OutputInterface* _next_output_in_list(std::vector<std::string> const& names);
-    OutputInterface* _next_output_in_direction(Direction direction);
 };
 }
 

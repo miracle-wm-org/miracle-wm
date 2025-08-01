@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "policy.h"
 #include "stub_configuration.h"
+#include "vertical_display_configuration_policy.h"
 
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
@@ -37,16 +38,10 @@ namespace mg = mir::graphics;
 using namespace testing;
 using namespace miracle;
 
-namespace
-{
-int argc = 1;
-const char* argv[] = { "miracle-wm" };
-}
-
 class PolicyTest : public mir_test_framework::WindowManagementTestHarness
 {
 public:
-    explicit PolicyTest()
+    PolicyTest()
     {
         server.wrap_display_configuration_policy([&](std::shared_ptr<mg::DisplayConfigurationPolicy> const&)
                                                      -> std::shared_ptr<mg::DisplayConfigurationPolicy>
@@ -100,10 +95,9 @@ public:
 
     auto get_initial_output_configs() -> std::vector<mir::graphics::DisplayConfigurationOutput> override
     {
-        auto r = output_configs_from_output_rectangles({
+        return output_configs_from_output_rectangles({
             mir::geometry::Rectangle { { 0, 0 }, { 800, 600 } }
         });
-        return r;
     }
 
     std::string config_path;
@@ -137,17 +131,52 @@ public:
 
     auto get_initial_output_configs() -> std::vector<mir::graphics::DisplayConfigurationOutput> override
     {
-        auto r = output_configs_from_output_rectangles({
+        return output_configs_from_output_rectangles({
             mir::geometry::Rectangle { { 0, 0 },   { 800, 600 }  },
             mir::geometry::Rectangle { { 800, 0 }, { 1000, 600 } }
         });
-        return r;
     }
 
     std::shared_ptr<Config> config;
 };
 
-TEST_F(DoubleWindowPolicyTest, default_window_is_tiling_window)
+class TripleHorizontalWindowPolicyTest : public PolicyTest
+{
+public:
+    TripleHorizontalWindowPolicyTest() :
+        config { std::make_shared<test::StubConfiguration>() }
+    {
+    }
+
+    auto get_builder() -> mir_test_framework::WindowManagementPolicyBuilder override
+    {
+        return [&](miral::WindowManagerTools const& tools)
+        {
+            return std::make_unique<Policy>(
+                tools,
+                server,
+                launcher,
+                config,
+                compositor_state,
+                std::make_shared<OutputListenerMultiplexer>(),
+                std::make_shared<DisplayConfig>(),
+                std::make_shared<ConfigObserverRegistrar>());
+        };
+    }
+
+    auto get_initial_output_configs() -> std::vector<mir::graphics::DisplayConfigurationOutput> override
+    {
+        return output_configs_from_output_rectangles({
+            mir::geometry::Rectangle { { 0, 0 },    { 800, 600 }  },
+            mir::geometry::Rectangle { { 800, 0 },  { 1000, 600 } },
+            mir::geometry::Rectangle { { 1800, 0 }, { 900, 600 }  }
+        });
+    }
+
+    std::shared_ptr<Config> config;
+};
+
+TEST_F(DoubleWindowPolicyTest, DefaultWindowIsTilingWindow)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -156,8 +185,20 @@ TEST_F(DoubleWindowPolicyTest, default_window_is_tiling_window)
     EXPECT_THAT(compositor_state->first_tiling()->window(), Eq(window));
 }
 
-TEST_F(DoubleWindowPolicyTest, can_remove_output_with_containers_open_on_it)
+TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
 {
+    // (mattkae): Arbitrary sleep so that we can account for the fact
+    // that an initial pointer event will come through and attempt
+    // to focus the first workspace.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Setup: focus the first workspace before we begin
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const focus_payload = "workspace --no-auto-back-and-forth 2";
+    uint32_t focus_payload_len = static_cast<uint32_t>(focus_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, focus_payload.c_str(), &focus_payload_len);
+
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
@@ -186,7 +227,7 @@ TEST_F(DoubleWindowPolicyTest, can_remove_output_with_containers_open_on_it)
     }));
 }
 
-TEST_F(DoubleWindowPolicyTest, can_remove_all_outputs_and_readd_it)
+TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -388,4 +429,181 @@ TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
     auto const container = compositor_state->focused_container();
     EXPECT_THAT(container->window(), Eq(windowC));
     EXPECT_THAT(container->get_parent().lock()->get_index_of_node(container), Eq(1));
+}
+
+TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
+{
+    // Setup: Create a new window and sanity check that it is on workspace 2
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    auto const output_having_workspace_taken = compositor_state->focused_container()->get_output();
+    EXPECT_THAT(compositor_state->focused_container()->get_workspace()->num(), Eq(2));
+
+    // Act: Issue a command to move the workspace to the next output
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const payload = "move workspace to output next";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    // Expect: that the current output has workspace 2 and the other output has workspace 1
+    // (because it gets reassigned!)
+    EXPECT_THAT(output_having_workspace_taken->get_workspaces()[0]->num(), Eq(1));
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(2));
+}
+
+TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
+{
+    // (mattkae): Arbitrary sleep so that we can account for the fact
+    // that an initial pointer event will come through and attempt
+    // to focus the first workspace.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Setup: focus the last workspace before we begin
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const focus_payload = "workspace --no-auto-back-and-forth 3";
+    uint32_t focus_payload_len = static_cast<uint32_t>(focus_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, focus_payload.c_str(), &focus_payload_len);
+
+    // Setup: Create a new window and sanity check that it is on workspace 3
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    EXPECT_THAT(compositor_state->focused_container()->get_workspace()->num(), Eq(3));
+
+    // Act: Issue a command to move the workspace to the left output
+    std::string const payload = "move workspace to output left";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    // Expect: that the container is still on workspace 3 but output 2
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(3));
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_area(), Eq(mir::geometry::Rectangle {
+                                                                                     { 800,  0   },
+                                                                                     { 1000, 600 }
+    }));
+}
+
+TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToRightOutput)
+{
+    // (mattkae): Arbitrary sleep so that we can account for the fact
+    // that an initial pointer event will come through and attempt
+    // to focus the first workspace.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Setup: focus the first workspace before we begin
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const focus_payload = "workspace --no-auto-back-and-forth 1";
+    uint32_t focus_payload_len = static_cast<uint32_t>(focus_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, focus_payload.c_str(), &focus_payload_len);
+
+    // Setup: Create a new window and sanity check that it is on workspace 1
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    EXPECT_THAT(compositor_state->focused_container()->get_workspace()->num(), Eq(1));
+
+    // Act: Issue a command to move the workspace to the right output
+    std::string const payload = "move workspace to output right";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    // Expect: that the container is still on workspace 1 but output 2
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(1));
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_area(), Eq(mir::geometry::Rectangle {
+                                                                                     { 800,  0   },
+                                                                                     { 1000, 600 }
+    }));
+}
+
+class DoubleVerticalWindowPolicyTest : public DoubleWindowPolicyTest
+{
+public:
+    DoubleVerticalWindowPolicyTest() :
+        DoubleWindowPolicyTest()
+    {
+        server.wrap_display_configuration_policy([&](std::shared_ptr<mg::DisplayConfigurationPolicy> const&)
+                                                     -> std::shared_ptr<mg::DisplayConfigurationPolicy>
+        {
+            return std::make_shared<test::VerticalDisplayConfigurationPolicy>();
+        });
+    }
+
+protected:
+    auto get_initial_output_configs() -> std::vector<mir::graphics::DisplayConfigurationOutput> override
+    {
+        return output_configs_from_output_rectangles({
+            mir::geometry::Rectangle { { 0, 0 },   { 800, 600 } },
+            mir::geometry::Rectangle { { 0, 600 }, { 800, 800 } }
+        });
+    }
+};
+
+TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
+{
+    // (mattkae): Arbitrary sleep so that we can account for the fact
+    // that an initial pointer event will come through and attempt
+    // to focus the first workspace.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Setup: focus the first workspace before we begin
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const focus_payload = "workspace --no-auto-back-and-forth 2";
+    uint32_t focus_payload_len = static_cast<uint32_t>(focus_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, focus_payload.c_str(), &focus_payload_len);
+
+    // Setup: Create a new window and sanity check that it is on workspace 2
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    EXPECT_THAT(compositor_state->focused_container()->get_workspace()->num(), Eq(2));
+
+    // Act: Issue a command to move the workspace to the up output
+    std::string const payload = "move workspace to output up";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    // Expect: that the container is still on workspace 2 but output 1
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(2));
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_area(), Eq(mir::geometry::Rectangle {
+                                                                                     { 0,   0   },
+                                                                                     { 800, 600 }
+    }));
+}
+
+TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
+{
+    // (mattkae): Arbitrary sleep so that we can account for the fact
+    // that an initial pointer event will come through and attempt
+    // to focus the first workspace.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Setup: focus the first workspace before we begin
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+    std::string const focus_payload = "workspace --no-auto-back-and-forth 1";
+    uint32_t focus_payload_len = static_cast<uint32_t>(focus_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, focus_payload.c_str(), &focus_payload_len);
+
+    // Setup: Create a new window and sanity check that it is on workspace 1
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const window = create_window(app, spec);
+    EXPECT_THAT(compositor_state->focused_container()->get_workspace()->num(), Eq(1));
+
+    // Act: Issue a command to move the workspace to the up output
+    std::string const payload = "move workspace to output down";
+    uint32_t payload_len = static_cast<uint32_t>(payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, payload.c_str(), &payload_len);
+
+    // Expect: that the container is still on workspace 1 but output 2
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(1));
+    EXPECT_THAT(compositor_state->focused_container()->get_output()->get_area(), Eq(mir::geometry::Rectangle {
+                                                                                     { 0,   600 },
+                                                                                     { 800, 800 }
+    }));
 }

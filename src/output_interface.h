@@ -44,6 +44,17 @@ struct WorkspaceCreationData
     std::shared_ptr<WorkspaceObserverRegistrar> const registrar;
 };
 
+/// An interface that defines an output in miracle.
+///
+/// When running the compositor, this implementation will most likely
+/// be a [miracle::Output]. This implementation wraps a [miral::Output]
+/// and contains a list of workspaces under its control. Each workspace
+/// in its turn contains a list of container trees which represent
+/// individual windows and grids of windows.
+///
+/// See also:
+///  - [miracle::Output] the default implementation of this inteface
+///  - [miracle::OutptuManager] maintains the list of outputs
 class OutputInterface
 {
 public:
@@ -104,6 +115,7 @@ public:
     [[nodiscard]] virtual geom::Rectangle get_workspace_rectangle(size_t i) const = 0;
     [[nodiscard]] virtual WorkspaceInterface const* workspace(uint32_t id) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_focused) const = 0;
+    [[nodiscard]] virtual bool is_primary() const = 0;
 
     /// This method should implement https://i3wm.org/docs/ipc.html#_outputs_reply
     [[nodiscard]] virtual nlohmann::json get_outputs_json(bool is_focused) const = 0;

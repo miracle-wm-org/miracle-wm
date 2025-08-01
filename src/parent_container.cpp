@@ -253,9 +253,10 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
         pending_node = create_space_for_window(-1);
     }
 
+    mir::log_info("Parent on workspace %s receiving new window", workspace ? workspace->display_name().c_str() : "nullptr");
     auto retval = pending_node;
     pending_node->associate_to_window(window);
-    pending_node->set_parent(Container::as_parent(shared_from_this()));
+    pending_node->set_parent(as_parent(shared_from_this()));
     pending_node = nullptr;
     commit_changes();
     return retval;

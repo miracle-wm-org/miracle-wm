@@ -201,17 +201,23 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInt
     if (workspace->get_output() == this)
         return;
 
+    // Remove the workspace from its old output. Note that we grab a reference to it
+    // so that its reference count doesn't erroneously hit zero.
     std::shared_ptr<WorkspaceInterface> to_add = nullptr;
-    if (auto old = workspace->get_output())
+    auto const old_output = workspace->get_output();
+    if (!old_output)
     {
-        for (auto const& w : old->get_workspaces())
+        mir::log_error("Failed to find the old output");
+        return;
+    }
+
+    for (auto const& w : old_output->get_workspaces())
+    {
+        if (w->id() == workspace->id())
         {
-            if (w->id() == workspace->id())
-            {
-                to_add = w;
-                old->advise_workspace_deleted(workspace_manager, workspace->id());
-                break;
-            }
+            to_add = w;
+            old_output->advise_workspace_deleted(workspace_manager, workspace->id());
+            break;
         }
     }
 
@@ -221,19 +227,22 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInt
         return;
     }
 
+    // Next, move the workspace to this output and remove it focus it
     mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
     insert_workspace_sorted(to_add);
     to_add->set_output(this);
-    to_add->hide();
+    workspace_manager.request_focus(to_add->id());
 
-    if (to_add->is_empty())
-        workspace_manager.delete_workspace(to_add->id());
+    // Finally, if [old_output] has no workspaces left, we need to request a workspace on it
+    if (old_output->get_workspaces().empty())
+        workspace_manager.request_first_available_workspace(old_output);
 }
 
 bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id)
 {
     // When the workspace becomes active, we try to move this output to the new
     // workspace transform, which may involve an animation.
+    mir::log_info("advise_workspace_active: %d", id);
 
     // First, we find where we're coming from and where we're going to.
     std::shared_ptr<WorkspaceInterface> from = nullptr;
@@ -671,9 +680,7 @@ nlohmann::json Output::get_outputs_json(bool) const
     current_mode_node["height"] = current_mode.size.height.as_int();
     current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
 
-    auto const primary = raw_output_config.custom_attribute.contains("primary")
-        ? raw_output_config.custom_attribute.at("primary") == "true"
-        : false;
+    auto const primary = is_primary();
 
     std::string subpixel_hinting;
     switch (raw_output_config.current_format)
@@ -739,4 +746,11 @@ nlohmann::json Output::get_outputs_json(bool) const
         { "modes",            modes_node                                        },
         { "current_mode",     current_mode_node                                 },
     };
+}
+
+bool Output::is_primary() const
+{
+    return raw_output_config.custom_attribute.contains("primary")
+        ? raw_output_config.custom_attribute.at("primary") == "true"
+        : false;
 }

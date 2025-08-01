@@ -82,6 +82,7 @@ public:
     [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override final;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override final;
     [[nodiscard]] nlohmann::json get_outputs_json(bool is_focused) const override final;
+    [[nodiscard]] bool is_primary() const override;
 
 private:
     class WorkspaceAnimation : public Animation
