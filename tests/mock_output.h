@@ -71,6 +71,7 @@ namespace test
         MOCK_METHOD(void, unset_defunct, (), (override));
         MOCK_METHOD(bool, is_defunct, (), (const, override));
         MOCK_METHOD(void, handle_workspace_animation, (AnimationStepResult const&, std::shared_ptr<WorkspaceInterface> const&, std::shared_ptr<WorkspaceInterface> const&), (override));
+        MOCK_METHOD(bool, is_primary, (), (const, override));
     };
 
 }

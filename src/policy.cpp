@@ -375,7 +375,10 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                     output_manager->unfocus(output_manager->focused()->id());
                 output_manager->focus(output->id());
                 if (auto const active = output->active())
+                {
+                    mir::log_info("Policy::handle_pointer_event: focusing active workspace: %d", active->id());
                     workspace_manager->request_focus(active->id());
+                }
             }
             break;
         }
@@ -628,6 +631,7 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 
 void Policy::advise_output_create(miral::Output const& output)
 {
+    mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
     std::lock_guard lock(self->mutex);
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);

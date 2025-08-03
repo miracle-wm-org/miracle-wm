@@ -639,6 +639,72 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         command_controller->try_move_to_scratchpad(parse_result.scope);
         return IpcValidationResult::create_success();
     }
+    else if (indexer.current() == "workspace")
+    {
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'move workspace' expected a third argument", true);
+
+        auto const& arg1 = indexer.current();
+        if (arg1 != "to")
+            return IpcValidationResult::create_failure("Expected 'to' after 'move workspace ...'", true);
+
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'move workspace to' expected another argument", true);
+
+        auto const& arg2 = indexer.current();
+        if (arg2 != "output")
+            return IpcValidationResult::create_failure("Expected 'output' after 'move workspace to ...'", true);
+
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("Expected another argument after 'move worksapce to output...'", true);
+
+        auto const& arg3 = indexer.current();
+        if (arg3 == "left")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::left);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "right")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::right);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "down")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::down);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "up")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::up);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "current")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::current);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "primary")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::primary);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "nonprimary")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::nonprimary);
+            return IpcValidationResult::create_success();
+        }
+        else if (arg3 == "next")
+        {
+            command_controller->try_move_workspace_to_output(OutputSelection::next);
+            return IpcValidationResult::create_success();
+        }
+        else
+        {
+            command_controller->try_move_workspace_to_outputs_by_name(indexer.current_remaining());
+            return IpcValidationResult::create_success();
+        }
+    }
 
     return IpcValidationResult::create_failure("Expected left/right/up/down/position/absolute/window/container/scratchpad after 'move ...'", true);
 }

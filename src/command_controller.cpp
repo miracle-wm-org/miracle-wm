@@ -752,8 +752,12 @@ bool CommandController::select_workspace(int number, bool back_and_forth)
         return false;
 
     if (!output_manager->focused())
+    {
+        mir::log_warning("select_workspace %d: no focused output", number);
         return false;
+    }
 
+    mir::log_info("select_workspace: %d", number);
     workspace_manager->request_workspace(output_manager->focused(), number, back_and_forth);
     return true;
 }
@@ -1290,62 +1294,10 @@ bool CommandController::try_select_prev_output()
     return false;
 }
 
-OutputInterface* CommandController::_next_output_in_direction(Direction direction)
-{
-    auto const& active = output_manager->focused();
-    auto const& active_area = active->get_area();
-    for (auto const& output : output_manager->outputs())
-    {
-        if (output.get() == output_manager->focused())
-            continue;
-
-        auto const& other_area = output->get_area();
-        switch (direction)
-        {
-        case Direction::left:
-        {
-            if (active_area.top_left.x.as_int() == (other_area.top_left.x.as_int() + other_area.size.width.as_int()))
-            {
-                return output.get();
-            }
-            break;
-        }
-        case Direction::right:
-        {
-            if (active_area.top_left.x.as_int() + active_area.size.width.as_int() == other_area.top_left.x.as_int())
-            {
-                return output.get();
-            }
-            break;
-        }
-        case Direction::up:
-        {
-            if (active_area.top_left.y.as_int() == (other_area.top_left.y.as_int() + other_area.size.height.as_int()))
-            {
-                return output.get();
-            }
-            break;
-        }
-        case Direction::down:
-        {
-            if (active_area.top_left.y.as_int() + active_area.size.height.as_int() == other_area.top_left.y.as_int())
-            {
-                return output.get();
-            }
-            break;
-        }
-        default:
-            return active;
-        }
-    }
-
-    return active;
-}
-
 bool CommandController::try_select_output(Direction direction)
 {
     std::lock_guard lock(mutex);
-    auto const& next = _next_output_in_direction(direction);
+    auto const next = output_manager->next(direction);
     if (next != output_manager->focused())
     {
         move_cursor_to_output(*next);
@@ -1401,41 +1353,13 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
     return result;
 }
 
-OutputInterface* CommandController::_next_output_in_list(std::vector<std::string> const& names)
-{
-    if (names.empty())
-        return output_manager->focused();
-
-    auto current_name = output_manager->focused()->name();
-    size_t next = 0;
-    for (size_t i = 0; i < names.size(); i++)
-    {
-        if (names[i] == current_name)
-        {
-            next = i + 1;
-            break;
-        }
-    }
-
-    if (next == names.size())
-        next = 0;
-
-    for (auto const& output : output_manager->outputs())
-    {
-        if (output->name() == names[next])
-            return output.get();
-    }
-
-    return output_manager->focused();
-}
-
 bool CommandController::try_select_output(std::vector<std::string> const& names)
 {
     std::lock_guard lock(mutex);
     if (!output_manager->focused())
         return false;
 
-    auto const& output = _next_output_in_list(names);
+    auto const output = output_manager->next_in_list(names);
     if (output != output_manager->focused())
         move_cursor_to_output(*output);
     return true;
@@ -1454,7 +1378,7 @@ bool CommandController::try_move_to_output_by_direction(Direction direction, std
     if (containers.empty())
         return false;
 
-    auto const& next = _next_output_in_direction(direction);
+    auto const& next = output_manager->next(direction);
     if (next != output_manager->focused())
     {
         for (auto const& container : containers)
@@ -1514,15 +1438,16 @@ bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
+    auto const primary = output_manager->primary();
     for (auto const& container : containers)
     {
-        if (container->get_output() == output_manager->outputs()[0].get())
+        if (container->get_output() == primary)
             continue;
 
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        output_manager->outputs()[0]->graft(container);
+        primary->graft(container);
         if (container->window().value())
             window_controller->select_active_window(container->window().value());
     }
@@ -1533,8 +1458,8 @@ bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> c
 bool CommandController::try_move_to_nonprimary_output(std::vector<ContainerScope> const& scope)
 {
     std::lock_guard lock(mutex);
-    constexpr int MIN_SIZE_TO_HAVE_NONPRIMARY_OUTPUT = 2;
-    if (output_manager->outputs().size() < MIN_SIZE_TO_HAVE_NONPRIMARY_OUTPUT)
+    auto const nonprimary = output_manager->non_primary();
+    if (!nonprimary)
         return false;
 
     if (!can_move_container())
@@ -1544,15 +1469,12 @@ bool CommandController::try_move_to_nonprimary_output(std::vector<ContainerScope
     if (containers.empty())
         return false;
 
-    if (output_manager->focused() != output_manager->outputs()[0].get())
-        return false;
-
     for (auto const& container : containers)
     {
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        output_manager->outputs()[1]->graft(container);
+        nonprimary->graft(container);
         if (container->window().value())
             window_controller->select_active_window(container->window().value());
     }
@@ -1612,7 +1534,7 @@ bool CommandController::try_move_to_output_by_name_list(std::vector<std::string>
     if (containers.empty())
         return false;
 
-    auto const& output = _next_output_in_list(names);
+    auto const& output = output_manager->next_in_list(names);
     if (output != state->focused_container()->get_output())
     {
         for (auto const& container : containers)
@@ -1941,6 +1863,88 @@ bool CommandController::set_outer_gaps(
         output_manager->focused()->active()->outer_gaps(next_outer_gaps);
     else
         config->override_outer_gaps(next_outer_gaps);
+    return true;
+}
+
+bool CommandController::try_move_workspace_to_output(OutputSelection selection)
+{
+    std::lock_guard lock(mutex);
+    if (!output_manager->focused())
+    {
+        mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused output");
+        return false;
+    }
+
+    auto const workspace = output_manager->focused()->active();
+    if (!workspace)
+    {
+        mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused workspace");
+        return false;
+    }
+
+    OutputInterface* output = nullptr;
+    switch (selection)
+    {
+    case OutputSelection::left:
+        output = output_manager->next(Direction::left);
+        break;
+    case OutputSelection::right:
+        output = output_manager->next(Direction::right);
+        break;
+    case OutputSelection::down:
+        output = output_manager->next(Direction::down);
+        break;
+    case OutputSelection::up:
+        output = output_manager->next(Direction::up);
+        break;
+    case OutputSelection::current:
+        output = output_manager->focused();
+        break;
+    case OutputSelection::primary:
+        output = output_manager->primary();
+        break;
+    case OutputSelection::nonprimary:
+        output = output_manager->non_primary();
+        break;
+    case OutputSelection::next:
+        output = output_manager->next();
+        break;
+    }
+
+    if (output == nullptr)
+    {
+        mir::log_warning("try_move_workspace_to_output: could not find output to move workspace to: %%d", selection);
+        return false;
+    }
+
+    workspace_manager->move_workspace_to_output(workspace->id(), output);
+    return true;
+}
+
+bool CommandController::try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs)
+{
+    std::lock_guard lock(mutex);
+    if (!output_manager->focused())
+    {
+        mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused output");
+        return false;
+    }
+
+    auto const workspace = output_manager->focused()->active();
+    if (!workspace)
+    {
+        mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused workspace");
+        return false;
+    }
+
+    auto const output = output_manager->next_in_list(outputs);
+    if (!output)
+    {
+        mir::log_warning("try_move_workspace_to_outputs_by_name: could not find output to move workspace to");
+        return false;
+    }
+
+    workspace_manager->move_workspace_to_output(workspace->id(), output);
     return true;
 }
 

@@ -47,7 +47,8 @@ set(SOURCES
     stub_session.h
     stub_surface.h
     stub_window_controller.h
-    stub_container.h)
+    stub_container.h
+    vertical_display_configuration_policy.h)
 
 if (END_TO_END_TESTS)
     list(APPEND SOURCES test_policy.cpp)

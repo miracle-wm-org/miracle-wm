@@ -136,3 +136,122 @@ OutputInterface* OutputManager::focused()
 {
     return focused_;
 }
+
+OutputInterface* OutputManager::primary()
+{
+    for (auto const& output : outputs())
+    {
+        if (output->is_primary())
+            return output.get();
+    }
+
+    return nullptr;
+}
+
+OutputInterface* OutputManager::non_primary()
+{
+    for (auto const& output : outputs())
+    {
+        if (!output->is_primary())
+            return output.get();
+    }
+
+    return nullptr;
+}
+
+OutputInterface* OutputManager::next()
+{
+    for (auto i = 0; i < outputs_.size(); i++)
+    {
+        auto const& output = outputs_[i];
+        if (output.get() == focused())
+        {
+            if (i + 1 == outputs_.size())
+                return outputs_[0].get();
+            else
+                return outputs_[i + 1].get();
+        }
+    }
+
+    return focused();
+}
+
+OutputInterface* OutputManager::next(Direction direction)
+{
+    auto const& active = focused();
+    auto const& active_area = active->get_area();
+    for (auto const& output : outputs())
+    {
+        if (output.get() == focused())
+            continue;
+
+        auto const& other_area = output->get_area();
+        switch (direction)
+        {
+        case Direction::left:
+        {
+            if (active_area.top_left.x.as_int() == (other_area.top_left.x.as_int() + other_area.size.width.as_int()))
+            {
+                return output.get();
+            }
+            break;
+        }
+        case Direction::right:
+        {
+            if (active_area.top_left.x.as_int() + active_area.size.width.as_int() == other_area.top_left.x.as_int())
+            {
+                return output.get();
+            }
+            break;
+        }
+        case Direction::up:
+        {
+            if (active_area.top_left.y.as_int() == (other_area.top_left.y.as_int() + other_area.size.height.as_int()))
+            {
+                return output.get();
+            }
+            break;
+        }
+        case Direction::down:
+        {
+            if (active_area.top_left.y.as_int() + active_area.size.height.as_int() == other_area.top_left.y.as_int())
+            {
+                return output.get();
+            }
+            break;
+        }
+        default:
+            return active;
+        }
+    }
+
+    return active;
+}
+
+OutputInterface* OutputManager::next_in_list(std::vector<std::string> const& names)
+{
+    if (names.empty())
+        return focused();
+
+    auto const current_name = focused()->name();
+    size_t next = 0;
+    for (size_t i = 0; i < names.size(); i++)
+    {
+        if (names[i] == current_name)
+        {
+            next = i + 1;
+            break;
+        }
+    }
+
+    if (next == names.size())
+        next = 0;
+
+    for (auto const& output : outputs())
+    {
+        if (output->name() == names[next])
+            return output.get();
+    }
+
+    return focused();
+}
