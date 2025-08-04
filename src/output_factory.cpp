@@ -41,7 +41,7 @@ MiralOutputFactory::MiralOutputFactory(
 {
 }
 
-std::unique_ptr<OutputInterface> MiralOutputFactory::create(
+std::shared_ptr<OutputInterface> MiralOutputFactory::create(
     std::string name, int id, mir::geometry::Rectangle area)
 {
     auto const current_config = display_config->configuration();
@@ -55,7 +55,7 @@ std::unique_ptr<OutputInterface> MiralOutputFactory::create(
                 raw_output_config = output;
         });
 
-    return std::make_unique<Output>(
+    return std::make_shared<Output>(
         policy,
         std::move(name),
         id,

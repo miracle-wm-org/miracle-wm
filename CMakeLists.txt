@@ -125,6 +125,7 @@ add_library(miracle-wm-implementation
     src/config_observer.h src/config_observer.cpp
     src/binding_event.h src/binding_event.cpp
     src/mir_version_manager.h
+    src/synchronized_recursive.h
 )
 
 add_executable(miracle-wm

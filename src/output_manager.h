@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "direction.h"
 #include "output_factory_interface.h"
+#include "synchronized_recursive.h"
 
 #include <memory>
 #include <mir/geometry/rectangle.h>
@@ -43,27 +44,38 @@ public:
     explicit OutputManager(
         std::unique_ptr<OutputFactoryInterface> output_factory);
 
-    OutputInterface* create(
+    std::shared_ptr<OutputInterface> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area,
         WorkspaceManager& workspace_manager);
     void update(int id, mir::geometry::Rectangle area);
     bool remove(int id, WorkspaceManager& workspace_manager);
-    [[nodiscard]] std::vector<std::unique_ptr<OutputInterface>> const& outputs() const;
+    [[nodiscard]] std::vector<std::shared_ptr<OutputInterface>> outputs() const;
     bool focus(int id);
     bool unfocus(int id);
-    OutputInterface* focused();
-    OutputInterface* primary();
-    OutputInterface* non_primary();
-    OutputInterface* next();
-    OutputInterface* next(Direction direction);
-    OutputInterface* next_in_list(std::vector<std::string> const& names);
+    std::shared_ptr<OutputInterface> focused();
+    std::shared_ptr<OutputInterface> primary();
+    std::shared_ptr<OutputInterface> non_primary();
+    std::shared_ptr<OutputInterface> prev();
+    std::shared_ptr<OutputInterface> next();
+    std::shared_ptr<OutputInterface> next(Direction direction);
+    std::shared_ptr<OutputInterface> next_in_list(std::vector<std::string> const& names);
 
 private:
     std::unique_ptr<OutputFactoryInterface> output_factory;
-    std::vector<std::unique_ptr<OutputInterface>> outputs_;
-    OutputInterface* focused_ = nullptr;
+    struct State
+    {
+        std::vector<std::shared_ptr<OutputInterface>> outputs_;
+        std::weak_ptr<OutputInterface> focused_;
+    };
+
+    // TODO (mattkae): Once things have settled down, remove the need for
+    //  a recursive mutex!
+    SynchronisedRecursive<State> state;
+
+    bool focus_internal(State& view, int id);
+    bool unfocus_internal(State& view, int id);
 };
 
 }

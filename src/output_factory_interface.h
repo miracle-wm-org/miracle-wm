@@ -29,7 +29,7 @@ class OutputFactoryInterface
 {
 public:
     virtual ~OutputFactoryInterface() = default;
-    virtual std::unique_ptr<OutputInterface> create(
+    virtual std::shared_ptr<OutputInterface> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area)

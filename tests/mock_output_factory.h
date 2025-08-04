@@ -30,7 +30,7 @@ namespace test
     {
     public:
         MOCK_METHOD(
-            std::unique_ptr<OutputInterface>,
+            std::shared_ptr<OutputInterface>,
             create,
             (std::string name, int id, mir::geometry::Rectangle area),
             (override));

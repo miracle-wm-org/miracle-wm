@@ -365,14 +365,15 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     state->cursor_position = { x, y };
 
     // Select the output first
+    auto const focused = output_manager->focused();
     for (auto const& output : output_manager->outputs())
     {
         if (output->point_is_in_output(static_cast<int>(x), static_cast<int>(y)))
         {
-            if (output_manager->focused() != output.get())
+            if (focused != output)
             {
-                if (output_manager->focused())
-                    output_manager->unfocus(output_manager->focused()->id());
+                if (focused)
+                    output_manager->unfocus(focused->id());
                 output_manager->focus(output->id());
                 if (auto const active = output->active())
                 {

@@ -40,7 +40,7 @@ TEST(OutputManagerTest, CreateOutputSuccess)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output))); // Mock return value
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output))); // Mock return value
 
     static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
@@ -51,14 +51,14 @@ TEST(OutputManagerTest, CreateOutputSuccess)
     auto workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, manager);
 
     // Act
-    OutputInterface* created_output = manager->create("Output1", 1, {
-                                                                        { 0,    0    },
-                                                                        { 1920, 1080 }
+    auto const created_output = manager->create("Output1", 1, {
+                                                                  { 0,    0    },
+                                                                  { 1920, 1080 }
     },
         *workspace_manager);
 
     // Assert
-    EXPECT_EQ(created_output, mock_output);
+    EXPECT_EQ(created_output.get(), mock_output);
     ASSERT_EQ(manager->outputs().size(), 1);
     EXPECT_EQ(manager->outputs()[0].get(), mock_output);
 }
@@ -73,7 +73,7 @@ TEST(OutputManagerTest, UpdateOutputArea)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
 
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
@@ -114,7 +114,7 @@ TEST(OutputManagerTest, RemoveOutput)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
 
     static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
@@ -155,7 +155,7 @@ TEST(OutputManagerTest, FocusAndUnfocus)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
 
@@ -176,15 +176,15 @@ TEST(OutputManagerTest, FocusAndUnfocus)
 
     // Act
     bool focused = manager->focus(1);
-    OutputInterface* focused_output = manager->focused();
+    auto const focused_output = manager->focused();
 
     // Assert
     EXPECT_TRUE(focused);
-    EXPECT_EQ(focused_output, mock_output);
+    EXPECT_EQ(focused_output.get(), mock_output);
 
     // Act: Unfocus
     bool unfocused = manager->unfocus(1);
-    OutputInterface* after_unfocus = manager->focused();
+    auto const after_unfocus = manager->focused();
 
     // Assert
     EXPECT_TRUE(unfocused);
@@ -201,7 +201,7 @@ TEST(OutputManagerTest, RemoveFocusedOutput)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
 
@@ -220,11 +220,11 @@ TEST(OutputManagerTest, RemoveFocusedOutput)
     },
         *workspace_manager);
     manager->focus(1);
-    ASSERT_EQ(manager->focused(), mock_output);
+    ASSERT_EQ(manager->focused().get(), mock_output);
 
     // Act: Remove focused output
     bool removed = manager->remove(1, *workspace_manager);
-    OutputInterface* focused_output = manager->focused();
+    auto const focused_output = manager->focused();
 
     // Assert
     EXPECT_TRUE(removed);
