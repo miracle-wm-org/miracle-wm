@@ -75,7 +75,7 @@ TEST_F(ScratchpadTest, CanShowContainer)
     auto output_factory = std::make_unique<test::MockOutputFactory>();
     auto output = new test::MockOutput();
     EXPECT_CALL(*output_factory, create(testing::_, testing::_, testing::_))
-        .WillOnce(::testing::Return(std::unique_ptr<OutputInterface>(output)));
+        .WillOnce(::testing::Return(std::shared_ptr<OutputInterface>(output)));
     mir::geometry::Rectangle output_area(
         mir::geometry::Point(0, 0),
         mir::geometry::Size(1920, 1280));

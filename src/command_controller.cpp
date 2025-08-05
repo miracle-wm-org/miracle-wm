@@ -751,14 +751,15 @@ bool CommandController::select_workspace(int number, bool back_and_forth)
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (!output_manager->focused())
+    auto const focused = output_manager->focused();
+    if (!focused)
     {
         mir::log_warning("select_workspace %d: no focused output", number);
         return false;
     }
 
     mir::log_info("select_workspace: %d", number);
-    workspace_manager->request_workspace(output_manager->focused(), number, back_and_forth);
+    workspace_manager->request_workspace(focused.get(), number, back_and_forth);
     return true;
 }
 
@@ -768,7 +769,14 @@ bool CommandController::select_workspace(std::string const& name, bool back_and_
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    return workspace_manager->request_workspace(output_manager->focused(), name, back_and_forth);
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("select_workspace %s: no focused output", name);
+        return false;
+    }
+
+    return workspace_manager->request_workspace(focused.get(), name, back_and_forth);
 }
 
 bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> const& scope)
@@ -793,7 +801,14 @@ bool CommandController::next_workspace()
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    workspace_manager->request_next(output_manager->focused());
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("next_workspace: no focused output");
+        return false;
+    }
+
+    workspace_manager->request_next(focused.get());
     return true;
 }
 
@@ -803,7 +818,14 @@ bool CommandController::prev_workspace()
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    workspace_manager->request_prev(output_manager->focused());
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("prev_workspace: no focused output");
+        return false;
+    }
+
+    workspace_manager->request_prev(focused.get());
     return true;
 }
 
@@ -883,6 +905,13 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
     if (containers.empty())
         return false;
 
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("try_move_to_workspace_named: no focused output");
+        return false;
+    }
+
     for (auto const& container : containers)
     {
         if (container->get_workspace()->name() == name)
@@ -891,8 +920,8 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_workspace(output_manager->focused(), name, back_and_forth))
-            output_manager->focused()->graft(container);
+        if (workspace_manager->request_workspace(focused.get(), name, back_and_forth))
+            focused->graft(container);
     }
 
     return true;
@@ -908,8 +937,12 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
     if (containers.empty())
         return false;
 
-    if (!output_manager->focused())
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("try_move_to_current_workspace: no focused output");
         return false;
+    }
 
     for (auto const& container : containers)
     {
@@ -919,8 +952,8 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_next(output_manager->focused()))
-            output_manager->focused()->graft(container);
+        if (workspace_manager->request_next(focused.get()))
+            focused->graft(container);
     }
 
     return true;
@@ -936,13 +969,20 @@ bool CommandController::try_move_to_next_workspace(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("try_move_to_next_workspace: no focused output");
+        return false;
+    }
+
     for (auto const& container : containers)
     {
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_next(output_manager->focused()))
-            output_manager->focused()->graft(container);
+        if (workspace_manager->request_next(focused.get()))
+            focused->graft(container);
     }
 
     return true;
@@ -958,13 +998,20 @@ bool CommandController::try_move_to_prev_workspace(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("try_move_to_prev_workspace: no focused output");
+        return false;
+    }
+
     for (auto const& container : containers)
     {
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_prev(output_manager->focused()))
-            output_manager->focused()->graft(container);
+        if (workspace_manager->request_prev(focused.get()))
+            focused->graft(container);
     }
 
     return true;
@@ -1259,36 +1306,22 @@ void CommandController::move_cursor_to_output(OutputInterface const& output)
 bool CommandController::try_select_next_output()
 {
     std::lock_guard lock(mutex);
-    for (size_t i = 0; i < output_manager->outputs().size(); i++)
-    {
-        if (output_manager->outputs()[i].get() == output_manager->focused())
-        {
-            size_t j = i + 1;
-            if (j == output_manager->outputs().size())
-                j = 0;
+    auto const next = output_manager->next();
+    if (!next)
+        return false;
 
-            move_cursor_to_output(*output_manager->outputs()[j]);
-            return true;
-        }
-    }
-
-    return false;
+    move_cursor_to_output(*next.get());
+    return true;
 }
 
 bool CommandController::try_select_prev_output()
 {
     std::lock_guard lock(mutex);
-    for (int i = output_manager->outputs().size() - 1; i >= 0; i++)
+    auto const prev = output_manager->prev();
+    if (prev != output_manager->focused())
     {
-        if (output_manager->outputs()[i].get() == output_manager->focused())
-        {
-            size_t j = i - 1;
-            if (j < 0)
-                j = output_manager->outputs().size() - 1;
-
-            move_cursor_to_output(*output_manager->outputs()[j]);
-            return true;
-        }
+        move_cursor_to_output(*prev);
+        return true;
     }
 
     return false;
@@ -1409,15 +1442,19 @@ bool CommandController::try_move_to_current_output(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
+    auto const focused = output_manager->focused();
+    if (!focused)
+        return false;
+
     for (auto const& container : containers)
     {
-        if (container->get_output() == output_manager->focused())
+        if (container->get_output() == focused.get())
             continue;
 
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        output_manager->focused()->graft(container);
+        focused->graft(container);
         if (container->window().value())
             window_controller->select_active_window(container->window().value());
     }
@@ -1439,9 +1476,12 @@ bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> c
         return false;
 
     auto const primary = output_manager->primary();
+    if (!primary)
+        return false;
+
     for (auto const& container : containers)
     {
-        if (container->get_output() == primary)
+        if (container->get_output() == primary.get())
             continue;
 
         container->get_output()->delete_container(container);
@@ -1491,25 +1531,8 @@ bool CommandController::try_move_to_next_output(std::vector<ContainerScope> cons
     if (containers.empty())
         return false;
 
-    auto it = std::find_if(output_manager->outputs().begin(), output_manager->outputs().end(), [output_manager = output_manager](std::unique_ptr<OutputInterface> const& output)
-    {
-        return output.get() == output_manager->focused();
-    });
-
-    if (it == output_manager->outputs().end())
-    {
-        mir::log_error("CommandController::try_move_active_to_next: cannot find active output in list");
-        return false;
-    }
-
-    it++;
-    if (it == output_manager->outputs().end())
-        it = output_manager->outputs().begin();
-
-    if (it->get() == output_manager->focused())
-        return false;
-
-    if ((*it).get() == state->focused_container()->get_output())
+    auto const next = output_manager->next();
+    if (next != output_manager->focused())
         return false;
 
     for (auto const& container : containers)
@@ -1517,7 +1540,7 @@ bool CommandController::try_move_to_next_output(std::vector<ContainerScope> cons
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        (*it)->graft(container);
+        next->graft(container);
         if (container->window().value())
             window_controller->select_active_window(container->window().value());
     }
@@ -1535,7 +1558,7 @@ bool CommandController::try_move_to_output_by_name_list(std::vector<std::string>
         return false;
 
     auto const& output = output_manager->next_in_list(names);
-    if (output != state->focused_container()->get_output())
+    if (output.get() != state->focused_container()->get_output())
     {
         for (auto const& container : containers)
         {
@@ -1882,7 +1905,7 @@ bool CommandController::try_move_workspace_to_output(OutputSelection selection)
         return false;
     }
 
-    OutputInterface* output = nullptr;
+    std::shared_ptr<OutputInterface> output = nullptr;
     switch (selection)
     {
     case OutputSelection::left:
@@ -1917,7 +1940,7 @@ bool CommandController::try_move_workspace_to_output(OutputSelection selection)
         return false;
     }
 
-    workspace_manager->move_workspace_to_output(workspace->id(), output);
+    workspace_manager->move_workspace_to_output(workspace->id(), output.get());
     return true;
 }
 
@@ -1944,7 +1967,7 @@ bool CommandController::try_move_workspace_to_outputs_by_name(std::vector<std::s
         return false;
     }
 
-    workspace_manager->move_workspace_to_output(workspace->id(), output);
+    workspace_manager->move_workspace_to_output(workspace->id(), output.get());
     return true;
 }
 
@@ -1974,7 +1997,7 @@ nlohmann::json CommandController::to_json() const
         if (bottom_y > bottom_right.y.as_int())
             bottom_right.y = geom::Y { bottom_y };
 
-        outputs_json.push_back(output->to_json(output_manager->focused() == output.get()));
+        outputs_json.push_back(output->to_json(output_manager->focused() == output));
     }
 
     geom::Rectangle total_area {
@@ -2005,7 +2028,7 @@ nlohmann::json CommandController::outputs_json() const
         if (output->is_defunct())
             continue;
 
-        j.push_back(output->get_outputs_json(output_manager->focused() == output.get()));
+        j.push_back(output->get_outputs_json(output_manager->focused() == output));
     }
     return j;
 }
@@ -2014,12 +2037,14 @@ nlohmann::json CommandController::workspaces_json() const
 {
     std::lock_guard lock(mutex);
     nlohmann::json j = nlohmann::json::array();
+    auto const focused = output_manager->focused();
+
     for (auto workspace : workspace_manager->workspaces())
     {
         if (workspace->get_output()->is_defunct())
             continue;
 
-        j.push_back(workspace->get_workspaces_json(output_manager->focused() == workspace->get_output()));
+        j.push_back(workspace->get_workspaces_json(focused ? focused.get() == workspace->get_output() : false));
     }
     return j;
 }
@@ -2027,8 +2052,9 @@ nlohmann::json CommandController::workspaces_json() const
 nlohmann::json CommandController::workspace_to_json(uint32_t id) const
 {
     std::lock_guard lock(mutex);
-    auto workspace = workspace_manager->workspace(id);
-    return workspace->to_json(output_manager->focused() == workspace->get_output());
+    auto const workspace = workspace_manager->workspace(id);
+    auto const focused = output_manager->focused();
+    return workspace->to_json(focused ? focused.get() == workspace->get_output() : false);
 }
 
 nlohmann::json CommandController::mode_to_json() const

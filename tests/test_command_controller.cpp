@@ -121,7 +121,7 @@ TEST_F(CommandControllerTest, SetInnerGapsSetsWorkspaceGaps)
     EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
     EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
     EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
-    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
 
     output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
     output_manager->focus(output->id());
@@ -170,7 +170,7 @@ TEST_F(CommandControllerTest, SetOuterGapsSetsWorkspaceGaps)
     EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
     EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
     EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
-    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+    EXPECT_CALL(*output_factory, create).WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
 
     output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
     output_manager->focus(output->id());
@@ -191,7 +191,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     EXPECT_CALL(*output, get_workspaces())
         .WillRepeatedly(ReturnRef(workspaces));
     EXPECT_CALL(*output_factory, create)
-        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+        .WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
 
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
     output_manager->focus(output->id());
@@ -207,6 +207,14 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 {
+    auto const output = std::make_shared<NiceMock<test::MockOutput>>();
+    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output_factory, create)
+        .WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
     auto const container = std::make_shared<NiceMock<test::MockContainer>>();
     state->add(container);
     state->focus_container(container);
@@ -252,7 +260,7 @@ TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)
     EXPECT_CALL(*output, get_workspaces)
         .WillRepeatedly(ReturnRef(workspaces));
     EXPECT_CALL(*output_factory, create)
-        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+        .WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
@@ -287,7 +295,7 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
     EXPECT_CALL(*output, get_workspaces)
         .WillRepeatedly(ReturnRef(workspaces));
     EXPECT_CALL(*output_factory, create)
-        .WillOnce(Return(std::unique_ptr<test::MockOutput>(output)));
+        .WillOnce(Return(std::shared_ptr<test::MockOutput>(output)));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();

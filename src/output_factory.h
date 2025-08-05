@@ -40,7 +40,7 @@ public:
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&,
         std::shared_ptr<DisplayConfig> const& display_config);
-    std::unique_ptr<OutputInterface> create(
+    std::shared_ptr<OutputInterface> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area) override;

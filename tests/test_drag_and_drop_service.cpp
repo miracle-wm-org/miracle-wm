@@ -97,7 +97,7 @@ TEST_F(DragAndDropServiceTest, CanStartDragging)
         .WillByDefault(::testing::ReturnRef(workspaces));
 
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
     output_manager->create("Output1", 1, {
                                              { 0,    0    },
                                              { 1920, 1080 }
@@ -131,7 +131,7 @@ TEST_F(DragAndDropServiceTest, CanStopDragging)
     ON_CALL(*mock_output, get_workspaces())
         .WillByDefault(::testing::ReturnRef(workspaces));
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
     output_manager->create("Output1", 1, {
                                              { 0,    0    },
                                              { 1920, 1080 }
@@ -172,7 +172,7 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
     ON_CALL(*mock_output, get_workspaces())
         .WillByDefault(::testing::ReturnRef(workspaces));
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
-        .WillOnce(testing::Return(std::unique_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
     output_manager->create("Output1", 1, {
                                              { 0,    0    },
                                              { 1920, 1080 }
