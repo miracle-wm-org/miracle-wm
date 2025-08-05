@@ -158,7 +158,7 @@ namespace test
             return nullptr;
         }
 
-        OutputInterface* get_output() const override
+        std::shared_ptr<OutputInterface> get_output() const override
         {
             return nullptr;
         }

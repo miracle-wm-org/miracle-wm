@@ -58,9 +58,9 @@ namespace test
 
         MOCK_METHOD(void, advise_focus_gained, (std::shared_ptr<Container> const& container), (override));
 
-        MOCK_METHOD(OutputInterface*, get_output, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
 
-        MOCK_METHOD(void, set_output, (OutputInterface*), (override));
+        MOCK_METHOD(void, set_output, (std::shared_ptr<OutputInterface> const&), (override));
 
         MOCK_METHOD(void, workspace_transform_change_hack, (), (override));
 

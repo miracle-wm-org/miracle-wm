@@ -53,18 +53,18 @@ std::vector<miral::Zone> empty_app_zones;
 
 std::shared_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
 {
-    auto output = std::make_shared<testing::NiceMock<test::MockOutput>>();
+    auto output = std::make_shared<NiceMock<test::MockOutput>>();
     ON_CALL(*output, get_area())
-        .WillByDefault(testing::ReturnRef(bounds));
+        .WillByDefault(ReturnRef(bounds));
     ON_CALL(*output, get_workspaces())
-        .WillByDefault(testing::ReturnRef(empty_workspaces));
+        .WillByDefault(ReturnRef(empty_workspaces));
     ON_CALL(*output, get_app_zones())
-        .WillByDefault(testing::ReturnRef(empty_app_zones));
+        .WillByDefault(ReturnRef(empty_app_zones));
     return output;
 }
 }
 
-class WorkspaceTest : public testing::Test
+class WorkspaceTest : public Test
 {
 public:
     WorkspaceTest() :
@@ -72,7 +72,7 @@ public:
         output(create_output(OUTPUT_SIZE)),
         window_controller(std::make_shared<StubWindowController>(pairs)),
         workspace(std::make_shared<Workspace>(
-            output.get(),
+            output,
             0,
             0,
             "0",
@@ -225,7 +225,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
     Workspace other(
-        other_output.get(),
+        other_output,
         1,
         1,
         "1",
@@ -248,7 +248,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
     Workspace other(
-        other_output.get(),
+        other_output,
         1,
         1,
         "1",
@@ -293,20 +293,20 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToOutputSizeWhenNoAppZonesAre
 
 TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesArePresent)
 {
-    auto output = std::make_unique<testing::NiceMock<test::MockOutput>>();
+    auto output = std::make_shared<NiceMock<test::MockOutput>>();
     ON_CALL(*output, get_area())
-        .WillByDefault(testing::ReturnRef(OTHER_OUTPUT_SIZE));
+        .WillByDefault(ReturnRef(OTHER_OUTPUT_SIZE));
     ON_CALL(*output, get_workspaces())
-        .WillByDefault(testing::ReturnRef(empty_workspaces));
+        .WillByDefault(ReturnRef(empty_workspaces));
 
     mir::geometry::Rectangle const zone_bounds(
         mir::geometry::Point(100, 100),
         mir::geometry::Size(500, 500));
     std::vector<miral::Zone> zones = { miral::Zone(zone_bounds) };
     ON_CALL(*output, get_app_zones())
-        .WillByDefault(testing::ReturnRef(zones));
+        .WillByDefault(ReturnRef(zones));
     Workspace other(
-        output.get(),
+        output,
         1,
         1,
         "1",
@@ -323,9 +323,9 @@ TEST_F(WorkspaceTest, GetWorkspaceJson)
 {
     std::string const output_name = "test";
     EXPECT_CALL(*output, name)
-        .WillOnce(testing::ReturnRef(output_name));
+        .WillOnce(ReturnRef(output_name));
     EXPECT_CALL(*output, active)
-        .WillOnce(testing::Return(workspace));
+        .WillOnce(Return(workspace));
 
     auto const json = workspace->get_workspaces_json(true);
     EXPECT_THAT(json["num"], Eq(0));

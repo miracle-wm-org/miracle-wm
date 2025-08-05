@@ -1448,7 +1448,7 @@ bool CommandController::try_move_to_current_output(std::vector<ContainerScope> c
 
     for (auto const& container : containers)
     {
-        if (container->get_output() == focused.get())
+        if (container->get_output() == focused)
             continue;
 
         container->get_output()->delete_container(container);
@@ -1481,7 +1481,7 @@ bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> c
 
     for (auto const& container : containers)
     {
-        if (container->get_output() == primary.get())
+        if (container->get_output() == primary)
             continue;
 
         container->get_output()->delete_container(container);
@@ -1558,7 +1558,7 @@ bool CommandController::try_move_to_output_by_name_list(std::vector<std::string>
         return false;
 
     auto const& output = output_manager->next_in_list(names);
-    if (output.get() != state->focused_container()->get_output())
+    if (output != state->focused_container()->get_output())
     {
         for (auto const& container : containers)
         {
@@ -2044,7 +2044,7 @@ nlohmann::json CommandController::workspaces_json() const
         if (workspace->get_output()->is_defunct())
             continue;
 
-        j.push_back(workspace->get_workspaces_json(focused ? focused.get() == workspace->get_output() : false));
+        j.push_back(workspace->get_workspaces_json(focused ? focused == workspace->get_output() : false));
     }
     return j;
 }
@@ -2054,7 +2054,7 @@ nlohmann::json CommandController::workspace_to_json(uint32_t id) const
     std::lock_guard lock(mutex);
     auto const workspace = workspace_manager->workspace(id);
     auto const focused = output_manager->focused();
-    return workspace->to_json(focused ? focused.get() == workspace->get_output() : false);
+    return workspace->to_json(focused ? focused == workspace->get_output() : false);
 }
 
 nlohmann::json CommandController::mode_to_json() const

@@ -162,7 +162,7 @@ WorkspaceInterface* ShellComponentContainer::get_workspace() const
     return nullptr;
 }
 
-OutputInterface* ShellComponentContainer::get_output() const
+std::shared_ptr<OutputInterface> ShellComponentContainer::get_output() const
 {
     return nullptr;
 }

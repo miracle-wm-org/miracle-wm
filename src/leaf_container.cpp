@@ -666,7 +666,7 @@ void LeafContainer::set_workspace(WorkspaceInterface* in)
     on_workspace_transform();
 }
 
-OutputInterface* LeafContainer::get_output() const
+std::shared_ptr<OutputInterface> LeafContainer::get_output() const
 {
     if (!workspace)
         return nullptr;
