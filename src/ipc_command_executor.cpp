@@ -213,6 +213,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
         case IpcCommandType::gaps:
             result.push_back(process_gap(command, parse_result));
             break;
+        case IpcCommandType::nop:
+            result.push_back(process_nop(command, parse_result));
+            break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
             break;
@@ -1325,4 +1328,11 @@ IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, I
         command_controller->set_outer_gaps(px.value(), outer_gaps_change, change_type, raw_all_specifier == "current");
         return IpcValidationResult::create_success();
     }
+}
+
+IpcValidationResult IpcCommandExecutor::process_nop(IpcCommand const& command, IpcParseResult const& parse_result) const
+{
+    (void)command;
+    (void)parse_result;
+    return IpcValidationResult::create_success();
 }

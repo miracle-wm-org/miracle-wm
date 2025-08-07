@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "ipc_command.h"
 #include "ipc_command_executor.h"
 #include "mock_command_controller.h"
 #include "mock_launcher.h"
@@ -1830,3 +1831,14 @@ INSTANTIATE_TEST_SUITE_P(
         std::pair("right", OuterGapsChange::right),
         std::pair("bottom", OuterGapsChange::bottom),
         std::pair("left", OuterGapsChange::left)));
+
+TEST_F(IpcCommandExecutorTest, CanSendNop)
+{
+    IpcParseResult parse_result;
+    IpcCommand const command(IpcCommandType::nop, "nop", {}, {});
+    parse_result.commands.push_back(command);
+
+    auto const validation_result = executor.process(parse_result);
+    EXPECT_THAT(validation_result.size(), Eq(1));
+    EXPECT_THAT(validation_result[0].success, Eq(true));
+}
