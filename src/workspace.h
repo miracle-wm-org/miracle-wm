@@ -41,7 +41,7 @@ class Workspace : public WorkspaceInterface
 {
 public:
     Workspace(
-        OutputInterface* output,
+        std::shared_ptr<OutputInterface> const& output,
         uint32_t id,
         std::optional<int> num,
         std::optional<std::string> name,
@@ -68,8 +68,8 @@ public:
     bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
-    OutputInterface* get_output() const override;
-    void set_output(OutputInterface*) override;
+    [[nodiscard]] std::shared_ptr<OutputInterface> get_output() const override;
+    void set_output(std::shared_ptr<OutputInterface> const&) override;
     void workspace_transform_change_hack() override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
@@ -103,7 +103,7 @@ private:
         std::shared_ptr<Container> node = nullptr;
     };
 
-    OutputInterface* output;
+    std::weak_ptr<OutputInterface> output;
     uint32_t id_;
     std::optional<int> num_;
     std::optional<std::string> name_;

@@ -103,7 +103,6 @@ public:
         = 0;
 
     // Getters
-    [[nodiscard]] virtual std::vector<miral::Window> collect_all_windows() const = 0;
     [[nodiscard]] virtual std::shared_ptr<WorkspaceInterface> active() const = 0;
     [[nodiscard]] virtual std::vector<std::shared_ptr<WorkspaceInterface>> const& get_workspaces() const = 0;
     [[nodiscard]] virtual geom::Rectangle const& get_area() const = 0;

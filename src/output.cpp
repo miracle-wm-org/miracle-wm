@@ -30,10 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 #include <glm/gtx/transform.hpp>
 #include <memory>
-#include <mir/graphics/edid.h>
 #include <mir/log.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
+#ifndef MIR_VERSION_2_22_OR_GREATER
+#include <mir/graphics/edid.h>
+#endif
 
 using namespace miracle;
 namespace mg = mir::graphics;
@@ -98,7 +100,7 @@ std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_
         return nullptr;
     }
 
-    auto workspace = active_workspace.lock().get();
+    auto const workspace = active_workspace.lock().get();
     std::shared_ptr<Container> result = nullptr;
     workspace->for_each_window([&](std::shared_ptr<Container> const& container)
     {
@@ -133,7 +135,7 @@ AllocationHint Output::allocate_position(
         hint.container_type = ContainerType::shell;
     else
     {
-        auto t = requested_specification.type();
+        auto const t = requested_specification.type();
         if (t == mir_window_type_normal || t == mir_window_type_freestyle)
             hint.container_type = ContainerType::leaf;
         else
@@ -180,7 +182,7 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     std::shared_ptr<WorkspaceInterface> new_workspace = std::make_shared<Workspace>(
-        this, data.id, data.num, data.name, config, window_controller, state, data.registrar);
+        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar);
     insert_workspace_sorted(new_workspace);
 }
 
@@ -198,7 +200,7 @@ void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint3
 
 void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInterface* workspace)
 {
-    if (workspace->get_output() == this)
+    if (workspace->get_output().get() == this)
         return;
 
     // Remove the workspace from its old output. Note that we grab a reference to it
@@ -230,12 +232,12 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInt
     // Next, move the workspace to this output and remove it focus it
     mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
     insert_workspace_sorted(to_add);
-    to_add->set_output(this);
+    to_add->set_output(shared_from_this());
     workspace_manager.request_focus(to_add->id());
 
     // Finally, if [old_output] has no workspaces left, we need to request a workspace on it
     if (old_output->get_workspaces().empty())
-        workspace_manager.request_first_available_workspace(old_output);
+        workspace_manager.request_first_available_workspace(old_output.get());
 }
 
 bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id)
@@ -466,22 +468,6 @@ void Output::update_area(geom::Rectangle const& new_area)
     area = new_area;
     for (auto& workspace : workspaces)
         workspace->set_area(area);
-}
-
-std::vector<miral::Window> Output::collect_all_windows() const
-{
-    std::vector<miral::Window> windows;
-    for (auto& workspace : get_workspaces())
-    {
-        workspace->for_each_window([&](std::shared_ptr<Container> const& container)
-        {
-            if (auto window = container->window())
-                windows.push_back(*window);
-            return false;
-        });
-    }
-
-    return windows;
 }
 
 void Output::graft(std::shared_ptr<Container> const& container)

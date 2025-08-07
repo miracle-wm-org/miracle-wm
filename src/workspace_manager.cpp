@@ -102,7 +102,7 @@ int WorkspaceManager::request_first_available_workspace(OutputInterface* output)
 {
     for (int i = 1; i < NUM_DEFAULT_WORKSPACES; i++)
     {
-        if (auto const& w = workspace(i))
+        if (workspace(i))
             continue;
 
         request_workspace(output, i, true);
@@ -224,7 +224,7 @@ bool WorkspaceManager::delete_workspace(uint32_t id)
         return false;
 
     registry->advise_removed(id);
-    auto* output = w->get_output();
+    auto const output = w->get_output();
     output->advise_workspace_deleted(*this, id);
     return true;
 }

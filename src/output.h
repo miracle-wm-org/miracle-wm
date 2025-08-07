@@ -25,7 +25,7 @@ namespace miracle
 {
 class Policy;
 
-class Output final : public OutputInterface
+class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
 public:
     explicit Output(
@@ -69,8 +69,7 @@ public:
         std::shared_ptr<WorkspaceInterface> const& to,
         std::shared_ptr<WorkspaceInterface> const& from) override;
 
-    [[nodiscard]] std::vector<miral::Window> collect_all_windows() const override final;
-    [[nodiscard]] std::shared_ptr<WorkspaceInterface> active() const override final;
+    [[nodiscard]] std::shared_ptr<WorkspaceInterface> active() const override;
     [[nodiscard]] std::vector<std::shared_ptr<WorkspaceInterface>> const& get_workspaces() const override { return workspaces; }
     [[nodiscard]] geom::Rectangle const& get_area() const override { return area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const override { return application_zone_list; }
@@ -78,10 +77,10 @@ public:
     [[nodiscard]] bool is_defunct() const override { return is_defunct_; }
     [[nodiscard]] int id() const override { return id_; }
     [[nodiscard]] glm::mat4 get_transform() const override;
-    [[nodiscard]] geom::Rectangle get_workspace_rectangle(size_t i) const override final;
-    [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override final;
-    [[nodiscard]] nlohmann::json to_json(bool is_focused) const override final;
-    [[nodiscard]] nlohmann::json get_outputs_json(bool is_focused) const override final;
+    [[nodiscard]] geom::Rectangle get_workspace_rectangle(size_t i) const override;
+    [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override;
+    [[nodiscard]] nlohmann::json to_json(bool is_focused) const override;
+    [[nodiscard]] nlohmann::json get_outputs_json(bool is_focused) const override;
     [[nodiscard]] bool is_primary() const override;
 
 private:
@@ -98,7 +97,7 @@ private:
             std::shared_ptr<WorkspaceInterface> const& from_workspace,
             Output* output);
 
-        void on_tick(AnimationStepResult const&) override final;
+        void on_tick(AnimationStepResult const&) override;
 
     private:
         std::shared_ptr<WorkspaceInterface> to_workspace;

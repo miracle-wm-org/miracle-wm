@@ -756,7 +756,7 @@ void ParentContainer::on_workspace_transform()
         node->on_workspace_transform();
 }
 
-OutputInterface* ParentContainer::get_output() const
+std::shared_ptr<OutputInterface> ParentContainer::get_output() const
 {
     return get_workspace()->get_output();
 }

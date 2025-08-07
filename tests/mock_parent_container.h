@@ -58,7 +58,7 @@ namespace test
         MOCK_METHOD(mir::geometry::Rectangle, confirm_placement, (MirWindowState, mir::geometry::Rectangle const&), (override));
         MOCK_METHOD(WorkspaceInterface*, get_workspace, (), (const, override));
         MOCK_METHOD(void, set_workspace, (WorkspaceInterface*), (override));
-        MOCK_METHOD(OutputInterface*, get_output, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
         MOCK_METHOD(glm::mat4, get_transform, (), (const, override));
         MOCK_METHOD(void, set_transform, (glm::mat4), (override));
         MOCK_METHOD(void, on_workspace_transform, (), (override));

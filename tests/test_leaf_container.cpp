@@ -78,7 +78,7 @@ public:
         workspaces.push_back(workspace);
 
         ON_CALL(*workspace, get_output())
-            .WillByDefault(testing::Return(output.get()));
+            .WillByDefault(testing::Return(output));
         ON_CALL(*output, get_area())
             .WillByDefault(testing::ReturnRef(parent_area));
         ON_CALL(*output, get_workspaces())
@@ -137,7 +137,7 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 {
     auto new_workspace = std::make_unique<test::MockWorkspace>();
     EXPECT_CALL(*new_workspace, get_output())
-        .WillRepeatedly(testing::Return(output.get()));
+        .WillRepeatedly(testing::Return(output));
 
     leaf_container->set_workspace(new_workspace.get());
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace.get());

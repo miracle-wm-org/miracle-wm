@@ -263,7 +263,7 @@ WorkspaceInterface* ContainerGroupContainer::get_workspace() const
     return nullptr;
 }
 
-OutputInterface* ContainerGroupContainer::get_output() const
+std::shared_ptr<OutputInterface> ContainerGroupContainer::get_output() const
 {
     return nullptr;
 }

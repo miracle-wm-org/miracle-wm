@@ -87,7 +87,7 @@ public:
     void hide() override;
     WorkspaceInterface* get_workspace() const override;
     void set_workspace(WorkspaceInterface*) override;
-    OutputInterface* get_output() const override;
+    std::shared_ptr<OutputInterface> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void on_workspace_transform() override;

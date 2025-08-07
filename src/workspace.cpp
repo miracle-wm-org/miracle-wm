@@ -93,7 +93,7 @@ std::shared_ptr<Container> foreach_node_internal(
     return nullptr;
 }
 
-geom::Rectangle get_output_area(OutputInterface const* output)
+geom::Rectangle get_output_area(std::shared_ptr<OutputInterface> const& output)
 {
     auto const& zones = output->get_app_zones();
     if (!zones.empty())
@@ -104,7 +104,7 @@ geom::Rectangle get_output_area(OutputInterface const* output)
 }
 
 Workspace::Workspace(
-    miracle::OutputInterface* output,
+    std::shared_ptr<OutputInterface> const& output,
     uint32_t id,
     std::optional<int> num,
     std::optional<std::string> name,
@@ -134,8 +134,11 @@ void Workspace::set_area(mir::geometry::Rectangle const& area)
 
 void Workspace::recalculate_area()
 {
-    root->set_logical_area(get_output_area(output));
-    root->commit_changes();
+    if (auto const sh_output = output.lock())
+    {
+        root->set_logical_area(get_output_area(sh_output));
+        root->commit_changes();
+    }
 }
 
 AllocationHint Workspace::allocate_position(
@@ -393,15 +396,15 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
         };
 }
 
-OutputInterface* Workspace::get_output() const
+std::shared_ptr<OutputInterface> Workspace::get_output() const
 {
-    return output;
+    return output.lock();
 }
 
-void Workspace::set_output(OutputInterface* new_output)
+void Workspace::set_output(std::shared_ptr<OutputInterface> const& new_output)
 {
     this->output = new_output;
-    set_area(output->get_area());
+    set_area(new_output->get_area());
 }
 
 void Workspace::workspace_transform_change_hack()
@@ -542,14 +545,15 @@ std::string Workspace::display_name() const
 
 nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
 {
-    bool const is_active_on_output = output->active().get() == this;
+    auto const sh_output = output.lock();
+    bool const is_active_on_output = sh_output != nullptr && sh_output->active().get() == this;
 
     // Note: The reported workspace area appears to be the placement
     // area of the root tree.
     //   See: https://i3wm.org/docs/ipc.html#_tree_reply
     auto const area = root->get_logical_area();
     auto const workspace_name = display_name();
-    auto const output_name = output->name();
+    auto const output_name = sh_output ? sh_output->name() : "N/A";
 
     return {
         {
@@ -572,7 +576,8 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
 
 nlohmann::json Workspace::to_json(bool is_output_focused) const
 {
-    bool const is_active_on_output = output->active().get() == this;
+    auto const sh_output = output.lock();
+    bool const is_active_on_output = sh_output != nullptr && sh_output->active().get() == this;
 
     // Note: The reported workspace area appears to be the placement
     // area of the root tree.
@@ -598,7 +603,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
         { "urgent", false },
-        { "output", output->name() },
+        { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },
         { "layout", to_string(root->get_scheme()) },

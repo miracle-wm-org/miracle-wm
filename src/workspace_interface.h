@@ -74,9 +74,9 @@ public:
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
-    [[nodiscard]] virtual OutputInterface* get_output() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<OutputInterface> get_output() const = 0;
 
-    virtual void set_output(OutputInterface*) = 0;
+    virtual void set_output(std::shared_ptr<OutputInterface> const&) = 0;
 
     virtual void workspace_transform_change_hack()
         = 0;
