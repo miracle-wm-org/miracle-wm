@@ -229,7 +229,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
     {
         BindingEvent const binding_event(
-            BINDING_MODE_STRINGS[std::to_underlying(state->mode())],
+            BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
             custom_key_command->command,
             modifiers,
             keysym,
@@ -246,8 +246,8 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return false;
 
         BindingEvent const binding_event(
-            BINDING_MODE_STRINGS[std::to_underlying(state->mode())],
-            default_key_command_strings[std::to_underlying(key_command)],
+            BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
+            default_key_command_strings[static_cast<size_t>(key_command)],
             modifiers,
             keysym,
             BindingEventType::keyboard);
@@ -532,11 +532,11 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         break;
     default:
     {
-        auto* workspace = container->get_workspace();
+        auto const workspace = container->get_workspace();
 
         // If the container has a null workspace, it is always selectable. Otherwise
         // it needs to be on the active workspace.
-        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active().get())
+        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
         {
             // TODO: In this scenario, we may want to navigate to the focused workspace.
             //  This was removed because it breaks workspace animations.
@@ -664,7 +664,7 @@ void Policy::handle_modify_window(
         return;
     }
 
-    auto const* workspace = container->get_workspace();
+    auto const workspace = container->get_workspace();
     if (workspace)
     {
         auto focused_output = output_manager->focused();
@@ -674,7 +674,7 @@ void Policy::handle_modify_window(
             return;
         }
 
-        if (workspace != focused_output->active().get())
+        if (workspace != focused_output->active())
             return;
     }
     else if (scratchpad_->contains(container) && !scratchpad_->is_showing(container))

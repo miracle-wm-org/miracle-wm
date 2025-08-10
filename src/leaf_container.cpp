@@ -142,7 +142,7 @@ inline glm::mat4 workspace_transform(Container const& container)
 }
 
 LeafContainer::LeafContainer(
-    WorkspaceInterface* workspace,
+    std::shared_ptr<WorkspaceInterface> const& workspace,
     std::shared_ptr<WindowController> const& window_controller,
     geom::Rectangle area,
     std::shared_ptr<Config> const& config,
@@ -215,9 +215,9 @@ geom::Rectangle LeafContainer::get_visible_area() const
     //  for different gaps on all sides. That is a bit too much trouble to implement
     //  for now though.
     auto gaps = config->get_inner_gaps();
-    if (workspace)
+    if (auto const sh_workspace = workspace.lock())
     {
-        if (auto const workspace_gaps = workspace->inner_gaps())
+        if (auto const workspace_gaps = sh_workspace->inner_gaps())
             gaps = *workspace_gaps;
     }
     int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
@@ -655,12 +655,12 @@ void LeafContainer::toggle_layout(bool cycle_thru_all)
     }
 }
 
-WorkspaceInterface* LeafContainer::get_workspace() const
+std::shared_ptr<WorkspaceInterface> LeafContainer::get_workspace() const
 {
-    return workspace;
+    return workspace.lock();
 }
 
-void LeafContainer::set_workspace(WorkspaceInterface* in)
+void LeafContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& in)
 {
     workspace = in;
     on_workspace_transform();
@@ -668,10 +668,10 @@ void LeafContainer::set_workspace(WorkspaceInterface* in)
 
 std::shared_ptr<OutputInterface> LeafContainer::get_output() const
 {
-    if (!workspace)
+    if (workspace.expired())
         return nullptr;
 
-    return workspace->get_output();
+    return workspace.lock()->get_output();
 }
 
 glm::mat4 LeafContainer::get_transform() const
@@ -694,7 +694,7 @@ void LeafContainer::on_workspace_transform()
     auto const& rdm = state->render_data_manager();
     state->render_data_manager()->output_area_change(
         id,
-        workspace->get_output()->get_area());
+        workspace.lock()->get_output()->get_area());
 
     rdm->workspace_transform_change(id, workspace_transform(*this));
     auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>();
@@ -839,9 +839,9 @@ bool LeafContainer::pinned() const
     return false;
 }
 
-bool LeafContainer::move(miracle::Direction direction)
+bool LeafContainer::move(Direction direction)
 {
-    return workspace->move_container(direction, *this);
+    return workspace.lock()->move_container(direction, *this);
 }
 
 bool LeafContainer::move_by(Direction, int)
@@ -1107,12 +1107,12 @@ bool LeafContainer::matches(ContainerScope const& scope) const
                 return false;
             }
 
-            return workspace == state->focused_container()->get_workspace();
+            return workspace.lock() == state->focused_container()->get_workspace();
         }
 
         jp::Regex re;
         re.setPattern(scope.value).compile();
-        return workspace != nullptr && re.match(workspace->display_name());
+        return !workspace.expired() && re.match(workspace.lock()->display_name());
     }
     case ContainerScopeType::con_id:
     {

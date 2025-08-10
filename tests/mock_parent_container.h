@@ -18,7 +18,7 @@ namespace test
             std::shared_ptr<WindowController> const& window_controller,
             std::shared_ptr<Config> const& config,
             geom::Rectangle area,
-            WorkspaceInterface* workspace,
+            std::shared_ptr<WorkspaceInterface> const& workspace,
             std::shared_ptr<ParentContainer> const& parent,
             bool is_anchored) :
             ParentContainer(state, window_controller, config, area, workspace, parent, is_anchored)
@@ -56,8 +56,8 @@ namespace test
         MOCK_METHOD(void, on_move_to, (geom::Point const&), (override));
         MOCK_METHOD(void, on_resize, (geom::Size const&), (override));
         MOCK_METHOD(mir::geometry::Rectangle, confirm_placement, (MirWindowState, mir::geometry::Rectangle const&), (override));
-        MOCK_METHOD(WorkspaceInterface*, get_workspace, (), (const, override));
-        MOCK_METHOD(void, set_workspace, (WorkspaceInterface*), (override));
+        MOCK_METHOD(std::shared_ptr<WorkspaceInterface>, get_workspace, (), (const, override));
+        MOCK_METHOD(void, set_workspace, (std::shared_ptr<WorkspaceInterface> const&), (override));
         MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
         MOCK_METHOD(glm::mat4, get_transform, (), (const, override));
         MOCK_METHOD(void, set_transform, (glm::mat4), (override));

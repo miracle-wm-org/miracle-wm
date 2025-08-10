@@ -54,6 +54,11 @@ public:
     {
         launcher(server);
         WindowManagementTestHarness::SetUp();
+
+        // (mattkae): Arbitrary sleep so that we can account for the fact
+        // that an initial pointer event will come through and attempt
+        // to focus the first workspace.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     miral::ExternalClientLauncher launcher;
@@ -187,11 +192,6 @@ TEST_F(DoubleWindowPolicyTest, DefaultWindowIsTilingWindow)
 
 TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
 {
-    // (mattkae): Arbitrary sleep so that we can account for the fact
-    // that an initial pointer event will come through and attempt
-    // to focus the first workspace.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -455,11 +455,6 @@ TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
 
 TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
 {
-    // (mattkae): Arbitrary sleep so that we can account for the fact
-    // that an initial pointer event will come through and attempt
-    // to focus the first workspace.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     // Setup: focus the last workspace before we begin
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -488,11 +483,6 @@ TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
 
 TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToRightOutput)
 {
-    // (mattkae): Arbitrary sleep so that we can account for the fact
-    // that an initial pointer event will come through and attempt
-    // to focus the first workspace.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -544,11 +534,6 @@ protected:
 
 TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
 {
-    // (mattkae): Arbitrary sleep so that we can account for the fact
-    // that an initial pointer event will come through and attempt
-    // to focus the first workspace.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -577,11 +562,6 @@ TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
 
 TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
 {
-    // (mattkae): Arbitrary sleep so that we can account for the fact
-    // that an initial pointer event will come through and attempt
-    // to focus the first workspace.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);

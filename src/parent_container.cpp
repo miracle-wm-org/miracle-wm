@@ -34,7 +34,7 @@ ParentContainer::ParentContainer(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Config> const& config,
     geom::Rectangle area,
-    WorkspaceInterface* workspace,
+    std::shared_ptr<WorkspaceInterface> const& workspace,
     std::shared_ptr<ParentContainer> const& parent,
     bool is_anchored) :
     state { state },
@@ -59,9 +59,9 @@ geom::Rectangle ParentContainer::get_logical_area() const
     if (parent.lock() == nullptr && is_anchored)
     {
         auto outer_gaps = config->get_outer_gaps();
-        if (workspace)
+        if (auto sh_workspace = workspace.lock())
         {
-            if (auto const workspace_outer_gaps = workspace->outer_gaps())
+            if (auto const workspace_outer_gaps = sh_workspace->outer_gaps())
                 outer_gaps = *workspace_outer_gaps;
         }
 
@@ -235,7 +235,7 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pend
     if (pending_index < 0)
         pending_index = num_nodes();
     pending_node = std::make_shared<LeafContainer>(
-        workspace,
+        workspace.lock(),
         window_controller,
         create_space(pending_index),
         config,
@@ -253,7 +253,7 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
         pending_node = create_space_for_window(-1);
     }
 
-    mir::log_info("Parent on workspace %s receiving new window", workspace ? workspace->display_name().c_str() : "nullptr");
+    mir::log_info("Parent on workspace %s receiving new window", !workspace.expired() ? workspace.lock()->display_name().c_str() : "nullptr");
     auto retval = pending_node;
     pending_node->associate_to_window(window);
     pending_node->set_parent(as_parent(shared_from_this()));
@@ -266,7 +266,7 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
 {
     auto const rectangle = create_space(index);
     node->set_parent(as_parent(shared_from_this()));
-    node->set_workspace(workspace);
+    node->set_workspace(workspace.lock());
     node->set_logical_area(rectangle);
     container_list.insert(container_list.begin() + index, node);
     relayout();
@@ -287,7 +287,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
         window_controller,
         config,
         container->get_logical_area(),
-        workspace,
+        workspace.lock(),
         Container::as_parent(shared_from_this()),
         true);
     new_parent_node->container_list.push_back(container);
@@ -738,16 +738,16 @@ void ParentContainer::on_open()
 {
 }
 
-WorkspaceInterface* ParentContainer::get_workspace() const
+std::shared_ptr<WorkspaceInterface> ParentContainer::get_workspace() const
 {
-    return workspace;
+    return workspace.lock();
 }
 
-void ParentContainer::set_workspace(WorkspaceInterface* next)
+void ParentContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& next)
 {
     workspace = next;
     for (auto const& node : container_list)
-        node->set_workspace(workspace);
+        node->set_workspace(next);
 }
 
 void ParentContainer::on_workspace_transform()

@@ -50,7 +50,7 @@ glm::mat4 Container::get_workspace_transform() const
     auto const& workspaces = output->get_workspaces();
     for (size_t i = 0; i < workspaces.size(); i++)
     {
-        if (workspaces[i].get() == get_workspace())
+        if (workspaces[i] == get_workspace())
         {
             auto const workspace_rect = output->get_workspace_rectangle(i);
             return glm::translate(
@@ -127,11 +127,11 @@ namespace
 {
 bool has_neighbor(Container const* container, LayoutScheme direction, size_t cannot_be_index)
 {
-    auto parent = container->get_parent().lock();
+    auto const parent = container->get_parent().lock();
     if (!parent)
         return false;
 
-    auto parent_container = Container::as_parent(parent);
+    auto const parent_container = Container::as_parent(parent);
     if (!parent_container)
         return false;
 
@@ -145,11 +145,11 @@ bool has_neighbor(Container const* container, LayoutScheme direction, size_t can
 
 bool has_right_neighbor(Container const* container)
 {
-    auto shared_parent = container->get_parent().lock();
+    auto const shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
 
-    auto parent_container = Container::as_parent(shared_parent);
+    auto const parent_container = Container::as_parent(shared_parent);
     if (!parent_container)
         return false;
 
@@ -158,11 +158,11 @@ bool has_right_neighbor(Container const* container)
 
 bool has_bottom_neighbor(Container const* container)
 {
-    auto shared_parent = container->get_parent().lock();
+    auto const shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
 
-    auto parent_container = Container::as_parent(shared_parent);
+    auto const parent_container = Container::as_parent(shared_parent);
     if (!parent_container)
         return false;
 
@@ -171,7 +171,7 @@ bool has_bottom_neighbor(Container const* container)
 
 bool has_left_neighbor(Container const* container)
 {
-    auto shared_parent = container->get_parent().lock();
+    auto const shared_parent = container->get_parent().lock();
     if (!shared_parent)
         return false;
     return has_neighbor(container, LayoutScheme::horizontal, 0);
@@ -186,7 +186,7 @@ bool has_top_neighbor(Container const* container)
 }
 }
 
-std::array<bool, (size_t)Direction::MAX> Container::get_neighbors() const
+std::array<bool, static_cast<size_t>(Direction::MAX)> Container::get_neighbors() const
 {
     return {
         has_top_neighbor(this),

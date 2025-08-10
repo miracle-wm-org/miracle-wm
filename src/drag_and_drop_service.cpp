@@ -158,7 +158,7 @@ void DragAndDropService::drag_to(
     std::shared_ptr<Container> const& dragging,
     WorkspaceInterface* workspace)
 {
-    if (dragging->get_workspace() == workspace)
+    if (dragging->get_workspace().get() == workspace)
         return;
 
     // TODO: Convert dragging to a leaf beforehand

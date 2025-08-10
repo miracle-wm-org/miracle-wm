@@ -258,7 +258,7 @@ ContainerGroupContainer::confirm_placement(MirWindowState state, mir::geometry::
     return {};
 }
 
-WorkspaceInterface* ContainerGroupContainer::get_workspace() const
+std::shared_ptr<WorkspaceInterface> ContainerGroupContainer::get_workspace() const
 {
     return nullptr;
 }

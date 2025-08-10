@@ -157,7 +157,7 @@ ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::
     return rectangle;
 }
 
-WorkspaceInterface* ShellComponentContainer::get_workspace() const
+std::shared_ptr<WorkspaceInterface> ShellComponentContainer::get_workspace() const
 {
     return nullptr;
 }

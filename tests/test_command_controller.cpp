@@ -202,7 +202,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     EXPECT_CALL(*container, get_workspace())
-        .WillOnce(Return(workspace.get()));
+        .WillOnce(Return(workspace));
     EXPECT_CALL(*workspace, num())
         .WillOnce(Return(1));
 
@@ -222,7 +222,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     EXPECT_CALL(*container, get_workspace())
-        .WillOnce(Return(workspace.get()));
+        .WillOnce(Return(workspace));
     std::optional<std::string> const name = "Test";
     EXPECT_CALL(*workspace, name())
         .WillOnce(ReturnRef(name));

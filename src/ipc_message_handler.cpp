@@ -203,7 +203,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(
         };
     }
     default:
-        mir::log_warning("Unknown payload type: %d", payload_type);
+        mir::log_warning("Unknown payload type: %d", static_cast<int>(payload_type));
         return {
             .fatal = true,
             .type = payload_type

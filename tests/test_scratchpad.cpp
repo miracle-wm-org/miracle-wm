@@ -38,6 +38,7 @@ TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
     auto window_controller = std::make_shared<test::MockWindowController>();
     auto output_factory = std::make_unique<test::MockOutputFactory>();
     auto output_manager = std::make_shared<OutputManager>(std::move(output_factory));
+    std::shared_ptr<WorkspaceInterface> workspace;
     Scratchpad scratchpad(window_controller, output_manager);
 
     auto container = std::make_shared<test::MockContainer>();
@@ -46,7 +47,7 @@ TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));
-    EXPECT_CALL(*container, set_workspace(nullptr));
+    EXPECT_CALL(*container, set_workspace(workspace));
     EXPECT_CALL(*container, hide());
 
     EXPECT_TRUE(scratchpad.move_to(container));
@@ -92,6 +93,7 @@ TEST_F(ScratchpadTest, CanShowContainer)
     auto workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager);
     output_manager->create("Test", 1, mir::geometry::Rectangle {}, *workspace_manager);
     output_manager->focus(1);
+    std::shared_ptr<WorkspaceInterface> workspace;
 
     // Add the container
     Scratchpad scratchpad(window_controller, output_manager);
@@ -101,7 +103,7 @@ TEST_F(ScratchpadTest, CanShowContainer)
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));
-    EXPECT_CALL(*container, set_workspace(nullptr));
+    EXPECT_CALL(*container, set_workspace(workspace));
     EXPECT_CALL(*container, hide());
     EXPECT_TRUE(scratchpad.move_to(container));
 
