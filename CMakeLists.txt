@@ -1,9 +1,42 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16) # PCH support needs 3.16+
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
 project(miracle-wm VERSION 0.6.2)
 
+# ----------------------------------------
+# Speed tweaks
+# ----------------------------------------
+
+# Prefer Ninja for faster builds (if user hasn't chosen a generator)
+if(CMAKE_GENERATOR STREQUAL "")
+    message(STATUS "Tip: Use Ninja for faster builds: cmake -G Ninja")
+endif()
+
+# Enable ccache if available
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
+
+# Enable mold if available
+find_program(MOLD_LINKER mold)
+if(MOLD_LINKER)
+    message(STATUS "Using mold linker: ${MOLD_LINKER}")
+    add_link_options(-fuse-ld=mold)
+endif()
+
+# Optional LTO
+option(ENABLE_LTO "Enable link-time optimization (slower builds, faster binaries)" OFF)
+if(ENABLE_LTO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
+# ----------------------------------------
+# Build settings
+# ----------------------------------------
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -11,43 +44,37 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
-add_compile_options(-Wimplicit-fallthrough)
 
-add_compile_options(
-    -Wall              # Enable most warnings
-    -Wextra            # Additional warnings
-    -Wpedantic         # Enforce strict compliance with the C++ standard
-    # -Werror            # Treat warnings as errors
-    -Wconversion       # Warn on type conversions that may lose data
-    -Wsign-conversion  # Warn on implicit signed-unsigned conversions
-    -Wimplicit-fallthrough  # Warn if switch-case fallthrough is not explicitly marked
-    -Wunreachable-code # Warn about unreachable code
-    -Wno-volatile      # Avoid warnings about volatile usage (C++23 deprecates some volatile features)
-    -Wno-unused-parameter # Disable unused parameter warning
-    #-fanalyzer         # Enable GCC static analyzer
-    #-fmodules-ts       # Enable experimental modules (GCC/Clang)
-)
-
+# ----------------------------------------
+# Compiler warnings
+# ----------------------------------------
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     add_compile_options(
-        -g                         # Debug symbols
-        -fno-omit-frame-pointer     # Improve debugging accuracy
+            -Wall -Wextra -Wpedantic
+            -Wconversion -Wsign-conversion
+            -Wimplicit-fallthrough
+            -Wunreachable-code
+            -Wno-volatile
+            -Wno-unused-parameter
+            -g -fno-omit-frame-pointer
     )
+else()
+    message(STATUS "Skipping most warnings for non-Debug build")
 endif()
-
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
     add_compile_options(
-        -O3           # Maximum optimization
-        -march=native # Optimize for the host architecture
-        -flto         # Link-time optimization
+            -O3
+            -march=native
     )
 endif()
 
+# ----------------------------------------
+# Dependencies
+# ----------------------------------------
 find_package(PkgConfig)
 
 set(MIR_MINIMUM_VERSION 2.18)
-
 pkg_check_modules(MIRAL REQUIRED miral>=5.1)
 pkg_check_modules(MIRRENDERER REQUIRED mirrenderer>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRPLATFORM REQUIRED mirplatform>=${MIR_MINIMUM_VERSION})
@@ -66,145 +93,150 @@ pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 
 include(GNUInstallDirs)
 
-add_library(miracle-wm-implementation
-    STATIC
-    src/policy.cpp
-    src/container.cpp
-    src/window_helpers.h
-    src/window_helpers.cpp
-    src/config.cpp
-    src/config.h
-    src/output.cpp
-    src/workspace_manager.cpp
-    src/ipc_message_handler.cpp
-    src/ipc_connection_manager.cpp
-    src/auto_restarting_launcher.cpp
-    src/workspace_interface.h
-    src/workspace_observer.cpp
-    src/workspace.cpp src/workspace.h
-    src/leaf_container.cpp
-    src/parent_container.cpp
-    src/window_manager_tools_window_controller.cpp
-    src/renderer.cpp
-    src/tessellation_helpers.cpp
-    src/ipc_command.cpp
-    src/ipc_command_executor.cpp
-    src/render_data_manager.cpp
-    src/animator.cpp
-    src/program_factory.cpp
-    src/mode_observer.cpp
-    src/debug_helper.h
-    src/shell_component_container.cpp
-    src/container_group_container.cpp
-    src/container_group_container.h
-    src/layout_scheme.cpp
-    src/utility_general.h
-    src/scratchpad.h src/scratchpad.cpp
-    src/compositor_state.h src/compositor_state.cpp
-    src/math_helpers.h
-    src/command_controller.cpp src/command_controller.h
-    src/animator_loop.cpp src/animator_loop.h
-    src/drag_and_drop_service.cpp src/drag_and_drop_service.h
-    src/output_factory_interface.h
-    src/output_manager.cpp src/output_manager.h
-    src/output_factory.cpp src/output_factory.cpp
-    src/output.h src/output.cpp
-    src/move_service.h src/move_service.cpp
-    src/resize_service.h src/resize_service.cpp
-    src/container_scope.h
-    src/forwarding_surface.cpp src/forwarding_surface.h
-    src/dying_surface_manager.cpp src/dying_surface_manager.h
-    src/shader_2d.cpp src/shader_2d.h
-    src/wlr-output-management-unstable-v1_wrapper.cpp src/wlr-output-management-unstable-v1_wrapper.h
-    src/wlr-ouput-management-unstable-v1.cpp src/wlr-ouput-management-unstable-v1.h
-    src/output_listener.cpp src/output_listener.h
-    src/display_config.cpp
-    src/display_config.h
-    src/tilling_algorithms.cpp src/tiling_algorithms.h
-    src/window_observer.h src/window_observer.cpp
-    src/config_observer.h src/config_observer.cpp
-    src/binding_event.h src/binding_event.cpp
-    src/mir_version_manager.h
-    src/synchronized_recursive.h
+# ----------------------------------------
+# miracle-wm-implementation library
+# ----------------------------------------
+add_library(miracle-wm-implementation STATIC
+        src/policy.cpp
+        src/container.cpp
+        src/window_helpers.cpp
+        src/config.cpp
+        src/output.cpp
+        src/workspace_manager.cpp
+        src/ipc_message_handler.cpp
+        src/ipc_connection_manager.cpp
+        src/auto_restarting_launcher.cpp
+        src/workspace_observer.cpp
+        src/workspace.cpp
+        src/leaf_container.cpp
+        src/parent_container.cpp
+        src/window_manager_tools_window_controller.cpp
+        src/renderer.cpp
+        src/tessellation_helpers.cpp
+        src/ipc_command.cpp
+        src/ipc_command_executor.cpp
+        src/render_data_manager.cpp
+        src/animator.cpp
+        src/program_factory.cpp
+        src/mode_observer.cpp
+        src/shell_component_container.cpp
+        src/container_group_container.cpp
+        src/layout_scheme.cpp
+        src/scratchpad.cpp
+        src/compositor_state.cpp
+        src/command_controller.cpp
+        src/animator_loop.cpp
+        src/drag_and_drop_service.cpp
+        src/output_manager.cpp
+        src/output_factory.cpp
+        src/move_service.cpp
+        src/resize_service.cpp
+        src/forwarding_surface.cpp
+        src/dying_surface_manager.cpp
+        src/shader_2d.cpp
+        src/wlr-output-management-unstable-v1_wrapper.cpp
+        src/wlr-ouput-management-unstable-v1.cpp
+        src/output_listener.cpp
+        src/display_config.cpp
+        src/tilling_algorithms.cpp
+        src/window_observer.cpp
+        src/config_observer.cpp
+        src/binding_event.cpp
 )
 
-add_executable(miracle-wm
-    src/main.cpp
+# ----------------------------------------
+# Precompiled headers for speed
+# ----------------------------------------
+target_precompile_headers(miracle-wm-implementation PRIVATE
+        <vector>
+        <string>
+        <map>
+        <memory>
+        <optional>
+        <utility>
+        <glm/glm.hpp>
+        <nlohmann/json.hpp>
+        <yaml-cpp/yaml.h>
+        <jpcre2.h>
+        <pcre2.h>
 )
 
 target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
-    ${MIRAL_INCLUDE_DIRS}
-    ${MIRCOMMON_INCLUDE_DIRS}
-    ${MIRRENDERER_INCLUDE_DIRS}
-    ${MIRPLATFORM_INCLUDE_DIRS}
-    ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
-    ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
-    ${MIRSERVER_INCLUDE_DIRS}
-    ${MIRWAYLAND_INCLUDE_DIRS}
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
-    ${XKBCOMMON_INCLUDE_DIRS})
+        ${MIRAL_INCLUDE_DIRS}
+        ${MIRCOMMON_INCLUDE_DIRS}
+        ${MIRRENDERER_INCLUDE_DIRS}
+        ${MIRPLATFORM_INCLUDE_DIRS}
+        ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
+        ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
+        ${MIRSERVER_INCLUDE_DIRS}
+        ${MIRWAYLAND_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
+        ${XKBCOMMON_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 target_link_libraries(miracle-wm-implementation
-    ${MIRAL_LDFLAGS}
-    ${MIRRENDERER_LDFLAGS}
-    ${MIRPLATFORM_LDFLAGS}
-    ${MIRSERVER_LDFLAGS}
-    ${MIRSERVER_INTERNAL_LDFLAGS}
-    ${MIRWAYLAND_LDFLAGS}
-    ${XKBCOMMON_LIBRARIES}
-    PkgConfig::YAML
-    PkgConfig::GLIB
-    PkgConfig::LIBEVDEV
-    nlohmann_json::nlohmann_json
-    PkgConfig::EGL
-    PkgConfig::GLESv2
-    -lpcre2-8 -lpcre2-16 -lpcre2-32
-    miracle-wm-config)
+        ${MIRAL_LDFLAGS}
+        ${MIRRENDERER_LDFLAGS}
+        ${MIRPLATFORM_LDFLAGS}
+        ${MIRSERVER_LDFLAGS}
+        ${MIRSERVER_INTERNAL_LDFLAGS}
+        ${MIRWAYLAND_LDFLAGS}
+        ${XKBCOMMON_LIBRARIES}
+        PkgConfig::YAML
+        PkgConfig::GLIB
+        PkgConfig::LIBEVDEV
+        nlohmann_json::nlohmann_json
+        PkgConfig::EGL
+        PkgConfig::GLESv2
+        -lpcre2-8 -lpcre2-16 -lpcre2-32
+        miracle-wm-config
+)
+
+# ----------------------------------------
+# miracle-wm executable
+# ----------------------------------------
+add_executable(miracle-wm src/main.cpp)
+target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
+target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
+
+# ----------------------------------------
+# Install rules
+# ----------------------------------------
+install(TARGETS miracle-wm DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(SYSTEMD_INTEGRATION)
-    # Install systemd files
-    install(FILES session/usr/lib/systemd/user/miracle-wm-session.target
-        session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
-        session/usr/lib/systemd/user/miracle-wm-xdg-autostart.target
-        DESTINATION /usr/lib/systemd/user/)
-
-    # Install the setup script
+    install(FILES
+            session/usr/lib/systemd/user/miracle-wm-session.target
+            session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
+            session/usr/lib/systemd/user/miracle-wm-xdg-autostart.target
+            DESTINATION /usr/lib/systemd/user/
+    )
     configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup
-        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
-    install(PROGRAMS session/usr/bin/libexec/miracle-wm-wait-sni-ready
-        DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
-
+    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
+    install(PROGRAMS session/usr/bin/libexec/miracle-wm-wait-sni-ready DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
 else()
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
 endif()
 
-target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
-
-install(TARGETS miracle-wm
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
 configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 install(PROGRAMS
-    src/miracle-wm-sensible-terminal
-    ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session
-    DESTINATION ${CMAKE_INSTALL_BINDIR}
+        src/miracle-wm-sensible-terminal
+        ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 if(SNAP_BUILD)
-    install(PROGRAMS
-        src/miracle-wm-unsnap
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+    install(PROGRAMS src/miracle-wm-unsnap DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
+# ----------------------------------------
+# Subdirectories
+# ----------------------------------------
 add_subdirectory(tests/)
 add_subdirectory(miraclemsg/)
 add_subdirectory(miracle-wm-config/)
