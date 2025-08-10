@@ -57,11 +57,11 @@ public:
             window_controller,
             config,
             parent_area,
-            workspace.get(),
+            workspace,
             nullptr,
             true)),
         leaf_container(std::make_shared<LeafContainer>(
-            workspace.get(),
+            workspace,
             window_controller,
             geom::Rectangle {
                 { 0,   0   },
@@ -135,12 +135,12 @@ TEST_F(LeafContainerTest, SetsAndGetsStateCorrectly)
 
 TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 {
-    auto new_workspace = std::make_unique<test::MockWorkspace>();
+    std::shared_ptr<test::MockWorkspace> const new_workspace = std::make_shared<test::MockWorkspace>();
     EXPECT_CALL(*new_workspace, get_output())
         .WillRepeatedly(testing::Return(output));
 
-    leaf_container->set_workspace(new_workspace.get());
-    ASSERT_EQ(leaf_container->get_workspace(), new_workspace.get());
+    leaf_container->set_workspace(new_workspace);
+    ASSERT_EQ(leaf_container->get_workspace(), new_workspace);
 }
 
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)

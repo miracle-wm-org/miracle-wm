@@ -214,7 +214,7 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
         .WillByDefault(::testing::Return(nullptr));
 
     ON_CALL(*other_container, get_workspace())
-        .WillByDefault(::testing::Return(workspace.get()));
+        .WillByDefault(::testing::Return(workspace));
 
     EXPECT_CALL(*container_drag, move_to(::testing::_));
 

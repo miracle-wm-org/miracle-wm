@@ -70,8 +70,8 @@ public:
     void on_resize(mir::geometry::Size const& size) override;
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
-    WorkspaceInterface* get_workspace() const override;
-    void set_workspace(WorkspaceInterface*) override { }
+    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
+    void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override { }
     std::shared_ptr<OutputInterface> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;

@@ -153,7 +153,7 @@ namespace test
             return {};
         }
 
-        WorkspaceInterface* get_workspace() const override
+        std::shared_ptr<WorkspaceInterface> get_workspace() const override
         {
             return nullptr;
         }

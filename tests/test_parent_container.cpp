@@ -44,11 +44,11 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
         geom::Rectangle const& area) :
-        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace.get(), nullptr, true))
+        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace, nullptr, true))
     {
     }
 
-    std::unique_ptr<test::MockWorkspace> workspace = std::make_unique<test::MockWorkspace>();
+    std::shared_ptr<test::MockWorkspace> workspace = std::make_shared<test::MockWorkspace>();
     geom::Rectangle area;
     std::shared_ptr<ParentContainer> parent;
 };
@@ -64,7 +64,7 @@ public:
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
-    std::unique_ptr<test::MockWorkspace> workspace = std::make_unique<test::MockWorkspace>();
+    std::shared_ptr<test::MockWorkspace> workspace = std::make_shared<test::MockWorkspace>();
 };
 
 class ParentContainerSwapTest : public ParentContainerTest
@@ -112,8 +112,8 @@ TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsSetsWorkspaces)
     Mock::AllowLeak(container3.get());
 
     // Act: Swap the containers on different parent
-    EXPECT_CALL(*container1, set_workspace(Eq(second_parent_data.workspace.get())));
-    EXPECT_CALL(*container2, set_workspace(Eq(first_parent_data.workspace.get())));
+    EXPECT_CALL(*container1, set_workspace(Eq(second_parent_data.workspace)));
+    EXPECT_CALL(*container2, set_workspace(Eq(first_parent_data.workspace)));
 
     ParentContainer::swap(
         first_parent_data.parent,

@@ -181,7 +181,7 @@ void Output::insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& 
 void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
-    std::shared_ptr<WorkspaceInterface> new_workspace = std::make_shared<Workspace>(
+    auto const new_workspace = std::make_shared<Workspace>(
         shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar);
     insert_workspace_sorted(new_workspace);
 }

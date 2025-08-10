@@ -592,6 +592,8 @@ bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope
             window_controller->select_active_window(node_to_select->window().value());
         }
     }
+
+    return true;
 }
 
 bool CommandController::try_select_next(std::vector<ContainerScope> const& scope)
@@ -623,14 +625,15 @@ bool CommandController::try_select_floating(std::vector<ContainerScope> const& s
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
+    // TODO: fixme!
     bool result = true;
     for (auto const& container : containers)
     {
-        if (auto to_select = state->first_floating())
+        if (auto const to_select = state->first_floating())
         {
             if (auto const& window = to_select->window())
             {
@@ -772,7 +775,7 @@ bool CommandController::select_workspace(std::string const& name, bool back_and_
     auto const focused = output_manager->focused();
     if (!focused)
     {
-        mir::log_warning("select_workspace %s: no focused output", name);
+        mir::log_warning("select_workspace %s: no focused output", name.c_str());
         return false;
     }
 
@@ -785,7 +788,7 @@ bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> 
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -946,7 +949,7 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
 
     for (auto const& container : containers)
     {
-        if (container->get_workspace() == output_manager->focused()->active().get())
+        if (container->get_workspace() == output_manager->focused()->active())
             continue;
 
         container->get_output()->delete_container(container);
@@ -1112,7 +1115,7 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
                              container->get_logical_area().size.height              }
             };
             auto new_parent = workspace->create_floating_tree(new_area);
-            new_parent->graft_existing(container, new_parent->num_nodes());
+            new_parent->graft_existing(container, static_cast<int>(new_parent->num_nodes()));
             container->set_workspace(workspace);
             new_parent->commit_changes();
             return new_parent;
@@ -1936,7 +1939,7 @@ bool CommandController::try_move_workspace_to_output(OutputSelection selection)
 
     if (output == nullptr)
     {
-        mir::log_warning("try_move_workspace_to_output: could not find output to move workspace to: %%d", selection);
+        mir::log_warning("try_move_workspace_to_output: could not find output to move workspace to: %d", static_cast<int>(selection));
         return false;
     }
 

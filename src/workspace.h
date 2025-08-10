@@ -37,7 +37,7 @@ struct WorkspaceIdentifier
     std::optional<std::string> const name;
 };
 
-class Workspace : public WorkspaceInterface
+class Workspace : public WorkspaceInterface, public std::enable_shared_from_this<Workspace>
 {
 public:
     Workspace(
@@ -87,7 +87,7 @@ public:
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
-    [[nodiscard]] std::shared_ptr<ParentContainer> get_root() const override { return root; }
+    [[nodiscard]] std::shared_ptr<ParentContainer> get_root() const override;
 
 private:
     struct MoveResult
@@ -103,11 +103,13 @@ private:
         std::shared_ptr<Container> node = nullptr;
     };
 
+    std::shared_ptr<ParentContainer> root() const;
+
     std::weak_ptr<OutputInterface> output;
     uint32_t id_;
     std::optional<int> num_;
     std::optional<std::string> name_;
-    std::shared_ptr<ParentContainer> root;
+    mutable std::shared_ptr<ParentContainer> root_;
     std::vector<std::shared_ptr<ParentContainer>> floating_trees;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> state;

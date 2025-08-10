@@ -119,25 +119,35 @@ Workspace::Workspace(
     window_controller { window_controller },
     state { state },
     registry { registry },
-    config { config },
-    root(std::make_shared<ParentContainer>(
-        state, window_controller, config, get_output_area(output), this, nullptr, true))
+    config { config }
 {
+}
+
+std::shared_ptr<ParentContainer> Workspace::root() const
+{
+    if (!root_)
+    {
+        auto mutable_ws = std::const_pointer_cast<Workspace>(shared_from_this());
+        root_ = std::make_shared<ParentContainer>(
+            state, window_controller, config, get_output_area(output.lock()), mutable_ws, nullptr, true);
+    }
+
+    return root_;
 }
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
-    root->on_workspace_transform();
-    root->set_logical_area(area);
-    root->commit_changes();
+    root()->on_workspace_transform();
+    root()->set_logical_area(area);
+    root()->commit_changes();
 }
 
 void Workspace::recalculate_area()
 {
     if (auto const sh_output = output.lock())
     {
-        root->set_logical_area(get_output_area(sh_output));
-        root->commit_changes();
+        root()->set_logical_area(get_output_area(sh_output));
+        root()->commit_changes();
     }
 }
 
@@ -160,7 +170,7 @@ AllocationHint Workspace::allocate_position(
         return { ContainerType::leaf, parent };
     }
     default:
-        return { layout };
+        return { layout, std::nullopt };
     }
 }
 
@@ -204,7 +214,7 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 
         // If we're deleting a container and it is the final container in a
         // floating tree, then we need to remove the tree entirely.
-        if (parent->num_nodes() == 0 && parent != root)
+        if (parent->num_nodes() == 0 && parent != root())
         {
             floating_trees.erase(
                 std::remove(floating_trees.begin(), floating_trees.end(), parent),
@@ -235,7 +245,7 @@ void Workspace::show()
     // a flag that tells miral not to select the last focused container while we
     // are in the process of becoming visible.
     is_showing = true;
-    root->show();
+    root()->show();
     for (auto const& floating : floating_trees)
         floating->show();
     is_showing = false;
@@ -243,7 +253,7 @@ void Workspace::show()
 
 void Workspace::hide()
 {
-    root->hide();
+    root()->hide();
     for (auto const& floating : floating_trees)
         floating->hide();
 }
@@ -274,7 +284,7 @@ bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> 
             return true;
     }
 
-    if (foreach_node_internal(_for_each_window, root))
+    if (foreach_node_internal(_for_each_window, root()))
         return true;
 
     return false;
@@ -297,7 +307,7 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> c
 std::shared_ptr<ParentContainer> Workspace::create_floating_tree(mir::geometry::Rectangle const& area)
 {
     auto floating = std::make_shared<ParentContainer>(
-        state, window_controller, config, area, this, nullptr, false);
+        state, window_controller, config, area, shared_from_this(), nullptr, false);
     floating_trees.push_back(floating);
     return floating;
 }
@@ -342,8 +352,8 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
 
 bool Workspace::add_to_root(Container& to_move)
 {
-    root->graft_existing(to_move.shared_from_this(), root->num_nodes());
-    to_move.set_workspace(this);
+    root()->graft_existing(to_move.shared_from_this(), static_cast<int>(root()->num_nodes()));
+    to_move.set_workspace(shared_from_this());
     return true;
 }
 
@@ -363,36 +373,35 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
     }
 
     auto parent = from.get_parent().lock();
-    if (root == parent)
+    if (root() == parent)
     {
         auto new_layout_direction = from_direction(direction);
-        if (new_layout_direction == root->get_direction())
+        if (new_layout_direction == root()->get_direction())
             return {};
 
         auto after_root_lane = std::make_shared<ParentContainer>(
             state,
             window_controller,
             config,
-            root->get_logical_area(),
-            this,
+            root()->get_logical_area(),
+            shared_from_this(),
             nullptr,
             true);
         after_root_lane->set_layout(new_layout_direction);
-        after_root_lane->graft_existing(root, 0);
-        root = after_root_lane;
+        after_root_lane->graft_existing(root(), 0);
+        root_ = after_root_lane;
         recalculate_area();
     }
 
-    bool is_negative = is_negative_direction(direction);
-    if (is_negative)
+    if (is_negative_direction(direction))
         return {
             MoveResult::traversal_type_prepend,
-            root
+            root_
         };
     else
         return {
             MoveResult::traversal_type_append,
-            root
+            root_
         };
 }
 
@@ -413,7 +422,7 @@ void Workspace::workspace_transform_change_hack()
     {
         if (auto const locked = container.lock())
         {
-            if (locked->get_workspace() == this)
+            if (locked->get_workspace().get() == this)
                 locked->on_workspace_transform();
         }
     }
@@ -421,7 +430,7 @@ void Workspace::workspace_transform_change_hack()
 
 bool Workspace::is_empty() const
 {
-    return root->num_nodes() == 0 && floating_trees.empty();
+    return root()->num_nodes() == 0 && floating_trees.empty();
 }
 
 void Workspace::graft(std::shared_ptr<Container> const& container)
@@ -439,20 +448,20 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
         }
 
         parent->set_anchored(false);
-        parent->set_workspace(this);
+        parent->set_workspace(shared_from_this());
         floating_trees.push_back(parent);
         break;
     }
     case ContainerType::leaf:
-        root->graft_existing(container, root->num_nodes());
-        root->commit_changes();
+        root()->graft_existing(container, static_cast<int>(root()->num_nodes()));
+        root()->commit_changes();
         break;
     default:
-        mir::log_error("Workspace::graft: ungraftable container type: %d", (int)container->get_type());
+        mir::log_error("Workspace::graft: ungraftable container type: %d", static_cast<int>(container->get_type()));
         break;
     }
 
-    container->set_workspace(this);
+    container->set_workspace(shared_from_this());
 }
 
 void Workspace::num(std::optional<int> n)
@@ -516,16 +525,21 @@ void Workspace::on_animation_end()
 std::shared_ptr<ParentContainer> Workspace::get_layout_container()
 {
     if (!state->focused_container())
-        return root;
+        return root();
 
     auto parent = state->focused_container()->get_parent().lock();
     if (!parent)
-        return root;
+        return root();
 
-    if (parent->get_workspace() != this)
-        return root;
+    if (parent->get_workspace().get() != this)
+        return root();
 
     return parent;
+}
+
+std::shared_ptr<ParentContainer> Workspace::get_root() const
+{
+    return root();
 }
 
 std::string Workspace::display_name() const
@@ -551,7 +565,7 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
     // Note: The reported workspace area appears to be the placement
     // area of the root tree.
     //   See: https://i3wm.org/docs/ipc.html#_tree_reply
-    auto const area = root->get_logical_area();
+    auto const area = root()->get_logical_area();
     auto const workspace_name = display_name();
     auto const output_name = sh_output ? sh_output->name() : "N/A";
 
@@ -582,14 +596,14 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
     // Note: The reported workspace area appears to be the placement
     // area of the root tree.
     //   See: https://i3wm.org/docs/ipc.html#_tree_reply
-    auto area = root->get_logical_area();
+    auto area = root()->get_logical_area();
 
     nlohmann::json floating_nodes = nlohmann::json::array();
     for (auto const& container : floating_trees)
         floating_nodes.push_back(container->to_json(is_active_on_output));
 
     nlohmann::json nodes = nlohmann::json::array();
-    for (auto const& container : root->get_sub_nodes())
+    for (auto const& container : root()->get_sub_nodes())
         nodes.push_back(container->to_json(is_active_on_output));
 
     return {
@@ -606,7 +620,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },
-        { "layout", to_string(root->get_scheme()) },
+        { "layout", to_string(root()->get_scheme()) },
         { "orientation", "none" },
         { "window_rect", {
                              { "x", 0 },

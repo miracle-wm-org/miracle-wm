@@ -94,8 +94,8 @@ public:
     virtual mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&)
         = 0;
-    virtual WorkspaceInterface* get_workspace() const = 0;
-    virtual void set_workspace(WorkspaceInterface*) = 0;
+    virtual std::shared_ptr<WorkspaceInterface> get_workspace() const = 0;
+    virtual void set_workspace(std::shared_ptr<WorkspaceInterface> const&) = 0;
     virtual std::shared_ptr<OutputInterface> get_output() const = 0;
     virtual glm::mat4 get_transform() const = 0;
     virtual void set_transform(glm::mat4 transform) = 0;

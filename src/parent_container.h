@@ -44,7 +44,7 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
         geom::Rectangle area,
-        WorkspaceInterface* workspace,
+        std::shared_ptr<WorkspaceInterface> const& workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
     ~ParentContainer() override = default;
@@ -99,8 +99,8 @@ public:
     void show() override;
     void hide() override;
     void on_open() override;
-    WorkspaceInterface* get_workspace() const override;
-    void set_workspace(WorkspaceInterface* override) override;
+    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
+    void set_workspace(std::shared_ptr<WorkspaceInterface> const& workspace) override;
     std::shared_ptr<OutputInterface> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
@@ -146,7 +146,7 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     geom::Rectangle logical_area;
-    WorkspaceInterface* workspace;
+    std::weak_ptr<WorkspaceInterface> workspace;
     std::weak_ptr<ParentContainer> parent;
     bool is_anchored;
     bool pinned_ = false;

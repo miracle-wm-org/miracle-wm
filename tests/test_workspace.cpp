@@ -224,7 +224,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToDifferentParent)
 TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
-    Workspace other(
+    auto const other = std::make_shared<Workspace>(
         other_output,
         1,
         1,
@@ -234,20 +234,20 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
         state,
         registry);
     auto leaf1 = create_leaf();
-    auto leaf2 = create_leaf(std::nullopt, &other);
+    auto leaf2 = create_leaf(std::nullopt, other.get());
 
-    ASSERT_EQ(leaf1->get_workspace(), workspace.get());
-    ASSERT_EQ(leaf2->get_workspace(), &other);
+    ASSERT_EQ(leaf1->get_workspace(), workspace);
+    ASSERT_EQ(leaf2->get_workspace(), other);
 
     ASSERT_TRUE(leaf1->move_to(*leaf2));
 
-    ASSERT_EQ(leaf2->get_workspace(), &other);
+    ASSERT_EQ(leaf2->get_workspace(), other);
 }
 
 TEST_F(WorkspaceTest, CanMoveContainerToTree)
 {
-    auto other_output = create_output(OTHER_OUTPUT_SIZE);
-    Workspace other(
+    auto const other_output = create_output(OTHER_OUTPUT_SIZE);
+    auto other = std::make_shared<Workspace>(
         other_output,
         1,
         1,
@@ -258,9 +258,9 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         registry);
     auto leaf1 = create_leaf();
 
-    ASSERT_EQ(leaf1->get_workspace(), workspace.get());
-    ASSERT_TRUE(other.add_to_root(*leaf1));
-    ASSERT_EQ(leaf1->get_workspace(), &other);
+    ASSERT_EQ(leaf1->get_workspace(), workspace);
+    ASSERT_TRUE(other->add_to_root(*leaf1));
+    ASSERT_EQ(leaf1->get_workspace(), other);
     ASSERT_EQ(leaf1->get_logical_area(), OTHER_OUTPUT_SIZE);
 }
 
@@ -305,7 +305,7 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
     std::vector<miral::Zone> zones = { miral::Zone(zone_bounds) };
     ON_CALL(*output, get_app_zones())
         .WillByDefault(ReturnRef(zones));
-    Workspace other(
+    auto const other = std::make_shared<Workspace>(
         output,
         1,
         1,
@@ -316,7 +316,7 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
         registry);
 
     // Assert that the first tree (w/o app zones) is equal to the output size.
-    ASSERT_EQ(other.get_root()->get_logical_area(), zone_bounds);
+    ASSERT_EQ(other->get_root()->get_logical_area(), zone_bounds);
 }
 
 TEST_F(WorkspaceTest, GetWorkspaceJson)
