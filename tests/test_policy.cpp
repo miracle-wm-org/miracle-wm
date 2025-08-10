@@ -431,6 +431,48 @@ TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
     EXPECT_THAT(container->get_parent().lock()->get_index_of_node(container), Eq(1));
 }
 
+struct LayoutSingleWindowPolicyData
+{
+    std::string layout_command;
+    LayoutScheme scheme;
+};
+
+class LayoutSingleWindowPolicyTest : public SingleWindowPolicyTest, public WithParamInterface<LayoutSingleWindowPolicyData>
+{
+};
+
+TEST_P(LayoutSingleWindowPolicyTest, LayoutCommandTest)
+{
+    auto const param = GetParam();
+
+    // Open up the connection
+    auto const socket_path = get_socketpath();
+    auto const socket_fd = ipc_open_socket(socket_path);
+
+    // Open a first window and mark it
+    auto const app = open_application("test");
+    miral::WindowSpecification const spec;
+    auto const windowA = create_window(app, spec);
+    std::string const split_payload = param.layout_command;
+    uint32_t len = static_cast<uint32_t>(split_payload.size());
+    ipc_single_command(socket_fd, IPC_COMMAND, split_payload.c_str(), &len);
+
+    auto const container = compositor_state->focused_container();
+    EXPECT_THAT(container->get_parent().lock()->get_scheme(), Eq(param.scheme));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LayoutSingleWindowPolicyTest,
+    LayoutSingleWindowPolicyTest,
+    ::testing::Values(
+        LayoutSingleWindowPolicyData { { "layout splitv" }, LayoutScheme::vertical },
+        LayoutSingleWindowPolicyData { { "layout splith" }, LayoutScheme::horizontal },
+        LayoutSingleWindowPolicyData { { "layout tabbed" }, LayoutScheme::tabbing },
+        LayoutSingleWindowPolicyData { { "layout stacking" }, LayoutScheme::stacking },
+        LayoutSingleWindowPolicyData { { "layout default" }, LayoutScheme::horizontal },
+        LayoutSingleWindowPolicyData { { "layout splith; layout toggle split" }, LayoutScheme::vertical },
+        LayoutSingleWindowPolicyData { { "layout splith; layout toggle splith tabbed" }, LayoutScheme::tabbing }));
+
 TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
 {
     // Setup: Create a new window and sanity check that it is on workspace 2
