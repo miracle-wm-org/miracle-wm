@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_group_container.h"
 #include "container_listener.h"
 #include "container_scope.h"
-#include "jpcre2.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
@@ -31,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_interface.h"
 
 #include <cmath>
+#include <jpcre2.h>
 #include <mir/log.h>
 #include <mir/scene/session.h>
 #include <mir/scene/surface.h>
