@@ -123,7 +123,7 @@ bool CommandController::try_cycle_through_request_types(
     for (auto const& container : containers)
     {
         auto const current_type = container->get_layout();
-        size_t i = -1;
+        size_t i = 0;
         bool found = false;
         for (; i < request_types.size(); i++)
         {
