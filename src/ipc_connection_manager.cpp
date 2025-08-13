@@ -165,7 +165,7 @@ IpcConnectionManager::IpcConnectionManager(
         auto client = std::make_shared<IpcClient>();
         client->client_fd = mir_fd;
         std::weak_ptr<IpcClient> weak_client = client;
-        main_loop->register_fd_handler({ mir_fd }, (void*)client.get(), [weak_client = weak_client, this](int const fd)
+        main_loop->register_fd_handler({ mir_fd }, client.get(), [weak_client = weak_client, this](int const)
         {
             auto const client = weak_client.lock();
             if (!client)
@@ -175,6 +175,13 @@ IpcConnectionManager::IpcConnectionManager(
             if (ioctl(client->client_fd, FIONREAD, &read_available) == -1)
             {
                 mir::log_error("Unable to read IPC socket buffer size");
+                disconnect(*client);
+                return;
+            }
+
+            if (read_available == 0)
+            {
+                mir::log_warning("Peer has closed connection");
                 disconnect(*client);
                 return;
             }
