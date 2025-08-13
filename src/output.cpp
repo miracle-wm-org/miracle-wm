@@ -588,6 +588,30 @@ nlohmann::json Output::to_json(bool is_focused) const
         break;
     }
 
+#ifdef MIR_VERSION_2_22_OR_GREATER
+    auto const make = raw_output_config.display_info.vendor.value_or("Unknown");
+    auto const model = raw_output_config.display_info.model.value_or("Unknown");
+    auto const serial = raw_output_config.display_info.serial.value_or("0x00000000");
+#else
+    std::string make = "Unknown";
+    std::string model = "Unknown";
+    std::string serial = "0x00000000";
+    if (raw_output_config.edid.size() >= mg::Edid::minimum_size)
+    {
+        auto const edid = reinterpret_cast<mg::Edid const*>(raw_output_config.edid.data());
+        mg::Edid::Manufacturer man;
+        edid->get_manufacturer(man);
+        mg::Edid::MonitorName name;
+        edid->get_monitor_name(name);
+
+        make = man;
+        model = name;
+#ifdef MIR_VERSION_2_21_OR_GREATER
+        serial = edid->serial_number();
+#endif
+    }
+#endif
+
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)            },
         { "name",                 name_                                             },
@@ -596,9 +620,9 @@ nlohmann::json Output::to_json(bool is_focused) const
         { "scale",                raw_output_config.scale                           },
         { "scale_filter",         "linear"                                          }, // Deprecated
         { "adaptive_sync_status", false                                             }, /// TODO: Supply this value
-        { "make",                 "Unknown"                                         }, // TODO: Supply this value
-        { "model",                "Unknown"                                         }, // TODO: Supply this value
-        { "serial",               "Unknown"                                         }, // TODO: Supply this value
+        { "make",                 make                                              },
+        { "model",                model                                             },
+        { "serial",               serial                                            },
         { "transform",            transform                                         },
         { "type",                 "output"                                          },
         { "layout",               "output"                                          },

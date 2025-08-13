@@ -1225,8 +1225,8 @@ nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
         { "orientation",          "none"                                         },
         { "percent",              get_percent_of_parent()                        },
         { "window_rect",          {
-                             { "x", visible_area.top_left.x.as_int() },
-                             { "y", visible_area.top_left.y.as_int() },
+                             { "x", visible_area.top_left.x.as_int() - logical_area.top_left.x.as_int() },
+                             { "y", visible_area.top_left.y.as_int() - logical_area.top_left.y.as_int() },
                              { "width", visible_area.size.width.as_int() },
                              { "height", visible_area.size.height.as_int() },
                          }                               },
@@ -1242,7 +1242,7 @@ nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
                           { "width", logical_area.size.width.as_int() },
                           { "height", logical_area.size.height.as_int() },
                       }                                     },
-        { "window",               0                                              }, // TODO
+        { "window",               reinterpret_cast<std::uintptr_t>(this)         },
         { "urgent",               false                                          },
         { "floating_nodes",       std::vector<int>()                             },
         { "sticky",               false                                          },
