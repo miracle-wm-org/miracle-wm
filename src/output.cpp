@@ -45,7 +45,7 @@ Output::Output(
     std::string name,
     int id,
     geom::Rectangle const& area,
-    mir::graphics::DisplayConfigurationOutput const& raw_output_config,
+    OutputConfigDetails const& output_config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
@@ -54,7 +54,7 @@ Output::Output(
     name_ { std::move(name) },
     id_ { id },
     area { area },
-    raw_output_config { raw_output_config },
+    output_config { output_config },
     state { state },
     config { config },
     window_controller { window_controller },
@@ -547,7 +547,7 @@ void Output::unset_defunct()
 
 nlohmann::json Output::to_json(bool is_focused) const
 {
-    auto active = raw_output_config.used;
+    auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& workspace : workspaces)
     {
@@ -556,7 +556,7 @@ nlohmann::json Output::to_json(bool is_focused) const
     }
 
     nlohmann::json modes_node;
-    for (auto const& mode : raw_output_config.modes)
+    for (auto const& mode : output_config.modes)
     {
         nlohmann::json mode_node;
         mode_node["width"] = mode.size.width.as_int();
@@ -565,14 +565,14 @@ nlohmann::json Output::to_json(bool is_focused) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = raw_output_config.modes[raw_output_config.current_mode_index];
+    auto const& current_mode = output_config.modes[output_config.current_mode_index];
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();
     current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
 
     nlohmann::json transform;
-    switch (raw_output_config.orientation)
+    switch (output_config.orientation)
     {
     case mir_orientation_normal:
         transform = "normal";
@@ -589,16 +589,16 @@ nlohmann::json Output::to_json(bool is_focused) const
     }
 
 #ifdef MIR_VERSION_2_22_OR_GREATER
-    auto const make = raw_output_config.display_info.vendor.value_or("Unknown");
-    auto const model = raw_output_config.display_info.model.value_or("Unknown");
-    auto const serial = raw_output_config.display_info.serial.value_or("0x00000000");
+    auto const make = output_config.display_info.vendor.value_or("Unknown");
+    auto const model = output_config.display_info.model.value_or("Unknown");
+    auto const serial = output_config.display_info.serial.value_or("0x00000000");
 #else
     std::string make = "Unknown";
     std::string model = "Unknown";
     std::string serial = "0x00000000";
-    if (raw_output_config.edid.size() >= mg::Edid::minimum_size)
+    if (output_config.edid.size() >= mg::Edid::minimum_size)
     {
-        auto const edid = reinterpret_cast<mg::Edid const*>(raw_output_config.edid.data());
+        auto const edid = reinterpret_cast<mg::Edid const*>(output_config.edid.data());
         mg::Edid::Manufacturer man;
         edid->get_manufacturer(man);
         mg::Edid::MonitorName name;
@@ -613,52 +613,52 @@ nlohmann::json Output::to_json(bool is_focused) const
 #endif
 
     return {
-        { "id",                   reinterpret_cast<std::uintptr_t>(this)            },
-        { "name",                 name_                                             },
-        { "active",               active                                            },
-        { "dpms",                 raw_output_config.power_mode == mir_power_mode_on },
-        { "scale",                raw_output_config.scale                           },
-        { "scale_filter",         "linear"                                          }, // Deprecated
-        { "adaptive_sync_status", false                                             }, /// TODO: Supply this value
-        { "make",                 make                                              },
-        { "model",                model                                             },
-        { "serial",               serial                                            },
-        { "transform",            transform                                         },
-        { "type",                 "output"                                          },
-        { "layout",               "output"                                          },
-        { "orientation",          "none"                                            },
-        { "visible",              true                                              },
-        { "focused",              is_focused                                        },
-        { "urgent",               false                                             },
-        { "border",               "none"                                            },
-        { "current_border_width", 0                                                 },
+        { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
+        { "name",                 name_                                         },
+        { "active",               active                                        },
+        { "dpms",                 output_config.power_mode == mir_power_mode_on },
+        { "scale",                output_config.scale                           },
+        { "scale_filter",         "linear"                                      }, // Deprecated
+        { "adaptive_sync_status", false                                         }, /// TODO: Supply this value
+        { "make",                 make                                          },
+        { "model",                model                                         },
+        { "serial",               serial                                        },
+        { "transform",            transform                                     },
+        { "type",                 "output"                                      },
+        { "layout",               "output"                                      },
+        { "orientation",          "none"                                        },
+        { "visible",              true                                          },
+        { "focused",              is_focused                                    },
+        { "urgent",               false                                         },
+        { "border",               "none"                                        },
+        { "current_border_width", 0                                             },
         { "window_rect",          {
                              { "x", 0 },
                              { "y", 0 },
                              { "width", 0 },
                              { "height", 0 },
-                         }                                  },
+                         }                              },
         { "deco_rect",            {
                            { "x", 0 },
                            { "y", 0 },
                            { "width", 0 },
                            { "height", 0 },
-                       }                                      },
+                       }                                  },
         { "geometry",             {
                           { "x", 0 },
                           { "y", 0 },
                           { "width", 0 },
                           { "height", 0 },
-                      }                                        },
+                      }                                    },
         { "rect",                 {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                                                },
-        { "nodes",                nodes                                             },
-        { "modes",                modes_node                                        },
-        { "current_mode",         current_mode_node                                 }
+                  }                                            },
+        { "nodes",                nodes                                         },
+        { "modes",                modes_node                                    },
+        { "current_mode",         current_mode_node                             }
     };
 }
 
@@ -672,10 +672,10 @@ nlohmann::json Output::get_outputs_json(bool) const
     else
         workspace = { "current_workspace", nullptr };
 
-    auto active = raw_output_config.used;
+    auto active = output_config.used;
 
     nlohmann::json modes_node;
-    for (auto const& mode : raw_output_config.modes)
+    for (auto const& mode : output_config.modes)
     {
         nlohmann::json mode_node;
         mode_node["width"] = mode.size.width.as_int();
@@ -684,7 +684,7 @@ nlohmann::json Output::get_outputs_json(bool) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = raw_output_config.modes[raw_output_config.current_mode_index];
+    auto const& current_mode = output_config.modes[output_config.current_mode_index];
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();
@@ -693,7 +693,7 @@ nlohmann::json Output::get_outputs_json(bool) const
     auto const primary = is_primary();
 
     std::string subpixel_hinting;
-    switch (raw_output_config.current_format)
+    switch (output_config.current_format)
     {
     case mir_pixel_format_abgr_8888:
     case mir_pixel_format_xbgr_8888:
@@ -712,16 +712,16 @@ nlohmann::json Output::get_outputs_json(bool) const
     }
 
 #ifdef MIR_VERSION_2_22_OR_GREATER
-    auto const make = raw_output_config.display_info.vendor.value_or("Unknown");
-    auto const model = raw_output_config.display_info.model.value_or("Unknown");
-    auto const serial = raw_output_config.display_info.serial.value_or("0x00000000");
+    auto const make = output_config.display_info.vendor.value_or("Unknown");
+    auto const model = output_config.display_info.model.value_or("Unknown");
+    auto const serial = output_config.display_info.serial.value_or("0x00000000");
 #else
     std::string make = "Unknown";
     std::string model = "Unknown";
     std::string serial = "0x00000000";
-    if (raw_output_config.edid.size() >= mg::Edid::minimum_size)
+    if (output_config.edid.size() >= mg::Edid::minimum_size)
     {
-        auto const edid = reinterpret_cast<mg::Edid const*>(raw_output_config.edid.data());
+        auto const edid = reinterpret_cast<mg::Edid const*>(output_config.edid.data());
         mg::Edid::Manufacturer man;
         edid->get_manufacturer(man);
         mg::Edid::MonitorName name;
@@ -736,31 +736,29 @@ nlohmann::json Output::get_outputs_json(bool) const
 #endif
 
     return {
-        { "name",             name_                                             },
-        { "make",             make                                              },
-        { "model",            model                                             },
-        { "serial",           serial                                            },
-        { "active",           active                                            },
-        { "dpms",             raw_output_config.power_mode == mir_power_mode_on },
-        { "power",            raw_output_config.power_mode == mir_power_mode_on },
-        { "primary",          primary                                           },
-        { "scale",            active ? raw_output_config.scale : -1             },
-        { "subpixel_hinting", subpixel_hinting                                  },
+        { "name",             name_                                         },
+        { "make",             make                                          },
+        { "model",            model                                         },
+        { "serial",           serial                                        },
+        { "active",           active                                        },
+        { "dpms",             output_config.power_mode == mir_power_mode_on },
+        { "power",            output_config.power_mode == mir_power_mode_on },
+        { "primary",          primary                                       },
+        { "scale",            active ? output_config.scale : -1             },
+        { "subpixel_hinting", subpixel_hinting                              },
         workspace,
         { "rect",             {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
                       { "width", area.size.width.as_int() },
                       { "height", area.size.height.as_int() },
-                  }                                            },
-        { "modes",            modes_node                                        },
-        { "current_mode",     current_mode_node                                 },
+                  }                                        },
+        { "modes",            modes_node                                    },
+        { "current_mode",     current_mode_node                             },
     };
 }
 
 bool Output::is_primary() const
 {
-    return raw_output_config.custom_attribute.contains("primary")
-        ? raw_output_config.custom_attribute.at("primary") == "true"
-        : false;
+    return output_config.is_primary;
 }
