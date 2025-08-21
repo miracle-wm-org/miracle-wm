@@ -191,9 +191,36 @@ public:
     {
         std::lock_guard lock(mutex);
 
-        cached = conf.clone();
+        cached.clear();
+        conf.for_each_output([&](mg::DisplayConfigurationOutput const& output)
+        {
+            cached.push_back(OutputConfigDetails {
+                output.name,
+                output.card_id,
+                output.physical_size_mm,
+                output.top_left,
+                output.scale,
+                output.orientation,
+                output.logical_group_id,
+                output.modes,
+                output.current_mode_index,
+                output.used,
+                output.power_mode,
+                output.current_format,
+                output.custom_attribute.contains("primary")
+                    ? output.custom_attribute.at("primary") == "true"
+                    : false,
+#ifdef MIR_VERSION_2_22_OR_GREATER
+                output.display_info
+#else
+                output.edid
+#endif
+            });
+        });
+
+        auto copy = conf.clone();
         if (!has_config_file())
-            try_create_default(*cached);
+            try_create_default(*copy);
     }
 
     /// Attempts to write the default configuration to [path] if it does not exist.
@@ -332,20 +359,10 @@ public:
     }
 
     /// Returns a copy of the set configuration, if it exists, otherwise std::nullopt.
-    [[nodiscard]] std::optional<std::unique_ptr<mg::DisplayConfiguration>> configuration()
+    [[nodiscard]] OutputConfigDetailList configuration()
     {
         std::lock_guard lock(mutex);
-        if (!cached)
-            return std::nullopt;
-
-        return cached->clone();
-    }
-
-    void on_stop()
-    {
-        // WARNING: This gets around a deinitialization problem in Mir that would
-        // causes us to crash on deallocation.
-        cached.reset();
+        return cached;
     }
 
     std::weak_ptr<mir::shell::DisplayConfigurationController> display_configuration_controller;
@@ -354,7 +371,7 @@ public:
 
 private:
     std::vector<OutputConfig> configs;
-    std::unique_ptr<mir::graphics::DisplayConfiguration> cached;
+    OutputConfigDetailList cached;
     mg::DisplayConfigurationLogicalGroupId const empty_group_id = mg::DisplayConfigurationLogicalGroupId(0);
 
     void apply_default(mg::DisplayConfiguration& conf) const
@@ -559,7 +576,7 @@ std::vector<miracle::DisplayConfig::OutputConfig> miracle::DisplayConfig::get_co
     return self->get_configs();
 }
 
-std::optional<std::unique_ptr<mir::graphics::DisplayConfiguration>> miracle::DisplayConfig::configuration() const
+miracle::OutputConfigDetailList miracle::DisplayConfig::configuration() const
 {
     return self->configuration();
 }
@@ -581,10 +598,5 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
             self->display_configuration_controller = server.the_display_configuration_controller();
         });
         return self;
-    });
-
-    server.add_stop_callback([this]
-    {
-        self->on_stop();
     });
 }

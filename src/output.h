@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_OUTPUT_H
 #define MIRACLE_WM_OUTPUT_H
 
+#include "display_config.h"
 #include "output_interface.h"
-#include <mir/graphics/display_configuration.h>
 
 namespace miracle
 {
@@ -33,7 +33,7 @@ public:
         std::string name,
         int id,
         geom::Rectangle const& area,
-        mir::graphics::DisplayConfigurationOutput const& raw_output_config,
+        OutputConfigDetails const& output_config,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
@@ -111,7 +111,7 @@ private:
     std::string name_;
     int id_;
     geom::Rectangle area;
-    mir::graphics::DisplayConfigurationOutput raw_output_config;
+    OutputConfigDetails output_config;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;

@@ -44,16 +44,12 @@ MiralOutputFactory::MiralOutputFactory(
 std::shared_ptr<OutputInterface> MiralOutputFactory::create(
     std::string name, int id, mir::geometry::Rectangle area)
 {
-    auto const current_config = display_config->configuration();
-    mir::graphics::DisplayConfigurationOutput raw_output_config;
-    if (!current_config)
-        mir::log_warning("DisplayConfiguration should be set by the time we create an output");
-    else
-        current_config.value()->for_each_output([&, this](mir::graphics::DisplayConfigurationOutput const& output)
-        {
-            if (output.name == name || output.card_id.as_value() == id)
-                raw_output_config = output;
-        });
+    OutputConfigDetails raw_output_config;
+    for (auto const& output_config : display_config->configuration())
+    {
+        if (output_config.name == name || output_config.card_id.as_value() == id)
+            raw_output_config = output_config;
+    }
 
     return std::make_shared<Output>(
         policy,

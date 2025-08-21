@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_DISPLAY_CONFIG_H
 #define MIRACLE_DISPLAY_CONFIG_H
 
+#include "mir_version_manager.h"
 #include <mir/geometry/point.h>
 #include <mir/graphics/display_configuration.h>
 
@@ -28,6 +29,38 @@ class Server;
 
 namespace miracle
 {
+
+/// This struct loosely mirrors [mir::graphics::DisplayConfigurationOutput], however,
+/// it gets us around a tricky bug where that class could be deinitialized when the
+/// program closes, causing us to segfault. This is most likely due to the fact that
+/// the graphics platform modules were probably offloaded before we hit the [DisplayConfig]
+/// deconstructor. Such is life.
+///
+/// At any rate, it is useful to have this struct in our control, so that is where we
+/// will keep it for now.
+struct OutputConfigDetails
+{
+    std::string name;
+    mir::graphics::DisplayConfigurationCardId card_id;
+    mir::geometry::Size size;
+    mir::geometry::Point position;
+    double scale;
+    MirOrientation orientation;
+    mir::graphics::DisplayConfigurationLogicalGroupId group_id;
+    std::vector<mir::graphics::DisplayConfigurationMode> modes;
+    size_t current_mode_index;
+    bool used;
+    MirPowerMode power_mode;
+    MirPixelFormat current_format;
+    bool is_primary;
+#ifdef MIR_VERSION_2_22_OR_GREATER
+    mir::graphics::DisplayInfo display_info;
+#else
+    std::vector<uint8_t> edid;
+#endif
+};
+
+typedef std::vector<OutputConfigDetails> OutputConfigDetailList;
 
 class DisplayConfig
 {
@@ -52,7 +85,7 @@ public:
     void write();
     void update(OutputConfig const& card);
     std::vector<OutputConfig> get_configs();
-    [[nodiscard]] std::optional<std::unique_ptr<mir::graphics::DisplayConfiguration>> configuration() const;
+    [[nodiscard]] OutputConfigDetailList configuration() const;
     void operator()(mir::Server& server);
 
 private:

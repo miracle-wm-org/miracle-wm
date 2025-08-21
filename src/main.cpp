@@ -119,6 +119,10 @@ int main(int argc, char const* argv[])
     } });
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
+    runner.add_stop_callback([display_config = display_config]() {
+
+    });
+
     return runner.run_with(
         { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar),
             wayland_extensions,

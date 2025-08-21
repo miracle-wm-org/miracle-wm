@@ -98,14 +98,14 @@ public:
     WlrOutputHeadV1(
         miral::Output const& output,
         mir::wayland::OutputManagerV1 const& parent,
-        mg::DisplayConfigurationOutput const& config);
+        OutputConfigDetails const& config);
     ~WlrOutputHeadV1() override;
     void send_initial();
-    void update(miral::Output const& updated, mg::DisplayConfigurationOutput const& updated_config);
+    void update(miral::Output const& updated, OutputConfigDetails const& updated_config);
     std::string name() const;
 
     miral::Output output;
-    mg::DisplayConfigurationOutput config;
+    OutputConfigDetails config;
     std::vector<std::shared_ptr<WlrOutputModeV1>> modes;
 
 private:
@@ -398,19 +398,12 @@ WlrOutputHeadV1 const* WlrOutputManagerV1::head(wl_resource* resource)
 
 void WlrOutputManagerV1::create_output_internal(miral::Output const& output)
 {
-    if (!config->configuration().has_value())
+    OutputConfigDetails output_config;
+    for (auto const& other_output_config : config->configuration())
     {
-        mir::log_error("Unable to create head because the display configuration is not set");
-        return;
+        if (other_output_config.name == output.name())
+            output_config = other_output_config;
     }
-
-    auto const display_config = config->configuration().value()->clone();
-    mg::DisplayConfigurationOutput output_config;
-    display_config->for_each_output([&](mg::DisplayConfigurationOutput const& config)
-    {
-        if (output.name() == config.name)
-            output_config = config;
-    });
 
     heads.push_back(std::make_shared<WlrOutputHeadV1>(output, *this, output_config));
     send_head_event(heads.back()->resource);
@@ -431,13 +424,12 @@ void WlrOutputManagerV1::advise_output_update(miral::Output const& updated, mira
     {
         if (head->output.id() == original.id())
         {
-            auto const display_config = config->configuration().value()->clone();
-            mg::DisplayConfigurationOutput output_config;
-            display_config->for_each_output([&](mg::DisplayConfigurationOutput const& config)
+            OutputConfigDetails output_config;
+            for (auto const& other_output_config : config->configuration())
             {
-                if (updated.name() == config.name)
-                    output_config = config;
-            });
+                if (other_output_config.name == updated.name())
+                    output_config = other_output_config;
+            }
 
             head->update(updated, output_config);
             break;
@@ -472,10 +464,10 @@ void WlrOutputManagerV1::stop()
 WlrOutputHeadV1::WlrOutputHeadV1(
     miral::Output const& output,
     mir::wayland::OutputManagerV1 const& parent,
-    mg::DisplayConfigurationOutput const& config) :
+    OutputConfigDetails const& config) :
     OutputHeadV1(parent),
     output { output },
-    config { std::move(config) }
+    config { config }
 {
 }
 
@@ -523,7 +515,7 @@ void WlrOutputHeadV1::send_initial()
     // TODO: Send the adapative_sync_event via send_adapative_sync_event
 }
 
-void WlrOutputHeadV1::update(miral::Output const& updated, mg::DisplayConfigurationOutput const& updated_config)
+void WlrOutputHeadV1::update(miral::Output const& updated, OutputConfigDetails const& updated_config)
 {
     if (is_defunct)
         return;
