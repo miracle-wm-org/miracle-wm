@@ -95,6 +95,14 @@ namespace test
 #endif
 #ifdef MIR_VERSION_2_22_OR_GREATER
         MOCK_METHOD(void, set_mirror_mode, (MirMirrorMode), (override));
+        MOCK_METHOD(mir::geometry::Width, min_width, (), (const, override));
+        MOCK_METHOD(mir::geometry::Width, max_width, (), (const, override));
+        MOCK_METHOD(mir::geometry::Height, min_height, (), (const, override));
+        MOCK_METHOD(mir::geometry::Height, max_height, (), (const, override));
+        MOCK_METHOD(void, set_min_width, (mir::geometry::Width), (override));
+        MOCK_METHOD(void, set_max_width, (mir::geometry::Width), (override));
+        MOCK_METHOD(void, set_min_height, (mir::geometry::Height), (override));
+        MOCK_METHOD(void, set_max_height, (mir::geometry::Height), (override));
 #endif
     };
 

@@ -293,6 +293,15 @@ public:
     void set_mirror_mode(MirMirrorMode) override
     {
     }
+
+    auto min_width() const -> mir::geometry::Width override { return mir::geometry::Width { 0 }; }
+    auto max_width() const -> mir::geometry::Width override { return mir::geometry::Width { 0 }; }
+    auto min_height() const -> mir::geometry::Height override { return mir::geometry::Height { 0 }; }
+    auto max_height() const -> mir::geometry::Height override { return mir::geometry::Height { 0 }; }
+    void set_min_width(mir::geometry::Width width) override { }
+    void set_max_width(mir::geometry::Width width) override { }
+    void set_min_height(mir::geometry::Height height) override { }
+    void set_max_height(mir::geometry::Height height) override { }
 #endif
 };
 }

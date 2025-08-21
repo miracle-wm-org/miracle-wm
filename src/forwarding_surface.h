@@ -105,7 +105,15 @@ public:
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
 #endif
 #ifdef MIR_VERSION_2_22_OR_GREATER
-    void set_mirror_mode(MirMirrorMode mirror_mode) { surface_->set_mirror_mode(mirror_mode); }
+    void set_mirror_mode(MirMirrorMode mirror_mode) override { surface_->set_mirror_mode(mirror_mode); }
+    auto min_width() const -> mir::geometry::Width override { return surface_->min_width(); }
+    auto max_width() const -> mir::geometry::Width override { return surface_->max_width(); }
+    auto min_height() const -> mir::geometry::Height override { return surface_->min_height(); }
+    auto max_height() const -> mir::geometry::Height override { return surface_->max_height(); }
+    void set_min_width(mir::geometry::Width width) override { surface_->set_min_width(width); }
+    void set_max_width(mir::geometry::Width width) override { surface_->set_max_width(width); }
+    void set_min_height(mir::geometry::Height height) override { surface_->set_min_height(height); }
+    void set_max_height(mir::geometry::Height height) override { surface_->set_max_height(height); }
 #endif
 
 private:
