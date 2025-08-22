@@ -99,6 +99,51 @@ std::optional<miracle::AnimationType> from_string_animation_type(std::string con
     return std::nullopt;
 }
 
+std::optional<MirPointerHandedness> from_string_handedness(std::string const& str, ParsingContext&)
+{
+    if (str == "left")
+        return mir_pointer_handedness_left;
+    else
+        return mir_pointer_handedness_right;
+}
+
+std::string to_string_handedness(MirPointerHandedness handedness)
+{
+    switch (handedness)
+    {
+    case mir_pointer_handedness_left:
+        return "left";
+    default:
+    case mir_pointer_handedness_right:
+        return "right";
+    }
+}
+
+std::optional<MirPointerAcceleration> from_string_acceleration(std::string const& str, ParsingContext&)
+{
+    if (str == "adaptive")
+        return mir_pointer_acceleration_adaptive;
+    else
+        return mir_pointer_acceleration_none;
+}
+
+std::string to_string_acceleration(MirPointerAcceleration acceleration)
+{
+    switch (acceleration)
+    {
+    case mir_pointer_acceleration_adaptive:
+        return "adaptive";
+    default:
+    case mir_pointer_acceleration_none:
+        return "none";
+    }
+}
+
+bool are_mouse_configs_same(miral::InputConfiguration::Mouse const& first, miral::InputConfiguration::Mouse const& second)
+{
+    return first.handedness() == second.handedness() && first.acceleration() == second.acceleration() && first.acceleration_bias() == second.acceleration_bias() && first.vscroll_speed() == second.vscroll_speed() && first.hscroll_speed() == second.hscroll_speed();
+}
+
 int program_exists(std::string const& name)
 {
     std::stringstream out;
@@ -678,6 +723,38 @@ void read_drag_and_drop(YAML::Node const& node, ParsingContext& context)
         context.result.config.drag_and_drop.modifiers = modifiers;
     }
 }
+
+void read_mouse(YAML::Node const& node, ParsingContext& context)
+{
+    auto const handedness = try_parse_string_to_optional_value<std::optional<MirPointerHandedness>>(
+        node,
+        "handedness",
+        from_string_handedness,
+        context);
+    context.result.config.mouse_configuration.handedness(handedness);
+
+    double vscroll_speed;
+    if (try_parse_value(node, "vscroll_speed", vscroll_speed, context, true))
+        context.result.config.mouse_configuration.vscroll_speed(vscroll_speed);
+
+    double hscroll_speed;
+    if (try_parse_value(node, "hscroll_speed", hscroll_speed, context, true))
+        context.result.config.mouse_configuration.hscroll_speed(hscroll_speed);
+
+    double acceleration_bias;
+    if (try_parse_value(node, "acceleration_bias", acceleration_bias, context, true))
+    {
+        acceleration_bias = std::clamp(acceleration_bias, -1.0, 1.0);
+        context.result.config.mouse_configuration.acceleration_bias(acceleration_bias);
+    }
+
+    auto const acceleration = try_parse_string_to_optional_value<std::optional<MirPointerAcceleration>>(
+        node,
+        "acceleration",
+        from_string_acceleration,
+        context);
+    context.result.config.mouse_configuration.acceleration(acceleration);
+}
 }
 
 miracle::ConfigData::ConfigData()
@@ -722,6 +799,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_move_modifier(config["move_modifier"], context);
         if (config["drag_and_drop"])
             read_drag_and_drop(config["drag_and_drop"], context);
+        if (config["mouse"])
+            read_mouse(config["mouse"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -985,6 +1064,23 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+    // Save mouse config only if we're different from the empty mouse config
+    if (!are_mouse_configs_same(config.mouse_configuration, miral::InputConfiguration::Mouse()))
+    {
+        out << YAML::Key << "mouse" << YAML::Value << YAML::BeginMap;
+        if (config.mouse_configuration.handedness() != std::nullopt)
+            out << YAML::Key << "handedness" << YAML::Value << to_string_handedness(config.mouse_configuration.handedness().value());
+        if (config.mouse_configuration.vscroll_speed() != std::nullopt)
+            out << YAML::Key << "vscroll_speed" << YAML::Value << config.mouse_configuration.vscroll_speed().value();
+        if (config.mouse_configuration.hscroll_speed() != std::nullopt)
+            out << YAML::Key << "hscroll_speed" << YAML::Value << config.mouse_configuration.hscroll_speed().value();
+        if (config.mouse_configuration.acceleration_bias() != std::nullopt)
+            out << YAML::Key << "acceleration_bias" << YAML::Value << config.mouse_configuration.acceleration_bias().value();
+        if (config.mouse_configuration.acceleration() != std::nullopt)
+            out << YAML::Key << "acceleration" << YAML::Value << to_string_acceleration(config.mouse_configuration.acceleration().value());
+    }
+
+    // Closing line
     out << YAML::EndMap;
 
     try

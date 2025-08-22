@@ -602,6 +602,24 @@ TEST_F(CAPIWrapperTest, DragAndDropConfig)
         mir_input_event_modifier_meta | mir_input_event_modifier_shift);
 }
 
+TEST_F(CAPIWrapperTest, MouseConfig)
+{
+    miracle_config_set_mouse_config(
+        &wrapper->config,
+        mir_pointer_handedness_right,
+        0.3,
+        0.4,
+        0.5,
+        mir_pointer_acceleration_adaptive);
+
+    auto const mouse = miracle_config_get_mouse_config(&wrapper->config);
+    EXPECT_EQ(mouse.handedness, mir_pointer_handedness_right);
+    EXPECT_EQ(mouse.acceleration_bias, 0.3);
+    EXPECT_EQ(mouse.vscroll_speed, 0.4);
+    EXPECT_EQ(mouse.hscroll_speed, 0.5);
+    EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -652,6 +670,13 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         mir_input_event_modifier_meta,
         KEY_F,
         "test-command");
+    miracle_config_set_mouse_config(
+        &wrapper->config,
+        mir_pointer_handedness_right,
+        0.3,
+        0.4,
+        0.5,
+        mir_pointer_acceleration_adaptive);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -678,6 +703,13 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(cmd.modifiers, mir_input_event_modifier_meta);
     EXPECT_EQ(cmd.key, KEY_F);
     EXPECT_STREQ(cmd.command, "test-command");
+
+    auto const mouse = miracle_config_get_mouse_config(loaded_config);
+    EXPECT_EQ(mouse.handedness, mir_pointer_handedness_right);
+    EXPECT_EQ(mouse.acceleration_bias, 0.3);
+    EXPECT_EQ(mouse.vscroll_speed, 0.4);
+    EXPECT_EQ(mouse.hscroll_speed, 0.5);
+    EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 
     // Clean up
     miracle_config_free(load_result);

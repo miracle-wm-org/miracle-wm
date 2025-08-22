@@ -255,6 +255,40 @@ extern "C"
         };
     }
 
+    uint miracle_config_get_handedness_options_count()
+    {
+        return static_cast<uint>(mir_pointer_handedness_left + 1);
+    }
+
+    miracle_config_option_t miracle_config_get_handedness_option(uint i)
+    {
+        switch (i)
+        {
+        case mir_pointer_handedness_left:
+            return { "left", i };
+        case mir_pointer_handedness_right:
+        default:
+            return { "right", i };
+        }
+    }
+
+    uint miracle_config_get_acceleration_options_count()
+    {
+        return static_cast<uint>(mir_pointer_acceleration_adaptive + 1);
+    }
+
+    miracle_config_option_t miracle_config_get_acceleration_option(uint i)
+    {
+        switch (i)
+        {
+        case mir_pointer_acceleration_adaptive:
+            return { "adapative", i };
+        case mir_pointer_acceleration_none:
+        default:
+            return { "none", i };
+        }
+    }
+
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
         auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
@@ -908,6 +942,34 @@ extern "C"
         auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
         data->drag_and_drop.enabled = enabled;
         data->drag_and_drop.modifiers = modifiers;
+    }
+
+    miracle_mouse_config_t miracle_config_get_mouse_config(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->mouse_configuration.handedness().value_or(mir_pointer_handedness_right),
+            data->mouse_configuration.acceleration_bias().value_or(0.0),
+            data->mouse_configuration.vscroll_speed().value_or(1.0),
+            data->mouse_configuration.hscroll_speed().value_or(1.0),
+            data->mouse_configuration.acceleration().value_or(mir_pointer_acceleration_none)
+        };
+    }
+
+    void miracle_config_set_mouse_config(
+        miracle_config_data_t* config,
+        MirPointerHandedness handedness,
+        double acceleration_bias,
+        double vscroll_speed,
+        double hscroll_speed,
+        MirPointerAcceleration acceleration)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->mouse_configuration.handedness(handedness);
+        data->mouse_configuration.acceleration_bias(acceleration_bias);
+        data->mouse_configuration.vscroll_speed(vscroll_speed);
+        data->mouse_configuration.hscroll_speed(hscroll_speed);
+        data->mouse_configuration.acceleration(acceleration);
     }
 
 } // extern "C"

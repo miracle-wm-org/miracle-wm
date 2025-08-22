@@ -89,6 +89,7 @@ int main(int argc, char const* argv[])
     auto display_config = std::make_shared<miracle::DisplayConfig>();
 
     ExternalClientLauncher external_client_launcher;
+    InputConfiguration input_configuration;
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
     for (auto const& env : config->get_env_variables())
@@ -96,16 +97,37 @@ int main(int argc, char const* argv[])
         setenv(env.key.c_str(), env.value.c_str(), 1);
     }
 
+    class InputConfigurationConfigObserver : public miracle::ConfigObserver
+    {
+    public:
+        InputConfigurationConfigObserver(InputConfiguration& input_configuration) :
+            input_configuration(input_configuration)
+        {
+        }
+
+        void on_config_changed(miracle::Config const& config) override
+        {
+            printf("CHANGED\n");
+            input_configuration.mouse(config.mouse());
+        }
+
+    private:
+        InputConfiguration& input_configuration;
+    };
+
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration);
+    config_observer_registrar->register_interest(input_config_observer);
+
     Keymap config_keymap;
     WaylandExtensions wayland_extensions = WaylandExtensions {}
-                                               .enable(miral::WaylandExtensions::zwlr_layer_shell_v1)
-                                               .enable(miral::WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
-                                               .enable(miral::WaylandExtensions::zxdg_output_manager_v1)
-                                               .enable(miral::WaylandExtensions::zwp_virtual_keyboard_manager_v1)
-                                               .enable(miral::WaylandExtensions::zwlr_virtual_pointer_manager_v1)
-                                               .enable(miral::WaylandExtensions::zwp_input_method_manager_v2)
-                                               .enable(miral::WaylandExtensions::zwlr_screencopy_manager_v1)
-                                               .enable(miral::WaylandExtensions::ext_session_lock_manager_v1);
+                                               .enable(WaylandExtensions::zwlr_layer_shell_v1)
+                                               .enable(WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
+                                               .enable(WaylandExtensions::zxdg_output_manager_v1)
+                                               .enable(WaylandExtensions::zwp_virtual_keyboard_manager_v1)
+                                               .enable(WaylandExtensions::zwlr_virtual_pointer_manager_v1)
+                                               .enable(WaylandExtensions::zwp_input_method_manager_v2)
+                                               .enable(WaylandExtensions::zwlr_screencopy_manager_v1)
+                                               .enable(WaylandExtensions::ext_session_lock_manager_v1);
 
     for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);
@@ -126,6 +148,7 @@ int main(int argc, char const* argv[])
             config_keymap,
             *display_config,
             external_client_launcher,
+            input_configuration,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);

@@ -1,5 +1,6 @@
 find_package(PkgConfig)
 pkg_check_modules(MIRCORE mircore REQUIRED)
+pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
@@ -22,10 +23,12 @@ set_target_properties(miracle-wm-config PROPERTIES
 
 target_include_directories(miracle-wm-config PUBLIC SYSTEM
     include
-    ${MIRCORE_INCLUDE_DIRS})
+    ${MIRCORE_INCLUDE_DIRS}
+    ${MIRAL_INCLUDE_DIRS})
 
 target_link_libraries(miracle-wm-config
     ${MIRCORE_LDFLAGS}
+    ${MIRAL_LDFLAGS}
     PkgConfig::YAML
     PkgConfig::LIBEVDEV
     PkgConfig::GLIB)

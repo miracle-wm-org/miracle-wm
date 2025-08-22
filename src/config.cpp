@@ -254,6 +254,12 @@ uint FilesystemConfiguration::get_primary_button() const
     return options.primary_button;
 }
 
+miral::InputConfiguration::Mouse FilesystemConfiguration::mouse() const
+{
+    std::lock_guard lock(mutex);
+    return options.mouse_configuration;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
