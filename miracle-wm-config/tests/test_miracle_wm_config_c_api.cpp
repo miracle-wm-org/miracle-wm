@@ -606,17 +606,17 @@ TEST_F(CAPIWrapperTest, MouseConfig)
 {
     miracle_config_set_mouse_config(
         &wrapper->config,
-        mir_pointer_handedness_right,
-        0.3,
-        0.4,
+        mir_pointer_handedness_left,
         0.5,
+        2.0,
+        3.0,
         mir_pointer_acceleration_adaptive);
 
     auto const mouse = miracle_config_get_mouse_config(&wrapper->config);
-    EXPECT_EQ(mouse.handedness, mir_pointer_handedness_right);
-    EXPECT_EQ(mouse.acceleration_bias, 0.3);
-    EXPECT_EQ(mouse.vscroll_speed, 0.4);
-    EXPECT_EQ(mouse.hscroll_speed, 0.5);
+    EXPECT_EQ(mouse.handedness, mir_pointer_handedness_left);
+    EXPECT_EQ(mouse.acceleration_bias, 0.5);
+    EXPECT_EQ(mouse.vscroll_speed, 2.0);
+    EXPECT_EQ(mouse.hscroll_speed, 3.0);
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 }
 

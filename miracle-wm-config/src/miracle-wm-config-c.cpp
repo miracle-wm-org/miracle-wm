@@ -964,7 +964,7 @@ extern "C"
         double hscroll_speed,
         MirPointerAcceleration acceleration)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->mouse_configuration.handedness(handedness);
         data->mouse_configuration.acceleration_bias(acceleration_bias);
         data->mouse_configuration.vscroll_speed(vscroll_speed);
