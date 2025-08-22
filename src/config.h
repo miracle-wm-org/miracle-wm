@@ -70,9 +70,9 @@ public:
     [[nodiscard]] virtual LayoutScheme get_default_layout_scheme() const = 0;
     [[nodiscard]] virtual DragAndDropConfiguration drag_and_drop() const = 0;
     [[nodiscard]] virtual uint move_modifier() const = 0;
-
     [[nodiscard]] virtual uint get_primary_modifier() const = 0;
     [[nodiscard]] virtual uint get_primary_button() const = 0;
+    [[nodiscard]] virtual miral::InputConfiguration::Mouse mouse() const = 0;
     uint process_modifier(uint modifier) const;
 };
 
@@ -108,6 +108,7 @@ public:
     [[nodiscard]] uint move_modifier() const override;
     [[nodiscard]] uint get_primary_modifier() const override;
     [[nodiscard]] uint get_primary_button() const override;
+    [[nodiscard]] miral::InputConfiguration::Mouse mouse() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

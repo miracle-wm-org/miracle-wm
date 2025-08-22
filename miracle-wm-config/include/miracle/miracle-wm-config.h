@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <glm/glm.hpp>
 #include <mir_toolkit/events/enums.h>
+#include <miral/input_configuration.h>
 #include <optional>
 #include <string>
 #include <vector>
@@ -117,6 +118,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     std::vector<WorkspaceConfig> workspace_configs;
     uint move_modifier = miracle_input_event_modifier_default;
     DragAndDropConfiguration drag_and_drop;
+    miral::InputConfiguration::Mouse mouse_configuration;
 };
 
 enum class ErrorLevel

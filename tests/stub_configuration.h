@@ -119,6 +119,11 @@ namespace test
             return mir_pointer_button_primary;
         }
 
+        miral::InputConfiguration::Mouse mouse() const override
+        {
+            return miral::InputConfiguration::Mouse {};
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

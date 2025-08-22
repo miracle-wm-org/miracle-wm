@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_CONFIG_C_H
 #define MIRACLE_WM_CONFIG_C_H
 
-#include <stdint.h>
+#include <mir_toolkit/mir_input_device_types.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -83,6 +83,10 @@ extern "C"
     miracle_config_option_t miracle_config_get_ease_function_option(uint i);
     uint miracle_config_get_layout_options_count();
     miracle_config_option_t miracle_config_get_layout_option(uint i);
+    uint miracle_config_get_handedness_options_count();
+    miracle_config_option_t miracle_config_get_handedness_option(uint i);
+    uint miracle_config_get_acceleration_options_count();
+    miracle_config_option_t miracle_config_get_acceleration_option(uint i);
 
     const char* miracle_config_path();
 
@@ -343,6 +347,25 @@ extern "C"
         miracle_config_data_t* config,
         bool enabled,
         uint modifiers);
+
+    // Mouse configuration
+    typedef struct
+    {
+        MirPointerHandedness handedness;
+        double acceleration_bias;
+        double vscroll_speed;
+        double hscroll_speed;
+        MirPointerAcceleration acceleration;
+    } miracle_mouse_config_t;
+
+    miracle_mouse_config_t miracle_config_get_mouse_config(const miracle_config_data_t* config);
+    void miracle_config_set_mouse_config(
+        miracle_config_data_t* config,
+        MirPointerHandedness handedness,
+        double acceleration_bias,
+        double vscroll_speed,
+        double hscroll_speed,
+        MirPointerAcceleration acceleration);
 
 #ifdef __cplusplus
 }
