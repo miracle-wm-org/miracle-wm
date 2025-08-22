@@ -1,5 +1,6 @@
 find_package(PkgConfig)
 pkg_check_modules(MIRCORE mircore REQUIRED)
+pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
@@ -65,6 +66,7 @@ add_executable(test_miracle_wm_config_c_api
 target_include_directories(test_miracle_wm_config_c_api PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${MIRCORE_INCLUDE_DIRS}
+    ${MIRSERVER_INCLUDE_DIRS}
     ${GTEST_INCLUDE_DIRS}
     ${GMOCK_INCLUDE_DIRS}
 )
@@ -74,6 +76,7 @@ target_link_libraries(test_miracle_wm_config_c_api
     GTest::GTest
     GTest::Main
     ${MIRCORE_LDFLAGS}
+    ${MIRSERVER_LDFLAGS}
 )
 
 add_test(NAME test_miracle_wm_config_c_api COMMAND test_miracle_wm_config_c_api)

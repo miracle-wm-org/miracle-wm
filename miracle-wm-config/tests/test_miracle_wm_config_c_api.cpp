@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <linux/input-event-codes.h>
+#include <mir/version.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 
@@ -615,8 +616,13 @@ TEST_F(CAPIWrapperTest, MouseConfig)
     auto const mouse = miracle_config_get_mouse_config(&wrapper->config);
     EXPECT_EQ(mouse.handedness, mir_pointer_handedness_left);
     EXPECT_EQ(mouse.acceleration_bias, 0.5);
+
+    // This is to fix tests on older systems that are afflicted by
+    // https://github.com/canonical/mir/commit/cef548009d8a2933bea8d500e5421e81257317e0
+#if MIR_SERVER_VERSION >= MIR_VERSION_NUMBER(2, 21, 1)
     EXPECT_EQ(mouse.vscroll_speed, 2.0);
     EXPECT_EQ(mouse.hscroll_speed, 3.0);
+#endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 }
 
@@ -707,8 +713,12 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     auto const mouse = miracle_config_get_mouse_config(loaded_config);
     EXPECT_EQ(mouse.handedness, mir_pointer_handedness_right);
     EXPECT_EQ(mouse.acceleration_bias, 0.3);
+    // This is to fix tests on older systems that are afflicted by
+    // https://github.com/canonical/mir/commit/cef548009d8a2933bea8d500e5421e81257317e0
+#if MIR_SERVER_VERSION >= MIR_VERSION_NUMBER(2, 21, 1)
     EXPECT_EQ(mouse.vscroll_speed, 0.4);
     EXPECT_EQ(mouse.hscroll_speed, 0.5);
+#endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 
     // Clean up
