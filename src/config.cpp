@@ -266,16 +266,7 @@ std::optional<std::string> FilesystemConfiguration::keymap() const
     if (!options.keymap)
         return std::nullopt;
 
-    std::stringstream ss;
-    ss << options.keymap->language;
-    if (options.keymap->variant)
-    {
-        ss << "+" << *options.keymap->variant;
-        for (auto const& option : options.keymap->options)
-            ss << "+" << option;
-    }
-
-    return ss.str();
+    return options.keymap->to_string();
 }
 
 std::string const& FilesystemConfiguration::get_filename() const

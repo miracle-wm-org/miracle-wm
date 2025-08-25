@@ -104,6 +104,8 @@ struct MIRACLE_WM_CONFIG_API KeymapConfiguration
     std::string language;
     std::optional<std::string> variant;
     std::vector<std::string> options;
+
+    [[nodiscard]] std::string to_string() const;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData

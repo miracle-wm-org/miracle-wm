@@ -1201,3 +1201,17 @@ std::string miracle::get_display_config_path()
     config_path_stream << "/miracle-wm/display.yaml";
     return config_path_stream.str();
 }
+
+std::string miracle::KeymapConfiguration::to_string() const
+{
+    std::stringstream ss;
+    ss << language;
+    if (variant)
+    {
+        ss << "+" << *variant;
+        for (auto const& option : options)
+            ss << "+" << option;
+    }
+
+    return ss.str();
+}
