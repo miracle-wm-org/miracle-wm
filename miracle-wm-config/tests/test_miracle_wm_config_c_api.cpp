@@ -626,6 +626,57 @@ TEST_F(CAPIWrapperTest, MouseConfig)
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 }
 
+TEST_F(CAPIWrapperTest, CanSetKeymap)
+{
+    miracle_config_set_keymap(
+        &wrapper->config,
+        true,
+        "fr",
+        true,
+        "dvorak");
+
+    auto const keymap = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_TRUE(keymap.is_set);
+    EXPECT_STREQ(keymap.language, "fr");
+    EXPECT_TRUE(keymap.has_variant);
+    EXPECT_STREQ(keymap.variant, "dvorak");
+}
+TEST_F(CAPIWrapperTest, CanSetKeymapOption)
+{
+    miracle_config_set_keymap(
+        &wrapper->config,
+        true,
+        "fr",
+        true,
+        "dvorak");
+
+    miracle_config_add_keymap_option(
+        &wrapper->config,
+        "hi");
+    miracle_config_add_keymap_option(
+        &wrapper->config,
+        "bye");
+    auto keymap = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_EQ(keymap.options_count, 2);
+
+    miracle_config_set_keymap_option(
+        &wrapper->config,
+        0,
+        "x");
+    auto option = miracle_config_get_keymap_option(
+        &wrapper->config,
+        0);
+    EXPECT_STREQ(option, "x");
+
+    miracle_config_remove_keymap_option(&wrapper->config, 0);
+    keymap = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_EQ(keymap.options_count, 1);
+    option = miracle_config_get_keymap_option(
+        &wrapper->config,
+        0);
+    EXPECT_STREQ(option, "bye");
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -683,6 +734,15 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         0.4,
         0.5,
         mir_pointer_acceleration_adaptive);
+    miracle_config_set_keymap(
+        &wrapper->config,
+        true,
+        "fr",
+        true,
+        "dvorak");
+    miracle_config_add_keymap_option(
+        &wrapper->config,
+        "hi");
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -720,6 +780,14 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(mouse.hscroll_speed, 0.5);
 #endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
+
+    auto const keymap = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_TRUE(keymap.is_set);
+    EXPECT_STREQ(keymap.language, "fr");
+    EXPECT_TRUE(keymap.has_variant);
+    EXPECT_STREQ(keymap.variant, "dvorak");
+    EXPECT_EQ(keymap.options_count, 1);
+    EXPECT_STREQ(miracle_config_get_keymap_option(&wrapper->config, 0), "hi");
 
     // Clean up
     miracle_config_free(load_result);

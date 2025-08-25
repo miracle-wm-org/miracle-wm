@@ -367,6 +367,32 @@ extern "C"
         double hscroll_speed,
         MirPointerAcceleration acceleration);
 
+    // Defines the keymap for the keyboard.
+    typedef struct
+    {
+        // If true, this means that the keymap is used.
+        bool is_set;
+        const char* language;
+        bool has_variant;
+        const char* variant;
+        size_t options_count;
+    } miracle_keymap_t;
+
+    miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config);
+    void miracle_config_set_keymap(
+        miracle_config_data_t* config,
+        bool is_set,
+        const char* language,
+        bool has_variant,
+        const char* variant);
+    const char* miracle_config_get_keymap_option(const miracle_config_data_t* config, size_t index);
+    void miracle_config_set_keymap_option(
+        miracle_config_data_t* config,
+        size_t index,
+        const char* option);
+    void miracle_config_add_keymap_option(miracle_config_data_t* config, const char* option);
+    void miracle_config_remove_keymap_option(miracle_config_data_t* config, size_t index);
+
 #ifdef __cplusplus
 }
 #endif

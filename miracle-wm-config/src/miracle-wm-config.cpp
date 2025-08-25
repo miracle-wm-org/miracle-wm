@@ -755,6 +755,51 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
         context);
     context.result.config.mouse_configuration.acceleration(acceleration);
 }
+
+void read_keyboard(YAML::Node const& node, ParsingContext& context)
+{
+    if (node["keymap"])
+    {
+        auto const& keymap_node = node["keymap"];
+        std::string language;
+        if (!try_parse_value(keymap_node, "language", language, context))
+        {
+            context.builder << "Expected 'language' to be provided under the 'keymap' key";
+            create_error(keymap_node, context);
+        }
+        else
+        {
+            context.result.config.keymap = miracle::KeymapConfiguration();
+            context.result.config.keymap->language = language;
+            std::string variant;
+            if (try_parse_value(keymap_node, "variant", variant, context))
+                context.result.config.keymap->variant = variant;
+            else
+                context.result.config.keymap->variant = std::nullopt;
+
+            context.result.config.keymap->options = {};
+            if (keymap_node["options"])
+            {
+                if (!keymap_node["options"].IsSequence())
+                {
+                    context.builder << "Expected 'options' to be a sequence";
+                    create_error(keymap_node["options"], context);
+                }
+                else
+                {
+                    for (auto const& option : keymap_node["options"])
+                    {
+                        std::string name;
+                        if (!try_parse_value(option, name, context))
+                            continue;
+
+                        context.result.config.keymap->options.emplace_back(name);
+                    }
+                }
+            }
+        }
+    }
+}
 }
 
 miracle::ConfigData::ConfigData()
@@ -801,6 +846,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_drag_and_drop(config["drag_and_drop"], context);
         if (config["mouse"])
             read_mouse(config["mouse"], context);
+        if (config["keyboard"])
+            read_keyboard(config["keyboard"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1068,6 +1115,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     if (!are_mouse_configs_same(config.mouse_configuration, miral::InputConfiguration::Mouse()))
     {
         out << YAML::Key << "mouse" << YAML::Value << YAML::BeginMap;
+
         if (config.mouse_configuration.handedness() != std::nullopt)
             out << YAML::Key << "handedness" << YAML::Value << to_string_handedness(config.mouse_configuration.handedness().value());
         if (config.mouse_configuration.vscroll_speed() != std::nullopt)
@@ -1078,6 +1126,24 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "acceleration_bias" << YAML::Value << config.mouse_configuration.acceleration_bias().value();
         if (config.mouse_configuration.acceleration() != std::nullopt)
             out << YAML::Key << "acceleration" << YAML::Value << to_string_acceleration(config.mouse_configuration.acceleration().value());
+
+        out << YAML::EndMap;
+    }
+
+    if (config.keymap)
+    {
+        out << YAML::Key << "keyboard" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "keymap" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "language" << YAML::Value << config.keymap->language;
+        if (config.keymap->variant)
+            out << YAML::Key << "variant" << YAML::Value << *config.keymap->variant;
+        out << YAML::Key << "options" << YAML::Value << YAML::BeginSeq;
+        for (auto const& option : config.keymap->options)
+            out << option;
+
+        out << YAML::EndSeq;
+        out << YAML::EndMap;
+        out << YAML::EndMap;
     }
 
     // Closing line
