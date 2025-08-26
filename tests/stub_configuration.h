@@ -124,6 +124,11 @@ namespace test
             return miral::InputConfiguration::Mouse {};
         }
 
+        std::optional<std::string> keymap() const override
+        {
+            return std::nullopt;
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

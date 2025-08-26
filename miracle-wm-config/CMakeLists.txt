@@ -61,6 +61,7 @@ install(
 # Tests
 add_executable(test_miracle_wm_config_c_api
     tests/test_miracle_wm_config_c_api.cpp
+    tests/test_miracle_wm_config.cpp
 )
 
 target_include_directories(test_miracle_wm_config_c_api PRIVATE

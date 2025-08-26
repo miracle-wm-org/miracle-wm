@@ -972,4 +972,71 @@ extern "C"
         data->mouse_configuration.acceleration(acceleration);
     }
 
+    miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        if (!data->keymap)
+            return { .is_set = false };
+
+        return {
+            .is_set = true,
+            .language = data->keymap->language.c_str(),
+            .has_variant = data->keymap->variant.has_value(),
+            .variant = data->keymap->variant ? data->keymap->variant->c_str() : "",
+            .options_count = data->keymap->options.size()
+        };
+    }
+
+    void miracle_config_set_keymap(
+        miracle_config_data_t* config,
+        bool is_set,
+        const char* language,
+        bool has_variant,
+        const char* variant)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (!is_set)
+            data->keymap = std::nullopt;
+        else if (!data->keymap)
+            data->keymap = miracle::KeymapConfiguration();
+
+        if (!data->keymap)
+            return;
+
+        data->keymap->language = language;
+        data->keymap->variant = has_variant ? variant : std::optional<std::string>();
+    }
+
+    const char* miracle_config_get_keymap_option(const miracle_config_data_t* config, size_t index)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        if (index >= data->keymap->options.size())
+            return nullptr;
+        return data->keymap->options[index].c_str();
+    }
+
+    void miracle_config_set_keymap_option(
+        miracle_config_data_t* config,
+        size_t index,
+        const char* option)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->keymap->options.size())
+            return;
+        data->keymap->options[index] = option;
+    }
+
+    void miracle_config_add_keymap_option(miracle_config_data_t* config, const char* option)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->keymap->options.push_back(option);
+    }
+    void miracle_config_remove_keymap_option(miracle_config_data_t* config, size_t index)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->keymap->options.size())
+            return;
+        data->keymap->options.erase(data->keymap->options.begin() + index);
+    }
+
 } // extern "C"

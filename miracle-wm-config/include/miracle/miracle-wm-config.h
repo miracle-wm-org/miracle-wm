@@ -99,6 +99,15 @@ struct MIRACLE_WM_CONFIG_API DragAndDropConfiguration
     uint modifiers = miracle_input_event_modifier_default | mir_input_event_modifier_shift;
 };
 
+struct MIRACLE_WM_CONFIG_API KeymapConfiguration
+{
+    std::string language;
+    std::optional<std::string> variant;
+    std::vector<std::string> options;
+
+    [[nodiscard]] std::string to_string() const;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -119,6 +128,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     uint move_modifier = miracle_input_event_modifier_default;
     DragAndDropConfiguration drag_and_drop;
     miral::InputConfiguration::Mouse mouse_configuration;
+    std::optional<KeymapConfiguration> keymap;
 };
 
 enum class ErrorLevel

@@ -260,6 +260,15 @@ miral::InputConfiguration::Mouse FilesystemConfiguration::mouse() const
     return options.mouse_configuration;
 }
 
+std::optional<std::string> FilesystemConfiguration::keymap() const
+{
+    std::lock_guard lock(mutex);
+    if (!options.keymap)
+        return std::nullopt;
+
+    return options.keymap->to_string();
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

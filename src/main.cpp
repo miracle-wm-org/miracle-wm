@@ -100,25 +100,28 @@ int main(int argc, char const* argv[])
     class InputConfigurationConfigObserver : public miracle::ConfigObserver
     {
     public:
-        InputConfigurationConfigObserver(InputConfiguration& input_configuration) :
-            input_configuration(input_configuration)
+        InputConfigurationConfigObserver(InputConfiguration const& input_configuration, Keymap const& keymap) :
+            input_configuration(input_configuration),
+            keymap(keymap)
         {
         }
 
         void on_config_changed(miracle::Config const& config) override
         {
-            printf("CHANGED\n");
             input_configuration.mouse(config.mouse());
+            if (auto const keymap_val = config.keymap())
+                keymap.set_keymap(keymap_val.value());
         }
 
     private:
-        InputConfiguration& input_configuration;
+        InputConfiguration input_configuration;
+        Keymap keymap;
     };
 
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration);
+    Keymap keymap;
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap);
     config_observer_registrar->register_interest(input_config_observer);
 
-    Keymap config_keymap;
     WaylandExtensions wayland_extensions = WaylandExtensions {}
                                                .enable(WaylandExtensions::zwlr_layer_shell_v1)
                                                .enable(WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
@@ -145,7 +148,7 @@ int main(int argc, char const* argv[])
         { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
-            config_keymap,
+            keymap,
             *display_config,
             external_client_launcher,
             input_configuration,
