@@ -769,6 +769,8 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
 
     if (try_parse_value(node, "repeat_rate", repeat_rate, context, true))
         keyboard_config.set_repeat_rate(repeat_rate);
+
+    context.result.config.keyboard_configuration = keyboard_config;
 #endif
 
     if (node["keymap"])
