@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/miracle-wm-config.h"
 #include "miracle/animation_definition_internal.h"
 #include "miracle/gaps.h"
+#include "miracle/keyboard.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -764,7 +765,7 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
     int repeat_delay = 0;
     int repeat_rate = 0;
     if (try_parse_value(node, "repeat_delay", repeat_delay, context, true))
-        keyboard_config.m(repeat_delay);
+        keyboard_config.set_repeat_delay(repeat_delay);
 
     if (try_parse_value(node, "repeat_rate", repeat_rate, context, true))
         keyboard_config.set_repeat_rate(repeat_rate);
@@ -1142,14 +1143,20 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     if (config.keymap || config.keyboard_configuration.repeat_delay() || config.keyboard_configuration.repeat_rate())
+#else
+    if (config.keymap)
+#endif
     {
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
         out << YAML::Key << "keyboard" << YAML::Value << YAML::BeginMap;
         if (config.keyboard_configuration.repeat_delay())
             out << YAML::Key << "repeat_delay" << YAML::Value << *config.keyboard_configuration.repeat_delay();
 
         if (config.keyboard_configuration.repeat_rate())
             out << YAML::Key << "repeat_rate" << YAML::Value << *config.keyboard_configuration.repeat_rate();
+#endif
 
         if (config.keymap)
         {

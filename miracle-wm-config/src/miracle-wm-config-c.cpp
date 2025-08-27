@@ -1,5 +1,6 @@
 #include <miracle/animation_definition_internal.h>
 #include <miracle/default_key_command.h>
+#include <miracle/keyboard.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
