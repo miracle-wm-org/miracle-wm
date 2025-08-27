@@ -1,4 +1,4 @@
-name: Build & Test - Fedora
+name: Build & Test - Fedora 42
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt-get -y install podman
-          podman pull fedora:41
+          podman pull fedora:42
       - name: Get source
         uses: actions/checkout@v3
         with:
@@ -27,7 +27,7 @@ jobs:
       - name: Create container and run tests
         run: |
           {
-              echo 'FROM fedora:41'
+              echo 'FROM fedora:42'
               echo '# set TZ to ensure the test using timestamp'
               echo 'ENV TZ=America/New_York'
               echo 'RUN dnf -y update'
