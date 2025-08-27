@@ -260,6 +260,12 @@ miral::InputConfiguration::Mouse FilesystemConfiguration::mouse() const
     return options.mouse_configuration;
 }
 
+miral::InputConfiguration::Keyboard FilesystemConfiguration::keyboard() const
+{
+    std::lock_guard lock(mutex);
+    return options.keyboard_configuration;
+}
+
 std::optional<std::string> FilesystemConfiguration::keymap() const
 {
     std::lock_guard lock(mutex);

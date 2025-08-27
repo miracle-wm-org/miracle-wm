@@ -128,6 +128,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     uint move_modifier = miracle_input_event_modifier_default;
     DragAndDropConfiguration drag_and_drop;
     miral::InputConfiguration::Mouse mouse_configuration;
+    miral::InputConfiguration::Keyboard keyboard_configuration;
     std::optional<KeymapConfiguration> keymap;
 };
 

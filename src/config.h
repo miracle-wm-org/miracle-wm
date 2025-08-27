@@ -73,6 +73,7 @@ public:
     [[nodiscard]] virtual uint get_primary_modifier() const = 0;
     [[nodiscard]] virtual uint get_primary_button() const = 0;
     [[nodiscard]] virtual miral::InputConfiguration::Mouse mouse() const = 0;
+    [[nodiscard]] virtual miral::InputConfiguration::Keyboard keyboard() const = 0;
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
     uint process_modifier(uint modifier) const;
 };
@@ -110,6 +111,7 @@ public:
     [[nodiscard]] uint get_primary_modifier() const override;
     [[nodiscard]] uint get_primary_button() const override;
     [[nodiscard]] miral::InputConfiguration::Mouse mouse() const override;
+    [[nodiscard]] miral::InputConfiguration::Keyboard keyboard() const override;
     [[nodiscard]] std::optional<std::string> keymap() const override;
 
 private:

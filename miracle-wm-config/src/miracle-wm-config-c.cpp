@@ -1039,4 +1039,27 @@ extern "C"
         data->keymap->options.erase(data->keymap->options.begin() + index);
     }
 
+    int miracle_config_get_key_repeat_delay(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return data->keyboard_configuration.repeat_delay().value_or(600);
+    }
+
+    void miracle_config_set_key_repeat_delay(miracle_config_data_t* config, int delay)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->keyboard_configuration.set_repeat_delay(delay);
+    }
+
+    int miracle_config_get_key_repeat_rate(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return data->keyboard_configuration.repeat_rate().value_or(25);
+    }
+
+    void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->keyboard_configuration.set_repeat_rate(rate);
+    }
 } // extern "C"

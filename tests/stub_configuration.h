@@ -124,6 +124,11 @@ namespace test
             return miral::InputConfiguration::Mouse {};
         }
 
+        miral::InputConfiguration::Keyboard keyboard() const override
+        {
+            return miral::InputConfiguration::Keyboard {};
+        }
+
         std::optional<std::string> keymap() const override
         {
             return std::nullopt;
