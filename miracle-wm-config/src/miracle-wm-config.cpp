@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/miracle-wm-config.h"
 #include "miracle/animation_definition_internal.h"
 #include "miracle/gaps.h"
+#include "miracle/keyboard.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -26,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/fwd.hpp>
 #include <iostream>
 #include <libevdev-1.0/libevdev/libevdev.h>
+#include <miral/version.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
@@ -758,6 +760,19 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
 
 void read_keyboard(YAML::Node const& node, ParsingContext& context)
 {
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+    miral::InputConfiguration::Keyboard keyboard_config;
+    int repeat_delay = 0;
+    int repeat_rate = 0;
+    if (try_parse_value(node, "repeat_delay", repeat_delay, context, true))
+        keyboard_config.set_repeat_delay(repeat_delay);
+
+    if (try_parse_value(node, "repeat_rate", repeat_rate, context, true))
+        keyboard_config.set_repeat_rate(repeat_rate);
+
+    context.result.config.keyboard_configuration = keyboard_config;
+#endif
+
     if (node["keymap"])
     {
         auto const& keymap_node = node["keymap"];
@@ -1130,19 +1145,35 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+    if (config.keymap || config.keyboard_configuration.repeat_delay() || config.keyboard_configuration.repeat_rate())
+#else
     if (config.keymap)
+#endif
     {
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
         out << YAML::Key << "keyboard" << YAML::Value << YAML::BeginMap;
-        out << YAML::Key << "keymap" << YAML::Value << YAML::BeginMap;
-        out << YAML::Key << "language" << YAML::Value << config.keymap->language;
-        if (config.keymap->variant)
-            out << YAML::Key << "variant" << YAML::Value << *config.keymap->variant;
-        out << YAML::Key << "options" << YAML::Value << YAML::BeginSeq;
-        for (auto const& option : config.keymap->options)
-            out << option;
+        if (config.keyboard_configuration.repeat_delay())
+            out << YAML::Key << "repeat_delay" << YAML::Value << *config.keyboard_configuration.repeat_delay();
 
-        out << YAML::EndSeq;
-        out << YAML::EndMap;
+        if (config.keyboard_configuration.repeat_rate())
+            out << YAML::Key << "repeat_rate" << YAML::Value << *config.keyboard_configuration.repeat_rate();
+#endif
+
+        if (config.keymap)
+        {
+            out << YAML::Key << "keymap" << YAML::Value << YAML::BeginMap;
+            out << YAML::Key << "language" << YAML::Value << config.keymap->language;
+            if (config.keymap->variant)
+                out << YAML::Key << "variant" << YAML::Value << *config.keymap->variant;
+            out << YAML::Key << "options" << YAML::Value << YAML::BeginSeq;
+            for (auto const& option : config.keymap->options)
+                out << option;
+
+            out << YAML::EndSeq;
+            out << YAML::EndMap;
+        }
+
         out << YAML::EndMap;
     }
 

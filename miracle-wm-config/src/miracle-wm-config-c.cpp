@@ -1,5 +1,6 @@
 #include <miracle/animation_definition_internal.h>
 #include <miracle/default_key_command.h>
+#include <miracle/keyboard.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
@@ -1039,4 +1040,39 @@ extern "C"
         data->keymap->options.erase(data->keymap->options.begin() + index);
     }
 
+    int miracle_config_get_key_repeat_delay(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+        return data->keyboard_configuration.repeat_delay().value_or(600);
+#endif
+    }
+
+    void miracle_config_set_key_repeat_delay(miracle_config_data_t* config, int delay)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+        data->keyboard_configuration.set_repeat_delay(delay);
+#else
+        (void)delay;
+#endif
+    }
+
+    int miracle_config_get_key_repeat_rate(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+        return data->keyboard_configuration.repeat_rate().value_or(25);
+#endif
+    }
+
+    void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+        data->keyboard_configuration.set_repeat_rate(rate);
+#else
+        (void)rate;
+#endif
+    }
 } // extern "C"

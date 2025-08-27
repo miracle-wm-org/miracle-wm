@@ -402,6 +402,26 @@ extern "C"
     void miracle_config_add_keymap_option(miracle_config_data_t* config, const char* option);
     void miracle_config_remove_keymap_option(miracle_config_data_t* config, size_t index);
 
+    /// Retrieve the repeat delay for the keyboard.
+    ///
+    /// This is the delay in milliseconds since the previous key down.
+    int miracle_config_get_key_repeat_delay(const miracle_config_data_t* config);
+
+    /// Set the repeat delay for the keyboard.
+    ///
+    /// The delay is in milliseconds since the previous key down.
+    void miracle_config_set_key_repeat_delay(miracle_config_data_t* config, int delay);
+
+    /// Retrieve the repeat rate for the keyboard.
+    ///
+    /// This is expressed in "characters per second".
+    int miracle_config_get_key_repeat_rate(const miracle_config_data_t* config);
+
+    /// Set the repeat rate for the keyboard.
+    ///
+    /// This is express in "characters per second".
+    void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate);
+
 #ifdef __cplusplus
 }
 #endif

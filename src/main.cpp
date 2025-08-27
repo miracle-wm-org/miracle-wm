@@ -109,6 +109,9 @@ int main(int argc, char const* argv[])
         void on_config_changed(miracle::Config const& config) override
         {
             input_configuration.mouse(config.mouse());
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+            input_configuration.keyboard(config.keyboard());
+#endif
             if (auto const keymap_val = config.keymap())
                 keymap.set_keymap(keymap_val.value());
         }

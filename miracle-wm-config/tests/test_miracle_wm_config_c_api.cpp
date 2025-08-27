@@ -694,6 +694,20 @@ TEST_F(CAPIWrapperTest, CanSetKeymapOption)
     EXPECT_STREQ(option, "bye");
 }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
+TEST_F(CAPIWrapperTest, CanSetKeyRepeatRate)
+{
+    miracle_config_set_key_repeat_rate(&wrapper->config, 5);
+    EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
+}
+
+TEST_F(CAPIWrapperTest, CanSetKeyRepeatDelay)
+{
+    miracle_config_set_key_repeat_delay(&wrapper->config, 10);
+    EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
+}
+#endif
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -760,6 +774,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     miracle_config_add_keymap_option(
         &wrapper->config,
         "hi");
+    miracle_config_set_key_repeat_rate(&wrapper->config, 5);
+    miracle_config_set_key_repeat_delay(&wrapper->config, 10);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -798,6 +814,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 #endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     auto const keymap = miracle_config_get_keymap(&wrapper->config);
     EXPECT_TRUE(keymap.is_set);
     EXPECT_STREQ(keymap.language, "fr");
@@ -805,6 +822,9 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_STREQ(keymap.variant, "dvorak");
     EXPECT_EQ(keymap.options_count, 1);
     EXPECT_STREQ(miracle_config_get_keymap_option(&wrapper->config, 0), "hi");
+    EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
+    EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
+#endif
 
     // Clean up
     miracle_config_free(load_result);
