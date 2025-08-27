@@ -694,6 +694,7 @@ TEST_F(CAPIWrapperTest, CanSetKeymapOption)
     EXPECT_STREQ(option, "bye");
 }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
 TEST_F(CAPIWrapperTest, CanSetKeyRepeatRate)
 {
     miracle_config_set_key_repeat_rate(&wrapper->config, 5);
@@ -705,6 +706,7 @@ TEST_F(CAPIWrapperTest, CanSetKeyRepeatDelay)
     miracle_config_set_key_repeat_delay(&wrapper->config, 10);
     EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
 }
+#endif
 
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
