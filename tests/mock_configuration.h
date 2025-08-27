@@ -52,7 +52,9 @@ namespace test
         MOCK_METHOD(uint, move_modifier, (), (const, override));
         MOCK_METHOD(uint, get_primary_button, (), (const, override));
         MOCK_METHOD(miral::InputConfiguration::Mouse, mouse, (), (const, override));
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
         MOCK_METHOD(miral::InputConfiguration::Keyboard, keyboard, (), (const, override));
+#endif
         MOCK_METHOD(std::optional<std::string>, keymap, (), (const, override));
     };
 }

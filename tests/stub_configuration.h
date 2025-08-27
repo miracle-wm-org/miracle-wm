@@ -124,10 +124,12 @@ namespace test
             return miral::InputConfiguration::Mouse {};
         }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
         miral::InputConfiguration::Keyboard keyboard() const override
         {
             return miral::InputConfiguration::Keyboard {};
         }
+#endif
 
         std::optional<std::string> keymap() const override
         {

@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/fwd.hpp>
 #include <iostream>
 #include <libevdev-1.0/libevdev/libevdev.h>
+#include <miral/version.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
@@ -758,14 +759,16 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
 
 void read_keyboard(YAML::Node const& node, ParsingContext& context)
 {
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     miral::InputConfiguration::Keyboard keyboard_config;
     int repeat_delay = 0;
     int repeat_rate = 0;
     if (try_parse_value(node, "repeat_delay", repeat_delay, context, true))
-        keyboard_config.set_repeat_delay(repeat_delay);
+        keyboard_config.m(repeat_delay);
 
     if (try_parse_value(node, "repeat_rate", repeat_rate, context, true))
         keyboard_config.set_repeat_rate(repeat_rate);
+#endif
 
     if (node["keymap"])
     {

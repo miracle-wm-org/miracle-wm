@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "default_key_command.h"
 #include "export.h"
 #include "gaps.h"
-#include "keyboard.h"
 #include "modifiers.h"
 
 #include <array>
@@ -31,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/glm.hpp>
 #include <mir_toolkit/events/enums.h>
 #include <miral/input_configuration.h>
+#include <miral/version.h>
 #include <optional>
 #include <string>
 #include <vector>
@@ -128,7 +128,9 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     uint move_modifier = miracle_input_event_modifier_default;
     DragAndDropConfiguration drag_and_drop;
     miral::InputConfiguration::Mouse mouse_configuration;
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     miral::InputConfiguration::Keyboard keyboard_configuration;
+#endif
     std::optional<KeymapConfiguration> keymap;
 };
 

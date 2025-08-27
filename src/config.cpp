@@ -260,11 +260,13 @@ miral::InputConfiguration::Mouse FilesystemConfiguration::mouse() const
     return options.mouse_configuration;
 }
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
 miral::InputConfiguration::Keyboard FilesystemConfiguration::keyboard() const
 {
     std::lock_guard lock(mutex);
     return options.keyboard_configuration;
 }
+#endif
 
 std::optional<std::string> FilesystemConfiguration::keymap() const
 {

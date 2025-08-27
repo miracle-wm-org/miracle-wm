@@ -812,6 +812,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 #endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     auto const keymap = miracle_config_get_keymap(&wrapper->config);
     EXPECT_TRUE(keymap.is_set);
     EXPECT_STREQ(keymap.language, "fr");
@@ -821,6 +822,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_STREQ(miracle_config_get_keymap_option(&wrapper->config, 0), "hi");
     EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
     EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
+#endif
 
     // Clean up
     miracle_config_free(load_result);

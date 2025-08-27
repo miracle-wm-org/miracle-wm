@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../miracle-wm-config/include/miracle/gaps.h"
 #include "container.h"
 #include <miracle/miracle-wm-config.h>
+#include <miral/version.h>
 
 #include <functional>
 #include <linux/input.h>
@@ -73,7 +74,9 @@ public:
     [[nodiscard]] virtual uint get_primary_modifier() const = 0;
     [[nodiscard]] virtual uint get_primary_button() const = 0;
     [[nodiscard]] virtual miral::InputConfiguration::Mouse mouse() const = 0;
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     [[nodiscard]] virtual miral::InputConfiguration::Keyboard keyboard() const = 0;
+#endif
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
     uint process_modifier(uint modifier) const;
 };
@@ -111,7 +114,9 @@ public:
     [[nodiscard]] uint get_primary_modifier() const override;
     [[nodiscard]] uint get_primary_button() const override;
     [[nodiscard]] miral::InputConfiguration::Mouse mouse() const override;
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     [[nodiscard]] miral::InputConfiguration::Keyboard keyboard() const override;
+#endif
     [[nodiscard]] std::optional<std::string> keymap() const override;
 
 private:
