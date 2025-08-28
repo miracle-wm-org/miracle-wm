@@ -57,6 +57,9 @@ CommandController::CommandController(
 void CommandController::try_toggle_resize_mode()
 {
     std::lock_guard lock(mutex);
+    if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::resizing)
+        return;
+
     if (!state->focused_container())
     {
         set_mode(WindowManagerMode::normal);
@@ -382,7 +385,7 @@ bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_p
         if (is_y_ppt)
             resolved_y = output->get_area().size.height.as_value() * y;
 
-        if (!container->move_to(resolved_x, resolved_y))
+        if (!container->move_to(resolved_x, resolved_y, true))
             result = false;
     }
     return result;

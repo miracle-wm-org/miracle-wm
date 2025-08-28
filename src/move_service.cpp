@@ -57,15 +57,9 @@ bool MoveService::handle_pointer_event(
             return false;
         }
 
-        /// If we haven't moved since last time, there's nothing to do
-        if (cursor_x == x && cursor_y == y)
-            return true;
-
-        auto const dx = x - cursor_x;
-        auto const dy = y - cursor_y;
-        state.focused_container()->move_by(dx, dy);
-        cursor_x = x;
-        cursor_y = y;
+        auto const dx = static_cast<int>(ceilf(x - cursor_x));
+        auto const dy = static_cast<int>(ceilf(y - cursor_y));
+        state.focused_container()->move_to(start_x + dx, start_y + dy, false);
         return true;
     }
     else if (action == mir_pointer_action_button_down)
@@ -94,6 +88,8 @@ bool MoveService::handle_pointer_event(
         command_controller->select_container(intersected);
         cursor_x = x;
         cursor_y = y;
+        start_x = intersected->get_logical_area().top_left.x.as_int();
+        start_y = intersected->get_logical_area().top_left.y.as_int();
         return true;
     }
 

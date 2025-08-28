@@ -258,7 +258,7 @@ bool ShellComponentContainer::move_by(float dx, float dy)
     return false;
 }
 
-bool ShellComponentContainer::move_to(int x, int y)
+bool ShellComponentContainer::move_to(int x, int y, bool)
 {
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
