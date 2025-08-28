@@ -367,13 +367,13 @@ bool ContainerGroupContainer::move_by(float x, float y)
     return result;
 }
 
-bool ContainerGroupContainer::move_to(int x, int y)
+bool ContainerGroupContainer::move_to(int x, int y, bool with_animations)
 {
     bool result = true;
     for (auto const& container : containers)
     {
         if (auto c = container.lock())
-            result &= c->move_to(x, y);
+            result &= c->move_to(x, y, with_animations);
     }
     return result;
 }

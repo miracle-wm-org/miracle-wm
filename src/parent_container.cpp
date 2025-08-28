@@ -854,7 +854,7 @@ bool ParentContainer::move_by(Direction direction, int pixels)
     return false;
 }
 
-bool ParentContainer::move_to(int x, int y)
+bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
     if (is_anchored)
         return false;
@@ -862,7 +862,7 @@ bool ParentContainer::move_to(int x, int y)
     auto area = logical_area;
     area.top_left.x = geom::X { x };
     area.top_left.y = geom::Y { y };
-    set_logical_area(area);
+    set_logical_area(area, with_animations);
     commit_changes();
     return true;
 }

@@ -103,7 +103,7 @@ public:
     bool move_by(Direction, int) override;
     bool move_by(float, float) override;
     bool move_to(Container& other) override;
-    bool move_to(int, int) override;
+    bool move_to(int, int, bool with_animations) override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
     bool drag_start() override;

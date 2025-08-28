@@ -76,7 +76,7 @@ namespace test
         MOCK_METHOD(bool, pinned, (bool), (override));
         MOCK_METHOD(bool, move, (Direction), (override));
         MOCK_METHOD(bool, move_by, (Direction, int), (override));
-        MOCK_METHOD(bool, move_to, (int, int), (override));
+        MOCK_METHOD(bool, move_to, (int, int, bool), (override));
         MOCK_METHOD(bool, move_to, (Container&), (override));
         MOCK_METHOD(bool, move_by, (float, float), (override));
         MOCK_METHOD(bool, toggle_tabbing, (), (override));

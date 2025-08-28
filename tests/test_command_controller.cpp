@@ -320,3 +320,43 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
         { .number = 2,
             .name = "hi" });
 }
+
+TEST_F(CommandControllerTest, CannotResizeWhileNotInNormalOrResizingState)
+{
+    state->mode(WindowManagerMode::moving);
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+
+    command_controller->try_toggle_resize_mode();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::moving));
+}
+
+TEST_F(CommandControllerTest, CanToggleResizeModeToResizing)
+{
+    state->mode(WindowManagerMode::normal);
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    EXPECT_CALL(*container, get_type())
+        .WillOnce(Return(ContainerType::leaf));
+    state->add(container);
+    state->focus_container(container);
+
+    command_controller->try_toggle_resize_mode();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::resizing));
+}
+
+TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
+{
+    state->mode(WindowManagerMode::resizing);
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    EXPECT_CALL(*container, get_type())
+        .WillOnce(Return(ContainerType::leaf));
+    state->add(container);
+    state->focus_container(container);
+
+    command_controller->try_toggle_resize_mode();
+    EXPECT_THAT(state->mode(), Eq(WindowManagerMode::normal));
+}

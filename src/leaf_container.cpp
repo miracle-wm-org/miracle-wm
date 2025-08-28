@@ -882,8 +882,10 @@ bool LeafContainer::move_to(Container& target)
     return true;
 }
 
-bool LeafContainer::move_to(int x, int y)
+bool LeafContainer::move_to(int x, int y, bool with_animations)
 {
+    if (auto sh_parent = parent.lock())
+        return sh_parent->move_to(x, y, with_animations);
     return false;
 }
 

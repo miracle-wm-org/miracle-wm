@@ -41,6 +41,8 @@ private:
 
     float cursor_x = 0;
     float cursor_y = 0;
+    int start_x = 0;
+    int start_y = 0;
 };
 
 } // miracle

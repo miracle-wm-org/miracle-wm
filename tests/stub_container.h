@@ -239,7 +239,7 @@ namespace test
             return false;
         }
 
-        bool move_to(int x, int y) override
+        bool move_to(int x, int y, bool with_animations) override
         {
             return false;
         }
