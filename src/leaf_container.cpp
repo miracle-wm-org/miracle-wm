@@ -697,13 +697,12 @@ void LeafContainer::on_workspace_transform()
         workspace.lock()->get_output()->get_area());
 
     rdm->workspace_transform_change(id, workspace_transform(*this));
-    auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>();
-    if (surface)
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
         // While we don't use this transform in rendering, we do need it
         // so that the compositor understands which surfaces overlap
         // and properly obscures them.
-        auto full_transform = get_output_transform()
+        auto const full_transform = get_output_transform()
             * get_workspace_transform()
             * get_transform();
         surface->set_transformation(full_transform);
@@ -723,9 +722,12 @@ void LeafContainer::set_alpha(float const alpha)
     //
     // This is unfortunate.
     state->render_data_manager()->alpha_change(id, alpha);
-    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
-        surface->set_transformation(transform);
+        auto const full_transform = get_output_transform()
+            * get_workspace_transform()
+            * get_transform();
+        surface->set_transformation(full_transform);
     }
 }
 

@@ -151,7 +151,6 @@ Renderer::DrawData Renderer::get_draw_data(
             if (item.surface == surface.value())
             {
                 result.data = item;
-
                 if (item.output_area != viewport)
                 {
                     result.enabled = false;
