@@ -18,15 +18,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "dying_surface_manager.h"
+#include "mir/geometry/forward.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
 #include "mock_main_loop.h"
 #include "mock_session.h"
 #include "mock_surface.h"
+#include "mock_output.h"
 #include "mock_surface_stack.h"
 #include "mock_window_controller.h"
 
+#include "gmock/gmock.h"
 #include <gtest/gtest.h>
+#include <memory>
 
 using namespace miracle;
 
@@ -62,12 +66,19 @@ public:
 TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
 {
     auto const container = std::make_shared<test::MockContainer>();
-
+    auto const output = std::make_shared<test::MockOutput>();
+    geom::Rectangle constexpr output_area({0, 0}, {19280, 1080});
+    
     // Pre-conditions for starting the animation
     EXPECT_CALL(*container, get_type())
         .WillOnce(testing::Return(ContainerType::leaf));
     EXPECT_CALL(*config, are_animations_enabled())
         .WillOnce(testing::Return(true));
+    EXPECT_CALL(*container, get_output())
+        .WillOnce(testing::Return(output));
+    EXPECT_CALL(*output, get_area())
+        .WillOnce(testing::ReturnRef(output_area));
+    
 
     auto const session = std::make_shared<test::MockSession>();
     auto const surface = std::make_shared<test::MockSurface>();
