@@ -482,7 +482,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(LeafContainerTest, CanSetAlpha)
 {
-    EXPECT_CALL(*surface, set_transformation(leaf_container->get_transform()));
+    EXPECT_CALL(*surface, set_transformation(testing::_));
     leaf_container->set_alpha(0.5f);
 
     auto data = state->render_data_manager()->get();

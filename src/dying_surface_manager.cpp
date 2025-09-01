@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
+#include "output_interface.h"
 #include "window_controller.h"
 #include <mir/main_loop.h>
 #include <mir/shell/surface_stack.h>
@@ -40,6 +41,7 @@ public:
         mir::geometry::Rectangle const& current,
         glm::mat4 const& transform,
         glm::mat4 const& workspace_transform,
+        mir::geometry::Rectangle const& output_area,
         std::function<void()> const& on_finish) :
         Animation(handle, definition, from, to, current),
         compositor_state(state),
@@ -51,7 +53,8 @@ public:
                 .needs_outline = true,
                 .is_focused = false,
                 .transform = transform,
-                .workspace_transform = workspace_transform });
+                .workspace_transform = workspace_transform,
+                .output_area = output_area });
     }
 
     ~RawSurfaceAnimation() override
@@ -109,10 +112,11 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
     if (!config->are_animations_enabled())
         return;
 
+    auto const output_area = container->get_output()->get_area();
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
-    main_loop->enqueue(this, [this, surface = surface, container = container]
+    main_loop->enqueue(this, [this, surface = surface, container = container, output_area = output_area]
     {
-        window_controller->invoke_under_lock([this, surface = surface, container = container]
+        window_controller->invoke_under_lock([this, surface = surface, container = container, output_area = output_area]
         {
             auto animating_surface = std::make_shared<ForwardingSurface>(surface);
             auto const raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
@@ -125,6 +129,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
                 container->get_visible_area(),
                 container->get_transform(),
                 container->get_output_transform() * container->get_workspace_transform(),
+                output_area,
                 [surface_stack = surface_stack, animating_surface = animating_surface]
             {
                 surface_stack->remove_surface(animating_surface);

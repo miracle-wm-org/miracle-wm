@@ -102,7 +102,7 @@ public:
     void set_focus_mode(MirFocusMode focus_mode) override;
 #ifdef MIR_VERSION_2_21_OR_GREATER
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
-    void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
+    void set_tiled_edges(mir::Flags<MirTiledEdge> flags) override { surface_->set_tiled_edges(flags); }
 #endif
 #ifdef MIR_VERSION_2_22_OR_GREATER
     void set_mirror_mode(MirMirrorMode mirror_mode) override { surface_->set_mirror_mode(mirror_mode); }
