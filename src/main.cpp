@@ -110,7 +110,14 @@ int main(int argc, char const* argv[])
         {
             input_configuration.mouse(config.mouse());
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
-            input_configuration.keyboard(config.keyboard());
+            // TODO(mattkae): Due to a bug in Mir, it is generally unsafe to reload
+            // the keyboard configuration after the first load, as dead clients (e.g.
+            // swayvnc) can cause the internal listeners in Mir to be fail.
+            if (!has_reloaded_keyboard_config)
+            {
+                has_reloaded_keyboard_config = true;
+                input_configuration.keyboard(config.keyboard());
+            }
 #endif
             if (auto const keymap_val = config.keymap())
                 keymap.set_keymap(keymap_val.value());
@@ -119,9 +126,14 @@ int main(int argc, char const* argv[])
     private:
         InputConfiguration input_configuration;
         Keymap keymap;
+        bool has_reloaded_keyboard_config = false;
     };
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
+    Keymap keymap = Keymap::system_locale1();
+#else
     Keymap keymap;
+#endif
     auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap);
     config_observer_registrar->register_interest(input_config_observer);
 
