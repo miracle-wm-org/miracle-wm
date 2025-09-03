@@ -882,20 +882,14 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
     if (containers.empty())
         return false;
 
-    if (!select_workspace(number, back_and_forth))
-        return false;
-
-    auto const o = output_manager->focused();
-
     for (auto const& container : containers)
     {
         if (container->get_workspace()->num() == number)
             continue;
 
         container->get_output()->delete_container(container);
-        o->graft(container);
-        if (container->window().value())
-            window_controller->select_active_window(container->window().value());
+        if (workspace_manager->request_workspace(output_manager->focused().get(), number, back_and_forth))
+            output_manager->focused()->graft(container);
     }
 
     return true;
