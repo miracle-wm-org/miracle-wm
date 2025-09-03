@@ -805,5 +805,10 @@ void Policy::advise_end()
         {
             launcher->launch(app);
         }
+
+        // TODO: This is very weird, but it seems like mouse and keyboard
+        //  configuration events will not be piped through until things are
+        //  up and running, so I guess we're going to do it here!
+        config_observer_registrar->advise_config_changed(*config);
     }
 }
