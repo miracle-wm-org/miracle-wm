@@ -1608,13 +1608,21 @@ bool CommandController::try_move_to_mark(std::string const& mark, std::vector<Co
         return false;
 
     // Graft the container onto the parent
-    auto const parent = marked_container->get_parent().lock();
-    auto const index = parent->get_index_of_node(marked_container);
     for (auto const& container : containers)
     {
         container->get_output()->delete_container(container);
+
+        // NOTE: it is important that we get the index of the marked container
+        // after we remove the other container, as removing the other container may
+        // affect the index here. In fact - even the parent itself may change in the
+        // meantime.
+        auto const parent = marked_container->get_parent().lock();
+        auto const index = parent->get_index_of_node(marked_container);
         parent->graft_existing(container, static_cast<int>(index.value_or(-1) + 1)); // Insert at the position after!
     }
+
+    auto const parent = marked_container->get_parent().lock();
+    parent->commit_changes();
 
     return true;
 }

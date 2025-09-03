@@ -118,7 +118,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
             }
             else
             {
-                container_list[cursor++]->set_logical_area({
+                container_list[cursor]->set_logical_area({
                     geom::Point {
                                  pos.position,
                                  placement_area.top_left.y.as_int()  },
@@ -126,6 +126,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
                                  pos.size,
                                  placement_area.size.height.as_int() }
                 });
+                cursor++;
             }
         }
     }
@@ -158,7 +159,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
             }
             else
             {
-                container_list[cursor++]->set_logical_area({
+                container_list[cursor]->set_logical_area({
                     geom::Point {
                                  placement_area.top_left.x.as_int(),
                                  pos.position },
@@ -166,6 +167,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
                                  placement_area.size.width.as_int(),
                                  pos.size     }
                 });
+                cursor++;
             }
         }
     }
