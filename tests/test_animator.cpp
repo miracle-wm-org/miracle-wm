@@ -36,7 +36,7 @@ public:
     {
     }
 
-    void on_tick(AnimationStepResult const& asr) override
+    void on_tick(AnimationFrameResult const& asr) override
     {
         was_called = true;
     }

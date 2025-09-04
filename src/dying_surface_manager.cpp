@@ -62,7 +62,7 @@ public:
         compositor_state->render_data_manager()->remove(id);
     }
 
-    void on_tick(AnimationStepResult const& result) override
+    void on_tick(AnimationFrameResult const& result) override
     {
         if (result.transform)
         {

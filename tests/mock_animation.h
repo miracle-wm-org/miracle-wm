@@ -37,7 +37,7 @@ namespace test
         {
         }
 
-        MOCK_METHOD(void, on_tick, (AnimationStepResult const&), (override));
+        MOCK_METHOD(void, on_tick, (AnimationFrameResult const&), (override));
     };
 }
 }

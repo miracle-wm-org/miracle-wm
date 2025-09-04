@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
-#include <mir/server_action_queue.h>
 #include <utility>
 #include <vector>
 
@@ -243,16 +242,6 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
         .transform = glm::scale(glm::mat4(1.0), glm::vec3(real_scale_x, real_scale_y, 0.f))
     };
 }
-
-glm::vec2 to_vec2_point(geom::Rectangle const& r)
-{
-    return { r.top_left.x.as_int(), r.top_left.y.as_int() };
-}
-
-glm::vec2 to_vec2_size(geom::Rectangle const& r)
-{
-    return { r.size.width.as_int(), r.size.height.as_int() };
-}
 }
 
 AnimationHandle const miracle::none_animation_handle = 0;
@@ -265,11 +254,10 @@ Animation::Animation(
     mir::geometry::Rectangle const& current) :
     handle { handle },
     definition { std::move(definition) },
-    to { to },
+    current { current },
     from { current },
-    clip_area { current },
-    real_size { current.size },
-    runtime_seconds { 0.f }
+    to { to },
+    real_size { current.size }
 {
     switch (definition.type)
     {
@@ -301,51 +289,51 @@ Animation::Animation(
     }
 }
 
-AnimationStepResult Animation::init()
+AnimationFrameResult Animation::init()
 {
     switch (definition.type)
     {
     case AnimationType::grow:
-        return { handle, false, clip_area, std::nullopt, std::nullopt, glm::mat4(0.f) };
+        return { false, std::nullopt, glm::mat4(0.f), std::nullopt };
     case AnimationType::shrink:
-        return { handle, false, clip_area, std::nullopt, std::nullopt, glm::mat4(1.f) };
+        return { false, std::nullopt, glm::mat4(1.f), std::nullopt };
     case AnimationType::slide:
     {
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
         const auto [position, clip_area_size, transform] = slide(0, from, to, real_size);
-        clip_area.top_left.x = geom::X { position.x };
-        clip_area.top_left.y = geom::Y { position.y };
-        clip_area.size.width = geom::Width { clip_area_size.x };
-        clip_area.size.height = geom::Height { clip_area_size.y };
+        current.top_left.x = geom::X { position.x };
+        current.top_left.y = geom::Y { position.y };
+        current.size.width = geom::Width { clip_area_size.x };
+        current.size.height = geom::Height { clip_area_size.y };
         return {
-            handle,
             false,
-            clip_area,
-            position,
-            to_vec2_size(to),
-            transform
+            current,
+            transform,
+            std::nullopt
         };
     }
     case AnimationType::fade_in:
-        return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 0 };
+        return { false, std::nullopt, std::nullopt, 0 };
     case AnimationType::fade_out:
-        return { .handle = handle, .is_complete = false, .clip_area = clip_area, .opacity = 1 };
+        return { false, std::nullopt, std::nullopt, 1 };
     case AnimationType::disabled:
-        return { handle, true, clip_area, to_vec2_point(to), to_vec2_size(to), glm::mat4(1.f) };
     default:
-        return { handle, false, clip_area, std::nullopt, std::nullopt, std::nullopt };
+    {
+        current = to;
+        return { true, current, std::nullopt, std::nullopt };
+    }
     }
 }
 
-AnimationStepResult Animation::step(float dt)
+AnimationFrameResult Animation::step(float dt)
 {
     runtime_seconds += dt;
     float const t = (runtime_seconds / definition.duration_seconds);
 
     if (runtime_seconds >= definition.duration_seconds)
     {
-        return { handle, true, to, to_vec2_point(to), to_vec2_size(to), glm::mat4(1.f),
+        return { true, to, glm::mat4(1.f),
             definition.type == AnimationType::fade_out ? 0.f : 1.f };
     }
 
@@ -355,16 +343,13 @@ AnimationStepResult Animation::step(float dt)
     {
         auto const p = ease(definition, t);
         const auto [position, clip_area_size, transform] = slide(p, from, to, real_size);
-        clip_area.top_left.x = geom::X { position.x };
-        clip_area.top_left.y = geom::Y { position.y };
-        clip_area.size.width = geom::Width { clip_area_size.x };
-        clip_area.size.height = geom::Height { clip_area_size.y };
+        current.top_left.x = geom::X { position.x };
+        current.top_left.y = geom::Y { position.y };
+        current.size.width = geom::Width { clip_area_size.x };
+        current.size.height = geom::Height { clip_area_size.y };
         return {
-            handle,
             false,
-            clip_area,
-            position,
-            std::nullopt,
+            current,
             transform,
             1.f
         };
@@ -394,7 +379,7 @@ AnimationStepResult Animation::step(float dt)
             geom::Size(new_width, new_height)
         };
 
-        return { handle, false, clip_area, std::nullopt, std::nullopt, transform };
+        return { false, clip_area, transform, std::nullopt };
     }
     case AnimationType::shrink:
     {
@@ -420,21 +405,21 @@ AnimationStepResult Animation::step(float dt)
             geom::Point(new_x, new_y),
             geom::Size(new_width, new_height)
         };
-        return { handle, false, clip_area, std::nullopt, std::nullopt, transform };
+        return { false, clip_area, transform, std::nullopt };
     }
     case AnimationType::fade_in:
     {
         auto const p = ease(definition, t);
-        return { .handle = handle, .is_complete = false, .clip_area = to, .opacity = p };
+        return { false, to, std::nullopt, p };
     }
     case AnimationType::fade_out:
     {
         auto const p = 1.f - ease(definition, t);
-        return { .handle = handle, .is_complete = false, .clip_area = to, .opacity = p };
+        return { false, to, std::nullopt, p };
     }
     case AnimationType::disabled:
     default:
-        return { handle, true, to, std::nullopt, std::nullopt, std::nullopt };
+        return { true, to, std::nullopt, std::nullopt };
     }
 }
 
@@ -443,12 +428,12 @@ void Animation::set_current_size(mir::geometry::Size const& size)
     real_size = size;
 }
 
-void Animation::mark_for_great_animator_in_the_sky()
+void Animation::mark_for_removal()
 {
     should_leave_this_animator_for_the_great_animator_in_the_sky = true;
 }
 
-bool Animation::is_going_to_great_animator_in_the_sky() const
+bool Animation::is_being_removed() const
 {
     return should_leave_this_animator_for_the_great_animator_in_the_sky;
 }
@@ -465,7 +450,7 @@ void Animator::append(std::shared_ptr<Animation> const& animation)
     for (auto const& other : active)
     {
         if (other->get_handle() == animation->get_handle())
-            other->mark_for_great_animator_in_the_sky();
+            other->mark_for_removal();
     }
     active.push_back(animation);
     animation->on_tick(animation->init());
@@ -478,7 +463,7 @@ void Animator::tick(float dt)
 
     for (auto const& item : active)
     {
-        if (item->is_going_to_great_animator_in_the_sky())
+        if (item->is_being_removed())
             continue;
 
         auto result = item->step(dt);
@@ -486,12 +471,12 @@ void Animator::tick(float dt)
         item->on_tick(result);
 
         if (result.is_complete)
-            item->mark_for_great_animator_in_the_sky();
+            item->mark_for_removal();
     }
 
     std::erase_if(active, [](std::shared_ptr<Animation> const& animation)
     {
-        return animation->is_going_to_great_animator_in_the_sky();
+        return animation->is_being_removed();
     });
 }
 
@@ -512,7 +497,7 @@ void Animator::remove_by_animation_handle(AnimationHandle handle)
     for (auto const& animation : active)
     {
         if (animation->get_handle() == handle)
-            animation->mark_for_great_animator_in_the_sky();
+            animation->mark_for_removal();
     }
 }
 

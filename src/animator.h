@@ -19,18 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_ANIMATOR_H
 
 #include <condition_variable>
-#include <functional>
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
 #include <miracle/animation_definition.h>
 #include <mutex>
 #include <optional>
 #include <thread>
-
-namespace mir
-{
-class ServerActionQueue;
-}
+#include <vector>
 
 namespace miracle
 {
@@ -40,22 +35,28 @@ typedef uint32_t AnimationHandle;
 /// Reserved for windows who lack an animation handle
 extern const AnimationHandle none_animation_handle;
 
-/// Callback data provided to the caller on each tick.
-struct AnimationStepResult
+/// Data provided when the animation ticks.
+///
+/// Individual [Animation]s can decide what they'd like to do with
+/// this. For example, Mir windows may set their position according
+/// to the provided rectangle on each frame, while outputs may change
+/// their current workspace to show a different workspace.
+struct AnimationFrameResult
 {
-public:
-    /// The handle of the animation to which this result matches
-    AnimationHandle handle = none_animation_handle;
+    /// Whether this result marks the end of animation.
+    ///
+    /// Once set, the animation that produced this object will
+    /// be removed.
+    bool const is_complete;
 
-    /// Whether or not this result marks the end of animation.
-    bool is_complete = false;
+    /// The current rectangle set by the animation, if any.
+    std::optional<mir::geometry::Rectangle> const rectangle;
 
-    /// The clip area that should be applied to this transformation
-    mir::geometry::Rectangle clip_area;
-    std::optional<glm::vec2> position;
-    std::optional<glm::vec2> size;
-    std::optional<glm::mat4> transform;
-    std::optional<float> opacity;
+    /// The current transform set by the animation, if any.
+    std::optional<glm::mat4> const transform;
+
+    /// The current opacity set by the animation, if any.
+    std::optional<float> const opacity;
 };
 
 class Animation
@@ -71,19 +72,19 @@ public:
 
     Animation& operator=(Animation const& other) = default;
 
-    AnimationStepResult init();
-    AnimationStepResult step(float dt);
+    AnimationFrameResult init();
+    AnimationFrameResult step(float dt);
     [[nodiscard]] AnimationHandle get_handle() const { return handle; }
     float get_runtime_seconds() const { return runtime_seconds; }
     void set_current_size(mir::geometry::Size const& size);
-    void mark_for_great_animator_in_the_sky();
-    bool is_going_to_great_animator_in_the_sky() const;
-    virtual void on_tick(AnimationStepResult const&) = 0;
+    void mark_for_removal();
+    bool is_being_removed() const;
+    virtual void on_tick(AnimationFrameResult const&) = 0;
 
 private:
     AnimationHandle handle;
     AnimationDefinition definition;
-    mir::geometry::Rectangle clip_area;
+    mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
     mir::geometry::Size real_size;
@@ -91,20 +92,34 @@ private:
     bool should_leave_this_animator_for_the_great_animator_in_the_sky = false;
 };
 
-/// Manages the animation queue. If multiple animations are queued for a window,
-/// then the latest animation may override values from previous animations.
+/// Manages the animation queue.
+///
+/// This class is used in conjunction with the [AnimatorLoop] which drives
+/// this class.
+///
+/// If multiple animations are queued for a window,  then the latest animation
+/// may override values from previous animations.
 class Animator
 {
 public:
-    /// Animateable components must register with the Animator before being
-    /// able to be animated.
+    /// Registers a new animation handle.
+    ///
+    /// Components that want to animate must provide a valid handler before
+    /// doing so.
     AnimationHandle register_animateable();
 
+    /// Run a frame of the animator.
+    ///
+    /// This is typically called by an [AnimatorLoop].
     void tick(float dt);
 
-    void append(std::shared_ptr<Animation> const&);
+    /// Append a new animation to the queue.
+    void append(std::shared_ptr<Animation> const& animation);
     void set_size_hack(AnimationHandle handle, mir::geometry::Size const& size);
+
+    /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
+
     [[nodiscard]] bool has_animations() const { return !active.empty(); }
     [[nodiscard]] bool is_animating(AnimationHandle handle);
     std::condition_variable& get_cv() { return cv; }

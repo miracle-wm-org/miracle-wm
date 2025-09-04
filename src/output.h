@@ -65,7 +65,7 @@ public:
     void set_defunct() override;
     void unset_defunct() override;
     void handle_workspace_animation(
-        AnimationStepResult const& result,
+        AnimationFrameResult const& result,
         std::shared_ptr<WorkspaceInterface> const& to,
         std::shared_ptr<WorkspaceInterface> const& from) override;
 
@@ -97,7 +97,7 @@ private:
             std::shared_ptr<WorkspaceInterface> const& from_workspace,
             Output* output);
 
-        void on_tick(AnimationStepResult const&) override;
+        void on_tick(AnimationFrameResult const&) override;
 
     private:
         std::shared_ptr<WorkspaceInterface> to_workspace;

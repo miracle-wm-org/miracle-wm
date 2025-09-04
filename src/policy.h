@@ -100,10 +100,10 @@ public:
         const MirInputEvent* input_event,
         MirResizeEdge edge) override;
     void handle_animation(
-        AnimationStepResult const& asr,
+        AnimationFrameResult const& asr,
         std::weak_ptr<Container> const& container);
     void handle_workspace_animation(
-        AnimationStepResult const& asr,
+        AnimationFrameResult const& asr,
         std::shared_ptr<WorkspaceInterface> const& to,
         std::shared_ptr<WorkspaceInterface> const& from);
     auto confirm_inherited_move(

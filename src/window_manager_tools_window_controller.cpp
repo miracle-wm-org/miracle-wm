@@ -59,17 +59,17 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
     geom::Rectangle rect { window.top_left(), window.size() };
     if (info.parent())
     {
-        policy->handle_animation({ container->animation_handle(), true, rect }, container);
+        policy->handle_animation({ true, rect, std::nullopt, std::nullopt }, container);
         return;
     }
 
     if (!config->are_animations_enabled())
     {
-        policy->handle_animation(AnimationStepResult { container->animation_handle(), true, rect }, container);
+        policy->handle_animation(AnimationFrameResult { true, rect, std::nullopt, std::nullopt }, container);
         return;
     }
 
-    auto animation = std::make_shared<WindowAnimation>(
+    auto const animation = std::make_shared<WindowAnimation>(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_open),
         rect,
@@ -94,24 +94,23 @@ void WindowManagerToolsWindowController::set_rectangle(
     auto const& info = info_for(window);
     if (info.parent())
     {
-        policy->handle_animation({ container->animation_handle(), true, to }, container);
+        policy->handle_animation({ true, to, std::nullopt, std::nullopt }, container);
         return;
     }
 
     if (!config->are_animations_enabled() || !with_animations)
     {
         policy->handle_animation(
-            AnimationStepResult { container->animation_handle(),
+            AnimationFrameResult {
                 true,
                 to,
-                glm::vec2(to.top_left.x.as_int(), to.top_left.y.as_int()),
-                glm::vec2(to.size.width.as_int(), to.size.height.as_int()),
-                glm::mat4(1.f) },
+                glm::mat4(1.f),
+                std::nullopt },
             container);
         return;
     }
 
-    auto animation = std::make_shared<WindowAnimation>(
+    auto const animation = std::make_shared<WindowAnimation>(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
         from,
@@ -131,7 +130,7 @@ MirWindowState WindowManagerToolsWindowController::get_state(miral::Window const
 
 void WindowManagerToolsWindowController::change_state(miral::Window const& window, MirWindowState state)
 {
-    auto& window_info = tools.info_for(window);
+    auto const& window_info = tools.info_for(window);
     miral::WindowSpecification spec;
     spec.state() = state;
     tools.place_and_size_for_state(spec, window_info);
@@ -184,8 +183,8 @@ void WindowManagerToolsWindowController::send_to_back(miral::Window const& windo
 }
 
 WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
-    AnimationHandle handle,
-    AnimationDefinition definition,
+    AnimationHandle const& handle,
+    AnimationDefinition const& definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
     mir::geometry::Rectangle const& current,
@@ -197,7 +196,7 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
 {
 }
 
-void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationStepResult const& asr)
+void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationFrameResult const& asr)
 {
     controller->server_action_queue->enqueue(controller, [controller = controller, asr = asr, container = container]()
     {
@@ -206,7 +205,7 @@ void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationStepR
 }
 
 void WindowManagerToolsWindowController::process_animation(
-    AnimationStepResult const& result,
+    AnimationFrameResult const& result,
     std::shared_ptr<Container> const& container)
 {
     // TODO (hack): we really need to refactor the entire animation system. The issue
@@ -220,21 +219,15 @@ void WindowManagerToolsWindowController::process_animation(
     {
         bool needs_modify = false;
         miral::WindowSpecification spec;
+        auto const& rectangle = result.rectangle;
 
-        if (result.position)
+        if (rectangle)
         {
-            spec.top_left() = mir::geometry::Point(
-                result.position.value().x,
-                result.position.value().y);
+            spec.top_left() = rectangle->top_left;
             needs_modify = true;
-        }
 
-        if (result.size)
-        {
-            spec.size() = mir::geometry::Size(
-                result.size.value().x,
-                result.size.value().y);
-            needs_modify = true;
+            if (result.is_complete)
+                spec.size() = rectangle->size;
         }
 
         if (!container->window())
@@ -256,13 +249,8 @@ void WindowManagerToolsWindowController::process_animation(
 
         if (result.is_complete)
             container->constrain();
-        else
-        {
-            if (container->get_type() == ContainerType::leaf)
-                clip(window, result.clip_area);
-            else
-                noclip(window);
-        }
+        else if (rectangle)
+            clip(window, rectangle.value());
     }
     catch (std::out_of_range const&)
     {
