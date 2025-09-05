@@ -23,7 +23,7 @@ using namespace miracle;
 
 namespace
 {
-class StubAnimation : public Animation
+class StubAnimation : public BuiltInAnimation
 {
 public:
     StubAnimation(
@@ -32,7 +32,7 @@ public:
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current) :
-        Animation(handle, definition, from, to, current)
+        BuiltInAnimation(handle, definition, from, to, current)
     {
     }
 

@@ -24,7 +24,7 @@ namespace miracle
 {
 namespace test
 {
-    class MockAnimation : public Animation
+    class MockAnimation : public BuiltInAnimation
     {
     public:
         MockAnimation(
@@ -33,7 +33,7 @@ namespace test
             mir::geometry::Rectangle const& from,
             mir::geometry::Rectangle const& to,
             mir::geometry::Rectangle const& current) :
-            Animation(handle, definition, from, to, current)
+            BuiltInAnimation(handle, definition, from, to, current)
         {
         }
 

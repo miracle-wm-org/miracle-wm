@@ -59,37 +59,50 @@ struct AnimationFrameResult
     std::optional<float> const opacity;
 };
 
+/// Interface that defines an animation.
 class Animation
 {
 public:
-    Animation(
+    explicit Animation(AnimationHandle handle);
+    virtual ~Animation() = default;
+    virtual AnimationFrameResult init() = 0;
+    virtual AnimationFrameResult step(float dt) = 0;
+    [[nodiscard]] AnimationHandle get_handle() const;
+    virtual void set_current_size(mir::geometry::Size const& size) = 0;
+    virtual void mark_for_removal();
+    [[nodiscard]] virtual bool is_being_removed() const;
+    virtual void on_tick(AnimationFrameResult const&) = 0;
+
+protected:
+    float runtime_seconds = 0.f;
+
+private:
+    AnimationHandle handle;
+    bool is_being_removed_ = false;
+};
+
+class BuiltInAnimation : public Animation
+{
+public:
+    BuiltInAnimation(
         AnimationHandle handle,
         AnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current);
-    virtual ~Animation() = default;
 
-    Animation& operator=(Animation const& other) = default;
+    BuiltInAnimation& operator=(BuiltInAnimation const& other) = default;
 
-    AnimationFrameResult init();
-    AnimationFrameResult step(float dt);
-    [[nodiscard]] AnimationHandle get_handle() const { return handle; }
-    float get_runtime_seconds() const { return runtime_seconds; }
-    void set_current_size(mir::geometry::Size const& size);
-    void mark_for_removal();
-    bool is_being_removed() const;
-    virtual void on_tick(AnimationFrameResult const&) = 0;
+    AnimationFrameResult init() override;
+    AnimationFrameResult step(float dt) override;
+    void set_current_size(mir::geometry::Size const& size) override;
 
 private:
-    AnimationHandle handle;
     AnimationDefinition definition;
     mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
     mir::geometry::Size real_size;
-    float runtime_seconds = 0.f;
-    bool should_leave_this_animator_for_the_great_animator_in_the_sky = false;
 };
 
 /// Manages the animation queue.

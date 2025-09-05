@@ -190,7 +190,7 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
     mir::geometry::Rectangle const& current,
     WindowManagerToolsWindowController* controller,
     std::shared_ptr<Container> const& container) :
-    Animation(handle, definition, from, to, current),
+    BuiltInAnimation(handle, definition, from, to, current),
     controller { controller },
     container { container }
 {
@@ -224,10 +224,8 @@ void WindowManagerToolsWindowController::process_animation(
         if (rectangle)
         {
             spec.top_left() = rectangle->top_left;
+            spec.size() = rectangle->size;
             needs_modify = true;
-
-            if (result.is_complete)
-                spec.size() = rectangle->size;
         }
 
         if (!container->window())

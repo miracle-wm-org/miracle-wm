@@ -84,7 +84,7 @@ public:
     [[nodiscard]] bool is_primary() const override;
 
 private:
-    class WorkspaceAnimation : public Animation
+    class WorkspaceAnimation : public BuiltInAnimation
     {
     public:
         WorkspaceAnimation(

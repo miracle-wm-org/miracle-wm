@@ -246,13 +246,33 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
 
 AnimationHandle const miracle::none_animation_handle = 0;
 
-Animation::Animation(
+Animation::Animation(AnimationHandle handle) :
+    handle { handle }
+{
+}
+
+AnimationHandle Animation::get_handle() const
+{
+    return handle;
+}
+
+void Animation::mark_for_removal()
+{
+    is_being_removed_ = true;
+}
+
+bool Animation::is_being_removed() const
+{
+    return is_being_removed_;
+}
+
+BuiltInAnimation::BuiltInAnimation(
     AnimationHandle handle,
     AnimationDefinition definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
     mir::geometry::Rectangle const& current) :
-    handle { handle },
+    Animation { handle },
     definition { std::move(definition) },
     current { current },
     from { current },
@@ -289,7 +309,7 @@ Animation::Animation(
     }
 }
 
-AnimationFrameResult Animation::init()
+AnimationFrameResult BuiltInAnimation::init()
 {
     switch (definition.type)
     {
@@ -326,7 +346,7 @@ AnimationFrameResult Animation::init()
     }
 }
 
-AnimationFrameResult Animation::step(float dt)
+AnimationFrameResult BuiltInAnimation::step(float dt)
 {
     runtime_seconds += dt;
     float const t = (runtime_seconds / definition.duration_seconds);
@@ -423,19 +443,9 @@ AnimationFrameResult Animation::step(float dt)
     }
 }
 
-void Animation::set_current_size(mir::geometry::Size const& size)
+void BuiltInAnimation::set_current_size(mir::geometry::Size const& size)
 {
     real_size = size;
-}
-
-void Animation::mark_for_removal()
-{
-    should_leave_this_animator_for_the_great_animator_in_the_sky = true;
-}
-
-bool Animation::is_being_removed() const
-{
-    return should_leave_this_animator_for_the_great_animator_in_the_sky;
 }
 
 AnimationHandle Animator::register_animateable()
