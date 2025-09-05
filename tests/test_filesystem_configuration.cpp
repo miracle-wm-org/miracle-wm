@@ -531,7 +531,7 @@ TEST_F(FilesystemConfigurationTest, DragAndDropMissingModifiers)
 struct AnimationTypeParam
 {
     std::string value;
-    AnimationType expected;
+    BultInAnimationType expected;
 };
 
 class FilesystemConfigurationTestAnimationTypes : public FilesystemConfigurationTest, public ::testing::WithParamInterface<AnimationTypeParam>
@@ -554,19 +554,19 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
 
     FilesystemConfiguration config(registrar, path, true);
     auto def = config.get_animation_definition(AnimateableEvent::window_open);
-    EXPECT_EQ(def.type, param.expected);
+    EXPECT_EQ(def.animations[0].type, param.expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,
     ::testing::Values(
-        AnimationTypeParam("disabled", AnimationType::disabled),
-        AnimationTypeParam("slide", AnimationType::slide),
-        AnimationTypeParam("grow", AnimationType::grow),
-        AnimationTypeParam("shrink", AnimationType::shrink),
-        AnimationTypeParam("fade_in", AnimationType::fade_in),
-        AnimationTypeParam("fade_out", AnimationType::fade_out)));
+        AnimationTypeParam("disabled", BultInAnimationType::disabled),
+        AnimationTypeParam("slide", BultInAnimationType::slide),
+        AnimationTypeParam("grow", BultInAnimationType::grow),
+        AnimationTypeParam("shrink", BultInAnimationType::shrink),
+        AnimationTypeParam("fade_in", BultInAnimationType::fade_in),
+        AnimationTypeParam("fade_out", BultInAnimationType::fade_out)));
 
 TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
 {

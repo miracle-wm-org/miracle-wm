@@ -10,18 +10,18 @@
 #include <wayland-server-core.h>
 
 #include "mir/log.h"
-#include "mir/wayland/client.h"
 #include "mir/wayland/protocol_error.h"
+#include "mir/wayland/client.h"
 
 namespace mir
 {
 namespace wayland
 {
-    extern struct wl_interface const zwlr_output_configuration_head_v1_interface_data;
-    extern struct wl_interface const zwlr_output_configuration_v1_interface_data;
-    extern struct wl_interface const zwlr_output_head_v1_interface_data;
-    extern struct wl_interface const zwlr_output_manager_v1_interface_data;
-    extern struct wl_interface const zwlr_output_mode_v1_interface_data;
+extern struct wl_interface const zwlr_output_configuration_head_v1_interface_data;
+extern struct wl_interface const zwlr_output_configuration_v1_interface_data;
+extern struct wl_interface const zwlr_output_head_v1_interface_data;
+extern struct wl_interface const zwlr_output_manager_v1_interface_data;
+extern struct wl_interface const zwlr_output_mode_v1_interface_data;
 }
 }
 
@@ -29,14 +29,13 @@ namespace mw = mir::wayland;
 
 namespace
 {
-struct wl_interface const* all_null_types[] {
+struct wl_interface const* all_null_types [] {
     nullptr,
     nullptr,
     nullptr,
     nullptr,
     nullptr,
-    nullptr
-};
+    nullptr};
 }
 
 // OutputManagerV1
@@ -47,24 +46,23 @@ struct mw::OutputManagerV1::Thunks
 
     static void create_configuration_thunk(struct wl_client* client, struct wl_resource* resource, uint32_t id, uint32_t serial)
     {
-        wl_resource* id_resolved {
-            wl_resource_create(client, &zwlr_output_configuration_v1_interface_data, wl_resource_get_version(resource), id)
-        };
+        wl_resource* id_resolved{
+            wl_resource_create(client, &zwlr_output_configuration_v1_interface_data, wl_resource_get_version(resource), id)};
         if (id_resolved == nullptr)
         {
             wl_client_post_no_memory(client);
-            BOOST_THROW_EXCEPTION((std::bad_alloc {}));
+            BOOST_THROW_EXCEPTION((std::bad_alloc{}));
         }
         try
         {
             auto me = static_cast<OutputManagerV1*>(wl_resource_get_user_data(resource));
             me->create_configuration(id_resolved, serial);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputManagerV1::create_configuration()");
         }
@@ -77,11 +75,11 @@ struct mw::OutputManagerV1::Thunks
             auto me = static_cast<OutputManagerV1*>(wl_resource_get_user_data(resource));
             me->stop();
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputManagerV1::stop()");
         }
@@ -103,13 +101,13 @@ struct mw::OutputManagerV1::Thunks
         if (resource == nullptr)
         {
             wl_client_post_no_memory(client);
-            BOOST_THROW_EXCEPTION((std::bad_alloc {}));
+            BOOST_THROW_EXCEPTION((std::bad_alloc{}));
         }
         try
         {
             me->bind(resource);
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputManagerV1 global bind");
         }
@@ -124,8 +122,8 @@ struct mw::OutputManagerV1::Thunks
 
 int const mw::OutputManagerV1::Thunks::supported_version = 4;
 
-mw::OutputManagerV1::OutputManagerV1(struct wl_resource* resource, Version<4>) :
-    Resource { resource }
+mw::OutputManagerV1::OutputManagerV1(struct wl_resource* resource, Version<4>)
+    : Resource{resource}
 {
     wl_resource_set_implementation(resource, Thunks::request_vtable, this, &Thunks::resource_destroyed_thunk);
 }
@@ -161,15 +159,14 @@ void mw::OutputManagerV1::destroy_and_delete() const
     wl_resource_destroy(resource);
 }
 
-mw::OutputManagerV1::Global::Global(wl_display* display, Version<4>) :
-    wayland::Global {
-        wl_global_create(
-            display,
-            &zwlr_output_manager_v1_interface_data,
-            Thunks::supported_version,
-            this,
-            &Thunks::bind_thunk)
-    }
+mw::OutputManagerV1::Global::Global(wl_display* display, Version<4>)
+    : wayland::Global{
+          wl_global_create(
+              display,
+              &zwlr_output_manager_v1_interface_data,
+              Thunks::supported_version,
+              this,
+              &Thunks::bind_thunk)}
 {
 }
 
@@ -180,32 +177,28 @@ auto mw::OutputManagerV1::Global::interface_name() const -> char const*
 
 struct wl_interface const* mw::OutputManagerV1::Thunks::create_configuration_types[] {
     &zwlr_output_configuration_v1_interface_data,
-    nullptr
-};
+    nullptr};
 
 struct wl_interface const* mw::OutputManagerV1::Thunks::head_types[] {
-    &zwlr_output_head_v1_interface_data
-};
+    &zwlr_output_head_v1_interface_data};
 
 struct wl_message const mw::OutputManagerV1::Thunks::request_messages[] {
-    { "create_configuration", "nu", create_configuration_types },
-    { "stop",                 "",   all_null_types             }
-};
+    {"create_configuration", "nu", create_configuration_types},
+    {"stop", "", all_null_types}};
 
 struct wl_message const mw::OutputManagerV1::Thunks::event_messages[] {
-    { "head",     "n", head_types     },
-    { "done",     "u", all_null_types },
-    { "finished", "",  all_null_types }
-};
+    {"head", "n", head_types},
+    {"done", "u", all_null_types},
+    {"finished", "", all_null_types}};
 
 void const* mw::OutputManagerV1::Thunks::request_vtable[] {
     (void*)Thunks::create_configuration_thunk,
-    (void*)Thunks::stop_thunk
-};
+    (void*)Thunks::stop_thunk};
 
 mw::OutputManagerV1* mw::OutputManagerV1::from(struct wl_resource* resource)
 {
-    if (resource && wl_resource_instance_of(resource, &zwlr_output_manager_v1_interface_data, OutputManagerV1::Thunks::request_vtable))
+    if (resource &&
+        wl_resource_instance_of(resource, &zwlr_output_manager_v1_interface_data, OutputManagerV1::Thunks::request_vtable))
     {
         return static_cast<OutputManagerV1*>(wl_resource_get_user_data(resource));
     }
@@ -229,11 +222,11 @@ struct mw::OutputHeadV1::Thunks
             me->release();
             wl_resource_destroy(resource);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputHeadV1::release()");
         }
@@ -253,11 +246,11 @@ struct mw::OutputHeadV1::Thunks
 
 int const mw::OutputHeadV1::Thunks::supported_version = 4;
 
-mw::OutputHeadV1::OutputHeadV1(OutputManagerV1 const& parent) :
-    Resource { wl_resource_create(
-        wl_resource_get_client(parent.resource),
-        &zwlr_output_head_v1_interface_data,
-        wl_resource_get_version(parent.resource), 0) }
+mw::OutputHeadV1::OutputHeadV1(OutputManagerV1 const& parent)
+    : Resource{wl_resource_create(
+          wl_resource_get_client(parent.resource),
+          &zwlr_output_head_v1_interface_data,
+          wl_resource_get_version(parent.resource), 0)}
 {
     wl_resource_set_implementation(resource, Thunks::request_vtable, this, &Thunks::resource_destroyed_thunk);
 }
@@ -311,7 +304,7 @@ void mw::OutputHeadV1::send_transform_event(int32_t transform) const
 
 void mw::OutputHeadV1::send_scale_event(double scale) const
 {
-    wl_fixed_t scale_resolved { wl_fixed_from_double(scale) };
+    wl_fixed_t scale_resolved{wl_fixed_from_double(scale)};
     wl_resource_post_event(resource, Opcode::scale, scale_resolved);
 }
 
@@ -435,41 +428,37 @@ uint32_t const mw::OutputHeadV1::AdaptiveSyncState::disabled;
 uint32_t const mw::OutputHeadV1::AdaptiveSyncState::enabled;
 
 struct wl_interface const* mw::OutputHeadV1::Thunks::mode_types[] {
-    &zwlr_output_mode_v1_interface_data
-};
+    &zwlr_output_mode_v1_interface_data};
 
 struct wl_interface const* mw::OutputHeadV1::Thunks::current_mode_types[] {
-    &zwlr_output_mode_v1_interface_data
-};
+    &zwlr_output_mode_v1_interface_data};
 
 struct wl_message const mw::OutputHeadV1::Thunks::request_messages[] {
-    { "release", "3", all_null_types }
-};
+    {"release", "3", all_null_types}};
 
 struct wl_message const mw::OutputHeadV1::Thunks::event_messages[] {
-    { "name",          "s",  all_null_types     },
-    { "description",   "s",  all_null_types     },
-    { "physical_size", "ii", all_null_types     },
-    { "mode",          "n",  mode_types         },
-    { "enabled",       "i",  all_null_types     },
-    { "current_mode",  "o",  current_mode_types },
-    { "position",      "ii", all_null_types     },
-    { "transform",     "i",  all_null_types     },
-    { "scale",         "f",  all_null_types     },
-    { "finished",      "",   all_null_types     },
-    { "make",          "2s", all_null_types     },
-    { "model",         "2s", all_null_types     },
-    { "serial_number", "2s", all_null_types     },
-    { "adaptive_sync", "4u", all_null_types     }
-};
+    {"name", "s", all_null_types},
+    {"description", "s", all_null_types},
+    {"physical_size", "ii", all_null_types},
+    {"mode", "n", mode_types},
+    {"enabled", "i", all_null_types},
+    {"current_mode", "o", current_mode_types},
+    {"position", "ii", all_null_types},
+    {"transform", "i", all_null_types},
+    {"scale", "f", all_null_types},
+    {"finished", "", all_null_types},
+    {"make", "2s", all_null_types},
+    {"model", "2s", all_null_types},
+    {"serial_number", "2s", all_null_types},
+    {"adaptive_sync", "4u", all_null_types}};
 
 void const* mw::OutputHeadV1::Thunks::request_vtable[] {
-    (void*)Thunks::release_thunk
-};
+    (void*)Thunks::release_thunk};
 
 mw::OutputHeadV1* mw::OutputHeadV1::from(struct wl_resource* resource)
 {
-    if (resource && wl_resource_instance_of(resource, &zwlr_output_head_v1_interface_data, OutputHeadV1::Thunks::request_vtable))
+    if (resource &&
+        wl_resource_instance_of(resource, &zwlr_output_head_v1_interface_data, OutputHeadV1::Thunks::request_vtable))
     {
         return static_cast<OutputHeadV1*>(wl_resource_get_user_data(resource));
     }
@@ -493,11 +482,11 @@ struct mw::OutputModeV1::Thunks
             me->release();
             wl_resource_destroy(resource);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputModeV1::release()");
         }
@@ -515,11 +504,11 @@ struct mw::OutputModeV1::Thunks
 
 int const mw::OutputModeV1::Thunks::supported_version = 3;
 
-mw::OutputModeV1::OutputModeV1(OutputHeadV1 const& parent) :
-    Resource { wl_resource_create(
-        wl_resource_get_client(parent.resource),
-        &zwlr_output_mode_v1_interface_data,
-        wl_resource_get_version(parent.resource), 0) }
+mw::OutputModeV1::OutputModeV1(OutputHeadV1 const& parent)
+    : Resource{wl_resource_create(
+          wl_resource_get_client(parent.resource),
+          &zwlr_output_mode_v1_interface_data,
+          wl_resource_get_version(parent.resource), 0)}
 {
     wl_resource_set_implementation(resource, Thunks::request_vtable, this, &Thunks::resource_destroyed_thunk);
 }
@@ -555,23 +544,21 @@ bool mw::OutputModeV1::is_instance(wl_resource* resource)
 }
 
 struct wl_message const mw::OutputModeV1::Thunks::request_messages[] {
-    { "release", "3", all_null_types }
-};
+    {"release", "3", all_null_types}};
 
 struct wl_message const mw::OutputModeV1::Thunks::event_messages[] {
-    { "size",      "ii", all_null_types },
-    { "refresh",   "i",  all_null_types },
-    { "preferred", "",   all_null_types },
-    { "finished",  "",   all_null_types }
-};
+    {"size", "ii", all_null_types},
+    {"refresh", "i", all_null_types},
+    {"preferred", "", all_null_types},
+    {"finished", "", all_null_types}};
 
 void const* mw::OutputModeV1::Thunks::request_vtable[] {
-    (void*)Thunks::release_thunk
-};
+    (void*)Thunks::release_thunk};
 
 mw::OutputModeV1* mw::OutputModeV1::from(struct wl_resource* resource)
 {
-    if (resource && wl_resource_instance_of(resource, &zwlr_output_mode_v1_interface_data, OutputModeV1::Thunks::request_vtable))
+    if (resource &&
+        wl_resource_instance_of(resource, &zwlr_output_mode_v1_interface_data, OutputModeV1::Thunks::request_vtable))
     {
         return static_cast<OutputModeV1*>(wl_resource_get_user_data(resource));
     }
@@ -589,24 +576,23 @@ struct mw::OutputConfigurationV1::Thunks
 
     static void enable_head_thunk(struct wl_client* client, struct wl_resource* resource, uint32_t id, struct wl_resource* head)
     {
-        wl_resource* id_resolved {
-            wl_resource_create(client, &zwlr_output_configuration_head_v1_interface_data, wl_resource_get_version(resource), id)
-        };
+        wl_resource* id_resolved{
+            wl_resource_create(client, &zwlr_output_configuration_head_v1_interface_data, wl_resource_get_version(resource), id)};
         if (id_resolved == nullptr)
         {
             wl_client_post_no_memory(client);
-            BOOST_THROW_EXCEPTION((std::bad_alloc {}));
+            BOOST_THROW_EXCEPTION((std::bad_alloc{}));
         }
         try
         {
             auto me = static_cast<OutputConfigurationV1*>(wl_resource_get_user_data(resource));
             me->enable_head(id_resolved, head);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationV1::enable_head()");
         }
@@ -619,11 +605,11 @@ struct mw::OutputConfigurationV1::Thunks
             auto me = static_cast<OutputConfigurationV1*>(wl_resource_get_user_data(resource));
             me->disable_head(head);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationV1::disable_head()");
         }
@@ -636,11 +622,11 @@ struct mw::OutputConfigurationV1::Thunks
             auto me = static_cast<OutputConfigurationV1*>(wl_resource_get_user_data(resource));
             me->apply();
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationV1::apply()");
         }
@@ -653,11 +639,11 @@ struct mw::OutputConfigurationV1::Thunks
             auto me = static_cast<OutputConfigurationV1*>(wl_resource_get_user_data(resource));
             me->test();
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationV1::test()");
         }
@@ -671,11 +657,11 @@ struct mw::OutputConfigurationV1::Thunks
             me->destroy();
             wl_resource_destroy(resource);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationV1::destroy()");
         }
@@ -695,8 +681,8 @@ struct mw::OutputConfigurationV1::Thunks
 
 int const mw::OutputConfigurationV1::Thunks::supported_version = 4;
 
-mw::OutputConfigurationV1::OutputConfigurationV1(struct wl_resource* resource, Version<4>) :
-    Resource { resource }
+mw::OutputConfigurationV1::OutputConfigurationV1(struct wl_resource* resource, Version<4>)
+    : Resource{resource}
 {
     wl_resource_set_implementation(resource, Thunks::request_vtable, this, &Thunks::resource_destroyed_thunk);
 }
@@ -732,38 +718,34 @@ uint32_t const mw::OutputConfigurationV1::Error::already_used;
 
 struct wl_interface const* mw::OutputConfigurationV1::Thunks::enable_head_types[] {
     &zwlr_output_configuration_head_v1_interface_data,
-    &zwlr_output_head_v1_interface_data
-};
+    &zwlr_output_head_v1_interface_data};
 
 struct wl_interface const* mw::OutputConfigurationV1::Thunks::disable_head_types[] {
-    &zwlr_output_head_v1_interface_data
-};
+    &zwlr_output_head_v1_interface_data};
 
 struct wl_message const mw::OutputConfigurationV1::Thunks::request_messages[] {
-    { "enable_head",  "no", enable_head_types  },
-    { "disable_head", "o",  disable_head_types },
-    { "apply",        "",   all_null_types     },
-    { "test",         "",   all_null_types     },
-    { "destroy",      "",   all_null_types     }
-};
+    {"enable_head", "no", enable_head_types},
+    {"disable_head", "o", disable_head_types},
+    {"apply", "", all_null_types},
+    {"test", "", all_null_types},
+    {"destroy", "", all_null_types}};
 
 struct wl_message const mw::OutputConfigurationV1::Thunks::event_messages[] {
-    { "succeeded", "", all_null_types },
-    { "failed",    "", all_null_types },
-    { "cancelled", "", all_null_types }
-};
+    {"succeeded", "", all_null_types},
+    {"failed", "", all_null_types},
+    {"cancelled", "", all_null_types}};
 
 void const* mw::OutputConfigurationV1::Thunks::request_vtable[] {
     (void*)Thunks::enable_head_thunk,
     (void*)Thunks::disable_head_thunk,
     (void*)Thunks::apply_thunk,
     (void*)Thunks::test_thunk,
-    (void*)Thunks::destroy_thunk
-};
+    (void*)Thunks::destroy_thunk};
 
 mw::OutputConfigurationV1* mw::OutputConfigurationV1::from(struct wl_resource* resource)
 {
-    if (resource && wl_resource_instance_of(resource, &zwlr_output_configuration_v1_interface_data, OutputConfigurationV1::Thunks::request_vtable))
+    if (resource &&
+        wl_resource_instance_of(resource, &zwlr_output_configuration_v1_interface_data, OutputConfigurationV1::Thunks::request_vtable))
     {
         return static_cast<OutputConfigurationV1*>(wl_resource_get_user_data(resource));
     }
@@ -786,11 +768,11 @@ struct mw::OutputConfigurationHeadV1::Thunks
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_mode(mode);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_mode()");
         }
@@ -803,11 +785,11 @@ struct mw::OutputConfigurationHeadV1::Thunks
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_custom_mode(width, height, refresh);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_custom_mode()");
         }
@@ -820,11 +802,11 @@ struct mw::OutputConfigurationHeadV1::Thunks
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_position(x, y);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_position()");
         }
@@ -837,11 +819,11 @@ struct mw::OutputConfigurationHeadV1::Thunks
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_transform(transform);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_transform()");
         }
@@ -849,17 +831,17 @@ struct mw::OutputConfigurationHeadV1::Thunks
 
     static void set_scale_thunk(struct wl_client* client, struct wl_resource* resource, wl_fixed_t scale)
     {
-        double scale_resolved { wl_fixed_to_double(scale) };
+        double scale_resolved{wl_fixed_to_double(scale)};
         try
         {
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_scale(scale_resolved);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_scale()");
         }
@@ -872,11 +854,11 @@ struct mw::OutputConfigurationHeadV1::Thunks
             auto me = static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
             me->set_adaptive_sync(state);
         }
-        catch (ProtocolError const& err)
+        catch(ProtocolError const& err)
         {
             wl_resource_post_error(err.resource(), err.code(), "%s", err.message());
         }
-        catch (...)
+        catch(...)
         {
             internal_error_processing_request(client, "OutputConfigurationHeadV1::set_adaptive_sync()");
         }
@@ -894,8 +876,8 @@ struct mw::OutputConfigurationHeadV1::Thunks
 
 int const mw::OutputConfigurationHeadV1::Thunks::supported_version = 4;
 
-mw::OutputConfigurationHeadV1::OutputConfigurationHeadV1(struct wl_resource* resource, Version<4>) :
-    Resource { resource }
+mw::OutputConfigurationHeadV1::OutputConfigurationHeadV1(struct wl_resource* resource, Version<4>)
+    : Resource{resource}
 {
     wl_resource_set_implementation(resource, Thunks::request_vtable, this, &Thunks::resource_destroyed_thunk);
 }
@@ -924,17 +906,15 @@ uint32_t const mw::OutputConfigurationHeadV1::Error::invalid_scale;
 uint32_t const mw::OutputConfigurationHeadV1::Error::invalid_adaptive_sync_state;
 
 struct wl_interface const* mw::OutputConfigurationHeadV1::Thunks::set_mode_types[] {
-    &zwlr_output_mode_v1_interface_data
-};
+    &zwlr_output_mode_v1_interface_data};
 
 struct wl_message const mw::OutputConfigurationHeadV1::Thunks::request_messages[] {
-    { "set_mode",          "o",   set_mode_types },
-    { "set_custom_mode",   "iii", all_null_types },
-    { "set_position",      "ii",  all_null_types },
-    { "set_transform",     "i",   all_null_types },
-    { "set_scale",         "f",   all_null_types },
-    { "set_adaptive_sync", "4u",  all_null_types }
-};
+    {"set_mode", "o", set_mode_types},
+    {"set_custom_mode", "iii", all_null_types},
+    {"set_position", "ii", all_null_types},
+    {"set_transform", "i", all_null_types},
+    {"set_scale", "f", all_null_types},
+    {"set_adaptive_sync", "4u", all_null_types}};
 
 void const* mw::OutputConfigurationHeadV1::Thunks::request_vtable[] {
     (void*)Thunks::set_mode_thunk,
@@ -942,12 +922,12 @@ void const* mw::OutputConfigurationHeadV1::Thunks::request_vtable[] {
     (void*)Thunks::set_position_thunk,
     (void*)Thunks::set_transform_thunk,
     (void*)Thunks::set_scale_thunk,
-    (void*)Thunks::set_adaptive_sync_thunk
-};
+    (void*)Thunks::set_adaptive_sync_thunk};
 
 mw::OutputConfigurationHeadV1* mw::OutputConfigurationHeadV1::from(struct wl_resource* resource)
 {
-    if (resource && wl_resource_instance_of(resource, &zwlr_output_configuration_head_v1_interface_data, OutputConfigurationHeadV1::Thunks::request_vtable))
+    if (resource &&
+        wl_resource_instance_of(resource, &zwlr_output_configuration_head_v1_interface_data, OutputConfigurationHeadV1::Thunks::request_vtable))
     {
         return static_cast<OutputConfigurationHeadV1*>(wl_resource_get_user_data(resource));
     }
@@ -962,40 +942,35 @@ namespace mir
 namespace wayland
 {
 
-    struct wl_interface const zwlr_output_manager_v1_interface_data {
-        mw::OutputManagerV1::interface_name,
-        mw::OutputManagerV1::Thunks::supported_version,
-        2, mw::OutputManagerV1::Thunks::request_messages,
-        3, mw::OutputManagerV1::Thunks::event_messages
-    };
+struct wl_interface const zwlr_output_manager_v1_interface_data {
+    mw::OutputManagerV1::interface_name,
+    mw::OutputManagerV1::Thunks::supported_version,
+    2, mw::OutputManagerV1::Thunks::request_messages,
+    3, mw::OutputManagerV1::Thunks::event_messages};
 
-    struct wl_interface const zwlr_output_head_v1_interface_data {
-        mw::OutputHeadV1::interface_name,
-        mw::OutputHeadV1::Thunks::supported_version,
-        1, mw::OutputHeadV1::Thunks::request_messages,
-        14, mw::OutputHeadV1::Thunks::event_messages
-    };
+struct wl_interface const zwlr_output_head_v1_interface_data {
+    mw::OutputHeadV1::interface_name,
+    mw::OutputHeadV1::Thunks::supported_version,
+    1, mw::OutputHeadV1::Thunks::request_messages,
+    14, mw::OutputHeadV1::Thunks::event_messages};
 
-    struct wl_interface const zwlr_output_mode_v1_interface_data {
-        mw::OutputModeV1::interface_name,
-        mw::OutputModeV1::Thunks::supported_version,
-        1, mw::OutputModeV1::Thunks::request_messages,
-        4, mw::OutputModeV1::Thunks::event_messages
-    };
+struct wl_interface const zwlr_output_mode_v1_interface_data {
+    mw::OutputModeV1::interface_name,
+    mw::OutputModeV1::Thunks::supported_version,
+    1, mw::OutputModeV1::Thunks::request_messages,
+    4, mw::OutputModeV1::Thunks::event_messages};
 
-    struct wl_interface const zwlr_output_configuration_v1_interface_data {
-        mw::OutputConfigurationV1::interface_name,
-        mw::OutputConfigurationV1::Thunks::supported_version,
-        5, mw::OutputConfigurationV1::Thunks::request_messages,
-        3, mw::OutputConfigurationV1::Thunks::event_messages
-    };
+struct wl_interface const zwlr_output_configuration_v1_interface_data {
+    mw::OutputConfigurationV1::interface_name,
+    mw::OutputConfigurationV1::Thunks::supported_version,
+    5, mw::OutputConfigurationV1::Thunks::request_messages,
+    3, mw::OutputConfigurationV1::Thunks::event_messages};
 
-    struct wl_interface const zwlr_output_configuration_head_v1_interface_data {
-        mw::OutputConfigurationHeadV1::interface_name,
-        mw::OutputConfigurationHeadV1::Thunks::supported_version,
-        6, mw::OutputConfigurationHeadV1::Thunks::request_messages,
-        0, nullptr
-    };
+struct wl_interface const zwlr_output_configuration_head_v1_interface_data {
+    mw::OutputConfigurationHeadV1::interface_name,
+    mw::OutputConfigurationHeadV1::Thunks::supported_version,
+    6, mw::OutputConfigurationHeadV1::Thunks::request_messages,
+    0, nullptr};
 
 }
 }

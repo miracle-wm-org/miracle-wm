@@ -72,7 +72,7 @@ private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     Policy* policy;
 
-    class WindowAnimation : public BuiltInAnimation
+    class WindowAnimation : public MultiBuiltInAnimation
     {
     public:
         WindowAnimation(

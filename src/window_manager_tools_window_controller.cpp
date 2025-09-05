@@ -190,7 +190,7 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
     mir::geometry::Rectangle const& current,
     WindowManagerToolsWindowController* controller,
     std::shared_ptr<Container> const& container) :
-    BuiltInAnimation(handle, definition, from, to, current),
+    MultiBuiltInAnimation(handle, definition, from, to, current),
     controller { controller },
     container { container }
 {

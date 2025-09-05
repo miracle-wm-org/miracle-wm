@@ -28,11 +28,11 @@ class StubAnimation : public BuiltInAnimation
 public:
     StubAnimation(
         AnimationHandle handle,
-        AnimationDefinition definition,
+        BuiltInAnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current) :
-        BuiltInAnimation(handle, definition, from, to, current)
+        BuiltInAnimation(handle, 1, definition, from, to, current)
     {
     }
 
@@ -53,10 +53,9 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
 {
     Animator animator;
     auto const handle = animator.register_animateable();
-    AnimationDefinition definition {
-        .type = AnimationType::slide,
+    BuiltInAnimationDefinition definition {
+        .type = BultInAnimationType::slide,
         .function = EaseFunction::linear,
-        .duration_seconds = 1
     };
     auto const animation = std::make_shared<StubAnimation>(
         handle,
@@ -84,13 +83,13 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
 {
     Animator animator;
     auto const handle = animator.register_animateable();
-    AnimationDefinition definition {
-        .type = AnimationType::fade_in,
+    BuiltInAnimationDefinition definition {
+        .type = BultInAnimationType::fade_in,
         .function = EaseFunction::linear,
-        .duration_seconds = 1
     };
     auto const animation = std::make_shared<test::MockAnimation>(
         handle,
+        1,
         definition,
         mir::geometry::Rectangle(
             mir::geometry::Point(0, 0),
@@ -111,13 +110,13 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
 {
     Animator animator;
     auto const handle = animator.register_animateable();
-    AnimationDefinition definition {
-        .type = AnimationType::fade_out,
+    BuiltInAnimationDefinition definition {
+        .type = BultInAnimationType::fade_out,
         .function = EaseFunction::linear,
-        .duration_seconds = 1
     };
     auto const animation = std::make_shared<test::MockAnimation>(
         handle,
+        1,
         definition,
         mir::geometry::Rectangle(
             mir::geometry::Point(0, 0),

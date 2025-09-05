@@ -44,6 +44,34 @@ void main() {
 }
 )";
 
+const GLchar* const border_vertex_shader_src = R"(
+attribute vec3 position;
+attribute vec2 texcoord;
+
+uniform mat4 screen_to_gl_coords;
+uniform mat4 display_transform;
+uniform mat4 workspace_transform;
+uniform mat4 border_transform;
+uniform mat4 transform;
+uniform vec2 center;
+
+varying vec2 v_texcoord;
+
+void main() {
+   // First, we transform the border to be resized and scaled to match the
+   // surface that it is surrounding.
+   vec4 p = vec4(-0.5, -0.5, 0.0, 0.0);
+   vec4 transformed = (border_transform * (vec4(position, 1.0) - p)) + p;
+
+   // Afterwards. we apply the regular transform from the surface.
+   p = vec4(center, 0.0, 0.0);
+   transformed = (transform * (transformed - p)) + p;
+
+   gl_Position = display_transform * screen_to_gl_coords * workspace_transform * transformed;
+   v_texcoord = texcoord;
+}
+)";
+
 const GLchar* const fragment_border_src = R"(
 #ifdef GL_ES
 precision mediump float;
@@ -139,6 +167,10 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     if (surface_size_uniform < 0)
         mir::log_warning("Program is missing surfaceSize");
 
+    border_transform_uniform = glGetUniformLocation(id, "border_transform");
+    if (border_transform_uniform < 0)
+        mir::log_warning("Program is missing border_transform_uniform");
+
     border_color_uniform = glGetUniformLocation(id, "borderColor");
     if (border_color_uniform < 0)
         mir::log_warning("Program is missing borderColor");
@@ -160,8 +192,9 @@ miracle::Program::Program(ProgramHandle&& program) :
 
 miracle::ProgramFactory::ProgramFactory() :
     vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) },
-    border_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
-    border_program { Program(link_shader(vertex_shader, border_shader)) }
+    border_vertex_shader { compile_shader(GL_VERTEX_SHADER, border_vertex_shader_src) },
+    border_fragment_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
+    border_program { Program(link_shader(border_vertex_shader, border_fragment_shader)) }
 {
 }
 

@@ -90,12 +90,12 @@ std::optional<miracle::EaseFunction> from_string_ease_function(std::string const
     return std::nullopt;
 }
 
-std::optional<miracle::AnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
+std::optional<miracle::BultInAnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::animation_type_strings.size(); i++)
+    for (auto i = 0; i < miracle::built_in_animation_type_strings.size(); i++)
     {
-        if (miracle::animation_type_strings[i] == str)
-            return static_cast<miracle::AnimationType>(i);
+        if (miracle::built_in_animation_type_strings[i] == str)
+            return static_cast<miracle::BultInAnimationType>(i);
     }
 
     return std::nullopt;
@@ -654,32 +654,17 @@ void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)
     }
 }
 
-void read_animation_definitions(YAML::Node const& animations_node, ParsingContext& context)
+namespace
 {
-    if (!animations_node.IsSequence())
+    bool try_read_built_in_animation_definition(YAML::Node const& node, ParsingContext& context, miracle::BuiltInAnimationDefinition& animation_def)
     {
-        context.builder << "Animation definitions must be a sequence";
-        create_error(animations_node, context);
-        return;
-    }
-
-    for (auto const& node : animations_node)
-    {
-        auto const& event = try_parse_string_to_optional_value<std::optional<miracle::AnimateableEvent>>(
-            node,
-            "event",
-            from_string_animateable_event,
-            context);
-        if (!event)
-            continue;
-
-        auto const& type = try_parse_string_to_optional_value<std::optional<miracle::AnimationType>>(
+        auto const& type = try_parse_string_to_optional_value<std::optional<miracle::BultInAnimationType>>(
             node,
             "type",
             from_string_animation_type,
             context);
         if (!type)
-            continue;
+            return false;
 
         auto const& function = try_parse_string_to_optional_value<std::optional<miracle::EaseFunction>>(
             node,
@@ -687,19 +672,97 @@ void read_animation_definitions(YAML::Node const& animations_node, ParsingContex
             from_string_ease_function,
             context);
         if (!function)
+            return false;
+
+        animation_def.type = type.value();
+        animation_def.function = function.value();
+        try_parse_value(node, "c1", animation_def.c1, context, true);
+        try_parse_value(node, "c2", animation_def.c2, context, true);
+        try_parse_value(node, "c3", animation_def.c3, context, true);
+        try_parse_value(node, "c4", animation_def.c4, context, true);
+        try_parse_value(node, "n1", animation_def.n1, context, true);
+        try_parse_value(node, "d1", animation_def.d1, context, true);
+        return true;
+    }
+}
+
+void read_animation_definitions(YAML::Node const& animation_node_list, ParsingContext& context)
+{
+    /// Animation definitions can be defined multiple ways.
+    ///
+    /// The first way allows users to define multiple animations running simulatenously:
+    ///
+    /// ```yaml
+    /// animations:
+    ///     - event: window_open
+    ///       duration: 1000
+    ///       list:
+    ///           - type: slide
+    ///             function: linear
+    ///             ...
+    /// ```
+    ///
+    /// This method empowers users to combine animations from multiple sources.
+    ///
+    /// The second way is the flat structure which was the original of the project:
+    ///
+    /// ```yaml
+    /// animations:
+    ///     - event: window_open
+    ///       duration: 1000
+    ///       type: slide
+    ///       function: linear
+    ///       ...
+    /// ```
+    ///
+    /// The latter has the limitation of only supporting a single entry.
+    ///
+    /// TODO: Deprecate the latter
+    /// TODO: Add sequential animations
+    if (!animation_node_list.IsSequence())
+    {
+        context.builder << "Animation definitions must be a sequence";
+        create_error(animation_node_list, context);
+        return;
+    }
+
+    for (auto const& animation_node : animation_node_list)
+    {
+        auto const& event = try_parse_string_to_optional_value<std::optional<miracle::AnimateableEvent>>(
+            animation_node,
+            "event",
+            from_string_animateable_event,
+            context);
+        if (!event)
             continue;
+
+        std::vector<miracle::BuiltInAnimationDefinition> animations;
+
+        if (animation_node["list"])
+        {
+            if (!animation_node["list"].IsSequence())
+                continue;
+
+            for (auto const built_in_animation_node : animation_node["multi"])
+            {
+                miracle::BuiltInAnimationDefinition animation_def;
+                if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
+                    animations.push_back(animation_def);
+            }
+        }
+        else
+        {
+            miracle::BuiltInAnimationDefinition animation_def;
+            if (try_read_built_in_animation_definition(animation_node, context, animation_def))
+                animations.push_back(animation_def);
+            else
+                continue;
+        }
 
         int const event_as_int = static_cast<int>(event.value());
         context.result.config.animation_definitions[event_as_int].is_default = false;
-        context.result.config.animation_definitions[event_as_int].type = type.value();
-        context.result.config.animation_definitions[event_as_int].function = function.value();
-        try_parse_value(node, "duration", context.result.config.animation_definitions[event_as_int].duration_seconds, context, true);
-        try_parse_value(node, "c1", context.result.config.animation_definitions[event_as_int].c1, context, true);
-        try_parse_value(node, "c2", context.result.config.animation_definitions[event_as_int].c2, context, true);
-        try_parse_value(node, "c3", context.result.config.animation_definitions[event_as_int].c3, context, true);
-        try_parse_value(node, "c4", context.result.config.animation_definitions[event_as_int].c4, context, true);
-        try_parse_value(node, "n1", context.result.config.animation_definitions[event_as_int].n1, context, true);
-        try_parse_value(node, "d1", context.result.config.animation_definitions[event_as_int].d1, context, true);
+        try_parse_value(animation_node, "duration", context.result.config.animation_definitions[event_as_int].duration_seconds, context, true);
+        context.result.config.animation_definitions[event_as_int].animations = animations;
     }
 }
 
@@ -818,8 +881,8 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
 }
 
 miracle::ConfigData::ConfigData()
+    : animation_definitions{internal::default_animation_definitions}
 {
-    animation_definitions = internal::default_animation_definitions;
 }
 
 miracle::ConfigLoadResult miracle::load_config(std::string const& path)
@@ -1065,31 +1128,39 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     if (has_custom_animations)
     {
         out << YAML::Key << "animations" << YAML::Value << YAML::BeginSeq;
-        for (int i = 0; i < static_cast<int>(AnimateableEvent::max); i++)
+        for (size_t i = 0; i < static_cast<size_t>(AnimateableEvent::max); i++)
         {
             auto const& def = config.animation_definitions[i];
-            if (!def.is_default)
+            if (def.is_default)
+                continue;
+            
+            out << YAML::BeginMap;
+            out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
+            if (def.duration_seconds != 0.f)
+                out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
+            out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<int>(def.type)];
+
+            out << YAML::Key << "list" << YAML::Value << YAML::BeginSeq;
+            for (auto const& animation : def.animations)
             {
                 out << YAML::BeginMap;
-                out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
-                out << YAML::Key << "type" << YAML::Value << animation_type_strings[static_cast<int>(def.type)];
-                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<int>(def.function)];
-                if (def.duration_seconds != 0.f)
-                    out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
-                if (def.c1 != 0.f)
-                    out << YAML::Key << "c1" << YAML::Value << def.c1;
-                if (def.c2 != 0.f)
-                    out << YAML::Key << "c2" << YAML::Value << def.c2;
-                if (def.c3 != 0.f)
-                    out << YAML::Key << "c3" << YAML::Value << def.c3;
-                if (def.c4 != 0.f)
-                    out << YAML::Key << "c4" << YAML::Value << def.c4;
-                if (def.n1 != 0.f)
-                    out << YAML::Key << "n1" << YAML::Value << def.n1;
-                if (def.d1 != 0.f)
-                    out << YAML::Key << "d1" << YAML::Value << def.d1;
+                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<int>(animation.function)];
+                if (animation.c1 != 0.f)
+                    out << YAML::Key << "c1" << YAML::Value << animation.c1;
+                if (animation.c2 != 0.f)
+                    out << YAML::Key << "c2" << YAML::Value << animation.c2;
+                if (animation.c3 != 0.f)
+                    out << YAML::Key << "c3" << YAML::Value << animation.c3;
+                if (animation.c4 != 0.f)
+                    out << YAML::Key << "c4" << YAML::Value << animation.c4;
+                if (animation.n1 != 0.f)
+                    out << YAML::Key << "n1" << YAML::Value << animation.n1;
+                if (animation.d1 != 0.f)
+                    out << YAML::Key << "d1" << YAML::Value << animation.d1;
                 out << YAML::EndMap;
             }
+            out << YAML::EndSeq;
+            out << YAML::EndMap;
         }
         out << YAML::EndSeq;
     }

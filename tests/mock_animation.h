@@ -29,11 +29,12 @@ namespace test
     public:
         MockAnimation(
             AnimationHandle handle,
-            AnimationDefinition definition,
+            float duration,
+            BuiltInAnimationDefinition definition,
             mir::geometry::Rectangle const& from,
             mir::geometry::Rectangle const& to,
             mir::geometry::Rectangle const& current) :
-            BuiltInAnimation(handle, definition, from, to, current)
+            BuiltInAnimation(handle, duration, definition, from, to, current)
         {
         }
 

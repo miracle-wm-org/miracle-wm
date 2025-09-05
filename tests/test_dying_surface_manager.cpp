@@ -94,7 +94,6 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
     // Resolution of the animation
     std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animation_definitions;
     animation_definitions[static_cast<int>(AnimateableEvent::window_close)] = {
-        .duration_seconds = 10.f
     };
     EXPECT_CALL(*config, get_animation_definition(AnimateableEvent::window_close))
         .WillOnce(testing::ReturnRef(animation_definitions[static_cast<int>(AnimateableEvent::window_close)]));

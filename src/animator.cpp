@@ -49,7 +49,7 @@ float get_percent_complete(float const target, float const real)
         return percent;
 }
 
-float ease_out_bounce(AnimationDefinition const& defintion, float x)
+float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
 {
     if (x < 1 / defintion.d1)
     {
@@ -69,7 +69,7 @@ float ease_out_bounce(AnimationDefinition const& defintion, float x)
     }
 }
 
-float ease(AnimationDefinition const& defintion, float t)
+float ease(BuiltInAnimationDefinition const& defintion, float t)
 {
     // https://easings.net/
     switch (defintion.function)
@@ -244,6 +244,17 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
 }
 }
 
+AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& other) const
+{
+    return AnimationFrameResult{
+        is_complete || other.is_complete,
+        rectangle ? *rectangle : other.rectangle,
+        transform ? *transform : other.transform,
+        opacity ? *opacity : other.opacity
+    };
+}
+
+
 AnimationHandle const miracle::none_animation_handle = 0;
 
 Animation::Animation(AnimationHandle handle) :
@@ -268,11 +279,13 @@ bool Animation::is_being_removed() const
 
 BuiltInAnimation::BuiltInAnimation(
     AnimationHandle handle,
-    AnimationDefinition definition,
+    float duration_seconds,
+    BuiltInAnimationDefinition definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
     mir::geometry::Rectangle const& current) :
     Animation { handle },
+    duration_seconds{ duration_seconds },
     definition { std::move(definition) },
     current { current },
     from { current },
@@ -281,7 +294,7 @@ BuiltInAnimation::BuiltInAnimation(
 {
     switch (definition.type)
     {
-    case AnimationType::slide:
+    case BultInAnimationType::slide:
     {
         // Find out the percentage that we're already through the move. This could be negative, by design.
         glm::vec2 end = to_glm_vec2(to.top_left);
@@ -301,7 +314,7 @@ BuiltInAnimation::BuiltInAnimation(
 
         float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
         percentage = std::clamp(percentage, 0.f, 1.f);
-        runtime_seconds = percentage * definition.duration_seconds;
+        runtime_seconds = percentage * duration_seconds;
         break;
     }
     default:
@@ -309,15 +322,59 @@ BuiltInAnimation::BuiltInAnimation(
     }
 }
 
+MultiBuiltInAnimation::MultiBuiltInAnimation(
+    AnimationHandle handle,
+    AnimationDefinition const& definition,
+    mir::geometry::Rectangle const& from,
+    mir::geometry::Rectangle const& to,
+    mir::geometry::Rectangle const& current)
+    : Animation(handle)
+{
+
+    for (auto const& def : definition.animations)
+    {
+        animations.emplace_back(BuiltInAnimation(
+            handle,
+            definition.duration_seconds,
+            def,
+            from,
+            to,
+            current));
+    }
+}
+
+AnimationFrameResult MultiBuiltInAnimation::init()
+{
+    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
+    for (auto& anim : animations)
+        result = anim.init().merge(result);
+    return result;
+}
+
+AnimationFrameResult MultiBuiltInAnimation::step(float dt)
+{
+    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
+    for (auto& anim : animations)
+        result = anim.step(dt).merge(result);
+    return result;
+}
+
+void MultiBuiltInAnimation::set_current_size(mir::geometry::Size const& size)
+{
+    for (auto& anim : animations)
+        anim.set_current_size(size);
+}
+
+
 AnimationFrameResult BuiltInAnimation::init()
 {
     switch (definition.type)
     {
-    case AnimationType::grow:
+    case BultInAnimationType::grow:
         return { false, std::nullopt, glm::mat4(0.f), std::nullopt };
-    case AnimationType::shrink:
+    case BultInAnimationType::shrink:
         return { false, std::nullopt, glm::mat4(1.f), std::nullopt };
-    case AnimationType::slide:
+    case BultInAnimationType::slide:
     {
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
@@ -333,11 +390,11 @@ AnimationFrameResult BuiltInAnimation::init()
             std::nullopt
         };
     }
-    case AnimationType::fade_in:
+    case BultInAnimationType::fade_in:
         return { false, std::nullopt, std::nullopt, 0 };
-    case AnimationType::fade_out:
+    case BultInAnimationType::fade_out:
         return { false, std::nullopt, std::nullopt, 1 };
-    case AnimationType::disabled:
+    case BultInAnimationType::disabled:
     default:
     {
         current = to;
@@ -349,17 +406,17 @@ AnimationFrameResult BuiltInAnimation::init()
 AnimationFrameResult BuiltInAnimation::step(float dt)
 {
     runtime_seconds += dt;
-    float const t = (runtime_seconds / definition.duration_seconds);
+    float const t = (runtime_seconds / duration_seconds);
 
-    if (runtime_seconds >= definition.duration_seconds)
+    if (runtime_seconds >= duration_seconds)
     {
         return { true, to, glm::mat4(1.f),
-            definition.type == AnimationType::fade_out ? 0.f : 1.f };
+            definition.type == BultInAnimationType::fade_out ? 0.f : 1.f };
     }
 
     switch (definition.type)
     {
-    case AnimationType::slide:
+    case BultInAnimationType::slide:
     {
         auto const p = ease(definition, t);
         const auto [position, clip_area_size, transform] = slide(p, from, to, real_size);
@@ -374,70 +431,33 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
             1.f
         };
     }
-    case AnimationType::grow:
+    case BultInAnimationType::grow:
     {
         auto const p = ease(definition, t);
-        glm::vec3 const translate(
-            static_cast<float>(to.size.width.as_value()) / 2.f,
-            static_cast<float>(to.size.height.as_value()) / 2.f,
-            0);
-        auto const inverse_translate = -translate;
-        glm::mat4 const transform = glm::translate(
-            glm::scale(
-                glm::translate(translate),
-                glm::vec3(p, p, 1.f)),
-            inverse_translate);
-
-        float center_x = to.top_left.x.as_value() + static_cast<float>(to.size.width.as_value()) / 2.f;
-        float center_y = to.top_left.y.as_value() + static_cast<float>(to.size.height.as_value()) / 2.f;
-        float new_width = static_cast<float>(from.size.width.as_value()) * p;
-        float new_height = static_cast<float>(from.size.height.as_value()) * p;
-        float new_x = center_x - new_width / 2.f;
-        float new_y = center_y - new_height / 2.f;
-        geom::Rectangle const clip_area {
-            geom::Point(new_x, new_y),
-            geom::Size(new_width, new_height)
-        };
-
-        return { false, clip_area, transform, std::nullopt };
+        glm::mat4 const transform = glm::scale(
+            glm::mat4(1.f),
+            glm::vec3(p, p, 1.f));;
+        return { false, std::nullopt, transform, std::nullopt };
     }
-    case AnimationType::shrink:
+    case BultInAnimationType::shrink:
     {
         auto const p = 1.f - ease(definition, t);
-        glm::vec3 const translate(
-            static_cast<float>(from.size.width.as_value()) / 2.f,
-            static_cast<float>(from.size.height.as_value()) / 2.f,
-            0);
-        auto const inverse_translate = -translate;
-        glm::mat4 const transform = glm::translate(
-            glm::scale(
-                glm::translate(translate),
-                glm::vec3(p, p, 1.f)),
-            inverse_translate);
-
-        float center_x = to.top_left.x.as_value() + static_cast<float>(to.size.width.as_value()) / 2.f;
-        float center_y = to.top_left.y.as_value() + static_cast<float>(to.size.height.as_value()) / 2.f;
-        float new_width = static_cast<float>(from.size.width.as_value()) * p;
-        float new_height = static_cast<float>(from.size.height.as_value()) * p;
-        float new_x = center_x - new_width / 2.f;
-        float new_y = center_y - new_height / 2.f;
-        geom::Rectangle const clip_area {
-            geom::Point(new_x, new_y),
-            geom::Size(new_width, new_height)
-        };
-        return { false, clip_area, transform, std::nullopt };
+        glm::mat4 const transform = glm::scale(
+            glm::mat4(1.f),
+            glm::vec3(p, p, 1.f));
+        return { false, std::nullopt, transform, std::nullopt };
     }
-    case AnimationType::fade_in:
+    case BultInAnimationType::fade_in:
     {
         auto const p = ease(definition, t);
         return { false, to, std::nullopt, p };
     }
-    case AnimationType::fade_out:
+    case BultInAnimationType::fade_out:
     {
         auto const p = 1.f - ease(definition, t);
         return { false, to, std::nullopt, p };
     }
-    case AnimationType::disabled:
+    case BultInAnimationType::disabled:
     default:
         return { true, to, std::nullopt, std::nullopt };
     }

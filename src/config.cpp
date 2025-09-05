@@ -555,7 +555,7 @@ BorderConfig const& FilesystemConfiguration::get_border_config() const
 AnimationDefinition const& FilesystemConfiguration::get_animation_definition(AnimateableEvent event) const
 {
     std::lock_guard lock(mutex);
-    return options.animation_definitions[static_cast<int>(event)];
+    return options.animation_definitions[static_cast<size_t>(event)];
 }
 
 bool FilesystemConfiguration::are_animations_enabled() const
