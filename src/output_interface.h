@@ -97,7 +97,7 @@ public:
     virtual void set_defunct() = 0;
     virtual void unset_defunct() = 0;
     virtual void handle_workspace_animation(
-        AnimationStepResult const& result,
+        AnimationFrameResult const& result,
         std::shared_ptr<WorkspaceInterface> const& to,
         std::shared_ptr<WorkspaceInterface> const& from)
         = 0;

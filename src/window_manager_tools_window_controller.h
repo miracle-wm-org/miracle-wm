@@ -61,7 +61,7 @@ public:
     void move_cursor_to(float x, float y) override;
     void set_size_hack(AnimationHandle handle, mir::geometry::Size const& size) override;
     miral::Window window_at(float x, float y) override;
-    void process_animation(AnimationStepResult const&, std::shared_ptr<Container> const&) override;
+    void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&) override;
     void invoke_under_lock(std::function<void()> const& f) override;
 
 private:
@@ -72,18 +72,18 @@ private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     Policy* policy;
 
-    class WindowAnimation : public Animation
+    class WindowAnimation : public BuiltInAnimation
     {
     public:
         WindowAnimation(
-            AnimationHandle handle,
-            AnimationDefinition definition,
+            AnimationHandle const& handle,
+            AnimationDefinition const& definition,
             mir::geometry::Rectangle const& from,
             mir::geometry::Rectangle const& to,
             mir::geometry::Rectangle const& current,
             WindowManagerToolsWindowController* controller,
             std::shared_ptr<Container> const& container);
-        void on_tick(AnimationStepResult const&) override;
+        void on_tick(AnimationFrameResult const&) override;
 
     private:
         WindowManagerToolsWindowController* controller;

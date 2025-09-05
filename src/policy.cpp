@@ -739,7 +739,7 @@ void Policy::handle_request_resize(
 }
 
 void Policy::handle_animation(
-    AnimationStepResult const& asr,
+    AnimationFrameResult const& asr,
     std::weak_ptr<Container> const& container)
 {
     std::lock_guard lock(self->mutex);
@@ -754,7 +754,7 @@ void Policy::handle_animation(
 }
 
 void Policy::handle_workspace_animation(
-    AnimationStepResult const& asr,
+    AnimationFrameResult const& asr,
     std::shared_ptr<WorkspaceInterface> const& to,
     std::shared_ptr<WorkspaceInterface> const& from)
 {

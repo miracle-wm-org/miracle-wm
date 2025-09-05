@@ -31,7 +31,7 @@ namespace test
         MOCK_METHOD(void, move_cursor_to, (float, float), (override));
         MOCK_METHOD(void, set_size_hack, (AnimationHandle, geom::Size const&), (override));
         MOCK_METHOD(miral::Window, window_at, (float, float), (override));
-        MOCK_METHOD(void, process_animation, (AnimationStepResult const&, std::shared_ptr<Container> const&), (override));
+        MOCK_METHOD(void, process_animation, (AnimationFrameResult const&, std::shared_ptr<Container> const&), (override));
         MOCK_METHOD(void, invoke_under_lock, (std::function<void()> const&), (override));
     };
 

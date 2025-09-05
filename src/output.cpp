@@ -323,12 +323,11 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         from->hide();
         to->on_animation_start();
         handle_workspace_animation(
-            AnimationStepResult { handle,
+            AnimationFrameResult {
                 true,
                 dest,
-                glm::vec2(dest.top_left.x.as_int(), dest.top_left.y.as_int()),
-                glm::vec2(dest.size.width.as_int(), dest.size.height.as_int()),
-                glm::mat4(1.f) },
+                glm::mat4(1.f),
+                std::nullopt },
             to,
             from);
         to->on_animation_end();
@@ -370,14 +369,14 @@ Output::WorkspaceAnimation::WorkspaceAnimation(
     std::shared_ptr<WorkspaceInterface> const& to_workspace,
     std::shared_ptr<WorkspaceInterface> const& from_workspace,
     Output* output) :
-    Animation(handle, definition, from, to, current),
+    BuiltInAnimation(handle, definition, from, to, current),
     to_workspace { to_workspace },
     from_workspace { from_workspace },
     output { output }
 {
 }
 
-void Output::WorkspaceAnimation::on_tick(miracle::AnimationStepResult const& asr)
+void Output::WorkspaceAnimation::on_tick(miracle::AnimationFrameResult const& asr)
 {
     output->policy->main_loop()->enqueue(this, [asr = asr, to_workspace = to_workspace, from_workspace = from_workspace, output = output]()
     {
@@ -386,14 +385,15 @@ void Output::WorkspaceAnimation::on_tick(miracle::AnimationStepResult const& asr
 }
 
 void Output::handle_workspace_animation(
-    AnimationStepResult const& asr,
+    AnimationFrameResult const& asr,
     std::shared_ptr<WorkspaceInterface> const& to,
     std::shared_ptr<WorkspaceInterface> const&)
 {
+    auto const rectangle = asr.rectangle;
     if (asr.is_complete)
     {
-        if (asr.position)
-            set_position(asr.position.value());
+        if (rectangle)
+            set_position(glm::vec2(rectangle->top_left.x.as_int(), rectangle->top_left.y.as_int()));
         if (asr.transform)
             set_transform(asr.transform.value());
 
@@ -408,8 +408,8 @@ void Output::handle_workspace_animation(
         return;
     }
 
-    if (asr.position)
-        set_position(asr.position.value());
+    if (rectangle)
+        set_position(glm::vec2(rectangle->top_left.x.as_int(), rectangle->top_left.y.as_int()));
     if (asr.transform)
         set_transform(asr.transform.value());
 

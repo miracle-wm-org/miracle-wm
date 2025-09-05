@@ -135,7 +135,7 @@ public:
         return miral::Window();
     }
 
-    void process_animation(AnimationStepResult const&, std::shared_ptr<Container> const&)
+    void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&)
     {
     }
 
