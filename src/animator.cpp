@@ -246,14 +246,13 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
 
 AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& other) const
 {
-    return AnimationFrameResult{
+    return AnimationFrameResult {
         is_complete || other.is_complete,
         rectangle ? *rectangle : other.rectangle,
         transform ? *transform : other.transform,
         opacity ? *opacity : other.opacity
     };
 }
-
 
 AnimationHandle const miracle::none_animation_handle = 0;
 
@@ -285,7 +284,7 @@ BuiltInAnimation::BuiltInAnimation(
     mir::geometry::Rectangle const& to,
     mir::geometry::Rectangle const& current) :
     Animation { handle },
-    duration_seconds{ duration_seconds },
+    duration_seconds { duration_seconds },
     definition { std::move(definition) },
     current { current },
     from { current },
@@ -327,8 +326,8 @@ MultiBuiltInAnimation::MultiBuiltInAnimation(
     AnimationDefinition const& definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current)
-    : Animation(handle)
+    mir::geometry::Rectangle const& current) :
+    Animation(handle)
 {
 
     for (auto const& def : definition.animations)
@@ -364,7 +363,6 @@ void MultiBuiltInAnimation::set_current_size(mir::geometry::Size const& size)
     for (auto& anim : animations)
         anim.set_current_size(size);
 }
-
 
 AnimationFrameResult BuiltInAnimation::init()
 {
@@ -436,7 +434,8 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
         auto const p = ease(definition, t);
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
-            glm::vec3(p, p, 1.f));;
+            glm::vec3(p, p, 1.f));
+        ;
         return { false, std::nullopt, transform, std::nullopt };
     }
     case BultInAnimationType::shrink:

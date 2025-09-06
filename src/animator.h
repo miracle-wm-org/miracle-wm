@@ -102,7 +102,7 @@ public:
 
     /// TODO: We shouldn't provide an empty function implementation here, but
     ///  it is useful for MultiBuiltInAnimation
-    void on_tick(AnimationFrameResult const& result) override {}
+    void on_tick(AnimationFrameResult const& result) override { }
 
 private:
     float duration_seconds;

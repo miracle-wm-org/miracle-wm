@@ -880,8 +880,8 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
 }
 }
 
-miracle::ConfigData::ConfigData()
-    : animation_definitions{internal::default_animation_definitions}
+miracle::ConfigData::ConfigData() :
+    animation_definitions { internal::default_animation_definitions }
 {
 }
 
@@ -1133,7 +1133,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             auto const& def = config.animation_definitions[i];
             if (def.is_default)
                 continue;
-            
+
             out << YAML::BeginMap;
             out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
             if (def.duration_seconds != 0.f)

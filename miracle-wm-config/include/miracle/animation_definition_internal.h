@@ -28,36 +28,35 @@ namespace internal
         { AnimationType::built_in,
          true,
          0.2f,
-         {
+         { BuiltInAnimationDefinition {
+                  BultInAnimationType::fade_in,
+                  EaseFunction::linear,
+              },
                 BuiltInAnimationDefinition {
-                    BultInAnimationType::fade_in,
+                    BultInAnimationType::grow,
                     EaseFunction::linear,
-                },
-             BuiltInAnimationDefinition {
-                        BultInAnimationType::grow,
-                        EaseFunction::linear,
-                    }} },
+                } } },
         { AnimationType::built_in,
          true,
          0.25f,
          { BuiltInAnimationDefinition {
                 BultInAnimationType::slide,
                 EaseFunction::linear,
-            } } },
+            } }     },
         { AnimationType::built_in,
          true,
          0.3f,
          { BuiltInAnimationDefinition {
                 BultInAnimationType::fade_out,
                 EaseFunction::linear,
-            } } },
+            } }     },
         { AnimationType::built_in,
          true,
          0.25f,
          { BuiltInAnimationDefinition {
                 BultInAnimationType::slide,
                 EaseFunction::ease_out_sine,
-            } } }
+            } }     }
     });
 }
 }
