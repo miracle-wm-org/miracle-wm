@@ -743,7 +743,7 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
             if (!animation_node["list"].IsSequence())
                 continue;
 
-            for (auto const built_in_animation_node : animation_node["multi"])
+            for (auto const built_in_animation_node : animation_node["list"])
             {
                 miracle::BuiltInAnimationDefinition animation_def;
                 if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))

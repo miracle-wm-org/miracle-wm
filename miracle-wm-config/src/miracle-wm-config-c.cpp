@@ -783,8 +783,8 @@ extern "C"
 
         return {
             def.is_default,
-            static_cast<uint>(def.type),
-            !def.animations.empty() ? static_cast<uint>(def.animations[0].function) : 0,
+            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].type),
+            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].function),
             def.duration_seconds,
             def.animations.empty() ? 0 : def.animations[0].c1,
             def.animations.empty() ? 0 : def.animations[0].c2,

@@ -557,6 +557,33 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
     EXPECT_EQ(def.animations[0].type, param.expected);
 }
 
+TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimationList)
+{
+    auto param = GetParam();
+    YAML::Node list_item;
+    list_item["type"] = param.value;
+    list_item["function"] = "linear";
+
+    YAML::Node list;
+    list.push_back(list_item);
+
+    YAML::Node animation;
+    animation["duration"] = 1000;
+    animation["event"] = "window_open";
+    animation["list"] = list;
+
+    YAML::Node animations_node;
+    animations_node.push_back(animation);
+
+    YAML::Node root;
+    root["animations"] = animations_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto def = config.get_animation_definition(AnimateableEvent::window_open);
+    EXPECT_EQ(def.animations[0].type, param.expected);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,
