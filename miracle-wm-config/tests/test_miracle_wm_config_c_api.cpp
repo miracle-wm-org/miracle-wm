@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gtest/gtest.h>
 #include <linux/input-event-codes.h>
 #include <mir/version.h>
+#include <miracle/animation_definition_internal.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 
@@ -553,9 +554,10 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
         &wrapper->config,
         static_cast<uint>(miracle::AnimateableEvent::window_open));
 
-    EXPECT_EQ(result.type, static_cast<uint>(miracle::BultInAnimationType::fade_in));
-    EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::linear));
-    EXPECT_FLOAT_EQ(result.duration_seconds, 0.3f);
+    auto const default_def = miracle::internal::default_animation_definitions[static_cast<uint>(miracle::AnimateableEvent::window_open)];
+    EXPECT_EQ(result.type, static_cast<uint>(default_def.animations[0].type));
+    EXPECT_EQ(result.function, static_cast<uint>(default_def.animations[0].function));
+    EXPECT_FLOAT_EQ(result.duration_seconds, default_def.duration_seconds);
 }
 
 TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
