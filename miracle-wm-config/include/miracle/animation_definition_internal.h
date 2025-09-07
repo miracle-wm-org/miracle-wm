@@ -24,29 +24,35 @@ namespace miracle
 {
 namespace internal
 {
-    std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> constexpr default_animation_definitions({
-        {
+    static std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> default_animation_definitions({
+        { AnimationType::built_in,
          true,
-         AnimationType::fade_in,
-         EaseFunction::linear,
-         0.3f,
-         },
-        {
+         0.2f,
+         { BuiltInAnimationDefinition {
+                BultInAnimationType::fade_in,
+                EaseFunction::linear,
+            } } },
+        { AnimationType::built_in,
          true,
-         AnimationType::slide,
-         EaseFunction::linear,
          0.25f,
-         },
-        {
+         { BuiltInAnimationDefinition {
+                BultInAnimationType::slide,
+                EaseFunction::linear,
+            } } },
+        { AnimationType::built_in,
          true,
-         AnimationType::fade_out,
-         EaseFunction::linear,
          0.3f,
-         },
-        { true,
-         AnimationType::slide,
-         EaseFunction::ease_out_sine,
-         0.25f }
+         { BuiltInAnimationDefinition {
+                BultInAnimationType::fade_out,
+                EaseFunction::linear,
+            } } },
+        { AnimationType::built_in,
+         true,
+         0.25f,
+         { BuiltInAnimationDefinition {
+                BultInAnimationType::slide,
+                EaseFunction::ease_out_sine,
+            } } }
     });
 }
 }

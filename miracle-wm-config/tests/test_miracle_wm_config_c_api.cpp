@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gtest/gtest.h>
 #include <linux/input-event-codes.h>
 #include <mir/version.h>
+#include <miracle/animation_definition_internal.h>
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 
@@ -132,7 +133,7 @@ TEST_F(CAPIWrapperTest, AnimateableEventOptionsCanBeFound)
 
 TEST_F(CAPIWrapperTest, AnimationTypeOptionsCount)
 {
-    ASSERT_THAT(miracle_config_get_animation_type_options_count(), Eq(static_cast<uint>(miracle::AnimationType::max)));
+    ASSERT_THAT(miracle_config_get_animation_type_options_count(), Eq(static_cast<uint>(miracle::BultInAnimationType::max)));
 }
 
 TEST_F(CAPIWrapperTest, AnimationTypeOptionsCanBeFound)
@@ -510,7 +511,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
 {
     miracle_animation_definition_t const def = {
         false,
-        static_cast<uint>(miracle::AnimationType::slide),
+        static_cast<uint>(miracle::BultInAnimationType::slide),
         static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
         0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
@@ -525,7 +526,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
         &wrapper->config,
         static_cast<uint>(miracle::AnimateableEvent::window_open));
 
-    EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::slide));
+    EXPECT_EQ(result.type, static_cast<uint>(miracle::BultInAnimationType::slide));
     EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::ease_out_bounce));
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
 }
@@ -534,7 +535,7 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
 {
     miracle_animation_definition_t const def = {
         false,
-        static_cast<uint>(miracle::AnimationType::slide),
+        static_cast<uint>(miracle::BultInAnimationType::slide),
         static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
         0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
@@ -553,9 +554,10 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
         &wrapper->config,
         static_cast<uint>(miracle::AnimateableEvent::window_open));
 
-    EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::fade_in));
-    EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::linear));
-    EXPECT_FLOAT_EQ(result.duration_seconds, 0.3f);
+    auto const default_def = miracle::internal::default_animation_definitions[static_cast<uint>(miracle::AnimateableEvent::window_open)];
+    EXPECT_EQ(result.type, static_cast<uint>(default_def.animations[0].type));
+    EXPECT_EQ(result.function, static_cast<uint>(default_def.animations[0].function));
+    EXPECT_FLOAT_EQ(result.duration_seconds, default_def.duration_seconds);
 }
 
 TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)

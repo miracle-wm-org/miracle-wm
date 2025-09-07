@@ -28,7 +28,7 @@ using namespace miracle;
 
 namespace
 {
-class RawSurfaceAnimation final : public BuiltInAnimation
+class RawSurfaceAnimation final : public MultiBuiltInAnimation
 {
 public:
     RawSurfaceAnimation(
@@ -43,7 +43,7 @@ public:
         glm::mat4 const& workspace_transform,
         mir::geometry::Rectangle const& output_area,
         std::function<void()> const& on_finish) :
-        BuiltInAnimation(handle, definition, from, to, current),
+        MultiBuiltInAnimation(handle, definition, from, to, current),
         compositor_state(state),
         surface_(surface),
         on_finish(on_finish)

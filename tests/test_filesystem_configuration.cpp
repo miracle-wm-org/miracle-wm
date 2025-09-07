@@ -531,7 +531,7 @@ TEST_F(FilesystemConfigurationTest, DragAndDropMissingModifiers)
 struct AnimationTypeParam
 {
     std::string value;
-    AnimationType expected;
+    BultInAnimationType expected;
 };
 
 class FilesystemConfigurationTestAnimationTypes : public FilesystemConfigurationTest, public ::testing::WithParamInterface<AnimationTypeParam>
@@ -554,19 +554,46 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
 
     FilesystemConfiguration config(registrar, path, true);
     auto def = config.get_animation_definition(AnimateableEvent::window_open);
-    EXPECT_EQ(def.type, param.expected);
+    EXPECT_EQ(def.animations[0].type, param.expected);
+}
+
+TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimationList)
+{
+    auto param = GetParam();
+    YAML::Node list_item;
+    list_item["type"] = param.value;
+    list_item["function"] = "linear";
+
+    YAML::Node list;
+    list.push_back(list_item);
+
+    YAML::Node animation;
+    animation["duration"] = 1000;
+    animation["event"] = "window_open";
+    animation["list"] = list;
+
+    YAML::Node animations_node;
+    animations_node.push_back(animation);
+
+    YAML::Node root;
+    root["animations"] = animations_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto def = config.get_animation_definition(AnimateableEvent::window_open);
+    EXPECT_EQ(def.animations[0].type, param.expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,
     ::testing::Values(
-        AnimationTypeParam("disabled", AnimationType::disabled),
-        AnimationTypeParam("slide", AnimationType::slide),
-        AnimationTypeParam("grow", AnimationType::grow),
-        AnimationTypeParam("shrink", AnimationType::shrink),
-        AnimationTypeParam("fade_in", AnimationType::fade_in),
-        AnimationTypeParam("fade_out", AnimationType::fade_out)));
+        AnimationTypeParam("disabled", BultInAnimationType::disabled),
+        AnimationTypeParam("slide", BultInAnimationType::slide),
+        AnimationTypeParam("grow", BultInAnimationType::grow),
+        AnimationTypeParam("shrink", BultInAnimationType::shrink),
+        AnimationTypeParam("fade_in", BultInAnimationType::fade_in),
+        AnimationTypeParam("fade_out", BultInAnimationType::fade_out)));
 
 TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
 {

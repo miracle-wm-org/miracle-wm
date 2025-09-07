@@ -206,13 +206,13 @@ extern "C"
 
     uint miracle_config_get_animation_type_options_count()
     {
-        return static_cast<uint>(miracle::AnimationType::max);
+        return static_cast<uint>(miracle::BultInAnimationType::max);
     }
 
     miracle_config_option_t miracle_config_get_animation_type_option(uint i)
     {
         return {
-            miracle::animation_type_strings[i],
+            miracle::built_in_animation_type_strings[i],
             i
         };
     }
@@ -783,16 +783,16 @@ extern "C"
 
         return {
             def.is_default,
-            static_cast<uint>(def.type),
-            static_cast<uint>(def.function),
+            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].type),
+            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].function),
             def.duration_seconds,
-            def.c1,
-            def.c2,
-            def.c3,
-            def.c4,
-            def.c5,
-            def.n1,
-            def.d1
+            def.animations.empty() ? 0 : def.animations[0].c1,
+            def.animations.empty() ? 0 : def.animations[0].c2,
+            def.animations.empty() ? 0 : def.animations[0].c3,
+            def.animations.empty() ? 0 : def.animations[0].c4,
+            def.animations.empty() ? 0 : def.animations[0].c5,
+            def.animations.empty() ? 0 : def.animations[0].n1,
+            def.animations.empty() ? 0 : def.animations[0].d1
         };
     }
 
@@ -805,16 +805,16 @@ extern "C"
         auto& def = data->animation_definitions[index];
 
         def.is_default = false;
-        def.type = static_cast<miracle::AnimationType>(definition->type);
-        def.function = static_cast<miracle::EaseFunction>(definition->function);
+        def.animations[0].type = static_cast<miracle::BultInAnimationType>(definition->type);
+        def.animations[0].function = static_cast<miracle::EaseFunction>(definition->function);
         def.duration_seconds = definition->duration_seconds;
-        def.c1 = definition->c1;
-        def.c2 = definition->c2;
-        def.c3 = definition->c3;
-        def.c4 = definition->c4;
-        def.c5 = definition->c5;
-        def.n1 = definition->n1;
-        def.d1 = definition->d1;
+        def.animations[0].c1 = definition->c1;
+        def.animations[0].c2 = definition->c2;
+        def.animations[0].c3 = definition->c3;
+        def.animations[0].c4 = definition->c4;
+        def.animations[0].c5 = definition->c5;
+        def.animations[0].n1 = definition->n1;
+        def.animations[0].d1 = definition->d1;
     }
 
     void miracle_config_reset_animation_definition(

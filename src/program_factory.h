@@ -83,6 +83,7 @@ struct ProgramData
     GLint alpha_uniform = -1;
     GLint mode_uniform = -1;
     GLint surface_size_uniform = -1;
+    GLint border_transform_uniform = -1;
     GLint border_color_uniform = -1;
     GLint border_width_uniform = -1;
     GLint border_radius_uniform = -1;
@@ -122,8 +123,9 @@ private:
         ShaderHandle const& fragment_shader);
 
     ShaderHandle const vertex_shader;
+    ShaderHandle const border_vertex_shader;
 
-    ShaderHandle const border_shader;
+    ShaderHandle const border_fragment_shader;
     Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.

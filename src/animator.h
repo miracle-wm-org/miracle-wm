@@ -47,16 +47,18 @@ struct AnimationFrameResult
     ///
     /// Once set, the animation that produced this object will
     /// be removed.
-    bool const is_complete;
+    bool is_complete;
 
     /// The current rectangle set by the animation, if any.
-    std::optional<mir::geometry::Rectangle> const rectangle;
+    std::optional<mir::geometry::Rectangle> rectangle;
 
     /// The current transform set by the animation, if any.
-    std::optional<glm::mat4> const transform;
+    std::optional<glm::mat4> transform;
 
     /// The current opacity set by the animation, if any.
-    std::optional<float> const opacity;
+    std::optional<float> opacity;
+
+    AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
 
 /// Interface that defines an animation.
@@ -86,7 +88,8 @@ class BuiltInAnimation : public Animation
 public:
     BuiltInAnimation(
         AnimationHandle handle,
-        AnimationDefinition definition,
+        float duration_seconds,
+        BuiltInAnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
         mir::geometry::Rectangle const& current);
@@ -97,12 +100,37 @@ public:
     AnimationFrameResult step(float dt) override;
     void set_current_size(mir::geometry::Size const& size) override;
 
+    /// TODO: We shouldn't provide an empty function implementation here, but
+    ///  it is useful for MultiBuiltInAnimation
+    void on_tick(AnimationFrameResult const& result) override { }
+
 private:
-    AnimationDefinition definition;
+    float duration_seconds;
+    BuiltInAnimationDefinition definition;
     mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
     mir::geometry::Size real_size;
+};
+
+class MultiBuiltInAnimation : public Animation
+{
+public:
+    MultiBuiltInAnimation(
+        AnimationHandle handle,
+        AnimationDefinition const& definition,
+        mir::geometry::Rectangle const& from,
+        mir::geometry::Rectangle const& to,
+        mir::geometry::Rectangle const& current);
+
+    MultiBuiltInAnimation& operator=(MultiBuiltInAnimation const& other) = default;
+
+    AnimationFrameResult init() override;
+    AnimationFrameResult step(float dt) override;
+    void set_current_size(mir::geometry::Size const& size) override;
+
+private:
+    std::vector<BuiltInAnimation> animations;
 };
 
 /// Manages the animation queue.

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "export.h"
 #include <array>
+#include <vector>
 
 namespace miracle
 {
@@ -95,7 +96,7 @@ constexpr std::array<const char*, static_cast<int>(EaseFunction::max)> ease_func
     "ease_in_out_bounce"
 };
 
-enum class MIRACLE_WM_CONFIG_API AnimationType
+enum class MIRACLE_WM_CONFIG_API BultInAnimationType
 {
     disabled,
     slide,
@@ -106,7 +107,7 @@ enum class MIRACLE_WM_CONFIG_API AnimationType
     max
 };
 
-constexpr std::array<const char*, static_cast<int>(AnimationType::max)> animation_type_strings = {
+constexpr std::array<const char*, static_cast<int>(BultInAnimationType::max)> built_in_animation_type_strings = {
     "disabled",
     "slide",
     "grow",
@@ -115,14 +116,11 @@ constexpr std::array<const char*, static_cast<int>(AnimationType::max)> animatio
     "fade_out"
 };
 
-/// Defines an animation that the Animator can use.
-/// Each animations are mapped to a single AnimateableEvent.
-struct MIRACLE_WM_CONFIG_API AnimationDefinition
+/// Defines a built-in animation for miracle.
+struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
 {
-    bool is_default = true;
-    AnimationType type = AnimationType::max;
+    BultInAnimationType type = BultInAnimationType::max;
     EaseFunction function = EaseFunction::linear;
-    float duration_seconds = 1.f;
 
     // Easing function values
     float c1 = 1.2f;
@@ -132,6 +130,27 @@ struct MIRACLE_WM_CONFIG_API AnimationDefinition
     float c5 = 1.3962634015954636f;
     float n1 = 7.5625f;
     float d1 = 2.75f;
+};
+
+enum class AnimationType
+{
+    built_in,
+    max
+};
+
+/// Defines an animation that is fed to miracle's animation system.
+///
+/// Animations come in a number of varieties as defined by [AnimationType].
+/// While miracle offers some built-in animations, there are plans to
+/// allow users to write their own animations in the future via a plugin
+/// system.
+struct MIRACLE_WM_CONFIG_API AnimationDefinition
+{
+    AnimationType type = AnimationType::max;
+    bool is_default = true;
+    float duration_seconds = 1.f;
+
+    std::vector<BuiltInAnimationDefinition> animations;
 };
 
 /// Defines an event that can be animated.

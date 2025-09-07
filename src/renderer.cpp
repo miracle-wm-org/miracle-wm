@@ -424,15 +424,19 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     // Next, we set model-specific transforms
     float const alpha = data.data.alpha;
-    glm::mat4 transform = glm::scale(
+    glm::mat4 border_transform = glm::scale(
         glm::translate(
             glm::mat4(1.0),
             glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
         glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
 
-    glUniform2f(prog->center_uniform, -0.5, -0.5);
+    GLfloat centrex = border_rect.top_left.x.as_int() + border_rect.size.width.as_int() / 2.0f;
+    GLfloat centrey = border_rect.top_left.y.as_int() + border_rect.size.height.as_int() / 2.0f;
+    glUniform2f(prog->center_uniform, centrex, centrey);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(transform));
+        glm::value_ptr(data.data.transform));
+    glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
+        glm::value_ptr(border_transform));
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, border_rect.size.width.as_value(), border_rect.size.height.as_value());
 
