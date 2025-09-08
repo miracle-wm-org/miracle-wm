@@ -257,7 +257,7 @@ void IpcConnectionManager::on_workspace_created(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -279,7 +279,7 @@ void IpcConnectionManager::on_workspace_empty(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -299,7 +299,7 @@ void IpcConnectionManager::on_workspace_removed(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -326,7 +326,7 @@ void IpcConnectionManager::on_workspace_focused(
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -346,7 +346,7 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -365,7 +365,7 @@ void IpcConnectionManager::on_config_changed(Config const&)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
         {
             continue;
         }
@@ -380,7 +380,7 @@ void IpcConnectionManager::on_mode_changed(WindowManagerMode mode)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_MODE)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_MODE)) == 0)
         {
             continue;
         }
@@ -397,7 +397,7 @@ void IpcConnectionManager::on_shutdown()
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_SHUTDOWN)) == 0)
         {
             continue;
         }
@@ -421,7 +421,7 @@ void IpcConnectionManager::send_window_event(const char* event, Container const&
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WINDOW)) == 0)
         {
             continue;
         }
@@ -455,7 +455,7 @@ void IpcConnectionManager::send_output_event()
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_OUTPUT)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_OUTPUT)) == 0)
         {
             continue;
         }
@@ -472,7 +472,7 @@ void IpcConnectionManager::on_binding_event(BindingEvent const& binding_event)
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & event_mask(IpcType::IPC_EVENT_BINDING)) == 0)
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_BINDING)) == 0)
         {
             continue;
         }
@@ -572,7 +572,7 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
         send_reply(client, result.type, result.payload);
 
     client.subscribed_events |= result.subscribed_events;
-    if (result.subscribed_events & event_mask(IpcType::IPC_EVENT_TICK))
+    if (result.subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_TICK))
     {
         json const response = {
             { "first",   true },
@@ -585,7 +585,7 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
     {
         for (auto& other_client : clients)
         {
-            if ((other_client->subscribed_events & event_mask(IpcType::IPC_EVENT_TICK)) == 0)
+            if ((other_client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_TICK)) == 0)
             {
                 continue;
             }

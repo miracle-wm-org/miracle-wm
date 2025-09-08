@@ -23,10 +23,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-size_t select_mode_index(size_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes)
+uint32_t select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes)
 {
     if (modes.empty())
-        return std::numeric_limits<size_t>::max();
+        return std::numeric_limits<uint32_t>::max();
 
     if (mode_index >= modes.size())
         return 0;

@@ -113,7 +113,7 @@ TEST_P(IpcMessageHandlerSubscriptionTest, CanSubcribeToEvent)
 
     auto const payload = to_string(subscription);
     auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), static_cast<uint32_t>(payload.size()));
-    EXPECT_THAT(result.subscribed_events == event_mask(param.expected), Eq(true));
+    EXPECT_THAT(result.subscribed_events == ipc_event_mask(param.expected), Eq(true));
 }
 
 INSTANTIATE_TEST_SUITE_P(

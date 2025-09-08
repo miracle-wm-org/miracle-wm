@@ -345,7 +345,7 @@ TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
     nlohmann::json payload_json;
     payload_json.push_back("binding");
     auto const payload = to_string(payload_json);
-    uint32_t response_len = payload.size();
+    uint32_t response_len = static_cast<uint32_t>(payload.size());
     ipc_single_command(socket_fd, IPC_SUBSCRIBE, payload.c_str(), &response_len);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
