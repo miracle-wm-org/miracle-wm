@@ -49,6 +49,7 @@ option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will r
 # Compiler warnings
 # ----------------------------------------
 if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
     add_compile_options(
             -Wall -Wextra -Wpedantic
             -Wconversion -Wsign-conversion

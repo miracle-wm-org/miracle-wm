@@ -78,7 +78,7 @@ public:
 
     [[nodiscard]] std::vector<std::string> current_remaining() const
     {
-        return std::vector(command.arguments.begin() + static_cast<std::vector<std::shared_ptr<miracle::Container>>::difference_type>(index), command.arguments.end());
+        return std::vector(command.arguments.begin() + static_cast<std::vector<std::string>::difference_type>(index), command.arguments.end());
     }
 
     std::optional<int> parse_int()

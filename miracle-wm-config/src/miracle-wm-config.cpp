@@ -432,7 +432,7 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
 
         context.result.config.built_in_key_command_overrides.push_back({ keyboard_action.value(),
             modifiers,
-            code,
+            static_cast<uint>(code),
             key_command });
     }
 }
@@ -481,14 +481,14 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
 
         context.result.config.custom_key_commands.push_back({ keyboard_action.value(),
             modifiers,
-            code,
+            static_cast<uint>(code),
             command });
     }
 }
 
 void read_inner_gaps(YAML::Node const& node, ParsingContext& context)
 {
-    size_t x = 0, y = 0;
+    uint x = 0, y = 0;
     if (!try_parse_value(node, "x", x, context))
         return;
     if (!try_parse_value(node, "y", y, context))
@@ -502,7 +502,7 @@ void read_inner_gaps(YAML::Node const& node, ParsingContext& context)
 
 void read_outer_gaps(YAML::Node const& node, ParsingContext& context)
 {
-    size_t x = 0, y = 0;
+    uint x = 0, y = 0;
     if (!try_parse_value(node, "x", x, context))
         return;
     if (!try_parse_value(node, "y", y, context))

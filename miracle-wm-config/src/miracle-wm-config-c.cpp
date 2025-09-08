@@ -31,7 +31,7 @@ extern "C"
 
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result)
     {
-        auto data = reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
+        auto const data = static_cast<miracle::ConfigLoadResult*>(result->ptr);
         return data->errors.size();
     }
 
@@ -39,13 +39,13 @@ extern "C"
         const miracle_config_load_result_t* result,
         size_t index)
     {
-        auto data = reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
-        auto errors = &data->errors;
+        auto const data = static_cast<miracle::ConfigLoadResult*>(result->ptr);
+        auto const errors = &data->errors;
         if (index >= errors->size())
             return nullptr;
 
         static thread_local miracle_config_error_t error;
-        const auto& cpp_error = (*errors)[index];
+        auto const& cpp_error = (*errors)[index];
 
         error.line = cpp_error.line;
         error.column = cpp_error.column;
@@ -62,7 +62,7 @@ extern "C"
     {
         if (result)
         {
-            delete reinterpret_cast<miracle::ConfigLoadResult*>(result->ptr);
+            delete static_cast<miracle::ConfigLoadResult*>(result->ptr);
             delete result;
         }
     }
@@ -71,8 +71,8 @@ extern "C"
     miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
-        auto result = new miracle::ConfigSaveResult(miracle::save_config(path, *data));
-        auto c_result = new miracle_config_save_result_t();
+        auto const result = new miracle::ConfigSaveResult(miracle::save_config(path, *data));
+        auto const c_result = new miracle_config_save_result_t();
         c_result->success = result->success;
         c_result->ptr = result;
         return c_result;
@@ -80,7 +80,7 @@ extern "C"
 
     size_t miracle_save_result_get_error_count(const miracle_config_save_result_t* result)
     {
-        auto ptr = reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
+        auto const ptr = static_cast<miracle::ConfigSaveResult*>(result->ptr);
         return ptr->errors.size();
     }
 
@@ -88,8 +88,8 @@ extern "C"
         const miracle_config_save_result_t* result,
         size_t index)
     {
-        auto ptr = reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
-        auto errors = &ptr->errors;
+        auto const ptr = static_cast<miracle::ConfigSaveResult*>(result->ptr);
+        auto const errors = &ptr->errors;
         if (index >= errors->size())
             return nullptr;
 
@@ -111,7 +111,7 @@ extern "C"
     {
         if (result)
         {
-            delete reinterpret_cast<miracle::ConfigSaveResult*>(result->ptr);
+            delete static_cast<miracle::ConfigSaveResult*>(result->ptr);
             delete result;
         }
     }
@@ -292,13 +292,13 @@ extern "C"
 
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->primary_button;
     }
 
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         for (auto const& [fst, scd] : miracle::mir_mouse_buttons_opts)
         {
             if (scd == button)
@@ -311,107 +311,97 @@ extern "C"
         // TODO: Error handling
     }
 
-    int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
+    uint miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->inner_gaps.left;
     }
 
-    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value)
+    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint value)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (value < 0)
-            value = 0;
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->inner_gaps.left = value;
         data->inner_gaps.right = value;
     }
 
-    int miracle_config_get_inner_gaps_y(const miracle_config_data_t* config)
+    uint miracle_config_get_inner_gaps_y(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->inner_gaps.top;
     }
 
-    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value)
+    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint value)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (value < 0)
-            value = 0;
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->inner_gaps.top = value;
         data->inner_gaps.bottom = value;
     }
 
-    int miracle_config_get_outer_gaps_x(const miracle_config_data_t* config)
+    uint miracle_config_get_outer_gaps_x(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->outer_gaps.left;
     }
 
-    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value)
+    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, uint value)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (value < 0)
-            value = 0;
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->outer_gaps.left = value;
         data->outer_gaps.right = value;
     }
 
-    int miracle_config_get_outer_gaps_y(const miracle_config_data_t* config)
+    uint miracle_config_get_outer_gaps_y(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->outer_gaps.top;
     }
 
-    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value)
+    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, uint value)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (value < 0)
-            value = 0;
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->outer_gaps.top = value;
         data->outer_gaps.bottom = value;
     }
 
     int miracle_config_get_resize_jump(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->resize_jump;
     }
 
     void miracle_config_set_resize_jump(miracle_config_data_t* config, int value)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (value < 0)
-            value = 0;
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->resize_jump = value;
     }
 
     bool miracle_config_get_animations_enabled(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->animations_enabled;
     }
 
     void miracle_config_set_animations_enabled(miracle_config_data_t* config, bool enabled)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->animations_enabled = enabled;
     }
 
     const char* miracle_config_get_terminal(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->terminal ? data->terminal->c_str() : nullptr;
     }
 
     void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->terminal = terminal ? std::optional<std::string>(terminal) : std::nullopt;
     }
 
     size_t miracle_config_get_custom_key_command_count(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->custom_key_commands.size();
     }
 
@@ -420,7 +410,7 @@ extern "C"
         size_t index)
     {
 
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->custom_key_commands.size())
             return { 0, 0, 0, nullptr };
 
@@ -440,7 +430,7 @@ extern "C"
         miracle_config_data_t* config,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         const char* command)
     {
 
@@ -454,7 +444,7 @@ extern "C"
         if (!found_action)
             return;
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->custom_key_commands.push_back({ static_cast<MirKeyboardAction>(action),
             modifiers,
             key,
@@ -463,14 +453,14 @@ extern "C"
 
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         const char* command)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
-        if (index < 0 || index >= data->custom_key_commands.size())
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->custom_key_commands.size())
             return;
 
         bool found_action = false;
@@ -491,23 +481,23 @@ extern "C"
 
     void miracle_config_clear_custom_key_commands(miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->custom_key_commands.clear();
     }
 
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->custom_key_commands.size())
             return false;
 
-        data->custom_key_commands.erase(data->custom_key_commands.begin() + index);
+        data->custom_key_commands.erase(data->custom_key_commands.begin() + static_cast<std::vector<miracle::CustomKeyCommand>::difference_type>(index));
         return true;
     }
 
     size_t miracle_config_get_built_in_key_command_override_count(const miracle_config_data_t* config)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         return data->built_in_key_command_overrides.size();
     }
 
@@ -515,7 +505,7 @@ extern "C"
         const miracle_config_data_t* config,
         size_t index)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         auto const& command = data->built_in_key_command_overrides[index];
         return {
             .action = static_cast<uint>(command.action),
@@ -529,10 +519,10 @@ extern "C"
         miracle_config_data_t* config,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         uint command)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->built_in_key_command_overrides.push_back(miracle::BuiltInKeyCommandOverride {
             static_cast<MirKeyboardAction>(action),
             modifiers,
@@ -542,13 +532,13 @@ extern "C"
 
     void miracle_config_set_built_in_key_command_override(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         uint command)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->built_in_key_command_overrides.size())
             return;
 
@@ -564,23 +554,23 @@ extern "C"
         const miracle_config_data_t* config,
         size_t index)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->built_in_key_command_overrides.size())
             return false;
 
-        data->built_in_key_command_overrides.erase(data->built_in_key_command_overrides.begin() + index);
+        data->built_in_key_command_overrides.erase(data->built_in_key_command_overrides.begin() + +static_cast<std::vector<miracle::BuiltInKeyCommandOverride>::difference_type>(index));
         return true;
     }
 
     size_t miracle_config_get_startup_app_count(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->startup_apps.size();
     }
 
     miracle_startup_app_t miracle_config_get_startup_app(const miracle_config_data_t* config, size_t index)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->startup_apps.size())
             return { nullptr, false, false, false, false };
 
@@ -605,7 +595,7 @@ extern "C"
         bool should_halt_compositor_on_death,
         bool in_systemd_scope)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->startup_apps.push_back({ command ? command : "",
             restart_on_death,
             no_startup_id,
@@ -615,14 +605,14 @@ extern "C"
 
     void miracle_config_set_startup_app(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         const char* command,
         bool restart_on_death,
         bool no_startup_id,
         bool should_halt_compositor_on_death,
         bool in_systemd_scope)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->startup_apps.size())
             return;
 
@@ -635,23 +625,23 @@ extern "C"
 
     void miracle_config_clear_startup_apps(miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->startup_apps.clear();
     }
 
     bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->startup_apps.size())
             return false;
 
-        data->startup_apps.erase(data->startup_apps.begin() + index);
+        data->startup_apps.erase(data->startup_apps.begin() + static_cast<std::vector<miracle::StartupApp>::difference_type>(index));
         return true;
     }
 
     size_t miracle_config_get_environment_variable_count(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->environment_variables.size();
     }
 
@@ -660,7 +650,7 @@ extern "C"
         size_t index)
     {
 
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->environment_variables.size())
             return { nullptr, nullptr };
 
@@ -682,18 +672,18 @@ extern "C"
         const char* value)
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->environment_variables.push_back({ key ? key : "",
             value ? value : "" });
     }
 
     void miracle_config_set_environment_variable(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         const char* key,
         const char* value)
     {
-        auto const data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->environment_variables.size())
             return;
 
@@ -703,17 +693,17 @@ extern "C"
 
     void miracle_config_clear_environment_variables(miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->environment_variables.clear();
     }
 
     bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->environment_variables.size())
             return false;
 
-        data->environment_variables.erase(data->environment_variables.begin() + index);
+        data->environment_variables.erase(data->environment_variables.begin() + +static_cast<std::vector<miracle::EnvironmentVariable>::difference_type>(index));
         return true;
     }
 
@@ -724,7 +714,7 @@ extern "C"
 
     miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         miracle_border_config_t result;
         result.size = data->border_config.size;
         result.radius = data->border_config.radius;
@@ -747,7 +737,7 @@ extern "C"
         const float color[4])
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->border_config.size = size;
         data->border_config.radius = radius;
 
@@ -778,7 +768,7 @@ extern "C"
         const miracle_config_data_t* config,
         size_t index)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         const auto& def = data->animation_definitions[index];
 
         return {
@@ -801,7 +791,7 @@ extern "C"
         size_t index,
         const miracle_animation_definition_t* definition)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions[index];
 
         def.is_default = false;
@@ -821,14 +811,14 @@ extern "C"
         miracle_config_data_t* config,
         size_t index)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions[index];
         def = miracle::internal::default_animation_definitions[index];
     }
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->workspace_configs.size();
     }
 
@@ -837,7 +827,7 @@ extern "C"
         size_t index)
     {
 
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs.size())
             return { -1, -1, nullptr };
 
@@ -863,7 +853,7 @@ extern "C"
         const char* name)
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         miracle::WorkspaceConfig ws;
 
         if (num >= 0)
@@ -884,7 +874,7 @@ extern "C"
         const char* name)
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs.size())
             return;
 
@@ -905,29 +895,29 @@ extern "C"
         size_t index)
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs.size())
             return false;
 
-        data->workspace_configs.erase(data->workspace_configs.begin() + index);
+        data->workspace_configs.erase(data->workspace_configs.begin() + +static_cast<std::vector<miracle::WorkspaceConfig>::difference_type>(index));
         return true;
     }
 
     uint miracle_config_get_move_modifier(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->move_modifier;
     }
 
     void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifier)
     {
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->move_modifier = modifier;
     }
 
     miracle_drag_and_drop_config_t miracle_config_get_drag_and_drop(const miracle_config_data_t* config)
     {
-        auto data = reinterpret_cast<const miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return {
             data->drag_and_drop.enabled,
             data->drag_and_drop.modifiers
@@ -940,7 +930,7 @@ extern "C"
         uint modifiers)
     {
 
-        auto data = reinterpret_cast<miracle::ConfigData*>(config->_internal);
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->drag_and_drop.enabled = enabled;
         data->drag_and_drop.modifiers = modifiers;
     }
@@ -1037,7 +1027,7 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->keymap->options.size())
             return;
-        data->keymap->options.erase(data->keymap->options.begin() + index);
+        data->keymap->options.erase(data->keymap->options.begin() + +static_cast<std::vector<std::string>::difference_type>(index));
     }
 
     int miracle_config_get_key_repeat_delay(const miracle_config_data_t* config)
