@@ -75,8 +75,8 @@ bool fd_is_valid(int fd)
 json mode_event_to_json(WindowManagerMode mode)
 {
     return {
-        { "change",       BINDING_MODE_STRINGS[static_cast<int>(mode)] },
-        { "pango_markup", true                                         }
+        { "change",       BINDING_MODE_STRINGS[static_cast<size_t>(mode)] },
+        { "pango_markup", true                                            }
     };
 }
 }
@@ -610,7 +610,7 @@ void IpcConnectionManager::send_reply(IpcClient& client, IpcType command_type, c
         return;
     }
 
-    const uint32_t payload_length = payload.size();
+    const uint32_t payload_length = static_cast<uint32_t>(payload.size());
     char data[IPC_HEADER_SIZE];
 
     const auto casted_command = static_cast<uint32_t>(command_type);
@@ -651,7 +651,7 @@ ssize_t write_nosigpipe(int fd, void* buf, size_t len)
     sigset_t oldset, newset;
     ssize_t result;
     siginfo_t si;
-    struct timespec ts = { 0 };
+    struct timespec ts = { 0, 0 };
 
     sigemptyset(&newset);
     sigaddset(&newset, SIGPIPE);
@@ -683,8 +683,9 @@ void IpcConnectionManager::handle_writeable(IpcClient& client)
             return;
         }
 
-        memmove(client.buffer.data(), client.buffer.data() + written, client.write_buffer_len - written);
-        client.write_buffer_len -= written;
+        auto const size = static_cast<size_t>(client.write_buffer_len - written);
+        memmove(client.buffer.data(), client.buffer.data() + written, size);
+        client.write_buffer_len -= static_cast<uint32_t>(written);
     }
 
     client.write_buffer_len = 0;

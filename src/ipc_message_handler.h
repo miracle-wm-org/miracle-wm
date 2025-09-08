@@ -71,7 +71,7 @@ struct MessageHandlerResult
 {
     bool fatal = false;
     IpcType type;
-    std::string payload;
+    std::string payload = "";
     int subscribed_events = 0;
     bool send_tick_event = false;
 };

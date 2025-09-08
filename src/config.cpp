@@ -41,7 +41,7 @@ const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
 uint Config::process_modifier(uint modifier) const
 {
     if (modifier & miracle_input_event_modifier_default)
-        modifier = modifier & ~miracle_input_event_modifier_default | get_input_event_modifier();
+        modifier = (modifier & ~miracle_input_event_modifier_default) | static_cast<uint>(get_input_event_modifier());
     return modifier;
 }
 
@@ -599,6 +599,6 @@ uint FilesystemConfiguration::move_modifier() const
 uint FilesystemConfiguration::process_modifier_internal(uint modifier) const
 {
     if (modifier & miracle_input_event_modifier_default)
-        modifier = modifier & ~miracle_input_event_modifier_default | static_cast<MirInputEventModifier>(options.primary_modifier);
+        modifier = (modifier & ~miracle_input_event_modifier_default) | options.primary_modifier;
     return modifier;
 }

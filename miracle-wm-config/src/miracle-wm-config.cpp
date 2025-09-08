@@ -59,7 +59,7 @@ std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& 
 
 std::optional<miracle::ContainerType> container_type_from_string(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::container_type_strings.size(); i++)
+    for (size_t i = 0; i < miracle::container_type_strings.size(); i++)
     {
         if (miracle::container_type_strings[i] == str)
             return static_cast<miracle::ContainerType>(i);
@@ -70,7 +70,7 @@ std::optional<miracle::ContainerType> container_type_from_string(std::string con
 
 std::optional<miracle::AnimateableEvent> from_string_animateable_event(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::animateable_event_strings.size(); i++)
+    for (size_t i = 0; i < miracle::animateable_event_strings.size(); i++)
     {
         if (miracle::animateable_event_strings[i] == str)
             return static_cast<miracle::AnimateableEvent>(i);
@@ -81,7 +81,7 @@ std::optional<miracle::AnimateableEvent> from_string_animateable_event(std::stri
 
 std::optional<miracle::EaseFunction> from_string_ease_function(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::ease_function_strings.size(); i++)
+    for (size_t i = 0; i < miracle::ease_function_strings.size(); i++)
     {
         if (miracle::ease_function_strings[i] == str)
             return static_cast<miracle::EaseFunction>(i);
@@ -92,7 +92,7 @@ std::optional<miracle::EaseFunction> from_string_ease_function(std::string const
 
 std::optional<miracle::BultInAnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
 {
-    for (auto i = 0; i < miracle::built_in_animation_type_strings.size(); i++)
+    for (size_t i = 0; i < miracle::built_in_animation_type_strings.size(); i++)
     {
         if (miracle::built_in_animation_type_strings[i] == str)
             return static_cast<miracle::BultInAnimationType>(i);
@@ -334,7 +334,7 @@ bool try_parse_color(YAML::Node const& node, glm::vec4& color, ParsingContext& c
 
         try
         {
-            unsigned int const i = std::stoul(value, nullptr, 16);
+            unsigned long const i = std::stoul(value, nullptr, 16);
             r = static_cast<float>(((i >> 24) & 0xFF)) / MAX_COLOR_VALUE;
             g = static_cast<float>(((i >> 16) & 0xFF)) / MAX_COLOR_VALUE;
             b = static_cast<float>(((i >> 8) & 0xFF)) / MAX_COLOR_VALUE;
@@ -401,7 +401,7 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
         auto const& modifiers_node = sub_node["modifiers"];
 
         auto key_command = miracle::DefaultKeyCommand::MAX;
-        for (auto i = 0; i < miracle::default_key_command_strings.size(); i++)
+        for (size_t i = 0; i < miracle::default_key_command_strings.size(); i++)
         {
             if (miracle::default_key_command_strings[i] == name)
                 key_command = static_cast<miracle::DefaultKeyCommand>(i);
@@ -759,7 +759,7 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
                 continue;
         }
 
-        int const event_as_int = static_cast<int>(event.value());
+        size_t const event_as_int = static_cast<size_t>(event.value());
         context.result.config.animation_definitions[event_as_int].is_default = false;
         try_parse_value(animation_node, "duration", context.result.config.animation_definitions[event_as_int].duration_seconds, context, true);
         context.result.config.animation_definitions[event_as_int].animations = animations;
@@ -960,7 +960,7 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
 
 miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigData const& config)
 {
-    ConfigSaveResult result(true);
+    ConfigSaveResult result(true, {});
     YAML::Emitter out;
     out << YAML::BeginMap;
 
@@ -981,9 +981,9 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         for (auto const& override : config.built_in_key_command_overrides)
         {
             out << YAML::BeginMap;
-            out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<int>(override.default_key_command)];
+            out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<uint32_t>(override.default_key_command)];
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, override.key);
+            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(override.key));
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1006,7 +1006,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << action.command;
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, action.key);
+            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(action.key));
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1083,7 +1083,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         // Save colors as hex values
         auto to_hex = [](glm::vec4 const& color)
         {
-            return ((int)(color.r * 255) << 24) | ((int)(color.g * 255) << 16) | ((int)(color.b * 255) << 8) | ((int)(color.a * 255));
+            return (static_cast<int>(color.r * 255) << 24) | (static_cast<int>(color.g * 255) << 16) | (static_cast<int>(color.b * 255) << 8) | (static_cast<int>(color.a * 255));
         };
 
         out << YAML::Key << "color" << YAML::Value << YAML::Hex << to_hex(config.border_config.color);
@@ -1100,7 +1100,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::BeginMap;
             out << YAML::Key << "number" << YAML::Value << workspace.num.value();
             if (workspace.layout)
-                out << YAML::Key << "layout" << YAML::Value << container_type_strings[static_cast<int>(workspace.layout.value())];
+                out << YAML::Key << "layout" << YAML::Value << container_type_strings[static_cast<uint32_t>(workspace.layout.value())];
             if (workspace.name)
                 out << YAML::Key << "name" << YAML::Value << workspace.name.value();
             out << YAML::EndMap;
@@ -1138,13 +1138,13 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
             if (def.duration_seconds != 0.f)
                 out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
-            out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<int>(def.type)];
+            out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(def.type)];
 
             out << YAML::Key << "list" << YAML::Value << YAML::BeginSeq;
             for (auto const& animation : def.animations)
             {
                 out << YAML::BeginMap;
-                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<int>(animation.function)];
+                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
                 if (animation.c1 != 0.f)
                     out << YAML::Key << "c1" << YAML::Value << animation.c1;
                 if (animation.c2 != 0.f)

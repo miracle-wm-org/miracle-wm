@@ -95,7 +95,7 @@ MessageHandlerResult IpcMessageHandler::handle_msg(
         MessageHandlerResult result = { .type = payload_type };
         for (auto const& i : j)
         {
-            std::string event_type = i.template get<std::string>();
+            auto const event_type = i.template get<std::string>();
             mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
             if (event_type == "workspace")
                 result.subscribed_events |= event_mask(IpcType::IPC_EVENT_WORKSPACE);

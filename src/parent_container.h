@@ -54,7 +54,7 @@ public:
     virtual size_t num_nodes() const;
     miral::WindowSpecification place_new_window(
         miral::WindowSpecification const& requested_specification);
-    std::shared_ptr<LeafContainer> create_space_for_window(int index = -1);
+    std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
     std::shared_ptr<LeafContainer> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Container> const& node, int index);
     std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
@@ -137,9 +137,9 @@ public:
     [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
     static void swap(
         std::shared_ptr<ParentContainer> const& first_parent,
-        int first_index,
+        size_t first_index,
         std::shared_ptr<ParentContainer> const& second_parent,
-        int second_index);
+        size_t second_index);
 
 private:
     std::shared_ptr<CompositorState> state;
@@ -148,16 +148,16 @@ private:
     geom::Rectangle logical_area;
     std::weak_ptr<WorkspaceInterface> workspace;
     std::weak_ptr<ParentContainer> parent;
+    LayoutScheme scheme = LayoutScheme::horizontal;
     bool is_anchored;
     bool pinned_ = false;
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
     bool is_shown = false;
 
-    LayoutScheme scheme = LayoutScheme::horizontal;
     std::vector<std::shared_ptr<Container>> container_list;
     std::shared_ptr<LeafContainer> pending_node;
 
-    geom::Rectangle create_space(int pending_index);
+    geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();
 };
 

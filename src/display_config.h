@@ -74,7 +74,7 @@ public:
         std::optional<mir::geometry::Size> size;
         std::optional<double> refresh;
         MirOrientation orientation;
-        double scale = 1.f;
+        float scale = 1.f;
         mir::graphics::DisplayConfigurationLogicalGroupId group_id;
     };
 

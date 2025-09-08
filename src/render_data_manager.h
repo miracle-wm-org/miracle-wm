@@ -18,8 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
-#include "shader_2d.h"
-
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
 #include <mutex>
@@ -40,7 +38,7 @@ struct RenderData
     glm::mat4 transform = glm::mat4(1.f);
     glm::mat4 workspace_transform = glm::mat4(1.f);
     float alpha = 1.f;
-    mir::geometry::Rectangle output_area;
+    mir::geometry::Rectangle output_area = mir::geometry::Rectangle();
 };
 
 class RenderDataManager

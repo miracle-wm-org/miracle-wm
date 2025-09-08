@@ -51,11 +51,11 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
     if (node->is_leaf())
         return Container::as_leaf(node);
 
-    bool is_vertical = is_vertical_direction(direction);
-    bool is_negative = is_negative_direction(direction);
-    auto lane_node = Container::as_parent(node);
-    if (is_vertical && lane_node->get_direction() == LayoutScheme::vertical
-        || !is_vertical && lane_node->get_direction() == LayoutScheme::horizontal)
+    bool const is_vertical = is_vertical_direction(direction);
+    bool const is_negative = is_negative_direction(direction);
+    auto const lane_node = Container::as_parent(node);
+    if ((is_vertical && lane_node->get_direction() == LayoutScheme::vertical)
+        || (!is_vertical && lane_node->get_direction() == LayoutScheme::horizontal))
     {
         if (is_negative)
         {
@@ -121,7 +121,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
     auto to_update = handle_remove_container(node);
     auto target_parent = Container::as_parent(to->get_parent().lock());
     auto const index = target_parent->get_index_of_node(to).value();
-    target_parent->graft_existing(node, index + 1);
+    target_parent->graft_existing(node, static_cast<int>(index + 1));
     node->set_workspace(target_parent->get_workspace());
 
     return { target_parent, to_update };
@@ -416,7 +416,7 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
                 other_rect.top_left.y = geom::Y { prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int() };
             }
 
-            if (other_rect.size.height.as_int() <= other_node->get_min_height())
+            if (other_rect.size.height.as_int() <= static_cast<int>(other_node->get_min_height()))
             {
                 mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
                 return;
@@ -449,7 +449,7 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
                 other_rect.top_left.x = geom::X { prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int() };
             }
 
-            if (other_rect.size.width.as_int() <= other_node->get_min_width())
+            if (other_rect.size.width.as_int() <= static_cast<int>(other_node->get_min_width()))
             {
                 mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
                 return;
@@ -803,8 +803,8 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
     {
         auto grandparent_direction = parent->get_direction();
         auto index = parent->get_index_of_node(current_node).value();
-        if (is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking)
-            || !is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing))
+        if ((is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking))
+            || (!is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing)))
         {
             if (is_negative)
             {

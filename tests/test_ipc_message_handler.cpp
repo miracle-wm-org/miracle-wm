@@ -54,7 +54,7 @@ TEST_F(IpcMessageHandlerTest, CanRunIpcCommand)
     EXPECT_CALL(*ipc_command_executor, process(testing::_))
         .WillOnce(Return(validation_results));
     const char* payload = command.c_str();
-    auto const result = message_handler.handle_msg(IpcType::IPC_COMMAND, payload, command.size());
+    auto const result = message_handler.handle_msg(IpcType::IPC_COMMAND, payload, static_cast<uint32_t>(command.size()));
     EXPECT_THAT(result.type, Eq(IpcType::IPC_COMMAND));
     nlohmann::json result_json = nlohmann::json::parse(result.payload);
     EXPECT_THAT(result_json[0]["success"], Eq(true));
@@ -69,7 +69,7 @@ TEST_F(IpcMessageHandlerTest, CanFailIpcCommand)
     EXPECT_CALL(*ipc_command_executor, process(testing::_))
         .WillOnce(Return(validation_results));
     const char* payload = command.c_str();
-    auto const result = message_handler.handle_msg(IpcType::IPC_COMMAND, payload, command.size());
+    auto const result = message_handler.handle_msg(IpcType::IPC_COMMAND, payload, static_cast<uint32_t>(command.size()));
     EXPECT_THAT(result.type, Eq(IpcType::IPC_COMMAND));
     nlohmann::json result_json = nlohmann::json::parse(result.payload);
     EXPECT_THAT(result_json[0]["success"], Eq(false));
@@ -112,7 +112,7 @@ TEST_P(IpcMessageHandlerSubscriptionTest, CanSubcribeToEvent)
     subscription.push_back(param.subscription);
 
     auto const payload = to_string(subscription);
-    auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), payload.size());
+    auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), static_cast<uint32_t>(payload.size()));
     EXPECT_THAT(result.subscribed_events == event_mask(param.expected), Eq(true));
 }
 
@@ -135,7 +135,7 @@ TEST_F(IpcMessageHandlerTest, CanFailToSubscribeToEvent)
     subscription.push_back("meow");
 
     auto const payload = to_string(subscription);
-    auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), payload.size());
+    auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), static_cast<uint32_t>(payload.size()));
     EXPECT_THAT(result.subscribed_events, Eq(0));
     nlohmann::json result_json = nlohmann::json::parse(result.payload);
     EXPECT_THAT(result_json["success"], Eq(false));

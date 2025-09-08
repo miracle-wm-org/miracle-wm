@@ -327,7 +327,7 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
         auto lane_node = Container::as_parent(traversal_result.node);
         auto moving_node = container.shared_from_this();
         handle_remove_container(moving_node);
-        lane_node->graft_existing(moving_node, lane_node->num_nodes());
+        lane_node->graft_existing(moving_node, static_cast<int>(lane_node->num_nodes()));
         lane_node->commit_changes();
         break;
     }

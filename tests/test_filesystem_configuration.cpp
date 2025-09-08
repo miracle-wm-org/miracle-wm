@@ -33,8 +33,6 @@ using namespace miracle;
 
 namespace
 {
-int argc = 1;
-char const* argv[] = { "miracle-wm-tests" };
 const std::string path = std::filesystem::current_path() / "test.yaml";
 }
 

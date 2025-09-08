@@ -75,8 +75,8 @@ void Scratchpad::toggle(ScratchpadItem& other)
         miral::WindowSpecification spec;
         spec.depth_layer() = mir_depth_layer_above;
         spec.top_left() = {
-            output_extents.top_left.x.as_int() + (output_extents.size.width.as_int() - window.size().width.as_int()) / 2.f,
-            output_extents.top_left.y.as_int() + (output_extents.size.height.as_int() - window.size().height.as_int()) / 2.f,
+            output_extents.top_left.x.as_int() + static_cast<int>(static_cast<float>(output_extents.size.width.as_int() - window.size().width.as_int()) / 2.f),
+            output_extents.top_left.y.as_int() + static_cast<int>(static_cast<float>(output_extents.size.height.as_int() - window.size().height.as_int()) / 2.f),
         };
         window_controller->modify(window, spec);
         window_controller->noclip(window);

@@ -63,12 +63,12 @@ Renderer::Renderer(
     output_surface { make_output_current(std::move(output)) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
-    display_transform(1),
     screen_to_gl_coords(1),
+    display_transform(1),
     gl_interface { std::move(gl_interface) },
+    border_model(Mesh::rectangle(glm::vec3(-0.5, -0.5, 0), glm::vec2(1, 1))),
     config { config },
-    compositor_state { compositor_state },
-    border_model(Mesh::rectangle(glm::vec3(-0.5, -0.5, 0), glm::vec2(1, 1)))
+    compositor_state { compositor_state }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -143,7 +143,9 @@ Renderer::DrawData Renderer::get_draw_data(
     mir::graphics::Renderable const& renderable,
     std::vector<RenderData> const& data) const
 {
-    DrawData result = { true };
+    DrawData result = {
+        true, RenderData { .surface = nullptr, .output_area = viewport }
+    };
     if (auto const surface = renderable.surface_if_any())
     {
         for (auto const& item : data)
@@ -227,10 +229,10 @@ void Renderer::draw(
         clip_pos = display_transform * data.data.workspace_transform * clip_pos;
 
         glScissor(
-            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
-            static_cast<int>(clip_pos.y * y_scale),
-            clip_area.value().size.width.as_int() * x_scale,
-            clip_area.value().size.height.as_int() * y_scale);
+            static_cast<GLint>((static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale),
+            static_cast<GLint>(clip_pos.y * y_scale),
+            static_cast<GLint>(clip_area.value().size.width.as_int() * x_scale),
+            static_cast<GLint>(clip_area.value().size.height.as_int() * y_scale));
     }
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
@@ -261,8 +263,8 @@ void Renderer::draw(
     glActiveTexture(GL_TEXTURE0);
 
     auto const& rect = renderable.screen_position();
-    GLfloat centrex = rect.top_left.x.as_int() + rect.size.width.as_int() / 2.0f;
-    GLfloat centrey = rect.top_left.y.as_int() + rect.size.height.as_int() / 2.0f;
+    auto const centrex = static_cast<GLfloat>(rect.top_left.x.as_int() + rect.size.width.as_int()) / 2.0f;
+    auto const centrey = static_cast<GLfloat>(rect.top_left.y.as_int() + rect.size.height.as_int()) / 2.0f;
     glUniform2f(prog->center_uniform, centrex, centrey);
 
     glm::mat4 transform = data.data.transform;
@@ -282,7 +284,7 @@ void Renderer::draw(
         glm::value_ptr(transform));
     glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, surface_size.width.as_value(), surface_size.height.as_value());
+    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
 
     switch (compositor_state->mode())
     {
@@ -297,8 +299,8 @@ void Renderer::draw(
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
 
-    glEnableVertexAttribArray(prog->position_attr);
-    glEnableVertexAttribArray(prog->texcoord_attr);
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
     primitives.clear();
     tessellate(primitives, renderable);
@@ -335,15 +337,13 @@ void Renderer::draw(
 
         for (auto const& p : primitives)
         {
-            BlendSeparate blend;
-
-            blend = client_blend;
+            auto const blend = client_blend;
             texture->bind();
 
-            glVertexAttribPointer(prog->position_attr, 3, GL_FLOAT,
+            glVertexAttribPointer(static_cast<GLuint>(prog->position_attr), 3, GL_FLOAT,
                 GL_FALSE, sizeof(mgl::Vertex),
                 &p.vertices[0].position);
-            glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT,
+            glVertexAttribPointer(static_cast<GLuint>(prog->texcoord_attr), 2, GL_FLOAT,
                 GL_FALSE, sizeof(mgl::Vertex),
                 &p.vertices[0].texcoord);
 
@@ -368,8 +368,8 @@ void Renderer::draw(
     {
     }
 
-    glDisableVertexAttribArray(prog->texcoord_attr);
-    glDisableVertexAttribArray(prog->position_attr);
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     if (clip_area)
     {
         glDisable(GL_SCISSOR_TEST);
@@ -430,31 +430,31 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
             glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
         glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
 
-    GLfloat centrex = border_rect.top_left.x.as_int() + border_rect.size.width.as_int() / 2.0f;
-    GLfloat centrey = border_rect.top_left.y.as_int() + border_rect.size.height.as_int() / 2.0f;
+    auto const centrex = static_cast<GLfloat>(border_rect.top_left.x.as_int() + border_rect.size.width.as_int()) / 2.0f;
+    auto const centrey = static_cast<GLfloat>(border_rect.top_left.y.as_int() + border_rect.size.height.as_int()) / 2.0f;
     glUniform2f(prog->center_uniform, centrex, centrey);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));
     glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(border_transform));
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, border_rect.size.width.as_value(), border_rect.size.height.as_value());
+    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(border_rect.size.width.as_value()), static_cast<GLfloat>(border_rect.size.height.as_value()));
 
     // Now we can render our model. This should be as easy
     glBindBuffer(GL_ARRAY_BUFFER, border_model.vbo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, border_model.ebo);
 
-    glEnableVertexAttribArray(prog->position_attr);
-    glEnableVertexAttribArray(prog->texcoord_attr);
-    glVertexAttribPointer(prog->position_attr, 3, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex), (void*)offsetof(Vertex, position));
-    glVertexAttribPointer(prog->texcoord_attr, 2, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
+    glVertexAttribPointer(static_cast<GLuint>(prog->position_attr), 3, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, position)));
+    glVertexAttribPointer(static_cast<GLuint>(prog->texcoord_attr), 2, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), reinterpret_cast<void*>(offsetof(Vertex, texcoord)));
 
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(border_model.indices.size()), GL_UNSIGNED_INT, 0);
 
-    glDisableVertexAttribArray(prog->position_attr);
-    glDisableVertexAttribArray(prog->texcoord_attr);
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

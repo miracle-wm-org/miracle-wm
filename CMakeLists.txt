@@ -238,6 +238,8 @@ endif()
 # Subdirectories
 # ----------------------------------------
 add_subdirectory(tests/)
-add_subdirectory(miraclemsg/)
 add_subdirectory(miracle-wm-config/)
 add_subdirectory(protocols/)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # Disable warnings for miraclemsg, since its a fork
+add_subdirectory(miraclemsg/)
