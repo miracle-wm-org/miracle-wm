@@ -119,8 +119,15 @@ int main(int argc, char const* argv[])
                 input_configuration.keyboard(config.keyboard());
             }
 #endif
-            if (auto const keymap_val = config.keymap())
-                keymap.set_keymap(keymap_val.value());
+            try
+            {
+                if (auto const keymap_val = config.keymap())
+                    keymap.set_keymap(keymap_val.value());
+            }
+            catch (std::invalid_argument const& e)
+            {
+                mir::log_error("Could not set keymap: %s", e.what());
+            }
         }
 
     private:
