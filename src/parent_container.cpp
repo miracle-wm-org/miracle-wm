@@ -66,8 +66,12 @@ geom::Rectangle ParentContainer::get_logical_area() const
         }
 
         return geom::Rectangle(
-            geom::Point(logical_area.top_left.x.as_int() + outer_gaps.left, logical_area.top_left.y.as_int() + outer_gaps.top),
-            geom::Size(logical_area.size.width.as_int() - (outer_gaps.left + outer_gaps.right), logical_area.size.height.as_int() - (outer_gaps.top + outer_gaps.bottom)));
+            geom::Point(
+                logical_area.top_left.x.as_int() + static_cast<int>(outer_gaps.left),
+                logical_area.top_left.y.as_int() + static_cast<int>(outer_gaps.top)),
+            geom::Size(
+                logical_area.size.width.as_int() - static_cast<int>(outer_gaps.left + outer_gaps.right),
+                logical_area.size.height.as_int() - static_cast<int>(outer_gaps.top + outer_gaps.bottom)));
     }
 
     return logical_area;
@@ -83,12 +87,13 @@ size_t ParentContainer::num_nodes() const
     return container_list.size();
 }
 
-geom::Rectangle ParentContainer::create_space(int pending_index)
+geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
 {
     auto const placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
     std::vector<TilePosition> positions;
     positions.reserve(container_list.size());
+    auto const pending_index = index.value_or(container_list.size());
     if (scheme == LayoutScheme::horizontal)
     {
         for (auto const& node : container_list)
@@ -186,7 +191,7 @@ geom::Rectangle ParentContainer::create_space(int pending_index)
 miral::WindowSpecification ParentContainer::place_new_window(
     miral::WindowSpecification const& requested_specification)
 {
-    int index = -1;
+    std::optional<size_t> index;
     for (size_t i = 0; i < container_list.size(); i++)
     {
         auto const& node = container_list[i];
@@ -232,18 +237,17 @@ miral::WindowSpecification ParentContainer::place_new_window(
     return new_spec;
 }
 
-std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(int pending_index)
+std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(std::optional<size_t> pending_index)
 {
-    if (pending_index < 0)
-        pending_index = num_nodes();
+    auto const index = pending_index.value_or(container_list.size());
     pending_node = std::make_shared<LeafContainer>(
         workspace.lock(),
         window_controller,
-        create_space(pending_index),
+        create_space(index),
         config,
         as_parent(shared_from_this()),
         state);
-    container_list.insert(container_list.begin() + pending_index, pending_node);
+    container_list.insert(container_list.begin() + static_cast<std::vector<std::shared_ptr<miracle::Container>>::difference_type>(index), pending_node);
     return pending_node;
 }
 
@@ -572,7 +576,7 @@ void ParentContainer::relayout()
         }
 
         int const diff_width = placement_area.size.width.as_value() - total_width;
-        int const diff_per_node = floor((double)diff_width / (double)container_list.size());
+        int const diff_per_node = static_cast<int>(floor(diff_width / static_cast<double>(container_list.size())));
         for (auto const& node : container_list)
         {
             auto rectangle = node->get_logical_area();
@@ -589,8 +593,8 @@ void ParentContainer::relayout()
             total_height += node->get_logical_area().size.height.as_int();
         }
 
-        int const diff_width = placement_area.size.height.as_value() - total_height;
-        int const diff_per_node = floor((double)diff_width / (double)container_list.size());
+        int const diff_height = placement_area.size.height.as_value() - total_height;
+        int const diff_per_node = static_cast<int>(floor(diff_height / static_cast<double>(container_list.size())));
         for (auto const& node : container_list)
         {
             auto rectangle = node->get_logical_area();
@@ -677,7 +681,7 @@ void ParentContainer::toggle_layout(bool cycle_thru_all)
     else
     {
         if (scheme == LayoutScheme::vertical)
-            scheme == LayoutScheme::horizontal;
+            scheme = LayoutScheme::horizontal;
         else if (scheme == LayoutScheme::horizontal)
             scheme = LayoutScheme::vertical;
     }
@@ -1019,9 +1023,9 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
 
 void ParentContainer::swap(
     std::shared_ptr<ParentContainer> const& first_parent,
-    int first_index,
+    size_t first_index,
     std::shared_ptr<ParentContainer> const& second_parent,
-    int second_index)
+    size_t second_index)
 {
     // First, swap the two containers at a positional and tree level
     auto const first_container = first_parent->container_list[first_index];

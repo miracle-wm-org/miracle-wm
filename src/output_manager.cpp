@@ -83,7 +83,7 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
         }
 
         // Find the workspace ids
-        std::vector<size_t> workspaces;
+        std::vector<uint32_t> workspaces;
         for (auto const& workspace : output->get_workspaces())
             workspaces.push_back(workspace->id());
 
@@ -93,7 +93,7 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
             next_it = locked->outputs_.begin();
 
         // Move workspaces to the next available output
-        for (auto workspace_id : workspaces)
+        for (auto const workspace_id : workspaces)
             workspace_manager.move_workspace_to_output(workspace_id, next_it->get());
 
         focus(next_it->get()->id());
@@ -179,16 +179,16 @@ std::shared_ptr<OutputInterface> OutputManager::non_primary()
 std::shared_ptr<OutputInterface> OutputManager::prev()
 {
     auto const locked = state.lock();
-    for (int i = locked->outputs_.size() - 1; i >= 0; i++)
+    for (size_t i = locked->outputs_.size() - 1;; i--)
     {
         if (locked->outputs_[i] == locked->focused_.lock())
         {
-            int j = i - 1;
-            if (j < 0)
-                j = locked->outputs_.size() - 1;
-
+            auto const j = i == 0 ? locked->outputs_.size() - 1 : i - 1;
             return locked->outputs_[j];
         }
+
+        if (i == 0)
+            break;
     }
 
     return locked->focused_.lock();
@@ -197,7 +197,7 @@ std::shared_ptr<OutputInterface> OutputManager::prev()
 std::shared_ptr<OutputInterface> OutputManager::next()
 {
     auto const locked = state.lock();
-    for (auto i = 0; i < locked->outputs_.size(); i++)
+    for (size_t i = 0; i < locked->outputs_.size(); i++)
     {
         auto const& output = locked->outputs_[i];
         if (output == locked->focused_.lock())

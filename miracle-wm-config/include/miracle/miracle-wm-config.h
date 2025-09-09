@@ -41,7 +41,7 @@ struct MIRACLE_WM_CONFIG_API KeyCommand
 {
     MirKeyboardAction action;
     uint modifiers;
-    int key;
+    uint key;
 };
 
 struct MIRACLE_WM_CONFIG_API CustomKeyCommand : KeyCommand

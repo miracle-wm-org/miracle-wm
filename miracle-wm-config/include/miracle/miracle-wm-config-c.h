@@ -124,17 +124,17 @@ extern "C"
     uint miracle_config_get_primary_button(const miracle_config_data_t* config);
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button);
 
-    int miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
-    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, int value);
+    uint miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
+    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint value);
 
-    int miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
-    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, int value);
+    uint miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
+    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint value);
 
-    int miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
-    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, int value);
+    uint miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
+    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, uint value);
 
-    int miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
-    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, int value);
+    uint miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
+    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, uint value);
 
     int miracle_config_get_resize_jump(const miracle_config_data_t* config);
     void miracle_config_set_resize_jump(miracle_config_data_t* config, int value);
@@ -149,7 +149,7 @@ extern "C"
     {
         uint action; // MirKeyboardAction as uint
         uint modifiers; // List of modifiers as uint
-        int key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+        uint key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
         const char* command; // NULL-terminated string
     } miracle_custom_key_command_t;
 
@@ -165,14 +165,14 @@ extern "C"
         miracle_config_data_t* config,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         const char* command);
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         const char* command);
     void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
     // Remove command at index (returns false if index is invalid)
@@ -182,7 +182,7 @@ extern "C"
     {
         uint action; // MirKeyboardAction as uint
         uint modifiers; // List of modifiers as uint
-        int key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+        uint key; // Input event code of the key, must be one of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
         uint command; // DefaultKeyCommand as uint
     } miracle_built_in_key_command_t;
 
@@ -194,14 +194,14 @@ extern "C"
         miracle_config_data_t* config,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         uint command);
     void miracle_config_set_built_in_key_command_override(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         uint action,
         uint modifiers,
-        int key,
+        uint key,
         uint command);
     bool miracle_config_remove_built_in_key_command_override(
         const miracle_config_data_t* config,
@@ -228,7 +228,7 @@ extern "C"
         bool in_systemd_scope);
     void miracle_config_set_startup_app(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         const char* command,
         bool restart_on_death,
         bool no_startup_id,
@@ -253,7 +253,7 @@ extern "C"
         const char* value);
     void miracle_config_set_environment_variable(
         miracle_config_data_t* config,
-        int index,
+        size_t index,
         const char* key,
         const char* value);
     bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index);
@@ -374,16 +374,16 @@ extern "C"
         bool is_set;
 
         /// The language for the keymap.
-        const char* language;
+        const char* language = "";
 
         /// Whether the [variant] is set.
-        bool has_variant;
+        bool has_variant = false;
 
         /// The variant.
-        const char* variant;
+        const char* variant = "";
 
         // The number of options specified on this keymap.
-        size_t options_count;
+        size_t options_count = false;
     } miracle_keymap_t;
 
     /// Retrieve the keymap from the configuration data.

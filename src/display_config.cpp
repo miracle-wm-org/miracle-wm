@@ -37,10 +37,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-auto select_mode_index(size_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> size_t
+auto select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> uint32_t
 {
     if (modes.empty())
-        return std::numeric_limits<size_t>::max();
+        return std::numeric_limits<uint32_t>::max();
 
     if (mode_index >= modes.size())
         return 0;
@@ -157,7 +157,7 @@ struct convert<miracle::DisplayConfig::OutputConfig>
         }
 
         if (node["scale"])
-            card.scale = node["scale"].as<double>(1.0);
+            card.scale = node["scale"].as<float>(1.f);
         if (node["group_id"])
             card.group_id = mg::DisplayConfigurationLogicalGroupId(node["group_id"].as<int>());
         return true;
@@ -392,7 +392,7 @@ private:
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.top_left = position;
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
             output.current_mode_index = preferred_mode_index;
             output.logical_group_id = empty_group_id;
             output.orientation = mir_orientation_normal;
@@ -482,14 +482,14 @@ private:
             mir::log_info("Output position is (%d, %d)", output.top_left.x.as_int(), output.top_left.y.as_int());
 
             auto const& modes = output.modes;
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
+            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
             output.current_mode_index = preferred_mode_index;
 
             if (card.size)
             {
                 bool matched_mode = false;
 
-                for (size_t i = 0; i < modes.size(); i++)
+                for (uint32_t i = 0; i < modes.size(); i++)
                 {
                     const auto& [size, vrefresh_hz] = modes[i];
                     if (size != card.size.value())

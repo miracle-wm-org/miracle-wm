@@ -91,17 +91,17 @@ public:
             target_workspace = workspace.get();
         miral::WindowSpecification spec;
         miral::ApplicationInfo app_info;
-        auto hint = target_workspace->allocate_position(app_info, spec, { ContainerType::leaf, parent });
+        auto const hint = target_workspace->allocate_position(app_info, spec, { ContainerType::leaf, parent });
 
-        auto session = std::make_shared<test::StubSession>();
+        auto const session = std::make_shared<test::StubSession>();
         sessions.push_back(session);
-        auto surface = std::make_shared<test::StubSurface>();
+        auto const surface = std::make_shared<test::StubSurface>();
         surfaces.push_back(surface);
 
-        miral::Window window(session, surface);
-        miral::WindowInfo info(window, spec);
+        miral::Window const window(session, surface);
+        miral::WindowInfo const info(window, spec);
         auto leaf = target_workspace->create_container(info, hint);
-        pairs.push_back({ window, leaf });
+        pairs.push_back({ window, leaf, geom::Rectangle(), mir_window_state_restored, std::nullopt });
 
         state->add(leaf);
         leaf->on_focus_gained();
@@ -113,8 +113,8 @@ public:
     std::vector<std::shared_ptr<test::StubSession>> sessions;
     std::vector<std::shared_ptr<test::StubSurface>> surfaces;
     std::vector<StubWindowData> pairs;
-    std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<test::MockOutput> output;
+    std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
     std::shared_ptr<Workspace> workspace;
 };

@@ -39,10 +39,10 @@ auto tex_coords_from_rect(geom::Size buffer_size, geom::RectangleD sample_rect) 
      * and (1.0, 1.0) is the bottom-right
      */
     SrcTexCoords coords;
-    coords.top = sample_rect.top() / buffer_size.height;
-    coords.bottom = sample_rect.bottom() / buffer_size.height;
-    coords.left = sample_rect.left() / buffer_size.width;
-    coords.right = sample_rect.right() / buffer_size.width;
+    coords.top = static_cast<GLfloat>(sample_rect.top() / buffer_size.height);
+    coords.bottom = static_cast<GLfloat>(sample_rect.bottom() / buffer_size.height);
+    coords.left = static_cast<GLfloat>(sample_rect.left() / buffer_size.width);
+    coords.right = static_cast<GLfloat>(sample_rect.right() / buffer_size.width);
     return coords;
 }
 }
@@ -52,10 +52,10 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
 {
     auto rect = renderable.screen_position();
     rect.top_left = rect.top_left - offset;
-    GLfloat const left = rect.top_left.x.as_int();
-    GLfloat const right = left + rect.size.width.as_int();
-    GLfloat const top = rect.top_left.y.as_int();
-    GLfloat const bottom = top + rect.size.height.as_int();
+    GLfloat const left = static_cast<GLfloat>(rect.top_left.x.as_int());
+    GLfloat const right = left + static_cast<GLfloat>(rect.size.width.as_int());
+    GLfloat const top = static_cast<GLfloat>(rect.top_left.y.as_int());
+    GLfloat const bottom = top + static_cast<GLfloat>(rect.size.height.as_int());
 
     mgl::Primitive rectangle;
     rectangle.type = GL_TRIANGLE_STRIP;

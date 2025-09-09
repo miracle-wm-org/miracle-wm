@@ -279,7 +279,7 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
     EXPECT_STREQ(cmd.command, "test-command-2");
 }
 
-TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexLessThanZero)
+TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
 {
     miracle_config_add_custom_key_command(
         &wrapper->config,
@@ -290,7 +290,7 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexLessThanZero)
 
     miracle_config_edit_custom_key_command(
         &wrapper->config,
-        -1,
+        100000,
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,

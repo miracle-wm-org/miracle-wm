@@ -78,7 +78,7 @@ public:
 
     [[nodiscard]] std::vector<std::string> current_remaining() const
     {
-        return std::vector(command.arguments.begin() + index, command.arguments.end());
+        return std::vector(command.arguments.begin() + static_cast<std::vector<std::string>::difference_type>(index), command.arguments.end());
     }
 
     std::optional<int> parse_int()
@@ -105,7 +105,7 @@ public:
         try
         {
             auto move_type = ParseMoveResult::MoveType::pixel;
-            float amount = std::stoi(current());
+            float amount = std::stof(current());
             bool has_type_label = false;
             if (next())
             {
@@ -770,22 +770,20 @@ IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command,
     if (command.arguments.size() < 2)
         return IpcValidationResult::create_failure("Expected at least 2 arguments for 'input'", true);
 
-    constexpr char* const TYPE_PREFIX = "type:";
-    const size_t TYPE_PREFIX_LEN = strlen(TYPE_PREFIX);
+    const std::string TYPE_PREFIX = "type:";
     std::string_view type_str = command.arguments[0];
     if (!type_str.starts_with("type:"))
         return IpcValidationResult::create_failure(std::format("'type' string is misformatted: {}", command.arguments[0].c_str()), true);
 
-    std::string_view const type = type_str.substr(TYPE_PREFIX_LEN);
+    std::string_view const type = type_str.substr(TYPE_PREFIX.size());
     assert(type == "keyboard");
 
     std::string_view const xkb_str = command.arguments[1];
-    constexpr char* const XKB_PREFIX = "xkb_";
-    const size_t XKB_PREFIX_LEN = strlen(XKB_PREFIX);
+    const std::string XKB_PREFIX = "xkb_";
     if (!xkb_str.starts_with(XKB_PREFIX))
         return IpcValidationResult::create_failure(std::format("'xkb' string is misformatted: {}", command.arguments[1].c_str()), true);
 
-    std::string_view const xkb_variable_name = xkb_str.substr(XKB_PREFIX_LEN);
+    std::string_view const xkb_variable_name = xkb_str.substr(XKB_PREFIX.size());
     if (xkb_variable_name != "model"
         && xkb_variable_name != "layout"
         && xkb_variable_name != "variant"
@@ -1000,8 +998,8 @@ struct ResizeAdjust
     std::string error;
     Direction direction = Direction::MAX;
     int multiplier = 1;
-    std::optional<ParseMoveResult> first;
-    std::optional<ParseMoveResult> second;
+    std::optional<ParseMoveResult> first = std::nullopt;
+    std::optional<ParseMoveResult> second = std::nullopt;
 };
 
 ResizeAdjust parse_resize(ArgumentsIndexer& indexer, int multiplier)
@@ -1041,10 +1039,10 @@ ResizeAdjust parse_resize(ArgumentsIndexer& indexer, int multiplier)
 
 struct SetResizeResult
 {
-    bool success = true;
+    bool success = false;
     std::string error;
-    ParseMoveResult width;
-    ParseMoveResult height;
+    std::optional<ParseMoveResult> width = std::nullopt;
+    std::optional<ParseMoveResult> height = std::nullopt;
 };
 
 SetResizeResult parse_set_resize(ArgumentsIndexer& indexer)
@@ -1095,7 +1093,7 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
         if (adjust.first->move_type == ParseMoveResult::MoveType::ppt)
             command_controller->try_resize_ppt(adjust.direction, adjust.first->amount, parse_result.scope);
         else
-            command_controller->try_resize(adjust.direction, adjust.first->amount, parse_result.scope);
+            command_controller->try_resize(adjust.direction, static_cast<int>(adjust.first->amount), parse_result.scope);
         return IpcValidationResult::create_success();
     }
     else if (arg0 == "set")
@@ -1105,10 +1103,10 @@ IpcValidationResult IpcCommandExecutor::process_resize(IpcCommand const& command
             return IpcValidationResult::create_failure(result.error, true);
 
         command_controller->try_set_size(
-            result.width.amount,
-            result.width.move_type == ParseMoveResult::MoveType::ppt,
-            result.height.amount,
-            result.height.move_type == ParseMoveResult::MoveType::ppt,
+            result.width->amount,
+            result.width->move_type == ParseMoveResult::MoveType::ppt,
+            result.height->amount,
+            result.height->move_type == ParseMoveResult::MoveType::ppt,
             parse_result.scope);
         return IpcValidationResult::create_success();
     }
@@ -1275,7 +1273,7 @@ IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, I
         if (!px)
             return IpcValidationResult::create_failure(std::format("'gaps inner {} {}' expected <px>", raw_all_specifier, raw_change_type), true);
 
-        command_controller->set_inner_gaps(px.value(), change_type, raw_all_specifier == "current");
+        command_controller->set_inner_gaps(static_cast<size_t>(px.value()), change_type, raw_all_specifier == "current");
         return IpcValidationResult::create_success();
     }
     else
@@ -1325,7 +1323,7 @@ IpcValidationResult IpcCommandExecutor::process_gap(IpcCommand const& command, I
         if (!px)
             return IpcValidationResult::create_failure(std::format("'gaps {} {}' expected <px>", raw_outer_gaps_change, raw_change_type), true);
 
-        command_controller->set_outer_gaps(px.value(), outer_gaps_change, change_type, raw_all_specifier == "current");
+        command_controller->set_outer_gaps(static_cast<size_t>(px.value()), outer_gaps_change, change_type, raw_all_specifier == "current");
         return IpcValidationResult::create_success();
     }
 }

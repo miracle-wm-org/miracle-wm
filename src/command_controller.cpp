@@ -231,19 +231,19 @@ bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vect
             continue;
         }
 
-        float total_size = 0;
+        int total_size = 0;
         switch (direction)
         {
         case Direction::down:
         case Direction::up:
-            total_size = output->get_area().size.height.as_value();
+            total_size = output->get_area().size.height.as_int();
             break;
         default:
-            total_size = output->get_area().size.width.as_value();
+            total_size = output->get_area().size.width.as_int();
             break;
         }
 
-        if (!container->resize(direction, ppt * total_size))
+        if (!container->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
             result = false;
     }
     return result;
@@ -342,16 +342,16 @@ bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vec
         {
         case Direction::up:
         case Direction::down:
-            total_size = output->get_area().size.height.as_value();
+            total_size = static_cast<float>(output->get_area().size.height.as_value());
             break;
         case Direction::left:
         case Direction::right:
         default:
-            total_size = output->get_area().size.width.as_value();
+            total_size = static_cast<float>(output->get_area().size.width.as_value());
             break;
         }
 
-        if (!container->move_by(direction, total_size * ppt))
+        if (!container->move_by(direction, static_cast<int>(total_size * ppt)))
             result = false;
     }
     return result;
@@ -381,11 +381,11 @@ bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_p
         float resolved_x = x;
         float resolved_y = y;
         if (is_x_ppt)
-            resolved_x = output->get_area().size.width.as_value() * x;
+            resolved_x = static_cast<float>(output->get_area().size.width.as_value()) * x;
         if (is_y_ppt)
-            resolved_y = output->get_area().size.height.as_value() * y;
+            resolved_y = static_cast<float>(output->get_area().size.height.as_value()) * y;
 
-        if (!container->move_to(resolved_x, resolved_y, true))
+        if (!container->move_to(static_cast<int>(resolved_x), static_cast<int>(resolved_y), true))
             result = false;
     }
     return result;
@@ -399,7 +399,7 @@ bool CommandController::try_move_to_center_of_active_output(std::vector<Containe
     auto const area = active_output->get_area();
     float const x = static_cast<float>(area.size.width.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
     float const y = static_cast<float>(area.size.height.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
-    return try_move_to(static_cast<int>(x), false, static_cast<int>(y), false, scope);
+    return try_move_to(x, false, y, false, scope);
 }
 
 bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> const& scope)
@@ -427,7 +427,7 @@ bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& sc
 {
     std::lock_guard lock(mutex);
     auto const& position = state->cursor_position;
-    return try_move_to(position.x.as_int(), false, position.y.as_int(), false, scope);
+    return try_move_to(static_cast<float>(position.x.as_int()), false, static_cast<float>(position.y.as_int()), false, scope);
 }
 
 bool CommandController::try_swap(std::vector<ContainerScope> const& scope, ContainerScope swap_with_scope)
@@ -628,31 +628,16 @@ bool CommandController::try_select_floating(std::vector<ContainerScope> const& s
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto const containers = resolve_scope(scope);
-    if (containers.empty())
-        return false;
-
-    // TODO: fixme!
-    bool result = true;
-    for (auto const& container : containers)
+    if (auto const to_select = state->first_floating())
     {
-        if (auto const to_select = state->first_floating())
+        if (auto const& window = to_select->window())
         {
-            if (auto const& window = to_select->window())
-            {
-                window_controller->select_active_window(window.value());
-            }
-            else
-            {
-                result = false;
-            }
-        }
-        else
-        {
-            result = false;
+            window_controller->select_active_window(window.value());
+            return true;
         }
     }
-    return result;
+
+    return false;
 }
 
 bool CommandController::try_select_tiling(std::vector<ContainerScope> const& scope)
@@ -661,30 +646,16 @@ bool CommandController::try_select_tiling(std::vector<ContainerScope> const& sco
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
-    if (containers.empty())
-        return false;
-
-    bool result = true;
-    for (auto const& container : containers)
+    if (auto to_select = state->first_tiling())
     {
-        if (auto to_select = state->first_tiling())
+        if (auto const& window = to_select->window())
         {
-            if (auto const& window = to_select->window())
-            {
-                window_controller->select_active_window(window.value());
-            }
-            else
-            {
-                result = false;
-            }
-        }
-        else
-        {
-            result = false;
+            window_controller->select_active_window(window.value());
+            return true;
         }
     }
-    return result;
+
+    return false;
 }
 
 bool CommandController::try_select_toggle(std::vector<ContainerScope> const& scope)
@@ -1298,8 +1269,8 @@ void CommandController::move_cursor_to_output(OutputInterface const& output)
 {
     auto const& extents = output.get_area();
     window_controller->move_cursor_to(
-        extents.top_left.x.as_int() + extents.size.width.as_int() / 2.f,
-        extents.top_left.y.as_int() + extents.size.height.as_int() / 2.f);
+        static_cast<float>(extents.top_left.x.as_int()) + static_cast<float>(extents.size.width.as_int()) / 2.f,
+        static_cast<float>(extents.top_left.y.as_int()) + static_cast<float>(extents.size.height.as_int()) / 2.f);
     output_manager->focus(output.id());
 }
 

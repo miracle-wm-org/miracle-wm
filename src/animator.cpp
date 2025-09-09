@@ -57,15 +57,18 @@ float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
     }
     else if (x < 2 / defintion.d1)
     {
-        return defintion.n1 * (x -= 1.5f / defintion.d1) * x + 0.75f;
+        x = x - 1.5f;
+        return defintion.n1 * (x / defintion.d1) * x + 0.75f;
     }
     else if (x < 2.5 / defintion.d1)
     {
-        return defintion.n1 * (x -= 2.25f / defintion.d1) * x + 0.9375f;
+        x = x - 2.25f;
+        return defintion.n1 * (x / defintion.d1) * x + 0.9375f;
     }
     else
     {
-        return defintion.n1 * (x -= 2.625f / defintion.d1) * x + 0.984375f;
+        x = x - 2.625f;
+        return defintion.n1 * (x / defintion.d1) * x + 0.984375f;
     }
 }
 
@@ -303,10 +306,10 @@ BuiltInAnimation::BuiltInAnimation(
         auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
 
         // Find out the percentage that we're already through the resize. This could be negative, by design.
-        float width_change = to.size.width.as_int() - from.size.width.as_int();
-        float height_change = to.size.height.as_int() - from.size.height.as_int();
-        float real_width_change = current.size.width.as_int() - from.size.width.as_int();
-        float real_height_change = current.size.height.as_int() - from.size.height.as_int();
+        float width_change = static_cast<float>(to.size.width.as_int() - from.size.width.as_int());
+        float height_change = static_cast<float>(to.size.height.as_int() - from.size.height.as_int());
+        float real_width_change = static_cast<float>(current.size.width.as_int() - from.size.width.as_int());
+        float real_height_change = static_cast<float>(current.size.height.as_int() - from.size.height.as_int());
 
         float percent_w = get_percent_complete(width_change, real_width_change);
         float percent_h = get_percent_complete(height_change, real_height_change);

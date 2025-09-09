@@ -131,7 +131,7 @@ class RenderDataManagerParameterizedTest : public RenderDataManagerTest, public 
 
 TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
 {
-    int value = GetParam();
+    auto const value = GetParam();
     for (int i = 0; i < value; i++)
     {
         render_data_manager.add({ .surface = nullptr,
@@ -141,7 +141,7 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
             .workspace_transform = glm::mat4(1.f) });
     }
 
-    auto result = render_data_manager.get();
+    auto const result = render_data_manager.get();
     ASSERT_EQ(result.size(), value);
 }
 

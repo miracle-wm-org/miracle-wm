@@ -81,7 +81,7 @@ namespace test
 
         [[nodiscard]] AnimationDefinition const& get_animation_definition(AnimateableEvent event) const override
         {
-            return animations[static_cast<int>(event)];
+            return animations[static_cast<size_t>(event)];
         }
 
         [[nodiscard]] bool are_animations_enabled() const override

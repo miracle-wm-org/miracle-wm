@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc_command.h"
 #include "ipc_command_executor.h"
 
-#define event_mask(ev) (1 << (static_cast<int>(ev) & 0x7F))
+#define ipc_event_mask(ev) (1 << (static_cast<int>(ev) & 0x7F))
 
 struct sockaddr_un;
 
@@ -71,7 +71,7 @@ struct MessageHandlerResult
 {
     bool fatal = false;
     IpcType type;
-    std::string payload;
+    std::string payload = "";
     int subscribed_events = 0;
     bool send_tick_event = false;
 };

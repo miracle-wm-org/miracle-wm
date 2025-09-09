@@ -184,7 +184,7 @@ void Shader2d::setViewport(float x, float y, float width, float height)
         y, y + height, // Bottom, Top
         -1.0f, 1.0f // Near, Far
     );
-    GLuint projectionLoc = glGetUniformLocation(programID, "uProjection");
+    auto const projectionLoc = glGetUniformLocation(programID, "uProjection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 }
 
@@ -194,10 +194,10 @@ void Mesh2d::uploadToGPU()
     glGenBuffers(1, &EBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2d), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(vertices.size() * sizeof(Vertex2d)), vertices.data(), GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(uint32_t)), indices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -205,7 +205,7 @@ void Mesh2d::uploadToGPU()
 
 void Mesh2d::draw(Shader2d const& shader) const
 {
-    GLuint const mesh_loc = glGetUniformLocation(shader.getProgram(), "uMesh");
+    auto const mesh_loc = glGetUniformLocation(shader.getProgram(), "uMesh");
     glUniformMatrix4fv(mesh_loc, 1, GL_FALSE, &transform[0][0]);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -245,7 +245,7 @@ void Model2d::uploadToGPU()
 
 void Model2d::draw(Shader2d const& shader) const
 {
-    GLuint const model_loc = glGetUniformLocation(shader.getProgram(), "uModel");
+    auto const model_loc = glGetUniformLocation(shader.getProgram(), "uModel");
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, &transform[0][0]);
     for (const auto& mesh : meshes)
     {
@@ -271,7 +271,7 @@ void Model2d::set_color(glm::vec4 const& color)
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, mesh.vertices.size() * sizeof(Vertex2d), mesh.vertices.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(mesh.vertices.size() * sizeof(Vertex2d)), mesh.vertices.data());
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 }

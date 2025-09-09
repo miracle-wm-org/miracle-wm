@@ -23,10 +23,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-size_t select_mode_index(size_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes)
+uint32_t select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes)
 {
     if (modes.empty())
-        return std::numeric_limits<size_t>::max();
+        return std::numeric_limits<uint32_t>::max();
 
     if (mode_index >= modes.size())
         return 0;
@@ -54,7 +54,7 @@ namespace test
                 {
                     conf_output.used = true;
                     conf_output.top_left = geom::Point { 0, max_y };
-                    size_t preferred_mode_index { select_mode_index(conf_output.preferred_mode_index, conf_output.modes) };
+                    uint32_t preferred_mode_index { select_mode_index(conf_output.preferred_mode_index, conf_output.modes) };
                     conf_output.current_mode_index = preferred_mode_index;
                     conf_output.power_mode = mir_power_mode_on;
                     conf_output.orientation = mir_orientation_normal;

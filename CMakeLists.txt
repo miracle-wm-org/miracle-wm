@@ -49,6 +49,7 @@ option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will r
 # Compiler warnings
 # ----------------------------------------
 if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
     add_compile_options(
             -Wall -Wextra -Wpedantic
             -Wconversion -Wsign-conversion
@@ -238,6 +239,8 @@ endif()
 # Subdirectories
 # ----------------------------------------
 add_subdirectory(tests/)
-add_subdirectory(miraclemsg/)
 add_subdirectory(miracle-wm-config/)
 add_subdirectory(protocols/)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # Disable warnings for miraclemsg, since its a fork
+add_subdirectory(miraclemsg/)
