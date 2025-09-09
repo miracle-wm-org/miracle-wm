@@ -92,9 +92,20 @@ void WindowManagerToolsWindowController::set_rectangle(
     }
 
     auto const& info = info_for(window);
+
+    // TODO: Remove once a real fix is added upstream
+    // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
+    // Workaround for: https://github.com/canonical/mir/issues/4222
+    auto const adjusted_to = geom::Rectangle {
+        to.top_left,
+        geom::Size {
+                    geom::Width(std::max(to.size.width.as_int(), info.min_width().as_value())),
+                    geom::Height(std::max(to.size.height.as_int(), info.min_height().as_value())) }
+    };
+
     if (info.parent())
     {
-        policy->handle_animation({ true, to, std::nullopt, std::nullopt }, container);
+        policy->handle_animation({ true, adjusted_to, std::nullopt, std::nullopt }, container);
         return;
     }
 
@@ -103,7 +114,7 @@ void WindowManagerToolsWindowController::set_rectangle(
         policy->handle_animation(
             AnimationFrameResult {
                 true,
-                to,
+                adjusted_to,
                 glm::mat4(1.f),
                 std::nullopt },
             container);
@@ -114,7 +125,7 @@ void WindowManagerToolsWindowController::set_rectangle(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
         from,
-        to,
+        adjusted_to,
         geom::Rectangle { window.top_left(), window.size() },
         this,
         container);
