@@ -25,20 +25,26 @@ using namespace miracle;
 
 namespace
 {
-std::string expand_tilde_getenv(const std::string& path) {
-    if (path.empty() || path[0] != '~') {
+std::string expand_tilde_getenv(const std::string& path)
+{
+    if (path.empty() || path[0] != '~')
+    {
         return path;
     }
 
     const char* home_dir = std::getenv("HOME");
-    if (home_dir == nullptr) {
+    if (home_dir == nullptr)
+    {
         return path;
     }
 
     std::string expanded_path = home_dir;
-    if (path.length() > 1 && path[1] == '/') {
+    if (path.length() > 1 && path[1] == '/')
+    {
         expanded_path += path.substr(1);
-    } else if (path.length() > 1 && path[1] != '/') {
+    }
+    else if (path.length() > 1 && path[1] != '/')
+    {
         return path;
     }
     return expanded_path;
