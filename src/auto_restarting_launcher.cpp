@@ -23,6 +23,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+namespace
+{
+std::string expand_tilde_getenv(const std::string& path)
+{
+    if (path.empty() || path[0] != '~')
+    {
+        return path;
+    }
+
+    const char* home_dir = std::getenv("HOME");
+    if (home_dir == nullptr)
+    {
+        return path;
+    }
+
+    std::string expanded_path = home_dir;
+    if (path.length() > 1 && path[1] == '/')
+    {
+        expanded_path += path.substr(1);
+    }
+    else if (path.length() > 1 && path[1] != '/')
+    {
+        return path;
+    }
+    return expanded_path;
+}
+}
+
 AutoRestartingLauncher::AutoRestartingLauncher(
     mir::Server& server,
     miral::ExternalClientLauncher& launcher) :
@@ -66,26 +94,17 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
             result.push_back("Restart=on-failure");
         }
 
-        size_t start = 0;
-        for (size_t i = 0; i < cmd.command.size(); i++)
-        {
-            if (cmd.command[i] == ' ')
-            {
-                if (start != i)
-                    result.push_back(cmd.command.substr(start, i - start));
-
-                start = i + 1;
-            }
-        }
-
-        if (start != cmd.command.size())
-            result.push_back(cmd.command.substr(start));
+        auto const split_command = miral::ExternalClientLauncher::split_command(cmd.command);
+        for (auto const& part : split_command)
+            result.push_back(part);
 
         pid = launcher.launch(result);
     }
     else
     {
-        pid = launcher.launch(cmd.command);
+        auto split_command = miral::ExternalClientLauncher::split_command(cmd.command);
+        split_command[0] = expand_tilde_getenv(split_command[0]);
+        pid = launcher.launch(split_command);
     }
 
     if (pid <= 0)
