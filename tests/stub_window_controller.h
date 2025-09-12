@@ -110,8 +110,6 @@ public:
         return stub_app_info;
     }
 
-    void set_size_hack(AnimationHandle, mir::geometry::Size const&) override { }
-
     void move_cursor_to(float x, float y) override { }
 
     StubWindowData const& get_window_data(std::shared_ptr<Container> const& container)
