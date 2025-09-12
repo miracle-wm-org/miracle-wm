@@ -257,8 +257,7 @@ BuiltInAnimation::BuiltInAnimation(
     definition { definition },
     current { from },
     from { from },
-    to { to },
-    real_size { from.size }
+    to { to }
 {
     switch (definition.type)
     {
@@ -380,7 +379,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     case BultInAnimationType::slide:
     {
         auto const p = ease(definition, t);
-        const auto [position, clip_area_size, transform] = slide(p, from, to);
+        const auto [position, clip_area_size] = slide(p, from, to);
         current.top_left.x = geom::X { position.x };
         current.top_left.y = geom::Y { position.y };
         current.size.width = geom::Width { clip_area_size.x };
@@ -388,7 +387,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
         return {
             false,
             current,
-            transform,
+            std::nullopt,
             1.f
         };
     }
