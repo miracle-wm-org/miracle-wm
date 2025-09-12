@@ -255,7 +255,7 @@ BuiltInAnimation::BuiltInAnimation(
     Animation { handle },
     duration_seconds { duration_seconds },
     definition { definition },
-    current { from },
+    current { current_ },
     from { from },
     to { to }
 {
