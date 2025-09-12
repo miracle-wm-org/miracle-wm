@@ -116,7 +116,7 @@ void WindowManagerToolsWindowController::set_rectangle(
         config->get_animation_definition(AnimateableEvent::window_move),
         from,
         to,
-        geom::Rectangle { window.top_left(), window.size() },
+        from,
         this,
         container);
 
