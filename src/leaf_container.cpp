@@ -555,11 +555,6 @@ void LeafContainer::on_move_to(geom::Point const&)
 {
 }
 
-void LeafContainer::on_resize(geom::Size const& size)
-{
-    window_controller->set_size_hack(animation_handle_, size);
-}
-
 bool LeafContainer::is_fullscreen() const
 {
     return window_controller->get_state(window_) == mir_window_state_fullscreen;
