@@ -185,16 +185,6 @@ float interpolate_scale(float const p, float const start, float const end)
     return current / end;
 }
 
-float interpolate_scale2(float const p, float const start, float const end, float const real)
-{
-    float const diff = end - start;
-    if (diff == 0)
-        return 1.f;
-
-    float const current = start + diff * p;
-    return current / real;
-}
-
 struct SlideResult
 {
     /// The current position that the surface should be in.
@@ -205,12 +195,9 @@ struct SlideResult
     /// be set to this size, as it has already been set on init().
     /// This size is strictly meant for the clip area.
     glm::vec2 clip_area_size;
-
-    /// The transformation ao apply to the surface.
-    glm::mat4 transform;
 };
 
-inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle const& to, geom::Size const& committed_size)
+inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle const& to)
 {
     auto const distance = to.top_left - from.top_left;
     float const dx = static_cast<float>(distance.dx.as_int()) * p;
@@ -219,30 +206,9 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
     float const clip_scale_x = interpolate_scale(p, static_cast<float>(from.size.width.as_value()), static_cast<float>(to.size.width.as_value()));
     float const clip_scale_y = interpolate_scale(p, static_cast<float>(from.size.height.as_value()), static_cast<float>(to.size.height.as_value()));
 
-    // This bit will only make sense by example.
-    //
-    // Let's say we're growing the width from 50px to 100px. When we first start animating,
-    // the client will not have yet confirmed the size, so it will most be 50px.
-    // In this case, [real_scale_x] will still be 200%, since it will want to scale from 50px
-    // to 100px (assuming p=0).
-    //
-    // However, after a frame or two, the actual size of the window will be 100px. In this
-    // case, we will want to scale down by ~50% (assuming p~=0) from 100px to ~50px.
-    float const real_scale_x = interpolate_scale2(
-        p,
-        static_cast<float>(from.size.width.as_value()),
-        static_cast<float>(to.size.width.as_value()),
-        static_cast<float>(committed_size.width.as_value()));
-    float const real_scale_y = interpolate_scale2(
-        p,
-        static_cast<float>(from.size.height.as_value()),
-        static_cast<float>(to.size.height.as_value()),
-        static_cast<float>(committed_size.height.as_value()));
-
     return {
         .position = glm::vec2(static_cast<float>(from.top_left.x.as_int()) + dx, static_cast<float>(from.top_left.y.as_int()) + dy),
-        .clip_area_size = glm::vec2(static_cast<float>(to.size.width.as_int()) * clip_scale_x, static_cast<float>(to.size.height.as_int()) * clip_scale_y),
-        .transform = glm::scale(glm::mat4(1.0), glm::vec3(real_scale_x, real_scale_y, 0.f))
+        .clip_area_size = glm::vec2(static_cast<float>(to.size.width.as_int()) * clip_scale_x, static_cast<float>(to.size.height.as_int()) * clip_scale_y)
     };
 }
 }
@@ -285,14 +251,13 @@ BuiltInAnimation::BuiltInAnimation(
     BuiltInAnimationDefinition definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current) :
+    mir::geometry::Rectangle const& current_) :
     Animation { handle },
     duration_seconds { duration_seconds },
-    definition { std::move(definition) },
-    current { current },
-    from { current },
-    to { to },
-    real_size { current.size }
+    definition { definition },
+    current { current_ },
+    from { from },
+    to { to }
 {
     switch (definition.type)
     {
@@ -361,12 +326,6 @@ AnimationFrameResult MultiBuiltInAnimation::step(float dt)
     return result;
 }
 
-void MultiBuiltInAnimation::set_current_size(mir::geometry::Size const& size)
-{
-    for (auto& anim : animations)
-        anim.set_current_size(size);
-}
-
 AnimationFrameResult BuiltInAnimation::init()
 {
     switch (definition.type)
@@ -379,7 +338,7 @@ AnimationFrameResult BuiltInAnimation::init()
     {
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
-        const auto [position, clip_area_size, transform] = slide(0, from, to, real_size);
+        const auto [position, clip_area_size] = slide(0, from, to);
         current.top_left.x = geom::X { position.x };
         current.top_left.y = geom::Y { position.y };
         current.size.width = geom::Width { clip_area_size.x };
@@ -387,7 +346,7 @@ AnimationFrameResult BuiltInAnimation::init()
         return {
             false,
             current,
-            transform,
+            std::nullopt,
             std::nullopt
         };
     }
@@ -420,7 +379,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     case BultInAnimationType::slide:
     {
         auto const p = ease(definition, t);
-        const auto [position, clip_area_size, transform] = slide(p, from, to, real_size);
+        const auto [position, clip_area_size] = slide(p, from, to);
         current.top_left.x = geom::X { position.x };
         current.top_left.y = geom::Y { position.y };
         current.size.width = geom::Width { clip_area_size.x };
@@ -428,7 +387,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
         return {
             false,
             current,
-            transform,
+            std::nullopt,
             1.f
         };
     }
@@ -463,11 +422,6 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     default:
         return { true, to, std::nullopt, std::nullopt };
     }
-}
-
-void BuiltInAnimation::set_current_size(mir::geometry::Size const& size)
-{
-    real_size = size;
 }
 
 AnimationHandle Animator::register_animateable()
@@ -510,17 +464,6 @@ void Animator::tick(float dt)
     {
         return animation->is_being_removed();
     });
-}
-
-void Animator::set_size_hack(AnimationHandle handle, mir::geometry::Size const& size)
-{
-    std::lock_guard<std::mutex> lock(processing_lock);
-
-    for (auto const& animation : active)
-    {
-        if (animation->get_handle() == handle)
-            animation->set_current_size(size);
-    }
 }
 
 void Animator::remove_by_animation_handle(AnimationHandle handle)

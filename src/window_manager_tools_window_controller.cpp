@@ -93,19 +93,9 @@ void WindowManagerToolsWindowController::set_rectangle(
 
     auto const& info = info_for(window);
 
-    // TODO: Remove once a real fix is added upstream
-    // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
-    // Workaround for: https://github.com/canonical/mir/issues/4222
-    auto const adjusted_to = geom::Rectangle {
-        to.top_left,
-        geom::Size {
-                    geom::Width(std::max(to.size.width.as_int(), info.min_width().as_value())),
-                    geom::Height(std::max(to.size.height.as_int(), info.min_height().as_value())) }
-    };
-
     if (info.parent())
     {
-        policy->handle_animation({ true, adjusted_to, std::nullopt, std::nullopt }, container);
+        policy->handle_animation({ true, to, std::nullopt, std::nullopt }, container);
         return;
     }
 
@@ -114,7 +104,7 @@ void WindowManagerToolsWindowController::set_rectangle(
         policy->handle_animation(
             AnimationFrameResult {
                 true,
-                adjusted_to,
+                to,
                 glm::mat4(1.f),
                 std::nullopt },
             container);
@@ -125,8 +115,8 @@ void WindowManagerToolsWindowController::set_rectangle(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
         from,
-        adjusted_to,
-        geom::Rectangle { window.top_left(), window.size() },
+        to,
+        from,
         this,
         container);
 
@@ -235,7 +225,15 @@ void WindowManagerToolsWindowController::process_animation(
         if (rectangle)
         {
             spec.top_left() = rectangle->top_left;
-            spec.size() = rectangle->size;
+            // TODO: Remove once a real fix is added upstream
+            // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
+            // Workaround for: https://github.com/canonical/mir/issues/4222
+            auto const& info = tools.info_for(container->window().value());
+            spec.size() = geom::Size {
+                geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
+                geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
+            };
+
             needs_modify = true;
         }
 
@@ -303,11 +301,6 @@ void WindowManagerToolsWindowController::close(miral::Window const& window)
 void WindowManagerToolsWindowController::move_cursor_to(float x, float y)
 {
     tools.move_cursor_to(geom::PointF { x, y });
-}
-
-void WindowManagerToolsWindowController::set_size_hack(AnimationHandle handle, mir::geometry::Size const& size)
-{
-    animator->set_size_hack(handle, size);
 }
 
 miral::Window WindowManagerToolsWindowController::window_at(float x, float y)

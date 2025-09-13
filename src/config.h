@@ -50,7 +50,7 @@ class Config
 {
 public:
     virtual ~Config() = default;
-    virtual void load(mir::Server& server) = 0;
+    virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
@@ -90,7 +90,7 @@ public:
     FilesystemConfiguration(FilesystemConfiguration const&) = delete;
     auto operator=(FilesystemConfiguration const&) -> FilesystemConfiguration& = delete;
 
-    void load(mir::Server& server) override;
+    void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;

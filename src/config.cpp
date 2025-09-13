@@ -69,7 +69,7 @@ FilesystemConfiguration::~FilesystemConfiguration()
         main_loop->unregister_fd_handler(this);
 }
 
-void FilesystemConfiguration::load(mir::Server& server)
+void FilesystemConfiguration::operator()(mir::Server& server)
 {
     const char* config_file_name_option = "config";
     server.add_configuration_option(
@@ -96,7 +96,7 @@ void FilesystemConfiguration::load(mir::Server& server)
         "If specified, this script will setup the systemd session before any apps are run",
         "");
 
-    server.add_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
+    server.add_pre_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
     {
         main_loop = server.the_main_loop();
         auto const server_opts = server.get_options();

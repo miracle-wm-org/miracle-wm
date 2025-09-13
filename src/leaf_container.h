@@ -75,7 +75,7 @@ public:
     void on_focus_gained() override;
     void on_focus_lost() override;
     void on_move_to(geom::Point const&) override;
-    void on_resize(geom::Size const&) override;
+    void on_resize(geom::Size const&) override { }
     void handle_request_move(MirInputEvent const* input_event) override;
     void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
     void request_horizontal_layout() override;

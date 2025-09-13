@@ -70,7 +70,6 @@ public:
     virtual AnimationFrameResult init() = 0;
     virtual AnimationFrameResult step(float dt) = 0;
     [[nodiscard]] AnimationHandle get_handle() const;
-    virtual void set_current_size(mir::geometry::Size const& size) = 0;
     virtual void mark_for_removal();
     [[nodiscard]] virtual bool is_being_removed() const;
     virtual void on_tick(AnimationFrameResult const&) = 0;
@@ -98,7 +97,6 @@ public:
 
     AnimationFrameResult init() override;
     AnimationFrameResult step(float dt) override;
-    void set_current_size(mir::geometry::Size const& size) override;
 
     /// TODO: We shouldn't provide an empty function implementation here, but
     ///  it is useful for MultiBuiltInAnimation
@@ -110,7 +108,6 @@ private:
     mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
-    mir::geometry::Size real_size;
 };
 
 class MultiBuiltInAnimation : public Animation
@@ -127,7 +124,6 @@ public:
 
     AnimationFrameResult init() override;
     AnimationFrameResult step(float dt) override;
-    void set_current_size(mir::geometry::Size const& size) override;
 
 private:
     std::vector<BuiltInAnimation> animations;
@@ -156,7 +152,6 @@ public:
 
     /// Append a new animation to the queue.
     void append(std::shared_ptr<Animation> const& animation);
-    void set_size_hack(AnimationHandle handle, mir::geometry::Size const& size);
 
     /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
