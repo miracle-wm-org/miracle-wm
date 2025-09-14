@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace mir
 {
-class ServerActionQueue;
 namespace shell
 {
     class SurfaceStack;
@@ -33,7 +32,6 @@ namespace miracle
 {
 class CompositorState;
 class Container;
-class WindowController;
 class Config;
 class Animator;
 
@@ -44,20 +42,16 @@ class DyingSurfaceManager
 {
 public:
     DyingSurfaceManager(
-        std::shared_ptr<mir::ServerActionQueue> const& main_loop,
         std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
         std::shared_ptr<CompositorState> const& compositor_state,
-        std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<Animator> const& animator);
 
     void animate_dying_surface(std::shared_ptr<Container> const& container);
 
 private:
-    std::shared_ptr<mir::ServerActionQueue> main_loop;
     std::shared_ptr<mir::shell::SurfaceStack> surface_stack;
     std::shared_ptr<CompositorState> compositor_state;
-    std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
 };

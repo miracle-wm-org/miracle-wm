@@ -188,10 +188,8 @@ Policy::Policy(
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
     dying_surface_manager(std::make_unique<DyingSurfaceManager>(
-        main_loop_,
         server.the_surface_stack(),
         state,
-        window_controller,
         config,
         animator)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>())

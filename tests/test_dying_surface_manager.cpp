@@ -38,26 +38,20 @@ class DyingSurfaceManagerTest : public testing::Test
 {
 public:
     DyingSurfaceManagerTest() :
-        main_loop(std::make_shared<mir::test::doubles::MockMainLoop>()),
         surface_stack(std::make_shared<test::MockSurfaceStack>()),
         compositor_state(std::make_shared<CompositorState>()),
-        window_controller(std::make_shared<test::MockWindowController>()),
         config(std::make_shared<test::MockConfig>()),
         animator(std::make_shared<Animator>()),
         dying_surface_manager(
-            main_loop,
             surface_stack,
             compositor_state,
-            window_controller,
             config,
             animator)
     {
     }
 
-    std::shared_ptr<mir::test::doubles::MockMainLoop> main_loop;
     std::shared_ptr<test::MockSurfaceStack> surface_stack;
     std::shared_ptr<CompositorState> compositor_state;
-    std::shared_ptr<test::MockWindowController> window_controller;
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<Animator> animator;
     DyingSurfaceManager dying_surface_manager;
@@ -86,10 +80,6 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
     // Condition for starting the loop
     EXPECT_CALL(*container, window())
         .WillOnce(testing::Return(window));
-    EXPECT_CALL(*main_loop, enqueue)
-        .WillOnce(::testing::InvokeArgument<1>());
-    EXPECT_CALL(*window_controller, invoke_under_lock)
-        .WillOnce(::testing::InvokeArgument<0>());
 
     // Resolution of the animation
     std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animation_definitions;

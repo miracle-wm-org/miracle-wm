@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "forwarding_surface.h"
 #include "output_interface.h"
 #include "window_controller.h"
-#include <mir/main_loop.h>
 #include <mir/shell/surface_stack.h>
 
 using namespace miracle;
@@ -89,16 +88,12 @@ private:
 }
 
 DyingSurfaceManager::DyingSurfaceManager(
-    std::shared_ptr<mir::ServerActionQueue> const& main_loop,
     std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
     std::shared_ptr<CompositorState> const& compositor_state,
-    std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<Animator> const& animator) :
-    main_loop(main_loop),
     surface_stack(surface_stack),
     compositor_state(compositor_state),
-    window_controller(window_controller),
     config(config),
     animator(animator)
 {
@@ -114,29 +109,23 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
 
     auto const output_area = container->get_output()->get_area();
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
-    main_loop->enqueue(this, [this, surface = surface, container = container, output_area = output_area]
+    auto animating_surface = std::make_shared<ForwardingSurface>(surface);
+    auto const raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
+        compositor_state,
+        animating_surface,
+        animator->register_animateable(),
+        config->get_animation_definition(AnimateableEvent::window_close),
+        container->get_visible_area(),
+        geom::Rectangle {},
+        container->get_visible_area(),
+        container->get_transform(),
+        container->get_output_transform() * container->get_workspace_transform(),
+        output_area,
+        [surface_stack = surface_stack, animating_surface = animating_surface]
     {
-        window_controller->invoke_under_lock([this, surface = surface, container = container, output_area = output_area]
-        {
-            auto animating_surface = std::make_shared<ForwardingSurface>(surface);
-            auto const raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
-                compositor_state,
-                animating_surface,
-                animator->register_animateable(),
-                config->get_animation_definition(AnimateableEvent::window_close),
-                container->get_visible_area(),
-                geom::Rectangle {},
-                container->get_visible_area(),
-                container->get_transform(),
-                container->get_output_transform() * container->get_workspace_transform(),
-                output_area,
-                [surface_stack = surface_stack, animating_surface = animating_surface]
-            {
-                surface_stack->remove_surface(animating_surface);
-            });
-
-            surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
-            animator->append(raw_surface_animation);
-        });
+        surface_stack->remove_surface(animating_surface);
     });
+
+    surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
+    animator->append(raw_surface_animation);
 }
