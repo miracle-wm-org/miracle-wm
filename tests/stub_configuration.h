@@ -27,7 +27,7 @@ namespace test
     class StubConfiguration : public miracle::Config
     {
     public:
-        void load(mir::Server& server) override { }
+        void operator()(mir::Server& server) override { }
         void reload() override { }
         [[nodiscard]] std::string const& get_filename() const override { return filename; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }

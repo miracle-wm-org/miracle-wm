@@ -63,7 +63,7 @@ public:
 
     void operator()(mir::Server& server)
     {
-        config->load(server);
+        config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
             "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });

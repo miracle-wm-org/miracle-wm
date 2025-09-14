@@ -21,6 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include <gmock/gmock.h>
 
+namespace mir
+{
+class Server;
+}
+
 namespace miracle
 {
 namespace test
@@ -28,7 +33,13 @@ namespace test
     class MockConfig : public Config
     {
     public:
-        MOCK_METHOD(void, load, (mir::Server & server), (override));
+        MOCK_METHOD(void, Call, (mir::Server & server));
+
+        void operator()(mir::Server& server) override
+        {
+            Call(server);
+        }
+
         MOCK_METHOD(void, reload, (), (override));
         MOCK_METHOD(std::string const&, get_filename, (), (const, override));
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
