@@ -67,6 +67,7 @@ namespace test
         MOCK_METHOD(miral::InputConfiguration::Keyboard, keyboard, (), (const, override));
 #endif
         MOCK_METHOD(std::optional<std::string>, keymap, (), (const, override));
+        MOCK_METHOD(MagnifierConfiguration, magnifier, (), (const, override));
     };
 }
 }

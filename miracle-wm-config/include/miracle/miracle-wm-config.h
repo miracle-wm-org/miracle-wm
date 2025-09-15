@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cstdlib>
 #include <glm/glm.hpp>
+#include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/input_configuration.h>
 #include <miral/version.h>
@@ -108,6 +109,15 @@ struct MIRACLE_WM_CONFIG_API KeymapConfiguration
     [[nodiscard]] std::string to_string() const;
 };
 
+struct MIRACLE_WM_CONFIG_API MagnifierConfiguration
+{
+    float scale = 1.f;
+    float scale_increment = 1.f;
+    int width = 400;
+    int height = 300;
+    int size_increment = 50;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -132,6 +142,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miral::InputConfiguration::Keyboard keyboard_configuration;
 #endif
     std::optional<KeymapConfiguration> keymap;
+    MagnifierConfiguration magnifier;
 };
 
 enum class ErrorLevel

@@ -78,6 +78,7 @@ public:
     [[nodiscard]] virtual miral::InputConfiguration::Keyboard keyboard() const = 0;
 #endif
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
+    [[nodiscard]] virtual MagnifierConfiguration magnifier() const = 0;
     uint process_modifier(uint modifier) const;
 };
 
@@ -118,6 +119,7 @@ public:
     [[nodiscard]] miral::InputConfiguration::Keyboard keyboard() const override;
 #endif
     [[nodiscard]] std::optional<std::string> keymap() const override;
+    [[nodiscard]] MagnifierConfiguration magnifier() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

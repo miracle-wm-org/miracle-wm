@@ -30,10 +30,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
-#include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
 #include <miral/external_client.h>
 #include <miral/keymap.h>
+#include <miral/magnifier.h>
 #include <miral/runner.h>
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
@@ -51,13 +51,15 @@ public:
         std::shared_ptr<miracle::CompositorState> const& compositor_state,
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
-        std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar) :
+        std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
+        miral::Magnifier const& magnifier) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
         output_listener(output_listener),
         display_config(display_config),
-        config_observer_registrar(config_observer_registrar)
+        config_observer_registrar(config_observer_registrar),
+        magnifier(magnifier)
     {
     }
 
@@ -65,7 +67,7 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -78,6 +80,7 @@ private:
     std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
     std::shared_ptr<miracle::DisplayConfig> display_config;
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
+    miral::Magnifier magnifier;
 };
 
 int main(int argc, char const* argv[])
@@ -90,6 +93,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
+    Magnifier magnifier;
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
     for (auto const& env : config->get_env_variables())
@@ -100,7 +104,9 @@ int main(int argc, char const* argv[])
     class InputConfigurationConfigObserver : public miracle::ConfigObserver
     {
     public:
-        InputConfigurationConfigObserver(InputConfiguration const& input_configuration, Keymap const& keymap) :
+        InputConfigurationConfigObserver(
+            InputConfiguration const& input_configuration,
+            Keymap const& keymap) :
             input_configuration(input_configuration),
             keymap(keymap)
         {
@@ -109,16 +115,15 @@ int main(int argc, char const* argv[])
         void on_config_changed(miracle::Config const& config) override
         {
             input_configuration.mouse(config.mouse());
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
             // TODO(mattkae): Due to a bug in Mir, it is generally unsafe to reload
-            // the keyboard configuration after the first load, as dead clients (e.g.
-            // swayvnc) can cause the internal listeners in Mir to be fail.
+            //  the keyboard configuration after the first load, as dead clients (e.g.
+            //  swayvnc) can cause the internal listeners in Mir to be fail.
             if (!has_reloaded_keyboard_config)
             {
                 has_reloaded_keyboard_config = true;
                 input_configuration.keyboard(config.keyboard());
             }
-#endif
+
             try
             {
                 if (auto const keymap_val = config.keymap())
@@ -167,13 +172,14 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,
             *display_config,
             external_client_launcher,
             input_configuration,
+            magnifier,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);

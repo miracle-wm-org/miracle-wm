@@ -143,6 +143,7 @@ add_library(miracle-wm-implementation STATIC
         src/window_observer.cpp
         src/config_observer.cpp
         src/binding_event.cpp
+        src/magnifier_wrapper.cpp
 )
 
 # ----------------------------------------

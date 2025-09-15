@@ -277,6 +277,12 @@ std::optional<std::string> FilesystemConfiguration::keymap() const
     return options.keymap->to_string();
 }
 
+MagnifierConfiguration FilesystemConfiguration::magnifier() const
+{
+    std::lock_guard lock(mutex);
+    return options.magnifier;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
@@ -444,7 +450,31 @@ bool FilesystemConfiguration::matches_key_command(
          KEY_W     },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_S     }
+         KEY_S     },
+        { // MagnifierOn
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_EQUAL },
+        { // Magnifier Off
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_ESC   },
+        { // Increase Size
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_EQUAL },
+        { // Decrease size
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         KEY_MINUS },
+        { // Increase scale
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_EQUAL },
+        { // Decrease scale
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         KEY_MINUS }
     };
 
     auto const try_run_key_command = [&](KeyCommand const& command, DefaultKeyCommand i)
