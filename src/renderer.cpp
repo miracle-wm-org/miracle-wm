@@ -504,6 +504,9 @@ void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
 
 void Renderer::update_gl_viewport()
 {
+    output_surface->make_current();
+    output_surface->bind();
+
     /*
      * Letterboxing: Move the glViewport to add black bars in the case that
      * the logical viewport aspect ratio doesn't match the display aspect.
