@@ -27,7 +27,7 @@ jobs:
       - name: Create container and run tests
         run: |
           {
-              echo 'FROM fedora:41'
+              echo 'FROM fedora:rawhide'
               echo '# set TZ to ensure the test using timestamp'
               echo 'ENV TZ=America/New_York'
               echo 'RUN dnf -y update'
