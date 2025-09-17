@@ -878,6 +878,14 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
         }
     }
 }
+
+void read_hover_click(YAML::Node const& node, ParsingContext& context)
+{
+    try_parse_value(node, "enabled", context.result.config.hover_click.enabled, context);
+    try_parse_value(node, "hover_duration", context.result.config.hover_click.hover_duration_milliseconds, context);
+    try_parse_value(node, "cancel_displacement_threshold", context.result.config.hover_click.cancel_displacement_threshold, context);
+    try_parse_value(node, "reclick_displacement_threshold", context.result.config.hover_click.reclick_displacement_threshold, context);
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -926,6 +934,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_mouse(config["mouse"], context);
         if (config["keyboard"])
             read_keyboard(config["keyboard"], context);
+        if (config["hover_click"])
+            read_hover_click(config["hover_click"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1245,6 +1255,16 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::EndMap;
         }
 
+        out << YAML::EndMap;
+    }
+
+    if (config.hover_click != HoverClickConfiguration {})
+    {
+        out << YAML::Key << "hover_click" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.hover_click.enabled;
+        out << YAML::Key << "hover_duration" << YAML::Value << config.hover_click.hover_duration_milliseconds;
+        out << YAML::Key << "cancel_displacement_threshold" << YAML::Value << config.hover_click.cancel_displacement_threshold;
+        out << YAML::Key << "reclick_displacement_threshold" << YAML::Value << config.hover_click.reclick_displacement_threshold;
         out << YAML::EndMap;
     }
 
