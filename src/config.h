@@ -80,6 +80,7 @@ public:
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
     uint process_modifier(uint modifier) const;
     [[nodiscard]] virtual HoverClickConfiguration hover_click() const = 0;
+    [[nodiscard]] virtual SimulatedSecondaryClickConfiguration simulated_secondary_click() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -120,6 +121,7 @@ public:
 #endif
     [[nodiscard]] std::optional<std::string> keymap() const override;
     [[nodiscard]] HoverClickConfiguration hover_click() const override;
+    [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

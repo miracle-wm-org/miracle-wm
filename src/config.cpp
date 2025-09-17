@@ -283,6 +283,12 @@ HoverClickConfiguration FilesystemConfiguration::hover_click() const
     return options.hover_click;
 }
 
+SimulatedSecondaryClickConfiguration FilesystemConfiguration::simulated_secondary_click() const
+{
+    std::lock_guard lock(mutex);
+    return options.simulated_secondary_click;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

@@ -68,6 +68,7 @@ namespace test
 #endif
         MOCK_METHOD(std::optional<std::string>, keymap, (), (const, override));
         MOCK_METHOD(HoverClickConfiguration, hover_click, (), (const, override));
+        MOCK_METHOD(SimulatedSecondaryClickConfiguration, simulated_secondary_click, (), (const, override));
     };
 }
 }

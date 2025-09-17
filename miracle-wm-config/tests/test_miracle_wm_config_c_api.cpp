@@ -724,6 +724,18 @@ TEST_F(CAPIWrapperTest, CanSetHoverClickData)
     EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
     EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
 }
+TEST_F(CAPIWrapperTest, CanSetSimulatedSecondaryClickData)
+{
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        true,
+        123,
+        456);
+    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
+    EXPECT_EQ(ssc.enabled, true);
+    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc.displacement_threshold, 456);
+}
 
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
@@ -799,6 +811,11 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         123,
         456,
         789);
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        true,
+        123,
+        456);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -854,6 +871,11 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
     EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
     EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+
+    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
+    EXPECT_EQ(ssc.enabled, true);
+    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc.displacement_threshold, 456);
 
     // Clean up
     miracle_config_free(load_result);

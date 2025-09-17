@@ -118,6 +118,15 @@ struct MIRACLE_WM_CONFIG_API HoverClickConfiguration
     bool operator==(const HoverClickConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API SimulatedSecondaryClickConfiguration
+{
+    bool enabled = false;
+    uint hold_duration_milliseconds = 1000;
+    int displacement_threshold = 20;
+
+    bool operator==(const SimulatedSecondaryClickConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -143,6 +152,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
 #endif
     std::optional<KeymapConfiguration> keymap;
     HoverClickConfiguration hover_click;
+    SimulatedSecondaryClickConfiguration simulated_secondary_click;
 };
 
 enum class ErrorLevel

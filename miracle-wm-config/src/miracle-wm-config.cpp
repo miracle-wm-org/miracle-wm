@@ -886,6 +886,13 @@ void read_hover_click(YAML::Node const& node, ParsingContext& context)
     try_parse_value(node, "cancel_displacement_threshold", context.result.config.hover_click.cancel_displacement_threshold, context);
     try_parse_value(node, "reclick_displacement_threshold", context.result.config.hover_click.reclick_displacement_threshold, context);
 }
+
+void read_simulated_secondary_click(YAML::Node const& node, ParsingContext& context)
+{
+    try_parse_value(node, "enabled", context.result.config.simulated_secondary_click.enabled, context);
+    try_parse_value(node, "hold_duration", context.result.config.simulated_secondary_click.hold_duration_milliseconds, context);
+    try_parse_value(node, "displacement_threshold", context.result.config.simulated_secondary_click.displacement_threshold, context);
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -936,6 +943,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_keyboard(config["keyboard"], context);
         if (config["hover_click"])
             read_hover_click(config["hover_click"], context);
+        if (config["simulated_secondary_click"])
+            read_simulated_secondary_click(config["simulated_secondary_click"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1265,6 +1274,15 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "hover_duration" << YAML::Value << config.hover_click.hover_duration_milliseconds;
         out << YAML::Key << "cancel_displacement_threshold" << YAML::Value << config.hover_click.cancel_displacement_threshold;
         out << YAML::Key << "reclick_displacement_threshold" << YAML::Value << config.hover_click.reclick_displacement_threshold;
+        out << YAML::EndMap;
+    }
+
+    if (config.simulated_secondary_click != SimulatedSecondaryClickConfiguration {})
+    {
+        out << YAML::Key << "simulated_secondary_click" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.simulated_secondary_click.enabled;
+        out << YAML::Key << "hold_duration" << YAML::Value << config.simulated_secondary_click.hold_duration_milliseconds;
+        out << YAML::Key << "displacement_threshold" << YAML::Value << config.simulated_secondary_click.displacement_threshold;
         out << YAML::EndMap;
     }
 
