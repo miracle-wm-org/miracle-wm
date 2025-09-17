@@ -1090,4 +1090,26 @@ extern "C"
         data->hover_click.cancel_displacement_threshold = cancel_displacement_threshold;
         data->hover_click.reclick_displacement_threshold = reclick_displacement_threshold;
     }
+
+    miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->simulated_secondary_click.enabled,
+            data->simulated_secondary_click.hold_duration_milliseconds,
+            data->simulated_secondary_click.displacement_threshold
+        };
+    }
+
+    void miracle_config_set_simulated_secondary_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hold_duration_milliseconds,
+        int displacement_threshold)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->simulated_secondary_click.enabled = enabled;
+        data->simulated_secondary_click.hold_duration_milliseconds = hold_duration_milliseconds;
+        data->simulated_secondary_click.displacement_threshold = displacement_threshold;
+    }
 } // extern "C"

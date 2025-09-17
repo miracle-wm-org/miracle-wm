@@ -458,6 +458,32 @@ extern "C"
         int cancel_displacement_threshold,
         int reclick_displacement_threshold);
 
+    /// Defines the simulated secondary click configuration
+    typedef struct
+    {
+        /// Whether simulated secondary click is enabled.
+        bool enabled;
+
+        /// The length of time that the user must hold down the left pointer button
+        /// to dispatch a secondary click.
+        ///
+        /// Defaults to 1000ms.
+        uint hold_duration_milliseconds;
+
+        /// The distance in pixels that the pointer can move before the secondary
+        /// click is cancelled.
+        ///
+        /// Defaults to 20px.
+        int displacement_threshold;
+    } miracle_simulated_secondary_click_t;
+
+    miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config);
+    void miracle_config_set_simulated_secondary_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hold_duration_milliseconds,
+        int displacement_threshold);
+
 #ifdef __cplusplus
 }
 #endif

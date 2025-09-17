@@ -582,6 +582,24 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
     EXPECT_EQ(def.animations[0].type, param.expected);
 }
 
+TEST_F(FilesystemConfigurationTest, CanReadSimulatedSecondaryClick)
+{
+    YAML::Node ssc_node;
+    ssc_node["enabled"] = true;
+    ssc_node["hold_duration"] = 123;
+    ssc_node["displacement_threshold"] = 456;
+
+    YAML::Node root;
+    root["simulated_secondary_click"] = ssc_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const ssc = config.simulated_secondary_click();
+    EXPECT_THAT(ssc.enabled, testing::Eq(true));
+    EXPECT_THAT(ssc.hold_duration_milliseconds, testing::Eq(123));
+    EXPECT_THAT(ssc.displacement_threshold, testing::Eq(456));
+}
+
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,
