@@ -277,6 +277,12 @@ std::optional<std::string> FilesystemConfiguration::keymap() const
     return options.keymap->to_string();
 }
 
+HoverClickConfiguration FilesystemConfiguration::hover_click() const
+{
+    std::lock_guard lock(mutex);
+    return options.hover_click;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

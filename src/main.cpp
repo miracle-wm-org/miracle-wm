@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
 #include <miral/external_client.h>
+#include <miral/hover_click.h>
 #include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/wayland_extensions.h>
@@ -90,6 +91,8 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
+    HoverClick hover_click = HoverClick::disabled();
+
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
     for (auto const& env : config->get_env_variables())
@@ -100,9 +103,12 @@ int main(int argc, char const* argv[])
     class InputConfigurationConfigObserver : public miracle::ConfigObserver
     {
     public:
-        InputConfigurationConfigObserver(InputConfiguration const& input_configuration, Keymap const& keymap) :
+        InputConfigurationConfigObserver(
+            InputConfiguration const& input_configuration,
+            Keymap const& keymap, HoverClick const& hover_click) :
             input_configuration(input_configuration),
-            keymap(keymap)
+            keymap(keymap),
+            hover_click(hover_click)
         {
         }
 
@@ -128,12 +134,22 @@ int main(int argc, char const* argv[])
             {
                 mir::log_error("Could not set keymap: %s", e.what());
             }
+
+            auto const hover_click_config = config.hover_click();
+            hover_click.hover_duration(std::chrono::milliseconds(hover_click_config.hover_duration_milliseconds));
+            hover_click.cancel_displacement_threshold(hover_click_config.cancel_displacement_threshold);
+            hover_click.reclick_displacement_threshold(hover_click_config.reclick_displacement_threshold);
+            if (hover_click_config.enabled)
+                hover_click.enable();
+            else
+                hover_click.disable();
         }
 
     private:
         InputConfiguration input_configuration;
         Keymap keymap;
         bool has_reloaded_keyboard_config = false;
+        HoverClick hover_click;
     };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
@@ -141,7 +157,7 @@ int main(int argc, char const* argv[])
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -174,6 +190,7 @@ int main(int argc, char const* argv[])
             *display_config,
             external_client_launcher,
             input_configuration,
+            hover_click,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);

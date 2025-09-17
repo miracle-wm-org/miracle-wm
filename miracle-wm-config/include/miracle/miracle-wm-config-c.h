@@ -422,6 +422,42 @@ extern "C"
     /// This is express in "characters per second".
     void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate);
 
+    /// Defines the hover click configuration.
+    typedef struct
+    {
+        /// Whether hover click is enabled.
+        bool enabled;
+
+        /// The length of time that the pointer must stay still in order to dispatch
+        /// a left click.
+        ///
+        /// Defaults to 1000ms.
+        uint hover_duration_milliseconds;
+
+        /// The distance in pixels that the pointer mut move from the initial hover click
+        /// position to cancel it.
+        ///
+        /// Defaults to 10px.
+        int cancel_displacement_threshold;
+
+        /// The distance in pixels that the pointer must move from the last hover click
+        /// or hover click cancel position to initiate a new hover click.
+        ///
+        /// Defaults to 5px.
+        int reclick_displacement_threshold;
+    } miracle_hover_click_t;
+
+    /// Retrieve the hover click config.
+    miracle_hover_click_t miracle_config_get_hover_click(const miracle_config_data_t* config);
+
+    /// Set the hover click config.
+    void miracle_config_set_hover_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hover_duration_milliseconds,
+        int cancel_displacement_threshold,
+        int reclick_displacement_threshold);
+
 #ifdef __cplusplus
 }
 #endif

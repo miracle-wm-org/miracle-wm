@@ -108,6 +108,16 @@ struct MIRACLE_WM_CONFIG_API KeymapConfiguration
     [[nodiscard]] std::string to_string() const;
 };
 
+struct MIRACLE_WM_CONFIG_API HoverClickConfiguration
+{
+    bool enabled = false;
+    uint hover_duration_milliseconds = 1000;
+    int cancel_displacement_threshold = 10;
+    int reclick_displacement_threshold = 5;
+
+    bool operator==(const HoverClickConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -132,6 +142,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miral::InputConfiguration::Keyboard keyboard_configuration;
 #endif
     std::optional<KeymapConfiguration> keymap;
+    HoverClickConfiguration hover_click;
 };
 
 enum class ErrorLevel

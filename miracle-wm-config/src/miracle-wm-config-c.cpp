@@ -1065,4 +1065,29 @@ extern "C"
         (void)rate;
 #endif
     }
+
+    miracle_hover_click_t miracle_config_get_hover_click(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->hover_click.enabled,
+            data->hover_click.hover_duration_milliseconds,
+            data->hover_click.cancel_displacement_threshold,
+            data->hover_click.reclick_displacement_threshold
+        };
+    }
+
+    void miracle_config_set_hover_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hover_duration_milliseconds,
+        int cancel_displacement_threshold,
+        int reclick_displacement_threshold)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->hover_click.enabled = enabled;
+        data->hover_click.hover_duration_milliseconds = hover_duration_milliseconds;
+        data->hover_click.cancel_displacement_threshold = cancel_displacement_threshold;
+        data->hover_click.reclick_displacement_threshold = reclick_displacement_threshold;
+    }
 } // extern "C"

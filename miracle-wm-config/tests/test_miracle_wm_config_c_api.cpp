@@ -710,6 +710,21 @@ TEST_F(CAPIWrapperTest, CanSetKeyRepeatDelay)
 }
 #endif
 
+TEST_F(CAPIWrapperTest, CanSetHoverClickData)
+{
+    miracle_config_set_hover_click(
+        &wrapper->config,
+        true,
+        123,
+        456,
+        789);
+    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
+    EXPECT_EQ(hover_click.enabled, true);
+    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -778,6 +793,12 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         "hi");
     miracle_config_set_key_repeat_rate(&wrapper->config, 5);
     miracle_config_set_key_repeat_delay(&wrapper->config, 10);
+    miracle_config_set_hover_click(
+        &wrapper->config,
+        true,
+        123,
+        456,
+        789);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -827,6 +848,12 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
     EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
 #endif
+
+    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
+    EXPECT_EQ(hover_click.enabled, true);
+    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
 
     // Clean up
     miracle_config_free(load_result);
