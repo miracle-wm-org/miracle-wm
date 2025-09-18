@@ -881,17 +881,51 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
 
 void read_hover_click(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_value(node, "enabled", context.result.config.hover_click.enabled, context);
-    try_parse_value(node, "hover_duration", context.result.config.hover_click.hover_duration_milliseconds, context);
-    try_parse_value(node, "cancel_displacement_threshold", context.result.config.hover_click.cancel_displacement_threshold, context);
-    try_parse_value(node, "reclick_displacement_threshold", context.result.config.hover_click.reclick_displacement_threshold, context);
+    try_parse_value(node, "enabled", context.result.config.hover_click.enabled, context, true);
+    try_parse_value(node, "hover_duration", context.result.config.hover_click.hover_duration_milliseconds, context, true);
+    try_parse_value(node, "cancel_displacement_threshold", context.result.config.hover_click.cancel_displacement_threshold, context, true);
+    try_parse_value(node, "reclick_displacement_threshold", context.result.config.hover_click.reclick_displacement_threshold, context, true);
 }
 
 void read_simulated_secondary_click(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_value(node, "enabled", context.result.config.simulated_secondary_click.enabled, context);
-    try_parse_value(node, "hold_duration", context.result.config.simulated_secondary_click.hold_duration_milliseconds, context);
-    try_parse_value(node, "displacement_threshold", context.result.config.simulated_secondary_click.displacement_threshold, context);
+    try_parse_value(node, "enabled", context.result.config.simulated_secondary_click.enabled, context, true);
+    try_parse_value(node, "hold_duration", context.result.config.simulated_secondary_click.hold_duration_milliseconds, context, true);
+    try_parse_value(node, "displacement_threshold", context.result.config.simulated_secondary_click.displacement_threshold, context, true);
+}
+
+inline std::string expand_tilde_getenv(const std::string& path)
+{
+    if (path.empty() || path[0] != '~')
+    {
+        return path;
+    }
+
+    const char* home_dir = std::getenv("HOME");
+    if (home_dir == nullptr)
+    {
+        return path;
+    }
+
+    std::string expanded_path = home_dir;
+    if (path.length() > 1 && path[1] == '/')
+    {
+        expanded_path += path.substr(1);
+    }
+    else if (path.length() > 1 && path[1] != '/')
+    {
+        return path;
+    }
+    return expanded_path;
+}
+
+void read_output_filter(YAML::Node const& node, ParsingContext& context)
+{
+    std::string shader_path;
+    if (try_parse_value(node, "shader_path", shader_path, context, true))
+        context.result.config.output_filter.shader_path = shader_path;
+    else
+        context.result.config.output_filter.shader_path = std::nullopt;
 }
 }
 
@@ -945,6 +979,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_hover_click(config["hover_click"], context);
         if (config["simulated_secondary_click"])
             read_simulated_secondary_click(config["simulated_secondary_click"], context);
+        if (config["output_filter"])
+            read_output_filter(config["output_filter"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1283,6 +1319,14 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "enabled" << YAML::Value << config.simulated_secondary_click.enabled;
         out << YAML::Key << "hold_duration" << YAML::Value << config.simulated_secondary_click.hold_duration_milliseconds;
         out << YAML::Key << "displacement_threshold" << YAML::Value << config.simulated_secondary_click.displacement_threshold;
+        out << YAML::EndMap;
+    }
+
+    if (config.output_filter != OutputFilterConfiguration {})
+    {
+        out << YAML::Key << "output_filter" << YAML::Value << YAML::BeginMap;
+        if (config.output_filter.shader_path)
+            out << YAML::Key << "shader_path" << YAML::Value << config.output_filter.shader_path.value();
         out << YAML::EndMap;
     }
 

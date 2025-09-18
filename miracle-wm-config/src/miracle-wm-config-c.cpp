@@ -1112,4 +1112,25 @@ extern "C"
         data->simulated_secondary_click.hold_duration_milliseconds = hold_duration_milliseconds;
         data->simulated_secondary_click.displacement_threshold = displacement_threshold;
     }
+
+    miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->output_filter.shader_path.has_value(),
+            data->output_filter.shader_path ? data->output_filter.shader_path->c_str() : ""
+        };
+    }
+
+    void miracle_config_set_output_filter(
+        miracle_config_data_t* config,
+        bool shader_path_enabled,
+        const char* shader_path)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (shader_path_enabled)
+            data->output_filter.shader_path = shader_path;
+        else
+            data->output_filter.shader_path = std::nullopt;
+    }
 } // extern "C"

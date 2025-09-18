@@ -484,6 +484,23 @@ extern "C"
         uint hold_duration_milliseconds,
         int displacement_threshold);
 
+    /// Defines the output filter used by miracle.
+    typedef struct
+    {
+        /// Whether #shader_path is enabled or not.
+        bool shader_path_enabled;
+
+        /// A shader path. This can start with a tilde that will resolve to the home directory.
+        const char* shader_path;
+    } miracle_output_filter_t;
+
+    /// Retrieve the output filter.
+    miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config);
+    void miracle_config_set_output_filter(
+        miracle_config_data_t* config,
+        bool shader_path_enabled,
+        const char* shader_path);
+
 #ifdef __cplusplus
 }
 #endif

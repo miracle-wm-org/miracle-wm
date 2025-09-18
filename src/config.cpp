@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include "config_observer.h"
+#include "file_helpers.h"
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -206,6 +208,16 @@ void FilesystemConfiguration::reload()
                     error.line,
                     error.column);
         }
+
+        // TODO: This might be a hack, I do not know yet.
+        //  At any rate, we want users to be confident that their paths will be saved
+        //  with the path that they wrote down, so we don't do the tilde resolution
+        //  there. At the same time, we don't want this resolution to happen every time
+        //  that we access a string, because that seems like an unnecessary overhead.
+        //  So it only makes sense to do it at load time. However, this might be annoying
+        //  in the long term. We will see!
+        if (options.output_filter.shader_path)
+            options.output_filter.shader_path = expand_tilde_getenv(options.output_filter.shader_path.value());
     }
 
     observer_registrar->advise_config_changed(*this);
@@ -287,6 +299,12 @@ SimulatedSecondaryClickConfiguration FilesystemConfiguration::simulated_secondar
 {
     std::lock_guard lock(mutex);
     return options.simulated_secondary_click;
+}
+
+OutputFilterConfiguration FilesystemConfiguration::output_filter() const
+{
+    std::lock_guard lock(mutex);
+    return options.output_filter;
 }
 
 std::string const& FilesystemConfiguration::get_filename() const

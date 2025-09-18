@@ -56,36 +56,20 @@ public:
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<CompositorState> const& compositor_state);
-    ~Renderer() override = default;
+    ~Renderer() override;
 
     // These are called with a valid GL context:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
     auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
 #ifdef MIR_VERSION_2_21_OR_GREATER
-    void set_output_filter(MirOutputFilter filter) override { }
+    void set_output_filter(MirOutputFilter filter) override;
 #endif
 
     // This is called _without_ a GL context:
     void suspend() override;
 
 private:
-    /**
-     * tessellate defines the list of triangles that will be used to render
-     * the surface. By default it just returns 4 vertices for a rectangle.
-     * However you can override its behaviour to tessellate more finely and
-     * deform freely for effects like wobbly windows.
-     *
-     * \param [in,out] primitives The list of rendering primitives to be
-     *                            grown and/or modified.
-     * \param [in]     renderable The renderable surface being tessellated.
-     *
-     * \note The cohesion of this function to gl::Renderer is quite loose and it
-     *       does not strictly need to reside here.
-     *       However it seems a good choice under gl::Renderer while this remains
-     *       the only OpenGL-specific class in the display server, and
-     *       tessellation is very much OpenGL-specific.
-     */
     static void tessellate(std::vector<mir::gl::Primitive>& primitives,
         mir::graphics::Renderable const& renderable);
 
@@ -165,7 +149,9 @@ private:
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
     void update_gl_viewport();
 
-    std::unique_ptr<mir::graphics::gl::OutputSurface> const output_surface;
+    class OutputFilter;
+    std::unique_ptr<OutputFilter> const output_surface;
+
     GLfloat clear_color[4];
     mutable long long frameno = 0;
     std::unique_ptr<ProgramFactory> const program_factory;
