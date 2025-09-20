@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <mir/graphics/buffer.h>
@@ -53,14 +55,318 @@ auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::
     output->make_current();
     return output;
 }
+
+template <void (*deleter)(GLsizei, const GLuint*)>
+class GLMultiHandle
+{
+public:
+    explicit GLMultiHandle(GLuint id) :
+        id { id }
+    {
+    }
+
+    ~GLMultiHandle()
+    {
+        if (id)
+            (*deleter)(1, &id);
+    }
+
+    GLMultiHandle(GLMultiHandle const&) = delete;
+
+    GLMultiHandle& operator=(GLMultiHandle const&) = delete;
+
+    GLMultiHandle(GLMultiHandle&& from) :
+        id { from.id }
+    {
+        from.id = 0;
+    }
+
+    operator GLuint() const
+    {
+        return id;
+    }
+
+private:
+    GLuint id;
+};
+
+using TextureHandle = GLMultiHandle<&glDeleteTextures>;
+using FramebufferHandle = GLMultiHandle<&glDeleteFramebuffers>;
 }
+
+// Shader that converts colors to grayscale.
+const GLchar* grayscale_src = "uniform sampler2D tex;\n"
+                              "vec4 sample_to_rgba(in vec2 texcoord) {\n"
+                              "   vec4 col = texture2D(tex, texcoord);\n"
+                              "   float s = (col[0] + col[1] + col[2]) / 3.0;\n"
+                              "   return vec4(s, s, s, col[3]);\n"
+                              "}\n";
+
+// Shader that inverts colors.
+const GLchar* invert_src = "uniform sampler2D tex;\n"
+                           "vec4 sample_to_rgba(in vec2 texcoord) {\n"
+                           "   vec4 col = texture2D(tex, texcoord);\n"
+                           "   return vec4(1.0 - col[0], 1.0 - col[1], 1.0 - col[2], col[3]);\n"
+                           "}\n";
+
+class Renderer::OutputFilter : public mg::gl::OutputSurface
+{
+public:
+    // NOTE: This must be called with a current GL context
+    explicit OutputFilter(std::unique_ptr<OutputSurface> output) :
+        output { std::move(output) },
+        texture { make_texture(this->output->size()) },
+        framebuffer { make_framebuffer(texture) },
+        program { nullptr },
+        position_attrib { 0 },
+        texcoord_attrib { 0 },
+        tex_uniform { 0 }
+    {
+    }
+
+    bool needs_refresh(std::optional<std::string> const& path) const
+    {
+        if (path == program_path)
+        {
+            if (!program_path)
+                return false;
+
+            if (!std::filesystem::exists(*program_path))
+                return false;
+
+            if (last_write_time != std::filesystem::last_write_time(*program_path))
+                return true;
+            return false;
+            ;
+        }
+
+        return true;
+    }
+
+    void set_custom_output_filter(std::optional<std::string> const& path)
+    {
+        if (!needs_refresh(path))
+            return;
+
+        has_program = false;
+        program_path = path;
+
+        if (!path)
+            return;
+
+        last_write_time = std::filesystem::last_write_time(*path);
+        std::ifstream file(*path);
+        if (!file.is_open())
+        {
+            mir::log_error("Could not open file: %s", path->c_str());
+            return;
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        next_program = buffer.str();
+        has_program = true;
+    }
+
+    void bind() override
+    {
+        // Bypass if no filter.
+        if (!has_program)
+        {
+            output->bind();
+            return;
+        }
+
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+
+        if (next_program)
+        {
+            try
+            {
+                program = std::make_unique<ProgramHandle>(compile_program(next_program.value().c_str()));
+                position_attrib = glGetAttribLocation(*program, "position");
+                texcoord_attrib = glGetAttribLocation(*program, "texcoord");
+                tex_uniform = glGetUniformLocation(*program, "tex");
+                next_program = std::nullopt;
+            }
+            catch (std::exception const& e)
+            {
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                mir::log_error("Failed to compile custom output filter: %s", e.what());
+                has_program = false;
+                next_program = std::nullopt;
+                output->bind();
+            }
+        }
+    }
+
+    void make_current() override
+    {
+        output->make_current();
+    }
+
+    void release_current() override
+    {
+        output->release_current();
+    }
+
+    auto commit() -> std::unique_ptr<mg::Framebuffer> override
+    {
+        // Bypass if no filter.
+        if (!has_program)
+            return output->commit();
+
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+        output->bind();
+
+        glUseProgram(*program);
+        glUniform1i(tex_uniform, 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        // Draw a single right angle triangle that covers the whole output.
+        GLfloat vertices[] = { -1, -1, 3, -1, -1, 3 };
+        GLfloat tex_coords[] = { 0, 0, 2, 0, 0, 2 };
+        glEnableVertexAttribArray(position_attrib);
+        glVertexAttribPointer(position_attrib, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+        glEnableVertexAttribArray(texcoord_attrib);
+        glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 0, tex_coords);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        return output->commit();
+    }
+
+    auto size() const -> mir::geometry::Size override
+    {
+        return output->size();
+    }
+
+    auto layout() const -> Layout override
+    {
+        return output->layout();
+    }
+
+private:
+    static GLuint compile_shader(GLenum type, GLchar const* src)
+    {
+        GLuint id = glCreateShader(type);
+        if (!id)
+        {
+            BOOST_THROW_EXCEPTION(std::runtime_error("Failed to create shader"));
+        }
+
+        glShaderSource(id, 1, &src, NULL);
+        glCompileShader(id);
+        GLint ok;
+        glGetShaderiv(id, GL_COMPILE_STATUS, &ok);
+        if (!ok)
+        {
+            GLchar log[1024] = "(No log info)";
+            glGetShaderInfoLog(id, sizeof log, NULL, log);
+            glDeleteShader(id);
+            BOOST_THROW_EXCEPTION(
+                std::runtime_error(
+                    std::string("Compile failed: ") + log + " for:\n" + src));
+        }
+        return id;
+    }
+
+    static ProgramHandle compile_program(GLchar const* src)
+    {
+        const GLchar* vertex_src = "attribute vec2 position;\n"
+                                   "attribute vec2 texcoord;\n"
+                                   "varying vec2 v_texcoord;\n"
+                                   "void main() {\n"
+                                   "   gl_Position = vec4(position, 0, 1); \n"
+                                   "   v_texcoord = texcoord;\n"
+                                   "}\n";
+
+        ShaderHandle vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_src) };
+
+        std::stringstream fragment_src;
+        fragment_src
+            << "#ifdef GL_ES\n"
+               "precision mediump float;\n"
+               "#endif\n"
+            << "\n"
+            << src
+            << "\n"
+            << "varying vec2 v_texcoord;\n"
+               "void main() {\n"
+               "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+               "}\n";
+
+        ShaderHandle fragment_shader { compile_shader(GL_FRAGMENT_SHADER, fragment_src.str().c_str()) };
+
+        ProgramHandle program { glCreateProgram() };
+        glAttachShader(program, fragment_shader);
+        glAttachShader(program, vertex_shader);
+        glLinkProgram(program);
+        GLint ok;
+        glGetProgramiv(program, GL_LINK_STATUS, &ok);
+        if (!ok)
+        {
+            GLchar log[1024];
+            glGetProgramInfoLog(program, sizeof log - 1, NULL, log);
+            log[sizeof log - 1] = '\0';
+            BOOST_THROW_EXCEPTION(
+                std::runtime_error(
+                    std::string("Linking GL shader failed: ") + log));
+        }
+
+        return program;
+    }
+
+    static GLuint make_texture(mir::geometry::Size size)
+    {
+        GLuint tex;
+        glGenTextures(1, &tex);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexImage2D(GL_TEXTURE_2D, 0,
+            GL_RGBA,
+            size.width.as_value(),
+            size.height.as_value(),
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        return tex;
+    }
+
+    static GLuint make_framebuffer(GLuint tex)
+    {
+        GLuint fb;
+        glGenFramebuffers(1, &fb);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        return fb;
+    }
+
+    std::unique_ptr<mg::gl::OutputSurface> output;
+    TextureHandle const texture;
+    FramebufferHandle const framebuffer;
+    bool has_program = false;
+    std::optional<std::string> program_path;
+    std::filesystem::file_time_type last_write_time;
+    std::optional<std::string> next_program;
+    std::unique_ptr<ProgramHandle> program;
+    GLint position_attrib;
+    GLint texcoord_attrib;
+    GLint tex_uniform;
+};
 
 Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& compositor_state) :
-    output_surface { make_output_current(std::move(output)) },
+    output_surface { std::make_unique<OutputFilter>(make_output_current(std::move(output))) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>() },
     screen_to_gl_coords(1),
@@ -131,6 +437,10 @@ Renderer::Renderer(
     border_model.upload_to_gpu();
 }
 
+Renderer::~Renderer()
+{
+}
+
 void Renderer::tessellate(
     std::vector<mgl::Primitive>& primitives,
     mg::Renderable const& renderable)
@@ -168,6 +478,7 @@ Renderer::DrawData Renderer::get_draw_data(
 
 auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
 {
+    output_surface->set_custom_output_filter(config->output_filter().shader_path);
     output_surface->make_current();
     output_surface->bind();
 
@@ -563,6 +874,10 @@ void Renderer::set_output_transform(glm::mat2 const& t)
         display_transform = new_display_transform;
         update_gl_viewport();
     }
+}
+
+void Renderer::set_output_filter(MirOutputFilter)
+{
 }
 
 void Renderer::suspend()

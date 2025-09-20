@@ -625,3 +625,32 @@ TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
 
     FilesystemConfiguration config(registrar, path, true);
 }
+
+TEST_F(FilesystemConfigurationTest, CanReadOutputFilter)
+{
+    YAML::Node output_filter_node;
+    output_filter_node["shader_path"] = "hello.frag";
+
+    YAML::Node root;
+    root["output_filter"] = output_filter_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const output_filter = config.output_filter();
+    EXPECT_THAT(output_filter.shader_path.value(), testing::Eq("hello.frag"));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadOutputFilterWithTilde)
+{
+    setenv("HOME", "/home/user", 1);
+    YAML::Node output_filter_node;
+    output_filter_node["shader_path"] = "~/hello.frag";
+
+    YAML::Node root;
+    root["output_filter"] = output_filter_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const output_filter = config.output_filter();
+    EXPECT_THAT(output_filter.shader_path.value(), testing::Eq("/home/user/hello.frag"));
+}

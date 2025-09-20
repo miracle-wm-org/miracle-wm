@@ -127,6 +127,13 @@ struct MIRACLE_WM_CONFIG_API SimulatedSecondaryClickConfiguration
     bool operator==(const SimulatedSecondaryClickConfiguration&) const = default;
 };
 
+struct OutputFilterConfiguration
+{
+    std::optional<std::string> shader_path;
+
+    bool operator==(const OutputFilterConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -153,6 +160,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     std::optional<KeymapConfiguration> keymap;
     HoverClickConfiguration hover_click;
     SimulatedSecondaryClickConfiguration simulated_secondary_click;
+    OutputFilterConfiguration output_filter;
 };
 
 enum class ErrorLevel

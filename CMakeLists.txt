@@ -235,6 +235,12 @@ if(SNAP_BUILD)
     install(PROGRAMS src/miracle-wm-unsnap DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
+install(
+    DIRECTORY shaders/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/miracle-wm/shaders
+    FILES_MATCHING PATTERN "*.frag"
+)
+
 # ----------------------------------------
 # Subdirectories
 # ----------------------------------------

@@ -30,11 +30,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
-#include <miral/append_event_filter.h>
 #include <miral/custom_renderer.h>
 #include <miral/external_client.h>
 #include <miral/hover_click.h>
 #include <miral/keymap.h>
+#include <miral/output_filter.h>
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
 #include <miral/wayland_extensions.h>
