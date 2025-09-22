@@ -153,11 +153,11 @@ Renderer::DrawData Renderer::get_draw_data(
             if (item.surface == surface.value())
             {
                 result.data = item;
-                if (item.output_area != viewport)
-                {
-                    result.enabled = false;
-                    return result;
-                }
+                // if (item.output_area != viewport)
+                // {
+                //     result.enabled = false;
+                //     return result;
+                // }
                 break;
             }
         }
@@ -219,21 +219,21 @@ void Renderer::draw(
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
-    if (clip_area)
-    {
-        glEnable(GL_SCISSOR_TEST);
-        // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-        auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
-            - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-        glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-        clip_pos = display_transform * data.data.workspace_transform * clip_pos;
-
-        glScissor(
-            static_cast<GLint>((static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale),
-            static_cast<GLint>(clip_pos.y * y_scale),
-            static_cast<GLint>(clip_area.value().size.width.as_int() * x_scale),
-            static_cast<GLint>(clip_area.value().size.height.as_int() * y_scale));
-    }
+    // if (clip_area)
+    // {
+    //     glEnable(GL_SCISSOR_TEST);
+    //     // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
+    //     auto const clip_y = data.data.output_area.size.height.as_int()
+    //         - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
+    //     glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
+    //     clip_pos = display_transform * data.data.workspace_transform * clip_pos;
+    //
+    //     glScissor(
+    //         static_cast<GLint>((static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int())),
+    //         static_cast<GLint>(clip_pos.y),
+    //         static_cast<GLint>(clip_area.value().size.width.as_int() * x_scale),
+    //         static_cast<GLint>(clip_area.value().size.height.as_int() * y_scale));
+    // }
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids

@@ -136,8 +136,8 @@ public:
                 workspace->recalculate_area();
         }
 
-        policy.magnifier->set_scale(config.magnifier().scale);
-        policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
+        // policy.magnifier->set_scale(config.magnifier().scale);
+        // policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
     }
 
     Policy& policy;

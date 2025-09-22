@@ -93,7 +93,12 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
-    Magnifier magnifier;
+    float magnification = 2.f;
+    Size capture_size { 100, 100 };
+    auto magnifier = Magnifier()
+                         .magnification(magnification)
+                         .capture_size(capture_size)
+                         .enable(true);
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
     for (auto const& env : config->get_env_variables())
@@ -172,7 +177,7 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, miral::Magnifier()),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,
