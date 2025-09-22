@@ -202,6 +202,8 @@ MIRACLE_WM_CONFIG_API ConfigSaveResult save_config(std::string const& path, Conf
 
 MIRACLE_WM_CONFIG_API std::string get_config_path();
 
+MIRACLE_WM_CONFIG_API std::string get_user_config_dir();
+
 MIRACLE_WM_CONFIG_API std::string get_display_config_path();
 
 }
