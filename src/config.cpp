@@ -147,8 +147,9 @@ void FilesystemConfiguration::_init(
             if (std::filesystem::exists(MIRACLE_DEFAULT_CONFIG_DIR))
             {
                 mir::log_info("Configuration hierarchy being copied from %s", MIRACLE_DEFAULT_CONFIG_DIR);
+                auto const config_dir = get_user_config_dir();
                 const auto fs_copyopts = std::filesystem::copy_options::recursive;
-                std::filesystem::copy(MIRACLE_DEFAULT_CONFIG_DIR, std::filesystem::path(config_path).parent_path(), fs_copyopts);
+                std::filesystem::copy(MIRACLE_DEFAULT_CONFIG_DIR, std::filesystem::path(config_dir), fs_copyopts);
             }
             else
             {

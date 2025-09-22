@@ -1225,6 +1225,11 @@ std::string miracle::get_config_path()
     return config_path_stream.str();
 }
 
+std::string miracle::get_user_config_dir()
+{
+    return g_get_user_config_dir();
+}
+
 std::string miracle::get_display_config_path()
 {
     std::stringstream config_path_stream;
