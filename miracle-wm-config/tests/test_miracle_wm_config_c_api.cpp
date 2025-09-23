@@ -746,6 +746,12 @@ TEST_F(CAPIWrapperTest, CanSetOutputFilter)
     EXPECT_STREQ(output_filter.shader_path, "hello");
 }
 
+TEST_F(CAPIWrapperTest, CanSetCursor)
+{
+    miracle_config_set_cursor(&wrapper->config, 2.f);
+    EXPECT_EQ(miracle_config_get_cursor(&wrapper->config).scale, 2.f);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -825,6 +831,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         true,
         123,
         456);
+    miracle_config_set_cursor(&wrapper->config, 2.f);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -885,6 +892,9 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(ssc.enabled, true);
     EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
     EXPECT_EQ(ssc.displacement_threshold, 456);
+
+    auto const cursor = miracle_config_get_cursor(&wrapper->config);
+    EXPECT_EQ(cursor.scale, 2.f);
 
     // Clean up
     miracle_config_free(load_result);

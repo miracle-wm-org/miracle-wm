@@ -134,6 +134,13 @@ struct OutputFilterConfiguration
     bool operator==(const OutputFilterConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API CursorConfiguration
+{
+    float scale = 1.f;
+
+    bool operator==(const CursorConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -161,6 +168,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     HoverClickConfiguration hover_click;
     SimulatedSecondaryClickConfiguration simulated_secondary_click;
     OutputFilterConfiguration output_filter;
+    CursorConfiguration cursor;
 };
 
 enum class ErrorLevel

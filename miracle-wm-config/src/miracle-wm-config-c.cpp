@@ -1133,4 +1133,17 @@ extern "C"
         else
             data->output_filter.shader_path = std::nullopt;
     }
+
+    miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->cursor.scale
+        };
+    }
+    void miracle_config_set_cursor(miracle_config_data_t* config, float scale)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->cursor.scale = scale;
+    }
 } // extern "C"

@@ -654,3 +654,17 @@ TEST_F(FilesystemConfigurationTest, CanReadOutputFilterWithTilde)
     auto const output_filter = config.output_filter();
     EXPECT_THAT(output_filter.shader_path.value(), testing::Eq("/home/user/hello.frag"));
 }
+
+TEST_F(FilesystemConfigurationTest, CanReadCursor)
+{
+    YAML::Node cursor_node;
+    cursor_node["scale"] = 4.f;
+
+    YAML::Node root;
+    root["cursor"] = cursor_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const cursor = config.cursor();
+    EXPECT_THAT(cursor.scale, testing::Eq(4.f));
+}

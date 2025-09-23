@@ -151,6 +151,11 @@ namespace test
             return {};
         }
 
+        CursorConfiguration cursor() const override
+        {
+            return {};
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

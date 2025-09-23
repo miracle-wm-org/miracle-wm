@@ -927,6 +927,11 @@ void read_output_filter(YAML::Node const& node, ParsingContext& context)
     else
         context.result.config.output_filter.shader_path = std::nullopt;
 }
+
+void read_cursor(YAML::Node const& node, ParsingContext& context)
+{
+    try_parse_value(node, "scale", context.result.config.cursor.scale, context, true);
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -981,6 +986,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_simulated_secondary_click(config["simulated_secondary_click"], context);
         if (config["output_filter"])
             read_output_filter(config["output_filter"], context);
+        if (config["cursor"])
+            read_cursor(config["cursor"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1327,6 +1334,13 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "output_filter" << YAML::Value << YAML::BeginMap;
         if (config.output_filter.shader_path)
             out << YAML::Key << "shader_path" << YAML::Value << config.output_filter.shader_path.value();
+        out << YAML::EndMap;
+    }
+
+    if (config.cursor != CursorConfiguration {})
+    {
+        out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "scale" << YAML::Value << config.cursor.scale;
         out << YAML::EndMap;
     }
 

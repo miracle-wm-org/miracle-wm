@@ -501,6 +501,18 @@ extern "C"
         bool shader_path_enabled,
         const char* shader_path);
 
+    /// Defines the cursor properties.
+    typedef struct
+    {
+        /// The scale of the cursor.
+        ///
+        /// Defaults to 1.
+        float scale;
+    } miracle_cursor_t;
+
+    miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config);
+    void miracle_config_set_cursor(miracle_config_data_t* config, float scale);
+
 #ifdef __cplusplus
 }
 #endif
