@@ -308,6 +308,12 @@ OutputFilterConfiguration FilesystemConfiguration::output_filter() const
     return options.output_filter;
 }
 
+CursorConfiguration FilesystemConfiguration::cursor() const
+{
+    std::lock_guard lock(mutex);
+    return options.cursor;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

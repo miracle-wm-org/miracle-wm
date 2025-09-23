@@ -70,6 +70,7 @@ namespace test
         MOCK_METHOD(HoverClickConfiguration, hover_click, (), (const, override));
         MOCK_METHOD(SimulatedSecondaryClickConfiguration, simulated_secondary_click, (), (const, override));
         MOCK_METHOD(OutputFilterConfiguration, output_filter, (), (const, override));
+        MOCK_METHOD(CursorConfiguration, cursor, (), (const, override));
     };
 }
 }

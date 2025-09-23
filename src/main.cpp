@@ -30,11 +30,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
+#include <miral/cursor_scale.h>
 #include <miral/custom_renderer.h>
 #include <miral/external_client.h>
 #include <miral/hover_click.h>
 #include <miral/keymap.h>
-#include <miral/output_filter.h>
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
 #include <miral/wayland_extensions.h>
@@ -94,6 +94,7 @@ int main(int argc, char const* argv[])
     InputConfiguration input_configuration;
     HoverClick hover_click = HoverClick::disabled();
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
+    CursorScale cursor_scale;
 
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
@@ -108,11 +109,12 @@ int main(int argc, char const* argv[])
         InputConfigurationConfigObserver(
             InputConfiguration const& input_configuration,
             Keymap const& keymap, HoverClick const& hover_click,
-            SimulatedSecondaryClick const& simulated_secondary_click) :
+            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale) :
             input_configuration(input_configuration),
             keymap(keymap),
             hover_click(hover_click),
-            simulated_secondary_click(simulated_secondary_click)
+            simulated_secondary_click(simulated_secondary_click),
+            cursor_scale(cursor_scale)
         {
         }
 
@@ -155,6 +157,8 @@ int main(int argc, char const* argv[])
                 simulated_secondary_click.enable();
             else
                 simulated_secondary_click.disable();
+
+            cursor_scale.scale(config.cursor().scale);
         }
 
     private:
@@ -163,6 +167,7 @@ int main(int argc, char const* argv[])
         bool has_reloaded_keyboard_config = false;
         HoverClick hover_click;
         SimulatedSecondaryClick simulated_secondary_click;
+        CursorScale cursor_scale;
     };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
@@ -170,7 +175,7 @@ int main(int argc, char const* argv[])
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -205,6 +210,7 @@ int main(int argc, char const* argv[])
             input_configuration,
             hover_click,
             simulated_secondary_click,
+            cursor_scale,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
