@@ -84,15 +84,6 @@ struct MIRACLE_WM_CONFIG_API WorkspaceConfig
     std::optional<std::string> name;
 };
 
-enum class MIRACLE_WM_CONFIG_API RenderFilter : int
-{
-    none,
-    grayscale,
-    protanopia,
-    deuteranopia,
-    tritanopia
-};
-
 struct MIRACLE_WM_CONFIG_API DragAndDropConfiguration
 {
     bool enabled = true;
