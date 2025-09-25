@@ -932,6 +932,12 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
 {
     try_parse_value(node, "scale", context.result.config.cursor.scale, context, true);
 }
+
+void read_slow_keys(YAML::Node const& node, ParsingContext& context)
+{
+    try_parse_value(node, "enabled", context.result.config.slow_keys.enabled, context, true);
+    try_parse_value(node, "hold_delay", context.result.config.slow_keys.hold_delay_milliseconds, context, true);
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -988,6 +994,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_output_filter(config["output_filter"], context);
         if (config["cursor"])
             read_cursor(config["cursor"], context);
+        if (config["slow_keys"])
+            read_slow_keys(config["slow_keys"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1341,6 +1349,14 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "scale" << YAML::Value << config.cursor.scale;
+        out << YAML::EndMap;
+    }
+
+    if (config.slow_keys != SlowKeysConfiguration {})
+    {
+        out << YAML::Key << "slow_keys" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.slow_keys.enabled;
+        out << YAML::Key << "hold_delay" << YAML::Value << config.slow_keys.hold_delay_milliseconds;
         out << YAML::EndMap;
     }
 

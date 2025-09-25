@@ -513,6 +513,22 @@ extern "C"
     miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config);
     void miracle_config_set_cursor(miracle_config_data_t* config, float scale);
 
+    typedef struct
+    {
+        /// Whether slow keys is enabled or not.
+        ///
+        /// Defaults to `false`.
+        bool enabled;
+
+        /// Time before a key press is registered, in milliseconds.
+        ///
+        /// Defaults to 200ms.
+        uint hold_duration_milliseconds;
+    } miracle_slow_keys_t;
+
+    miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config);
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds);
+
 #ifdef __cplusplus
 }
 #endif

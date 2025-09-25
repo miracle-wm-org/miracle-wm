@@ -71,6 +71,7 @@ namespace test
         MOCK_METHOD(SimulatedSecondaryClickConfiguration, simulated_secondary_click, (), (const, override));
         MOCK_METHOD(OutputFilterConfiguration, output_filter, (), (const, override));
         MOCK_METHOD(CursorConfiguration, cursor, (), (const, override));
+        MOCK_METHOD(SlowKeysConfiguration, slow_keys, (), (const, override));
     };
 }
 }

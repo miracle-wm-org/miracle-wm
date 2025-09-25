@@ -668,3 +668,19 @@ TEST_F(FilesystemConfigurationTest, CanReadCursor)
     auto const cursor = config.cursor();
     EXPECT_THAT(cursor.scale, testing::Eq(4.f));
 }
+
+TEST_F(FilesystemConfigurationTest, CanReadSlowKeys)
+{
+    YAML::Node slow_keys_node;
+    slow_keys_node["enabled"] = true;
+    slow_keys_node["hold_delay"] = 500;
+
+    YAML::Node root;
+    root["slow_keys"] = slow_keys_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const slow_keys = config.slow_keys();
+    EXPECT_THAT(slow_keys.enabled, testing::Eq(true));
+    EXPECT_THAT(slow_keys.hold_delay_milliseconds, testing::Eq(500));
+}

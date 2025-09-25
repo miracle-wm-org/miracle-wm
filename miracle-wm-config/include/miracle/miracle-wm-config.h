@@ -127,7 +127,7 @@ struct MIRACLE_WM_CONFIG_API SimulatedSecondaryClickConfiguration
     bool operator==(const SimulatedSecondaryClickConfiguration&) const = default;
 };
 
-struct OutputFilterConfiguration
+struct MIRACLE_WM_CONFIG_API OutputFilterConfiguration
 {
     std::optional<std::string> shader_path;
 
@@ -139,6 +139,14 @@ struct MIRACLE_WM_CONFIG_API CursorConfiguration
     float scale = 1.f;
 
     bool operator==(const CursorConfiguration&) const = default;
+};
+
+struct MIRACLE_WM_CONFIG_API SlowKeysConfiguration
+{
+    bool enabled = false;
+    uint hold_delay_milliseconds = 200;
+
+    bool operator==(const SlowKeysConfiguration&) const = default;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData
@@ -169,6 +177,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     SimulatedSecondaryClickConfiguration simulated_secondary_click;
     OutputFilterConfiguration output_filter;
     CursorConfiguration cursor;
+    SlowKeysConfiguration slow_keys;
 };
 
 enum class ErrorLevel

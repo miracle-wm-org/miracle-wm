@@ -83,6 +83,7 @@ public:
     [[nodiscard]] virtual SimulatedSecondaryClickConfiguration simulated_secondary_click() const = 0;
     [[nodiscard]] virtual OutputFilterConfiguration output_filter() const = 0;
     [[nodiscard]] virtual CursorConfiguration cursor() const = 0;
+    [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -126,6 +127,7 @@ public:
     [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
     [[nodiscard]] OutputFilterConfiguration output_filter() const override;
     [[nodiscard]] CursorConfiguration cursor() const;
+    [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;
