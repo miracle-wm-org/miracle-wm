@@ -760,6 +760,14 @@ TEST_F(CAPIWrapperTest, CanSetSlowKeys)
     EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
 }
 
+TEST_F(CAPIWrapperTest, CanSetStickyKeys)
+{
+    miracle_config_set_sticky_keys(&wrapper->config, true, false);
+    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
+    EXPECT_EQ(sticky_keys.enabled, true);
+    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -841,6 +849,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         456);
     miracle_config_set_cursor(&wrapper->config, 2.f);
     miracle_config_set_slow_keys(&wrapper->config, true, 500);
+    miracle_config_set_sticky_keys(&wrapper->config, true, false);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -908,6 +917,10 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
     EXPECT_EQ(slow_keys.enabled, true);
     EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
+
+    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
+    EXPECT_EQ(sticky_keys.enabled, true);
+    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
 
     // Clean up
     miracle_config_free(load_result);

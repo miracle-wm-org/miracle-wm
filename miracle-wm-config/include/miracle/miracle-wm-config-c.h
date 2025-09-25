@@ -529,6 +529,23 @@ extern "C"
     miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config);
     void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds);
 
+    typedef struct
+    {
+        /// Whether sticky keys is enabled or not.
+        ///
+        /// Defaults to `false`.
+        bool enabled;
+
+        /// When set to true, depressing two modifier keys simultaneously will result
+        /// in sticky keys being temporarily disabled until all keys are released.
+        ///
+        /// Defaults to `true`.
+        bool should_disable_if_two_keys_are_pressed_together = true;
+    } miracle_sticky_keys_t;
+
+    miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config);
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together);
+
 #ifdef __cplusplus
 }
 #endif
