@@ -1161,4 +1161,19 @@ extern "C"
         data->slow_keys.enabled = enabled;
         data->slow_keys.hold_delay_milliseconds = hold_duration_millseconds;
     }
+
+    miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->sticky_keys.enabled,
+            data->sticky_keys.should_disable_if_two_keys_are_pressed_together,
+        };
+    }
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->sticky_keys.enabled = enabled;
+        data->sticky_keys.should_disable_if_two_keys_are_pressed_together = should_disable_if_two_keys_are_pressed_together;
+    }
 } // extern "C"

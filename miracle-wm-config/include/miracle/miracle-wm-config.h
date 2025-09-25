@@ -140,6 +140,14 @@ struct MIRACLE_WM_CONFIG_API SlowKeysConfiguration
     bool operator==(const SlowKeysConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
+{
+    bool enabled = false;
+    bool should_disable_if_two_keys_are_pressed_together = true;
+
+    bool operator==(const StickyKeysConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -169,6 +177,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     OutputFilterConfiguration output_filter;
     CursorConfiguration cursor;
     SlowKeysConfiguration slow_keys;
+    StickyKeysConfiguration sticky_keys;
 };
 
 enum class ErrorLevel

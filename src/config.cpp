@@ -320,6 +320,12 @@ SlowKeysConfiguration FilesystemConfiguration::slow_keys() const
     return options.slow_keys;
 }
 
+StickyKeysConfiguration FilesystemConfiguration::sticky_keys() const
+{
+    std::lock_guard lock(mutex);
+    return options.sticky_keys;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

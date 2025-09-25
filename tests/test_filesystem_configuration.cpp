@@ -684,3 +684,19 @@ TEST_F(FilesystemConfigurationTest, CanReadSlowKeys)
     EXPECT_THAT(slow_keys.enabled, testing::Eq(true));
     EXPECT_THAT(slow_keys.hold_delay_milliseconds, testing::Eq(500));
 }
+
+TEST_F(FilesystemConfigurationTest, CanReadStickyKeys)
+{
+    YAML::Node sticky_keys_node;
+    sticky_keys_node["enabled"] = true;
+    sticky_keys_node["should_disable_if_two_keys_are_pressed_together"] = false;
+
+    YAML::Node root;
+    root["sticky_keys"] = sticky_keys_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const sticky_keys = config.sticky_keys();
+    EXPECT_THAT(sticky_keys.enabled, testing::Eq(true));
+    EXPECT_THAT(sticky_keys.should_disable_if_two_keys_are_pressed_together, testing::Eq(false));
+}

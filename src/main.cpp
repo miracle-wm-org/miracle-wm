@@ -38,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
 #include <miral/slow_keys.h>
+#include <miral/sticky_keys.h>
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
@@ -97,6 +98,7 @@ int main(int argc, char const* argv[])
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
     CursorScale cursor_scale;
     SlowKeys slow_keys = SlowKeys::disabled();
+    StickyKeys sticky_keys = StickyKeys::disabled();
 
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
@@ -111,13 +113,14 @@ int main(int argc, char const* argv[])
         InputConfigurationConfigObserver(
             InputConfiguration const& input_configuration,
             Keymap const& keymap, HoverClick const& hover_click,
-            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys) :
+            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys, StickyKeys const& sticky_keys) :
             input_configuration(input_configuration),
             keymap(keymap),
             hover_click(hover_click),
             simulated_secondary_click(simulated_secondary_click),
             cursor_scale(cursor_scale),
-            slow_keys(slow_keys)
+            slow_keys(slow_keys),
+            sticky_keys(sticky_keys)
         {
         }
 
@@ -169,6 +172,13 @@ int main(int argc, char const* argv[])
                 slow_keys.enable();
             else
                 slow_keys.disable();
+
+            auto const sticky_keys_config = config.sticky_keys();
+            sticky_keys.should_disable_if_two_keys_are_pressed_together(sticky_keys_config.should_disable_if_two_keys_are_pressed_together);
+            if (sticky_keys_config.enabled)
+                sticky_keys.enable();
+            else
+                sticky_keys.disable();
         }
 
     private:
@@ -179,6 +189,7 @@ int main(int argc, char const* argv[])
         SimulatedSecondaryClick simulated_secondary_click;
         CursorScale cursor_scale;
         SlowKeys slow_keys;
+        StickyKeys sticky_keys;
     };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
@@ -186,7 +197,7 @@ int main(int argc, char const* argv[])
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -223,6 +234,7 @@ int main(int argc, char const* argv[])
             simulated_secondary_click,
             cursor_scale,
             slow_keys,
+            sticky_keys,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
