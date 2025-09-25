@@ -314,6 +314,12 @@ CursorConfiguration FilesystemConfiguration::cursor() const
     return options.cursor;
 }
 
+SlowKeysConfiguration FilesystemConfiguration::slow_keys() const
+{
+    std::lock_guard lock(mutex);
+    return options.slow_keys;
+}
+
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

@@ -1146,4 +1146,19 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->cursor.scale = scale;
     }
+
+    miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->slow_keys.enabled,
+            data->slow_keys.hold_delay_milliseconds,
+        };
+    }
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->slow_keys.enabled = enabled;
+        data->slow_keys.hold_delay_milliseconds = hold_duration_millseconds;
+    }
 } // extern "C"

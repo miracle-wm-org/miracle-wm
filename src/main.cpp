@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/keymap.h>
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
+#include <miral/slow_keys.h>
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
@@ -95,6 +96,7 @@ int main(int argc, char const* argv[])
     HoverClick hover_click = HoverClick::disabled();
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
     CursorScale cursor_scale;
+    SlowKeys slow_keys = SlowKeys::disabled();
 
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
@@ -109,12 +111,13 @@ int main(int argc, char const* argv[])
         InputConfigurationConfigObserver(
             InputConfiguration const& input_configuration,
             Keymap const& keymap, HoverClick const& hover_click,
-            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale) :
+            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys) :
             input_configuration(input_configuration),
             keymap(keymap),
             hover_click(hover_click),
             simulated_secondary_click(simulated_secondary_click),
-            cursor_scale(cursor_scale)
+            cursor_scale(cursor_scale),
+            slow_keys(slow_keys)
         {
         }
 
@@ -159,6 +162,13 @@ int main(int argc, char const* argv[])
                 simulated_secondary_click.disable();
 
             cursor_scale.scale(config.cursor().scale);
+
+            auto const slow_keys_config = config.slow_keys();
+            slow_keys.hold_delay(std::chrono::milliseconds(slow_keys_config.hold_delay_milliseconds));
+            if (slow_keys_config.enabled)
+                slow_keys.enable();
+            else
+                slow_keys.disable();
         }
 
     private:
@@ -168,6 +178,7 @@ int main(int argc, char const* argv[])
         HoverClick hover_click;
         SimulatedSecondaryClick simulated_secondary_click;
         CursorScale cursor_scale;
+        SlowKeys slow_keys;
     };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
@@ -175,7 +186,7 @@ int main(int argc, char const* argv[])
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -211,6 +222,7 @@ int main(int argc, char const* argv[])
             hover_click,
             simulated_secondary_click,
             cursor_scale,
+            slow_keys,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
