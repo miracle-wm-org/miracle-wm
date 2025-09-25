@@ -597,16 +597,6 @@ void Renderer::draw(
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
 
-    switch (compositor_state->mode())
-    {
-    case WindowManagerMode::selecting:
-        glUniform1i(prog->mode_uniform, (int)(data.data.is_focused ? RenderFilter::none : RenderFilter::grayscale));
-        break;
-    default:
-        glUniform1i(prog->mode_uniform, (int)RenderFilter::none);
-        break;
-    }
-
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
 

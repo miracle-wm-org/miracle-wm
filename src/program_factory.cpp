@@ -159,10 +159,6 @@ miracle::ProgramData::ProgramData(GLuint program_id)
     if (alpha_uniform < 0)
         mir::log_warning("Program is missing alpha_uniform");
 
-    mode_uniform = glGetUniformLocation(id, "mode");
-    if (mode_uniform < 0)
-        mir::log_warning("Program is missing mode_uniform");
-
     surface_size_uniform = glGetUniformLocation(id, "surfaceSize");
     if (surface_size_uniform < 0)
         mir::log_warning("Program is missing surfaceSize");
@@ -226,22 +222,11 @@ precision mediump float;
         +
         R"(
 
-uniform int mode;
 uniform float alpha;
 uniform vec2 surfaceSize;
 uniform float borderRadius;
 
 varying vec2 v_texcoord;  // This is going to be [0, 1]
-
-vec4 resolve_color(vec4 v) {
-    if (mode == 1) {
-        float color =  0.299 * v.x + 0.587 * v.y + 0.114 * v.z;
-        return vec4(color, color, color, v.w);
-    }
-    else {
-        return v;
-    }
-}
 
 float roundedRectSDF(vec2 p, vec2 size, float r) {
     vec2 halfSize = size * 0.5;
@@ -254,7 +239,7 @@ void main() {
     float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
     float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
 
-    vec4 contentColor = alpha * resolve_color(sample_to_rgba(v_texcoord));
+    vec4 contentColor = alpha * sample_to_rgba(v_texcoord);
     contentColor *= shapeMask;
     if (contentColor.a < 0.01)
         discard;
