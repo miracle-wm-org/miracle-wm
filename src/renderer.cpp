@@ -154,6 +154,9 @@ public:
         if (!path)
             return;
 
+        if (!std::filesystem::exists(*path))
+            return;
+
         last_write_time = std::filesystem::last_write_time(*path);
         std::ifstream file(*path);
         if (!file.is_open())
