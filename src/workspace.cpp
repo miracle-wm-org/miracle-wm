@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define MIR_LOG_COMPONENT "workspace_content"
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include "workspace.h"
 #include "compositor_state.h"
@@ -28,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_observer.h"
 
 #include <cassert>
+#include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <miral/zone.h>
@@ -495,6 +497,36 @@ void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
 {
     workspace_inner_gaps = gaps;
     recalculate_area();
+}
+
+glm::mat4 Workspace::transform() const
+{
+    auto const output = get_output();
+    if (!output)
+        return glm::mat4(1.f);
+
+    // The workspace transform is calculated based off the index of the workspace in
+    // the output that owns it. This value is cached to avoid recalculating it over
+    // and over again. If the index of the workspace changes, the transform is
+    // recalculated on the next access.
+    auto const& workspaces = output->get_workspaces();
+    for (size_t i = 0; i < workspaces.size(); i++)
+    {
+        if (workspaces[i].get() == this)
+        {
+            if (workspace_index == i)
+                return cached_transform;
+
+            auto const workspace_rect = output->get_workspace_rectangle(i);
+            workspace_index = static_cast<int>(i);
+            cached_transform = glm::translate(
+                glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
+            return cached_transform;
+        }
+    }
+
+    mir::log_error("Cannot resolve workspace transform for workspace %d", id());
+    return glm::mat4(1.f);
 }
 
 void Workspace::on_animation_start()
