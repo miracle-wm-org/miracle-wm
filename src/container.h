@@ -97,8 +97,20 @@ public:
     virtual std::shared_ptr<WorkspaceInterface> get_workspace() const = 0;
     virtual void set_workspace(std::shared_ptr<WorkspaceInterface> const&) = 0;
     virtual std::shared_ptr<OutputInterface> get_output() const = 0;
+
+    /// Retrieve the current transform of this node.
+    ///
+    /// This does NOT include the output and workspace transforms. This is intended
+    /// for use by the animation system.
+    ///
+    /// \returns the transform on the node
     virtual glm::mat4 get_transform() const = 0;
+
+    /// Sets the transform of this node.
+    ///
+    ///\param transform
     virtual void set_transform(glm::mat4 transform) = 0;
+
     virtual void on_workspace_transform() = 0;
     virtual glm::mat4 get_workspace_transform() const;
     virtual glm::mat4 get_output_transform() const;

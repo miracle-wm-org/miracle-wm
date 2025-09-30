@@ -110,6 +110,15 @@ public:
     [[nodiscard]] virtual int id() const = 0;
     [[nodiscard]] virtual std::string const& name() const = 0;
     [[nodiscard]] virtual bool is_defunct() const = 0;
+
+    /// Return the transform for the output.
+    ///
+    /// This transform is often used to "scroll" the output between workspaces,
+    /// as each workspace lives at its own offset translation. However, this
+    /// may potentially contain transformations applied to all surfaces on an output
+    /// such as zoom in/out effects.
+    ///
+    /// \returns the transformation
     [[nodiscard]] virtual glm::mat4 get_transform() const = 0;
     [[nodiscard]] virtual geom::Rectangle get_workspace_rectangle(size_t i) const = 0;
     [[nodiscard]] virtual WorkspaceInterface const* workspace(uint32_t id) const = 0;

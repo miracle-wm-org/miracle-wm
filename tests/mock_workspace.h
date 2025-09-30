@@ -84,6 +84,8 @@ namespace test
 
         MOCK_METHOD(std::optional<Gaps>, inner_gaps, (), (const, override));
         MOCK_METHOD(void, inner_gaps, (std::optional<Gaps> const&), (override));
+
+        MOCK_METHOD(glm::mat4, transform, (), (const, override));
     };
 }
 }
