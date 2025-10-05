@@ -446,10 +446,11 @@ Renderer::~Renderer()
 
 void Renderer::tessellate(
     std::vector<mgl::Primitive>& primitives,
-    mg::Renderable const& renderable)
+    mg::Renderable const& renderable,
+    bool const is_flipped)
 {
     primitives.resize(1);
-    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 });
+    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped);
 }
 
 Renderer::DrawData Renderer::get_draw_data(
@@ -576,26 +577,12 @@ void Renderer::draw(
 
     glActiveTexture(GL_TEXTURE0);
 
-    auto const& rect = renderable.screen_position();
-    auto const centrex = static_cast<GLfloat>(rect.top_left.x.as_int() + rect.size.width.as_int()) / 2.0f;
-    auto const centrey = static_cast<GLfloat>(rect.top_left.y.as_int() + rect.size.height.as_int()) / 2.0f;
+    auto const centrex = static_cast<GLfloat>(surface_size.width.as_int()) / 2.0f;
+    auto const centrey = static_cast<GLfloat>(surface_size.height.as_int()) / 2.0f;
     glUniform2f(prog->center_uniform, centrex, centrey);
 
-    glm::mat4 transform = data.data.transform;
-    if (texture->layout() == mg::gl::Texture::Layout::TopRowFirst)
-    {
-        // GL textures have (0,0) at bottom-left rather than top-left
-        // We have to invert this texture to get it the way up GL expects.
-        transform *= glm::mat4 {
-            1.0, 0.0, 0.0, 0.0,
-            0.0, -1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0
-        };
-    }
-
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(transform));
+        glm::value_ptr(data.data.transform));
     glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
@@ -607,7 +594,7 @@ void Renderer::draw(
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
     primitives.clear();
-    tessellate(primitives, renderable);
+    tessellate(primitives, renderable, texture->layout() == mg::gl::Texture::Layout::TopRowFirst);
 
     // if we fail to load the texture, we need to carry on (part of lp:1629275)
     try
