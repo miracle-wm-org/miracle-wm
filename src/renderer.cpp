@@ -669,24 +669,9 @@ void Renderer::draw(
 
 void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
 {
-    auto clip_area_opt = surface.clip_area();
+    auto const clip_area_opt = surface.clip_area();
     if (!clip_area_opt)
         return;
-
-    // Calculate the border rectangle
-    // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-    auto border_rect = clip_area_opt.value();
-    auto const clip_y = viewport.top_left.y.as_int() + viewport.size.height.as_int()
-        - border_rect.top_left.y.as_int() - border_rect.size.height.as_int();
-    glm::vec4 clip_pos(border_rect.top_left.x.as_int(), clip_y, 0, 1);
-
-    border_rect = geom::Rectangle(
-        geom::Point(
-            (static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int()) * x_scale,
-            static_cast<int>(clip_pos.y * y_scale)),
-        geom::Size(
-            border_rect.size.width.as_int() * x_scale,
-            border_rect.size.height.as_int() * y_scale));
 
     // First, we select the border shader as our shader
     auto const* const prog = &program_factory->border().data;
@@ -694,15 +679,17 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     // Next, we use the clip area as our rendering size
     auto const border_config = config->get_border_config();
-    border_rect.top_left.x = geom::X(viewport.left().as_value() + border_rect.top_left.x.as_value() - border_config.size);
-    border_rect.top_left.y = geom::Y(viewport.top().as_value() + border_rect.top_left.y.as_value() - border_config.size);
-    border_rect.size.width = geom::Width(border_rect.size.width.as_value() + 2 * border_config.size);
-    border_rect.size.height = geom::Height(border_rect.size.height.as_value() + 2 * border_config.size);
+    auto const border_rect = geom::Rectangle(
+        geom::Point(
+            clip_area_opt.value().top_left.x.as_value() * x_scale - border_config.size,
+            clip_area_opt.value().top_left.y.as_value() * y_scale - border_config.size),
+        geom::Size(
+            clip_area_opt.value().size.width.as_value() * x_scale + 2 * border_config.size,
+            clip_area_opt.value().size.height.as_value() * y_scale + 2 * border_config.size));
 
     // Next, we update the uniforms for the context, including global transforms
-    auto const inverse_y_transform = display_transform * glm::mat4 { 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(inverse_y_transform));
+        glm::value_ptr(display_transform));
     glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
         glm::value_ptr(screen_to_gl_coords));
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
@@ -721,9 +708,9 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
             glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
         glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
 
-    auto const centrex = static_cast<GLfloat>(border_rect.top_left.x.as_int() + border_rect.size.width.as_int()) / 2.0f;
-    auto const centrey = static_cast<GLfloat>(border_rect.top_left.y.as_int() + border_rect.size.height.as_int()) / 2.0f;
-    glUniform2f(prog->center_uniform, centrex, centrey);
+    auto const centerx = static_cast<GLfloat>(border_rect.top_left.x.as_int() + border_rect.size.width.as_int()) / 2.0f;
+    auto const centery = static_cast<GLfloat>(border_rect.top_left.y.as_int() + border_rect.size.height.as_int()) / 2.0f;
+    glUniform2f(prog->center_uniform, centerx, centery);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));
     glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
