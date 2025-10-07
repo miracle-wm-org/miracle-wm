@@ -39,6 +39,19 @@ protected:
     std::unique_ptr<miracle_config_load_result_t> wrapper;
 };
 
+TEST_F(CAPIWrapperTest, CanModifyIncludes)
+{
+    miracle_config_add_include(&wrapper->config, "/home/hi");
+    miracle_config_add_include(&wrapper->config, "/home/bye");
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
+    miracle_config_set_include(&wrapper->config, "/home/meow", 1);
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/meow");
+    miracle_config_remove_include(&wrapper->config, 0);
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(1));
+}
+
 TEST_F(CAPIWrapperTest, CanSetValidPrimaryModifier)
 {
     uint modifier = mir_input_event_modifier_alt;
@@ -809,6 +822,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     const char* temp_path = "/tmp/miracle_test_roundtrip.yaml";
 
     // Set some config values
+    miracle_config_add_include(&wrapper->config, "/home/hi");
+    miracle_config_add_include(&wrapper->config, "/home/bye");
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
     miracle_config_add_environment_variable(&wrapper->config, "TEST", "VALUE");
@@ -862,6 +877,11 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 
     // Verify values match
     auto loaded_config = miracle_config_get_data(load_result);
+
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
+
     EXPECT_EQ(miracle_config_get_primary_modifier(loaded_config), mir_input_event_modifier_alt);
     EXPECT_EQ(miracle_config_get_inner_gaps_x(loaded_config), 20);
 

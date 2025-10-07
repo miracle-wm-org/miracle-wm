@@ -178,6 +178,9 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     CursorConfiguration cursor;
     SlowKeysConfiguration slow_keys;
     StickyKeysConfiguration sticky_keys;
+
+    /// Other configuration files to include in addition to this one.
+    std::vector<std::string> includes;
 };
 
 enum class ErrorLevel

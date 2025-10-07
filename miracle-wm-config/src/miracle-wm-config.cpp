@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <miral/version.h>
+#include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
@@ -367,6 +368,31 @@ bool try_parse_color(YAML::Node const& root, const char* key, glm::vec4& color, 
     }
 
     return try_parse_color(root[key], color, context);
+}
+
+void read_includes(YAML::Node const& node, ParsingContext& context)
+{
+    if (!node.IsSequence())
+    {
+        context.builder << "Expected list of includes";
+        create_error(node, context);
+        return;
+    }
+
+    std::vector<std::string> includes;
+    for (auto const& include_node : node)
+    {
+        if (!include_node.IsScalar())
+        {
+            context.builder << "Expected a string";
+            create_error(include_node, context);
+            return;
+        }
+
+        includes.push_back(include_node.as<std::string>());
+    }
+
+    context.result.config.includes = std::move(includes);
 }
 
 void read_action_key(YAML::Node const& node, ParsingContext& context)
@@ -958,6 +984,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
     try
     {
         YAML::Node config = YAML::LoadFile(path);
+        if (config["includes"])
+            read_includes(config["includes"], context);
         if (config["action_key"])
             read_action_key(config["action_key"], context);
         if (config["default_action_overrides"])
@@ -1041,6 +1069,16 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     ConfigSaveResult result(true, {});
     YAML::Emitter out;
     out << YAML::BeginMap;
+
+    if (!config.includes.empty())
+    {
+        out << YAML::Key << "includes" << YAML::Value << YAML::BeginSeq;
+
+        for (auto const& include : config.includes)
+            out << include;
+
+        out << YAML::EndSeq;
+    }
 
     // Save primary modifier
     for (auto const& [name, value] : mir_input_event_modifier_opts)

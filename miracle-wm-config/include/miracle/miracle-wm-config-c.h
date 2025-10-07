@@ -118,6 +118,12 @@ extern "C"
     // Frees the memory allocated by [miracle_config_save].
     void miracle_save_result_free(miracle_config_save_result_t* result);
 
+    size_t miracle_config_get_num_includes(const miracle_config_data_t* config);
+    const char* miracle_config_get_include(const miracle_config_data_t* config, size_t index);
+    void miracle_config_add_include(const miracle_config_data_t* config, const char* value);
+    void miracle_config_remove_include(const miracle_config_data_t* config, size_t index);
+    void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index);
+
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
 
