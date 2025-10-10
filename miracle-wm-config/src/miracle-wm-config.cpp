@@ -1444,8 +1444,24 @@ std::string miracle::KeymapConfiguration::to_string() const
     if (variant)
     {
         ss << "+" << *variant;
-        for (auto const& option : options)
-            ss << "+" << option;
+    }
+    else
+    {
+        // Warning: The Mir side of things expects some variant
+        // if options are provided. If one isn't supplied, then
+        // we supply the "empty" variant.
+        ss << "+ ";
+    }
+
+    if (!options.empty())
+    {
+        ss << "+";
+        for (size_t i = 0; i < options.size(); i++)
+        {
+            ss << options[i];
+            if (i < options.size() - 1)
+                ss << ",";
+        }
     }
 
     return ss.str();
