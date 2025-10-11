@@ -30,12 +30,28 @@ TEST_F(KeymapConfigurationTest, KeymapToString)
     config.variant = "qwerty";
     config.options.emplace_back("a");
     config.options.emplace_back("b");
-    EXPECT_EQ(config.to_string(), "en+qwerty+a+b");
+    EXPECT_EQ(config.to_string(), "en+qwerty+a,b");
 }
 
 TEST_F(KeymapConfigurationTest, KeymapLanguageOnly)
 {
     miracle::KeymapConfiguration config;
     config.language = "en";
-    EXPECT_EQ(config.to_string(), "en");
+    EXPECT_EQ(config.to_string(), "en+ ");
+}
+
+TEST_F(KeymapConfigurationTest, KeymapLanguageAndOptions)
+{
+    miracle::KeymapConfiguration config;
+    config.language = "en";
+    config.options.emplace_back("a");
+    EXPECT_EQ(config.to_string(), "en+ +a");
+}
+
+TEST_F(KeymapConfigurationTest, KeymapVariant)
+{
+    miracle::KeymapConfiguration config;
+    config.language = "en";
+    config.variant = "qwerty";
+    EXPECT_EQ(config.to_string(), "en+qwerty");
 }
