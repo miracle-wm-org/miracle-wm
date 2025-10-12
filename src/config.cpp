@@ -166,14 +166,14 @@ void FilesystemConfiguration::_init(
     // If the user specified an --systemd-session-configure <APP_NAME>, let's add that to the list
     if (systemd_app)
     {
-        options.startup_apps.insert(options.startup_apps.begin(), systemd_app.value());
+        options.startup_apps.value.insert(options.startup_apps.value.begin(), systemd_app.value());
     }
 
     // If the user specified an --exec <APP_NAME>, let's add that to the list
     if (exec_app)
     {
         mir::log_info("Miracle will die when the application specified with --exec dies");
-        options.startup_apps.push_back(exec_app.value());
+        options.startup_apps.value.push_back(exec_app.value());
     }
 
     is_loaded_ = true;
@@ -197,7 +197,7 @@ void FilesystemConfiguration::reload()
         }
 
         mir::log_info("Configuration is loading...");
-        auto const [config, errors] = load_config(config_path);
+        auto const [config, errors] = load_config(expand_tilde_getenv(config_path));
         options = config;
 
         if (!errors.empty())
@@ -217,8 +217,8 @@ void FilesystemConfiguration::reload()
         //  that we access a string, because that seems like an unnecessary overhead.
         //  So it only makes sense to do it at load time. However, this might be annoying
         //  in the long term. We will see!
-        if (options.output_filter.shader_path)
-            options.output_filter.shader_path = expand_tilde_getenv(options.output_filter.shader_path.value());
+        if (options.output_filter->shader_path)
+            options.output_filter->shader_path = expand_tilde_getenv(options.output_filter->shader_path.value());
     }
 
     observer_registrar->advise_config_changed(*this);
@@ -284,10 +284,10 @@ miral::InputConfiguration::Keyboard FilesystemConfiguration::keyboard() const
 std::optional<std::string> FilesystemConfiguration::keymap() const
 {
     std::lock_guard lock(mutex);
-    if (!options.keymap)
+    if (!*options.keymap)
         return std::nullopt;
 
-    return options.keymap->to_string();
+    return (*options.keymap)->to_string();
 }
 
 HoverClickConfiguration FilesystemConfiguration::hover_click() const
@@ -334,7 +334,7 @@ std::string const& FilesystemConfiguration::get_filename() const
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
 {
     std::lock_guard lock(mutex);
-    return static_cast<MirInputEventModifier>(options.primary_modifier);
+    return static_cast<MirInputEventModifier>(*options.primary_modifier);
 }
 
 CustomKeyCommand const*
@@ -342,7 +342,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, in
 {
     std::lock_guard lock(mutex);
     // TODO: Copy & paste
-    for (auto const& command : options.custom_key_commands)
+    for (auto const& command : *options.custom_key_commands)
     {
         if (action != command.action)
             continue;
@@ -604,7 +604,7 @@ BorderConfig const& FilesystemConfiguration::get_border_config() const
 AnimationDefinition const& FilesystemConfiguration::get_animation_definition(AnimateableEvent event) const
 {
     std::lock_guard lock(mutex);
-    return options.animation_definitions[static_cast<size_t>(event)];
+    return (*options.animation_definitions)[static_cast<size_t>(event)];
 }
 
 bool FilesystemConfiguration::are_animations_enabled() const
@@ -616,7 +616,7 @@ bool FilesystemConfiguration::are_animations_enabled() const
 WorkspaceConfig FilesystemConfiguration::get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const
 {
     std::lock_guard lock(mutex);
-    for (auto const& config : options.workspace_configs)
+    for (auto const& config : *options.workspace_configs)
     {
         if (num && config.num == num.value())
             return config;
