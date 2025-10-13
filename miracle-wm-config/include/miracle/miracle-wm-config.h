@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "export.h"
 #include "gaps.h"
 #include "modifiers.h"
+#include "with_default_flag.h"
 
 #include <array>
 #include <cstdlib>
@@ -151,33 +152,36 @@ struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
-    uint primary_modifier = mir_input_event_modifier_meta;
-    uint primary_button = mir_pointer_button_primary;
-    std::vector<CustomKeyCommand> custom_key_commands;
-    std::vector<BuiltInKeyCommandOverride> built_in_key_command_overrides;
-    Gaps inner_gaps = { .top = 10, .bottom = 10, .left = 10, .right = 10 };
-    Gaps outer_gaps = { .top = 10, .bottom = 10, .left = 10, .right = 10 };
-    std::vector<StartupApp> startup_apps;
-    std::optional<std::string> terminal = "miracle-wm-sensible-terminal";
-    int resize_jump = 50;
-    std::vector<EnvironmentVariable> environment_variables;
-    BorderConfig border_config;
-    bool animations_enabled = true;
-    std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animation_definitions;
-    std::vector<WorkspaceConfig> workspace_configs;
-    uint move_modifier = miracle_input_event_modifier_default;
-    DragAndDropConfiguration drag_and_drop;
-    miral::InputConfiguration::Mouse mouse_configuration;
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
-    miral::InputConfiguration::Keyboard keyboard_configuration;
-#endif
-    std::optional<KeymapConfiguration> keymap;
-    HoverClickConfiguration hover_click;
-    SimulatedSecondaryClickConfiguration simulated_secondary_click;
-    OutputFilterConfiguration output_filter;
-    CursorConfiguration cursor;
-    SlowKeysConfiguration slow_keys;
-    StickyKeysConfiguration sticky_keys;
+    miracle::WithDefaultFlag<uint> primary_modifier = mir_input_event_modifier_meta;
+    miracle::WithDefaultFlag<uint> primary_button = mir_pointer_button_primary;
+    miracle::WithDefaultFlag<std::vector<CustomKeyCommand>> custom_key_commands;
+    miracle::WithDefaultFlag<std::vector<BuiltInKeyCommandOverride>> built_in_key_command_overrides;
+    miracle::WithDefaultFlag<Gaps> inner_gaps = Gaps { .top = 10, .bottom = 10, .left = 10, .right = 10 };
+    miracle::WithDefaultFlag<Gaps> outer_gaps = Gaps { .top = 10, .bottom = 10, .left = 10, .right = 10 };
+    miracle::WithDefaultFlag<std::vector<StartupApp>> startup_apps;
+    miracle::WithDefaultFlag<std::optional<std::string>> terminal = std::optional<std::string>("miracle-wm-sensible-terminal");
+    miracle::WithDefaultFlag<int> resize_jump = 50;
+    miracle::WithDefaultFlag<std::vector<EnvironmentVariable>> environment_variables;
+    miracle::WithDefaultFlag<BorderConfig> border_config;
+    miracle::WithDefaultFlag<bool> animations_enabled = true;
+    miracle::WithDefaultFlag<std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)>> animation_definitions;
+    miracle::WithDefaultFlag<std::vector<WorkspaceConfig>> workspace_configs;
+    miracle::WithDefaultFlag<uint> move_modifier = miracle_input_event_modifier_default;
+    miracle::WithDefaultFlag<DragAndDropConfiguration> drag_and_drop;
+    miracle::WithDefaultFlag<miral::InputConfiguration::Mouse> mouse_configuration;
+    miracle::WithDefaultFlag<miral::InputConfiguration::Keyboard> keyboard_configuration;
+    miracle::WithDefaultFlag<std::optional<KeymapConfiguration>> keymap;
+    miracle::WithDefaultFlag<HoverClickConfiguration> hover_click;
+    miracle::WithDefaultFlag<SimulatedSecondaryClickConfiguration> simulated_secondary_click;
+    miracle::WithDefaultFlag<OutputFilterConfiguration> output_filter;
+    miracle::WithDefaultFlag<CursorConfiguration> cursor;
+    miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
+    miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
+
+    /// Other configuration files to include in addition to this one.
+    miracle::WithDefaultFlag<std::vector<std::string>> includes;
+
+    ConfigData merge_with(ConfigData& other);
 };
 
 enum class ErrorLevel
