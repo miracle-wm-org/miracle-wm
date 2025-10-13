@@ -700,3 +700,26 @@ TEST_F(FilesystemConfigurationTest, CanReadStickyKeys)
     EXPECT_THAT(sticky_keys.enabled, testing::Eq(true));
     EXPECT_THAT(sticky_keys.should_disable_if_two_keys_are_pressed_together, testing::Eq(false));
 }
+
+TEST_F(FilesystemConfigurationTest, CanReadIncludes)
+{
+    const std::string include_path = std::filesystem::current_path() / "test_include.yaml";
+
+    // Write main config
+    YAML::Node includes;
+    includes.push_back(include_path);
+    YAML::Node root;
+    root["includes"] = includes;
+    write_yaml_node(root);
+
+    // Write included config
+    {
+        std::ofstream included_file(include_path, std::ios::trunc);
+        included_file << "action_key" << ": " << "alt" << "\n";
+    }
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_THAT(config.get_input_event_modifier(), testing::Eq(mir_input_event_modifier_alt));
+
+    std::filesystem::remove(include_path.c_str());
+}

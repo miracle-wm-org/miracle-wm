@@ -184,6 +184,34 @@ void FilesystemConfiguration::_init(
         mir::log_warning("Cannot watch for configuration changes because main_loop is not set");
 }
 
+namespace
+{
+ConfigData load_config_recursive(std::string const& path)
+{
+    auto [config, errors] = load_config(expand_tilde_getenv(path));
+
+    if (!errors.empty())
+    {
+        for (auto const& error : errors)
+            mir::log_error("Configuration parsing error: %s (%s::L%d:%d)",
+                error.message.c_str(),
+                error.filename.c_str(),
+                error.line,
+                error.column);
+    }
+
+    /// Load the includes provided by this path. Note that this may be recursive, but
+    /// miracle will not prevent you from loading erroneously.
+    for (auto const& include : *config.includes)
+    {
+        auto loaded = load_config_recursive(include);
+        config = config.merge_with(loaded);
+    }
+
+    return config;
+}
+}
+
 void FilesystemConfiguration::reload()
 {
     {
@@ -197,18 +225,7 @@ void FilesystemConfiguration::reload()
         }
 
         mir::log_info("Configuration is loading...");
-        auto const [config, errors] = load_config(expand_tilde_getenv(config_path));
-        options = config;
-
-        if (!errors.empty())
-        {
-            for (auto const& error : errors)
-                mir::log_error("Configuration parsing error: %s (%s::L%d:%d)",
-                    error.message.c_str(),
-                    error.filename.c_str(),
-                    error.line,
-                    error.column);
-        }
+        options = load_config_recursive(config_path);
 
         // TODO: This might be a hack, I do not know yet.
         //  At any rate, we want users to be confident that their paths will be saved
