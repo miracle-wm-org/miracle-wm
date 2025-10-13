@@ -120,31 +120,31 @@ extern "C"
     size_t miracle_config_get_num_includes(const miracle_config_data_t* config)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
-        return data->includes.size();
+        return data->includes->size();
     }
 
     const char* miracle_config_get_include(const miracle_config_data_t* config, size_t index)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
-        return data->includes[index].c_str();
+        return data->includes.value[index].c_str();
     }
 
     void miracle_config_add_include(const miracle_config_data_t* config, const char* value)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->includes.push_back(value);
+        data->includes->push_back(value);
     }
 
     void miracle_config_remove_include(const miracle_config_data_t* config, size_t index)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->includes.erase(data->includes.begin() + static_cast<std::vector<std::string>::difference_type>(index));
+        data->includes->erase(data->includes->begin() + static_cast<std::vector<std::string>::difference_type>(index));
     }
 
     void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->includes[index] = value;
+        data->includes.value[index] = value;
     }
 
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config)

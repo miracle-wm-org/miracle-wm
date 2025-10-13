@@ -169,9 +169,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<uint> move_modifier = miracle_input_event_modifier_default;
     miracle::WithDefaultFlag<DragAndDropConfiguration> drag_and_drop;
     miracle::WithDefaultFlag<miral::InputConfiguration::Mouse> mouse_configuration;
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     miracle::WithDefaultFlag<miral::InputConfiguration::Keyboard> keyboard_configuration;
-#endif
     miracle::WithDefaultFlag<std::optional<KeymapConfiguration>> keymap;
     miracle::WithDefaultFlag<HoverClickConfiguration> hover_click;
     miracle::WithDefaultFlag<SimulatedSecondaryClickConfiguration> simulated_secondary_click;
@@ -181,7 +179,9 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
 
     /// Other configuration files to include in addition to this one.
-    std::vector<std::string> includes;
+    miracle::WithDefaultFlag<std::vector<std::string>> includes;
+
+    ConfigData merge_with(ConfigData& other);
 };
 
 enum class ErrorLevel

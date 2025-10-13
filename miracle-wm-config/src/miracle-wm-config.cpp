@@ -1109,11 +1109,11 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     YAML::Emitter out;
     out << YAML::BeginMap;
 
-    if (!config.includes.empty())
+    if (config.includes.is_set())
     {
         out << YAML::Key << "includes" << YAML::Value << YAML::BeginSeq;
 
-        for (auto const& include : config.includes)
+        for (auto const& include : *config.includes)
             out << include;
 
         out << YAML::EndSeq;
@@ -1527,4 +1527,72 @@ std::string miracle::KeymapConfiguration::to_string() const
     }
 
     return ss.str();
+}
+
+namespace
+{
+template <typename T>
+std::vector<T> concat_vectors(std::vector<T> const& a, std::vector<T> const& b)
+{
+    std::vector<T> result;
+    result.reserve(a.size() + b.size());
+    result.insert(result.end(), a.begin(), a.end());
+    result.insert(result.end(), b.begin(), b.end());
+    return result;
+}
+
+template <typename T, size_t U>
+std::array<T, U> merge_arrays(
+    std::array<T, U> const& a,
+    std::array<T, U> const& b,
+    std::function<bool(T const&, T const&)> const& compare)
+{
+    std::array<T, U> result;
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        auto const& a_item = a[i];
+        auto const& b_item = b[i];
+        result[i] = compare(a_item, b_item) ? a_item : b_item;
+    }
+
+    return result;
+}
+}
+
+miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
+{
+    // This method merges two configurations. [other] will be given priority over [this]
+    // if it is set.
+    ConfigData result;
+    result.primary_modifier = other.primary_modifier.is_set() ? other.primary_modifier : primary_modifier;
+    result.primary_button = other.primary_button.is_set() ? other.primary_button : primary_button;
+    result.custom_key_commands = concat_vectors(*other.custom_key_commands, *custom_key_commands);
+    result.built_in_key_command_overrides = concat_vectors(*other.built_in_key_command_overrides, *built_in_key_command_overrides);
+    result.inner_gaps = other.inner_gaps.is_set() ? other.inner_gaps : inner_gaps;
+    result.outer_gaps = other.outer_gaps.is_set() ? other.outer_gaps : outer_gaps;
+    result.startup_apps = concat_vectors(*other.startup_apps, *startup_apps);
+    result.terminal = other.terminal.is_set() ? other.terminal : terminal;
+    result.resize_jump = other.resize_jump.is_set() ? other.resize_jump : resize_jump;
+    result.environment_variables = concat_vectors(*other.environment_variables, *environment_variables);
+    result.border_config = other.border_config.is_set() ? other.border_config : border_config;
+    result.animations_enabled = other.animations_enabled.is_set() ? other.animations_enabled : animations_enabled;
+    result.animation_definitions = merge_arrays<AnimationDefinition, static_cast<int>(AnimateableEvent::max)>(*other.animation_definitions, *animation_definitions,
+        [](auto const&, auto const&)
+    { return true; });
+    result.workspace_configs = concat_vectors(*other.workspace_configs, *workspace_configs);
+    result.move_modifier = other.move_modifier.is_set() ? other.move_modifier : move_modifier;
+    result.drag_and_drop = other.drag_and_drop.is_set() ? other.drag_and_drop : drag_and_drop;
+    result.mouse_configuration->merge(*other.mouse_configuration);
+    result.mouse_configuration->merge(*mouse_configuration);
+    result.keyboard_configuration->merge(*other.keyboard_configuration);
+    result.keyboard_configuration->merge(*keyboard_configuration);
+    result.keymap = other.keymap.is_set() ? other.keymap : keymap;
+    result.hover_click = other.hover_click.is_set() ? other.hover_click : hover_click;
+    result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : simulated_secondary_click;
+    result.output_filter = other.output_filter.is_set() ? other.output_filter : output_filter;
+    result.cursor = other.cursor.is_set() ? other.cursor : cursor;
+    result.slow_keys = other.slow_keys.is_set() ? other.slow_keys : slow_keys;
+    result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : sticky_keys;
+    result.includes = concat_vectors(*other.includes, *includes);
+    return result;
 }

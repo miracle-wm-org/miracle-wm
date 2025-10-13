@@ -67,6 +67,8 @@ public:
     bool operator==(const WithDefaultFlag& other) const = delete;
     bool operator!=(const WithDefaultFlag& other) const = delete;
 
+    bool is_set() const { return !is_default_value; }
+
     T value {};
     bool is_default_value { true };
 };
