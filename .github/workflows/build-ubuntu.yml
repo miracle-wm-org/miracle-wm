@@ -39,7 +39,7 @@ jobs:
         sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
           libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev libgtest-dev libgmock-dev \
-          mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev
+          mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev
           
         sudo apt install mir-platform-graphics-virtual xwayland \
           mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
