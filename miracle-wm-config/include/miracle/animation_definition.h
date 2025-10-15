@@ -102,8 +102,7 @@ enum class MIRACLE_WM_CONFIG_API BultInAnimationType
     slide,
     grow,
     shrink,
-    fade_in,
-    fade_out,
+    fade,
     max
 };
 
@@ -112,8 +111,7 @@ constexpr std::array<const char*, static_cast<int>(BultInAnimationType::max)> bu
     "slide",
     "grow",
     "shrink",
-    "fade_in",
-    "fade_out"
+    "fade"
 };
 
 /// Defines a built-in animation for miracle.

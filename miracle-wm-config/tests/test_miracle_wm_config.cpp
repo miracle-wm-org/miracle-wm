@@ -60,7 +60,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     first.animations_enabled = false;
     std::vector<miracle::BuiltInAnimationDefinition> first_animations;
     first_animations.push_back(
-        miracle::BuiltInAnimationDefinition { .type = miracle::BultInAnimationType::fade_in });
+        miracle::BuiltInAnimationDefinition { .type = miracle::BultInAnimationType::fade });
     first.animation_definitions.value[0] = miracle::AnimationDefinition {
         .type = miracle::AnimationType::built_in,
         .duration_seconds = 5,

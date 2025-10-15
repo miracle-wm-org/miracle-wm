@@ -251,13 +251,17 @@ BuiltInAnimation::BuiltInAnimation(
     BuiltInAnimationDefinition definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current_) :
+    mir::geometry::Rectangle const& current_,
+    float opacity_start,
+    float opacity_end) :
     Animation { handle },
     duration_seconds { duration_seconds },
     definition { definition },
     current { current_ },
     from { from },
-    to { to }
+    to { to },
+    opacity_start { opacity_start },
+    opacity_end { opacity_end }
 {
     switch (definition.type)
     {
@@ -294,7 +298,9 @@ MultiBuiltInAnimation::MultiBuiltInAnimation(
     AnimationDefinition const& definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current) :
+    mir::geometry::Rectangle const& current,
+    float opacity_start,
+    float opacity_end) :
     Animation(handle)
 {
 
@@ -306,7 +312,9 @@ MultiBuiltInAnimation::MultiBuiltInAnimation(
             def,
             from,
             to,
-            current));
+            current,
+            opacity_start,
+            opacity_end));
     }
 }
 
@@ -350,10 +358,8 @@ AnimationFrameResult BuiltInAnimation::init()
             std::nullopt
         };
     }
-    case BultInAnimationType::fade_in:
-        return { false, std::nullopt, std::nullopt, 0 };
-    case BultInAnimationType::fade_out:
-        return { false, std::nullopt, std::nullopt, 1 };
+    case BultInAnimationType::fade:
+        return { false, std::nullopt, std::nullopt, opacity_start };
     case BultInAnimationType::disabled:
     default:
     {
@@ -371,7 +377,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     if (runtime_seconds >= duration_seconds)
     {
         return { true, to, glm::mat4(1.f),
-            definition.type == BultInAnimationType::fade_out ? 0.f : 1.f };
+            definition.type == BultInAnimationType::fade ? opacity_end : 1.f };
     }
 
     switch (definition.type)
@@ -408,15 +414,11 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
             glm::vec3(p, p, 1.f));
         return { false, std::nullopt, transform, std::nullopt };
     }
-    case BultInAnimationType::fade_in:
+    case BultInAnimationType::fade:
     {
         auto const p = ease(definition, t);
-        return { false, to, std::nullopt, p };
-    }
-    case BultInAnimationType::fade_out:
-    {
-        auto const p = 1.f - ease(definition, t);
-        return { false, to, std::nullopt, p };
+        float opacity_diff = opacity_end - opacity_start;
+        return { false, to, std::nullopt, opacity_start + opacity_diff * p };
     }
     case BultInAnimationType::disabled:
     default:

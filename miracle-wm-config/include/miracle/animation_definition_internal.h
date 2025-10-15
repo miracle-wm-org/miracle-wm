@@ -29,7 +29,7 @@ namespace internal
          true,
          0.2f,
          { BuiltInAnimationDefinition {
-                BultInAnimationType::fade_in,
+                BultInAnimationType::fade,
                 EaseFunction::linear,
             } } },
         { AnimationType::built_in,
@@ -43,7 +43,7 @@ namespace internal
          true,
          0.3f,
          { BuiltInAnimationDefinition {
-                BultInAnimationType::fade_out,
+                BultInAnimationType::fade,
                 EaseFunction::linear,
             } } },
         { AnimationType::built_in,

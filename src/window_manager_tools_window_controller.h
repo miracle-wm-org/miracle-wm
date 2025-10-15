@@ -81,7 +81,9 @@ private:
             mir::geometry::Rectangle const& to,
             mir::geometry::Rectangle const& current,
             WindowManagerToolsWindowController* controller,
-            std::shared_ptr<Container> const& container);
+            std::shared_ptr<Container> const& container,
+            float opacity_start,
+            float opacity_end);
         void on_tick(AnimationFrameResult const&) override;
 
     private:

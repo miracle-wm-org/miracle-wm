@@ -33,8 +33,10 @@ namespace test
             BuiltInAnimationDefinition definition,
             mir::geometry::Rectangle const& from,
             mir::geometry::Rectangle const& to,
-            mir::geometry::Rectangle const& current) :
-            BuiltInAnimation(handle, duration, definition, from, to, current)
+            mir::geometry::Rectangle const& current,
+            float opacity_start,
+            float opacity_end) :
+            BuiltInAnimation(handle, duration, definition, from, to, current, opacity_start, opacity_end)
         {
         }
 
