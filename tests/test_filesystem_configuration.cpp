@@ -608,8 +608,7 @@ INSTANTIATE_TEST_SUITE_P(
         AnimationTypeParam("slide", BultInAnimationType::slide),
         AnimationTypeParam("grow", BultInAnimationType::grow),
         AnimationTypeParam("shrink", BultInAnimationType::shrink),
-        AnimationTypeParam("fade_in", BultInAnimationType::fade_in),
-        AnimationTypeParam("fade_out", BultInAnimationType::fade_out)));
+        AnimationTypeParam("fade", BultInAnimationType::fade)));
 
 TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
 {

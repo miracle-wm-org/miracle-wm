@@ -91,7 +91,9 @@ public:
         BuiltInAnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current);
+        mir::geometry::Rectangle const& current,
+        float opacity_start,
+        float opacity_end);
 
     BuiltInAnimation& operator=(BuiltInAnimation const& other) = default;
 
@@ -108,6 +110,8 @@ private:
     mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
+    float const opacity_start;
+    float const opacity_end;
 };
 
 class MultiBuiltInAnimation : public Animation
@@ -118,7 +122,9 @@ public:
         AnimationDefinition const& definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current);
+        mir::geometry::Rectangle const& current,
+        float opacity_start,
+        float opacity_end);
 
     MultiBuiltInAnimation& operator=(MultiBuiltInAnimation const& other) = default;
 
