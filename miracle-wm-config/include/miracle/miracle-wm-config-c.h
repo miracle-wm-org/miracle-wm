@@ -118,6 +118,12 @@ extern "C"
     // Frees the memory allocated by [miracle_config_save].
     void miracle_save_result_free(miracle_config_save_result_t* result);
 
+    size_t miracle_config_get_num_includes(const miracle_config_data_t* config);
+    const char* miracle_config_get_include(const miracle_config_data_t* config, size_t index);
+    void miracle_config_add_include(const miracle_config_data_t* config, const char* value);
+    void miracle_config_remove_include(const miracle_config_data_t* config, size_t index);
+    void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index);
+
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
 
@@ -421,6 +427,130 @@ extern "C"
     ///
     /// This is express in "characters per second".
     void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate);
+
+    /// Defines the hover click configuration.
+    typedef struct
+    {
+        /// Whether hover click is enabled.
+        bool enabled;
+
+        /// The length of time that the pointer must stay still in order to dispatch
+        /// a left click.
+        ///
+        /// Defaults to 1000ms.
+        uint hover_duration_milliseconds;
+
+        /// The distance in pixels that the pointer mut move from the initial hover click
+        /// position to cancel it.
+        ///
+        /// Defaults to 10px.
+        int cancel_displacement_threshold;
+
+        /// The distance in pixels that the pointer must move from the last hover click
+        /// or hover click cancel position to initiate a new hover click.
+        ///
+        /// Defaults to 5px.
+        int reclick_displacement_threshold;
+    } miracle_hover_click_t;
+
+    /// Retrieve the hover click config.
+    miracle_hover_click_t miracle_config_get_hover_click(const miracle_config_data_t* config);
+
+    /// Set the hover click config.
+    void miracle_config_set_hover_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hover_duration_milliseconds,
+        int cancel_displacement_threshold,
+        int reclick_displacement_threshold);
+
+    /// Defines the simulated secondary click configuration
+    typedef struct
+    {
+        /// Whether simulated secondary click is enabled.
+        bool enabled;
+
+        /// The length of time that the user must hold down the left pointer button
+        /// to dispatch a secondary click.
+        ///
+        /// Defaults to 1000ms.
+        uint hold_duration_milliseconds;
+
+        /// The distance in pixels that the pointer can move before the secondary
+        /// click is cancelled.
+        ///
+        /// Defaults to 20px.
+        int displacement_threshold;
+    } miracle_simulated_secondary_click_t;
+
+    miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config);
+    void miracle_config_set_simulated_secondary_click(
+        miracle_config_data_t* config,
+        bool enabled,
+        uint hold_duration_milliseconds,
+        int displacement_threshold);
+
+    /// Defines the output filter used by miracle.
+    typedef struct
+    {
+        /// Whether #shader_path is enabled or not.
+        bool shader_path_enabled;
+
+        /// A shader path. This can start with a tilde that will resolve to the home directory.
+        const char* shader_path;
+    } miracle_output_filter_t;
+
+    /// Retrieve the output filter.
+    miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config);
+    void miracle_config_set_output_filter(
+        miracle_config_data_t* config,
+        bool shader_path_enabled,
+        const char* shader_path);
+
+    /// Defines the cursor properties.
+    typedef struct
+    {
+        /// The scale of the cursor.
+        ///
+        /// Defaults to 1.
+        float scale;
+    } miracle_cursor_t;
+
+    miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config);
+    void miracle_config_set_cursor(miracle_config_data_t* config, float scale);
+
+    typedef struct
+    {
+        /// Whether slow keys is enabled or not.
+        ///
+        /// Defaults to `false`.
+        bool enabled;
+
+        /// Time before a key press is registered, in milliseconds.
+        ///
+        /// Defaults to 200ms.
+        uint hold_duration_milliseconds;
+    } miracle_slow_keys_t;
+
+    miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config);
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds);
+
+    typedef struct
+    {
+        /// Whether sticky keys is enabled or not.
+        ///
+        /// Defaults to `false`.
+        bool enabled;
+
+        /// When set to true, depressing two modifier keys simultaneously will result
+        /// in sticky keys being temporarily disabled until all keys are released.
+        ///
+        /// Defaults to `true`.
+        bool should_disable_if_two_keys_are_pressed_together = true;
+    } miracle_sticky_keys_t;
+
+    miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config);
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together);
 
 #ifdef __cplusplus
 }

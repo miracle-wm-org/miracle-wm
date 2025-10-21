@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "container_listener.h"
 #include "leaf_container.h"
+#include "math_helpers.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "parent_container.h"
@@ -1074,13 +1075,15 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
         // If the parent is anchored, we move [container] to a new floating tree.
         if (parent->anchored())
         {
-            geom::Rectangle new_area = {
+            auto const output = container->get_output();
+            auto const output_area = output->get_area();
+            geom::Rectangle const new_area = {
                 geom::Point {
-                             container->get_logical_area().top_left.x.as_int() + 50,
-                             container->get_logical_area().top_left.y.as_int() + 50 },
+                             as_float(output_area.top_left.x) + as_float(output_area.size.width) * 0.1f,
+                             as_float(output_area.top_left.y) + as_float(output_area.size.height) * 0.1f },
                 geom::Size {
-                             container->get_logical_area().size.width,
-                             container->get_logical_area().size.height              }
+                             as_float(output_area.size.width) * 0.8f,
+                             as_float(output_area.size.height) * 0.8f                                    }
             };
             auto new_parent = workspace->create_floating_tree(new_area);
             new_parent->graft_existing(container, static_cast<int>(new_parent->num_nodes()));

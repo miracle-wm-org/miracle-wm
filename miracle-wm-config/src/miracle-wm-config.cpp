@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/animation_definition_internal.h"
 #include "miracle/gaps.h"
 #include "miracle/keyboard.h"
+#include "miral/hover_click.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -28,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <miral/version.h>
+#include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 #include <yaml-cpp/yaml.h>
@@ -139,11 +141,6 @@ std::string to_string_acceleration(MirPointerAcceleration acceleration)
     case mir_pointer_acceleration_none:
         return "none";
     }
-}
-
-bool are_mouse_configs_same(miral::InputConfiguration::Mouse const& first, miral::InputConfiguration::Mouse const& second)
-{
-    return first.handedness() == second.handedness() && first.acceleration() == second.acceleration() && first.acceleration_bias() == second.acceleration_bias() && first.vscroll_speed() == second.vscroll_speed() && first.hscroll_speed() == second.hscroll_speed();
 }
 
 int program_exists(std::string const& name)
@@ -369,6 +366,31 @@ bool try_parse_color(YAML::Node const& root, const char* key, glm::vec4& color, 
     return try_parse_color(root[key], color, context);
 }
 
+void read_includes(YAML::Node const& node, ParsingContext& context)
+{
+    if (!node.IsSequence())
+    {
+        context.builder << "Expected list of includes";
+        create_error(node, context);
+        return;
+    }
+
+    std::vector<std::string> includes;
+    for (auto const& include_node : node)
+    {
+        if (!include_node.IsScalar())
+        {
+            context.builder << "Expected a string";
+            create_error(include_node, context);
+            return;
+        }
+
+        includes.push_back(include_node.as<std::string>());
+    }
+
+    context.result.config.includes = std::move(includes);
+}
+
 void read_action_key(YAML::Node const& node, ParsingContext& context)
 {
     if (auto const modifier = try_parse_string_to_optional_value<std::optional<uint>>(node, try_parse_modifier, context))
@@ -430,7 +452,7 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
         if (!try_parse_modifiers(modifiers_node, modifiers, context))
             continue;
 
-        context.result.config.built_in_key_command_overrides.push_back({ keyboard_action.value(),
+        context.result.config.built_in_key_command_overrides->push_back({ keyboard_action.value(),
             modifiers,
             static_cast<uint>(code),
             key_command });
@@ -479,7 +501,7 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
         if (!try_parse_modifiers(modifiers_node, modifiers, context))
             continue;
 
-        context.result.config.custom_key_commands.push_back({ keyboard_action.value(),
+        context.result.config.custom_key_commands->push_back({ keyboard_action.value(),
             modifiers,
             static_cast<uint>(code),
             command });
@@ -494,10 +516,12 @@ void read_inner_gaps(YAML::Node const& node, ParsingContext& context)
     if (!try_parse_value(node, "y", y, context))
         return;
 
-    context.result.config.inner_gaps.top = y;
-    context.result.config.inner_gaps.bottom = y;
-    context.result.config.inner_gaps.left = x;
-    context.result.config.inner_gaps.right = x;
+    miracle::Gaps inner_gaps;
+    inner_gaps.top = y;
+    inner_gaps.bottom = y;
+    inner_gaps.left = x;
+    inner_gaps.right = x;
+    context.result.config.inner_gaps = inner_gaps;
 }
 
 void read_outer_gaps(YAML::Node const& node, ParsingContext& context)
@@ -508,10 +532,12 @@ void read_outer_gaps(YAML::Node const& node, ParsingContext& context)
     if (!try_parse_value(node, "y", y, context))
         return;
 
-    context.result.config.outer_gaps.top = y;
-    context.result.config.outer_gaps.bottom = y;
-    context.result.config.outer_gaps.left = x;
-    context.result.config.outer_gaps.right = x;
+    miracle::Gaps outer_gaps;
+    outer_gaps.top = y;
+    outer_gaps.bottom = y;
+    outer_gaps.left = x;
+    outer_gaps.right = x;
+    context.result.config.outer_gaps = outer_gaps;
 }
 
 void read_startup_apps(YAML::Node const& startup_apps, ParsingContext& context)
@@ -523,6 +549,7 @@ void read_startup_apps(YAML::Node const& startup_apps, ParsingContext& context)
         return;
     }
 
+    std::vector<miracle::StartupApp> startup_apps_vec;
     for (auto const& node : startup_apps)
     {
         std::string command;
@@ -557,12 +584,14 @@ void read_startup_apps(YAML::Node const& startup_apps, ParsingContext& context)
                 continue;
         }
 
-        context.result.config.startup_apps.push_back({ .command = std::move(command),
+        startup_apps_vec.push_back({ .command = std::move(command),
             .restart_on_death = restart_on_death,
             .no_startup_id = no_startup_id,
             .should_halt_compositor_on_death = should_halt_compositor_on_death,
             .in_systemd_scope = in_systemd_scope });
     }
+
+    context.result.config.startup_apps = startup_apps_vec;
 }
 
 void read_terminal(YAML::Node const& node, ParsingContext& context)
@@ -583,7 +612,9 @@ void read_terminal(YAML::Node const& node, ParsingContext& context)
 
 void read_resize_jump(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_value(node, context.result.config.resize_jump, context);
+    int resize_jump;
+    if (try_parse_value(node, resize_jump, context))
+        context.result.config.resize_jump = resize_jump;
 }
 
 void read_environment_variables(YAML::Node const& env, ParsingContext& context)
@@ -595,6 +626,7 @@ void read_environment_variables(YAML::Node const& env, ParsingContext& context)
         return;
     }
 
+    std::vector<miracle::EnvironmentVariable> variables;
     for (auto const& node : env)
     {
         std::string key, value;
@@ -602,8 +634,10 @@ void read_environment_variables(YAML::Node const& env, ParsingContext& context)
             continue;
         if (!try_parse_value(node, "value", value, context))
             continue;
-        context.result.config.environment_variables.push_back({ key, value });
+        variables.push_back({ key, value });
     }
+
+    context.result.config.environment_variables = variables;
 }
 
 void read_border(YAML::Node const& border, ParsingContext& context)
@@ -630,6 +664,7 @@ void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)
         return;
     }
 
+    std::vector<miracle::WorkspaceConfig> workspace_configs;
     for (auto const& workspace : workspaces)
     {
         int num;
@@ -648,10 +683,12 @@ void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)
         if (!try_parse_value(workspace, "name", name, context, true))
             continue;
 
-        context.result.config.workspace_configs.push_back({ num,
+        workspace_configs.push_back({ num,
             type,
             name.empty() ? std::optional<std::string>(std::nullopt) : name });
     }
+
+    context.result.config.workspace_configs = workspace_configs;
 }
 
 namespace
@@ -760,57 +797,65 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
 
         size_t const event_as_int = static_cast<size_t>(event.value());
-        context.result.config.animation_definitions[event_as_int].is_default = false;
-        try_parse_value(animation_node, "duration", context.result.config.animation_definitions[event_as_int].duration_seconds, context, true);
-        context.result.config.animation_definitions[event_as_int].animations = animations;
+        context.result.config.animation_definitions.value[event_as_int].is_default = false;
+        try_parse_value(animation_node, "duration", context.result.config.animation_definitions.value[event_as_int].duration_seconds, context, true);
+        context.result.config.animation_definitions.value[event_as_int].animations = animations;
     }
 }
 
 void read_enable_animations(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_value(node, context.result.config.animations_enabled, context);
+    bool animations_enabled;
+    if (try_parse_value(node, animations_enabled, context))
+        context.result.config.animations_enabled = animations_enabled;
 }
 
 void read_move_modifier(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_modifiers(node, context.result.config.move_modifier, context);
+    uint move_modifier;
+    if (try_parse_modifiers(node, move_modifier, context))
+        context.result.config.move_modifier = move_modifier;
 }
 
 void read_drag_and_drop(YAML::Node const& node, ParsingContext& context)
 {
-    try_parse_value(node, "enabled", context.result.config.drag_and_drop.enabled, context, true);
+    miracle::DragAndDropConfiguration drag_and_drop;
+    try_parse_value(node, "enabled", drag_and_drop.enabled, context, true);
     uint modifiers = 0;
     if (node["modifiers"])
     {
         if (!try_parse_modifiers(node["modifiers"], modifiers, context))
             return;
 
-        context.result.config.drag_and_drop.modifiers = modifiers;
+        drag_and_drop.modifiers = modifiers;
     }
+
+    context.result.config.drag_and_drop = drag_and_drop;
 }
 
 void read_mouse(YAML::Node const& node, ParsingContext& context)
 {
+    miral::InputConfiguration::Mouse mouse_configuration;
     auto const handedness = try_parse_string_to_optional_value<std::optional<MirPointerHandedness>>(
         node,
         "handedness",
         from_string_handedness,
         context);
-    context.result.config.mouse_configuration.handedness(handedness);
+    mouse_configuration.handedness(handedness);
 
     double vscroll_speed;
     if (try_parse_value(node, "vscroll_speed", vscroll_speed, context, true))
-        context.result.config.mouse_configuration.vscroll_speed(vscroll_speed);
+        mouse_configuration.vscroll_speed(vscroll_speed);
 
     double hscroll_speed;
     if (try_parse_value(node, "hscroll_speed", hscroll_speed, context, true))
-        context.result.config.mouse_configuration.hscroll_speed(hscroll_speed);
+        mouse_configuration.hscroll_speed(hscroll_speed);
 
     double acceleration_bias;
     if (try_parse_value(node, "acceleration_bias", acceleration_bias, context, true))
     {
         acceleration_bias = std::clamp(acceleration_bias, -1.0, 1.0);
-        context.result.config.mouse_configuration.acceleration_bias(acceleration_bias);
+        mouse_configuration.acceleration_bias(acceleration_bias);
     }
 
     auto const acceleration = try_parse_string_to_optional_value<std::optional<MirPointerAcceleration>>(
@@ -818,7 +863,9 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
         "acceleration",
         from_string_acceleration,
         context);
-    context.result.config.mouse_configuration.acceleration(acceleration);
+    mouse_configuration.acceleration(acceleration);
+
+    context.result.config.mouse_configuration = mouse_configuration;
 }
 
 void read_keyboard(YAML::Node const& node, ParsingContext& context)
@@ -838,6 +885,7 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
 
     if (node["keymap"])
     {
+        miracle::KeymapConfiguration keymap;
         auto const& keymap_node = node["keymap"];
         std::string language;
         if (!try_parse_value(keymap_node, "language", language, context))
@@ -848,14 +896,14 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
         else
         {
             context.result.config.keymap = miracle::KeymapConfiguration();
-            context.result.config.keymap->language = language;
+            keymap.language = language;
             std::string variant;
             if (try_parse_value(keymap_node, "variant", variant, context))
-                context.result.config.keymap->variant = variant;
+                keymap.variant = variant;
             else
-                context.result.config.keymap->variant = std::nullopt;
+                keymap.variant = std::nullopt;
 
-            context.result.config.keymap->options = {};
+            keymap.options = {};
             if (keymap_node["options"])
             {
                 if (!keymap_node["options"].IsSequence())
@@ -871,18 +919,96 @@ void read_keyboard(YAML::Node const& node, ParsingContext& context)
                         if (!try_parse_value(option, name, context))
                             continue;
 
-                        context.result.config.keymap->options.emplace_back(name);
+                        keymap.options.emplace_back(name);
                     }
                 }
             }
         }
+
+        context.result.config.keymap = keymap;
     }
 }
+
+void read_hover_click(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::HoverClickConfiguration hover_click;
+    try_parse_value(node, "enabled", hover_click.enabled, context, true);
+    try_parse_value(node, "hover_duration", hover_click.hover_duration_milliseconds, context, true);
+    try_parse_value(node, "cancel_displacement_threshold", hover_click.cancel_displacement_threshold, context, true);
+    try_parse_value(node, "reclick_displacement_threshold", hover_click.reclick_displacement_threshold, context, true);
+
+    context.result.config.hover_click = hover_click;
 }
 
-miracle::ConfigData::ConfigData() :
-    animation_definitions { internal::default_animation_definitions }
+void read_simulated_secondary_click(YAML::Node const& node, ParsingContext& context)
 {
+    miracle::SimulatedSecondaryClickConfiguration simulated_secondary_click;
+    try_parse_value(node, "enabled", simulated_secondary_click.enabled, context, true);
+    try_parse_value(node, "hold_duration", simulated_secondary_click.hold_duration_milliseconds, context, true);
+    try_parse_value(node, "displacement_threshold", simulated_secondary_click.displacement_threshold, context, true);
+
+    context.result.config.simulated_secondary_click = simulated_secondary_click;
+}
+
+inline std::string expand_tilde_getenv(const std::string& path)
+{
+    if (path.empty() || path[0] != '~')
+    {
+        return path;
+    }
+
+    const char* home_dir = std::getenv("HOME");
+    if (home_dir == nullptr)
+    {
+        return path;
+    }
+
+    std::string expanded_path = home_dir;
+    if (path.length() > 1 && path[1] == '/')
+    {
+        expanded_path += path.substr(1);
+    }
+    else if (path.length() > 1 && path[1] != '/')
+    {
+        return path;
+    }
+    return expanded_path;
+}
+
+void read_output_filter(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::OutputFilterConfiguration output_filter;
+    std::string shader_path;
+    if (try_parse_value(node, "shader_path", shader_path, context, true))
+        output_filter.shader_path = shader_path;
+    else
+        output_filter.shader_path = std::nullopt;
+
+    context.result.config.output_filter = output_filter;
+}
+
+void read_cursor(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::CursorConfiguration cursor;
+    try_parse_value(node, "scale", cursor.scale, context, true);
+    context.result.config.cursor = cursor;
+}
+
+void read_slow_keys(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::SlowKeysConfiguration slow_keys;
+    try_parse_value(node, "enabled", slow_keys.enabled, context, true);
+    try_parse_value(node, "hold_delay", slow_keys.hold_delay_milliseconds, context, true);
+    context.result.config.slow_keys = slow_keys;
+}
+
+void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::StickyKeysConfiguration sticky_keys;
+    try_parse_value(node, "enabled", sticky_keys.enabled, context, true);
+    try_parse_value(node, "should_disable_if_two_keys_are_pressed_together", sticky_keys.should_disable_if_two_keys_are_pressed_together, context, true);
+    context.result.config.sticky_keys = sticky_keys;
+}
 }
 
 miracle::ConfigLoadResult miracle::load_config(std::string const& path)
@@ -892,6 +1018,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
     try
     {
         YAML::Node config = YAML::LoadFile(path);
+        if (config["includes"])
+            read_includes(config["includes"], context);
         if (config["action_key"])
             read_action_key(config["action_key"], context);
         if (config["default_action_overrides"])
@@ -926,6 +1054,18 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_mouse(config["mouse"], context);
         if (config["keyboard"])
             read_keyboard(config["keyboard"], context);
+        if (config["hover_click"])
+            read_hover_click(config["hover_click"], context);
+        if (config["simulated_secondary_click"])
+            read_simulated_secondary_click(config["simulated_secondary_click"], context);
+        if (config["output_filter"])
+            read_output_filter(config["output_filter"], context);
+        if (config["cursor"])
+            read_cursor(config["cursor"], context);
+        if (config["slow_keys"])
+            read_slow_keys(config["slow_keys"], context);
+        if (config["sticky_keys"])
+            read_sticky_keys(config["sticky_keys"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -964,6 +1104,16 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     YAML::Emitter out;
     out << YAML::BeginMap;
 
+    if (config.includes.is_set())
+    {
+        out << YAML::Key << "includes" << YAML::Value << YAML::BeginSeq;
+
+        for (auto const& include : *config.includes)
+            out << include;
+
+        out << YAML::EndSeq;
+    }
+
     // Save primary modifier
     for (auto const& [name, value] : mir_input_event_modifier_opts)
     {
@@ -975,10 +1125,10 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save default action overrides
-    if (!config.built_in_key_command_overrides.empty())
+    if (!config.built_in_key_command_overrides.is_default_value)
     {
         out << YAML::Key << "default_action_overrides" << YAML::Value << YAML::BeginSeq;
-        for (auto const& override : config.built_in_key_command_overrides)
+        for (auto const& override : *config.built_in_key_command_overrides)
         {
             out << YAML::BeginMap;
             out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<uint32_t>(override.default_key_command)];
@@ -998,10 +1148,10 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save custom actions
-    if (!config.custom_key_commands.empty())
+    if (!config.custom_key_commands.is_default_value)
     {
         out << YAML::Key << "custom_actions" << YAML::Value << YAML::BeginSeq;
-        for (auto const& action : config.custom_key_commands)
+        for (auto const& action : *config.custom_key_commands)
         {
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << action.command;
@@ -1021,21 +1171,28 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save gaps
-    out << YAML::Key << "inner_gaps" << YAML::Value << YAML::BeginMap
-        << YAML::Key << "x" << YAML::Value << config.inner_gaps.left
-        << YAML::Key << "y" << YAML::Value << config.inner_gaps.top
-        << YAML::EndMap;
+    if (!config.inner_gaps.is_default_value)
+    {
 
-    out << YAML::Key << "outer_gaps" << YAML::Value << YAML::BeginMap
-        << YAML::Key << "x" << YAML::Value << config.outer_gaps.left
-        << YAML::Key << "y" << YAML::Value << config.outer_gaps.top
-        << YAML::EndMap;
+        out << YAML::Key << "inner_gaps" << YAML::Value << YAML::BeginMap
+            << YAML::Key << "x" << YAML::Value << config.inner_gaps->left
+            << YAML::Key << "y" << YAML::Value << config.inner_gaps->top
+            << YAML::EndMap;
+    }
+
+    if (!config.outer_gaps.is_default_value)
+    {
+        out << YAML::Key << "outer_gaps" << YAML::Value << YAML::BeginMap
+            << YAML::Key << "x" << YAML::Value << config.outer_gaps->left
+            << YAML::Key << "y" << YAML::Value << config.outer_gaps->top
+            << YAML::EndMap;
+    }
 
     // Save startup apps
-    if (!config.startup_apps.empty())
+    if (!config.startup_apps.is_default_value)
     {
         out << YAML::Key << "startup_apps" << YAML::Value << YAML::BeginSeq;
-        for (auto const& app : config.startup_apps)
+        for (auto const& app : *config.startup_apps)
         {
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << app.command;
@@ -1053,17 +1210,17 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save terminal
-    if (config.terminal)
-        out << YAML::Key << "terminal" << YAML::Value << config.terminal.value();
+    if (!config.terminal.is_default_value && *config.terminal)
+        out << YAML::Key << "terminal" << YAML::Value << *config.terminal.value;
 
     // Save resize jump
     out << YAML::Key << "resize_jump" << YAML::Value << config.resize_jump;
 
     // Save environment variables
-    if (!config.environment_variables.empty())
+    if (!config.environment_variables.is_default_value)
     {
         out << YAML::Key << "environment_variables" << YAML::Value << YAML::BeginSeq;
-        for (auto const& var : config.environment_variables)
+        for (auto const& var : *config.environment_variables)
         {
             out << YAML::BeginMap;
             out << YAML::Key << "key" << YAML::Value << var.key;
@@ -1074,11 +1231,11 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save border config
-    if (config.border_config.size > 0)
+    if (!config.border_config.is_default_value)
     {
         out << YAML::Key << "border" << YAML::Value << YAML::BeginMap;
-        out << YAML::Key << "size" << YAML::Value << config.border_config.size;
-        out << YAML::Key << "radius" << YAML::Value << config.border_config.radius;
+        out << YAML::Key << "size" << YAML::Value << config.border_config->size;
+        out << YAML::Key << "radius" << YAML::Value << config.border_config->radius;
 
         // Save colors as hex values
         auto to_hex = [](glm::vec4 const& color)
@@ -1086,16 +1243,16 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             return (static_cast<int>(color.r * 255) << 24) | (static_cast<int>(color.g * 255) << 16) | (static_cast<int>(color.b * 255) << 8) | (static_cast<int>(color.a * 255));
         };
 
-        out << YAML::Key << "color" << YAML::Value << YAML::Hex << to_hex(config.border_config.color);
-        out << YAML::Key << "focus_color" << YAML::Value << YAML::Hex << to_hex(config.border_config.focus_color);
+        out << YAML::Key << "color" << YAML::Value << YAML::Hex << to_hex(config.border_config->color);
+        out << YAML::Key << "focus_color" << YAML::Value << YAML::Hex << to_hex(config.border_config->focus_color);
         out << YAML::EndMap;
     }
 
     // Save workspaces
-    if (!config.workspace_configs.empty())
+    if (!config.workspace_configs.is_default_value)
     {
         out << YAML::Key << "workspaces" << YAML::Value << YAML::BeginSeq;
-        for (auto const& workspace : config.workspace_configs)
+        for (auto const& workspace : *config.workspace_configs)
         {
             out << YAML::BeginMap;
             out << YAML::Key << "number" << YAML::Value << workspace.num.value();
@@ -1116,7 +1273,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
 
     // Save animation definitions
     bool has_custom_animations = false;
-    for (auto const& def : config.animation_definitions)
+    for (auto const& def : *config.animation_definitions)
     {
         if (!def.is_default)
         {
@@ -1130,7 +1287,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "animations" << YAML::Value << YAML::BeginSeq;
         for (size_t i = 0; i < static_cast<size_t>(AnimateableEvent::max); i++)
         {
-            auto const& def = config.animation_definitions[i];
+            auto const& def = config.animation_definitions.value[i];
             if (def.is_default)
                 continue;
 
@@ -1166,7 +1323,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save move modifier
-    if (config.move_modifier != miracle_input_event_modifier_default)
+    if (!config.move_modifier.is_default_value)
     {
         out << YAML::Key << "move_modifier" << YAML::Value << YAML::BeginSeq;
         for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1178,18 +1335,18 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save drag and drop
-    if (!config.drag_and_drop.enabled || config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
+    if (!config.drag_and_drop.is_default_value)
     {
         out << YAML::Key << "drag_and_drop" << YAML::Value << YAML::BeginMap;
-        if (!config.drag_and_drop.enabled)
-            out << YAML::Key << "enabled" << YAML::Value << config.drag_and_drop.enabled;
+        if (!config.drag_and_drop->enabled)
+            out << YAML::Key << "enabled" << YAML::Value << config.drag_and_drop->enabled;
 
-        if (config.drag_and_drop.modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
+        if (config.drag_and_drop->modifiers != (miracle_input_event_modifier_default | mir_input_event_modifier_shift))
         {
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
             {
-                if (config.drag_and_drop.modifiers & value)
+                if (config.drag_and_drop->modifiers & value)
                     out << name;
             }
             out << YAML::EndSeq;
@@ -1198,53 +1355,97 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     }
 
     // Save mouse config only if we're different from the empty mouse config
-    if (!are_mouse_configs_same(config.mouse_configuration, miral::InputConfiguration::Mouse()))
+    if (!config.mouse_configuration.is_default_value)
     {
         out << YAML::Key << "mouse" << YAML::Value << YAML::BeginMap;
 
-        if (config.mouse_configuration.handedness() != std::nullopt)
-            out << YAML::Key << "handedness" << YAML::Value << to_string_handedness(config.mouse_configuration.handedness().value());
-        if (config.mouse_configuration.vscroll_speed() != std::nullopt)
-            out << YAML::Key << "vscroll_speed" << YAML::Value << config.mouse_configuration.vscroll_speed().value();
-        if (config.mouse_configuration.hscroll_speed() != std::nullopt)
-            out << YAML::Key << "hscroll_speed" << YAML::Value << config.mouse_configuration.hscroll_speed().value();
-        if (config.mouse_configuration.acceleration_bias() != std::nullopt)
-            out << YAML::Key << "acceleration_bias" << YAML::Value << config.mouse_configuration.acceleration_bias().value();
-        if (config.mouse_configuration.acceleration() != std::nullopt)
-            out << YAML::Key << "acceleration" << YAML::Value << to_string_acceleration(config.mouse_configuration.acceleration().value());
+        if (config.mouse_configuration->handedness() != std::nullopt)
+            out << YAML::Key << "handedness" << YAML::Value << to_string_handedness(config.mouse_configuration->handedness().value());
+        if (config.mouse_configuration->vscroll_speed() != std::nullopt)
+            out << YAML::Key << "vscroll_speed" << YAML::Value << config.mouse_configuration->vscroll_speed().value();
+        if (config.mouse_configuration->hscroll_speed() != std::nullopt)
+            out << YAML::Key << "hscroll_speed" << YAML::Value << config.mouse_configuration->hscroll_speed().value();
+        if (config.mouse_configuration->acceleration_bias() != std::nullopt)
+            out << YAML::Key << "acceleration_bias" << YAML::Value << config.mouse_configuration->acceleration_bias().value();
+        if (config.mouse_configuration->acceleration() != std::nullopt)
+            out << YAML::Key << "acceleration" << YAML::Value << to_string_acceleration(config.mouse_configuration->acceleration().value());
 
         out << YAML::EndMap;
     }
 
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
-    if (config.keymap || config.keyboard_configuration.repeat_delay() || config.keyboard_configuration.repeat_rate())
-#else
-    if (config.keymap)
-#endif
+    if (!config.keymap.is_default_value)
     {
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
         out << YAML::Key << "keyboard" << YAML::Value << YAML::BeginMap;
-        if (config.keyboard_configuration.repeat_delay())
-            out << YAML::Key << "repeat_delay" << YAML::Value << *config.keyboard_configuration.repeat_delay();
+        if (config.keyboard_configuration->repeat_delay())
+            out << YAML::Key << "repeat_delay" << YAML::Value << *config.keyboard_configuration->repeat_delay();
 
-        if (config.keyboard_configuration.repeat_rate())
-            out << YAML::Key << "repeat_rate" << YAML::Value << *config.keyboard_configuration.repeat_rate();
-#endif
+        if (config.keyboard_configuration->repeat_rate())
+            out << YAML::Key << "repeat_rate" << YAML::Value << *config.keyboard_configuration->repeat_rate();
 
-        if (config.keymap)
+        if (!config.keymap.is_default_value)
         {
             out << YAML::Key << "keymap" << YAML::Value << YAML::BeginMap;
-            out << YAML::Key << "language" << YAML::Value << config.keymap->language;
-            if (config.keymap->variant)
-                out << YAML::Key << "variant" << YAML::Value << *config.keymap->variant;
+            out << YAML::Key << "language" << YAML::Value << config.keymap->value().language;
+            if (config.keymap->value().variant)
+                out << YAML::Key << "variant" << YAML::Value << *config.keymap->value().variant;
             out << YAML::Key << "options" << YAML::Value << YAML::BeginSeq;
-            for (auto const& option : config.keymap->options)
+            for (auto const& option : config.keymap->value().options)
                 out << option;
 
             out << YAML::EndSeq;
             out << YAML::EndMap;
         }
 
+        out << YAML::EndMap;
+    }
+
+    if (!config.hover_click.is_default_value)
+    {
+        out << YAML::Key << "hover_click" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.hover_click->enabled;
+        out << YAML::Key << "hover_duration" << YAML::Value << config.hover_click->hover_duration_milliseconds;
+        out << YAML::Key << "cancel_displacement_threshold" << YAML::Value << config.hover_click->cancel_displacement_threshold;
+        out << YAML::Key << "reclick_displacement_threshold" << YAML::Value << config.hover_click->reclick_displacement_threshold;
+        out << YAML::EndMap;
+    }
+
+    if (!config.simulated_secondary_click.is_default_value)
+    {
+        out << YAML::Key << "simulated_secondary_click" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.simulated_secondary_click->enabled;
+        out << YAML::Key << "hold_duration" << YAML::Value << config.simulated_secondary_click->hold_duration_milliseconds;
+        out << YAML::Key << "displacement_threshold" << YAML::Value << config.simulated_secondary_click->displacement_threshold;
+        out << YAML::EndMap;
+    }
+
+    if (!config.output_filter.is_default_value)
+    {
+        out << YAML::Key << "output_filter" << YAML::Value << YAML::BeginMap;
+        if (config.output_filter->shader_path)
+            out << YAML::Key << "shader_path" << YAML::Value << config.output_filter->shader_path.value();
+        out << YAML::EndMap;
+    }
+
+    if (!config.cursor.is_default_value)
+    {
+        out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "scale" << YAML::Value << config.cursor->scale;
+        out << YAML::EndMap;
+    }
+
+    if (!config.slow_keys.is_default_value)
+    {
+        out << YAML::Key << "slow_keys" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.slow_keys->enabled;
+        out << YAML::Key << "hold_delay" << YAML::Value << config.slow_keys->hold_delay_milliseconds;
+        out << YAML::EndMap;
+    }
+
+    if (!config.sticky_keys.is_default_value)
+    {
+        out << YAML::Key << "sticky_keys" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.sticky_keys->enabled;
+        out << YAML::Key << "should_disable_if_two_keys_are_pressed_together" << YAML::Value << config.sticky_keys->should_disable_if_two_keys_are_pressed_together;
         out << YAML::EndMap;
     }
 
@@ -1296,6 +1497,11 @@ std::string miracle::get_config_path()
     return config_path_stream.str();
 }
 
+std::string miracle::get_user_config_dir()
+{
+    return g_get_user_config_dir();
+}
+
 std::string miracle::get_display_config_path()
 {
     std::stringstream config_path_stream;
@@ -1311,9 +1517,93 @@ std::string miracle::KeymapConfiguration::to_string() const
     if (variant)
     {
         ss << "+" << *variant;
-        for (auto const& option : options)
-            ss << "+" << option;
+    }
+    else
+    {
+        // Warning: The Mir side of things expects some variant
+        // if options are provided. If one isn't supplied, then
+        // we supply the "empty" variant.
+        ss << "+ ";
+    }
+
+    if (!options.empty())
+    {
+        ss << "+";
+        for (size_t i = 0; i < options.size(); i++)
+        {
+            ss << options[i];
+            if (i < options.size() - 1)
+                ss << ",";
+        }
     }
 
     return ss.str();
+}
+
+namespace
+{
+template <typename T>
+std::vector<T> concat_vectors(std::vector<T> const& a, std::vector<T> const& b)
+{
+    std::vector<T> result;
+    result.reserve(a.size() + b.size());
+    result.insert(result.end(), a.begin(), a.end());
+    result.insert(result.end(), b.begin(), b.end());
+    return result;
+}
+
+template <typename T, size_t U>
+std::array<T, U> merge_arrays(
+    std::array<T, U> const& a,
+    std::array<T, U> const& b,
+    std::function<bool(T const&, T const&)> const& compare)
+{
+    std::array<T, U> result;
+    for (size_t i = 0; i < a.size(); i++)
+    {
+        auto const& a_item = a[i];
+        auto const& b_item = b[i];
+        result[i] = compare(a_item, b_item) ? a_item : b_item;
+    }
+
+    return result;
+}
+}
+
+miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
+{
+    // This method merges two configurations. [other] will be given priority over [this]
+    // if it is set.
+    ConfigData result;
+    result.primary_modifier = other.primary_modifier.is_set() ? other.primary_modifier : primary_modifier;
+    result.primary_button = other.primary_button.is_set() ? other.primary_button : primary_button;
+    result.custom_key_commands = concat_vectors(*other.custom_key_commands, *custom_key_commands);
+    result.built_in_key_command_overrides = concat_vectors(*other.built_in_key_command_overrides, *built_in_key_command_overrides);
+    result.inner_gaps = other.inner_gaps.is_set() ? other.inner_gaps : inner_gaps;
+    result.outer_gaps = other.outer_gaps.is_set() ? other.outer_gaps : outer_gaps;
+    result.startup_apps = concat_vectors(*other.startup_apps, *startup_apps);
+    result.terminal = other.terminal.is_set() ? other.terminal : terminal;
+    result.resize_jump = other.resize_jump.is_set() ? other.resize_jump : resize_jump;
+    result.environment_variables = concat_vectors(*other.environment_variables, *environment_variables);
+    result.border_config = other.border_config.is_set() ? other.border_config : border_config;
+    result.animations_enabled = other.animations_enabled.is_set() ? other.animations_enabled : animations_enabled;
+    result.animation_definitions = merge_arrays<AnimationDefinition, static_cast<int>(AnimateableEvent::max)>(*other.animation_definitions, *animation_definitions,
+        [](auto const&, auto const&)
+    { return true; });
+    result.workspace_configs = concat_vectors(*other.workspace_configs, *workspace_configs);
+    result.move_modifier = other.move_modifier.is_set() ? other.move_modifier : move_modifier;
+    result.drag_and_drop = other.drag_and_drop.is_set() ? other.drag_and_drop : drag_and_drop;
+    result.mouse_configuration->merge(*other.mouse_configuration);
+    result.mouse_configuration->merge(*mouse_configuration);
+    result.keyboard_configuration->merge(*other.keyboard_configuration);
+    result.keyboard_configuration->merge(*keyboard_configuration);
+    result.keymap = other.keymap.is_set() ? other.keymap : keymap;
+    result.hover_click = other.hover_click.is_set() ? other.hover_click : hover_click;
+    result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : simulated_secondary_click;
+    result.output_filter = other.output_filter.is_set() ? other.output_filter : output_filter;
+    result.cursor = other.cursor.is_set() ? other.cursor : cursor;
+    result.slow_keys = other.slow_keys.is_set() ? other.slow_keys : slow_keys;
+    result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : sticky_keys;
+    result.includes = concat_vectors(*other.includes, *includes);
+    return result;
 }

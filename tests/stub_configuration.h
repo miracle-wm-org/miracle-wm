@@ -142,6 +142,36 @@ namespace test
             return {};
         }
 
+        HoverClickConfiguration hover_click() const override
+        {
+            return {};
+        }
+
+        SimulatedSecondaryClickConfiguration simulated_secondary_click() const override
+        {
+            return {};
+        }
+
+        OutputFilterConfiguration output_filter() const override
+        {
+            return {};
+        }
+
+        CursorConfiguration cursor() const override
+        {
+            return {};
+        }
+
+        SlowKeysConfiguration slow_keys() const override
+        {
+            return {};
+        }
+
+        StickyKeysConfiguration sticky_keys() const override
+        {
+            return {};
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

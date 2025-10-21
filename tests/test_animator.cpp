@@ -31,8 +31,10 @@ public:
         BuiltInAnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current) :
-        BuiltInAnimation(handle, 1, definition, from, to, current)
+        mir::geometry::Rectangle const& current,
+        float opacity_start,
+        float opacity_end) :
+        BuiltInAnimation(handle, 1, definition, from, to, current, opacity_start, opacity_end)
     {
     }
 
@@ -68,7 +70,8 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
             mir::geometry::Size(0, 0)),
         mir::geometry::Rectangle(
             mir::geometry::Point(0, 0),
-            mir::geometry::Size(0, 0)));
+            mir::geometry::Size(0, 0)),
+        0, 1);
     animator.append(animation);
     animator.tick(0.16f);
     EXPECT_EQ(animation->was_called, true);
@@ -84,7 +87,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
     Animator animator;
     auto const handle = animator.register_animateable();
     BuiltInAnimationDefinition definition {
-        .type = BultInAnimationType::fade_in,
+        .type = BultInAnimationType::fade,
         .function = EaseFunction::linear,
     };
     auto const animation = std::make_shared<test::MockAnimation>(
@@ -99,7 +102,9 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
             mir::geometry::Size(0, 0)),
         mir::geometry::Rectangle(
             mir::geometry::Point(0, 0),
-            mir::geometry::Size(0, 0)));
+            mir::geometry::Size(0, 0)),
+        0,
+        1);
     EXPECT_CALL(*animation, on_tick(OpacityIs(0.f)));
     animator.append(animation);
     EXPECT_CALL(*animation, on_tick(OpacityIs(0.75f)));
@@ -111,7 +116,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
     Animator animator;
     auto const handle = animator.register_animateable();
     BuiltInAnimationDefinition definition {
-        .type = BultInAnimationType::fade_out,
+        .type = BultInAnimationType::fade,
         .function = EaseFunction::linear,
     };
     auto const animation = std::make_shared<test::MockAnimation>(
@@ -126,7 +131,8 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
             mir::geometry::Size(0, 0)),
         mir::geometry::Rectangle(
             mir::geometry::Point(0, 0),
-            mir::geometry::Size(0, 0)));
+            mir::geometry::Size(0, 0)),
+        1, 0);
     EXPECT_CALL(*animation, on_tick(OpacityIs(1.f)));
     animator.append(animation);
     EXPECT_CALL(*animation, on_tick(OpacityIs(0.25f)));

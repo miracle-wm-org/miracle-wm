@@ -42,7 +42,7 @@ public:
         glm::mat4 const& workspace_transform,
         mir::geometry::Rectangle const& output_area,
         std::function<void()> const& on_finish) :
-        MultiBuiltInAnimation(handle, definition, from, to, current),
+        MultiBuiltInAnimation(handle, definition, from, to, current, 1.f, 0.f),
         compositor_state(state),
         surface_(surface),
         on_finish(on_finish)

@@ -582,6 +582,24 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
     EXPECT_EQ(def.animations[0].type, param.expected);
 }
 
+TEST_F(FilesystemConfigurationTest, CanReadSimulatedSecondaryClick)
+{
+    YAML::Node ssc_node;
+    ssc_node["enabled"] = true;
+    ssc_node["hold_duration"] = 123;
+    ssc_node["displacement_threshold"] = 456;
+
+    YAML::Node root;
+    root["simulated_secondary_click"] = ssc_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const ssc = config.simulated_secondary_click();
+    EXPECT_THAT(ssc.enabled, testing::Eq(true));
+    EXPECT_THAT(ssc.hold_duration_milliseconds, testing::Eq(123));
+    EXPECT_THAT(ssc.displacement_threshold, testing::Eq(456));
+}
+
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,
@@ -590,8 +608,7 @@ INSTANTIATE_TEST_SUITE_P(
         AnimationTypeParam("slide", BultInAnimationType::slide),
         AnimationTypeParam("grow", BultInAnimationType::grow),
         AnimationTypeParam("shrink", BultInAnimationType::shrink),
-        AnimationTypeParam("fade_in", BultInAnimationType::fade_in),
-        AnimationTypeParam("fade_out", BultInAnimationType::fade_out)));
+        AnimationTypeParam("fade", BultInAnimationType::fade)));
 
 TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
 {
@@ -606,4 +623,102 @@ TEST_F(FilesystemConfigurationTest, TriggersListenerOnReload)
     EXPECT_CALL(*observer, on_config_changed).Times(1);
 
     FilesystemConfiguration config(registrar, path, true);
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadOutputFilter)
+{
+    YAML::Node output_filter_node;
+    output_filter_node["shader_path"] = "hello.frag";
+
+    YAML::Node root;
+    root["output_filter"] = output_filter_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const output_filter = config.output_filter();
+    EXPECT_THAT(output_filter.shader_path.value(), testing::Eq("hello.frag"));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadOutputFilterWithTilde)
+{
+    setenv("HOME", "/home/user", 1);
+    YAML::Node output_filter_node;
+    output_filter_node["shader_path"] = "~/hello.frag";
+
+    YAML::Node root;
+    root["output_filter"] = output_filter_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const output_filter = config.output_filter();
+    EXPECT_THAT(output_filter.shader_path.value(), testing::Eq("/home/user/hello.frag"));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadCursor)
+{
+    YAML::Node cursor_node;
+    cursor_node["scale"] = 4.f;
+
+    YAML::Node root;
+    root["cursor"] = cursor_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const cursor = config.cursor();
+    EXPECT_THAT(cursor.scale, testing::Eq(4.f));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadSlowKeys)
+{
+    YAML::Node slow_keys_node;
+    slow_keys_node["enabled"] = true;
+    slow_keys_node["hold_delay"] = 500;
+
+    YAML::Node root;
+    root["slow_keys"] = slow_keys_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const slow_keys = config.slow_keys();
+    EXPECT_THAT(slow_keys.enabled, testing::Eq(true));
+    EXPECT_THAT(slow_keys.hold_delay_milliseconds, testing::Eq(500));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadStickyKeys)
+{
+    YAML::Node sticky_keys_node;
+    sticky_keys_node["enabled"] = true;
+    sticky_keys_node["should_disable_if_two_keys_are_pressed_together"] = false;
+
+    YAML::Node root;
+    root["sticky_keys"] = sticky_keys_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const sticky_keys = config.sticky_keys();
+    EXPECT_THAT(sticky_keys.enabled, testing::Eq(true));
+    EXPECT_THAT(sticky_keys.should_disable_if_two_keys_are_pressed_together, testing::Eq(false));
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadIncludes)
+{
+    const std::string include_path = std::filesystem::current_path() / "test_include.yaml";
+
+    // Write main config
+    YAML::Node includes;
+    includes.push_back(include_path);
+    YAML::Node root;
+    root["includes"] = includes;
+    write_yaml_node(root);
+
+    // Write included config
+    {
+        std::ofstream included_file(include_path, std::ios::trunc);
+        included_file << "action_key" << ": " << "alt" << "\n";
+    }
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_THAT(config.get_input_event_modifier(), testing::Eq(mir_input_event_modifier_alt));
+
+    std::filesystem::remove(include_path.c_str());
 }

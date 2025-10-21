@@ -466,7 +466,7 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
 
     for (size_t i = 0; i < nodes.size(); i++)
     {
-        nodes[i]->set_logical_area(pending_node_resizes[i]);
+        nodes[i]->set_logical_area(pending_node_resizes[i], true);
         nodes[i]->commit_changes();
     }
 }

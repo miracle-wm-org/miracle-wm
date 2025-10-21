@@ -124,13 +124,14 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
             else
             {
                 container_list[cursor]->set_logical_area({
-                    geom::Point {
-                                 pos.position,
-                                 placement_area.top_left.y.as_int()  },
-                    geom::Size {
-                                 pos.size,
-                                 placement_area.size.height.as_int() }
-                });
+                                                             geom::Point {
+                                                                          pos.position,
+                                                                          placement_area.top_left.y.as_int()  },
+                                                             geom::Size {
+                                                                          pos.size,
+                                                                          placement_area.size.height.as_int() }
+                },
+                    true);
                 cursor++;
             }
         }
@@ -165,13 +166,14 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
             else
             {
                 container_list[cursor]->set_logical_area({
-                    geom::Point {
-                                 placement_area.top_left.x.as_int(),
-                                 pos.position },
-                    geom::Size {
-                                 placement_area.size.width.as_int(),
-                                 pos.size     }
-                });
+                                                             geom::Point {
+                                                                          placement_area.top_left.x.as_int(),
+                                                                          pos.position },
+                                                             geom::Size {
+                                                                          placement_area.size.width.as_int(),
+                                                                          pos.size     }
+                },
+                    true);
                 cursor++;
             }
         }
@@ -273,7 +275,7 @@ void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int
     auto const rectangle = create_space(index);
     node->set_parent(as_parent(shared_from_this()));
     node->set_workspace(workspace.lock());
-    node->set_logical_area(rectangle);
+    node->set_logical_area(rectangle, true);
     container_list.insert(container_list.begin() + index, node);
     relayout();
     constrain();
@@ -582,7 +584,7 @@ void ParentContainer::relayout()
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width { rectangle.size.width.as_int() + diff_per_node };
             rectangle.size.height = geom::Height { placement_area.size.height };
-            node->set_logical_area(rectangle);
+            node->set_logical_area(rectangle, true);
         }
     }
     else if (scheme == LayoutScheme::vertical)
@@ -600,13 +602,13 @@ void ParentContainer::relayout()
             auto rectangle = node->get_logical_area();
             rectangle.size.width = geom::Width { placement_area.size.width };
             rectangle.size.height = geom::Height { rectangle.size.height.as_int() + diff_per_node };
-            node->set_logical_area(rectangle);
+            node->set_logical_area(rectangle, true);
         }
     }
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
     {
         for (auto const& node : container_list)
-            node->set_logical_area(placement_area);
+            node->set_logical_area(placement_area, true);
     }
     else
     {
@@ -1046,8 +1048,8 @@ void ParentContainer::swap(
     first_container->set_workspace(second_parent->get_workspace());
     second_container->set_parent(first_parent);
     second_container->set_workspace(first_parent->get_workspace());
-    first_container->set_logical_area(second_container->get_logical_area());
-    second_container->set_logical_area(first_logical_area);
+    first_container->set_logical_area(second_container->get_logical_area(), true);
+    second_container->set_logical_area(first_logical_area, true);
     first_parent->commit_changes();
     second_parent->commit_changes();
 

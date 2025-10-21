@@ -30,11 +30,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
+#include <miral/cursor_scale.h>
 #include <miral/custom_renderer.h>
 #include <miral/external_client.h>
+#include <miral/hover_click.h>
 #include <miral/keymap.h>
 #include <miral/magnifier.h>
 #include <miral/runner.h>
+#include <miral/simulated_secondary_click.h>
+#include <miral/slow_keys.h>
+#include <miral/sticky_keys.h>
 #include <miral/wayland_extensions.h>
 #include <miral/window_management_options.h>
 #include <miral/x11_support.h>
@@ -99,6 +104,12 @@ int main(int argc, char const* argv[])
                          .magnification(magnification)
                          .capture_size(capture_size)
                          .enable(true);
+    HoverClick hover_click = HoverClick::disabled();
+    SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
+    CursorScale cursor_scale;
+    SlowKeys slow_keys = SlowKeys::disabled();
+    StickyKeys sticky_keys = StickyKeys::disabled();
+
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
     for (auto const& env : config->get_env_variables())
@@ -111,9 +122,15 @@ int main(int argc, char const* argv[])
     public:
         InputConfigurationConfigObserver(
             InputConfiguration const& input_configuration,
-            Keymap const& keymap) :
+            Keymap const& keymap, HoverClick const& hover_click,
+            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys, StickyKeys const& sticky_keys) :
             input_configuration(input_configuration),
-            keymap(keymap)
+            keymap(keymap),
+            hover_click(hover_click),
+            simulated_secondary_click(simulated_secondary_click),
+            cursor_scale(cursor_scale),
+            slow_keys(slow_keys),
+            sticky_keys(sticky_keys)
         {
         }
 
@@ -138,12 +155,50 @@ int main(int argc, char const* argv[])
             {
                 mir::log_error("Could not set keymap: %s", e.what());
             }
+
+            auto const hover_click_config = config.hover_click();
+            hover_click.hover_duration(std::chrono::milliseconds(hover_click_config.hover_duration_milliseconds));
+            hover_click.cancel_displacement_threshold(hover_click_config.cancel_displacement_threshold);
+            hover_click.reclick_displacement_threshold(hover_click_config.reclick_displacement_threshold);
+            if (hover_click_config.enabled)
+                hover_click.enable();
+            else
+                hover_click.disable();
+
+            auto const simulated_secondary_click_config = config.simulated_secondary_click();
+            simulated_secondary_click.hold_duration(std::chrono::milliseconds(simulated_secondary_click_config.hold_duration_milliseconds));
+            simulated_secondary_click.displacement_threshold(simulated_secondary_click_config.displacement_threshold);
+            if (simulated_secondary_click_config.enabled)
+                simulated_secondary_click.enable();
+            else
+                simulated_secondary_click.disable();
+
+            cursor_scale.scale(config.cursor().scale);
+
+            auto const slow_keys_config = config.slow_keys();
+            slow_keys.hold_delay(std::chrono::milliseconds(slow_keys_config.hold_delay_milliseconds));
+            if (slow_keys_config.enabled)
+                slow_keys.enable();
+            else
+                slow_keys.disable();
+
+            auto const sticky_keys_config = config.sticky_keys();
+            sticky_keys.should_disable_if_two_keys_are_pressed_together(sticky_keys_config.should_disable_if_two_keys_are_pressed_together);
+            if (sticky_keys_config.enabled)
+                sticky_keys.enable();
+            else
+                sticky_keys.disable();
         }
 
     private:
         InputConfiguration input_configuration;
         Keymap keymap;
         bool has_reloaded_keyboard_config = false;
+        HoverClick hover_click;
+        SimulatedSecondaryClick simulated_secondary_click;
+        CursorScale cursor_scale;
+        SlowKeys slow_keys;
+        StickyKeys sticky_keys;
     };
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
@@ -151,7 +206,7 @@ int main(int argc, char const* argv[])
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -185,6 +240,11 @@ int main(int argc, char const* argv[])
             external_client_launcher,
             input_configuration,
             magnifier,
+            hover_click,
+            simulated_secondary_click,
+            cursor_scale,
+            slow_keys,
+            sticky_keys,
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);

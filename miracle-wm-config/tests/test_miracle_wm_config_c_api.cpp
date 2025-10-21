@@ -39,6 +39,19 @@ protected:
     std::unique_ptr<miracle_config_load_result_t> wrapper;
 };
 
+TEST_F(CAPIWrapperTest, CanModifyIncludes)
+{
+    miracle_config_add_include(&wrapper->config, "/home/hi");
+    miracle_config_add_include(&wrapper->config, "/home/bye");
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
+    miracle_config_set_include(&wrapper->config, "/home/meow", 1);
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/meow");
+    miracle_config_remove_include(&wrapper->config, 0);
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(1));
+}
+
 TEST_F(CAPIWrapperTest, CanSetValidPrimaryModifier)
 {
     uint modifier = mir_input_event_modifier_alt;
@@ -710,6 +723,64 @@ TEST_F(CAPIWrapperTest, CanSetKeyRepeatDelay)
 }
 #endif
 
+TEST_F(CAPIWrapperTest, CanSetHoverClickData)
+{
+    miracle_config_set_hover_click(
+        &wrapper->config,
+        true,
+        123,
+        456,
+        789);
+    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
+    EXPECT_EQ(hover_click.enabled, true);
+    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+}
+
+TEST_F(CAPIWrapperTest, CanSetSimulatedSecondaryClickData)
+{
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        true,
+        123,
+        456);
+    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
+    EXPECT_EQ(ssc.enabled, true);
+    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc.displacement_threshold, 456);
+}
+
+TEST_F(CAPIWrapperTest, CanSetOutputFilter)
+{
+    miracle_config_set_output_filter(&wrapper->config, true, "hello");
+    auto const output_filter = miracle_config_get_output_filter(&wrapper->config);
+    EXPECT_EQ(output_filter.shader_path_enabled, true);
+    EXPECT_STREQ(output_filter.shader_path, "hello");
+}
+
+TEST_F(CAPIWrapperTest, CanSetCursor)
+{
+    miracle_config_set_cursor(&wrapper->config, 2.f);
+    EXPECT_EQ(miracle_config_get_cursor(&wrapper->config).scale, 2.f);
+}
+
+TEST_F(CAPIWrapperTest, CanSetSlowKeys)
+{
+    miracle_config_set_slow_keys(&wrapper->config, true, 500);
+    auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
+    EXPECT_EQ(slow_keys.enabled, true);
+    EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
+}
+
+TEST_F(CAPIWrapperTest, CanSetStickyKeys)
+{
+    miracle_config_set_sticky_keys(&wrapper->config, true, false);
+    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
+    EXPECT_EQ(sticky_keys.enabled, true);
+    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -751,6 +822,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     const char* temp_path = "/tmp/miracle_test_roundtrip.yaml";
 
     // Set some config values
+    miracle_config_add_include(&wrapper->config, "/home/hi");
+    miracle_config_add_include(&wrapper->config, "/home/bye");
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
     miracle_config_add_environment_variable(&wrapper->config, "TEST", "VALUE");
@@ -778,6 +851,20 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         "hi");
     miracle_config_set_key_repeat_rate(&wrapper->config, 5);
     miracle_config_set_key_repeat_delay(&wrapper->config, 10);
+    miracle_config_set_hover_click(
+        &wrapper->config,
+        true,
+        123,
+        456,
+        789);
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        true,
+        123,
+        456);
+    miracle_config_set_cursor(&wrapper->config, 2.f);
+    miracle_config_set_slow_keys(&wrapper->config, true, 500);
+    miracle_config_set_sticky_keys(&wrapper->config, true, false);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -790,6 +877,11 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 
     // Verify values match
     auto loaded_config = miracle_config_get_data(load_result);
+
+    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
+    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
+
     EXPECT_EQ(miracle_config_get_primary_modifier(loaded_config), mir_input_event_modifier_alt);
     EXPECT_EQ(miracle_config_get_inner_gaps_x(loaded_config), 20);
 
@@ -827,6 +919,28 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
     EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
 #endif
+
+    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
+    EXPECT_EQ(hover_click.enabled, true);
+    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+
+    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
+    EXPECT_EQ(ssc.enabled, true);
+    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc.displacement_threshold, 456);
+
+    auto const cursor = miracle_config_get_cursor(&wrapper->config);
+    EXPECT_EQ(cursor.scale, 2.f);
+
+    auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
+    EXPECT_EQ(slow_keys.enabled, true);
+    EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
+
+    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
+    EXPECT_EQ(sticky_keys.enabled, true);
+    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
 
     // Clean up
     miracle_config_free(load_result);

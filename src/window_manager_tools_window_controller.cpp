@@ -76,7 +76,9 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
         rect,
         rect,
         this,
-        container);
+        container,
+        0,
+        1);
 
     animator->append(animation);
 }
@@ -118,7 +120,9 @@ void WindowManagerToolsWindowController::set_rectangle(
         to,
         from,
         this,
-        container);
+        container,
+        1,
+        1);
 
     animator->append(animation);
 }
@@ -190,8 +194,10 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
     mir::geometry::Rectangle const& to,
     mir::geometry::Rectangle const& current,
     WindowManagerToolsWindowController* controller,
-    std::shared_ptr<Container> const& container) :
-    MultiBuiltInAnimation(handle, definition, from, to, current),
+    std::shared_ptr<Container> const& container,
+    float opacity_start,
+    float opacity_end) :
+    MultiBuiltInAnimation(handle, definition, from, to, current, opacity_start, opacity_end),
     controller { controller },
     container { container }
 {

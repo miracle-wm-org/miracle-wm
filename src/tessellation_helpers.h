@@ -30,7 +30,7 @@ namespace gl
 {
 
     Primitive tessellate_renderable_into_rectangle(
-        graphics::Renderable const& renderable, geometry::Displacement const& offset);
+        graphics::Renderable const& renderable, geometry::Displacement const& offset, bool const is_flipped);
 
 }
 }

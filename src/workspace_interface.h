@@ -98,6 +98,8 @@ public:
     [[nodiscard]] virtual std::optional<Gaps> inner_gaps() const = 0;
     virtual void inner_gaps(std::optional<Gaps> const& gaps) = 0;
 
+    virtual glm::mat4 transform() const = 0;
+
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_output_focused) const = 0;

@@ -369,7 +369,7 @@ Output::WorkspaceAnimation::WorkspaceAnimation(
     std::shared_ptr<WorkspaceInterface> const& to_workspace,
     std::shared_ptr<WorkspaceInterface> const& from_workspace,
     Output* output) :
-    MultiBuiltInAnimation(handle, definition, from, to, current),
+    MultiBuiltInAnimation(handle, definition, from, to, current, 1.f, 1.f),
     to_workspace { to_workspace },
     from_workspace { from_workspace },
     output { output }

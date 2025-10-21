@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16) # PCH support needs 3.16+
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
-project(miracle-wm VERSION 0.7.0)
+project(miracle-wm VERSION 0.7.1)
 
 # ----------------------------------------
 # Speed tweaks
@@ -235,6 +235,12 @@ install(PROGRAMS
 if(SNAP_BUILD)
     install(PROGRAMS src/miracle-wm-unsnap DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
+
+install(
+    DIRECTORY shaders/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/miracle-wm/shaders
+    FILES_MATCHING PATTERN "*.frag"
+)
 
 # ----------------------------------------
 # Subdirectories

@@ -15,13 +15,35 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_VERSION_H
-#define MIRACLE_WM_VERSION_H
+#ifndef MIRACLE_FILE_HELPERS_H
+#define MIRACLE_FILE_HELPERS_H
+#include <string>
 
-#define MIRACLE_WM_MAJOR 0
-#define MIRACLE_WM_MINOR 7
-#define MIRACLE_WM_PATCH 1
+namespace miracle
+{
+inline std::string expand_tilde_getenv(const std::string& path)
+{
+    if (path.empty() || path[0] != '~')
+    {
+        return path;
+    }
 
-#define MIRACLE_VERSION_STRING "0.7.1"
+    const char* home_dir = std::getenv("HOME");
+    if (home_dir == nullptr)
+    {
+        return path;
+    }
 
-#endif // MIRACLE_WM_VERSION_H
+    std::string expanded_path = home_dir;
+    if (path.length() > 1 && path[1] == '/')
+    {
+        expanded_path += path.substr(1);
+    }
+    else if (path.length() > 1 && path[1] != '/')
+    {
+        return path;
+    }
+    return expanded_path;
+}
+}
+#endif

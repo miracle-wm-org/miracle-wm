@@ -48,7 +48,7 @@ auto tex_coords_from_rect(geom::Size buffer_size, geom::RectangleD sample_rect) 
 }
 
 mgl::Primitive mgl::tessellate_renderable_into_rectangle(
-    mg::Renderable const& renderable, geom::Displacement const& offset)
+    mg::Renderable const& renderable, geom::Displacement const& offset, bool const is_flipped)
 {
     auto rect = renderable.screen_position();
     rect.top_left = rect.top_left - offset;
@@ -65,19 +65,19 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     auto& vertices = rectangle.vertices;
     vertices[0] = {
         { left, top, 0.0f },
-        { tex_left, tex_top }
+        { tex_left, is_flipped ? 1.f - tex_top : tex_top }
     };
     vertices[1] = {
         { left, bottom, 0.0f },
-        { tex_left, tex_bottom }
+        { tex_left, is_flipped ? 1.f - tex_bottom : tex_bottom }
     };
     vertices[2] = {
         { right, top, 0.0f },
-        { tex_right, tex_top }
+        { tex_right, is_flipped ? 1.f - tex_top : tex_top }
     };
     vertices[3] = {
         { right, bottom, 0.0f },
-        { tex_right, tex_bottom }
+        { tex_right, is_flipped ? 1.f - tex_bottom : tex_bottom }
     };
     return rectangle;
 }

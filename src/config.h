@@ -80,6 +80,12 @@ public:
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
     [[nodiscard]] virtual MagnifierConfiguration magnifier() const = 0;
     uint process_modifier(uint modifier) const;
+    [[nodiscard]] virtual HoverClickConfiguration hover_click() const = 0;
+    [[nodiscard]] virtual SimulatedSecondaryClickConfiguration simulated_secondary_click() const = 0;
+    [[nodiscard]] virtual OutputFilterConfiguration output_filter() const = 0;
+    [[nodiscard]] virtual CursorConfiguration cursor() const = 0;
+    [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
+    [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -120,6 +126,12 @@ public:
 #endif
     [[nodiscard]] std::optional<std::string> keymap() const override;
     [[nodiscard]] MagnifierConfiguration magnifier() const override;
+    [[nodiscard]] HoverClickConfiguration hover_click() const override;
+    [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
+    [[nodiscard]] OutputFilterConfiguration output_filter() const override;
+    [[nodiscard]] CursorConfiguration cursor() const;
+    [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
+    [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

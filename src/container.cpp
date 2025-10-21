@@ -42,28 +42,16 @@ ContainerType miracle::container_type_from_string(std::string const& str)
 
 glm::mat4 Container::get_workspace_transform() const
 {
-    // TODO: Cache this transform, right now this is really inefficient.
-    auto output = get_output();
-    if (!output)
+    auto const workspace = get_workspace();
+    if (!workspace)
         return glm::mat4(1.f);
 
-    auto const& workspaces = output->get_workspaces();
-    for (size_t i = 0; i < workspaces.size(); i++)
-    {
-        if (workspaces[i] == get_workspace())
-        {
-            auto const workspace_rect = output->get_workspace_rectangle(i);
-            return glm::translate(
-                glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
-        }
-    }
-
-    return glm::mat4(1.f);
+    return workspace->transform();
 }
 
 glm::mat4 Container::get_output_transform() const
 {
-    auto output = get_output();
+    auto const output = get_output();
     if (!output)
         return glm::mat4(1.f);
 
