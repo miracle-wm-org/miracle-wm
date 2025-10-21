@@ -161,6 +161,7 @@ struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
 
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
+    ConfigData();
     miracle::WithDefaultFlag<uint> primary_modifier = mir_input_event_modifier_meta;
     miracle::WithDefaultFlag<uint> primary_button = mir_pointer_button_primary;
     miracle::WithDefaultFlag<std::vector<CustomKeyCommand>> custom_key_commands;

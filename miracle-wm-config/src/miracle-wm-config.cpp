@@ -1011,6 +1011,11 @@ void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
 }
 }
 
+miracle::ConfigData::ConfigData() :
+    animation_definitions { internal::default_animation_definitions }
+{
+}
+
 miracle::ConfigLoadResult miracle::load_config(std::string const& path)
 {
     ParsingContext context;

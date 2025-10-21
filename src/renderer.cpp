@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "renderer.h"
 #include "compositor_state.h"
 #include "config.h"
+#include "math_helpers.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
 
@@ -458,20 +459,21 @@ Renderer::DrawData Renderer::get_draw_data(
     std::vector<RenderData> const& data) const
 {
     DrawData result = {
-        true, RenderData { .surface = nullptr, .output_area = viewport }
+        true, RenderData { .surface = nullptr, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .alpha = renderable.alpha(), .output_area = viewport }
     };
     if (auto const surface = renderable.surface_if_any())
     {
+        result.data.surface = surface.value();
         for (auto const& item : data)
         {
             if (item.surface == surface.value())
             {
                 result.data = item;
-                // if (item.output_area != viewport)
-                // {
-                //     result.enabled = false;
-                //     return result;
-                // }
+                if (!item.output_area.overlaps(viewport))
+                {
+                    result.enabled = false;
+                    return result;
+                }
                 break;
             }
         }
@@ -534,21 +536,38 @@ void Renderer::draw(
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
-    // if (clip_area)
-    // {
-    //     glEnable(GL_SCISSOR_TEST);
-    //     // The Y-coordinate is always relative to the top, so we make it relative to the bottom.
-    //     auto const clip_y = data.data.output_area.size.height.as_int()
-    //         - clip_area.value().top_left.y.as_int() - clip_area.value().size.height.as_int();
-    //     glm::vec4 clip_pos(clip_area.value().top_left.x.as_int(), clip_y, 0, 1);
-    //     clip_pos = display_transform * data.data.workspace_transform * clip_pos;
-    //
-    //     glScissor(
-    //         static_cast<GLint>((static_cast<int>(clip_pos.x) - viewport.top_left.x.as_int())),
-    //         static_cast<GLint>(clip_pos.y),
-    //         static_cast<GLint>(clip_area.value().size.width.as_int() * x_scale),
-    //         static_cast<GLint>(clip_area.value().size.height.as_int() * y_scale));
-    // }
+    if (clip_area)
+    {
+        // The clip area is relative to the top-left of the output that it is on.
+        // glScissor's coordinates are in terms of the viewport however, where (x,y)
+        // is the bottom-left corner of the scissor box in viewport coordinates.
+        //
+        // Hence, we need to put the clip area in the coordinates of the viewport itself.
+
+        // First, we compute the intersection of the clip area with the viewport.
+        auto const intersection = intersect(*clip_area, viewport);
+        if (!intersection)
+        {
+            glDisable(GL_SCISSOR_TEST);
+            return;
+        }
+
+        // Then we invert and calcualte the scizzor x and y.
+        const auto scissor_x = intersection->top_left.x.as_int() - viewport.top_left.x.as_int();
+        const auto scissor_y = viewport.size.height.as_int()
+            - (intersection->top_left.y.as_int() - viewport.top_left.y.as_int())
+            - intersection->size.height.as_int();
+
+        // TODO: This 2x and 4x scaling is some weird math that I'm doing, and I have no good understanding
+        //  as to why I'm doing it. It works though!
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(
+            static_cast<GLint>(scissor_x * x_scale),
+            static_cast<GLint>(scissor_y * y_scale) - 2 * viewport.size.height.as_int(),
+            static_cast<GLint>(intersection->size.width.as_int() * x_scale),
+            static_cast<GLint>(intersection->size.height.as_int() * y_scale) + 4 * viewport.size.height.as_int());
+    }
+    auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
@@ -577,9 +596,9 @@ void Renderer::draw(
 
     glActiveTexture(GL_TEXTURE0);
 
-    auto const centrex = static_cast<GLfloat>(surface_size.width.as_int()) / 2.0f;
-    auto const centrey = static_cast<GLfloat>(surface_size.height.as_int()) / 2.0f;
-    glUniform2f(prog->center_uniform, centrex, centrey);
+    auto const centerx = surface_pos.x.as_int() + static_cast<GLfloat>(surface_size.width.as_int()) / 2.0f;
+    auto const centery = surface_pos.y.as_int() + static_cast<GLfloat>(surface_size.height.as_int()) / 2.0f;
+    glUniform2f(prog->center_uniform, centerx, centery);
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));

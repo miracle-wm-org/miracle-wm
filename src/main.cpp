@@ -98,7 +98,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
-    float magnification = 2.f;
+    float magnification = 5.f;
     Size capture_size { 100, 100 };
     auto magnifier = Magnifier()
                          .magnification(magnification)
