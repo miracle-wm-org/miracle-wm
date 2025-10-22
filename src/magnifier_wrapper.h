@@ -43,8 +43,8 @@ private:
     bool enabled = false;
     bool has_changed = false;
     float scale = 0;
-    int width = 0;
-    int height = 0;
+    int width = 400;
+    int height = 300;
 };
 }
 

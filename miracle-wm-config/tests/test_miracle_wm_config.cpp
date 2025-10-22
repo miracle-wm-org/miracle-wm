@@ -99,6 +99,9 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     first.sticky_keys = miracle::StickyKeysConfiguration {
         .enabled = false
     };
+    first.magnifier = miracle::MagnifierConfiguration {
+        .enabled = false
+    };
 
     miracle::ConfigData second;
     second.primary_modifier = mir_input_event_modifier_shift;
@@ -161,6 +164,9 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     second.sticky_keys = miracle::StickyKeysConfiguration {
         .enabled = true
     };
+    second.magnifier = miracle::MagnifierConfiguration {
+        .enabled = true
+    };
 
     auto const merged = first.merge_with(second);
     EXPECT_THAT(*merged.primary_modifier, Eq(mir_input_event_modifier_shift));
@@ -200,6 +206,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     EXPECT_THAT(merged.cursor->scale, Eq(4.f));
     EXPECT_THAT(merged.slow_keys->enabled, Eq(true));
     EXPECT_THAT(merged.sticky_keys->enabled, Eq(true));
+    EXPECT_THAT(merged.magnifier->enabled, Eq(true));
 }
 
 TEST_F(KeymapConfigurationTest, KeymapLanguageOnly)

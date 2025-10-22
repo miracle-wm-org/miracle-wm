@@ -373,8 +373,8 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         case DefaultKeyCommand::MagnifierDecreaseSize:
         {
             magnifier->set_size(
-                std::max(magnifier->get_width() - config->magnifier().size_increment, 1),
-                std::max(magnifier->get_height() - config->magnifier().size_increment, 1));
+                std::max(magnifier->get_width() - config->magnifier().size_increment, 100),
+                std::max(magnifier->get_height() - config->magnifier().size_increment, 100));
             return true;
         }
         case DefaultKeyCommand::MagnifierIncreaseScale:
@@ -384,7 +384,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         }
         case DefaultKeyCommand::MagnifierDecreaseScale:
         {
-            magnifier->set_scale(magnifier->get_scale() - config->magnifier().scale_increment);
+            magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
             return true;
         }
         default:

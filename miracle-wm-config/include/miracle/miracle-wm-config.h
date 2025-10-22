@@ -107,7 +107,7 @@ struct MIRACLE_WM_CONFIG_API MagnifierConfiguration
     float scale = 1.5f;
     float scale_increment = 0.5f;
     int width = 400;
-    int height = 300;
+    int height = 400;
     int size_increment = 50;
 };
 

@@ -781,6 +781,25 @@ TEST_F(CAPIWrapperTest, CanSetStickyKeys)
     EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
 }
 
+TEST_F(CAPIWrapperTest, CanSetMagnifier)
+{
+    miracle_magnifier_t magnifier;
+    magnifier.enabled = true;
+    magnifier.scale = 2.f;
+    magnifier.scale_increment = 0.75f;
+    magnifier.width = 800;
+    magnifier.height = 600;
+    magnifier.size_increment = 200;
+    miracle_config_set_magnifier(&wrapper->config, magnifier);
+    auto const magnifier_config = miracle_config_get_magnifier(&wrapper->config);
+    EXPECT_EQ(magnifier_config.enabled, true);
+    EXPECT_EQ(magnifier_config.scale, 2.f);
+    EXPECT_EQ(magnifier_config.scale_increment, 0.75f);
+    EXPECT_EQ(magnifier.width, 800);
+    EXPECT_EQ(magnifier.height, 600);
+    EXPECT_EQ(magnifier.size_increment, 200);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -865,6 +884,14 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     miracle_config_set_cursor(&wrapper->config, 2.f);
     miracle_config_set_slow_keys(&wrapper->config, true, 500);
     miracle_config_set_sticky_keys(&wrapper->config, true, false);
+    miracle_magnifier_t magnifier;
+    magnifier.enabled = true;
+    magnifier.scale = 2.f;
+    magnifier.scale_increment = 0.75f;
+    magnifier.width = 800;
+    magnifier.height = 600;
+    magnifier.size_increment = 200;
+    miracle_config_set_magnifier(&wrapper->config, magnifier);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -941,6 +968,14 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
     EXPECT_EQ(sticky_keys.enabled, true);
     EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
+
+    auto const magnifier_config = miracle_config_get_magnifier(&wrapper->config);
+    EXPECT_EQ(magnifier_config.enabled, true);
+    EXPECT_EQ(magnifier_config.scale, 2.f);
+    EXPECT_EQ(magnifier_config.scale_increment, 0.75f);
+    EXPECT_EQ(magnifier.width, 800);
+    EXPECT_EQ(magnifier.height, 600);
+    EXPECT_EQ(magnifier.size_increment, 200);
 
     // Clean up
     miracle_config_free(load_result);

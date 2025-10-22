@@ -1009,6 +1009,18 @@ void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
     try_parse_value(node, "should_disable_if_two_keys_are_pressed_together", sticky_keys.should_disable_if_two_keys_are_pressed_together, context, true);
     context.result.config.sticky_keys = sticky_keys;
 }
+
+void read_magnifier(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::MagnifierConfiguration magnifier;
+    try_parse_value(node, "enabled", magnifier.enabled, context, true);
+    try_parse_value(node, "scale", magnifier.scale, context, true);
+    try_parse_value(node, "scale_increment", magnifier.scale_increment, context, true);
+    try_parse_value(node, "width", magnifier.width, context, true);
+    try_parse_value(node, "height", magnifier.height, context, true);
+    try_parse_value(node, "size_increment", magnifier.size_increment, context, true);
+    context.result.config.magnifier = magnifier;
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -1071,6 +1083,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_slow_keys(config["slow_keys"], context);
         if (config["sticky_keys"])
             read_sticky_keys(config["sticky_keys"], context);
+        if (config["magnifier"])
+            read_magnifier(config["magnifier"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1454,6 +1468,18 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+    if (!config.magnifier.is_default_value)
+    {
+        out << YAML::Key << "magnifier" << YAML::Value << YAML::BeginMap;
+        out << YAML::Key << "enabled" << YAML::Value << config.magnifier->enabled;
+        out << YAML::Key << "scale" << YAML::Value << config.magnifier->scale;
+        out << YAML::Key << "scale_increment" << YAML::Value << config.magnifier->scale_increment;
+        out << YAML::Key << "width" << YAML::Value << config.magnifier->width;
+        out << YAML::Key << "height" << YAML::Value << config.magnifier->height;
+        out << YAML::Key << "size_increment" << YAML::Value << config.magnifier->size_increment;
+        out << YAML::EndMap;
+    }
+
     // Closing line
     out << YAML::EndMap;
 
@@ -1610,5 +1636,6 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.slow_keys = other.slow_keys.is_set() ? other.slow_keys : slow_keys;
     result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : sticky_keys;
     result.includes = concat_vectors(*other.includes, *includes);
+    result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
     return result;
 }
