@@ -57,7 +57,7 @@ public:
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
         std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
-        miral::Magnifier const& magnifier) :
+        Magnifier const& magnifier) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
@@ -85,7 +85,7 @@ private:
     std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
     std::shared_ptr<miracle::DisplayConfig> display_config;
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
-    miral::Magnifier magnifier;
+    Magnifier magnifier;
 };
 
 int main(int argc, char const* argv[])
@@ -98,12 +98,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
-    float magnification = 5.f;
-    Size capture_size { 100, 100 };
-    auto magnifier = Magnifier()
-                         .magnification(magnification)
-                         .capture_size(capture_size)
-                         .enable(true);
+    Magnifier magnifier;
     HoverClick hover_click = HoverClick::disabled();
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
     CursorScale cursor_scale;
@@ -232,7 +227,7 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, miral::Magnifier()),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,

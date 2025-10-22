@@ -558,12 +558,14 @@ void Renderer::draw(
             - (intersection->top_left.y.as_int() - viewport.top_left.y.as_int())
             - intersection->size.height.as_int();
 
+        glm::vec4 const scissor = data.data.workspace_transform * glm::vec4(scissor_x, scissor_y, 0, 1);
+
         // TODO: This 2x and 4x scaling is some weird math that I'm doing, and I have no good understanding
         //  as to why I'm doing it. It works though!
         glEnable(GL_SCISSOR_TEST);
         glScissor(
-            static_cast<GLint>(scissor_x * x_scale),
-            static_cast<GLint>(scissor_y * y_scale) - 2 * viewport.size.height.as_int(),
+            static_cast<GLint>(scissor.x * x_scale),
+            static_cast<GLint>(scissor.y * y_scale) - 2 * viewport.size.height.as_int(),
             static_cast<GLint>(intersection->size.width.as_int() * x_scale),
             static_cast<GLint>(intersection->size.height.as_int() * y_scale) + 4 * viewport.size.height.as_int());
     }

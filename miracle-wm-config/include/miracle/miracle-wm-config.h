@@ -103,8 +103,9 @@ struct MIRACLE_WM_CONFIG_API KeymapConfiguration
 
 struct MIRACLE_WM_CONFIG_API MagnifierConfiguration
 {
+    bool enabled = true;
     float scale = 1.5f;
-    float scale_increment = 1.f;
+    float scale_increment = 0.5f;
     int width = 400;
     int height = 300;
     int size_increment = 50;

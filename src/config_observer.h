@@ -35,6 +35,7 @@ class ConfigObserverRegistrar : public ObserverRegistrar<ConfigObserver>
 {
 public:
     void advise_config_changed(Config const& config);
+    void advise_first_load(Config const& config);
 };
 }
 

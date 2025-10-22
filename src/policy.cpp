@@ -136,12 +136,22 @@ public:
                 workspace->recalculate_area();
         }
 
-        // policy.magnifier->set_scale(config.magnifier().scale);
-        // policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
+        if (!has_loaded_once)
+        {
+            if (config.magnifier().enabled)
+                policy.magnifier->enable();
+            else
+                policy.magnifier->disable();
+        }
+
+        policy.magnifier->set_scale(config.magnifier().scale);
+        policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
+        has_loaded_once = true;
     }
 
     Policy& policy;
     std::recursive_mutex mutex;
+    bool has_loaded_once = false;
 };
 
 Policy::Policy(
