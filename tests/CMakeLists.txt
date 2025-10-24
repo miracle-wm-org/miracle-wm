@@ -78,5 +78,7 @@ target_link_libraries(miracle-wm-tests
     pthread
     GTest::GTest GTest::Main GTest::gmock)
 
+target_compile_definitions(miracle-wm-tests PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV})
+
 enable_testing()
 

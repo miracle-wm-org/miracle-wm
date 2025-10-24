@@ -45,7 +45,15 @@ jobs:
           mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DEND_TO_END_TESTS=1
+      run: |
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.ppa }}" = "dev" ]; then
+            EXTRA_FLAGS="-DCOMPILING_AGAINST_DEV=1"
+          fi
+          cmake -B ${{ github.workspace }}/build \
+                -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+                -DEND_TO_END_TESTS=1 \
+                $EXTRA_FLAGS
 
     - name: Build
       run:  cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

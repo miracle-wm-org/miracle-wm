@@ -44,6 +44,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
+option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
+if(COMPILING_AGAINST_DEV)
+    set(COMPILING_AGAINST_DEV 1)
+else()
+    set(COMPILING_AGAINST_DEV 0)
+endif()
 
 # ----------------------------------------
 # Compiler warnings
@@ -144,6 +150,8 @@ add_library(miracle-wm-implementation STATIC
         src/config_observer.cpp
         src/binding_event.cpp
 )
+
+target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV})
 
 # ----------------------------------------
 # Precompiled headers for speed
