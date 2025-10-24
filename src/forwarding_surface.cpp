@@ -85,7 +85,7 @@ public:
     }
 #endif
 
-#ifdef MIR_VERSION_2_23_OR_GREATER
+#ifdef MIR_VERSION_2_24_OR_GREATER
     auto opaque_region() const -> std::optional<mir::geometry::Rectangles> override
     {
         return renderable ? renderable->opaque_region() : std::nullopt;

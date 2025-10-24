@@ -304,7 +304,7 @@ public:
     void set_max_height(mir::geometry::Height height) override { }
 #endif
 
-#ifdef MIR_VERSION_2_23_OR_GREATER
+#ifdef MIR_VERSION_2_24_OR_GREATER
     void set_opaque_region(mir::geometry::Rectangles const& region) override { }
 #endif
 };
