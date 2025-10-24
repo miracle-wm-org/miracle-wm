@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/external_client.h>
 #include <miral/hover_click.h>
 #include <miral/keymap.h>
+#include <miral/magnifier.h>
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
 #include <miral/slow_keys.h>
@@ -55,13 +56,15 @@ public:
         std::shared_ptr<miracle::CompositorState> const& compositor_state,
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
-        std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar) :
+        std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
+        Magnifier const& magnifier) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
         output_listener(output_listener),
         display_config(display_config),
-        config_observer_registrar(config_observer_registrar)
+        config_observer_registrar(config_observer_registrar),
+        magnifier(magnifier)
     {
     }
 
@@ -69,7 +72,7 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -82,6 +85,7 @@ private:
     std::shared_ptr<miracle::OutputListenerMultiplexer> output_listener;
     std::shared_ptr<miracle::DisplayConfig> display_config;
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
+    Magnifier magnifier;
 };
 
 int main(int argc, char const* argv[])
@@ -94,6 +98,7 @@ int main(int argc, char const* argv[])
 
     ExternalClientLauncher external_client_launcher;
     InputConfiguration input_configuration;
+    Magnifier magnifier;
     HoverClick hover_click = HoverClick::disabled();
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
     CursorScale cursor_scale;
@@ -127,16 +132,15 @@ int main(int argc, char const* argv[])
         void on_config_changed(miracle::Config const& config) override
         {
             input_configuration.mouse(config.mouse());
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
             // TODO(mattkae): Due to a bug in Mir, it is generally unsafe to reload
-            // the keyboard configuration after the first load, as dead clients (e.g.
-            // swayvnc) can cause the internal listeners in Mir to be fail.
+            //  the keyboard configuration after the first load, as dead clients (e.g.
+            //  swayvnc) can cause the internal listeners in Mir to be fail.
             if (!has_reloaded_keyboard_config)
             {
                 has_reloaded_keyboard_config = true;
                 input_configuration.keyboard(config.keyboard());
             }
-#endif
+
             try
             {
                 if (auto const keymap_val = config.keymap())
@@ -223,13 +227,14 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,
             *display_config,
             external_client_launcher,
             input_configuration,
+            magnifier,
             hover_click,
             simulated_secondary_click,
             cursor_scale,

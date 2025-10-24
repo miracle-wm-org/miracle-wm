@@ -78,6 +78,7 @@ public:
     [[nodiscard]] virtual miral::InputConfiguration::Keyboard keyboard() const = 0;
 #endif
     [[nodiscard]] virtual std::optional<std::string> keymap() const = 0;
+    [[nodiscard]] virtual MagnifierConfiguration magnifier() const = 0;
     uint process_modifier(uint modifier) const;
     [[nodiscard]] virtual HoverClickConfiguration hover_click() const = 0;
     [[nodiscard]] virtual SimulatedSecondaryClickConfiguration simulated_secondary_click() const = 0;
@@ -124,6 +125,7 @@ public:
     [[nodiscard]] miral::InputConfiguration::Keyboard keyboard() const override;
 #endif
     [[nodiscard]] std::optional<std::string> keymap() const override;
+    [[nodiscard]] MagnifierConfiguration magnifier() const override;
     [[nodiscard]] HoverClickConfiguration hover_click() const override;
     [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
     [[nodiscard]] OutputFilterConfiguration output_filter() const override;

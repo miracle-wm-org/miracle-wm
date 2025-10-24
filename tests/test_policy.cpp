@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_configuration.h"
 #include "vertical_display_configuration_policy.h"
 
+#include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
 
@@ -94,7 +95,8 @@ public:
                 compositor_state,
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
-                std::make_shared<ConfigObserverRegistrar>());
+                std::make_shared<ConfigObserverRegistrar>(),
+                miral::Magnifier());
         };
     }
 
@@ -130,7 +132,8 @@ public:
                 compositor_state,
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
-                std::make_shared<ConfigObserverRegistrar>());
+                std::make_shared<ConfigObserverRegistrar>(),
+                miral::Magnifier());
         };
     }
 
@@ -165,7 +168,8 @@ public:
                 compositor_state,
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
-                std::make_shared<ConfigObserverRegistrar>());
+                std::make_shared<ConfigObserverRegistrar>(),
+                miral::Magnifier());
         };
     }
 

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_listener.h"
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
+#include "magnifier_wrapper.h"
 #include "output_factory.h"
 #include "output_listener.h"
 #include "output_manager.h"
@@ -38,7 +39,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
-#include <mir/shell/surface_stack.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/application_info.h>
 #include <miral/runner.h>
@@ -125,7 +125,7 @@ public:
         policy.window_observer_registrar->advise_window_marked(container);
     }
 
-    void on_config_changed(Config const&) override
+    void on_config_changed(Config const& config) override
     {
         // Note: We need to grab the lock because this notification comes from
         // a different thread.
@@ -135,10 +135,23 @@ public:
             for (auto const& workspace : output->get_workspaces())
                 workspace->recalculate_area();
         }
+
+        if (!has_loaded_once)
+        {
+            if (config.magnifier().enabled)
+                policy.magnifier->enable();
+            else
+                policy.magnifier->disable();
+        }
+
+        policy.magnifier->set_scale(config.magnifier().scale);
+        policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
+        has_loaded_once = true;
     }
 
     Policy& policy;
     std::recursive_mutex mutex;
+    bool has_loaded_once = false;
 };
 
 Policy::Policy(
@@ -149,7 +162,8 @@ Policy::Policy(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
     std::shared_ptr<DisplayConfig> const& display_config,
-    std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar) :
+    std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
+    miral::Magnifier const& magnifier) :
     tools { tools },
     config { config },
     state { state },
@@ -192,7 +206,8 @@ Policy::Policy(
         state,
         config,
         animator)),
-    window_observer_registrar(std::make_unique<WindowObserverRegistrar>())
+    window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
@@ -344,6 +359,34 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             return command_controller->toggle_tabbing({});
         case DefaultKeyCommand::ToggleStacking:
             return command_controller->toggle_stacking({});
+        case DefaultKeyCommand::MagnifierOn:
+            return magnifier->enable();
+        case DefaultKeyCommand::MagnifierOff:
+            return magnifier->disable();
+        case DefaultKeyCommand::MagnifierIncreaseSize:
+        {
+            magnifier->set_size(
+                magnifier->get_width() + config->magnifier().size_increment,
+                magnifier->get_height() + config->magnifier().size_increment);
+            return true;
+        }
+        case DefaultKeyCommand::MagnifierDecreaseSize:
+        {
+            magnifier->set_size(
+                std::max(magnifier->get_width() - config->magnifier().size_increment, 100),
+                std::max(magnifier->get_height() - config->magnifier().size_increment, 100));
+            return true;
+        }
+        case DefaultKeyCommand::MagnifierIncreaseScale:
+        {
+            magnifier->set_scale(magnifier->get_scale() + config->magnifier().scale_increment);
+            return true;
+        }
+        case DefaultKeyCommand::MagnifierDecreaseScale:
+        {
+            magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
+            return true;
+        }
         default:
             mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
             break;

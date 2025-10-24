@@ -9,7 +9,6 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <wayland-server-core.h>
 
-#include "mir/log.h"
 #include "mir/wayland/client.h"
 #include "mir/wayland/protocol_error.h"
 

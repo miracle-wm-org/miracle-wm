@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cstdlib>
 #include <glm/glm.hpp>
+#include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
 #include <miral/input_configuration.h>
 #include <miral/version.h>
@@ -98,6 +99,16 @@ struct MIRACLE_WM_CONFIG_API KeymapConfiguration
     std::vector<std::string> options;
 
     [[nodiscard]] std::string to_string() const;
+};
+
+struct MIRACLE_WM_CONFIG_API MagnifierConfiguration
+{
+    bool enabled = true;
+    float scale = 1.5f;
+    float scale_increment = 0.5f;
+    int width = 400;
+    int height = 400;
+    int size_increment = 50;
 };
 
 struct MIRACLE_WM_CONFIG_API HoverClickConfiguration
@@ -177,6 +188,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<CursorConfiguration> cursor;
     miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
+    miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

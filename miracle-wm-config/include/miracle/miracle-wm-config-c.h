@@ -552,6 +552,43 @@ extern "C"
     miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config);
     void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together);
 
+    /// Defines the parameters for the magnifier accessibility feature.
+    typedef struct
+    {
+        /// Whether the magnifier is enabled by default.
+        ///
+        /// Defaults to `false`.
+        bool enabled;
+
+        /// The default scale of the magnifier.
+        ///
+        /// Defaults to 1.5.
+        float scale;
+
+        /// The scale increment of the magnifier.
+        ///
+        /// Defaults to 0.5.
+        float scale_increment;
+
+        /// The default width of the magnifier.
+        ///
+        /// Defaults to 400px.
+        int width;
+
+        /// The default height of the magnifier.
+        ///
+        /// Defaults to 400px.
+        int height;
+
+        /// The size increment of the magnifier.
+        ///
+        /// Defaults to 50px.
+        int size_increment;
+    } miracle_magnifier_t;
+
+    miracle_magnifier_t miracle_config_get_magnifier(const miracle_config_data_t* config);
+    void miracle_config_set_magnifier(miracle_config_data_t* config, miracle_magnifier_t magnifier);
+
 #ifdef __cplusplus
 }
 #endif

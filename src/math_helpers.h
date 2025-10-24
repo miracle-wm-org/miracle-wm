@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MATH_HELPERS_H
 #define MIRACLE_WM_MATH_HELPERS_H
 
+#include <mir/geometry/rectangle.h>
+
 namespace miracle
 {
 template <typename T>
@@ -25,6 +27,10 @@ float as_float(T const& value)
 {
     return static_cast<float>(value.as_int());
 }
+
+std::optional<mir::geometry::Rectangle> intersect(
+    const mir::geometry::Rectangle& a, const mir::geometry::Rectangle& b);
+
 }
 
 #endif // MIRACLE_WM_MATH_HELPERS_H

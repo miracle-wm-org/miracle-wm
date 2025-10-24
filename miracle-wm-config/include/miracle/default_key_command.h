@@ -68,6 +68,12 @@ enum class MIRACLE_WM_CONFIG_API DefaultKeyCommand
     TogglePinnedToWorkspace,
     ToggleTabbing,
     ToggleStacking,
+    MagnifierOn,
+    MagnifierOff,
+    MagnifierIncreaseSize,
+    MagnifierDecreaseSize,
+    MagnifierIncreaseScale,
+    MagnifierDecreaseScale,
     MAX
 };
 
@@ -114,7 +120,13 @@ constexpr std::array<const char*, static_cast<int>(DefaultKeyCommand::MAX)> defa
     "toggle_floating",
     "toggle_pinned_to_workspace",
     "toggle_tabbing",
-    "toggle_stacking"
+    "toggle_stacking",
+    "magnifierOn",
+    "magnifierOff",
+    "magnifierIncreaseSize",
+    "magnifierDecreaseSize",
+    "magnifierIncreaseScale",
+    "magnifierDecreaseScale"
 };
 
 }

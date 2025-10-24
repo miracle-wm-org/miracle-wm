@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <memory>
+#include <miral/magnifier.h>
 #include <miral/window_management_policy.h>
 #include <miral/window_manager_tools.h>
 #include <vector>
@@ -57,6 +58,7 @@ class DyingSurfaceManager;
 class OutputListenerMultiplexer;
 class DisplayConfig;
 class WindowObserverRegistrar;
+class MagnifierWrapper;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -69,7 +71,8 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<DisplayConfig> const& display_config,
-        std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar);
+        std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
+        miral::Magnifier const& magnifier);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -145,6 +148,7 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
+    std::unique_ptr<MagnifierWrapper> magnifier;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

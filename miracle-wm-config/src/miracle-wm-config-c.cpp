@@ -1206,4 +1206,28 @@ extern "C"
         data->sticky_keys->enabled = enabled;
         data->sticky_keys->should_disable_if_two_keys_are_pressed_together = should_disable_if_two_keys_are_pressed_together;
     }
+
+    miracle_magnifier_t miracle_config_get_magnifier(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->magnifier->enabled,
+            data->magnifier->scale,
+            data->magnifier->scale_increment,
+            data->magnifier->width,
+            data->magnifier->height,
+            data->magnifier->size_increment
+        };
+    }
+
+    void miracle_config_set_magnifier(miracle_config_data_t* config, miracle_magnifier_t magnifier)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->magnifier->enabled = magnifier.enabled;
+        data->magnifier->scale = magnifier.scale;
+        data->magnifier->scale_increment = magnifier.scale_increment;
+        data->magnifier->width = magnifier.width;
+        data->magnifier->height = magnifier.height;
+        data->magnifier->size_increment = magnifier.size_increment;
+    }
 } // extern "C"
