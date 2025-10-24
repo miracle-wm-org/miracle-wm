@@ -85,6 +85,13 @@ public:
     }
 #endif
 
+#ifdef MIR_VERSION_2_24_OR_GREATER
+    auto opaque_region() const -> std::optional<mir::geometry::Rectangles> override
+    {
+        return renderable ? renderable->opaque_region() : std::nullopt;
+    }
+#endif
+
 private:
     std::shared_ptr<Renderable> renderable;
     std::shared_ptr<mir::scene::Surface const> animating_surface;

@@ -104,6 +104,10 @@ namespace test
         MOCK_METHOD(void, set_min_height, (mir::geometry::Height), (override));
         MOCK_METHOD(void, set_max_height, (mir::geometry::Height), (override));
 #endif
+
+#ifdef MIR_VERSION_2_24_OR_GREATER
+        MOCK_METHOD(void, set_opaque_region, (mir::geometry::Rectangles const&), (override));
+#endif
     };
 
 }

@@ -116,6 +116,10 @@ public:
     void set_max_height(mir::geometry::Height height) override { surface_->set_max_height(height); }
 #endif
 
+#ifdef MIR_VERSION_2_24_OR_GREATER
+    void set_opaque_region(mir::geometry::Rectangles const& region) override { surface_->set_opaque_region(region); }
+#endif
+
 private:
     std::shared_ptr<mir::scene::Surface> surface_;
 };
