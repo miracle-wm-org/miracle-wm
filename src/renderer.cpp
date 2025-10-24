@@ -552,22 +552,29 @@ void Renderer::draw(
             return;
         }
 
-        // Then we invert and calcualte the scizzor x and y.
+        // Then we invert and calculate the scissor x and y.
         const auto scissor_x = intersection->top_left.x.as_int() - viewport.top_left.x.as_int();
-        const auto scissor_y = viewport.size.height.as_int()
-            - (intersection->top_left.y.as_int() - viewport.top_left.y.as_int())
-            - intersection->size.height.as_int();
+        int scissor_y = 0;
+        switch (output_surface->layout())
+        {
+        case mir::graphics::gl::OutputSurface::Layout::GL:
+            scissor_y = viewport.size.height.as_int()
+                - (intersection->top_left.y.as_int() - viewport.top_left.y.as_int())
+                - intersection->size.height.as_int();
+            break;
+        case mir::graphics::gl::OutputSurface::Layout::TopRowFirst:
+            scissor_y = intersection->top_left.y.as_int() - viewport.top_left.y.as_int();
+            break;
+        }
 
         glm::vec4 const scissor = data.data.workspace_transform * glm::vec4(scissor_x, scissor_y, 0, 1);
 
-        // TODO: This 2x and 4x scaling is some weird math that I'm doing, and I have no good understanding
-        //  as to why I'm doing it. It works though!
         glEnable(GL_SCISSOR_TEST);
         glScissor(
             static_cast<GLint>(scissor.x * x_scale),
-            static_cast<GLint>(scissor.y * y_scale) - 2 * viewport.size.height.as_int(),
+            static_cast<GLint>(scissor.y * y_scale),
             static_cast<GLint>(intersection->size.width.as_int() * x_scale),
-            static_cast<GLint>(intersection->size.height.as_int() * y_scale) + 4 * viewport.size.height.as_int());
+            static_cast<GLint>(intersection->size.height.as_int() * y_scale));
     }
     auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
