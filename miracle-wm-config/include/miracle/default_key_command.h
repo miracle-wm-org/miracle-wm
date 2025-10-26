@@ -121,12 +121,12 @@ constexpr std::array<const char*, static_cast<int>(DefaultKeyCommand::MAX)> defa
     "toggle_pinned_to_workspace",
     "toggle_tabbing",
     "toggle_stacking",
-    "magnifierOn",
-    "magnifierOff",
-    "magnifierIncreaseSize",
-    "magnifierDecreaseSize",
-    "magnifierIncreaseScale",
-    "magnifierDecreaseScale"
+    "magnifier_on",
+    "magnifier_off",
+    "magnifier_increase_size",
+    "magnifier_decrease_size",
+    "magnifier_increase_scale",
+    "magnifier_decrease_scale"
 };
 
 }
