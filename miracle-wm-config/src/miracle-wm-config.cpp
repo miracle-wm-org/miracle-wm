@@ -1025,7 +1025,7 @@ void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
 void read_cursor_focus(YAML::Node const& node, ParsingContext& context)
 {
     miracle::CursorFocusConfiguration cursor_focus_mode_config;
-    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "cursor_focus_mode", from_string_cursor_focus_mode, context))
+    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "mode", from_string_cursor_focus_mode, context))
         cursor_focus_mode_config.mode = mode.value();
 
     context.result.config.cursor_focus = cursor_focus_mode_config;
