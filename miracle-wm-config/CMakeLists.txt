@@ -13,6 +13,7 @@ add_library(miracle-wm-config
     include/miracle/animation_definition.h
     include/miracle/container_type.h
     include/miracle/default_key_command.h
+    include/miracle/cursor_focus_mode.h
     include/miracle/modifiers.h
     src/miracle-wm-config-c.cpp include/miracle/miracle-wm-config-c.h)
 

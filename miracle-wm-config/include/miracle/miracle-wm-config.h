@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animation_definition.h"
 #include "container_type.h"
+#include "cursor_focus_mode.h"
 #include "default_key_command.h"
 #include "export.h"
 #include "gaps.h"
@@ -149,6 +150,11 @@ struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
     bool operator==(const StickyKeysConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API CursorFocusConfiguration
+{
+  CursorFocusMode mode = CursorFocusMode::HoverFocus;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -177,6 +183,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<CursorConfiguration> cursor;
     miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
+    miracle::WithDefaultFlag<CursorFocusConfiguration> cursor_focus;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

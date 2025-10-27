@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle/miracle-wm-config.h"
 #include "miracle/animation_definition_internal.h"
+#include "miracle/cursor_focus_mode.h"
 #include "miracle/gaps.h"
 #include "miracle/keyboard.h"
 #include "miral/hover_click.h"
@@ -129,6 +130,17 @@ std::optional<MirPointerAcceleration> from_string_acceleration(std::string const
         return mir_pointer_acceleration_adaptive;
     else
         return mir_pointer_acceleration_none;
+}
+
+std::optional<miracle::CursorFocusMode> from_string_cursor_focus_mode(std::string const& str, ParsingContext&)
+{
+    for (size_t i = 0; i < miracle::cursor_focus_mode_strings.size(); i++)
+    {
+        if (miracle::cursor_focus_mode_strings[i] == str)
+            return static_cast<miracle::CursorFocusMode>(i);
+    }
+
+    return std::nullopt;
 }
 
 std::string to_string_acceleration(MirPointerAcceleration acceleration)
@@ -1009,6 +1021,15 @@ void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
     try_parse_value(node, "should_disable_if_two_keys_are_pressed_together", sticky_keys.should_disable_if_two_keys_are_pressed_together, context, true);
     context.result.config.sticky_keys = sticky_keys;
 }
+
+void read_cursor_focus(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::CursorFocusConfiguration cursor_focus_mode_config;
+    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "cursor_focus_mode", from_string_cursor_focus_mode, context))
+        cursor_focus_mode_config.mode = mode.value();
+
+    context.result.config.cursor_focus = cursor_focus_mode_config;
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -1071,6 +1092,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_slow_keys(config["slow_keys"], context);
         if (config["sticky_keys"])
             read_sticky_keys(config["sticky_keys"], context);
+        if (config["cursor_focus"])
+            read_cursor_focus(config["cursor_focus"], context);
     }
     catch (YAML::Exception const& e)
     {

@@ -85,6 +85,7 @@ public:
     [[nodiscard]] virtual CursorConfiguration cursor() const = 0;
     [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
+    [[nodiscard]] virtual CursorFocusConfiguration cursor_focus() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -127,9 +128,10 @@ public:
     [[nodiscard]] HoverClickConfiguration hover_click() const override;
     [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
     [[nodiscard]] OutputFilterConfiguration output_filter() const override;
-    [[nodiscard]] CursorConfiguration cursor() const;
+    [[nodiscard]] CursorConfiguration cursor() const override;
     [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
+    [[nodiscard]] CursorFocusConfiguration cursor_focus() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;
