@@ -31,10 +31,10 @@ enum class MIRACLE_WM_CONFIG_API CursorFocusMode
 };
 
 constexpr std::array<const char*, static_cast<int>(CursorFocusMode::MAX)> cursor_focus_mode_strings = {
-  "hover",
-  "click"
+    "hover",
+    "click"
 };
 
 }
 
-#endif // MIRACLE_WM_CONFIG_CURSOR_FOCUS_MODE_H 
+#endif // MIRACLE_WM_CONFIG_CURSOR_FOCUS_MODE_H

@@ -1,4 +1,5 @@
 #include <miracle/animation_definition_internal.h>
+#include <miracle/cursor_focus_mode.h>
 #include <miracle/default_key_command.h>
 #include <miracle/keyboard.h>
 #include <miracle/miracle-wm-config-c.h>
@@ -1168,13 +1169,16 @@ extern "C"
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         return {
-            data->cursor->scale
+            data->cursor->scale,
+            static_cast<uint>(data->cursor->focus_mode)
         };
     }
-    void miracle_config_set_cursor(miracle_config_data_t* config, float scale)
+
+    void miracle_config_set_cursor(miracle_config_data_t* config, float scale, uint focus_mode)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->cursor->scale = scale;
+        data->cursor->focus_mode = static_cast<miracle::CursorFocusMode>(focus_mode);
     }
 
     miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config)

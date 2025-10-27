@@ -761,8 +761,10 @@ TEST_F(CAPIWrapperTest, CanSetOutputFilter)
 
 TEST_F(CAPIWrapperTest, CanSetCursor)
 {
-    miracle_config_set_cursor(&wrapper->config, 2.f);
-    EXPECT_EQ(miracle_config_get_cursor(&wrapper->config).scale, 2.f);
+    miracle_config_set_cursor(&wrapper->config, 2.f, static_cast<uint>(miracle::CursorFocusMode::Click));
+    auto const cursor = miracle_config_get_cursor(&wrapper->config);
+    EXPECT_EQ(cursor.scale, 2.f);
+    EXPECT_EQ(cursor.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
 }
 
 TEST_F(CAPIWrapperTest, CanSetSlowKeys)
@@ -862,7 +864,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         true,
         123,
         456);
-    miracle_config_set_cursor(&wrapper->config, 2.f);
+    miracle_config_set_cursor(&wrapper->config, 2.f, static_cast<uint>(miracle::CursorFocusMode::Click));
     miracle_config_set_slow_keys(&wrapper->config, true, 500);
     miracle_config_set_sticky_keys(&wrapper->config, true, false);
 
@@ -933,6 +935,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 
     auto const cursor = miracle_config_get_cursor(&wrapper->config);
     EXPECT_EQ(cursor.scale, 2.f);
+    EXPECT_EQ(cursor.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
 
     auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
     EXPECT_EQ(slow_keys.enabled, true);

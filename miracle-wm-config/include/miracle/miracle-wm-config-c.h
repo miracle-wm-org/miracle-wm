@@ -514,10 +514,15 @@ extern "C"
         ///
         /// Defaults to 1.
         float scale;
+
+        /// How to focus windows with the cursor.
+        ///
+        /// Defaults to 0 (focus on hover)
+        uint focus_mode; // miracle::CursorFocusMode as uint
     } miracle_cursor_t;
 
     miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config);
-    void miracle_config_set_cursor(miracle_config_data_t* config, float scale);
+    void miracle_config_set_cursor(miracle_config_data_t* config, float scale, uint focus_mode);
 
     typedef struct
     {

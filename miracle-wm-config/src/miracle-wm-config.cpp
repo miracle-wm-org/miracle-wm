@@ -1003,7 +1003,7 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
 {
     miracle::CursorConfiguration cursor;
     try_parse_value(node, "scale", cursor.scale, context, true);
-    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
+    if (auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
         cursor.focus_mode = mode.value();
 
     context.result.config.cursor = cursor;
@@ -1450,6 +1450,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "scale" << YAML::Value << config.cursor->scale;
+        out << YAML::Key << "mode" << YAML::Value << cursor_focus_mode_strings[static_cast<uint32_t>(config.cursor->focus_mode)];
         out << YAML::EndMap;
     }
 
