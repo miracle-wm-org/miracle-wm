@@ -426,7 +426,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 if (auto window = intersected->window().value())
                 {
                     if (state->focused_container() != intersected &&
-                        ( config->cursor_focus().mode == CursorFocusMode::HoverFocus ||
+                        ( config->cursor().focus_mode == CursorFocusMode::Hover ||
                           action == mir_pointer_action_button_down ) )
                         window_controller->select_active_window(window);
                 }

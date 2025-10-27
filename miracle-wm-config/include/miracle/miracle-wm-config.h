@@ -130,6 +130,7 @@ struct MIRACLE_WM_CONFIG_API OutputFilterConfiguration
 struct MIRACLE_WM_CONFIG_API CursorConfiguration
 {
     float scale = 1.f;
+    CursorFocusMode focus_mode = CursorFocusMode::Hover;
 
     bool operator==(const CursorConfiguration&) const = default;
 };
@@ -148,11 +149,6 @@ struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
     bool should_disable_if_two_keys_are_pressed_together = true;
 
     bool operator==(const StickyKeysConfiguration&) const = default;
-};
-
-struct MIRACLE_WM_CONFIG_API CursorFocusConfiguration
-{
-  CursorFocusMode mode = CursorFocusMode::HoverFocus;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData
@@ -183,7 +179,6 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<CursorConfiguration> cursor;
     miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
-    miracle::WithDefaultFlag<CursorFocusConfiguration> cursor_focus;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

@@ -25,14 +25,14 @@ namespace miracle
 {
 enum class MIRACLE_WM_CONFIG_API CursorFocusMode
 {
-    HoverFocus = 0,
-    ClickFocus,
+    Hover = 0,
+    Click,
     MAX
 };
 
 constexpr std::array<const char*, static_cast<int>(CursorFocusMode::MAX)> cursor_focus_mode_strings = {
-  "hover_focus",
-  "click_focus"
+  "hover",
+  "click"
 };
 
 }

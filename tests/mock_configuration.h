@@ -73,7 +73,6 @@ namespace test
         MOCK_METHOD(CursorConfiguration, cursor, (), (const, override));
         MOCK_METHOD(SlowKeysConfiguration, slow_keys, (), (const, override));
         MOCK_METHOD(StickyKeysConfiguration, sticky_keys, (), (const, override));
-        MOCK_METHOD(CursorFocusConfiguration, cursor_focus, (), (const, override));
     };
 }
 }

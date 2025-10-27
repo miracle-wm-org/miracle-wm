@@ -343,12 +343,6 @@ StickyKeysConfiguration FilesystemConfiguration::sticky_keys() const
     return options.sticky_keys;
 }
 
-CursorFocusConfiguration FilesystemConfiguration::cursor_focus() const
-{
-  std::lock_guard lock(mutex);
-  return options.cursor_focus;
-}
-
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;

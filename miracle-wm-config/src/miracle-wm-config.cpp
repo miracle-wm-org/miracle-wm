@@ -1003,6 +1003,9 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
 {
     miracle::CursorConfiguration cursor;
     try_parse_value(node, "scale", cursor.scale, context, true);
+    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
+        cursor.focus_mode = mode.value();
+
     context.result.config.cursor = cursor;
 }
 
@@ -1020,15 +1023,6 @@ void read_sticky_keys(YAML::Node const& node, ParsingContext& context)
     try_parse_value(node, "enabled", sticky_keys.enabled, context, true);
     try_parse_value(node, "should_disable_if_two_keys_are_pressed_together", sticky_keys.should_disable_if_two_keys_are_pressed_together, context, true);
     context.result.config.sticky_keys = sticky_keys;
-}
-
-void read_cursor_focus(YAML::Node const& node, ParsingContext& context)
-{
-    miracle::CursorFocusConfiguration cursor_focus_mode_config;
-    if(auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "mode", from_string_cursor_focus_mode, context))
-        cursor_focus_mode_config.mode = mode.value();
-
-    context.result.config.cursor_focus = cursor_focus_mode_config;
 }
 }
 
@@ -1092,8 +1086,6 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_slow_keys(config["slow_keys"], context);
         if (config["sticky_keys"])
             read_sticky_keys(config["sticky_keys"], context);
-        if (config["cursor_focus"])
-            read_cursor_focus(config["cursor_focus"], context);
     }
     catch (YAML::Exception const& e)
     {
