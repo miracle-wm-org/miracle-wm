@@ -669,13 +669,6 @@ std::shared_ptr<OutputInterface> LeafContainer::get_output() const
     return workspace.lock()->get_output();
 }
 
-glm::mat4 LeafContainer::full_transform() const
-{
-    return get_output_transform()
-        * get_workspace_transform()
-        * get_transform();
-}
-
 glm::mat4 LeafContainer::get_transform() const
 {
     return transform;
@@ -687,7 +680,7 @@ void LeafContainer::set_transform(glm::mat4 transform_)
     state->render_data_manager()->transform_change(id, transform_);
     if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
-        surface->set_transformation(full_transform());
+        surface->set_transformation(get_transform());
     }
 }
 
@@ -701,7 +694,7 @@ void LeafContainer::on_workspace_transform()
     rdm->workspace_transform_change(id, workspace_transform(*this));
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
-        surface->set_transformation(full_transform());
+        surface->set_transformation(get_transform());
     }
 }
 
@@ -720,7 +713,7 @@ void LeafContainer::set_alpha(float const alpha)
     state->render_data_manager()->alpha_change(id, alpha);
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
-        surface->set_transformation(full_transform());
+        surface->set_transformation(get_transform());
     }
 }
 

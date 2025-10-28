@@ -144,7 +144,6 @@ private:
 
     static void handle_resize(Container* container, Direction direction, int amount);
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
-    glm::mat4 full_transform() const;
 };
 
 } // miracle

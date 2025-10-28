@@ -53,7 +53,6 @@ namespace test
         MOCK_METHOD(void, update_area, (geom::Rectangle const& area), (override));
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(void, set_transform, (glm::mat4 const& in), (override));
-        MOCK_METHOD(void, set_position, (glm::vec2 const&), (override));
         MOCK_METHOD(std::shared_ptr<WorkspaceInterface>, active, (), (const, override));
         MOCK_METHOD(std::vector<std::shared_ptr<WorkspaceInterface>> const&, get_workspaces, (), (const, override));
         MOCK_METHOD(geom::Rectangle const&, get_area, (), (const, override));
@@ -61,7 +60,6 @@ namespace test
         MOCK_METHOD(std::string const&, name, (), (const, override));
         MOCK_METHOD(int, id, (), (const, override));
         MOCK_METHOD(glm::mat4, get_transform, (), (const, override));
-        MOCK_METHOD(geom::Rectangle, get_workspace_rectangle, (size_t i), (const, override));
         MOCK_METHOD(WorkspaceInterface const*, workspace, (uint32_t id), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
         MOCK_METHOD(nlohmann::json, get_outputs_json, (bool), (const, override));
@@ -69,7 +67,6 @@ namespace test
         MOCK_METHOD(void, set_defunct, (), (override));
         MOCK_METHOD(void, unset_defunct, (), (override));
         MOCK_METHOD(bool, is_defunct, (), (const, override));
-        MOCK_METHOD(void, handle_workspace_animation, (AnimationFrameResult const&, std::shared_ptr<WorkspaceInterface> const&, std::shared_ptr<WorkspaceInterface> const&), (override));
         MOCK_METHOD(bool, is_primary, (), (const, override));
     };
 

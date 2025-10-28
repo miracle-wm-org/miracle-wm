@@ -60,14 +60,9 @@ public:
     void update_area(geom::Rectangle const& area) override;
     void graft(std::shared_ptr<Container> const& container) override;
     void set_transform(glm::mat4 const& in) override;
-    void set_position(glm::vec2 const&) override;
     void set_info(int id, std::string name) override;
     void set_defunct() override;
     void unset_defunct() override;
-    void handle_workspace_animation(
-        AnimationFrameResult const& result,
-        std::shared_ptr<WorkspaceInterface> const& to,
-        std::shared_ptr<WorkspaceInterface> const& from) override;
 
     [[nodiscard]] std::shared_ptr<WorkspaceInterface> active() const override;
     [[nodiscard]] std::vector<std::shared_ptr<WorkspaceInterface>> const& get_workspaces() const override { return workspaces; }
@@ -77,34 +72,12 @@ public:
     [[nodiscard]] bool is_defunct() const override { return is_defunct_; }
     [[nodiscard]] int id() const override { return id_; }
     [[nodiscard]] glm::mat4 get_transform() const override;
-    [[nodiscard]] geom::Rectangle get_workspace_rectangle(size_t i) const override;
     [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override;
     [[nodiscard]] nlohmann::json get_outputs_json(bool is_focused) const override;
     [[nodiscard]] bool is_primary() const override;
 
 private:
-    class WorkspaceAnimation : public MultiBuiltInAnimation
-    {
-    public:
-        WorkspaceAnimation(
-            AnimationHandle handle,
-            AnimationDefinition definition,
-            mir::geometry::Rectangle const& from,
-            mir::geometry::Rectangle const& to,
-            mir::geometry::Rectangle const& current,
-            std::shared_ptr<WorkspaceInterface> const& to_workspace,
-            std::shared_ptr<WorkspaceInterface> const& from_workspace,
-            Output* output);
-
-        void on_tick(AnimationFrameResult const&) override;
-
-    private:
-        std::shared_ptr<WorkspaceInterface> to_workspace;
-        std::shared_ptr<WorkspaceInterface> from_workspace;
-        Output* output;
-    };
-
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
     Policy* policy;
@@ -121,14 +94,8 @@ private:
     std::vector<miral::Zone> application_zone_list;
     AnimationHandle handle;
 
-    /// The position of the output for scrolling across workspaces
-    glm::vec2 position_offset = glm::vec2(0.f);
-
-    /// The transform applied to the workspace
+    /// The transform applied to the entire output..
     glm::mat4 transform = glm::mat4(1.f);
-
-    /// A matrix resulting from combining position + transform
-    glm::mat4 final_transform = glm::mat4(1.f);
 
     bool is_defunct_ = false;
 };

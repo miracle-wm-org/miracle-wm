@@ -800,7 +800,7 @@ void Policy::handle_workspace_animation(
     std::shared_ptr<WorkspaceInterface> const& from)
 {
     std::lock_guard lock(self->mutex);
-    to->get_output()->handle_workspace_animation(asr, to, from);
+    // TODO?
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(

@@ -79,7 +79,8 @@ public:
             std::make_shared<test::StubConfiguration>(),
             window_controller,
             state,
-            registry))
+            registry,
+            animator))
     {
     }
 
@@ -116,6 +117,7 @@ public:
     std::shared_ptr<test::MockOutput> output;
     std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
+    std::shared_ptr<Animator> animator = std::make_shared<Animator>();
     std::shared_ptr<Workspace> workspace;
 };
 
@@ -232,7 +234,8 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
         std::make_shared<test::StubConfiguration>(),
         window_controller,
         state,
-        registry);
+        registry,
+        animator);
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf(std::nullopt, other.get());
 
@@ -255,7 +258,8 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         std::make_shared<test::StubConfiguration>(),
         window_controller,
         state,
-        registry);
+        registry,
+        animator);
     auto leaf1 = create_leaf();
 
     ASSERT_EQ(leaf1->get_workspace(), workspace);
@@ -313,7 +317,8 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
         std::make_shared<test::StubConfiguration>(),
         window_controller,
         state,
-        registry);
+        registry,
+        animator);
 
     // Assert that the first tree (w/o app zones) is equal to the output size.
     ASSERT_EQ(other->get_root()->get_logical_area(), zone_bounds);

@@ -103,6 +103,67 @@ geom::Rectangle get_output_area(std::shared_ptr<OutputInterface> const& output)
 
     return output->get_area();
 }
+
+class WorkspaceAnimation : public MultiBuiltInAnimation
+{
+public:
+    WorkspaceAnimation(
+        AnimationHandle handle,
+        AnimationDefinition const& definition,
+        mir::geometry::Rectangle const& from,
+        mir::geometry::Rectangle const& to,
+        mir::geometry::Rectangle const& current,
+        float opacity_start,
+        float opacity_end,
+        std::shared_ptr<Workspace> const& workspace,
+        bool is_hiding) :
+        MultiBuiltInAnimation(handle, definition, from, to, current, opacity_start, opacity_end),
+        workspace(workspace),
+        is_hiding(is_hiding)
+    {
+    }
+
+    AnimationFrameResult init() override
+    {
+        auto const locked = workspace.lock();
+        if (!locked)
+            return {};
+
+        locked->on_animation_start(is_hiding);
+        return MultiBuiltInAnimation::init();
+    }
+
+    void on_tick(AnimationFrameResult const& asr) override
+    {
+        auto const locked = workspace.lock();
+        if (!locked)
+            return;
+
+        glm::mat4 matrix(1.f);
+        if (asr.transform)
+            matrix = matrix * asr.transform.value();
+        if (asr.rectangle)
+        {
+            matrix = glm::translate(
+                matrix,
+                glm::vec3(
+                    asr.rectangle->top_left.x.as_value(),
+                    asr.rectangle->top_left.y.as_value(),
+                    0));
+        }
+
+        locked->transform(matrix);
+        if (asr.is_complete)
+        {
+            locked->on_animation_end(is_hiding);
+            return;
+        }
+    }
+
+private:
+    std::weak_ptr<Workspace> workspace;
+    bool is_hiding;
+};
 }
 
 Workspace::Workspace(
@@ -113,7 +174,8 @@ Workspace::Workspace(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& state,
-    std::shared_ptr<WorkspaceObserverRegistrar> const& registry) :
+    std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
+    std::shared_ptr<Animator> const& animator) :
     output { output },
     id_ { id },
     num_ { num },
@@ -121,7 +183,9 @@ Workspace::Workspace(
     window_controller { window_controller },
     state { state },
     registry { registry },
-    config { config }
+    config { config },
+    animator { animator },
+    animation_handle { animator->register_animateable() }
 {
 }
 
@@ -239,25 +303,50 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
         last_selected_container = container;
 }
 
-void Workspace::show()
+void Workspace::show(geom::Point const& origin)
 {
-    // HACK: miral will try to select a newly visible window if none is currently
-    // selected. In most instances, we do not want this, as we would rather
-    // select our [last_selected_container] instead. To work around this, we set
-    // a flag that tells miral not to select the last focused container while we
-    // are in the process of becoming visible.
-    is_showing = true;
-    root()->show();
-    for (auto const& floating : floating_trees)
-        floating->show();
-    is_showing = false;
+    if (!config->are_animations_enabled())
+    {
+        on_animation_end(false);
+        return;
+    }
+
+    auto const area = root()->get_logical_area();
+    auto const animation = std::make_shared<WorkspaceAnimation>(
+        animation_handle,
+        config->get_animation_definition(AnimateableEvent::workspace_switch),
+        geom::Rectangle(origin, area.size),
+        geom::Rectangle(geom::Point(0, 0), area.size),
+        geom::Rectangle(origin, area.size),
+        0,
+        1,
+        shared_from_this(),
+        false);
+
+    animator->append(animation);
 }
 
-void Workspace::hide()
+void Workspace::hide(geom::Point const& end)
 {
-    root()->hide();
-    for (auto const& floating : floating_trees)
-        floating->hide();
+    if (!config->are_animations_enabled())
+    {
+        on_animation_end(true);
+        return;
+    }
+
+    auto const area = root()->get_logical_area();
+    auto const animation = std::make_shared<WorkspaceAnimation>(
+        animation_handle,
+        config->get_animation_definition(AnimateableEvent::workspace_switch),
+        geom::Rectangle(geom::Point(0, 0), area.size),
+        geom::Rectangle(end, area.size),
+        geom::Rectangle(geom::Point(0, 0), area.size),
+        0,
+        1,
+        shared_from_this(),
+        true);
+
+    animator->append(animation);
 }
 
 bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> const& f) const
@@ -418,18 +507,6 @@ void Workspace::set_output(std::shared_ptr<OutputInterface> const& new_output)
     set_area(new_output->get_area());
 }
 
-void Workspace::workspace_transform_change_hack()
-{
-    for (auto const& container : state->containers())
-    {
-        if (auto const locked = container.lock())
-        {
-            if (locked->get_workspace().get() == this)
-                locked->on_workspace_transform();
-        }
-    }
-}
-
 bool Workspace::is_empty() const
 {
     return root()->num_nodes() == 0 && floating_trees.empty();
@@ -469,7 +546,6 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 void Workspace::num(std::optional<int> n)
 {
     num_ = n;
-    workspace_transform_change_hack();
 }
 
 void Workspace::name(std::optional<std::string> const& name)
@@ -499,59 +575,67 @@ void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
     recalculate_area();
 }
 
+void Workspace::transform(glm::mat4 const& transform)
+{
+    transform_ = transform;
+    for (auto const& container : state->containers())
+    {
+        if (auto const locked = container.lock())
+        {
+            if (locked->get_workspace().get() == this)
+                locked->on_workspace_transform();
+        }
+    }
+}
+
 glm::mat4 Workspace::transform() const
 {
-    auto const output = get_output();
-    if (!output)
-        return glm::mat4(1.f);
-
-    // The workspace transform is calculated based off the index of the workspace in
-    // the output that owns it. This value is cached to avoid recalculating it over
-    // and over again. If the index of the workspace changes, the transform is
-    // recalculated on the next access.
-    auto const& workspaces = output->get_workspaces();
-    for (size_t i = 0; i < workspaces.size(); i++)
-    {
-        if (workspaces[i].get() == this)
-        {
-            if (workspace_index == i)
-                return cached_transform;
-
-            auto const workspace_rect = output->get_workspace_rectangle(i);
-            workspace_index = static_cast<int>(i);
-            cached_transform = glm::translate(
-                glm::vec3(workspace_rect.top_left.x.as_int(), workspace_rect.top_left.y.as_int(), 0));
-            return cached_transform;
-        }
-    }
-
-    mir::log_error("Cannot resolve workspace transform for workspace %d", id());
-    return glm::mat4(1.f);
+    return transform_;
 }
 
-void Workspace::on_animation_start()
+void Workspace::on_animation_start(bool is_hiding)
 {
-    if (auto const sh_last_selected = last_selected_container.lock())
-    {
-        if (sh_last_selected->window().has_value())
-            window_controller->select_active_window(sh_last_selected->window().value());
-        return;
-    }
+    // HACK: miral will try to select a newly visible window if none is currently
+    // selected. In most instances, we do not want this, as we would rather
+    // select our [last_selected_container] instead. To work around this, we set
+    // a flag that tells miral not to select the last focused container while we
+    // are in the process of becoming visible.
+    is_showing = true;
+    root()->show();
+    for (auto const& floating : floating_trees)
+        floating->show();
+    is_showing = false;
 
-    for_each_window([&](std::shared_ptr<Container> const& container)
+    if (!is_hiding)
     {
-        if (container->window().has_value())
+        if (auto const sh_last_selected = last_selected_container.lock())
         {
-            window_controller->select_active_window(container->window().value());
-            return true;
+            if (sh_last_selected->window().has_value())
+                window_controller->select_active_window(sh_last_selected->window().value());
+            return;
         }
 
-        return false;
-    });
+        for_each_window([&](std::shared_ptr<Container> const& container)
+        {
+            if (container->window().has_value())
+            {
+                window_controller->select_active_window(container->window().value());
+                return true;
+            }
+
+            return false;
+        });
+    }
 }
 
-void Workspace::on_animation_end()
+void Workspace::on_animation_end(bool is_hiding)
 {
+    if (is_hiding)
+    {
+        root()->hide();
+        for (auto const& floating : floating_trees)
+            floating->hide();
+    }
 }
 
 std::shared_ptr<ParentContainer> Workspace::get_layout_container()

@@ -87,7 +87,6 @@ public:
     /// on the active [Workspace].
     virtual void graft(std::shared_ptr<Container> const& container) = 0;
     virtual void set_transform(glm::mat4 const& in) = 0;
-    virtual void set_position(glm::vec2 const&) = 0;
 
     /// Set the [id] and [name] associated with this output.
     virtual void set_info(int id, std::string name) = 0;
@@ -96,11 +95,6 @@ public:
     /// around to be reassociated with a "true" output.
     virtual void set_defunct() = 0;
     virtual void unset_defunct() = 0;
-    virtual void handle_workspace_animation(
-        AnimationFrameResult const& result,
-        std::shared_ptr<WorkspaceInterface> const& to,
-        std::shared_ptr<WorkspaceInterface> const& from)
-        = 0;
 
     // Getters
     [[nodiscard]] virtual std::shared_ptr<WorkspaceInterface> active() const = 0;
@@ -120,7 +114,6 @@ public:
     ///
     /// \returns the transformation
     [[nodiscard]] virtual glm::mat4 get_transform() const = 0;
-    [[nodiscard]] virtual geom::Rectangle get_workspace_rectangle(size_t i) const = 0;
     [[nodiscard]] virtual WorkspaceInterface const* workspace(uint32_t id) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_focused) const = 0;
     [[nodiscard]] virtual bool is_primary() const = 0;

@@ -46,8 +46,8 @@ namespace test
 
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(bool, move_container, (Direction direction, Container&), (override));
-        MOCK_METHOD(void, show, (), (override));
-        MOCK_METHOD(void, hide, (), (override));
+        MOCK_METHOD(void, show, (geom::Point const&), (override));
+        MOCK_METHOD(void, hide, (geom::Point const&), (override));
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, create_floating_tree, (mir::geometry::Rectangle const&), (override));
 
@@ -62,8 +62,6 @@ namespace test
 
         MOCK_METHOD(void, set_output, (std::shared_ptr<OutputInterface> const&), (override));
 
-        MOCK_METHOD(void, workspace_transform_change_hack, (), (override));
-
         MOCK_METHOD(bool, is_empty, (), (const, override));
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const&), (override));
 
@@ -76,8 +74,8 @@ namespace test
         MOCK_METHOD(void, name, (std::optional<std::string> const&), (override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
-        MOCK_METHOD(void, on_animation_start, (), (override));
-        MOCK_METHOD(void, on_animation_end, (), (override));
+        MOCK_METHOD(void, on_animation_start, (bool), (override));
+        MOCK_METHOD(void, on_animation_end, (bool), (override));
 
         MOCK_METHOD(std::optional<Gaps>, outer_gaps, (), (const, override));
         MOCK_METHOD(void, outer_gaps, (std::optional<Gaps> const&), (override));
@@ -85,6 +83,7 @@ namespace test
         MOCK_METHOD(std::optional<Gaps>, inner_gaps, (), (const, override));
         MOCK_METHOD(void, inner_gaps, (std::optional<Gaps> const&), (override));
 
+        MOCK_METHOD(void, transform, (glm::mat4 const&), (override));
         MOCK_METHOD(glm::mat4, transform, (), (const, override));
     };
 }
