@@ -271,6 +271,7 @@ TEST_F(SingleWindowPolicyTest, can_move_container_to_workspace_that_doesnt_have_
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window1 = create_window(app, spec);
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
 
     {
         // Move to workspace 2

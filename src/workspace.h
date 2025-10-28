@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
+#include "animator.h"
 #include "workspace_interface.h"
 
 #include <memory>
@@ -30,6 +31,7 @@ class WindowController;
 class Config;
 class CompositorState;
 class WorkspaceObserverRegistrar;
+class Animator;
 
 struct WorkspaceIdentifier
 {
@@ -48,7 +50,8 @@ public:
         std::shared_ptr<Config> const& config,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& state,
-        std::shared_ptr<WorkspaceObserverRegistrar> const& registry);
+        std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
+        std::shared_ptr<Animator> const& animator);
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
@@ -62,19 +65,18 @@ public:
     void delete_container(std::shared_ptr<Container> const& container) override;
     bool move_container(Direction direction, Container&) override;
     bool add_to_root(Container& to_move) override;
-    void show() override;
-    void hide() override;
+    void show(mir::geometry::Point const& origin) override;
+    void hide(mir::geometry::Point const& end) override;
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> const& other) override;
     bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
     [[nodiscard]] std::shared_ptr<OutputInterface> get_output() const override;
     void set_output(std::shared_ptr<OutputInterface> const&) override;
-    void workspace_transform_change_hack() override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
-    void on_animation_start() override;
-    void on_animation_end() override;
+    void on_animation_start(bool is_hiding) override;
+    void on_animation_end(bool is_hiding) override;
     [[nodiscard]] uint32_t id() const override { return id_; }
     [[nodiscard]] std::optional<int> num() const override { return num_; }
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
@@ -84,6 +86,7 @@ public:
     void outer_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] std::optional<Gaps> inner_gaps() const override;
     void inner_gaps(std::optional<Gaps> const& gaps) override;
+    void transform(glm::mat4 const&) override;
     glm::mat4 transform() const override;
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
@@ -116,12 +119,13 @@ private:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WorkspaceObserverRegistrar> registry;
     std::shared_ptr<Config> config;
+    std::shared_ptr<Animator> animator;
+    AnimationHandle animation_handle;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
     std::optional<Gaps> workspace_outer_gaps;
     std::optional<Gaps> workspace_inner_gaps;
-    mutable int workspace_index = -1;
-    mutable glm::mat4 cached_transform;
+    glm::mat4 transform_;
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

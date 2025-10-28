@@ -59,11 +59,7 @@ Output::Output(
     config { config },
     window_controller { window_controller },
     animator { animator },
-    handle { animator->register_animateable() },
-    position_offset { 0.f, 0.f },
-    transform { glm::mat4(1.f) },
-    final_transform { glm::mat4(1.f) },
-    is_defunct_ { false }
+    handle { animator->register_animateable() }
 {
 }
 
@@ -86,8 +82,22 @@ std::shared_ptr<Container> Output::intersect(float x, float y)
     if (animator->is_animating(handle))
         return nullptr;
 
-    if (auto const window = window_controller->window_at(x, y))
-        return window_controller->get_container(window);
+    if (auto const active_workspace = active())
+    {
+        std::shared_ptr<Container> result = nullptr;
+        active_workspace->for_each_window([&](std::shared_ptr<Container> const& container)
+        {
+            if (container->get_visible_area().contains(geom::Point(x, y)))
+            {
+                result = container;
+                return true;
+            }
+
+            return false;
+        });
+
+        return result;
+    }
 
     return nullptr;
 }
@@ -182,7 +192,7 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     auto const new_workspace = std::make_shared<Workspace>(
-        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar);
+        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar, animator);
     insert_workspace_sorted(new_workspace);
 }
 
@@ -277,149 +287,24 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     if (!from || to == from)
     {
         active_workspace = to;
-        to->show();
-
-        auto const to_rectangle = get_workspace_rectangle(to_index);
-        set_position(glm::vec2(
-            -to_rectangle.top_left.x.as_int(),
-            -to_rectangle.top_left.y.as_int()));
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        to->workspace_transform_change_hack();
-#pragma GCC diagnostic pop
+        to->show(geom::Point(0, 0));
         return true;
     }
 
-    // If we have a 'from' and a 'to', we want to animate between them.
-
-    // Note: It is very important that [active_workspace] be modified before notifications
-    // are sent out.
+    // It is very important that [active_workspace] be modified before notifications are sent out.
     active_workspace = to;
 
-    auto const from_src = get_workspace_rectangle(from_index);
-    auto const to_src = get_workspace_rectangle(to_index);
     from->transfer_pinned_windows_to(to);
+    auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
+    auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
+    to->show(to_start);
 
-    geom::Rectangle const real {
-        { geom::X { position_offset.x }, geom::Y { position_offset.y } },
-        area.size
-    };
-    geom::Rectangle const src {
-        { geom::X { -from_src.top_left.x.as_int() }, geom::Y { from_src.top_left.y.as_int() } },
-        area.size
-    };
-    geom::Rectangle const dest {
-        { geom::X { -to_src.top_left.x.as_int() }, geom::Y { to_src.top_left.y.as_int() } },
-        area.size
-    };
-
-    // If 'from' is empty, we can delete the workspace. However, this means that from_src is now incorrect
+    // If [from] is empty, we can delete the workspace.
     if (from->is_empty())
         workspace_manager.delete_workspace(from->id());
-
-    if (!config->are_animations_enabled())
-    {
-        to->show();
-        from->hide();
-        to->on_animation_start();
-        handle_workspace_animation(
-            AnimationFrameResult {
-                true,
-                dest,
-                glm::mat4(1.f),
-                std::nullopt },
-            to,
-            from);
-        to->on_animation_end();
-        return true;
-    }
-
-    auto const animation = std::make_shared<WorkspaceAnimation>(
-        handle,
-        config->get_animation_definition(AnimateableEvent::workspace_switch),
-        src,
-        dest,
-        real,
-        to,
-        from,
-        this);
-
-    animator->append(animation);
-
-    // Show all workspaces so that we can animate over all workspaces.
-    // Important: Make sure that we show _after_ the "append" has
-    // happened so that we are showing with the correct initial
-    // transform.
-    for (auto const& workspace : workspaces)
-    {
-        if (workspace != from)
-            workspace->show();
-    }
-
-    to->on_animation_start();
+    else
+        from->hide(from_end);
     return true;
-}
-
-Output::WorkspaceAnimation::WorkspaceAnimation(
-    AnimationHandle handle,
-    AnimationDefinition definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current,
-    std::shared_ptr<WorkspaceInterface> const& to_workspace,
-    std::shared_ptr<WorkspaceInterface> const& from_workspace,
-    Output* output) :
-    MultiBuiltInAnimation(handle, definition, from, to, current, 1.f, 1.f),
-    to_workspace { to_workspace },
-    from_workspace { from_workspace },
-    output { output }
-{
-}
-
-void Output::WorkspaceAnimation::on_tick(miracle::AnimationFrameResult const& asr)
-{
-    output->policy->main_loop()->enqueue(this, [asr = asr, to_workspace = to_workspace, from_workspace = from_workspace, output = output]()
-    {
-        output->policy->handle_workspace_animation(asr, to_workspace, from_workspace);
-    });
-}
-
-void Output::handle_workspace_animation(
-    AnimationFrameResult const& asr,
-    std::shared_ptr<WorkspaceInterface> const& to,
-    std::shared_ptr<WorkspaceInterface> const&)
-{
-    auto const rectangle = asr.rectangle;
-    if (asr.is_complete)
-    {
-        if (rectangle)
-            set_position(glm::vec2(rectangle->top_left.x.as_int(), rectangle->top_left.y.as_int()));
-        if (asr.transform)
-            set_transform(asr.transform.value());
-
-        for (auto const& workspace : workspaces)
-        {
-            if (workspace != to)
-                workspace->hide();
-        }
-
-        to->workspace_transform_change_hack();
-        to->on_animation_end();
-        return;
-    }
-
-    if (rectangle)
-        set_position(glm::vec2(rectangle->top_left.x.as_int(), rectangle->top_left.y.as_int()));
-    if (asr.transform)
-        set_transform(asr.transform.value());
-
-    for (auto const& workspace : workspaces)
-    {
-        if (!workspace)
-            continue;
-
-        workspace->workspace_transform_change_hack();
-    }
 }
 
 void Output::advise_application_zone_create(miral::Zone const& application_zone)
@@ -475,32 +360,6 @@ void Output::graft(std::shared_ptr<Container> const& container)
     active()->graft(container);
 }
 
-geom::Rectangle Output::get_workspace_rectangle(size_t i) const
-{
-    // TODO: Support vertical workspaces one day in the future
-    auto const& workspace = workspaces[i];
-    size_t x = 0;
-    if (workspace->num())
-        x = static_cast<size_t>((workspace->num().value() - 1) * area.size.width.as_int());
-    else
-    {
-        // Find the index of the first non-numbered workspace
-        size_t j = 0;
-        for (; j < workspaces.size(); j++)
-        {
-            if (workspaces[j]->num() == std::nullopt)
-                break;
-        }
-
-        x = (WorkspaceManager::NUM_DEFAULT_WORKSPACES - 1) + (i - j) * static_cast<size_t>(area.size.width.as_int());
-    }
-
-    return geom::Rectangle {
-        geom::Point { geom::X { x },            geom::Y { 0 }             },
-        geom::Size { area.size.width.as_int(), area.size.height.as_int() }
-    };
-}
-
 [[nodiscard]] WorkspaceInterface const* Output::workspace(uint32_t id) const
 {
     for (auto const& workspace : workspaces)
@@ -514,19 +373,12 @@ geom::Rectangle Output::get_workspace_rectangle(size_t i) const
 
 glm::mat4 Output::get_transform() const
 {
-    return final_transform;
+    return transform;
 }
 
 void Output::set_transform(glm::mat4 const& in)
 {
     transform = in;
-    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
-}
-
-void Output::set_position(glm::vec2 const& v)
-{
-    position_offset = v;
-    final_transform = glm::translate(transform, glm::vec3(position_offset.x, position_offset.y, 0));
 }
 
 void Output::set_info(int next_id, std::string next_name)

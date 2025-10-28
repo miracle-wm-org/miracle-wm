@@ -58,8 +58,16 @@ public:
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual bool move_container(Direction direction, Container&) = 0;
     virtual bool add_to_root(Container& to_move) = 0;
-    virtual void show() = 0;
-    virtual void hide() = 0;
+
+    /// Show the workspace.
+    ///
+    /// \param origin the position that the animation should happen from.
+    virtual void show(mir::geometry::Point const& origin) = 0;
+
+    /// Hide the workspace.
+    ///
+    /// \param end the position that the workspace will end up at.
+    virtual void hide(mir::geometry::Point const& end) = 0;
 
     virtual void transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> const& other) = 0;
 
@@ -78,13 +86,10 @@ public:
 
     virtual void set_output(std::shared_ptr<OutputInterface> const&) = 0;
 
-    virtual void workspace_transform_change_hack()
-        = 0;
-
     [[nodiscard]] virtual bool is_empty() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;
-    virtual void on_animation_start() = 0;
-    virtual void on_animation_end() = 0;
+    virtual void on_animation_start(bool is_hiding) = 0;
+    virtual void on_animation_end(bool is_hiding) = 0;
 
     [[nodiscard]] virtual uint32_t id() const = 0;
     [[nodiscard]] virtual std::optional<int> num() const = 0;
@@ -98,6 +103,12 @@ public:
     [[nodiscard]] virtual std::optional<Gaps> inner_gaps() const = 0;
     virtual void inner_gaps(std::optional<Gaps> const& gaps) = 0;
 
+    /// Sets the transformation for this workspace.
+    virtual void transform(glm::mat4 const&) = 0;
+
+    /// Retrieve the transformation for this workspace.
+    ///
+    /// \returns the workspace transforms
     virtual glm::mat4 transform() const = 0;
 
     /// Json returned to IPC GET_WORKSPACES command.
