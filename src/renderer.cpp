@@ -611,7 +611,11 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));
-    glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
+
+    auto const border_config = config->get_border_config();
+    glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? border_config.radius : 0);
+    glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
+
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
 

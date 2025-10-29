@@ -225,6 +225,7 @@ precision mediump float;
 uniform float alpha;
 uniform vec2 surfaceSize;
 uniform float borderRadius;
+uniform float borderWidth;
 
 varying vec2 v_texcoord;  // This is going to be [0, 1]
 
@@ -236,7 +237,8 @@ float roundedRectSDF(vec2 p, vec2 size, float r) {
 
 void main() {
     vec2 pixelPos = v_texcoord * surfaceSize;
-    float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
+    float innerRadius = max(borderRadius - borderWidth, 0.0);
+    float sdf = roundedRectSDF(pixelPos, surfaceSize, innerRadius);
     float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
 
     vec4 contentColor = alpha * sample_to_rgba(v_texcoord);
