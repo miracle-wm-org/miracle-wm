@@ -75,7 +75,8 @@ public:
     std::shared_ptr<OutputInterface> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
-    void on_workspace_transform() override;
+    void set_workspace_transform(glm::mat4 const&) override;
+    void set_workspace_alpha(float a) override;
     glm::mat4 get_workspace_transform() const override;
     glm::mat4 get_output_transform() const override;
     void set_alpha(float const alpha) override;

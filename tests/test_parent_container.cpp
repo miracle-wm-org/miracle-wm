@@ -156,8 +156,8 @@ TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsOnDifferentWorkspace
     Mock::AllowLeak(container3.get());
 
     // Act: Swap the containers on different parent
-    EXPECT_CALL(*container1, on_workspace_transform());
-    EXPECT_CALL(*container2, on_workspace_transform());
+    EXPECT_CALL(*container1, set_workspace(testing::_));
+    EXPECT_CALL(*container2, set_workspace(testing::_));
 
     ParentContainer::swap(
         first_parent_data.parent,

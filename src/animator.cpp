@@ -418,7 +418,7 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     {
         auto const p = ease(definition, t);
         float opacity_diff = opacity_end - opacity_start;
-        return { false, to, std::nullopt, opacity_start + opacity_diff * p };
+        return { false, std::nullopt, std::nullopt, opacity_start + opacity_diff * p };
     }
     case BultInAnimationType::disabled:
     default:

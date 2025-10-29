@@ -34,6 +34,7 @@ TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     auto result = render_data_manager.get();
@@ -41,6 +42,7 @@ TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
     ASSERT_TRUE(result[0].needs_outline);
     ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }
@@ -52,6 +54,7 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     render_data_manager.transform_change(id, glm::mat4(2.f));
@@ -62,6 +65,7 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
     ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(2.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }
 
@@ -72,6 +76,7 @@ TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     render_data_manager.workspace_transform_change(id, glm::mat4(2.f));
@@ -82,6 +87,29 @@ TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
     ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(2.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
+    ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
+}
+
+TEST_F(RenderDataManagerTest, CanChangeWorkspaceAlpha)
+{
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
+
+    render_data_manager.workspace_alpha(id, 0.1f);
+
+    auto result = render_data_manager.get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_TRUE(result[0].needs_outline);
+    ASSERT_TRUE(result[0].is_focused);
+    ASSERT_EQ(result[0].transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.1f);
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }
 
@@ -92,6 +120,7 @@ TEST_F(RenderDataManagerTest, CanChangeFocus)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     render_data_manager.focus_change(id, false);
@@ -102,6 +131,7 @@ TEST_F(RenderDataManagerTest, CanChangeFocus)
     ASSERT_FALSE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }
 
@@ -112,6 +142,7 @@ TEST_F(RenderDataManagerTest, CanChangeOutputArea)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     render_data_manager.output_area_change(id, mir::geometry::Rectangle({ 10, 10 }, { 600, 600 }));
@@ -122,6 +153,7 @@ TEST_F(RenderDataManagerTest, CanChangeOutputArea)
     ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 10, 10 }, { 600, 600 }));
 }
 
@@ -134,11 +166,14 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
     auto const value = GetParam();
     for (int i = 0; i < value; i++)
     {
-        render_data_manager.add({ .surface = nullptr,
+        render_data_manager.add({
+            .surface = nullptr,
             .needs_outline = true,
             .is_focused = true,
             .transform = glm::mat4(1.f),
-            .workspace_transform = glm::mat4(1.f) });
+            .workspace_transform = glm::mat4(1.f),
+            .workspace_alpha = 0.5f,
+        });
     }
 
     auto const result = render_data_manager.get();
@@ -157,6 +192,7 @@ TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
         .is_focused = true,
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
+        .workspace_alpha = 0.5f,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }) });
 
     render_data_manager.needs_outline_change(id, false);
@@ -167,5 +203,6 @@ TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
     ASSERT_TRUE(result[0].is_focused);
     ASSERT_EQ(result[0].transform, glm::mat4(1.f));
     ASSERT_EQ(result[0].workspace_transform, glm::mat4(1.f));
+    ASSERT_EQ(result[0].workspace_alpha, 0.5f);
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }

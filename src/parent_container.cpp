@@ -758,10 +758,16 @@ void ParentContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& n
         node->set_workspace(next);
 }
 
-void ParentContainer::on_workspace_transform()
+void ParentContainer::set_workspace_transform(glm::mat4 const& t)
 {
     for (auto const& node : container_list)
-        node->on_workspace_transform();
+        node->set_workspace_transform(t);
+}
+
+void ParentContainer::set_workspace_alpha(float a)
+{
+    for (auto const& node : container_list)
+        node->set_workspace_alpha(a);
 }
 
 std::shared_ptr<OutputInterface> ParentContainer::get_output() const
@@ -1063,11 +1069,4 @@ void ParentContainer::swap(
         second_parent->show();
     else
         second_parent->hide();
-
-    // Finally, we need to notify that the workspace transform changed
-    if (first_parent->get_workspace() != second_parent->get_workspace())
-    {
-        first_container->on_workspace_transform();
-        second_container->on_workspace_transform();
-    }
 }

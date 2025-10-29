@@ -581,7 +581,7 @@ void Renderer::draw(
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
-    float const alpha = renderable.alpha() * data.data.alpha;
+    float const alpha = renderable.alpha() * data.data.alpha * data.data.workspace_alpha;
     auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
 
     glUseProgram(prog->id);
@@ -729,7 +729,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
 
     // Next, we set model-specific transforms
-    float const alpha = data.data.alpha;
+    float const alpha = data.data.alpha * data.data.workspace_alpha;
     glm::mat4 border_transform = glm::scale(
         glm::translate(
             glm::mat4(1.0),

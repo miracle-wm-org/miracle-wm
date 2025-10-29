@@ -90,7 +90,8 @@ public:
     std::shared_ptr<OutputInterface> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
-    void on_workspace_transform() override;
+    void set_workspace_transform(glm::mat4 const&) override;
+    void set_workspace_alpha(float a) override;
     void set_alpha(float alpha) override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
@@ -142,6 +143,8 @@ private:
     bool is_dragging_ = false;
     geom::Point dragged_position;
 
+    /// Trigger a rerender on the surface.
+    void rerender();
     static void handle_resize(Container* container, Direction direction, int amount);
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
 };

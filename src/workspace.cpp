@@ -152,7 +152,9 @@ public:
                     0));
         }
 
+        float const alpha = asr.opacity ? *asr.opacity : 1.f;
         locked->transform(matrix);
+        locked->alpha(alpha);
         if (asr.is_complete)
         {
             locked->on_animation_end(is_hiding);
@@ -203,7 +205,8 @@ std::shared_ptr<ParentContainer> Workspace::root() const
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
-    root()->on_workspace_transform();
+    // TODO: This is wort of weird.
+    root()->set_workspace(shared_from_this());
     root()->set_logical_area(area);
     root()->commit_changes();
 }
@@ -341,8 +344,8 @@ void Workspace::hide(geom::Point const& end)
         geom::Rectangle(geom::Point(0, 0), area.size),
         geom::Rectangle(end, area.size),
         geom::Rectangle(geom::Point(0, 0), area.size),
-        0,
         1,
+        0,
         shared_from_this(),
         true);
 
@@ -583,7 +586,7 @@ void Workspace::transform(glm::mat4 const& transform)
         if (auto const locked = container.lock())
         {
             if (locked->get_workspace().get() == this)
-                locked->on_workspace_transform();
+                locked->set_workspace_transform(transform);
         }
     }
 }
@@ -591,6 +594,24 @@ void Workspace::transform(glm::mat4 const& transform)
 glm::mat4 Workspace::transform() const
 {
     return transform_;
+}
+
+void Workspace::alpha(float a)
+{
+    alpha_ = a;
+    for (auto const& container : state->containers())
+    {
+        if (auto const locked = container.lock())
+        {
+            if (locked->get_workspace().get() == this)
+                locked->set_workspace_alpha(a);
+        }
+    }
+}
+
+float Workspace::alpha() const
+{
+    return alpha_;
 }
 
 void Workspace::on_animation_start(bool is_hiding)

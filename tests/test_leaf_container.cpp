@@ -138,9 +138,19 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
     std::shared_ptr<test::MockWorkspace> const new_workspace = std::make_shared<test::MockWorkspace>();
     EXPECT_CALL(*new_workspace, get_output())
         .WillRepeatedly(testing::Return(output));
+    EXPECT_CALL(*new_workspace, transform())
+        .WillRepeatedly(testing::Return(glm::mat4(2.f)));
 
     leaf_container->set_workspace(new_workspace);
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace);
+    EXPECT_THAT(state->render_data_manager()->get()[0].output_area, testing::Eq(parent_area));
+    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
+}
+
+TEST_F(LeafContainerTest, CanSetWorkspaceAlpha)
+{
+    leaf_container->set_workspace_alpha(0.5f);
+    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_alpha, testing::Eq(0.5f));
 }
 
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)
