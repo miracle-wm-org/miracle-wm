@@ -1450,7 +1450,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "scale" << YAML::Value << config.cursor->scale;
-        out << YAML::Key << "mode" << YAML::Value << cursor_focus_mode_strings[static_cast<uint32_t>(config.cursor->focus_mode)];
+        out << YAML::Key << "focus_mode" << YAML::Value << cursor_focus_mode_strings[static_cast<uint32_t>(config.cursor->focus_mode)];
         out << YAML::EndMap;
     }
 
