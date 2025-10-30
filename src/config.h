@@ -87,6 +87,7 @@ public:
     [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
     [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
+    [[nodiscard]] virtual bool get_workspace_back_and_forth() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -134,6 +135,7 @@ public:
     [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
     [[nodiscard]] TouchpadConfiguration touchpad() const override;
+    [[nodiscard]] bool get_workspace_back_and_forth() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

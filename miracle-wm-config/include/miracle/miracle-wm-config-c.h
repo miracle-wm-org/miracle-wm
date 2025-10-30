@@ -1375,6 +1375,9 @@ extern "C"
     /// \param magnifier the magnifier config
     void miracle_config_set_magnifier(miracle_config_data_t* config, miracle_magnifier_t magnifier);
 
+    bool miracle_config_get_workspace_back_and_forth(const miracle_config_data_t* config);
+    void miracle_config_set_workspace_back_and_forth(miracle_config_data_t* config, bool enabled);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1274,4 +1274,16 @@ extern "C"
         data->magnifier->height = magnifier.height;
         data->magnifier->size_increment = magnifier.size_increment;
     }
+
+    bool miracle_config_get_workspace_back_and_forth(const miracle_config_data_t* config)
+    {
+        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return data->workspace_back_and_forth;
+    }
+
+    void miracle_config_set_workspace_back_and_forth(miracle_config_data_t* config, bool enabled)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->workspace_back_and_forth = enabled;
+    }
 } // extern "C"

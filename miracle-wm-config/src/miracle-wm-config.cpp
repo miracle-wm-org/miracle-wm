@@ -1091,6 +1091,13 @@ void read_magnifier(YAML::Node const& node, ParsingContext& context)
     try_parse_value(node, "size_increment", magnifier.size_increment, context, true);
     context.result.config.magnifier = magnifier;
 }
+
+void read_workspace_back_and_forth(YAML::Node const& node, ParsingContext& context)
+{
+    bool workspace_back_and_forth;
+    if (try_parse_value(node, workspace_back_and_forth, context))
+        context.result.config.workspace_back_and_forth = workspace_back_and_forth;
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -1157,6 +1164,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_sticky_keys(config["sticky_keys"], context);
         if (config["magnifier"])
             read_magnifier(config["magnifier"], context);
+        if (config["workspace_back_and_forth"])
+            read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1575,6 +1584,11 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+    if (!config.workspace_back_and_forth.is_default_value)
+    {
+        out << YAML::Key << "workspace_back_and_forth" << YAML::Value << config.workspace_back_and_forth;
+    }
+
     // Closing line
     out << YAML::EndMap;
 
@@ -1731,5 +1745,6 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : sticky_keys;
     result.includes = concat_vectors(*other.includes, *includes);
     result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
+    result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : workspace_back_and_forth;
     return result;
 }

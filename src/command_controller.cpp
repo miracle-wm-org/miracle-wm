@@ -721,7 +721,7 @@ bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const&
     return result;
 }
 
-bool CommandController::select_workspace(int number, bool back_and_forth)
+bool CommandController::select_workspace(int number, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
@@ -735,11 +735,11 @@ bool CommandController::select_workspace(int number, bool back_and_forth)
     }
 
     mir::log_info("select_workspace: %d", number);
-    workspace_manager->request_workspace(focused.get(), number, back_and_forth);
+    workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth);
     return true;
 }
 
-bool CommandController::select_workspace(std::string const& name, bool back_and_forth)
+bool CommandController::select_workspace(std::string const& name, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
@@ -752,7 +752,7 @@ bool CommandController::select_workspace(std::string const& name, bool back_and_
         return false;
     }
 
-    return workspace_manager->request_workspace(focused.get(), name, back_and_forth);
+    return workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth);
 }
 
 bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> const& scope)
@@ -839,7 +839,7 @@ bool CommandController::prev_workspace_on_output()
     return false;
 }
 
-bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool back_and_forth)
+bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (!can_move_container())
@@ -858,14 +858,14 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
             continue;
 
         container->get_output()->delete_container(container);
-        if (workspace_manager->request_workspace(output_manager->focused().get(), number, back_and_forth))
+        if (workspace_manager->request_workspace(output_manager->focused().get(), number, allow_back_and_forth))
             output_manager->focused()->graft(container);
     }
 
     return true;
 }
 
-bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool back_and_forth)
+bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (!can_move_container())
@@ -890,7 +890,7 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_workspace(focused.get(), name, back_and_forth))
+        if (workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth))
             focused->graft(container);
     }
 

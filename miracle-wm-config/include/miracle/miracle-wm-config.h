@@ -224,6 +224,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
+    miracle::WithDefaultFlag<bool> workspace_back_and_forth = true;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

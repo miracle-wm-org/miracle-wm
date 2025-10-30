@@ -913,6 +913,12 @@ TEST_F(CAPIWrapperTest, CanSetMagnifier)
     EXPECT_EQ(magnifier.size_increment, 200);
 }
 
+TEST_F(CAPIWrapperTest, CanSetWorkspaceBackAndForth)
+{
+    miracle_config_set_workspace_back_and_forth(&wrapper->config, false);
+    EXPECT_THAT(miracle_config_get_workspace_back_and_forth(&wrapper->config), Eq(false));
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -1054,6 +1060,7 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     magnifier.height = 600;
     magnifier.size_increment = 200;
     miracle_config_set_magnifier(&wrapper->config, magnifier);
+    miracle_config_set_workspace_back_and_forth(&wrapper->config, false);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -1150,6 +1157,8 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(magnifier_config.width, 800);
     EXPECT_EQ(magnifier_config.height, 600);
     EXPECT_EQ(magnifier_config.size_increment, 200);
+
+    EXPECT_EQ(miracle_config_get_workspace_back_and_forth(&wrapper->config), false);
 
     // Clean up
     miracle_config_free(load_result);

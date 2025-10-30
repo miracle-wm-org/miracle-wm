@@ -62,10 +62,14 @@ bool WorkspaceManager::focus_existing(WorkspaceInterface const* existing, bool b
 bool WorkspaceManager::request_workspace(
     OutputInterface* output_hint,
     int num,
-    bool back_and_forth)
+    bool allow_back_and_forth)
 {
     if (auto const& existing = workspace(num))
+    {
+        const bool back_and_forth = allow_back_and_forth ? config->get_workspace_back_and_forth() : false;
         return focus_existing(existing, back_and_forth);
+    }
+
 
     mir::log_info("request_workspace: %d being created", num);
     uint32_t id = next_id++;
@@ -82,10 +86,13 @@ bool WorkspaceManager::request_workspace(
 bool WorkspaceManager::request_workspace(
     OutputInterface* output_hint,
     std::string const& name,
-    bool back_and_forth)
+    bool allow_back_and_forth)
 {
     if (auto const& existing = workspace(name))
+    {
+        const bool back_and_forth = allow_back_and_forth ? config->get_workspace_back_and_forth() : false;
         return focus_existing(existing, back_and_forth);
+    }
 
     mir::log_info("request_workspace: %s being created", name.c_str());
     uint32_t id = next_id++;

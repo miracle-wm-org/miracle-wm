@@ -58,12 +58,12 @@ public:
     ///
     /// \param output_hint output that we want to show on if creating a new workspace
     /// \param key workspace number that we want to create
-    /// \param back_and_forth
+    /// \param allow_back_and_forth
     /// \returns true if we focused a new workspace, otherwise false
     bool request_workspace(
         OutputInterface* output_hint,
         int key,
-        bool back_and_forth = true);
+        bool allow_back_and_forth = false);
 
     /// Request the workspace by name.
     ///
@@ -74,7 +74,7 @@ public:
     bool request_workspace(
         OutputInterface* output_hint,
         std::string const& name,
-        bool back_and_forth = true);
+        bool allow_back_and_forth = false);
 
     /// Returns any available workspace with the lowest numerical value starting with 1.
     int request_first_available_workspace(OutputInterface* output);
