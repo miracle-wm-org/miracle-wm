@@ -335,6 +335,53 @@ TEST_F(SingleWindowPolicyTest, can_move_container_to_workspace_that_doesnt_have_
     }
 }
 
+TEST_F(SingleWindowPolicyTest, can_focus_window_on_cursor_hover)
+{
+    auto const app = open_application("test");
+
+    miral::WindowSpecification spec;
+    auto const leftWindow = create_window(app, spec);
+    auto const rightWindow = create_window(app, spec);
+
+    {
+        geom::PointF pointer_position { 50, 50 };
+
+        auto const move_event = mir::events::make_pointer_event(
+            0,
+            std::chrono::system_clock::now().time_since_epoch(),
+            mir_input_event_modifier_none,
+            mir_pointer_action_motion,
+            MirPointerButtons { 0 },
+            pointer_position,
+            {},
+            mir_pointer_axis_source_none,
+            {},
+            {});
+        publish_event(*move_event);
+    }
+
+    EXPECT_THAT(compositor_state->focused_container()->window(), Eq(leftWindow));
+
+    {
+        geom::PointF pointer_position { 450, 50 };
+
+        auto const move_event = mir::events::make_pointer_event(
+            0,
+            std::chrono::system_clock::now().time_since_epoch(),
+            mir_input_event_modifier_none,
+            mir_pointer_action_motion,
+            MirPointerButtons { 0 },
+            pointer_position,
+            {},
+            mir_pointer_axis_source_none,
+            {},
+            {});
+        publish_event(*move_event);
+    }
+
+    EXPECT_THAT(compositor_state->focused_container()->window(), Eq(rightWindow));
+}
+
 TEST_F(SingleWindowPolicyTest, can_open_ipc_client)
 {
     auto const socket_path = get_socketpath();

@@ -129,7 +129,7 @@ public:
     [[nodiscard]] HoverClickConfiguration hover_click() const override;
     [[nodiscard]] SimulatedSecondaryClickConfiguration simulated_secondary_click() const override;
     [[nodiscard]] OutputFilterConfiguration output_filter() const override;
-    [[nodiscard]] CursorConfiguration cursor() const;
+    [[nodiscard]] CursorConfiguration cursor() const override;
     [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
 

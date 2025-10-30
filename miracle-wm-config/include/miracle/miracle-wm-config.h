@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animation_definition.h"
 #include "container_type.h"
+#include "cursor_focus_mode.h"
 #include "default_key_command.h"
 #include "export.h"
 #include "gaps.h"
@@ -140,6 +141,7 @@ struct MIRACLE_WM_CONFIG_API OutputFilterConfiguration
 struct MIRACLE_WM_CONFIG_API CursorConfiguration
 {
     float scale = 1.f;
+    CursorFocusMode focus_mode = CursorFocusMode::Hover;
 
     bool operator==(const CursorConfiguration&) const = default;
 };

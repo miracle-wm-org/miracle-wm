@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle/miracle-wm-config.h"
 #include "miracle/animation_definition_internal.h"
+#include "miracle/cursor_focus_mode.h"
 #include "miracle/gaps.h"
 #include "miracle/keyboard.h"
 #include "miral/hover_click.h"
@@ -129,6 +130,17 @@ std::optional<MirPointerAcceleration> from_string_acceleration(std::string const
         return mir_pointer_acceleration_adaptive;
     else
         return mir_pointer_acceleration_none;
+}
+
+std::optional<miracle::CursorFocusMode> from_string_cursor_focus_mode(std::string const& str, ParsingContext&)
+{
+    for (size_t i = 0; i < miracle::cursor_focus_mode_strings.size(); i++)
+    {
+        if (miracle::cursor_focus_mode_strings[i] == str)
+            return static_cast<miracle::CursorFocusMode>(i);
+    }
+
+    return std::nullopt;
 }
 
 std::string to_string_acceleration(MirPointerAcceleration acceleration)
@@ -991,6 +1003,9 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
 {
     miracle::CursorConfiguration cursor;
     try_parse_value(node, "scale", cursor.scale, context, true);
+    if (auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
+        cursor.focus_mode = mode.value();
+
     context.result.config.cursor = cursor;
 }
 
@@ -1449,6 +1464,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     {
         out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "scale" << YAML::Value << config.cursor->scale;
+        out << YAML::Key << "focus_mode" << YAML::Value << cursor_focus_mode_strings[static_cast<uint32_t>(config.cursor->focus_mode)];
         out << YAML::EndMap;
     }
 
