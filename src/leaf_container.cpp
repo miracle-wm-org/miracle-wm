@@ -707,10 +707,15 @@ void LeafContainer::set_workspace_alpha(float a)
 {
     auto const& rdm = state->render_data_manager();
     rdm->workspace_alpha(id, a);
-    rerender();
+    workspace_alpha = a;
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+    {
+        surface->set_alpha(alpha * workspace_alpha);
+        surface->set_transformation(get_transform());
+    }
 }
 
-void LeafContainer::set_alpha(float const alpha)
+void LeafContainer::set_alpha(float const a)
 {
     // We want the alpha on the surface to be maintained to whatever the client
     // set it, so we set a separate alpha in the render data manager instead
@@ -722,9 +727,11 @@ void LeafContainer::set_alpha(float const alpha)
     // the Surface to be marked as dirty and get rerendered.
     //
     // This is unfortunate.
-    state->render_data_manager()->alpha_change(id, alpha);
+    state->render_data_manager()->alpha_change(id, a);
+    alpha = a;
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
+        surface->set_alpha(alpha * workspace_alpha);
         surface->set_transformation(get_transform());
     }
 }

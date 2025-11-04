@@ -640,7 +640,7 @@ void Renderer::draw(
             client_blend = { GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
                 GL_ONE, GL_ONE_MINUS_SRC_ALPHA };
         }
-        else if (renderable.alpha() == 1.0f) // RGBX and no window translucency:
+        else if (alpha == 1.0f) // RGBX and no window translucency:
         {
             client_blend = { GL_ONE, GL_ZERO,
                 GL_ZERO, GL_ONE }; // Avoid using src_alpha!
@@ -651,7 +651,7 @@ void Renderer::draw(
             // careful and avoid using SRC_ALPHA (LP: #1423462).
             client_blend = { GL_ONE, GL_ONE_MINUS_CONSTANT_ALPHA,
                 GL_ZERO, GL_ONE };
-            glBlendColor(0.0f, 0.0f, 0.0f, renderable.alpha());
+            glBlendColor(0.0f, 0.0f, 0.0f, alpha);
         }
 
         for (auto const& p : primitives)
@@ -816,7 +816,7 @@ void Renderer::update_gl_viewport()
     /*
      * Letterboxing: Move the glViewport to add black bars in the case that
      * the logical viewport aspect ratio doesn't match the display aspect.
-     * This keeps pixels square. Note "black"-bars are really glClearColor.
+
      */
     auto transformed_viewport = display_transform * glm::vec4(viewport.size.width.as_int(), viewport.size.height.as_int(), 0, 1);
     auto viewport_width = fabs(transformed_viewport[0]);

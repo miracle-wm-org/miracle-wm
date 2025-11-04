@@ -142,6 +142,8 @@ private:
     uint32_t animation_handle_ = 0;
     bool is_dragging_ = false;
     geom::Point dragged_position;
+    float alpha = 1.f;
+    float workspace_alpha = 1.f;
 
     /// Trigger a rerender on the surface.
     void rerender();
