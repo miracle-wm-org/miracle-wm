@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
+#include <mir/server_action_queue.h>
 #include <utility>
 #include <vector>
 
@@ -426,6 +427,11 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     }
 }
 
+Animator::Animator(std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
+    server_action_queue(server_action_queue)
+{
+}
+
 AnimationHandle Animator::register_animateable()
 {
     std::lock_guard<std::mutex> lock(processing_lock);
@@ -441,7 +447,10 @@ void Animator::append(std::shared_ptr<Animation> const& animation)
             other->mark_for_removal();
     }
     active.push_back(animation);
-    animation->on_tick(animation->init());
+    server_action_queue->enqueue(this, [animation = animation]()
+    {
+        animation->on_tick(animation->init());
+    });
     cv.notify_one();
 }
 
@@ -456,7 +465,10 @@ void Animator::tick(float dt)
 
         auto result = item->step(dt);
 
-        item->on_tick(result);
+        server_action_queue->enqueue(this, [item = item, result = result]()
+        {
+            item->on_tick(result);
+        });
 
         if (result.is_complete)
             item->mark_for_removal();

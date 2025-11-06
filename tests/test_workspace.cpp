@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_output_factory.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "passthrough_server_action_queue.h"
 #include "stub_configuration.h"
 #include "stub_session.h"
 #include "stub_surface.h"
@@ -117,7 +118,7 @@ public:
     std::shared_ptr<test::MockOutput> output;
     std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
-    std::shared_ptr<Animator> animator = std::make_shared<Animator>();
+    std::shared_ptr<Animator> animator = std::make_shared<Animator>(std::make_shared<PassthroughServerActionQueue>());
     std::shared_ptr<Workspace> workspace;
 };
 

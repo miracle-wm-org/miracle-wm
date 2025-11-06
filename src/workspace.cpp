@@ -116,15 +116,18 @@ public:
         float opacity_start,
         float opacity_end,
         std::shared_ptr<Workspace> const& workspace,
+        std::shared_ptr<CompositorState> const& state,
         bool is_hiding) :
         MultiBuiltInAnimation(handle, definition, from, to, current, opacity_start, opacity_end),
         workspace(workspace),
+        state(state),
         is_hiding(is_hiding)
     {
     }
 
     AnimationFrameResult init() override
     {
+        auto const lock = state->lock();
         auto const locked = workspace.lock();
         if (!locked)
             return {};
@@ -135,6 +138,7 @@ public:
 
     void on_tick(AnimationFrameResult const& asr) override
     {
+        auto const lock = state->lock();
         auto const locked = workspace.lock();
         if (!locked)
             return;
@@ -156,14 +160,12 @@ public:
         locked->transform(matrix);
         locked->alpha(alpha);
         if (asr.is_complete)
-        {
             locked->on_animation_end(is_hiding);
-            return;
-        }
     }
 
 private:
     std::weak_ptr<Workspace> workspace;
+    std::shared_ptr<CompositorState> state;
     bool is_hiding;
 };
 }
@@ -308,8 +310,9 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show(geom::Point const& origin)
 {
-    if (!config->are_animations_enabled())
+    if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
+        on_animation_start(false);
         on_animation_end(false);
         return;
     }
@@ -324,6 +327,7 @@ void Workspace::show(geom::Point const& origin)
         0,
         1,
         shared_from_this(),
+        state,
         false);
 
     animator->append(animation);
@@ -347,6 +351,7 @@ void Workspace::hide(geom::Point const& end)
         1,
         0,
         shared_from_this(),
+        state,
         true);
 
     animator->append(animation);

@@ -129,7 +129,7 @@ public:
     {
         // Note: We need to grab the lock because this notification comes from
         // a different thread.
-        std::lock_guard lock(mutex);
+        auto const lock = policy.state->lock();
         for (auto const& output : policy.output_manager->outputs())
         {
             for (auto const& workspace : output->get_workspaces())
@@ -150,7 +150,6 @@ public:
     }
 
     Policy& policy;
-    std::recursive_mutex mutex;
     bool has_loaded_once = false;
 };
 
@@ -169,9 +168,9 @@ Policy::Policy(
     state { state },
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
-    animator(std::make_shared<Animator>()),
+    animator(std::make_shared<Animator>(server.the_main_loop())),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, state, config, server.the_main_loop(), this)),
+        tools, animator, state, config)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
@@ -187,7 +186,7 @@ Policy::Policy(
     self(std::make_shared<Self>(*this)),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
     command_controller(std::make_shared<CommandController>(
-        config, self->mutex, state, window_controller,
+        config, state, window_controller,
         workspace_manager, mode_observer_registrar,
         std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager)),
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
@@ -397,7 +396,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 
 bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
     auto const action = miral::toolkit::mir_pointer_event_action(event);
@@ -493,7 +492,7 @@ auto Policy::place_new_window(
     const miral::ApplicationInfo& app_info,
     const miral::WindowSpecification& requested_specification) -> miral::WindowSpecification
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     if (!output_manager->focused())
     {
         mir::log_warning("place_new_window: no output available");
@@ -507,7 +506,7 @@ auto Policy::place_new_window(
 
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     if (!output_manager->focused())
     {
         mir::log_error("Policy::advise_new_window: no focused output");
@@ -526,7 +525,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -544,7 +543,7 @@ Policy::confirm_placement_on_display(
     MirWindowState new_state,
     mir::geometry::Rectangle const& new_placement)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -557,7 +556,7 @@ Policy::confirm_placement_on_display(
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -597,7 +596,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -618,7 +617,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -647,7 +646,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -660,7 +659,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 
 void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -674,21 +673,21 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 void Policy::advise_output_create(miral::Output const& output)
 {
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
 }
@@ -697,7 +696,7 @@ void Policy::handle_modify_window(
     miral::WindowInfo& window_info,
     const miral::WindowSpecification& modifications)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -726,7 +725,7 @@ void Policy::handle_modify_window(
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -744,7 +743,7 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -766,7 +765,7 @@ void Policy::handle_request_resize(
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     auto container = window_controller->get_container(window_info.window());
     if (!container)
     {
@@ -779,30 +778,6 @@ void Policy::handle_request_resize(
     resize_service->handle_request_resize(container, action, edge);
 }
 
-void Policy::handle_animation(
-    AnimationFrameResult const& asr,
-    std::weak_ptr<Container> const& container)
-{
-    std::lock_guard lock(self->mutex);
-    auto sh_container = container.lock();
-    if (!sh_container)
-    {
-        mir::log_error("handle_animation: container is invalid");
-        return;
-    }
-
-    window_controller->process_animation(asr, sh_container);
-}
-
-void Policy::handle_workspace_animation(
-    AnimationFrameResult const& asr,
-    std::shared_ptr<WorkspaceInterface> const& to,
-    std::shared_ptr<WorkspaceInterface> const& from)
-{
-    std::lock_guard lock(self->mutex);
-    // TODO?
-}
-
 mir::geometry::Rectangle Policy::confirm_inherited_move(
     const miral::WindowInfo& window_info,
     mir::geometry::Displacement movement)
@@ -812,7 +787,7 @@ mir::geometry::Rectangle Policy::confirm_inherited_move(
 
 void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_create(application_zone);
@@ -821,7 +796,7 @@ void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 
 void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_update(updated, original);
@@ -830,7 +805,7 @@ void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Z
 
 void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 {
-    std::lock_guard lock(self->mutex);
+    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_delete(application_zone);
