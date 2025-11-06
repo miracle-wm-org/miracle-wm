@@ -116,15 +116,18 @@ public:
         float opacity_start,
         float opacity_end,
         std::shared_ptr<Workspace> const& workspace,
+        std::shared_ptr<CompositorState> const& state,
         bool is_hiding) :
         MultiBuiltInAnimation(handle, definition, from, to, current, opacity_start, opacity_end),
         workspace(workspace),
+        state(state),
         is_hiding(is_hiding)
     {
     }
 
     AnimationFrameResult init() override
     {
+        auto const lock = state->lock();
         auto const locked = workspace.lock();
         if (!locked)
             return {};
@@ -135,6 +138,7 @@ public:
 
     void on_tick(AnimationFrameResult const& asr) override
     {
+        auto const lock = state->lock();
         auto const locked = workspace.lock();
         if (!locked)
             return;
@@ -152,16 +156,16 @@ public:
                     0));
         }
 
+        float const alpha = asr.opacity ? *asr.opacity : 1.f;
         locked->transform(matrix);
+        locked->alpha(alpha);
         if (asr.is_complete)
-        {
             locked->on_animation_end(is_hiding);
-            return;
-        }
     }
 
 private:
     std::weak_ptr<Workspace> workspace;
+    std::shared_ptr<CompositorState> state;
     bool is_hiding;
 };
 }
@@ -203,7 +207,8 @@ std::shared_ptr<ParentContainer> Workspace::root() const
 
 void Workspace::set_area(mir::geometry::Rectangle const& area)
 {
-    root()->on_workspace_transform();
+    // TODO: This is wort of weird.
+    root()->set_workspace(shared_from_this());
     root()->set_logical_area(area);
     root()->commit_changes();
 }
@@ -305,8 +310,9 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show(geom::Point const& origin)
 {
-    if (!config->are_animations_enabled())
+    if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
+        on_animation_start(false);
         on_animation_end(false);
         return;
     }
@@ -321,6 +327,7 @@ void Workspace::show(geom::Point const& origin)
         0,
         1,
         shared_from_this(),
+        state,
         false);
 
     animator->append(animation);
@@ -341,9 +348,10 @@ void Workspace::hide(geom::Point const& end)
         geom::Rectangle(geom::Point(0, 0), area.size),
         geom::Rectangle(end, area.size),
         geom::Rectangle(geom::Point(0, 0), area.size),
-        0,
         1,
+        0,
         shared_from_this(),
+        state,
         true);
 
     animator->append(animation);
@@ -583,7 +591,7 @@ void Workspace::transform(glm::mat4 const& transform)
         if (auto const locked = container.lock())
         {
             if (locked->get_workspace().get() == this)
-                locked->on_workspace_transform();
+                locked->set_workspace_transform(transform);
         }
     }
 }
@@ -591,6 +599,24 @@ void Workspace::transform(glm::mat4 const& transform)
 glm::mat4 Workspace::transform() const
 {
     return transform_;
+}
+
+void Workspace::alpha(float a)
+{
+    alpha_ = a;
+    for (auto const& container : state->containers())
+    {
+        if (auto const locked = container.lock())
+        {
+            if (locked->get_workspace().get() == this)
+                locked->set_workspace_alpha(a);
+        }
+    }
+}
+
+float Workspace::alpha() const
+{
+    return alpha_;
 }
 
 void Workspace::on_animation_start(bool is_hiding)

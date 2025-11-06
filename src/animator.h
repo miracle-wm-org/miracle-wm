@@ -27,6 +27,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <thread>
 #include <vector>
 
+namespace mir
+{
+class ServerActionQueue;
+}
+
 namespace miracle
 {
 /// Unique handle provided to track animators
@@ -145,6 +150,8 @@ private:
 class Animator
 {
 public:
+    explicit Animator(std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
+
     /// Registers a new animation handle.
     ///
     /// Components that want to animate must provide a valid handler before
@@ -168,6 +175,7 @@ public:
     std::mutex& get_lock() { return processing_lock; }
 
 private:
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::vector<std::shared_ptr<Animation>> active;
     std::thread run_thread;
     std::condition_variable cv;

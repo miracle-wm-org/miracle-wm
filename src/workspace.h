@@ -88,6 +88,8 @@ public:
     void inner_gaps(std::optional<Gaps> const& gaps) override;
     void transform(glm::mat4 const&) override;
     glm::mat4 transform() const override;
+    void alpha(float) override;
+    float alpha() const override;
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
@@ -125,7 +127,8 @@ private:
     std::weak_ptr<Container> last_selected_container;
     std::optional<Gaps> workspace_outer_gaps;
     std::optional<Gaps> workspace_inner_gaps;
-    glm::mat4 transform_;
+    glm::mat4 transform_ = glm::mat4(1.f);
+    float alpha_ = 1.f;
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

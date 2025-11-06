@@ -181,7 +181,11 @@ void ShellComponentContainer::set_transform(glm::mat4 transform)
     }
 }
 
-void ShellComponentContainer::on_workspace_transform()
+void ShellComponentContainer::set_workspace_transform(glm::mat4 const&)
+{
+}
+
+void ShellComponentContainer::set_workspace_alpha(float a)
 {
 }
 

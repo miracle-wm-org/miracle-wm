@@ -75,7 +75,14 @@ public:
     void mode(WindowManagerMode);
     RenderDataManager* render_data_manager() const;
 
+    /// Lock the provided mutex.
+    std::lock_guard<std::recursive_mutex> lock() { return std::lock_guard(mutex); }
+
+    /// Uniquely lock the provided mutex.
+    std::unique_lock<std::recursive_mutex> unique_lock() { return std::unique_lock(mutex); }
+
 private:
+    std::recursive_mutex mutex;
     std::weak_ptr<Container> focused;
     std::vector<std::weak_ptr<Container>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;

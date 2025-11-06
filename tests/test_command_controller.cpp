@@ -60,7 +60,6 @@ public:
         scratchpad(std::make_shared<Scratchpad>(window_controller, output_manager)),
         command_controller(std::make_shared<CommandController>(
             config,
-            mutex,
             state,
             window_controller,
             workspace_manager,
@@ -72,7 +71,6 @@ public:
         Mock::AllowLeak(output.get());
     }
 
-    std::recursive_mutex mutex;
     std::shared_ptr<NiceMock<test::MockOutput>> output = std::make_shared<NiceMock<test::MockOutput>>();
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<test::MockConfig> config;

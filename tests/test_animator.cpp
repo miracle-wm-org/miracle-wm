@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animator.h"
 #include "mock_animation.h"
+#include "passthrough_server_action_queue.h"
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -53,7 +54,7 @@ class AnimatorTest : public testing::Test
 
 TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
 {
-    Animator animator;
+    Animator animator(std::make_shared<PassthroughServerActionQueue>());
     auto const handle = animator.register_animateable();
     BuiltInAnimationDefinition definition {
         .type = BultInAnimationType::slide,
@@ -84,7 +85,7 @@ MATCHER_P(OpacityIs, expected_opacity, "")
 
 TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
 {
-    Animator animator;
+    Animator animator(std::make_shared<PassthroughServerActionQueue>());
     auto const handle = animator.register_animateable();
     BuiltInAnimationDefinition definition {
         .type = BultInAnimationType::fade,
@@ -113,7 +114,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
 
 TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
 {
-    Animator animator;
+    Animator animator(std::make_shared<PassthroughServerActionQueue>());
     auto const handle = animator.register_animateable();
     BuiltInAnimationDefinition definition {
         .type = BultInAnimationType::fade,

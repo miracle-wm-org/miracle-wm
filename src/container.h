@@ -111,7 +111,8 @@ public:
     ///\param transform
     virtual void set_transform(glm::mat4 transform) = 0;
 
-    virtual void on_workspace_transform() = 0;
+    virtual void set_workspace_transform(glm::mat4 const& transform) = 0;
+    virtual void set_workspace_alpha(float a) = 0;
     virtual glm::mat4 get_workspace_transform() const;
     virtual glm::mat4 get_output_transform() const;
     virtual void set_alpha(float const alpha) = 0;

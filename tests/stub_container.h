@@ -172,9 +172,8 @@ namespace test
         {
         }
 
-        void on_workspace_transform() override
-        {
-        }
+        void set_workspace_transform(glm::mat4 const& transform) override { }
+        void set_workspace_alpha(float alpha) override { }
 
         glm::mat4 get_workspace_transform() const override
         {

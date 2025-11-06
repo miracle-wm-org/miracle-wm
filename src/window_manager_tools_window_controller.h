@@ -22,10 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 #include <miral/window_manager_tools.h>
 
-namespace mir
-{
-class ServerActionQueue;
-}
 namespace miracle
 {
 class CompositorState;
@@ -39,9 +35,7 @@ public:
         miral::WindowManagerTools const&,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<CompositorState> const& state,
-        std::shared_ptr<Config> const& config,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
-        Policy* policy);
+        std::shared_ptr<Config> const& config);
     void open(miral::Window const&) override;
     void set_rectangle(miral::Window const&, geom::Rectangle const&, geom::Rectangle const&, bool with_animations = true) override;
     MirWindowState get_state(miral::Window const&) override;
@@ -68,8 +62,6 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
-    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    Policy* policy;
 
     class WindowAnimation : public MultiBuiltInAnimation
     {

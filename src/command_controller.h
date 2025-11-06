@@ -191,7 +191,6 @@ class CommandController : public AbstractCommandController
 public:
     CommandController(
         std::shared_ptr<Config> const& config,
-        std::recursive_mutex& mutex,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<WorkspaceManager> const& workspace_manager,
@@ -290,7 +289,6 @@ public:
 
 private:
     std::shared_ptr<Config> config;
-    std::recursive_mutex& mutex;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<WorkspaceManager> workspace_manager;
