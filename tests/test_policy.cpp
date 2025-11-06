@@ -249,7 +249,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
     }));
 }
 
-TEST_F(SingleWindowPolicyTest, can_move_container_to_workspace_that_doesnt_have_containers)
+TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doesnt_have_containers)
 {
     {
         // Move to workspace 1

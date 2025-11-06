@@ -127,7 +127,7 @@ private:
     std::weak_ptr<Container> last_selected_container;
     std::optional<Gaps> workspace_outer_gaps;
     std::optional<Gaps> workspace_inner_gaps;
-    glm::mat4 transform_;
+    glm::mat4 transform_ = glm::mat4(1.f);
     float alpha_ = 1.f;
 
     /// Retrieves the container that is currently being used for layout
