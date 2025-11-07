@@ -85,6 +85,9 @@ namespace test
 
         MOCK_METHOD(void, transform, (glm::mat4 const&), (override));
         MOCK_METHOD(glm::mat4, transform, (), (const, override));
+
+        MOCK_METHOD(void, alpha, (float), (override));
+        MOCK_METHOD(float, alpha, (), (const, override));
     };
 }
 }

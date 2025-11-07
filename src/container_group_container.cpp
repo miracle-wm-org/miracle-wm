@@ -277,7 +277,11 @@ void ContainerGroupContainer::set_transform(glm::mat4 transform)
 {
 }
 
-void ContainerGroupContainer::on_workspace_transform()
+void ContainerGroupContainer::set_workspace_transform(glm::mat4 const&)
+{
+}
+
+void ContainerGroupContainer::set_workspace_alpha(float a)
 {
 }
 

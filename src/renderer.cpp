@@ -581,7 +581,7 @@ void Renderer::draw(
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
-    float const alpha = renderable.alpha() * data.data.alpha;
+    float const alpha = renderable.alpha() * data.data.alpha * data.data.workspace_alpha;
     auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
 
     glUseProgram(prog->id);
@@ -611,7 +611,11 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));
-    glUniform1f(prog->border_radius_uniform, data.data.needs_outline ? config->get_border_config().radius : 0);
+
+    auto const border_config = config->get_border_config();
+    auto const content_radius = data.data.needs_outline ? std::max(border_config.radius - static_cast<GLfloat>(border_config.size), 0.f) : 0.f;
+    glUniform1f(prog->border_radius_uniform, content_radius);
+
     glUniform1f(prog->alpha_uniform, alpha);
     glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
 
@@ -640,7 +644,7 @@ void Renderer::draw(
             client_blend = { GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
                 GL_ONE, GL_ONE_MINUS_SRC_ALPHA };
         }
-        else if (renderable.alpha() == 1.0f) // RGBX and no window translucency:
+        else if (alpha == 1.0f) // RGBX and no window translucency:
         {
             client_blend = { GL_ONE, GL_ZERO,
                 GL_ZERO, GL_ONE }; // Avoid using src_alpha!
@@ -651,7 +655,7 @@ void Renderer::draw(
             // careful and avoid using SRC_ALPHA (LP: #1423462).
             client_blend = { GL_ONE, GL_ONE_MINUS_CONSTANT_ALPHA,
                 GL_ZERO, GL_ONE };
-            glBlendColor(0.0f, 0.0f, 0.0f, renderable.alpha());
+            glBlendColor(0.0f, 0.0f, 0.0f, alpha);
         }
 
         for (auto const& p : primitives)
@@ -729,7 +733,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
 
     // Next, we set model-specific transforms
-    float const alpha = data.data.alpha;
+    float const alpha = data.data.alpha * data.data.workspace_alpha;
     glm::mat4 border_transform = glm::scale(
         glm::translate(
             glm::mat4(1.0),
@@ -816,7 +820,7 @@ void Renderer::update_gl_viewport()
     /*
      * Letterboxing: Move the glViewport to add black bars in the case that
      * the logical viewport aspect ratio doesn't match the display aspect.
-     * This keeps pixels square. Note "black"-bars are really glClearColor.
+
      */
     auto transformed_viewport = display_transform * glm::vec4(viewport.size.width.as_int(), viewport.size.height.as_int(), 0, 1);
     auto viewport_width = fabs(transformed_viewport[0]);

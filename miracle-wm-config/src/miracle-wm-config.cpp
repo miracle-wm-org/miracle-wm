@@ -1634,9 +1634,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.environment_variables = concat_vectors(*other.environment_variables, *environment_variables);
     result.border_config = other.border_config.is_set() ? other.border_config : border_config;
     result.animations_enabled = other.animations_enabled.is_set() ? other.animations_enabled : animations_enabled;
-    result.animation_definitions = merge_arrays<AnimationDefinition, static_cast<int>(AnimateableEvent::max)>(*other.animation_definitions, *animation_definitions,
-        [](auto const&, auto const&)
-    { return true; });
+    result.animation_definitions = other.animation_definitions.is_set() ? other.animation_definitions : animation_definitions;
     result.workspace_configs = concat_vectors(*other.workspace_configs, *workspace_configs);
     result.move_modifier = other.move_modifier.is_set() ? other.move_modifier : move_modifier;
     result.drag_and_drop = other.drag_and_drop.is_set() ? other.drag_and_drop : drag_and_drop;

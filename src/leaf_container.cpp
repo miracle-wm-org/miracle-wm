@@ -172,6 +172,7 @@ void LeafContainer::associate_to_window(miral::Window const& in_window)
                     .is_focused = is_focused(),
                     .transform = get_transform(),
                     .workspace_transform = workspace_transform(*this),
+                    .workspace_alpha = workspace.expired() ? 1.f : workspace.lock()->alpha(),
                     .output_area = get_output()->get_area() }
     });
 }
@@ -658,7 +659,11 @@ std::shared_ptr<WorkspaceInterface> LeafContainer::get_workspace() const
 void LeafContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& in)
 {
     workspace = in;
-    on_workspace_transform();
+
+    state->render_data_manager()->output_area_change(
+        id,
+        workspace.lock()->get_output()->get_area());
+    set_workspace_transform(in->transform());
 }
 
 std::shared_ptr<OutputInterface> LeafContainer::get_output() const
@@ -684,21 +689,33 @@ void LeafContainer::set_transform(glm::mat4 transform_)
     }
 }
 
-void LeafContainer::on_workspace_transform()
+void LeafContainer::rerender()
+{
+    // A hack to trigger a rerender on the surface by re-applying its transformation.
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+        surface->set_transformation(get_transform());
+}
+
+void LeafContainer::set_workspace_transform(glm::mat4 const& transform)
 {
     auto const& rdm = state->render_data_manager();
-    state->render_data_manager()->output_area_change(
-        id,
-        workspace.lock()->get_output()->get_area());
+    rdm->workspace_transform_change(id, transform);
+    rerender();
+}
 
-    rdm->workspace_transform_change(id, workspace_transform(*this));
+void LeafContainer::set_workspace_alpha(float a)
+{
+    auto const& rdm = state->render_data_manager();
+    rdm->workspace_alpha(id, a);
+    workspace_alpha = a;
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
+        surface->set_alpha(alpha * workspace_alpha);
         surface->set_transformation(get_transform());
     }
 }
 
-void LeafContainer::set_alpha(float const alpha)
+void LeafContainer::set_alpha(float const a)
 {
     // We want the alpha on the surface to be maintained to whatever the client
     // set it, so we set a separate alpha in the render data manager instead
@@ -710,9 +727,11 @@ void LeafContainer::set_alpha(float const alpha)
     // the Surface to be marked as dirty and get rerendered.
     //
     // This is unfortunate.
-    state->render_data_manager()->alpha_change(id, alpha);
+    state->render_data_manager()->alpha_change(id, a);
+    alpha = a;
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
+        surface->set_alpha(alpha * workspace_alpha);
         surface->set_transformation(get_transform());
     }
 }

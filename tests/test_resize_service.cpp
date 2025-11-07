@@ -49,7 +49,6 @@ public:
         scratchpad(std::make_shared<Scratchpad>(window_controller, output_manager)),
         command_controller(std::make_shared<CommandController>(
             config,
-            mutex,
             state,
             window_controller,
             workspace_manager,
@@ -61,7 +60,6 @@ public:
     {
     }
 
-    std::recursive_mutex mutex;
     std::vector<StubWindowData> data;
     test::MockOutputFactory* output_factory = new test::MockOutputFactory();
     std::shared_ptr<OutputManager> output_manager;

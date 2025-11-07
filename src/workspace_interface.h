@@ -111,6 +111,16 @@ public:
     /// \returns the workspace transforms
     virtual glm::mat4 transform() const = 0;
 
+    /// Set the opacity on every window in the workspace.
+    ///
+    /// \param a the alpha value
+    virtual void alpha(float a) = 0;
+
+    /// Retrieve the alpha for this workspace.
+    ///
+    /// \returns the alpha value
+    virtual float alpha() const = 0;
+
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_output_focused) const = 0;

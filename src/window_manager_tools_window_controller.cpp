@@ -25,8 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "window_helpers.h"
 #include <mir/log.h>
-#include <mir/scene/surface.h>
-#include <mir/server_action_queue.h>
 
 using namespace miracle;
 
@@ -34,15 +32,11 @@ WindowManagerToolsWindowController::WindowManagerToolsWindowController(
     miral::WindowManagerTools const& tools,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<CompositorState> const& state,
-    std::shared_ptr<Config> const& config,
-    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
-    Policy* policy) :
+    std::shared_ptr<Config> const& config) :
     tools { tools },
     animator { animator },
     state { state },
-    config { config },
-    server_action_queue { server_action_queue },
-    policy { policy }
+    config { config }
 {
 }
 
@@ -59,13 +53,13 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
     geom::Rectangle rect { window.top_left(), window.size() };
     if (info.parent())
     {
-        policy->handle_animation({ true, rect, std::nullopt, std::nullopt }, container);
+        process_animation({ true, rect, std::nullopt, std::nullopt }, container);
         return;
     }
 
     if (!config->are_animations_enabled())
     {
-        policy->handle_animation(AnimationFrameResult { true, rect, std::nullopt, std::nullopt }, container);
+        process_animation(AnimationFrameResult { true, rect, std::nullopt, std::nullopt }, container);
         return;
     }
 
@@ -97,13 +91,13 @@ void WindowManagerToolsWindowController::set_rectangle(
 
     if (info.parent())
     {
-        policy->handle_animation({ true, to, std::nullopt, std::nullopt }, container);
+        process_animation({ true, to, std::nullopt, std::nullopt }, container);
         return;
     }
 
     if (!config->are_animations_enabled() || !with_animations)
     {
-        policy->handle_animation(
+        process_animation(
             AnimationFrameResult {
                 true,
                 to,
@@ -205,16 +199,14 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
 
 void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationFrameResult const& asr)
 {
-    controller->server_action_queue->enqueue(controller, [controller = controller, asr = asr, container = container]()
-    {
-        controller->policy->handle_animation(asr, container);
-    });
+    controller->process_animation(asr, container.lock());
 }
 
 void WindowManagerToolsWindowController::process_animation(
     AnimationFrameResult const& result,
     std::shared_ptr<Container> const& container)
 {
+    auto const lock = state->lock();
     // TODO (hack): we really need to refactor the entire animation system. The issue
     //  here is that our current system relies on us enqueuing animation processing
     //  onto the main loop for animations. However, this may cause a situation where
