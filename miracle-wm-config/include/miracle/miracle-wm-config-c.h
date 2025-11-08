@@ -26,52 +26,152 @@ extern "C"
 {
 #endif
 
+    /// The level of an error.
     typedef enum
     {
+        /// A warning level.
         MIRACLE_CONFIG_ERROR_LEVEL_WARNING,
+
+        /// An error level.
         MIRACLE_CONFIG_ERROR_LEVEL_ERROR
     } miracle_config_error_level_t;
 
+    /// Describes an error encountered while loading the configuration.
     typedef struct
     {
+        /// The line at which the error occurred.
         int line;
+
+        /// The column at which the error occurred.
         int column;
+
+        /// The level of the error.
         miracle_config_error_level_t level;
+
+        /// The file that the error originated in.
         const char* filename;
+
+        /// A message describing what wrent wrong.
         const char* message;
     } miracle_config_error_t;
 
+    /// An opaque pointer to the configuration.
+    ///
+    /// Callers should use the provided C methods to access information
+    /// from the configuration.
     typedef struct
     {
         void* _internal; // Opaque pointer to ConfigData
     } miracle_config_data_t;
 
+    /// Created by calling #miracle_config_load.
+    ///
+    /// Callers may use this to access the loaded config in addition to information
+    /// about what went wrong during loading, if anything.
     typedef struct
     {
+        /// The miracle configuration.
         miracle_config_data_t config;
-        void* ptr; // Opaque pointer to miracle::ConfigLoadResult
+
+        /// An opaque pointer to the underlying data.
+        void* ptr;
     } miracle_config_load_result_t;
 
+    /// Created by calling #miracle_config_save.
     typedef struct
     {
+        /// `true` if the save was a success, otherwise `false`.
         bool success;
-        void* ptr; // Opaque pointer to miracle::ConfigSaveResult
+
+        /// An opaque pointer to information related to save success.
+        void* ptr;
     } miracle_config_save_result_t;
 
+    /// A generic construct used to describe an option for a given type in miracle.
+    ///
+    /// Callers will often use the `miracle_config_get_*_options_count` and
+    /// `miracle_config_get_*_option` functions to retrieve instance of this object.
     typedef struct
     {
+        /// The display name of the option.
+        ///
+        /// This is intended to be displayed by UIs.
         const char* name;
+
+        /// The value of the option.
+        ///
+        /// This is intended to be used in setters on the miracle config API.
         uint value;
     } miracle_config_option_t;
 
-    // Options getters
+    /// Returns a pointer to the loaded #miracle_config_data_t from a #miracle_config_load_result_t.
+    ///
+    /// \param result a load result
+    /// \returnes the config data
+    const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result);
+
+    /// Retrieve the number of possible modifier options.
+    ///
+    /// Modifiers may be retrieved using #miracle_config_get_modifier_option.
+    ///
+    /// \returns number of possible modifier options
     uint miracle_config_get_modifier_options_count();
+
+    /// Retrieve a modifier option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_modifier_options_count results in
+    /// undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_modifier_option(uint i);
+
+    /// Retrieve the number of options for mouse buttons.
+    ///
+    /// Each mouse button option may be retrieved with #miracle_config_get_mouse_button_option.
+    ///
+    /// \returns the number of mouse button options
     uint miracle_config_get_mouse_button_options_count();
+
+    /// Retrieve a mouse button option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_mouse_button_options_count results in
+    /// undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_mouse_button_option(uint i);
+
+    /// Retrieve the number of options for mouse actions.
+    ///
+    /// Each mouse action option may be retrieved with #miracle_config_get_mouse_actions_option.
+    ///
+    /// \returns the number of mouse action options
     uint miracle_config_get_mouse_actions_options_count();
+
+    /// Retrieve a mouse action option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_mouse_actions_options_count results in
+    /// undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_mouse_actions_option(uint i);
+
+    /// Retrieve the number of options for keyboard actions.
+    ///
+    /// Each mouse action option may be retrieved with #miracle_config_get_keyboard_actions_option.
+    ///
+    /// \returns the number of mouse action options
     uint miracle_config_get_keyboard_actions_options_count();
+
+    /// Retrieve a keyboard action option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_keyboard_actions_options_count results in
+    /// undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
     uint miracle_config_get_built_in_key_command_options_count();
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
@@ -88,67 +188,225 @@ extern "C"
     uint miracle_config_get_acceleration_options_count();
     miracle_config_option_t miracle_config_get_acceleration_option(uint i);
 
+    /// Retrieve the standard miracle config path.
+    ///
+    /// This is typically located at `~/.config/miracle-wm/config.yaml`.
+    ///
+    /// \returns the standard miracle config path
     const char* miracle_config_path();
 
-    // Creates a new ConfigLoadResult by loading from the given path
+    /// Load the miracle configuration from the provided path.
+    ///
+    /// \param path path to the file
+    /// \returns a load result
     miracle_config_load_result_t* miracle_config_load(const char* path);
 
-    // Gets the number of errors in the result
+    /// Returns the number of errors found in the #miracle_config_load_result_t.
+    ///
+    /// Individual errors may be retrieved via #miracle_config_get_error.
+    ///
+    /// \param result a load result
+    /// \returns the number of errors
     size_t miracle_config_get_error_count(const miracle_config_load_result_t* result);
 
-    // Gets an error by index (0-based)
+    /// Retrieve an error from the #miracle_config_load_result_t.
+    ///
+    /// Use #miracle_config_get_error_count to see how many errors are available.
+    ///
+    /// \param result a load result
+    /// \param index the error
+    /// \returns a pointer to an error, or `NULL` if the index does not exist.
     const miracle_config_error_t* miracle_config_get_error(
         const miracle_config_load_result_t* result,
         size_t index);
 
-    // Frees the memory allocated for the config load result
+    /// Frees a #miracle_config_load_result_t.
+    ///
+    /// \param result result to free
     void miracle_config_free(miracle_config_load_result_t* result);
 
-    // Saves the config to the given path
+    /// Saves the provided \p config to the given \p path.
+    ///
+    /// \param path the path to save to
+    /// \param config the configuration to save
+    /// \returns a save result
     miracle_config_save_result_t* miracle_config_save(const char* path, const miracle_config_data_t* config);
 
-    // Gets the number of errors in a [miracle_config_save_result_t]
+    /// Retrieve the number of errors in a #miracle_config_save_result_t.
+    ///
+    /// Use #miracle_save_result_get_error to access each error.
+    ///
+    /// \param result the save result
+    /// \returns the number of errors
     size_t miracle_save_result_get_error_count(const miracle_config_save_result_t* result);
 
-    // Gets an error by index (0-based)
+    /// Retrieve an error from the #miracle_config_save_result_t.
+    ///
+    /// Use #miracle_save_result_get_error_count to see how many errors are available.
+    ///
+    /// \param result a save result
+    /// \param index the error
+    /// \returns a pointer to an error, or `NULL` if the index does not exist.
     const miracle_config_error_t* miracle_save_result_get_error(
         const miracle_config_save_result_t* result,
         size_t index);
 
-    // Frees the memory allocated by [miracle_config_save].
+    /// Frees the memory allocated by #miracle_config_save.
+    ///
+    /// \param result to free
     void miracle_save_result_free(miracle_config_save_result_t* result);
 
+    /// Retrieve the number of includes that this configuration refers to.
+    ///
+    /// Use #miracle_config_get_include to access each include.
+    ///
+    /// \param config the config
+    /// \returns the number of includes
     size_t miracle_config_get_num_includes(const miracle_config_data_t* config);
+
+    /// Retrieve an "include" by index.
+    ///
+    /// An "include" is another path in the system that contains another configuration
+    /// file for miracle. Users may use includes to compose their configuration out of
+    /// multiple files
+    ///
+    /// Use #miracle_config_get_num_includes to get the number of includes available.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns a path to another include
     const char* miracle_config_get_include(const miracle_config_data_t* config, size_t index);
-    void miracle_config_add_include(const miracle_config_data_t* config, const char* value);
+
+    /// Add a new include to the configuration.
+    ///
+    /// \param config the config
+    /// \param value the new include
+    /// \param index the index to add it at
+    void miracle_config_add_include(const miracle_config_data_t* config, const char* value, size_t index);
+
+    /// Remove an include from the configuration.
+    ///
+    /// \param config the config
+    /// \param index the index to remove
     void miracle_config_remove_include(const miracle_config_data_t* config, size_t index);
+
+    /// Set an include at a particular index.
+    ///
+    /// \param config the config
+    /// \param value the value to set
+    /// \param index the index to modify
     void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index);
 
+    /// Retrieve the primary modifier.
+    ///
+    /// The modifier will be one of those found by calling #miracle_config_get_modifier_option.
+    ///
+    /// \param config the config
+    /// \returns the modifier value
     uint miracle_config_get_primary_modifier(const miracle_config_data_t* config);
+
+    /// Set the primary modifier.
+    ///
+    /// The modifier should be one of those found by calling #miracle_config_get_modifier_option.
+    ///
+    /// \param config the config
+    /// \param modifier the new modifier
     void miracle_config_set_primary_modifier(miracle_config_data_t* config, uint modifier);
 
+    /// Retrieve the primary mouse button.
+    ///
+    /// The mouse button will be one of those found by calling #miracle_config_get_mouse_button_option.
+    ///
+    /// \param config the config
+    /// \returns the primary mouse button value
     uint miracle_config_get_primary_button(const miracle_config_data_t* config);
+
+    /// Sets the primary mouse button.
+    ///
+    /// The mouse button should be one of those found by calling #miracle_config_get_mouse_button_option.
+    ///
+    /// \param config the config
+    /// \param button the primary mouse button value
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button);
 
+    /// Retrieve the inner gaps of the \p config in the horizontal direction.
+    ///
+    /// \returns the horizontal inner gaps
     uint32_t miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
+
+    /// Set the horizontal inner gaps.
+    ///
+    /// \param config the config
+    /// \param value the horizontal inner gaps
     void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint32_t value);
 
+    /// Retrieve the inner gaps of the \p config in the vertical direction.
+    ///
+    /// \returns the vertical inner gaps
     uint32_t miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
+
+    /// Set the vertical inner gaps.
+    ///
+    /// \param config the config
+    /// \param value the vertical inner gaps
     void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint32_t value);
 
+    /// Retrieve the outer gaps of the \p config in the horizontal direction.
+    ///
+    /// \returns the horizontal outer gaps
     uint32_t miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
+
+    /// Set the horizontal outer gaps.
+    ///
+    /// \param config the config
+    /// \param value the horizontal outer gaps
     void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, uint32_t value);
 
+    /// Retrieve the outer gaps of the \p config in the vertical direction.
+    ///
+    /// \returns the vertical outer gaps
     uint32_t miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
+
+    /// Set the vertical outer gaps.
+    ///
+    /// \param config the config
+    /// \param value the vertical outer gaps
     void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, uint32_t value);
 
+    /// Retrieve the resize jump.
+    ///
+    /// \param config the config
+    /// \returns the resize jump
     int miracle_config_get_resize_jump(const miracle_config_data_t* config);
+
+    /// Set the resize jump.
+    ///
+    /// \param config the config
+    /// \param value the jump in pixels
     void miracle_config_set_resize_jump(miracle_config_data_t* config, int value);
 
+    /// Retrieve whether animations are enabled.
+    ///
+    /// \param config the config
+    /// \returns `true` if enabled, otherwise `false`
     bool miracle_config_get_animations_enabled(const miracle_config_data_t* config);
+
+    /// Set whether or not animations are enabled.
+    ///
+    /// \param config the config
+    /// \param enabled the new anbled status
     void miracle_config_set_animations_enabled(miracle_config_data_t* config, bool enabled);
 
+    /// Get the terminal command as a string.
+    ///
+    /// \param config the config
+    /// \returns the terminal command
     const char* miracle_config_get_terminal(const miracle_config_data_t* config);
+
+    /// Set the terminal command.
+    ///
+    /// \param config the config
+    /// \param terminal the terminal command as a string.
     void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal);
 
     typedef struct
@@ -159,10 +417,10 @@ extern "C"
         const char* command; // NULL-terminated string
     } miracle_custom_key_command_t;
 
-    // Returns pointer to config data from load result
-    const miracle_config_data_t* miracle_config_get_data(const miracle_config_load_result_t* result);
-
-    // Custom key command accessors
+    /// Retrieve the number of custom keybinds in the \p config.
+    ///
+    /// \param config the config
+    /// \returns the number of custom keybinds
     size_t miracle_config_get_custom_key_command_count(const miracle_config_data_t* config);
     miracle_custom_key_command_t miracle_config_get_custom_key_command(
         const miracle_config_data_t* config,
@@ -309,12 +567,39 @@ extern "C"
         miracle_config_data_t* config,
         size_t index);
 
-    // Workspace config accessors
+    /// Describes a configuration for a workspace.
     typedef struct
     {
-        int num; // -1 if not set
-        int layout_strategy; // miracle::WindowLayoutStrategy as int
-        const char* name; // NULL if not set
+        /// `true` if #num is set, otherwise `false`.
+        bool has_num;
+
+        /// The workspace number associated with this configuration.
+        ///
+        /// Either #num or #name must be set for the configuration to be
+        /// valid.
+        int num;
+
+        /// `true` if #name is set, otherwise `false`.
+        bool has_name;
+
+        /// The workspace name associated with this configuration.
+        ///
+        /// Either #num or #name must be set for the configuration to be
+        /// valid.
+        const char* name;
+
+        /// `true` if #layout_strategy is set, otherwise `false`.
+        bool has_layout_strategy;
+
+        /// The layout strategy for windows on this workspace.
+        ///
+        /// This strategy decides how new windows are placed for this workspace.
+        ///
+        /// Callers may use #miracle_config_get_layout_option and #miracle_config_get_layout_options_count
+        /// to list the available layout strategies.
+        ///
+        /// Defaults to "tiling".
+        int layout_strategy;
     } miracle_workspace_config_t;
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config);
@@ -323,15 +608,11 @@ extern "C"
         size_t index);
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
-        int num,
-        int layout_stategy,
-        const char* name);
+        miracle_workspace_config_t* workspace_config);
     void miracle_config_set_workspace_config(
         miracle_config_data_t* config,
         size_t index,
-        int num,
-        int layout_strategy,
-        const char* name);
+        miracle_workspace_config_t* workspace_config);
     void miracle_config_clear_workspace_configs(miracle_config_data_t* config);
     bool miracle_config_remove_workspace_config(
         miracle_config_data_t* config,

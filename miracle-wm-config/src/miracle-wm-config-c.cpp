@@ -130,15 +130,15 @@ extern "C"
         return data->includes.value[index].c_str();
     }
 
-    void miracle_config_add_include(const miracle_config_data_t* config, const char* value)
+    void miracle_config_add_include(const miracle_config_data_t* config, const char* value, size_t index)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->includes->push_back(value);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->includes->insert(data->includes->begin() + static_cast<std::vector<std::string>::difference_type>(index), value);
     }
 
     void miracle_config_remove_include(const miracle_config_data_t* config, size_t index)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        const auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->includes->erase(data->includes->begin() + static_cast<std::vector<std::string>::difference_type>(index));
     }
 
@@ -871,28 +871,29 @@ extern "C"
             name_copy.clear();
 
         return {
-            ws.num ? *ws.num : -1,
-            ws.window_layout_strategy ? static_cast<int>(*ws.window_layout_strategy) : -1,
-            ws.name ? name_copy.c_str() : nullptr
+            ws.num.has_value(),
+            ws.num.value_or(-1),
+            ws.name.has_value(),
+            name_copy.c_str(),
+            ws.window_layout_strategy.has_value(),
+            static_cast<int>(ws.window_layout_strategy.value_or(miracle::WindowLayoutStrategy::tiling)),
         };
     }
 
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
-        int num,
-        int layout_stategy,
-        const char* name)
+        miracle_workspace_config_t* workspace_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         miracle::WorkspaceConfig ws;
 
-        if (num >= 0)
-            ws.num = num;
-        if (layout_stategy >= 0)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_stategy);
-        if (name)
-            ws.name = name;
+        if (workspace_config->has_num)
+            ws.num = workspace_config->num;
+        if (workspace_config->has_name)
+            ws.name = workspace_config->name;
+        if (workspace_config->has_layout_strategy)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs->push_back(ws);
     }
