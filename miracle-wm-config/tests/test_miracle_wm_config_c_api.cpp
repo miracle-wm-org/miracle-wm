@@ -172,7 +172,7 @@ TEST_F(CAPIWrapperTest, EaseFunctionOptionsCanBeFound)
 
 TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCount)
 {
-    ASSERT_THAT(miracle_config_get_layout_options_count(), Eq(static_cast<uint>(miracle::ContainerType::max)));
+    ASSERT_THAT(miracle_config_get_layout_options_count(), Eq(static_cast<uint>(miracle::WindowLayoutStrategy::max)));
 }
 
 TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCanBeFound)
@@ -578,14 +578,14 @@ TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
     miracle_config_add_workspace_config(
         &wrapper->config,
         1,
-        static_cast<int>(miracle::ContainerType::leaf),
+        static_cast<int>(miracle::WindowLayoutStrategy::floating),
         "Main");
 
     EXPECT_EQ(miracle_config_get_workspace_config_count(&wrapper->config), 1);
 
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
     EXPECT_EQ(ws.num, 1);
-    EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::leaf));
+    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
     EXPECT_STREQ(ws.name, "Main");
 }
 
@@ -601,12 +601,12 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
         &wrapper->config,
         0,
         2,
-        static_cast<int>(miracle::ContainerType::stack),
+        static_cast<int>(miracle::WindowLayoutStrategy::floating),
         "Other");
 
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
     EXPECT_EQ(ws.num, 2);
-    EXPECT_EQ(ws.container_type, static_cast<int>(miracle::ContainerType::stack));
+    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
     EXPECT_STREQ(ws.name, "Other");
 }
 

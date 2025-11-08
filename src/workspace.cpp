@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "math_helpers.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
@@ -227,22 +228,48 @@ AllocationHint Workspace::allocate_position(
     miral::WindowSpecification& requested_specification,
     AllocationHint const& hint)
 {
-    // If there's no ideal layout type, use the one provided by the workspace
+    // We will figure out which parent to add this window to before placing it.
+    //
+    // The parent is either:
+    // 1. The one provided in the hint
+    // 2. The same parent as the currently selected (or root)
+    // 3. A wholly new parent, in the event that we are initializing a floating window.
     auto const& workspace_config = config->get_workspace_config(num_, name_);
-    auto const layout = hint.container_type == ContainerType::none
-        ? workspace_config.layout ? workspace_config.layout.value() : ContainerType::leaf
-        : hint.container_type;
-    switch (layout)
+    std::shared_ptr<ParentContainer> parent;
+    if (hint.parent)
+        parent = hint.parent.value();
+    else
     {
-    case ContainerType::leaf:
-    {
-        auto parent = hint.parent ? hint.parent.value() : get_layout_container();
-        requested_specification = parent->place_new_window(requested_specification);
-        return { ContainerType::leaf, parent };
+        if (workspace_config.window_layout_strategy)
+        {
+            switch (*workspace_config.window_layout_strategy)
+            {
+
+            case WindowLayoutStrategy::floating:
+            {
+                auto const output_area = get_output()->get_area();
+                geom::Rectangle const floating_area = {
+                    geom::Point {
+                                 as_float(output_area.top_left.x) + as_float(output_area.size.width) * 0.1f,
+                                 as_float(output_area.top_left.y) + as_float(output_area.size.height) * 0.1f },
+                    geom::Size {
+                                 as_float(output_area.size.width) * 0.8f,
+                                 as_float(output_area.size.height) * 0.8f                                    }
+                };
+                parent = create_floating_tree(floating_area);
+                break;
+            }
+            default:
+                parent = get_layout_container();
+                break;
+            }
+        }
+        else
+            parent = get_layout_container();
     }
-    default:
-        return { layout, std::nullopt };
-    }
+
+    requested_specification = parent->place_new_window(requested_specification);
+    return { ContainerType::leaf, parent };
 }
 
 std::shared_ptr<Container> Workspace::create_container(
