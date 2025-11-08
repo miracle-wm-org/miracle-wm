@@ -1709,7 +1709,7 @@ bool CommandController::rename_existing_workspace(
     return false;
 }
 
-bool CommandController::set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only)
+bool CommandController::set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only)
 {
     auto lock = state->unique_lock();
     auto const gaps_opt = [&]() -> std::optional<Gaps>
@@ -1761,7 +1761,7 @@ bool CommandController::set_inner_gaps(size_t px, GapsChangeType type, bool curr
 }
 
 bool CommandController::set_outer_gaps(
-    size_t px,
+    uint32_t px,
     OuterGapsChange outer_gaps_change,
     GapsChangeType type,
     bool current_workspace_only)

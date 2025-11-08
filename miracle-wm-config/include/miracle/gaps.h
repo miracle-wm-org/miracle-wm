@@ -18,16 +18,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_GAPS_H
 #define MIRACLEWM_GAPS_H
 
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 
 namespace miracle
 {
 struct Gaps
 {
-    uint top = 0;
-    uint bottom = 0;
-    uint left = 0;
-    uint right = 0;
+    uint32_t top = 0;
+    uint32_t bottom = 0;
+    uint32_t left = 0;
+    uint32_t right = 0;
 };
 
 inline Gaps operator+(Gaps const& lhs, Gaps const& rhs)

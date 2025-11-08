@@ -342,33 +342,33 @@ extern "C"
         // TODO: Error handling
     }
 
-    uint miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
+    uint32_t miracle_config_get_inner_gaps_x(const miracle_config_data_t* config)
     {
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->inner_gaps->left;
     }
 
-    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint value)
+    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint32_t value)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->inner_gaps->left = value;
         data->inner_gaps->right = value;
     }
 
-    uint miracle_config_get_inner_gaps_y(const miracle_config_data_t* config)
+    uint32_t miracle_config_get_inner_gaps_y(const miracle_config_data_t* config)
     {
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->inner_gaps->top;
     }
 
-    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint value)
+    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint32_t value)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->inner_gaps->top = value;
         data->inner_gaps->bottom = value;
     }
 
-    uint miracle_config_get_outer_gaps_x(const miracle_config_data_t* config)
+    uint32_t miracle_config_get_outer_gaps_x(const miracle_config_data_t* config)
     {
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         return data->outer_gaps->left;
@@ -998,7 +998,11 @@ extern "C"
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (!*data->keymap)
-            return { .is_set = false };
+            return { .is_set = false,
+                .language = "",
+                .has_variant = false,
+                .variant = "",
+                .options_count = 0 };
 
         return {
             .is_set = true,

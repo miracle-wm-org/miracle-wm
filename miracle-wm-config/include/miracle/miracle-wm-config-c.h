@@ -130,17 +130,17 @@ extern "C"
     uint miracle_config_get_primary_button(const miracle_config_data_t* config);
     void miracle_config_set_primary_button(miracle_config_data_t* config, uint button);
 
-    uint miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
-    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint value);
+    uint32_t miracle_config_get_inner_gaps_x(const miracle_config_data_t* config);
+    void miracle_config_set_inner_gaps_x(miracle_config_data_t* config, uint32_t value);
 
-    uint miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
-    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint value);
+    uint32_t miracle_config_get_inner_gaps_y(const miracle_config_data_t* config);
+    void miracle_config_set_inner_gaps_y(miracle_config_data_t* config, uint32_t value);
 
-    uint miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
-    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, uint value);
+    uint32_t miracle_config_get_outer_gaps_x(const miracle_config_data_t* config);
+    void miracle_config_set_outer_gaps_x(miracle_config_data_t* config, uint32_t value);
 
-    uint miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
-    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, uint value);
+    uint32_t miracle_config_get_outer_gaps_y(const miracle_config_data_t* config);
+    void miracle_config_set_outer_gaps_y(miracle_config_data_t* config, uint32_t value);
 
     int miracle_config_get_resize_jump(const miracle_config_data_t* config);
     void miracle_config_set_resize_jump(miracle_config_data_t* config, int value);
@@ -380,16 +380,16 @@ extern "C"
         bool is_set;
 
         /// The language for the keymap.
-        const char* language = "";
+        const char* language;
 
         /// Whether the [variant] is set.
-        bool has_variant = false;
+        bool has_variant;
 
         /// The variant.
-        const char* variant = "";
+        const char* variant;
 
         // The number of options specified on this keymap.
-        size_t options_count = false;
+        size_t options_count;
     } miracle_keymap_t;
 
     /// Retrieve the keymap from the configuration data.
@@ -551,7 +551,7 @@ extern "C"
         /// in sticky keys being temporarily disabled until all keys are released.
         ///
         /// Defaults to `true`.
-        bool should_disable_if_two_keys_are_pressed_together = true;
+        bool should_disable_if_two_keys_are_pressed_together;
     } miracle_sticky_keys_t;
 
     miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config);
