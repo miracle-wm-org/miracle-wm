@@ -459,16 +459,13 @@ extern "C"
 
     void miracle_config_add_custom_key_command(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command)
+        miracle_custom_key_command_t* key_command)
     {
 
         bool found_action = false;
         for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
         {
-            if (snd == action)
+            if (snd == key_command->action)
                 found_action = true;
         }
 
@@ -476,19 +473,16 @@ extern "C"
             return;
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->custom_key_commands->push_back({ static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            command ? command : "" });
+        data->custom_key_commands->push_back(miracle::CustomKeyCommand{ static_cast<MirKeyboardAction>(key_command->action),
+            key_command->modifiers,
+            key_command->key,
+            key_command->command });
     }
 
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command)
+        miracle_custom_key_command_t* key_command)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->custom_key_commands->size())
@@ -497,23 +491,17 @@ extern "C"
         bool found_action = false;
         for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
         {
-            if (snd == action)
+            if (snd == key_command->action)
                 found_action = true;
         }
 
         if (!found_action)
             return;
 
-        data->custom_key_commands.value[index] = { static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            command ? command : "" };
-    }
-
-    void miracle_config_clear_custom_key_commands(miracle_config_data_t* config)
-    {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->custom_key_commands->clear();
+        data->custom_key_commands.value[index] = { static_cast<MirKeyboardAction>(key_command->action),
+            key_command->modifiers,
+            key_command->key,
+            key_command->command };
     }
 
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index)
@@ -532,7 +520,7 @@ extern "C"
         return data->built_in_key_command_overrides->size();
     }
 
-    miracle_built_in_key_command_t miracle_config_get_built_in_key_command_override(
+    miracle_built_in_key_command_override_t miracle_config_get_built_in_key_command_override(
         const miracle_config_data_t* config,
         size_t index)
     {
@@ -548,36 +536,30 @@ extern "C"
 
     void miracle_config_add_built_in_key_command_override(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command)
+        miracle_built_in_key_command_override_t* key_command_override)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->built_in_key_command_overrides->push_back(miracle::BuiltInKeyCommandOverride {
-            static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            static_cast<miracle::DefaultKeyCommand>(command) });
+            static_cast<MirKeyboardAction>(key_command_override->action),
+            key_command_override->modifiers,
+            key_command_override->key,
+            static_cast<miracle::DefaultKeyCommand>(key_command_override->command) });
     }
 
     void miracle_config_set_built_in_key_command_override(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command)
+        miracle_built_in_key_command_override_t* key_command_override)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->built_in_key_command_overrides->size())
             return;
 
         data->built_in_key_command_overrides.value[index] = miracle::BuiltInKeyCommandOverride {
-            static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            static_cast<miracle::DefaultKeyCommand>(command)
+            static_cast<MirKeyboardAction>(key_command_override->action),
+            key_command_override->modifiers,
+            key_command_override->key,
+            static_cast<miracle::DefaultKeyCommand>(key_command_override->command)
         };
     }
 

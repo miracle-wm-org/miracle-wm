@@ -409,64 +409,137 @@ extern "C"
     /// \param terminal the terminal command as a string.
     void miracle_config_set_terminal(miracle_config_data_t* config, const char* terminal);
 
+    /// Describes a custom keybind action.
     typedef struct
     {
-        uint action; // MirKeyboardAction as uint
-        uint modifiers; // List of modifiers as uint
-        uint key; // Input event code of the key, must be oen of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
-        const char* command; // NULL-terminated string
+        /// The keyboard action that triggers this command.
+        ///
+        /// Use #miracle_config_get_keyboard_actions_option to list the options.
+        uint action;
+
+        /// A bit field describing the modifiers that must be held for this keybind
+        /// to be triggered.
+        ///
+        /// Use #miracle_config_get_modifier_option to list the options.
+        uint modifiers;
+
+        /// The input event code that must be acted on to trigger the action.
+        ///
+        /// See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h for the options.
+        uint key;
+
+        /// The command that will be triggered by this key combination.
+        const char* command;
     } miracle_custom_key_command_t;
 
     /// Retrieve the number of custom keybinds in the \p config.
     ///
+    /// Use #miracle_config_get_custom_key_command to retrieve the key commands.
+    ///
     /// \param config the config
     /// \returns the number of custom keybinds
     size_t miracle_config_get_custom_key_command_count(const miracle_config_data_t* config);
+
+    /// Retrieve a custom keybind by index.
+    ///
+    /// Use #miracle_config_get_custom_key_command_count to retrieve the number of key commands
+    /// that are available.
+    ///
+    /// \param config the config
+    /// \paramm index the index of the key command
+    /// \returns the custom key command
     miracle_custom_key_command_t miracle_config_get_custom_key_command(
         const miracle_config_data_t* config,
         size_t index);
+
+    /// Add a custom keybind.
+    ///
+    /// \param config the config
+    /// \param key_command the keybind
     void miracle_config_add_custom_key_command(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command);
+        miracle_custom_key_command_t* key_command);
+
+    /// Modify a custom keybind.
+    ///
+    /// \param config the config
+    /// \param index the index to change
+    /// \param key_command the keybind
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command);
-    void miracle_config_clear_custom_key_commands(miracle_config_data_t* config);
-    // Remove command at index (returns false if index is invalid)
+        miracle_custom_key_command_t* key_command);
+
+    /// Remove the custom key command by \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns `true` if it was removed, otherwise `false`
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index);
 
+    /// Describes an internal keybind that is overridden by this keybind.
     typedef struct
     {
-        uint action; // MirKeyboardAction as uint
-        uint modifiers; // List of modifiers as uint
-        uint key; // Input event code of the key, must be one of https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
-        uint command; // DefaultKeyCommand as uint
-    } miracle_built_in_key_command_t;
+        /// The keyboard action that triggers this command.
+        ///
+        /// Use #miracle_config_get_keyboard_actions_option to list the options.
+        uint action;
 
+        /// A bit field describing the modifiers that must be held for this keybind
+        /// to be triggered.
+        ///
+        /// Use #miracle_config_get_modifier_option to list the options.
+        uint modifiers;
+
+        /// The input event code that must be acted on to trigger the action.
+        ///
+        /// See https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h for the options.
+        uint key;
+
+        /// The command that is being overridden.
+        ///
+        /// Use #miracle_config_get_built_in_key_command_option to get the built-in key command options.
+        uint command;
+    } miracle_built_in_key_command_override_t;
+
+    /// Retrieve the number of built-in keybind overrides.
+    ///
+    /// \param config the config
+    /// \returns the number of built-in keybind overrides
     size_t miracle_config_get_built_in_key_command_override_count(const miracle_config_data_t* config);
-    miracle_built_in_key_command_t miracle_config_get_built_in_key_command_override(
+
+    /// Retrieve the built-in key command override at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the build in key command override
+    miracle_built_in_key_command_override_t miracle_config_get_built_in_key_command_override(
         const miracle_config_data_t* config,
         size_t index);
+
+    /// Add a built-in keybind override.
+    ///
+    /// \param config the config
+    /// \param key_command_override the override
     void miracle_config_add_built_in_key_command_override(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command);
+        miracle_built_in_key_command_override_t* key_command_override);
+
+    /// Modify a built-in keybind override at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \param key_command_override the override
     void miracle_config_set_built_in_key_command_override(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command);
+        miracle_built_in_key_command_override_t* key_command_override);
+
+    /// Remove a built-in key command override at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns `true` if successfully removed, otherwise `false`.
     bool miracle_config_remove_built_in_key_command_override(
         const miracle_config_data_t* config,
         size_t index);
