@@ -1151,7 +1151,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
     // Save primary modifier
     for (auto const& [name, value] : mir_input_event_modifier_opts)
     {
-        if (value == config.primary_modifier)
+        if (value == config.primary_modifier.value)
         {
             out << YAML::Key << "action_key" << YAML::Value << name;
             break;
