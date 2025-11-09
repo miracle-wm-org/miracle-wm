@@ -276,13 +276,13 @@ extern "C"
 
     uint miracle_config_get_layout_options_count()
     {
-        return static_cast<uint>(miracle::ContainerType::max);
+        return static_cast<uint>(miracle::WindowLayoutStrategy::max);
     }
 
     miracle_config_option_t miracle_config_get_layout_option(uint i)
     {
         return {
-            miracle::container_type_strings[i],
+            miracle::window_layout_strategy_strings[i],
             i
         };
     }
@@ -872,7 +872,7 @@ extern "C"
 
         return {
             ws.num ? *ws.num : -1,
-            ws.layout ? static_cast<int>(*ws.layout) : -1,
+            ws.window_layout_strategy ? static_cast<int>(*ws.window_layout_strategy) : -1,
             ws.name ? name_copy.c_str() : nullptr
         };
     }
@@ -880,7 +880,7 @@ extern "C"
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
         int num,
-        int container_type,
+        int layout_stategy,
         const char* name)
     {
 
@@ -889,8 +889,8 @@ extern "C"
 
         if (num >= 0)
             ws.num = num;
-        if (container_type >= 0)
-            ws.layout = static_cast<miracle::ContainerType>(container_type);
+        if (layout_stategy >= 0)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_stategy);
         if (name)
             ws.name = name;
 
@@ -901,7 +901,7 @@ extern "C"
         miracle_config_data_t* config,
         size_t index,
         int num,
-        int container_type,
+        int layout_strategy,
         const char* name)
     {
 
@@ -913,8 +913,8 @@ extern "C"
 
         if (num >= 0)
             ws.num = num;
-        if (container_type >= 0)
-            ws.layout = static_cast<miracle::ContainerType>(container_type);
+        if (layout_strategy >= 0)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_strategy);
         if (name)
             ws.name = name;
 

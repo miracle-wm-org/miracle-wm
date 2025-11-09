@@ -68,7 +68,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     };
     first.workspace_configs->push_back(miracle::WorkspaceConfig {
         .num = 2,
-        .layout = miracle::ContainerType::leaf,
+        .window_layout_strategy = miracle::WindowLayoutStrategy::tiling,
         .name = "second",
     });
     first.move_modifier = mir_input_event_modifier_shift;
@@ -133,7 +133,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     };
     second.workspace_configs->push_back(miracle::WorkspaceConfig {
         .num = 2,
-        .layout = miracle::ContainerType::stack,
+        .window_layout_strategy = miracle::WindowLayoutStrategy::floating,
         .name = "second",
     });
     second.move_modifier = mir_input_event_modifier_shift;
@@ -190,10 +190,10 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     EXPECT_THAT(merged.animation_definitions.value[0].duration_seconds, Eq(5));
     EXPECT_THAT(merged.workspace_configs->size(), Eq(2));
     EXPECT_THAT(merged.workspace_configs.value[0].num, Eq(2));
-    EXPECT_THAT(merged.workspace_configs.value[0].layout, Eq(miracle::ContainerType::stack));
+    EXPECT_THAT(merged.workspace_configs.value[0].window_layout_strategy, Eq(miracle::WindowLayoutStrategy::floating));
     EXPECT_THAT(merged.workspace_configs.value[0].name, Eq("second"));
     EXPECT_THAT(merged.workspace_configs.value[1].num, Eq(2));
-    EXPECT_THAT(merged.workspace_configs.value[1].layout, Eq(miracle::ContainerType::leaf));
+    EXPECT_THAT(merged.workspace_configs.value[1].window_layout_strategy, Eq(miracle::WindowLayoutStrategy::tiling));
     EXPECT_THAT(merged.workspace_configs.value[1].name, Eq("second"));
     EXPECT_THAT(*merged.move_modifier, Eq(mir_input_event_modifier_shift));
     EXPECT_THAT(merged.drag_and_drop->enabled, Eq(true));

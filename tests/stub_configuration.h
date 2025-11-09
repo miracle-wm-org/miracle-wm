@@ -92,7 +92,7 @@ namespace test
 
         [[nodiscard]] WorkspaceConfig get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const override
         {
-            return { num, ContainerType::leaf, name };
+            return { num, std::nullopt, name };
         }
 
         [[nodiscard]] uint get_primary_modifier() const override

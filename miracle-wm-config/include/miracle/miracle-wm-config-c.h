@@ -313,7 +313,7 @@ extern "C"
     typedef struct
     {
         int num; // -1 if not set
-        int container_type; // miracle::ContainerType as int
+        int layout_strategy; // miracle::WindowLayoutStrategy as int
         const char* name; // NULL if not set
     } miracle_workspace_config_t;
 
@@ -324,13 +324,13 @@ extern "C"
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
         int num,
-        int container_type,
+        int layout_stategy,
         const char* name);
     void miracle_config_set_workspace_config(
         miracle_config_data_t* config,
         size_t index,
         int num,
-        int container_type,
+        int layout_strategy,
         const char* name);
     void miracle_config_clear_workspace_configs(miracle_config_data_t* config);
     bool miracle_config_remove_workspace_config(
