@@ -32,6 +32,7 @@ namespace miracle
 class OutputListener
 {
 public:
+    virtual ~OutputListener() = default;
     virtual void output_created(miral::Output const&) = 0;
     virtual void output_updated(miral::Output const& updated, miral::Output const& original) = 0;
     virtual void output_deleted(miral::Output const&) = 0;
