@@ -387,6 +387,13 @@ bool FilesystemConfiguration::matches_key_command(
     unsigned int modifiers,
     std::function<bool(DefaultKeyCommand)> const& f) const
 {
+    struct KeyCommand
+    {
+        MirKeyboardAction action;
+        uint modifiers;
+        uint key;
+    };
+
     constexpr KeyCommand default_key_commands[static_cast<int>(DefaultKeyCommand::MAX)] = {
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
@@ -543,16 +550,16 @@ bool FilesystemConfiguration::matches_key_command(
          KEY_MINUS }
     };
 
-    auto const try_run_key_command = [&](KeyCommand const& command, DefaultKeyCommand i)
+    auto const try_run_key_command = [&](MirKeyboardAction action, uint modifiers, uint key, DefaultKeyCommand i)
     {
-        if (action != command.action)
+        if (action != action)
             return false;
 
-        auto const command_modifiers = process_modifier(command.modifiers);
+        auto const command_modifiers = process_modifier(modifiers);
         if (command_modifiers != modifiers)
             return false;
 
-        if (scan_code == command.key)
+        if (scan_code == key)
         {
             if (f(i))
                 return true;
@@ -571,13 +578,13 @@ bool FilesystemConfiguration::matches_key_command(
 
     for (auto& override : overrides)
     {
-        if (try_run_key_command(override, override.default_key_command))
+        if (try_run_key_command(override.action, override.modifiers, override.key, override.default_key_command))
             return true;
     }
 
     for (size_t i = 0; i < static_cast<int>(DefaultKeyCommand::MAX); i++)
     {
-        if (try_run_key_command(default_key_commands[i], static_cast<DefaultKeyCommand>(i)))
+        if (try_run_key_command(default_key_commands[i].action, default_key_commands[i].modifiers, default_key_commands[i].key, static_cast<DefaultKeyCommand>(i)))
             return true;
     }
 
