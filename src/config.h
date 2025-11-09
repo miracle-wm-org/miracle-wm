@@ -40,7 +40,7 @@ class MainLoop;
 
 namespace miral
 {
-class FdHandle;
+struct FdHandle;
 }
 namespace miracle
 {
