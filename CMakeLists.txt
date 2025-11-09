@@ -61,7 +61,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
             -Wconversion -Wsign-conversion
             -Wimplicit-fallthrough
             -Wunreachable-code
-            -Wno-volatile
             -Wno-unused-parameter
             -g -fno-omit-frame-pointer
     )

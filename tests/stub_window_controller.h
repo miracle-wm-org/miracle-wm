@@ -123,12 +123,12 @@ public:
         throw std::runtime_error("get_window_data should resolve");
     }
 
-    miral::Window window_at(float x, float y)
+    miral::Window window_at(float x, float y) override
     {
         return miral::Window();
     }
 
-    void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&)
+    void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&) override
     {
     }
 

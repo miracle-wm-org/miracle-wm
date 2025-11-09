@@ -52,7 +52,7 @@ struct AnimationFrameResult
     ///
     /// Once set, the animation that produced this object will
     /// be removed.
-    bool is_complete;
+    bool is_complete = false;
 
     /// The current rectangle set by the animation, if any.
     std::optional<mir::geometry::Rectangle> rectangle;
@@ -99,8 +99,6 @@ public:
         mir::geometry::Rectangle const& current,
         float opacity_start,
         float opacity_end);
-
-    BuiltInAnimation& operator=(BuiltInAnimation const& other) = default;
 
     AnimationFrameResult init() override;
     AnimationFrameResult step(float dt) override;

@@ -40,20 +40,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-struct MIRACLE_WM_CONFIG_API KeyCommand
+struct MIRACLE_WM_CONFIG_API CustomKeyCommand
 {
     MirKeyboardAction action;
     uint modifiers;
     uint key;
-};
-
-struct MIRACLE_WM_CONFIG_API CustomKeyCommand : KeyCommand
-{
     std::string command;
 };
 
-struct MIRACLE_WM_CONFIG_API BuiltInKeyCommandOverride : KeyCommand
+struct MIRACLE_WM_CONFIG_API BuiltInKeyCommandOverride
 {
+    MirKeyboardAction action;
+    uint modifiers;
+    uint key;
     DefaultKeyCommand default_key_command;
 };
 

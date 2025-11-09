@@ -168,8 +168,8 @@ public:
     virtual std::unordered_set<std::string> get_all_marks() const = 0;
     virtual bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) = 0;
     virtual bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) = 0;
-    virtual bool set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only) = 0;
-    virtual bool set_outer_gaps(size_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) = 0;
+    virtual bool set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only) = 0;
+    virtual bool set_outer_gaps(uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) = 0;
     virtual bool try_move_workspace_to_output(OutputSelection selection) = 0;
     virtual bool try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs) = 0;
     [[nodiscard]] virtual nlohmann::json to_json() const = 0;
@@ -277,8 +277,8 @@ public:
     std::unordered_set<std::string> get_all_marks() const override;
     bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) override;
     bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) override;
-    bool set_inner_gaps(size_t px, GapsChangeType type, bool current_workspace_only) override;
-    bool set_outer_gaps(size_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) override;
+    bool set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only) override;
+    bool set_outer_gaps(uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) override;
     bool try_move_workspace_to_output(OutputSelection selection) override;
     bool try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs) override;
     [[nodiscard]] nlohmann::json to_json() const override;
