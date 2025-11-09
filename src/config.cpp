@@ -550,16 +550,16 @@ bool FilesystemConfiguration::matches_key_command(
          KEY_MINUS }
     };
 
-    auto const try_run_key_command = [&](MirKeyboardAction action, uint modifiers, uint key, DefaultKeyCommand i)
+    auto const try_run_key_command = [&](MirKeyboardAction in_action, uint in_modifiers, uint in_key, DefaultKeyCommand i)
     {
-        if (action != action)
+        if (action != in_action)
             return false;
 
-        auto const command_modifiers = process_modifier(modifiers);
+        auto const command_modifiers = process_modifier(in_modifiers);
         if (command_modifiers != modifiers)
             return false;
 
-        if (scan_code == key)
+        if (scan_code == in_key)
         {
             if (f(i))
                 return true;
