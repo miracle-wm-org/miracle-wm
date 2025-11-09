@@ -544,66 +544,133 @@ extern "C"
         const miracle_config_data_t* config,
         size_t index);
 
-    // Startup app accessors
+    /// Represents an application that will start when the compositor is ready for client
+    /// connections.
     typedef struct
     {
+        /// The command to execute.
         const char* command;
+
+        /// If `true`, the command will be rerun if it returns a non-zero exit code.
         bool restart_on_death;
+
+        /// Specifies that the app should receive no startup ID.
         bool no_startup_id;
+
+        /// If `true`, the compositor will exit when this program exits.
         bool should_halt_compositor_on_death;
+
+        /// If `true`, the #command will be run in systemd's scope.
         bool in_systemd_scope;
     } miracle_startup_app_t;
 
+    /// Retrieve the number of startup applications.
+    ///
+    /// \param config the config
+    /// \returns the number of startup applications
     size_t miracle_config_get_startup_app_count(const miracle_config_data_t* config);
+
+    /// Retrieve a startup application at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns a startup app
     miracle_startup_app_t miracle_config_get_startup_app(const miracle_config_data_t* config, size_t index);
+
+    /// Add a new startup app.
+    ///
+    /// \param config the config
+    /// \param startup_app the new startup app
     void miracle_config_add_startup_app(
         miracle_config_data_t* config,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope);
+        miracle_startup_app_t* startup_app);
+
+    /// Modify the startup app at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index to modify
+    /// \param startup_app the startup app
     void miracle_config_set_startup_app(
         miracle_config_data_t* config,
         size_t index,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope);
+        miracle_startup_app_t* startup_app);
+
+    /// Remove a startup app at a particular index.
+    ///
+    /// \param config the config
+    /// \param index the index to remove
     bool miracle_config_remove_startup_app(miracle_config_data_t* config, size_t index);
 
-    // Environment variable accessors
+    /// Describes an environment variable that will be set when the compositor starts.
     typedef struct
     {
+        /// The key for the environment variable.
         const char* key;
+
+        /// The value for the environment variable.
         const char* value;
     } miracle_environment_variable_t;
 
+    /// Retrieve the number of environment variables.
+    ///
+    /// \param config the config
+    /// \returns the number of environment variables set in the config
     size_t miracle_config_get_environment_variable_count(const miracle_config_data_t* config);
+
+    /// Retrieve an environment variable at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the environment variable
     miracle_environment_variable_t miracle_config_get_environment_variable(
         const miracle_config_data_t* config,
         size_t index);
+
+    /// Add an environment variable.
+    ///
+    /// \param config the config
+    /// \param variable the environment variable to add
     void miracle_config_add_environment_variable(
         miracle_config_data_t* config,
-        const char* key,
-        const char* value);
+        miracle_environment_variable_t* variable);
+
+    /// Modify an environment variable.
+    ///
+    /// \param config the config
+    /// \param index to modify
+    /// \param variable new variable
     void miracle_config_set_environment_variable(
         miracle_config_data_t* config,
         size_t index,
-        const char* key,
-        const char* value);
+        miracle_environment_variable_t* variable);
+
+    /// Remove an environment variable.
+    ///
+    /// \param config the config
+    /// \param index to remove
+    /// \returns `true` if removed, otherwise `false`
     bool miracle_config_remove_environment_variable(miracle_config_data_t* config, size_t index);
 
-    // Border config accessors
+    // The configuration for window borders.
     typedef struct
     {
+        /// The size of the border in pixels.
         int size;
+
+        /// The radius of the border in pixels.
         float radius;
-        float focus_color[4]; // RGBA
-        float color[4]; // RGBA
+
+        /// The RGBA color of the border when focused.
+        float focus_color[4];
+
+        /// The RGBA color of the border when not focused.
+        float color[4];
     } miracle_border_config_t;
 
+    /// Retrieve the border config.
+    ///
+    /// \param config the config
+    /// \returns the border config
     miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config);
     void miracle_config_set_border_config(
         miracle_config_data_t* config,

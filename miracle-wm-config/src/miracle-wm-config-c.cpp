@@ -473,7 +473,7 @@ extern "C"
             return;
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->custom_key_commands->push_back(miracle::CustomKeyCommand{ static_cast<MirKeyboardAction>(key_command->action),
+        data->custom_key_commands->push_back(miracle::CustomKeyCommand { static_cast<MirKeyboardAction>(key_command->action),
             key_command->modifiers,
             key_command->key,
             key_command->command });
@@ -602,38 +602,30 @@ extern "C"
 
     void miracle_config_add_startup_app(
         miracle_config_data_t* config,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope)
+        miracle_startup_app_t* startup_app)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->startup_apps->push_back({ command ? command : "",
-            restart_on_death,
-            no_startup_id,
-            should_halt_compositor_on_death,
-            in_systemd_scope });
+        data->startup_apps->push_back({ startup_app->command,
+            startup_app->restart_on_death,
+            startup_app->no_startup_id,
+            startup_app->should_halt_compositor_on_death,
+            startup_app->in_systemd_scope });
     }
 
     void miracle_config_set_startup_app(
         miracle_config_data_t* config,
         size_t index,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope)
+        miracle_startup_app_t* startup_app)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->startup_apps->size())
             return;
 
-        data->startup_apps.value[index] = { command ? command : "",
-            restart_on_death,
-            no_startup_id,
-            should_halt_compositor_on_death,
-            in_systemd_scope };
+        data->startup_apps.value[index] = { startup_app->command,
+            startup_app->restart_on_death,
+            startup_app->no_startup_id,
+            startup_app->should_halt_compositor_on_death,
+            startup_app->in_systemd_scope };
     }
 
     void miracle_config_clear_startup_apps(miracle_config_data_t* config)
@@ -681,27 +673,23 @@ extern "C"
 
     void miracle_config_add_environment_variable(
         miracle_config_data_t* config,
-        const char* key,
-        const char* value)
+        miracle_environment_variable_t* variable)
     {
-
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->environment_variables->push_back({ key ? key : "",
-            value ? value : "" });
+        data->environment_variables->push_back({ variable->key,
+            variable->value });
     }
 
     void miracle_config_set_environment_variable(
         miracle_config_data_t* config,
         size_t index,
-        const char* key,
-        const char* value)
+        miracle_environment_variable_t* variable)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->environment_variables->size())
             return;
 
-        data->environment_variables.value[index] = { key ? key : "",
-            value ? value : "" };
+        data->environment_variables.value[index] = { variable->key, variable->value };
     }
 
     void miracle_config_clear_environment_variables(miracle_config_data_t* config)
@@ -842,7 +830,7 @@ extern "C"
 
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs->size())
-            return { -1, -1, nullptr };
+            return { false, -1, false, nullptr, false, -1 };
 
         static thread_local std::string name_copy;
         const auto& ws = data->workspace_configs.value[index];
@@ -883,9 +871,7 @@ extern "C"
     void miracle_config_set_workspace_config(
         miracle_config_data_t* config,
         size_t index,
-        int num,
-        int layout_strategy,
-        const char* name)
+        miracle_workspace_config_t* workspace_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
@@ -894,12 +880,12 @@ extern "C"
 
         miracle::WorkspaceConfig ws;
 
-        if (num >= 0)
-            ws.num = num;
-        if (layout_strategy >= 0)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_strategy);
-        if (name)
-            ws.name = name;
+        if (workspace_config->has_num)
+            ws.num = workspace_config->num;
+        if (workspace_config->has_name)
+            ws.name = workspace_config->name;
+        if (workspace_config->has_layout_strategy)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs.value[index] = ws;
     }
