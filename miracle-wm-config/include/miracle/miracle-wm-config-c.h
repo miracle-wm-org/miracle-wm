@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_CONFIG_C_H
 #define MIRACLE_WM_CONFIG_C_H
 
-#include <mir_toolkit/mir_input_device_types.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -175,8 +175,6 @@ extern "C"
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
     uint miracle_config_get_built_in_key_command_options_count();
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
-    uint miracle_config_get_animateable_event_options_count();
-    miracle_config_option_t miracle_config_get_animateable_event_option(uint i);
     uint miracle_config_get_animation_type_options_count();
     miracle_config_option_t miracle_config_get_animation_type_option(uint i);
     uint miracle_config_get_ease_function_options_count();
@@ -672,40 +670,167 @@ extern "C"
     /// \param config the config
     /// \returns the border config
     miracle_border_config_t miracle_config_get_border_config(const miracle_config_data_t* config);
+
+    /// Modify the border config.
+    ///
+    /// \param config the config
+    /// \param border_config the new border config
     void miracle_config_set_border_config(
         miracle_config_data_t* config,
-        int size,
-        float radius,
-        const float focus_color[4],
-        const float color[4]);
+        miracle_border_config_t* border_config);
 
-    // Animation definition accessors
+    /// Describes an animateable event in miracle.
+    ///
+    /// Miracle provides animations at key points in the lifecycles of
+    /// windows, workspaces, and more.
     typedef struct
     {
-        bool is_default;
-        uint type;
-        uint function;
-        float duration_seconds;
-        float c1;
-        float c2;
-        float c3;
-        float c4;
-        float c5;
-        float n1;
-        float d1;
-    } miracle_animation_definition_t;
+        /// The name of the animateable event.
+        ///
+        /// This CANNOT be changed by the user.
+        const char* name;
 
-    size_t miracle_config_get_animation_definition_count();
-    miracle_animation_definition_t miracle_config_get_animation_definition(
-        const miracle_config_data_t* config,
+        /// If `true`, this event has not been altered from its default yet.
+        bool is_default;
+
+        /// The duration of the animation in seconds.
+        float duration_seconds;
+
+        /// The number of animations that are run concurrently when this event happens.
+        ///
+        /// Each animateable event is built from a number of animations
+        /// that run concurrent to each other. This enables the user to
+        /// combine animations in fun and unique ways.
+        ///
+        /// Use #miracle_animateable_event_get_animation to get an animation at a particular
+        /// index. There exists other methods to update each animation and add more as well.
+        size_t num_animations;
+
+        /// Opaque pointer.
+        void* _internal;
+    } miracle_animateable_event_t;
+
+    /// Describes an animation.
+    typedef struct
+    {
+        /// The animation type.
+        ///
+        /// Use #miracle_config_get_animation_type_option to get the available
+        /// animation types.
+        uint type;
+
+        /// The animation easing function.
+        ///
+        /// Use #miracle_config_get_ease_function_option to get the available
+        /// easing functiont ypes.
+        uint function;
+
+        /// The c1 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float c1;
+
+        /// The c2 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float c2;
+
+        /// The c3 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float c3;
+
+        /// The c4 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float c4;
+
+        /// The c5 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float c5;
+
+        /// The n1 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float n1;
+
+        /// The d1 variable of easing functions.
+        ///
+        /// See https://easings.net/.
+        float d1;
+    } miracle_built_in_animation_t;
+
+    /// Retrieve the number of animateable events.
+    ///
+    /// \returns the number of animateable events
+    size_t miracle_config_get_animateable_event_count();
+
+    /// Retrieve an animateable event at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the animateable event definition
+    miracle_animateable_event_t miracle_config_get_animateable_event(
+        miracle_config_data_t* config,
         size_t index);
-    void miracle_config_set_animation_definition(
+
+    /// Modify an animateable event at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \param definition the animateable event definition
+    void miracle_config_set_animateable_event(
         miracle_config_data_t* config,
         size_t index,
-        const miracle_animation_definition_t* definition);
+        const miracle_animateable_event_t* definition);
+
+    /// Reset the animateable event at \p index to its default.
+    ///
+    /// \param config the config
+    /// \param index the index
     void miracle_config_reset_animation_definition(
         miracle_config_data_t* config,
         size_t index);
+
+    /// Retrieve an animation from an animateable event by \p index.
+    ///
+    /// \param animateable_event the animateable event
+    /// \param index the index
+    /// \returns the animation at the index
+    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index
+    );
+
+    /// Add a new animation to the animateable event.
+    ///
+    /// \param animateable_event the animateable event
+    /// \param animation the new animation
+    void miracle_animateable_event_add_animation(
+        miracle_animateable_event_t* animateable_event,
+        miracle_built_in_animation_t animation
+    );
+
+    /// Modify an animation at a particular \p index.
+    ///
+    /// \param animateable_event the animateable event
+    /// \param index the index
+    /// \param animation the modification
+    void miracle_animateable_event_set_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index,
+        miracle_built_in_animation_t animation
+    );
+
+    /// Remove an animation from an animateable event.
+    ///
+    /// \param animateable_event the event
+    /// \param index to remove
+    void miracle_animateable_event_remove_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index
+    );
 
     /// Describes a configuration for a workspace.
     typedef struct
@@ -742,62 +867,136 @@ extern "C"
         int layout_strategy;
     } miracle_workspace_config_t;
 
+    /// Retrieve the number of workspace configurations.
+    ///
+    /// \returns the number of workspace configs
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config);
+
+    /// Retrieve a workspace configuration at a particular \p index.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the workspace config
     miracle_workspace_config_t miracle_config_get_workspace_config(
         const miracle_config_data_t* config,
         size_t index);
+
+    /// Add a new workspace config.
+    ///
+    /// \param config the config
+    /// \param workspace_config the new workspace config
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
         miracle_workspace_config_t* workspace_config);
+
+    /// Modify a workspace config.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \param workspace_config the modification
     void miracle_config_set_workspace_config(
         miracle_config_data_t* config,
         size_t index,
         miracle_workspace_config_t* workspace_config);
-    void miracle_config_clear_workspace_configs(miracle_config_data_t* config);
+
+
+    /// Remove a workspace config.
+    ///
+    /// \param config the config
+    /// \param index to remove
     bool miracle_config_remove_workspace_config(
         miracle_config_data_t* config,
         size_t index);
 
-    // Move modifier accessors
+    /// Get the move modifier key.
+    ///
+    /// \param config the config
+    /// \returns the move modifier
     uint miracle_config_get_move_modifier(const miracle_config_data_t* config);
+
+    /// Set the move modifier key
+    ///
+    /// \param config the config
+    /// \param modifier the new modifier
     void miracle_config_set_move_modifier(miracle_config_data_t* config, uint modifier);
 
-    // Drag and drop config accessors
+    // The drag and drop configuration.
     typedef struct
     {
+        /// Whether or not drag and drop is enabled.
         bool enabled;
+
+        /// The modifiers that must be held for drag and drop to work.
         uint modifiers;
     } miracle_drag_and_drop_config_t;
 
+    /// Retrieve the drag and drop config.
+    ///
+    /// \param config the config
+    /// \returns the drag and drop config
     miracle_drag_and_drop_config_t miracle_config_get_drag_and_drop(const miracle_config_data_t* config);
+
+    /// Modify the drag and drop config.
+    ///
+    /// \param config the config
+    /// \param drag_and_drop_config the modified drag and drop config
     void miracle_config_set_drag_and_drop(
         miracle_config_data_t* config,
-        bool enabled,
-        uint modifiers);
+        miracle_drag_and_drop_config_t* drag_and_drop_config);
 
-    // Mouse configuration
+    // The mouse configuration.
     typedef struct
     {
-        MirPointerHandedness handedness;
+        /// The handedness of the mouse.
+        ///
+        /// Use #miracle_config_get_handedness_option to list the options.
+        uint handedness;
+
+        /// The acceleration bias of the mouse.
+        ///
+        /// This is a number between -1 and 1.
+        ///
+        /// Defaults to 0.
         double acceleration_bias;
+
+        /// The vertical scroll speed of the mouse.
+        ///
+        /// This is a number between 0 and 1.
+        ///
+        /// Defaults to 1.
         double vscroll_speed;
+
+        /// The horizontal scroll speed of the mouse.
+        ///
+        /// This is a number between 0 and 1.
+        ///
+        /// Defaults to 1.
         double hscroll_speed;
-        MirPointerAcceleration acceleration;
+
+        /// The acceleration profile of the mouse.
+        ///
+        /// Use #miracle_config_get_acceleration_option to list the options.
+        uint acceleration;
     } miracle_mouse_config_t;
 
+    /// Retrieve the mouse config.
+    ///
+    /// \param config the config
+    /// \returns the mouse config
     miracle_mouse_config_t miracle_config_get_mouse_config(const miracle_config_data_t* config);
+
+    /// Modify the mouse config.
+    ///
+    /// \param config the config
+    /// \param mouse_config the new mouse config
     void miracle_config_set_mouse_config(
         miracle_config_data_t* config,
-        MirPointerHandedness handedness,
-        double acceleration_bias,
-        double vscroll_speed,
-        double hscroll_speed,
-        MirPointerAcceleration acceleration);
+        miracle_mouse_config_t* mouse_config);
 
     /// Defines the keymap for the keyboard.
     typedef struct
     {
-        /// If true, this means that the keymap is used.
+        /// If `true`, this means that the keymap is used.
         bool is_set;
 
         /// The language for the keymap.
@@ -809,44 +1008,85 @@ extern "C"
         /// The variant.
         const char* variant;
 
-        // The number of options specified on this keymap.
+        /// The number of options specified on this keymap.
+        ///
+        /// Use #miracle_config_get_keymap_option to retrieve the option at a particular index.
         size_t options_count;
     } miracle_keymap_t;
 
-    /// Retrieve the keymap from the configuration data.
+    /// Retrieve the keymap.
+    ///
+    /// \param config the config
+    /// \returns the keymap
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config);
+
+    /// Modify the keymap.
+    ///
+    /// \param config the config
+    /// \param keymap the keymap modification
     void miracle_config_set_keymap(
         miracle_config_data_t* config,
-        bool is_set,
-        const char* language,
-        bool has_variant,
-        const char* variant);
+        miracle_keymap_t* keymap);
+
+    /// Retrieve an option from the keymap.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the option
     const char* miracle_config_get_keymap_option(const miracle_config_data_t* config, size_t index);
+
+    /// Modify an option from the keymap.
+    ///
+    /// \param config the config
+    /// \param index to modify
+    /// \param option new value
     void miracle_config_set_keymap_option(
         miracle_config_data_t* config,
         size_t index,
         const char* option);
+
+    /// Add an option to the keymap.
+    ///
+    /// \param config the config
+    /// \param option the new option
     void miracle_config_add_keymap_option(miracle_config_data_t* config, const char* option);
+
+    /// Remove an option from the keymap.
+    ///
+    /// \param config the config
+    /// \param index the index
     void miracle_config_remove_keymap_option(miracle_config_data_t* config, size_t index);
 
     /// Retrieve the repeat delay for the keyboard.
     ///
     /// This is the delay in milliseconds since the previous key down.
+    ///
+    /// \param config the config
+    /// \returns the key repeate delay
     int miracle_config_get_key_repeat_delay(const miracle_config_data_t* config);
 
     /// Set the repeat delay for the keyboard.
     ///
     /// The delay is in milliseconds since the previous key down.
+    ///
+    /// \param config the config
+    /// \param delay the new delay
     void miracle_config_set_key_repeat_delay(miracle_config_data_t* config, int delay);
 
     /// Retrieve the repeat rate for the keyboard.
     ///
     /// This is expressed in "characters per second".
+    ///
+    /// \param config the config
+    /// \returns the repeat rate
     int miracle_config_get_key_repeat_rate(const miracle_config_data_t* config);
 
     /// Set the repeat rate for the keyboard.
     ///
-    /// This is express in "characters per second".
+    /// This is expressed in "characters per second".
+    ///
+    /// \param config the config
+    /// \param rate the new rate
     void miracle_config_set_key_repeat_rate(miracle_config_data_t* config, int rate);
 
     /// Defines the hover click configuration.
@@ -875,15 +1115,18 @@ extern "C"
     } miracle_hover_click_t;
 
     /// Retrieve the hover click config.
+    ///
+    /// \param config the config
+    /// \returns the hover click config
     miracle_hover_click_t miracle_config_get_hover_click(const miracle_config_data_t* config);
 
-    /// Set the hover click config.
+    /// Modify the hover click config.
+    ///
+    /// \param config the config
+    /// \param hover_click the new hover click config
     void miracle_config_set_hover_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hover_duration_milliseconds,
-        int cancel_displacement_threshold,
-        int reclick_displacement_threshold);
+        miracle_hover_click_t* hover_click);
 
     /// Defines the simulated secondary click configuration
     typedef struct
@@ -904,12 +1147,19 @@ extern "C"
         int displacement_threshold;
     } miracle_simulated_secondary_click_t;
 
+    /// Retrieve the simulated secondary click config.
+    ///
+    /// \param config the config
+    /// \returns the simulated secondary click config
     miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config);
+
+    /// Modify the simulated secondary click config.
+    ///
+    /// \param config the config
+    /// \param simulated_secondary_click the modification
     void miracle_config_set_simulated_secondary_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hold_duration_milliseconds,
-        int displacement_threshold);
+        miracle_simulated_secondary_click_t* simulated_secondary_click);
 
     /// Defines the output filter used by miracle.
     typedef struct
@@ -922,11 +1172,18 @@ extern "C"
     } miracle_output_filter_t;
 
     /// Retrieve the output filter.
+    ///
+    /// \param config the config
+    /// \returns the output filter config
     miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config);
+
+    /// Modify the output filter.
+    ///
+    /// \param config the config
+    /// \param output_filter the output filter
     void miracle_config_set_output_filter(
         miracle_config_data_t* config,
-        bool shader_path_enabled,
-        const char* shader_path);
+        miracle_output_filter_t* output_filter);
 
     /// Defines the cursor properties.
     typedef struct
@@ -942,9 +1199,19 @@ extern "C"
         uint focus_mode; // miracle::CursorFocusMode as uint
     } miracle_cursor_t;
 
+    /// Retrieve the cursor config.
+    ///
+    /// \param config the config
+    /// \returns the cursor
     miracle_cursor_t miracle_config_get_cursor(const miracle_config_data_t* config);
-    void miracle_config_set_cursor(miracle_config_data_t* config, float scale, uint focus_mode);
 
+    /// Modify the cursor config.
+    ///
+    /// \param config the config
+    /// \param cursor the cursor
+    void miracle_config_set_cursor(miracle_config_data_t* config, miracle_cursor_t* cursor);
+
+    /// Defines the slow keys accessibility feature.
     typedef struct
     {
         /// Whether slow keys is enabled or not.
@@ -958,8 +1225,17 @@ extern "C"
         uint hold_duration_milliseconds;
     } miracle_slow_keys_t;
 
+    /// Retrieve the slow keys configuration.
+    ///
+    /// \param config the config
+    /// \returns the slow keys config
     miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config);
-    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds);
+
+    /// Modify the slow keys configuration.
+    ///
+    /// \param config the config
+    /// \param slow_keys the slow keys conifg
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, miracle_slow_keys_t* slow_keys);
 
     typedef struct
     {
@@ -975,8 +1251,17 @@ extern "C"
         bool should_disable_if_two_keys_are_pressed_together;
     } miracle_sticky_keys_t;
 
+    /// Retrieve the sticky key config.
+    ///
+    /// \param config the config
+    /// \returns the sticky keys config
     miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config);
-    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together);
+
+    /// Modify the sticky keys config.
+    ///
+    /// \param config the config
+    /// \param sticky_keys the sticky keys config
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, miracle_sticky_keys_t* sticky_keys);
 
     /// Defines the parameters for the magnifier accessibility feature.
     typedef struct
@@ -1012,7 +1297,16 @@ extern "C"
         int size_increment;
     } miracle_magnifier_t;
 
+    /// Retrieve the magnifier config.
+    ///
+    /// \param config the config
+    /// \returns the magnifier config
     miracle_magnifier_t miracle_config_get_magnifier(const miracle_config_data_t* config);
+
+    /// Modify the magnifier.
+    ///
+    /// \param config the config
+    /// \param magnifier the magnifier config
     void miracle_config_set_magnifier(miracle_config_data_t* config, miracle_magnifier_t magnifier);
 
 #ifdef __cplusplus

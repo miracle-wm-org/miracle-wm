@@ -261,19 +261,6 @@ extern "C"
         };
     }
 
-    uint miracle_config_get_animateable_event_options_count()
-    {
-        return static_cast<uint>(miracle::AnimateableEvent::max);
-    }
-
-    miracle_config_option_t miracle_config_get_animateable_event_option(uint i)
-    {
-        return {
-            miracle::animateable_event_strings[i],
-            i
-        };
-    }
-
     uint miracle_config_get_layout_options_count()
     {
         return static_cast<uint>(miracle::WindowLayoutStrategy::max);
@@ -732,80 +719,50 @@ extern "C"
 
     void miracle_config_set_border_config(
         miracle_config_data_t* config,
-        int size,
-        float radius,
-        const float focus_color[4],
-        const float color[4])
+        miracle_border_config_t* border_config)
     {
 
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->border_config->size = size;
-        data->border_config->radius = radius;
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->border_config->size = border_config->size;
+        data->border_config->radius = border_config->radius;
 
-        // Copy float[4] to glm::vec4
-        if (focus_color)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                data->border_config->focus_color[i] = focus_color[i];
-            }
-        }
+        for (int i = 0; i < 4; i++)
+            data->border_config->focus_color[i] = border_config->focus_color[i];
 
-        if (color)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                data->border_config->color[i] = color[i];
-            }
-        }
+        for (int i = 0; i < 4; i++)
+            data->border_config->color[i] = border_config->color[i];
     }
 
-    size_t miracle_config_get_animation_definition_count()
+    size_t miracle_config_get_animateable_event_count()
     {
         return static_cast<int>(miracle::AnimateableEvent::max);
     }
 
-    miracle_animation_definition_t miracle_config_get_animation_definition(
-        const miracle_config_data_t* config,
+    miracle_animateable_event_t miracle_config_get_animateable_event(
+        miracle_config_data_t* config,
         size_t index)
     {
-        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
-        const auto& def = data->animation_definitions.value[index];
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        auto def = &data->animation_definitions.value[index];
 
         return {
-            def.is_default,
-            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].type),
-            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].function),
-            def.duration_seconds,
-            def.animations.empty() ? 0 : def.animations[0].c1,
-            def.animations.empty() ? 0 : def.animations[0].c2,
-            def.animations.empty() ? 0 : def.animations[0].c3,
-            def.animations.empty() ? 0 : def.animations[0].c4,
-            def.animations.empty() ? 0 : def.animations[0].c5,
-            def.animations.empty() ? 0 : def.animations[0].n1,
-            def.animations.empty() ? 0 : def.animations[0].d1
+            miracle::animateable_event_strings[index],
+            def->is_default,
+            def->duration_seconds,
+            def->animations.size(),
+            static_cast<void*>(def)
         };
     }
 
-    void miracle_config_set_animation_definition(
+    void miracle_config_set_animateable_event(
         miracle_config_data_t* config,
         size_t index,
-        const miracle_animation_definition_t* definition)
+        const miracle_animateable_event_t* definition)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
-
         def.is_default = false;
-        def.animations[0].type = static_cast<miracle::BultInAnimationType>(definition->type);
-        def.animations[0].function = static_cast<miracle::EaseFunction>(definition->function);
         def.duration_seconds = definition->duration_seconds;
-        def.animations[0].c1 = definition->c1;
-        def.animations[0].c2 = definition->c2;
-        def.animations[0].c3 = definition->c3;
-        def.animations[0].c4 = definition->c4;
-        def.animations[0].c5 = definition->c5;
-        def.animations[0].n1 = definition->n1;
-        def.animations[0].d1 = definition->d1;
     }
 
     void miracle_config_reset_animation_definition(
@@ -815,6 +772,73 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
         def = miracle::internal::default_animation_definitions[index];
+    }
+
+    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index
+    )
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        auto const animation = def->animations[index];
+        return {
+            static_cast<uint>(animation.type),
+            static_cast<uint>(animation.function),
+            animation.c1,
+            animation.c2,
+            animation.c3,
+            animation.c4,
+            animation.c5,
+            animation.n1,
+            animation.d1
+        };
+    }
+
+    void miracle_animateable_event_add_animation(
+        miracle_animateable_event_t* animateable_event,
+        miracle_built_in_animation_t animation
+    )
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->animations.push_back(miracle::BuiltInAnimationDefinition{
+            static_cast<miracle::BultInAnimationType>(animation.type),
+            static_cast<miracle::EaseFunction>(animation.function),
+            animation.c1,
+            animation.c2,
+            animation.c3,
+            animation.c4,
+            animation.c5,
+            animation.n1,
+            animation.d1
+        });
+    }
+
+    void miracle_animateable_event_set_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index,
+        miracle_built_in_animation_t animation
+    )
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        auto& animation_def = def->animations[index];
+        animation_def.type = static_cast<miracle::BultInAnimationType>(animation.type);
+        animation_def.function = static_cast<miracle::EaseFunction>(animation.function);
+        animation_def.c1 = animation.c1;
+        animation_def.c2 = animation.c2;
+        animation_def.c3 = animation.c3;
+        animation_def.c4 = animation.c4;
+        animation_def.c5 = animation.c5;
+        animation_def.n1 = animation.n1;
+        animation_def.d1 = animation.d1;
+    }
+
+    void miracle_animateable_event_remove_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index
+    )
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->animations.erase(def->animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));
     }
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config)
@@ -926,41 +950,36 @@ extern "C"
 
     void miracle_config_set_drag_and_drop(
         miracle_config_data_t* config,
-        bool enabled,
-        uint modifiers)
+        miracle_drag_and_drop_config_t* drag_and_drop_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->drag_and_drop->enabled = enabled;
-        data->drag_and_drop->modifiers = modifiers;
+        data->drag_and_drop->enabled = drag_and_drop_config->enabled;
+        data->drag_and_drop->modifiers = drag_and_drop_config->modifiers;
     }
 
     miracle_mouse_config_t miracle_config_get_mouse_config(const miracle_config_data_t* config)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         return {
-            data->mouse_configuration->handedness().value_or(mir_pointer_handedness_right),
+            static_cast<uint>(data->mouse_configuration->handedness().value_or(mir_pointer_handedness_right)),
             data->mouse_configuration->acceleration_bias().value_or(0.0),
             data->mouse_configuration->vscroll_speed().value_or(1.0),
             data->mouse_configuration->hscroll_speed().value_or(1.0),
-            data->mouse_configuration->acceleration().value_or(mir_pointer_acceleration_none)
+            static_cast<uint>(data->mouse_configuration->acceleration().value_or(mir_pointer_acceleration_none))
         };
     }
 
     void miracle_config_set_mouse_config(
         miracle_config_data_t* config,
-        MirPointerHandedness handedness,
-        double acceleration_bias,
-        double vscroll_speed,
-        double hscroll_speed,
-        MirPointerAcceleration acceleration)
+        miracle_mouse_config_t* mouse_config)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->mouse_configuration->handedness(handedness);
-        data->mouse_configuration->acceleration_bias(acceleration_bias);
-        data->mouse_configuration->vscroll_speed(vscroll_speed);
-        data->mouse_configuration->hscroll_speed(hscroll_speed);
-        data->mouse_configuration->acceleration(acceleration);
+        data->mouse_configuration->handedness(static_cast<MirPointerHandedness>(mouse_config->handedness));
+        data->mouse_configuration->acceleration_bias(mouse_config->acceleration_bias);
+        data->mouse_configuration->vscroll_speed(mouse_config->vscroll_speed);
+        data->mouse_configuration->hscroll_speed(mouse_config->hscroll_speed);
+        data->mouse_configuration->acceleration(static_cast<MirPointerAcceleration>(mouse_config->acceleration));
     }
 
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)
@@ -984,13 +1003,10 @@ extern "C"
 
     void miracle_config_set_keymap(
         miracle_config_data_t* config,
-        bool is_set,
-        const char* language,
-        bool has_variant,
-        const char* variant)
+        miracle_keymap_t* keymap)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        if (!is_set)
+        if (!keymap->is_set)
             data->keymap = std::nullopt;
         else if (!*data->keymap)
             data->keymap = miracle::KeymapConfiguration();
@@ -998,8 +1014,8 @@ extern "C"
         if (!*data->keymap)
             return;
 
-        data->keymap->value().language = language;
-        data->keymap->value().variant = has_variant ? variant : std::optional<std::string>();
+        data->keymap->value().language = keymap->language;
+        data->keymap->value().variant = keymap->has_variant ? keymap->variant : std::optional<std::string>();
     }
 
     const char* miracle_config_get_keymap_option(const miracle_config_data_t* config, size_t index)
@@ -1083,16 +1099,13 @@ extern "C"
 
     void miracle_config_set_hover_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hover_duration_milliseconds,
-        int cancel_displacement_threshold,
-        int reclick_displacement_threshold)
+        miracle_hover_click_t* hover_click)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->hover_click->enabled = enabled;
-        data->hover_click->hover_duration_milliseconds = hover_duration_milliseconds;
-        data->hover_click->cancel_displacement_threshold = cancel_displacement_threshold;
-        data->hover_click->reclick_displacement_threshold = reclick_displacement_threshold;
+        data->hover_click->enabled = hover_click->enabled;
+        data->hover_click->hover_duration_milliseconds = hover_click->hover_duration_milliseconds;
+        data->hover_click->cancel_displacement_threshold = hover_click->cancel_displacement_threshold;
+        data->hover_click->reclick_displacement_threshold = hover_click->reclick_displacement_threshold;
     }
 
     miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config)
@@ -1107,14 +1120,12 @@ extern "C"
 
     void miracle_config_set_simulated_secondary_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hold_duration_milliseconds,
-        int displacement_threshold)
+        miracle_simulated_secondary_click_t* simulated_secondary_click)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->simulated_secondary_click->enabled = enabled;
-        data->simulated_secondary_click->hold_duration_milliseconds = hold_duration_milliseconds;
-        data->simulated_secondary_click->displacement_threshold = displacement_threshold;
+        data->simulated_secondary_click->enabled = simulated_secondary_click->enabled;
+        data->simulated_secondary_click->hold_duration_milliseconds = simulated_secondary_click->hold_duration_milliseconds;
+        data->simulated_secondary_click->displacement_threshold = simulated_secondary_click->displacement_threshold;
     }
 
     miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config)
@@ -1128,12 +1139,11 @@ extern "C"
 
     void miracle_config_set_output_filter(
         miracle_config_data_t* config,
-        bool shader_path_enabled,
-        const char* shader_path)
+        miracle_output_filter_t* output_filter)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        if (shader_path_enabled)
-            data->output_filter->shader_path = shader_path;
+        if (output_filter->shader_path_enabled)
+            data->output_filter->shader_path = output_filter->shader_path;
         else
             data->output_filter->shader_path = std::nullopt;
     }
@@ -1147,11 +1157,11 @@ extern "C"
         };
     }
 
-    void miracle_config_set_cursor(miracle_config_data_t* config, float scale, uint focus_mode)
+    void miracle_config_set_cursor(miracle_config_data_t* config, miracle_cursor_t* cursor)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->cursor->scale = scale;
-        data->cursor->focus_mode = static_cast<miracle::CursorFocusMode>(focus_mode);
+        data->cursor->scale = cursor->scale;
+        data->cursor->focus_mode = static_cast<miracle::CursorFocusMode>(cursor->focus_mode);
     }
 
     miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config)
@@ -1162,11 +1172,11 @@ extern "C"
             data->slow_keys->hold_delay_milliseconds,
         };
     }
-    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds)
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, miracle_slow_keys_t* slow_keys)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->slow_keys->enabled = enabled;
-        data->slow_keys->hold_delay_milliseconds = hold_duration_millseconds;
+        data->slow_keys->enabled = slow_keys->enabled;
+        data->slow_keys->hold_delay_milliseconds = slow_keys->hold_duration_milliseconds;
     }
 
     miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config)
@@ -1177,11 +1187,11 @@ extern "C"
             data->sticky_keys->should_disable_if_two_keys_are_pressed_together,
         };
     }
-    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together)
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, miracle_sticky_keys_t* sticky_keys)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->sticky_keys->enabled = enabled;
-        data->sticky_keys->should_disable_if_two_keys_are_pressed_together = should_disable_if_two_keys_are_pressed_together;
+        data->sticky_keys->enabled = sticky_keys->enabled;
+        data->sticky_keys->should_disable_if_two_keys_are_pressed_together = sticky_keys->should_disable_if_two_keys_are_pressed_together;
     }
 
     miracle_magnifier_t miracle_config_get_magnifier(const miracle_config_data_t* config)

@@ -41,8 +41,8 @@ protected:
 
 TEST_F(CAPIWrapperTest, CanModifyIncludes)
 {
-    miracle_config_add_include(&wrapper->config, "/home/hi");
-    miracle_config_add_include(&wrapper->config, "/home/bye");
+    miracle_config_add_include(&wrapper->config, "/home/hi", 0);
+    miracle_config_add_include(&wrapper->config, "/home/bye", 1);
     EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
     EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
     EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
@@ -128,19 +128,6 @@ TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
     for (uint i = 0; i < miracle_config_get_built_in_key_command_options_count(); i++)
     {
         ASSERT_THAT(miracle_config_get_built_in_key_command_option(i).name, Ne(nullptr));
-    }
-}
-
-TEST_F(CAPIWrapperTest, AnimateableEventOptionsCount)
-{
-    ASSERT_THAT(miracle_config_get_animateable_event_options_count(), Eq(static_cast<uint>(miracle::AnimateableEvent::max)));
-}
-
-TEST_F(CAPIWrapperTest, AnimateableEventOptionsCanBeFound)
-{
-    for (uint i = 0; i < miracle_config_get_animateable_event_options_count(); i++)
-    {
-        ASSERT_THAT(miracle_config_get_animateable_event_option(i).name, Ne(nullptr));
     }
 }
 
@@ -252,12 +239,15 @@ TEST_F(CAPIWrapperTest, CanSetNullTerminal)
 
 TEST_F(CAPIWrapperTest, CanAddCustomKeyCommand)
 {
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
+    miracle_custom_key_command_t key_command = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command");
+        "test-command"
+    };
+    miracle_config_add_custom_key_command(
+        &wrapper->config,
+        &key_command);
 
     EXPECT_EQ(miracle_config_get_custom_key_command_count(&wrapper->config), 1);
 
@@ -270,20 +260,25 @@ TEST_F(CAPIWrapperTest, CanAddCustomKeyCommand)
 
 TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
 {
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
+    miracle_custom_key_command_t key_command = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command");
+        "test-command"
+    };
+    miracle_config_add_custom_key_command(
+        &wrapper->config, &key_command
+        );
 
-    miracle_config_edit_custom_key_command(
-        &wrapper->config,
-        0,
+    key_command = {
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2");
+        "test-command-2"
+    };
+    miracle_config_edit_custom_key_command(
+        &wrapper->config,
+        0, &key_command);
 
     auto cmd = miracle_config_get_custom_key_command(&wrapper->config, 0);
     EXPECT_EQ(cmd.action, mir_keyboard_action_up);
@@ -294,20 +289,26 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
 
 TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
 {
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
+    miracle_custom_key_command_t key_command = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command");
-
-    miracle_config_edit_custom_key_command(
+        "test-command"
+    };
+    miracle_config_add_custom_key_command(
         &wrapper->config,
-        100000,
+        &key_command);
+
+    key_command = {
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         12,
-        "test-command-2");
+        "test-command-2"
+    };
+    miracle_config_edit_custom_key_command(
+        &wrapper->config,
+        100000,
+        &key_command);
 
     auto cmd = miracle_config_get_custom_key_command(&wrapper->config, 0);
     EXPECT_EQ(cmd.action, mir_keyboard_action_down);

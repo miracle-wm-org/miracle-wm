@@ -136,9 +136,10 @@ enum class AnimationType
     max
 };
 
-/// Defines an animation that is fed to miracle's animation system.
+/// Defines an animation fed to miracle's animation system.
 ///
-/// Animations come in a number of varieties as defined by [AnimationType].
+/// Animations come in a number of varieties as defined by #AnimationType.
+///
 /// While miracle offers some built-in animations, there are plans to
 /// allow users to write their own animations in the future via a plugin
 /// system.
