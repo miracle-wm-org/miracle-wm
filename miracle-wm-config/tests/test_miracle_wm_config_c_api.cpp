@@ -1,3 +1,4 @@
+
 /**
 Copyright (C) 2024  Matthew Kosarek
 
@@ -267,8 +268,7 @@ TEST_F(CAPIWrapperTest, CanEditCustomKeyCommand)
         "test-command"
     };
     miracle_config_add_custom_key_command(
-        &wrapper->config, &key_command
-        );
+        &wrapper->config, &key_command);
 
     key_command = {
         mir_keyboard_action_up,
@@ -319,40 +319,31 @@ TEST_F(CAPIWrapperTest, CannotEditCustomKeyCommandWithIndexGreaterThanRange)
 
 TEST_F(CAPIWrapperTest, CanRemoveCustomKeyCommand)
 {
-    // Test add/get
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
+    miracle_custom_key_command_t key_command = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         10,
-        "test-command");
+        "test-command"
+    };
+    miracle_config_add_custom_key_command(
+        &wrapper->config,
+        &key_command);
 
     EXPECT_TRUE(miracle_config_remove_custom_key_command(&wrapper->config, 0));
     EXPECT_EQ(miracle_config_get_custom_key_command_count(&wrapper->config), 0);
 }
 
-TEST_F(CAPIWrapperTest, CanClearCustomKeyCommand)
-{
-    // Test add/get
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
-        mir_keyboard_action_down,
-        mir_input_event_modifier_meta,
-        10,
-        "test-command");
-
-    miracle_config_clear_custom_key_commands(&wrapper->config);
-    EXPECT_EQ(miracle_config_get_custom_key_command_count(&wrapper->config), 0);
-}
-
 TEST_F(CAPIWrapperTest, CanAddBuiltInKeyCommand)
 {
-    miracle_config_add_built_in_key_command_override(
-        &wrapper->config,
+    miracle_built_in_key_command_override_t override = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen)
+    };
+    miracle_config_add_built_in_key_command_override(
+        &wrapper->config,
+        &override);
     EXPECT_THAT(miracle_config_get_built_in_key_command_override_count(&wrapper->config), Eq(1));
     auto const key_command = miracle_config_get_built_in_key_command_override(
         &wrapper->config, 0);
@@ -364,20 +355,26 @@ TEST_F(CAPIWrapperTest, CanAddBuiltInKeyCommand)
 
 TEST_F(CAPIWrapperTest, CanUpdateBuiltInKeyCommand)
 {
-    miracle_config_add_built_in_key_command_override(
-        &wrapper->config,
+    miracle_built_in_key_command_override_t override = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
-
-    miracle_config_set_built_in_key_command_override(
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen)
+    };
+    miracle_config_add_built_in_key_command_override(
         &wrapper->config,
-        0,
+        &override);
+
+    override = {
         mir_keyboard_action_up,
         mir_input_event_modifier_alt,
         KEY_K,
-        static_cast<uint>(miracle::DefaultKeyCommand::MoveDown));
+        static_cast<uint>(miracle::DefaultKeyCommand::MoveDown)
+    };
+    miracle_config_set_built_in_key_command_override(
+        &wrapper->config,
+        0,
+        &override);
 
     auto const key_command = miracle_config_get_built_in_key_command_override(
         &wrapper->config, 0);
@@ -389,25 +386,31 @@ TEST_F(CAPIWrapperTest, CanUpdateBuiltInKeyCommand)
 
 TEST_F(CAPIWrapperTest, CanRemoveBuiltInKeyCommand)
 {
-    miracle_config_add_built_in_key_command_override(
-        &wrapper->config,
+    miracle_built_in_key_command_override_t override = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen));
+        static_cast<uint>(miracle::DefaultKeyCommand::Fullscreen)
+    };
+    miracle_config_add_built_in_key_command_override(
+        &wrapper->config,
+        &override);
 
     EXPECT_THAT(miracle_config_remove_built_in_key_command_override(&wrapper->config, 0), Eq(true));
 }
 
 TEST_F(CAPIWrapperTest, CanAddStartupApps)
 {
-    miracle_config_add_startup_app(
-        &wrapper->config,
+    miracle_startup_app_t startup_app = {
         "test-app",
         true,
         false,
         true,
-        false);
+        false
+    };
+    miracle_config_add_startup_app(
+        &wrapper->config,
+        &startup_app);
 
     EXPECT_EQ(miracle_config_get_startup_app_count(&wrapper->config), 1);
 
@@ -421,22 +424,28 @@ TEST_F(CAPIWrapperTest, CanAddStartupApps)
 
 TEST_F(CAPIWrapperTest, CanSetStartupApps)
 {
-    miracle_config_add_startup_app(
-        &wrapper->config,
+    miracle_startup_app_t startup_app = {
         "test-app",
         true,
         false,
         true,
-        false);
-
-    miracle_config_set_startup_app(
+        false
+    };
+    miracle_config_add_startup_app(
         &wrapper->config,
-        0,
+        &startup_app);
+
+    startup_app = {
         "test-app-2",
         false,
         true,
         false,
-        true);
+        true
+    };
+    miracle_config_set_startup_app(
+        &wrapper->config,
+        0,
+        &startup_app);
 
     auto app = miracle_config_get_startup_app(&wrapper->config, 0);
     EXPECT_STREQ(app.command, "test-app-2");
@@ -448,13 +457,16 @@ TEST_F(CAPIWrapperTest, CanSetStartupApps)
 
 TEST_F(CAPIWrapperTest, CanRemoveStartupApps)
 {
-    miracle_config_add_startup_app(
-        &wrapper->config,
+    miracle_startup_app_t startup_app = {
         "test-app",
         true,
         false,
         true,
-        false);
+        false
+    };
+    miracle_config_add_startup_app(
+        &wrapper->config,
+        &startup_app);
 
     miracle_config_remove_startup_app(&wrapper->config, 0);
     EXPECT_EQ(miracle_config_get_startup_app_count(&wrapper->config), 0);
@@ -462,10 +474,10 @@ TEST_F(CAPIWrapperTest, CanRemoveStartupApps)
 
 TEST_F(CAPIWrapperTest, CanAddEnvironmentVariable)
 {
+    miracle_environment_variable_t variable = { "first", "second" };
     miracle_config_add_environment_variable(
         &wrapper->config,
-        "first",
-        "second");
+        &variable);
 
     EXPECT_THAT(miracle_config_get_environment_variable_count(&wrapper->config), Eq(1));
     auto const env_variable = miracle_config_get_environment_variable(&wrapper->config, 0);
@@ -475,16 +487,16 @@ TEST_F(CAPIWrapperTest, CanAddEnvironmentVariable)
 
 TEST_F(CAPIWrapperTest, CanSetEnvironmentVariable)
 {
+    miracle_environment_variable_t variable = { "first", "second" };
     miracle_config_add_environment_variable(
         &wrapper->config,
-        "first",
-        "second");
+        &variable);
 
+    variable = { "third", "fourth" };
     miracle_config_set_environment_variable(
         &wrapper->config,
         0,
-        "third",
-        "fourth");
+        &variable);
 
     auto const env_variable = miracle_config_get_environment_variable(&wrapper->config, 0);
     EXPECT_THAT(std::string(env_variable.key), Eq("third"));
@@ -493,10 +505,10 @@ TEST_F(CAPIWrapperTest, CanSetEnvironmentVariable)
 
 TEST_F(CAPIWrapperTest, CanRemoveEnvironmentVariable)
 {
+    miracle_environment_variable_t variable = { "first", "second" };
     miracle_config_add_environment_variable(
         &wrapper->config,
-        "first",
-        "second");
+        &variable);
     miracle_config_remove_environment_variable(&wrapper->config, 0);
 
     EXPECT_THAT(miracle_config_get_environment_variable_count(&wrapper->config), Eq(0));
@@ -504,15 +516,15 @@ TEST_F(CAPIWrapperTest, CanRemoveEnvironmentVariable)
 
 TEST_F(CAPIWrapperTest, BorderConfig)
 {
-    float focus_color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    float color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-
-    miracle_config_set_border_config(
-        &wrapper->config,
+    miracle_border_config_t border_config = {
         2,
         3.f,
-        focus_color,
-        color);
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 0.5f, 0.5f, 0.5f, 1.0f }
+    };
+    miracle_config_set_border_config(
+        &wrapper->config,
+        &border_config);
 
     auto border = miracle_config_get_border_config(&wrapper->config);
     EXPECT_EQ(border.size, 2);
@@ -523,101 +535,148 @@ TEST_F(CAPIWrapperTest, BorderConfig)
 
 TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
 {
-    miracle_animation_definition_t const def = {
-        false,
+    auto animateable_event = miracle_config_get_animateable_event(
+        &wrapper->config,
+        0);
+    animateable_event.duration_seconds = 0.5f;
+
+    miracle_built_in_animation_t animation = {
         static_cast<uint>(miracle::BultInAnimationType::slide),
         static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
-        0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
     };
 
-    miracle_config_set_animation_definition(
-        &wrapper->config,
-        static_cast<uint>(miracle::AnimateableEvent::window_open),
-        &def);
+    // Clear existing animations and add our new one
+    while (animateable_event.num_animations > 0)
+    {
+        miracle_animateable_event_remove_animation(&animateable_event, 0);
+    }
+    miracle_animateable_event_add_animation(&animateable_event, animation);
 
-    auto result = miracle_config_get_animation_definition(
+    miracle_config_set_animateable_event(
         &wrapper->config,
-        static_cast<uint>(miracle::AnimateableEvent::window_open));
+        0,
+        &animateable_event);
 
-    EXPECT_EQ(result.type, static_cast<uint>(miracle::BultInAnimationType::slide));
-    EXPECT_EQ(result.function, static_cast<uint>(miracle::EaseFunction::ease_out_bounce));
+    auto result = miracle_config_get_animateable_event(
+        &wrapper->config,
+        0);
+
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
+    EXPECT_EQ(result.num_animations, 1);
+
+    auto result_animation = miracle_animateable_event_get_animation(&result, 0);
+    EXPECT_EQ(result_animation.type, static_cast<uint>(miracle::BultInAnimationType::slide));
+    EXPECT_EQ(result_animation.function, static_cast<uint>(miracle::EaseFunction::ease_out_bounce));
 }
 
 TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
 {
-    miracle_animation_definition_t const def = {
-        false,
+    auto animateable_event = miracle_config_get_animateable_event(
+        &wrapper->config,
+        0);
+    animateable_event.duration_seconds = 0.5f;
+
+    miracle_built_in_animation_t animation = {
         static_cast<uint>(miracle::BultInAnimationType::slide),
         static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
-        0.5f,
         1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
     };
 
-    miracle_config_set_animation_definition(
+    while (animateable_event.num_animations > 0)
+    {
+        miracle_animateable_event_remove_animation(&animateable_event, 0);
+    }
+    miracle_animateable_event_add_animation(&animateable_event, animation);
+
+    miracle_config_set_animateable_event(
         &wrapper->config,
-        static_cast<uint>(miracle::AnimateableEvent::window_open),
-        &def);
+        0,
+        &animateable_event);
 
     miracle_config_reset_animation_definition(
         &wrapper->config,
-        static_cast<uint>(miracle::AnimateableEvent::window_open));
+        0);
 
-    auto result = miracle_config_get_animation_definition(
+    auto result = miracle_config_get_animateable_event(
         &wrapper->config,
-        static_cast<uint>(miracle::AnimateableEvent::window_open));
+        0);
 
-    auto const default_def = miracle::internal::default_animation_definitions[static_cast<uint>(miracle::AnimateableEvent::window_open)];
-    EXPECT_EQ(result.type, static_cast<uint>(default_def.animations[0].type));
-    EXPECT_EQ(result.function, static_cast<uint>(default_def.animations[0].function));
-    EXPECT_FLOAT_EQ(result.duration_seconds, default_def.duration_seconds);
+    EXPECT_TRUE(result.is_default);
 }
 
 TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
 {
+    miracle_workspace_config_t workspace_config = {
+        true, // has_num
+        1, // num
+        false, // has_name
+        nullptr, // name
+        true, // has_layout_strategy
+        static_cast<int>(miracle::WindowLayoutStrategy::floating)
+    };
     miracle_config_add_workspace_config(
         &wrapper->config,
-        1,
-        static_cast<int>(miracle::WindowLayoutStrategy::floating),
-        "Main");
+        &workspace_config);
 
     EXPECT_EQ(miracle_config_get_workspace_config_count(&wrapper->config), 1);
 
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
+    EXPECT_TRUE(ws.has_num);
     EXPECT_EQ(ws.num, 1);
+    EXPECT_TRUE(ws.has_layout_strategy);
     EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
-    EXPECT_STREQ(ws.name, "Main");
 }
 
 TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
 {
+    miracle_workspace_config_t workspace_config = {
+        true, // has_num
+        1, // num
+        false, // has_name
+        nullptr, // name
+        true, // has_layout_strategy
+        static_cast<int>(miracle::WindowLayoutStrategy::floating)
+    };
     miracle_config_add_workspace_config(
         &wrapper->config,
-        1,
-        static_cast<int>(miracle::ContainerType::leaf),
-        "Main");
+        &workspace_config);
 
+    workspace_config = {
+        true, // has_num
+        2, // num
+        true, // has_name
+        "Other", // name
+        true, // has_layout_strategy
+        static_cast<int>(miracle::WindowLayoutStrategy::floating)
+    };
     miracle_config_set_workspace_config(
         &wrapper->config,
         0,
-        2,
-        static_cast<int>(miracle::WindowLayoutStrategy::floating),
-        "Other");
+        &workspace_config);
 
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
+    EXPECT_TRUE(ws.has_num);
     EXPECT_EQ(ws.num, 2);
-    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
+    EXPECT_TRUE(ws.has_name);
     EXPECT_STREQ(ws.name, "Other");
+    EXPECT_TRUE(ws.has_layout_strategy);
+    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
 }
 
 TEST_F(CAPIWrapperTest, CanRemoveWorkspaceConfig)
 {
+    miracle_workspace_config_t workspace_config = {
+        true, // has_num
+        1, // num
+        false, // has_name
+        nullptr, // name
+        true, // has_layout_strategy
+        static_cast<int>(miracle::WindowLayoutStrategy::floating)
+    };
     miracle_config_add_workspace_config(
         &wrapper->config,
-        1,
-        static_cast<int>(miracle::ContainerType::leaf),
-        "Main");
+        &workspace_config);
 
     miracle_config_remove_workspace_config(&wrapper->config, 0);
     EXPECT_EQ(miracle_config_get_workspace_config_count(&wrapper->config), 0);
@@ -625,10 +684,13 @@ TEST_F(CAPIWrapperTest, CanRemoveWorkspaceConfig)
 
 TEST_F(CAPIWrapperTest, DragAndDropConfig)
 {
+    miracle_drag_and_drop_config_t dnd_config = {
+        true,
+        mir_input_event_modifier_meta | mir_input_event_modifier_shift
+    };
     miracle_config_set_drag_and_drop(
         &wrapper->config,
-        true,
-        mir_input_event_modifier_meta | mir_input_event_modifier_shift);
+        &dnd_config);
 
     auto dnd = miracle_config_get_drag_and_drop(&wrapper->config);
     EXPECT_TRUE(dnd.enabled);
@@ -638,13 +700,16 @@ TEST_F(CAPIWrapperTest, DragAndDropConfig)
 
 TEST_F(CAPIWrapperTest, MouseConfig)
 {
-    miracle_config_set_mouse_config(
-        &wrapper->config,
+    miracle_mouse_config_t mouse_config = {
         mir_pointer_handedness_left,
         0.5,
         2.0,
         3.0,
-        mir_pointer_acceleration_adaptive);
+        mir_pointer_acceleration_adaptive
+    };
+    miracle_config_set_mouse_config(
+        &wrapper->config,
+        &mouse_config);
 
     auto const mouse = miracle_config_get_mouse_config(&wrapper->config);
     EXPECT_EQ(mouse.handedness, mir_pointer_handedness_left);
@@ -661,27 +726,36 @@ TEST_F(CAPIWrapperTest, MouseConfig)
 
 TEST_F(CAPIWrapperTest, CanSetKeymap)
 {
+    miracle_keymap_t keymap = {
+        true, // is_set
+        "fr", // language
+        true, // has_variant
+        "dvorak", // variant
+        0 // options_count
+    };
     miracle_config_set_keymap(
         &wrapper->config,
-        true,
-        "fr",
-        true,
-        "dvorak");
+        &keymap);
 
-    auto const keymap = miracle_config_get_keymap(&wrapper->config);
-    EXPECT_TRUE(keymap.is_set);
-    EXPECT_STREQ(keymap.language, "fr");
-    EXPECT_TRUE(keymap.has_variant);
-    EXPECT_STREQ(keymap.variant, "dvorak");
+    auto const keymap_result = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_TRUE(keymap_result.is_set);
+    EXPECT_STREQ(keymap_result.language, "fr");
+    EXPECT_TRUE(keymap_result.has_variant);
+    EXPECT_STREQ(keymap_result.variant, "dvorak");
 }
+
 TEST_F(CAPIWrapperTest, CanSetKeymapOption)
 {
+    miracle_keymap_t keymap = {
+        true, // is_set
+        "fr", // language
+        true, // has_variant
+        "dvorak", // variant
+        0 // options_count
+    };
     miracle_config_set_keymap(
         &wrapper->config,
-        true,
-        "fr",
-        true,
-        "dvorak");
+        &keymap);
 
     miracle_config_add_keymap_option(
         &wrapper->config,
@@ -689,8 +763,8 @@ TEST_F(CAPIWrapperTest, CanSetKeymapOption)
     miracle_config_add_keymap_option(
         &wrapper->config,
         "bye");
-    auto keymap = miracle_config_get_keymap(&wrapper->config);
-    EXPECT_EQ(keymap.options_count, 2);
+    auto keymap_result = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_EQ(keymap_result.options_count, 2);
 
     miracle_config_set_keymap_option(
         &wrapper->config,
@@ -702,8 +776,8 @@ TEST_F(CAPIWrapperTest, CanSetKeymapOption)
     EXPECT_STREQ(option, "x");
 
     miracle_config_remove_keymap_option(&wrapper->config, 0);
-    keymap = miracle_config_get_keymap(&wrapper->config);
-    EXPECT_EQ(keymap.options_count, 1);
+    keymap_result = miracle_config_get_keymap(&wrapper->config);
+    EXPECT_EQ(keymap_result.options_count, 1);
     option = miracle_config_get_keymap_option(
         &wrapper->config,
         0);
@@ -726,62 +800,78 @@ TEST_F(CAPIWrapperTest, CanSetKeyRepeatDelay)
 
 TEST_F(CAPIWrapperTest, CanSetHoverClickData)
 {
-    miracle_config_set_hover_click(
-        &wrapper->config,
+    miracle_hover_click_t hover_click = {
         true,
         123,
         456,
-        789);
-    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
-    EXPECT_EQ(hover_click.enabled, true);
-    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
-    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
-    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+        789
+    };
+    miracle_config_set_hover_click(
+        &wrapper->config,
+        &hover_click);
+    auto const hover_click_result = miracle_config_get_hover_click(&wrapper->config);
+    EXPECT_EQ(hover_click_result.enabled, true);
+    EXPECT_EQ(hover_click_result.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click_result.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click_result.reclick_displacement_threshold, 789);
 }
 
 TEST_F(CAPIWrapperTest, CanSetSimulatedSecondaryClickData)
 {
-    miracle_config_set_simulated_secondary_click(
-        &wrapper->config,
+    miracle_simulated_secondary_click_t ssc = {
         true,
         123,
-        456);
-    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
-    EXPECT_EQ(ssc.enabled, true);
-    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
-    EXPECT_EQ(ssc.displacement_threshold, 456);
+        456
+    };
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        &ssc);
+    auto const ssc_result = miracle_config_get_simulated_secondary_click(&wrapper->config);
+    EXPECT_EQ(ssc_result.enabled, true);
+    EXPECT_EQ(ssc_result.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc_result.displacement_threshold, 456);
 }
 
 TEST_F(CAPIWrapperTest, CanSetOutputFilter)
 {
-    miracle_config_set_output_filter(&wrapper->config, true, "hello");
-    auto const output_filter = miracle_config_get_output_filter(&wrapper->config);
-    EXPECT_EQ(output_filter.shader_path_enabled, true);
-    EXPECT_STREQ(output_filter.shader_path, "hello");
+    miracle_output_filter_t output_filter = {
+        true,
+        "hello"
+    };
+    miracle_config_set_output_filter(&wrapper->config, &output_filter);
+    auto const output_filter_result = miracle_config_get_output_filter(&wrapper->config);
+    EXPECT_EQ(output_filter_result.shader_path_enabled, true);
+    EXPECT_STREQ(output_filter_result.shader_path, "hello");
 }
 
 TEST_F(CAPIWrapperTest, CanSetCursor)
 {
-    miracle_config_set_cursor(&wrapper->config, 2.f, static_cast<uint>(miracle::CursorFocusMode::Click));
-    auto const cursor = miracle_config_get_cursor(&wrapper->config);
-    EXPECT_EQ(cursor.scale, 2.f);
-    EXPECT_EQ(cursor.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
+    miracle_cursor_t cursor = {
+        2.f,
+        static_cast<uint>(miracle::CursorFocusMode::Click)
+    };
+    miracle_config_set_cursor(&wrapper->config, &cursor);
+    auto const cursor_result = miracle_config_get_cursor(&wrapper->config);
+    EXPECT_EQ(cursor_result.scale, 2.f);
+    EXPECT_EQ(cursor_result.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
 }
 
 TEST_F(CAPIWrapperTest, CanSetSlowKeys)
 {
-    miracle_config_set_slow_keys(&wrapper->config, true, 500);
-    auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
-    EXPECT_EQ(slow_keys.enabled, true);
-    EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
+    miracle_slow_keys_t slow_keys = { true, 500 };
+    miracle_config_set_slow_keys(&wrapper->config, &slow_keys);
+    auto const slow_keys_result = miracle_config_get_slow_keys(&wrapper->config);
+    EXPECT_EQ(slow_keys_result.enabled, true);
+    EXPECT_EQ(slow_keys_result.hold_duration_milliseconds, 500);
 }
 
 TEST_F(CAPIWrapperTest, CanSetStickyKeys)
 {
-    miracle_config_set_sticky_keys(&wrapper->config, true, false);
-    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
-    EXPECT_EQ(sticky_keys.enabled, true);
-    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
+    miracle_sticky_keys_t sticky_keys = { true, false };
+    miracle_config_set_sticky_keys(&wrapper->config, &sticky_keys);
+    auto const sticky_keys_result = miracle_config_get_sticky_keys(&wrapper->config);
+    EXPECT_EQ(sticky_keys_result.enabled, true);
+    EXPECT_EQ(sticky_keys_result.should_disable_if_two_keys_are_pressed_together, false);
 }
 
 TEST_F(CAPIWrapperTest, CanSetMagnifier)
@@ -811,7 +901,8 @@ TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
     // Set some config values
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
-    miracle_config_add_environment_variable(&wrapper->config, "TEST", "VALUE");
+    miracle_environment_variable_t env_var = { "TEST", "VALUE" };
+    miracle_config_add_environment_variable(&wrapper->config, &env_var);
 
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
@@ -844,49 +935,82 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     const char* temp_path = "/tmp/miracle_test_roundtrip.yaml";
 
     // Set some config values
-    miracle_config_add_include(&wrapper->config, "/home/hi");
-    miracle_config_add_include(&wrapper->config, "/home/bye");
+    miracle_config_add_include(&wrapper->config, "/home/hi", 0);
+    miracle_config_add_include(&wrapper->config, "/home/bye", 1);
     miracle_config_set_primary_modifier(&wrapper->config, mir_input_event_modifier_alt);
     miracle_config_set_inner_gaps_x(&wrapper->config, 20);
-    miracle_config_add_environment_variable(&wrapper->config, "TEST", "VALUE");
-    miracle_config_add_custom_key_command(
-        &wrapper->config,
+
+    miracle_environment_variable_t env_var = { "TEST", "VALUE" };
+    miracle_config_add_environment_variable(&wrapper->config, &env_var);
+
+    miracle_custom_key_command_t key_command = {
         mir_keyboard_action_down,
         mir_input_event_modifier_meta,
         KEY_F,
-        "test-command");
-    miracle_config_set_mouse_config(
+        "test-command"
+    };
+    miracle_config_add_custom_key_command(
         &wrapper->config,
+        &key_command);
+
+    miracle_mouse_config_t mouse_config = {
         mir_pointer_handedness_right,
         0.3,
         0.4,
         0.5,
-        mir_pointer_acceleration_adaptive);
-    miracle_config_set_keymap(
+        mir_pointer_acceleration_adaptive
+    };
+    miracle_config_set_mouse_config(
         &wrapper->config,
+        &mouse_config);
+
+    miracle_keymap_t keymap = {
         true,
         "fr",
         true,
-        "dvorak");
+        "dvorak",
+        0
+    };
+    miracle_config_set_keymap(
+        &wrapper->config,
+        &keymap);
     miracle_config_add_keymap_option(
         &wrapper->config,
         "hi");
     miracle_config_set_key_repeat_rate(&wrapper->config, 5);
     miracle_config_set_key_repeat_delay(&wrapper->config, 10);
-    miracle_config_set_hover_click(
-        &wrapper->config,
+
+    miracle_hover_click_t hover_click = {
         true,
         123,
         456,
-        789);
-    miracle_config_set_simulated_secondary_click(
+        789
+    };
+    miracle_config_set_hover_click(
         &wrapper->config,
+        &hover_click);
+
+    miracle_simulated_secondary_click_t ssc = {
         true,
         123,
-        456);
-    miracle_config_set_cursor(&wrapper->config, 2.f, static_cast<uint>(miracle::CursorFocusMode::Click));
-    miracle_config_set_slow_keys(&wrapper->config, true, 500);
-    miracle_config_set_sticky_keys(&wrapper->config, true, false);
+        456
+    };
+    miracle_config_set_simulated_secondary_click(
+        &wrapper->config,
+        &ssc);
+
+    miracle_cursor_t cursor = {
+        2.f,
+        static_cast<uint>(miracle::CursorFocusMode::Click)
+    };
+    miracle_config_set_cursor(&wrapper->config, &cursor);
+
+    miracle_slow_keys_t slow_keys = { true, 500 };
+    miracle_config_set_slow_keys(&wrapper->config, &slow_keys);
+
+    miracle_sticky_keys_t sticky_keys = { true, false };
+    miracle_config_set_sticky_keys(&wrapper->config, &sticky_keys);
+
     miracle_magnifier_t magnifier;
     magnifier.enabled = true;
     magnifier.scale = 2.f;
@@ -908,9 +1032,9 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     // Verify values match
     auto loaded_config = miracle_config_get_data(load_result);
 
-    EXPECT_THAT(miracle_config_get_num_includes(&wrapper->config), Eq(2));
-    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 0), "/home/hi");
-    EXPECT_STREQ(miracle_config_get_include(&wrapper->config, 1), "/home/bye");
+    EXPECT_THAT(miracle_config_get_num_includes(loaded_config), Eq(2));
+    EXPECT_STREQ(miracle_config_get_include(loaded_config, 0), "/home/hi");
+    EXPECT_STREQ(miracle_config_get_include(loaded_config, 1), "/home/bye");
 
     EXPECT_EQ(miracle_config_get_primary_modifier(loaded_config), mir_input_event_modifier_alt);
     EXPECT_EQ(miracle_config_get_inner_gaps_x(loaded_config), 20);
@@ -939,47 +1063,47 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
-    auto const keymap = miracle_config_get_keymap(&wrapper->config);
-    EXPECT_TRUE(keymap.is_set);
-    EXPECT_STREQ(keymap.language, "fr");
-    EXPECT_TRUE(keymap.has_variant);
-    EXPECT_STREQ(keymap.variant, "dvorak");
-    EXPECT_EQ(keymap.options_count, 1);
-    EXPECT_STREQ(miracle_config_get_keymap_option(&wrapper->config, 0), "hi");
-    EXPECT_EQ(miracle_config_get_key_repeat_rate(&wrapper->config), 5);
-    EXPECT_EQ(miracle_config_get_key_repeat_delay(&wrapper->config), 10);
+    auto const keymap_result = miracle_config_get_keymap(loaded_config);
+    EXPECT_TRUE(keymap_result.is_set);
+    EXPECT_STREQ(keymap_result.language, "fr");
+    EXPECT_TRUE(keymap_result.has_variant);
+    EXPECT_STREQ(keymap_result.variant, "dvorak");
+    EXPECT_EQ(keymap_result.options_count, 1);
+    EXPECT_STREQ(miracle_config_get_keymap_option(loaded_config, 0), "hi");
+    EXPECT_EQ(miracle_config_get_key_repeat_rate(loaded_config), 5);
+    EXPECT_EQ(miracle_config_get_key_repeat_delay(loaded_config), 10);
 #endif
 
-    auto const hover_click = miracle_config_get_hover_click(&wrapper->config);
-    EXPECT_EQ(hover_click.enabled, true);
-    EXPECT_EQ(hover_click.hover_duration_milliseconds, 123);
-    EXPECT_EQ(hover_click.cancel_displacement_threshold, 456);
-    EXPECT_EQ(hover_click.reclick_displacement_threshold, 789);
+    auto const hover_click_result = miracle_config_get_hover_click(loaded_config);
+    EXPECT_EQ(hover_click_result.enabled, true);
+    EXPECT_EQ(hover_click_result.hover_duration_milliseconds, 123);
+    EXPECT_EQ(hover_click_result.cancel_displacement_threshold, 456);
+    EXPECT_EQ(hover_click_result.reclick_displacement_threshold, 789);
 
-    auto const ssc = miracle_config_get_simulated_secondary_click(&wrapper->config);
-    EXPECT_EQ(ssc.enabled, true);
-    EXPECT_EQ(ssc.hold_duration_milliseconds, 123);
-    EXPECT_EQ(ssc.displacement_threshold, 456);
+    auto const ssc_result = miracle_config_get_simulated_secondary_click(loaded_config);
+    EXPECT_EQ(ssc_result.enabled, true);
+    EXPECT_EQ(ssc_result.hold_duration_milliseconds, 123);
+    EXPECT_EQ(ssc_result.displacement_threshold, 456);
 
-    auto const cursor = miracle_config_get_cursor(&wrapper->config);
-    EXPECT_EQ(cursor.scale, 2.f);
-    EXPECT_EQ(cursor.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
+    auto const cursor_result = miracle_config_get_cursor(loaded_config);
+    EXPECT_EQ(cursor_result.scale, 2.f);
+    EXPECT_EQ(cursor_result.focus_mode, static_cast<uint>(miracle::CursorFocusMode::Click));
 
-    auto const slow_keys = miracle_config_get_slow_keys(&wrapper->config);
-    EXPECT_EQ(slow_keys.enabled, true);
-    EXPECT_EQ(slow_keys.hold_duration_milliseconds, 500);
+    auto const slow_keys_result = miracle_config_get_slow_keys(loaded_config);
+    EXPECT_EQ(slow_keys_result.enabled, true);
+    EXPECT_EQ(slow_keys_result.hold_duration_milliseconds, 500);
 
-    auto const sticky_keys = miracle_config_get_sticky_keys(&wrapper->config);
-    EXPECT_EQ(sticky_keys.enabled, true);
-    EXPECT_EQ(sticky_keys.should_disable_if_two_keys_are_pressed_together, false);
+    auto const sticky_keys_result = miracle_config_get_sticky_keys(loaded_config);
+    EXPECT_EQ(sticky_keys_result.enabled, true);
+    EXPECT_EQ(sticky_keys_result.should_disable_if_two_keys_are_pressed_together, false);
 
-    auto const magnifier_config = miracle_config_get_magnifier(&wrapper->config);
+    auto const magnifier_config = miracle_config_get_magnifier(loaded_config);
     EXPECT_EQ(magnifier_config.enabled, true);
     EXPECT_EQ(magnifier_config.scale, 2.f);
     EXPECT_EQ(magnifier_config.scale_increment, 0.75f);
-    EXPECT_EQ(magnifier.width, 800);
-    EXPECT_EQ(magnifier.height, 600);
-    EXPECT_EQ(magnifier.size_increment, 200);
+    EXPECT_EQ(magnifier_config.width, 800);
+    EXPECT_EQ(magnifier_config.height, 600);
+    EXPECT_EQ(magnifier_config.size_increment, 200);
 
     // Clean up
     miracle_config_free(load_result);

@@ -776,8 +776,7 @@ extern "C"
 
     miracle_built_in_animation_t miracle_animateable_event_get_animation(
         miracle_animateable_event_t* animateable_event,
-        size_t index
-    )
+        size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
         auto const animation = def->animations[index];
@@ -796,11 +795,10 @@ extern "C"
 
     void miracle_animateable_event_add_animation(
         miracle_animateable_event_t* animateable_event,
-        miracle_built_in_animation_t animation
-    )
+        miracle_built_in_animation_t animation)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
-        def->animations.push_back(miracle::BuiltInAnimationDefinition{
+        def->animations.push_back(miracle::BuiltInAnimationDefinition {
             static_cast<miracle::BultInAnimationType>(animation.type),
             static_cast<miracle::EaseFunction>(animation.function),
             animation.c1,
@@ -809,15 +807,13 @@ extern "C"
             animation.c4,
             animation.c5,
             animation.n1,
-            animation.d1
-        });
+            animation.d1 });
     }
 
     void miracle_animateable_event_set_animation(
         miracle_animateable_event_t* animateable_event,
         size_t index,
-        miracle_built_in_animation_t animation
-    )
+        miracle_built_in_animation_t animation)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
         auto& animation_def = def->animations[index];
@@ -834,8 +830,7 @@ extern "C"
 
     void miracle_animateable_event_remove_animation(
         miracle_animateable_event_t* animateable_event,
-        size_t index
-    )
+        size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
         def->animations.erase(def->animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));

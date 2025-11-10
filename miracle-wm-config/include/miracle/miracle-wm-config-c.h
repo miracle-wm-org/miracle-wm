@@ -800,8 +800,7 @@ extern "C"
     /// \returns the animation at the index
     miracle_built_in_animation_t miracle_animateable_event_get_animation(
         miracle_animateable_event_t* animateable_event,
-        size_t index
-    );
+        size_t index);
 
     /// Add a new animation to the animateable event.
     ///
@@ -809,8 +808,7 @@ extern "C"
     /// \param animation the new animation
     void miracle_animateable_event_add_animation(
         miracle_animateable_event_t* animateable_event,
-        miracle_built_in_animation_t animation
-    );
+        miracle_built_in_animation_t animation);
 
     /// Modify an animation at a particular \p index.
     ///
@@ -820,8 +818,7 @@ extern "C"
     void miracle_animateable_event_set_animation(
         miracle_animateable_event_t* animateable_event,
         size_t index,
-        miracle_built_in_animation_t animation
-    );
+        miracle_built_in_animation_t animation);
 
     /// Remove an animation from an animateable event.
     ///
@@ -829,8 +826,7 @@ extern "C"
     /// \param index to remove
     void miracle_animateable_event_remove_animation(
         miracle_animateable_event_t* animateable_event,
-        size_t index
-    );
+        size_t index);
 
     /// Describes a configuration for a workspace.
     typedef struct
@@ -898,7 +894,6 @@ extern "C"
         miracle_config_data_t* config,
         size_t index,
         miracle_workspace_config_t* workspace_config);
-
 
     /// Remove a workspace config.
     ///
