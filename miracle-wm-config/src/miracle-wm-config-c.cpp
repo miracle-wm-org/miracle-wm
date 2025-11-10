@@ -798,6 +798,7 @@ extern "C"
         miracle_built_in_animation_t animation)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
         def->animations.push_back(miracle::BuiltInAnimationDefinition {
             static_cast<miracle::BultInAnimationType>(animation.type),
             static_cast<miracle::EaseFunction>(animation.function),
@@ -816,6 +817,7 @@ extern "C"
         miracle_built_in_animation_t animation)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
         auto& animation_def = def->animations[index];
         animation_def.type = static_cast<miracle::BultInAnimationType>(animation.type);
         animation_def.function = static_cast<miracle::EaseFunction>(animation.function);
@@ -833,6 +835,7 @@ extern "C"
         size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
         def->animations.erase(def->animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));
     }
 
