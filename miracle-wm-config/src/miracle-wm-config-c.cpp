@@ -130,15 +130,15 @@ extern "C"
         return data->includes.value[index].c_str();
     }
 
-    void miracle_config_add_include(const miracle_config_data_t* config, const char* value)
+    void miracle_config_add_include(const miracle_config_data_t* config, const char* value, size_t index)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->includes->push_back(value);
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->includes->insert(data->includes->begin() + static_cast<std::vector<std::string>::difference_type>(index), value);
     }
 
     void miracle_config_remove_include(const miracle_config_data_t* config, size_t index)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        const auto data = static_cast<miracle::ConfigData*>(config->_internal);
         data->includes->erase(data->includes->begin() + static_cast<std::vector<std::string>::difference_type>(index));
     }
 
@@ -257,19 +257,6 @@ extern "C"
     {
         return {
             miracle::ease_function_strings[i],
-            i
-        };
-    }
-
-    uint miracle_config_get_animateable_event_options_count()
-    {
-        return static_cast<uint>(miracle::AnimateableEvent::max);
-    }
-
-    miracle_config_option_t miracle_config_get_animateable_event_option(uint i)
-    {
-        return {
-            miracle::animateable_event_strings[i],
             i
         };
     }
@@ -459,16 +446,13 @@ extern "C"
 
     void miracle_config_add_custom_key_command(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command)
+        miracle_custom_key_command_t* key_command)
     {
 
         bool found_action = false;
         for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
         {
-            if (snd == action)
+            if (snd == key_command->action)
                 found_action = true;
         }
 
@@ -476,19 +460,16 @@ extern "C"
             return;
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->custom_key_commands->push_back({ static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            command ? command : "" });
+        data->custom_key_commands->push_back(miracle::CustomKeyCommand { static_cast<MirKeyboardAction>(key_command->action),
+            key_command->modifiers,
+            key_command->key,
+            key_command->command });
     }
 
     void miracle_config_edit_custom_key_command(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        const char* command)
+        miracle_custom_key_command_t* key_command)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->custom_key_commands->size())
@@ -497,23 +478,17 @@ extern "C"
         bool found_action = false;
         for (auto const& [fst, snd] : miracle::mir_keyboard_actions_strings)
         {
-            if (snd == action)
+            if (snd == key_command->action)
                 found_action = true;
         }
 
         if (!found_action)
             return;
 
-        data->custom_key_commands.value[index] = { static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            command ? command : "" };
-    }
-
-    void miracle_config_clear_custom_key_commands(miracle_config_data_t* config)
-    {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->custom_key_commands->clear();
+        data->custom_key_commands.value[index] = { static_cast<MirKeyboardAction>(key_command->action),
+            key_command->modifiers,
+            key_command->key,
+            key_command->command };
     }
 
     bool miracle_config_remove_custom_key_command(miracle_config_data_t* config, size_t index)
@@ -532,7 +507,7 @@ extern "C"
         return data->built_in_key_command_overrides->size();
     }
 
-    miracle_built_in_key_command_t miracle_config_get_built_in_key_command_override(
+    miracle_built_in_key_command_override_t miracle_config_get_built_in_key_command_override(
         const miracle_config_data_t* config,
         size_t index)
     {
@@ -548,36 +523,30 @@ extern "C"
 
     void miracle_config_add_built_in_key_command_override(
         miracle_config_data_t* config,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command)
+        miracle_built_in_key_command_override_t* key_command_override)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         data->built_in_key_command_overrides->push_back(miracle::BuiltInKeyCommandOverride {
-            static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            static_cast<miracle::DefaultKeyCommand>(command) });
+            static_cast<MirKeyboardAction>(key_command_override->action),
+            key_command_override->modifiers,
+            key_command_override->key,
+            static_cast<miracle::DefaultKeyCommand>(key_command_override->command) });
     }
 
     void miracle_config_set_built_in_key_command_override(
         miracle_config_data_t* config,
         size_t index,
-        uint action,
-        uint modifiers,
-        uint key,
-        uint command)
+        miracle_built_in_key_command_override_t* key_command_override)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->built_in_key_command_overrides->size())
             return;
 
         data->built_in_key_command_overrides.value[index] = miracle::BuiltInKeyCommandOverride {
-            static_cast<MirKeyboardAction>(action),
-            modifiers,
-            key,
-            static_cast<miracle::DefaultKeyCommand>(command)
+            static_cast<MirKeyboardAction>(key_command_override->action),
+            key_command_override->modifiers,
+            key_command_override->key,
+            static_cast<miracle::DefaultKeyCommand>(key_command_override->command)
         };
     }
 
@@ -620,38 +589,30 @@ extern "C"
 
     void miracle_config_add_startup_app(
         miracle_config_data_t* config,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope)
+        miracle_startup_app_t* startup_app)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->startup_apps->push_back({ command ? command : "",
-            restart_on_death,
-            no_startup_id,
-            should_halt_compositor_on_death,
-            in_systemd_scope });
+        data->startup_apps->push_back({ startup_app->command,
+            startup_app->restart_on_death,
+            startup_app->no_startup_id,
+            startup_app->should_halt_compositor_on_death,
+            startup_app->in_systemd_scope });
     }
 
     void miracle_config_set_startup_app(
         miracle_config_data_t* config,
         size_t index,
-        const char* command,
-        bool restart_on_death,
-        bool no_startup_id,
-        bool should_halt_compositor_on_death,
-        bool in_systemd_scope)
+        miracle_startup_app_t* startup_app)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->startup_apps->size())
             return;
 
-        data->startup_apps.value[index] = { command ? command : "",
-            restart_on_death,
-            no_startup_id,
-            should_halt_compositor_on_death,
-            in_systemd_scope };
+        data->startup_apps.value[index] = { startup_app->command,
+            startup_app->restart_on_death,
+            startup_app->no_startup_id,
+            startup_app->should_halt_compositor_on_death,
+            startup_app->in_systemd_scope };
     }
 
     void miracle_config_clear_startup_apps(miracle_config_data_t* config)
@@ -699,27 +660,23 @@ extern "C"
 
     void miracle_config_add_environment_variable(
         miracle_config_data_t* config,
-        const char* key,
-        const char* value)
+        miracle_environment_variable_t* variable)
     {
-
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->environment_variables->push_back({ key ? key : "",
-            value ? value : "" });
+        data->environment_variables->push_back({ variable->key,
+            variable->value });
     }
 
     void miracle_config_set_environment_variable(
         miracle_config_data_t* config,
         size_t index,
-        const char* key,
-        const char* value)
+        miracle_environment_variable_t* variable)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->environment_variables->size())
             return;
 
-        data->environment_variables.value[index] = { key ? key : "",
-            value ? value : "" };
+        data->environment_variables.value[index] = { variable->key, variable->value };
     }
 
     void miracle_config_clear_environment_variables(miracle_config_data_t* config)
@@ -762,80 +719,50 @@ extern "C"
 
     void miracle_config_set_border_config(
         miracle_config_data_t* config,
-        int size,
-        float radius,
-        const float focus_color[4],
-        const float color[4])
+        miracle_border_config_t* border_config)
     {
 
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->border_config->size = size;
-        data->border_config->radius = radius;
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->border_config->size = border_config->size;
+        data->border_config->radius = border_config->radius;
 
-        // Copy float[4] to glm::vec4
-        if (focus_color)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                data->border_config->focus_color[i] = focus_color[i];
-            }
-        }
+        for (int i = 0; i < 4; i++)
+            data->border_config->focus_color[i] = border_config->focus_color[i];
 
-        if (color)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                data->border_config->color[i] = color[i];
-            }
-        }
+        for (int i = 0; i < 4; i++)
+            data->border_config->color[i] = border_config->color[i];
     }
 
-    size_t miracle_config_get_animation_definition_count()
+    size_t miracle_config_get_animateable_event_count()
     {
         return static_cast<int>(miracle::AnimateableEvent::max);
     }
 
-    miracle_animation_definition_t miracle_config_get_animation_definition(
-        const miracle_config_data_t* config,
+    miracle_animateable_event_t miracle_config_get_animateable_event(
+        miracle_config_data_t* config,
         size_t index)
     {
-        auto data = static_cast<const miracle::ConfigData*>(config->_internal);
-        const auto& def = data->animation_definitions.value[index];
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        auto def = &data->animation_definitions.value[index];
 
         return {
-            def.is_default,
-            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].type),
-            def.animations.empty() ? 0 : static_cast<uint>(def.animations[0].function),
-            def.duration_seconds,
-            def.animations.empty() ? 0 : def.animations[0].c1,
-            def.animations.empty() ? 0 : def.animations[0].c2,
-            def.animations.empty() ? 0 : def.animations[0].c3,
-            def.animations.empty() ? 0 : def.animations[0].c4,
-            def.animations.empty() ? 0 : def.animations[0].c5,
-            def.animations.empty() ? 0 : def.animations[0].n1,
-            def.animations.empty() ? 0 : def.animations[0].d1
+            miracle::animateable_event_strings[index],
+            def->is_default,
+            def->duration_seconds,
+            def->animations.size(),
+            static_cast<void*>(def)
         };
     }
 
-    void miracle_config_set_animation_definition(
+    void miracle_config_set_animateable_event(
         miracle_config_data_t* config,
         size_t index,
-        const miracle_animation_definition_t* definition)
+        const miracle_animateable_event_t* definition)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
-
         def.is_default = false;
-        def.animations[0].type = static_cast<miracle::BultInAnimationType>(definition->type);
-        def.animations[0].function = static_cast<miracle::EaseFunction>(definition->function);
         def.duration_seconds = definition->duration_seconds;
-        def.animations[0].c1 = definition->c1;
-        def.animations[0].c2 = definition->c2;
-        def.animations[0].c3 = definition->c3;
-        def.animations[0].c4 = definition->c4;
-        def.animations[0].c5 = definition->c5;
-        def.animations[0].n1 = definition->n1;
-        def.animations[0].d1 = definition->d1;
     }
 
     void miracle_config_reset_animation_definition(
@@ -845,6 +772,71 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
         def = miracle::internal::default_animation_definitions[index];
+    }
+
+    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index)
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        auto const animation = def->animations[index];
+        return {
+            static_cast<uint>(animation.type),
+            static_cast<uint>(animation.function),
+            animation.c1,
+            animation.c2,
+            animation.c3,
+            animation.c4,
+            animation.c5,
+            animation.n1,
+            animation.d1
+        };
+    }
+
+    void miracle_animateable_event_add_animation(
+        miracle_animateable_event_t* animateable_event,
+        miracle_built_in_animation_t animation)
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
+        def->animations.push_back(miracle::BuiltInAnimationDefinition {
+            static_cast<miracle::BultInAnimationType>(animation.type),
+            static_cast<miracle::EaseFunction>(animation.function),
+            animation.c1,
+            animation.c2,
+            animation.c3,
+            animation.c4,
+            animation.c5,
+            animation.n1,
+            animation.d1 });
+    }
+
+    void miracle_animateable_event_set_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index,
+        miracle_built_in_animation_t animation)
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
+        auto& animation_def = def->animations[index];
+        animation_def.type = static_cast<miracle::BultInAnimationType>(animation.type);
+        animation_def.function = static_cast<miracle::EaseFunction>(animation.function);
+        animation_def.c1 = animation.c1;
+        animation_def.c2 = animation.c2;
+        animation_def.c3 = animation.c3;
+        animation_def.c4 = animation.c4;
+        animation_def.c5 = animation.c5;
+        animation_def.n1 = animation.n1;
+        animation_def.d1 = animation.d1;
+    }
+
+    void miracle_animateable_event_remove_animation(
+        miracle_animateable_event_t* animateable_event,
+        size_t index)
+    {
+        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        def->is_default = false;
+        def->animations.erase(def->animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));
     }
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config)
@@ -860,7 +852,7 @@ extern "C"
 
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs->size())
-            return { -1, -1, nullptr };
+            return { false, -1, false, nullptr, false, -1 };
 
         static thread_local std::string name_copy;
         const auto& ws = data->workspace_configs.value[index];
@@ -871,28 +863,29 @@ extern "C"
             name_copy.clear();
 
         return {
-            ws.num ? *ws.num : -1,
-            ws.window_layout_strategy ? static_cast<int>(*ws.window_layout_strategy) : -1,
-            ws.name ? name_copy.c_str() : nullptr
+            ws.num.has_value(),
+            ws.num.value_or(-1),
+            ws.name.has_value(),
+            name_copy.c_str(),
+            ws.window_layout_strategy.has_value(),
+            static_cast<int>(ws.window_layout_strategy.value_or(miracle::WindowLayoutStrategy::tiling)),
         };
     }
 
     void miracle_config_add_workspace_config(
         miracle_config_data_t* config,
-        int num,
-        int layout_stategy,
-        const char* name)
+        miracle_workspace_config_t* workspace_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         miracle::WorkspaceConfig ws;
 
-        if (num >= 0)
-            ws.num = num;
-        if (layout_stategy >= 0)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_stategy);
-        if (name)
-            ws.name = name;
+        if (workspace_config->has_num)
+            ws.num = workspace_config->num;
+        if (workspace_config->has_name)
+            ws.name = workspace_config->name;
+        if (workspace_config->has_layout_strategy)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs->push_back(ws);
     }
@@ -900,9 +893,7 @@ extern "C"
     void miracle_config_set_workspace_config(
         miracle_config_data_t* config,
         size_t index,
-        int num,
-        int layout_strategy,
-        const char* name)
+        miracle_workspace_config_t* workspace_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
@@ -911,12 +902,12 @@ extern "C"
 
         miracle::WorkspaceConfig ws;
 
-        if (num >= 0)
-            ws.num = num;
-        if (layout_strategy >= 0)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(layout_strategy);
-        if (name)
-            ws.name = name;
+        if (workspace_config->has_num)
+            ws.num = workspace_config->num;
+        if (workspace_config->has_name)
+            ws.name = workspace_config->name;
+        if (workspace_config->has_layout_strategy)
+            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs.value[index] = ws;
     }
@@ -957,41 +948,36 @@ extern "C"
 
     void miracle_config_set_drag_and_drop(
         miracle_config_data_t* config,
-        bool enabled,
-        uint modifiers)
+        miracle_drag_and_drop_config_t* drag_and_drop_config)
     {
 
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->drag_and_drop->enabled = enabled;
-        data->drag_and_drop->modifiers = modifiers;
+        data->drag_and_drop->enabled = drag_and_drop_config->enabled;
+        data->drag_and_drop->modifiers = drag_and_drop_config->modifiers;
     }
 
     miracle_mouse_config_t miracle_config_get_mouse_config(const miracle_config_data_t* config)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         return {
-            data->mouse_configuration->handedness().value_or(mir_pointer_handedness_right),
+            static_cast<uint>(data->mouse_configuration->handedness().value_or(mir_pointer_handedness_right)),
             data->mouse_configuration->acceleration_bias().value_or(0.0),
             data->mouse_configuration->vscroll_speed().value_or(1.0),
             data->mouse_configuration->hscroll_speed().value_or(1.0),
-            data->mouse_configuration->acceleration().value_or(mir_pointer_acceleration_none)
+            static_cast<uint>(data->mouse_configuration->acceleration().value_or(mir_pointer_acceleration_none))
         };
     }
 
     void miracle_config_set_mouse_config(
         miracle_config_data_t* config,
-        MirPointerHandedness handedness,
-        double acceleration_bias,
-        double vscroll_speed,
-        double hscroll_speed,
-        MirPointerAcceleration acceleration)
+        miracle_mouse_config_t* mouse_config)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->mouse_configuration->handedness(handedness);
-        data->mouse_configuration->acceleration_bias(acceleration_bias);
-        data->mouse_configuration->vscroll_speed(vscroll_speed);
-        data->mouse_configuration->hscroll_speed(hscroll_speed);
-        data->mouse_configuration->acceleration(acceleration);
+        data->mouse_configuration->handedness(static_cast<MirPointerHandedness>(mouse_config->handedness));
+        data->mouse_configuration->acceleration_bias(mouse_config->acceleration_bias);
+        data->mouse_configuration->vscroll_speed(mouse_config->vscroll_speed);
+        data->mouse_configuration->hscroll_speed(mouse_config->hscroll_speed);
+        data->mouse_configuration->acceleration(static_cast<MirPointerAcceleration>(mouse_config->acceleration));
     }
 
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)
@@ -1015,13 +1001,10 @@ extern "C"
 
     void miracle_config_set_keymap(
         miracle_config_data_t* config,
-        bool is_set,
-        const char* language,
-        bool has_variant,
-        const char* variant)
+        miracle_keymap_t* keymap)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        if (!is_set)
+        if (!keymap->is_set)
             data->keymap = std::nullopt;
         else if (!*data->keymap)
             data->keymap = miracle::KeymapConfiguration();
@@ -1029,8 +1012,8 @@ extern "C"
         if (!*data->keymap)
             return;
 
-        data->keymap->value().language = language;
-        data->keymap->value().variant = has_variant ? variant : std::optional<std::string>();
+        data->keymap->value().language = keymap->language;
+        data->keymap->value().variant = keymap->has_variant ? keymap->variant : std::optional<std::string>();
     }
 
     const char* miracle_config_get_keymap_option(const miracle_config_data_t* config, size_t index)
@@ -1114,16 +1097,13 @@ extern "C"
 
     void miracle_config_set_hover_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hover_duration_milliseconds,
-        int cancel_displacement_threshold,
-        int reclick_displacement_threshold)
+        miracle_hover_click_t* hover_click)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->hover_click->enabled = enabled;
-        data->hover_click->hover_duration_milliseconds = hover_duration_milliseconds;
-        data->hover_click->cancel_displacement_threshold = cancel_displacement_threshold;
-        data->hover_click->reclick_displacement_threshold = reclick_displacement_threshold;
+        data->hover_click->enabled = hover_click->enabled;
+        data->hover_click->hover_duration_milliseconds = hover_click->hover_duration_milliseconds;
+        data->hover_click->cancel_displacement_threshold = hover_click->cancel_displacement_threshold;
+        data->hover_click->reclick_displacement_threshold = hover_click->reclick_displacement_threshold;
     }
 
     miracle_simulated_secondary_click_t miracle_config_get_simulated_secondary_click(miracle_config_data_t const* config)
@@ -1138,14 +1118,12 @@ extern "C"
 
     void miracle_config_set_simulated_secondary_click(
         miracle_config_data_t* config,
-        bool enabled,
-        uint hold_duration_milliseconds,
-        int displacement_threshold)
+        miracle_simulated_secondary_click_t* simulated_secondary_click)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->simulated_secondary_click->enabled = enabled;
-        data->simulated_secondary_click->hold_duration_milliseconds = hold_duration_milliseconds;
-        data->simulated_secondary_click->displacement_threshold = displacement_threshold;
+        data->simulated_secondary_click->enabled = simulated_secondary_click->enabled;
+        data->simulated_secondary_click->hold_duration_milliseconds = simulated_secondary_click->hold_duration_milliseconds;
+        data->simulated_secondary_click->displacement_threshold = simulated_secondary_click->displacement_threshold;
     }
 
     miracle_output_filter_t miracle_config_get_output_filter(const miracle_config_data_t* config)
@@ -1159,12 +1137,11 @@ extern "C"
 
     void miracle_config_set_output_filter(
         miracle_config_data_t* config,
-        bool shader_path_enabled,
-        const char* shader_path)
+        miracle_output_filter_t* output_filter)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        if (shader_path_enabled)
-            data->output_filter->shader_path = shader_path;
+        if (output_filter->shader_path_enabled)
+            data->output_filter->shader_path = output_filter->shader_path;
         else
             data->output_filter->shader_path = std::nullopt;
     }
@@ -1178,11 +1155,11 @@ extern "C"
         };
     }
 
-    void miracle_config_set_cursor(miracle_config_data_t* config, float scale, uint focus_mode)
+    void miracle_config_set_cursor(miracle_config_data_t* config, miracle_cursor_t* cursor)
     {
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->cursor->scale = scale;
-        data->cursor->focus_mode = static_cast<miracle::CursorFocusMode>(focus_mode);
+        data->cursor->scale = cursor->scale;
+        data->cursor->focus_mode = static_cast<miracle::CursorFocusMode>(cursor->focus_mode);
     }
 
     miracle_slow_keys_t miracle_config_get_slow_keys(const miracle_config_data_t* config)
@@ -1193,11 +1170,11 @@ extern "C"
             data->slow_keys->hold_delay_milliseconds,
         };
     }
-    void miracle_config_set_slow_keys(miracle_config_data_t* config, bool enabled, uint hold_duration_millseconds)
+    void miracle_config_set_slow_keys(miracle_config_data_t* config, miracle_slow_keys_t* slow_keys)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->slow_keys->enabled = enabled;
-        data->slow_keys->hold_delay_milliseconds = hold_duration_millseconds;
+        data->slow_keys->enabled = slow_keys->enabled;
+        data->slow_keys->hold_delay_milliseconds = slow_keys->hold_duration_milliseconds;
     }
 
     miracle_sticky_keys_t miracle_config_get_sticky_keys(const miracle_config_data_t* config)
@@ -1208,11 +1185,11 @@ extern "C"
             data->sticky_keys->should_disable_if_two_keys_are_pressed_together,
         };
     }
-    void miracle_config_set_sticky_keys(miracle_config_data_t* config, bool enabled, bool should_disable_if_two_keys_are_pressed_together)
+    void miracle_config_set_sticky_keys(miracle_config_data_t* config, miracle_sticky_keys_t* sticky_keys)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->sticky_keys->enabled = enabled;
-        data->sticky_keys->should_disable_if_two_keys_are_pressed_together = should_disable_if_two_keys_are_pressed_together;
+        data->sticky_keys->enabled = sticky_keys->enabled;
+        data->sticky_keys->should_disable_if_two_keys_are_pressed_together = sticky_keys->should_disable_if_two_keys_are_pressed_together;
     }
 
     miracle_magnifier_t miracle_config_get_magnifier(const miracle_config_data_t* config)
