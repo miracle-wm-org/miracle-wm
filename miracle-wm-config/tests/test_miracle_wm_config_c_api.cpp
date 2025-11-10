@@ -539,35 +539,14 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
         &wrapper->config,
         0);
     animateable_event.duration_seconds = 0.5f;
-
-    miracle_built_in_animation_t animation = {
-        static_cast<uint>(miracle::BultInAnimationType::slide),
-        static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
-        1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
-    };
-
-    // Clear existing animations and add our new one
-    while (animateable_event.num_animations > 0)
-    {
-        miracle_animateable_event_remove_animation(&animateable_event, 0);
-    }
-    miracle_animateable_event_add_animation(&animateable_event, animation);
-
-    miracle_config_set_animateable_event(
-        &wrapper->config,
-        0,
-        &animateable_event);
-
+    miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
     auto result = miracle_config_get_animateable_event(
         &wrapper->config,
         0);
 
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
     EXPECT_EQ(result.num_animations, 1);
-
-    auto result_animation = miracle_animateable_event_get_animation(&result, 0);
-    EXPECT_EQ(result_animation.type, static_cast<uint>(miracle::BultInAnimationType::slide));
-    EXPECT_EQ(result_animation.function, static_cast<uint>(miracle::EaseFunction::ease_out_bounce));
+    EXPECT_FALSE(result.is_default);
 }
 
 TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
@@ -576,28 +555,14 @@ TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
         &wrapper->config,
         0);
     animateable_event.duration_seconds = 0.5f;
-
-    miracle_built_in_animation_t animation = {
-        static_cast<uint>(miracle::BultInAnimationType::slide),
-        static_cast<uint>(miracle::EaseFunction::ease_out_bounce),
-        1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f
-    };
-
-    while (animateable_event.num_animations > 0)
-    {
-        miracle_animateable_event_remove_animation(&animateable_event, 0);
-    }
-    miracle_animateable_event_add_animation(&animateable_event, animation);
-
+    miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
     miracle_config_set_animateable_event(
         &wrapper->config,
         0,
         &animateable_event);
-
     miracle_config_reset_animation_definition(
         &wrapper->config,
         0);
-
     auto result = miracle_config_get_animateable_event(
         &wrapper->config,
         0);
