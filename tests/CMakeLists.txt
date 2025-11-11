@@ -44,6 +44,7 @@ set(SOURCES
     test_parent_container.cpp
     test_ipc_message_handler.cpp
     test_ipc_command_executor.cpp
+    test_workspace_manager.cpp
     stub_configuration.h
     stub_session.h
     stub_surface.h

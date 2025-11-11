@@ -70,7 +70,6 @@ bool WorkspaceManager::request_workspace(
         return focus_existing(existing, back_and_forth);
     }
 
-
     mir::log_info("request_workspace: %d being created", num);
     uint32_t id = next_id++;
     auto const& workspace_config = config->get_workspace_config(num, std::nullopt);
