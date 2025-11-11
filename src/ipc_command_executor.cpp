@@ -523,7 +523,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (!indexer.next())
             return IpcValidationResult::create_failure("'move window/container' expected a third argument", true);
 
-        auto const back_and_forth = std::ranges::find(command.options, "--no-auto-back-and-forth") == command.options.end();
+        auto const back_and_forth = !std::ranges::contains(command.options, "--no-auto-back-and-forth");
         auto const& arg1 = indexer.current();
         if (arg1 != "to")
             return IpcValidationResult::create_failure("Expected 'to' after 'move window/container ...'", true);
