@@ -185,6 +185,10 @@ extern "C"
     miracle_config_option_t miracle_config_get_handedness_option(uint i);
     uint miracle_config_get_acceleration_options_count();
     miracle_config_option_t miracle_config_get_acceleration_option(uint i);
+    uint miracle_config_get_touchpad_click_mode_options_count();
+    miracle_config_option_t miracle_config_get_touchpad_click_mode_option(uint i);
+    uint miracle_config_get_touchpad_scroll_mode_options_count();
+    miracle_config_option_t miracle_config_get_touchpad_scroll_mode_option(uint i);
 
     /// Retrieve the standard miracle config path.
     ///
@@ -987,6 +991,73 @@ extern "C"
     void miracle_config_set_mouse_config(
         miracle_config_data_t* config,
         miracle_mouse_config_t* mouse_config);
+
+    /// Defines the touchpad configuration.
+    typedef struct
+    {
+        /// Whether to disable the touchpad while typing.
+        ///
+        /// Defaults to false.
+        bool disable_while_typing;
+
+        /// Whether to disable the touchpad when an external mouse is connected.
+        ///
+        /// Defaults to false.
+        bool disable_with_external_mouse;
+
+        /// The acceleration bias of the touchpad.
+        ///
+        /// This is a number between -1 and 1.
+        ///
+        /// Defaults to 0.
+        float acceleration_bias;
+
+        /// The vertical scroll speed of the touchpad.
+        ///
+        /// Defaults to 1.
+        float vscroll_speed;
+
+        /// The horizontal scroll speed of the touchpad.
+        ///
+        /// Defaults to 1.
+        float hscroll_speed;
+
+        /// Whether tap-to-click is enabled.
+        ///
+        /// Defaults to true.
+        bool tap_to_click;
+
+        /// Whether middle mouse button emulation is enabled.
+        ///
+        /// Defaults to false.
+        bool middle_mouse_button_emulation;
+
+        /// The click mode for the touchpad.
+        ///
+        /// Use #miracle_config_get_touchpad_click_mode_option to list the options.
+        /// Defaults to finger_count.
+        uint click_mode;
+
+        /// The scroll mode for the touchpad.
+        ///
+        /// Use #miracle_config_get_touchpad_scroll_mode_option to list the options.
+        /// Defaults to two_finger_scroll.
+        uint scroll_mode;
+    } miracle_touchpad_config_t;
+
+    /// Retrieve the touchpad config.
+    ///
+    /// \param config the config
+    /// \returns the touchpad config
+    miracle_touchpad_config_t miracle_config_get_touchpad_config(const miracle_config_data_t* config);
+
+    /// Modify the touchpad config.
+    ///
+    /// \param config the config
+    /// \param touchpad_config the new touchpad config
+    void miracle_config_set_touchpad_config(
+        miracle_config_data_t* config,
+        miracle_touchpad_config_t* touchpad_config);
 
     /// Defines the keymap for the keyboard.
     typedef struct

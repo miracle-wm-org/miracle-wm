@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/cursor_focus_mode.h"
 #include "miracle/gaps.h"
 #include "miracle/keyboard.h"
+#include "miracle/touchpad.h"
 #include "miral/hover_click.h"
 #include <cstdlib>
 #include <filesystem>
@@ -153,6 +154,46 @@ std::string to_string_acceleration(MirPointerAcceleration acceleration)
     case mir_pointer_acceleration_none:
         return "none";
     }
+}
+
+std::optional<MirTouchpadClickMode> from_string_touchpad_click_mode(std::string const& str, ParsingContext&)
+{
+    for (const auto& [name, value] : miracle::mir_touchpad_click_mode_opts)
+    {
+        if (str == name)
+            return static_cast<MirTouchpadClickMode>(value);
+    }
+    return std::nullopt;
+}
+
+std::string to_string_touchpad_click_mode(MirTouchpadClickMode click_mode)
+{
+    for (const auto& [name, value] : miracle::mir_touchpad_click_mode_opts)
+    {
+        if (static_cast<uint>(click_mode) == value)
+            return name;
+    }
+    return "finger_count"; // default fallback
+}
+
+std::optional<MirTouchpadScrollMode> from_string_touchpad_scroll_mode(std::string const& str, ParsingContext&)
+{
+    for (const auto& [name, value] : miracle::mir_touchpad_scroll_mode_opts)
+    {
+        if (str == name)
+            return static_cast<MirTouchpadScrollMode>(value);
+    }
+    return std::nullopt;
+}
+
+std::string to_string_touchpad_scroll_mode(MirTouchpadScrollMode scroll_mode)
+{
+    for (const auto& [name, value] : miracle::mir_touchpad_scroll_mode_opts)
+    {
+        if (static_cast<uint>(value) == static_cast<uint>(scroll_mode))
+            return name;
+    }
+    return "two_finger_scroll"; // default fallback
 }
 
 int program_exists(std::string const& name)
@@ -876,6 +917,49 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
     context.result.config.mouse_configuration = mouse_configuration;
 }
 
+void read_touchpad(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::TouchpadConfiguration touchpad_config;
+
+    try_parse_value(node, "disable_while_typing", touchpad_config.disable_while_typing, context, true);
+    try_parse_value(node, "disable_with_external_mouse", touchpad_config.disable_with_external_mouse, context, true);
+    try_parse_value(node, "tap_to_click", touchpad_config.tap_to_click, context, true);
+    try_parse_value(node, "middle_mouse_button_emulation", touchpad_config.middle_mouse_button_emulation, context, true);
+
+    double vscroll_speed;
+    if (try_parse_value(node, "vscroll_speed", vscroll_speed, context, true))
+        touchpad_config.vscroll_speed = static_cast<float>(vscroll_speed);
+
+    double hscroll_speed;
+    if (try_parse_value(node, "hscroll_speed", hscroll_speed, context, true))
+        touchpad_config.hscroll_speed = static_cast<float>(hscroll_speed);
+
+    double acceleration_bias;
+    if (try_parse_value(node, "acceleration_bias", acceleration_bias, context, true))
+    {
+        acceleration_bias = std::clamp(acceleration_bias, -1.0, 1.0);
+        touchpad_config.acceleration_bias = static_cast<float>(acceleration_bias);
+    }
+
+    auto const click_mode = try_parse_string_to_optional_value<std::optional<MirTouchpadClickMode>>(
+        node,
+        "click_mode",
+        from_string_touchpad_click_mode,
+        context);
+    if (click_mode.has_value())
+        touchpad_config.click_mode = click_mode.value();
+
+    auto const scroll_mode = try_parse_string_to_optional_value<std::optional<MirTouchpadScrollMode>>(
+        node,
+        "scroll_mode",
+        from_string_touchpad_scroll_mode,
+        context);
+    if (scroll_mode.has_value())
+        touchpad_config.scroll_mode = scroll_mode.value();
+
+    context.result.config.touchpad = touchpad_config;
+}
+
 void read_keyboard(YAML::Node const& node, ParsingContext& context)
 {
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
@@ -1055,6 +1139,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_drag_and_drop(config["drag_and_drop"], context);
         if (config["mouse"])
             read_mouse(config["mouse"], context);
+        if (config["touchpad"])
+            read_touchpad(config["touchpad"], context);
         if (config["keyboard"])
             read_keyboard(config["keyboard"], context);
         if (config["hover_click"])
@@ -1382,6 +1468,24 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::EndMap;
     }
 
+    // Save touchpad config only if we're different from the default touchpad config
+    if (!config.touchpad.is_default_value)
+    {
+        out << YAML::Key << "touchpad" << YAML::Value << YAML::BeginMap;
+
+        out << YAML::Key << "disable_while_typing" << YAML::Value << config.touchpad->disable_while_typing;
+        out << YAML::Key << "disable_with_external_mouse" << YAML::Value << config.touchpad->disable_with_external_mouse;
+        out << YAML::Key << "tap_to_click" << YAML::Value << config.touchpad->tap_to_click;
+        out << YAML::Key << "middle_mouse_button_emulation" << YAML::Value << config.touchpad->middle_mouse_button_emulation;
+        out << YAML::Key << "acceleration_bias" << YAML::Value << config.touchpad->acceleration_bias;
+        out << YAML::Key << "vscroll_speed" << YAML::Value << config.touchpad->vscroll_speed;
+        out << YAML::Key << "hscroll_speed" << YAML::Value << config.touchpad->hscroll_speed;
+        out << YAML::Key << "click_mode" << YAML::Value << to_string_touchpad_click_mode(config.touchpad->click_mode);
+        out << YAML::Key << "scroll_mode" << YAML::Value << to_string_touchpad_scroll_mode(config.touchpad->scroll_mode);
+
+        out << YAML::EndMap;
+    }
+
     if (!config.keymap.is_default_value)
     {
         out << YAML::Key << "keyboard" << YAML::Value << YAML::BeginMap;
@@ -1617,6 +1721,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.mouse_configuration->merge(*mouse_configuration);
     result.keyboard_configuration->merge(*other.keyboard_configuration);
     result.keyboard_configuration->merge(*keyboard_configuration);
+    result.touchpad = other.touchpad.is_set() ? other.touchpad : touchpad;
     result.keymap = other.keymap.is_set() ? other.keymap : keymap;
     result.hover_click = other.hover_click.is_set() ? other.hover_click : hover_click;
     result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : simulated_secondary_click;

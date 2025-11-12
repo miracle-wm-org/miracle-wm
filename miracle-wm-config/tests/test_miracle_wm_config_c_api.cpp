@@ -689,6 +689,61 @@ TEST_F(CAPIWrapperTest, MouseConfig)
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
 }
 
+TEST_F(CAPIWrapperTest, TouchpadConfig)
+{
+    miracle_touchpad_config_t touchpad_config = {
+        true, // disable_while_typing
+        false, // disable_with_external_mouse
+        -0.3f, // acceleration_bias
+        1.5f, // vscroll_speed
+        0.8f, // hscroll_speed
+        false, // tap_to_click
+        true, // middle_mouse_button_emulation
+        mir_touchpad_click_mode_area_to_click, // click_mode
+        mir_touchpad_scroll_mode_edge_scroll // scroll_mode
+    };
+    miracle_config_set_touchpad_config(
+        &wrapper->config,
+        &touchpad_config);
+
+    auto const touchpad = miracle_config_get_touchpad_config(&wrapper->config);
+    EXPECT_EQ(touchpad.disable_while_typing, true);
+    EXPECT_EQ(touchpad.disable_with_external_mouse, false);
+    EXPECT_EQ(touchpad.acceleration_bias, -0.3f);
+    EXPECT_EQ(touchpad.vscroll_speed, 1.5f);
+    EXPECT_EQ(touchpad.hscroll_speed, 0.8f);
+    EXPECT_EQ(touchpad.tap_to_click, false);
+    EXPECT_EQ(touchpad.middle_mouse_button_emulation, true);
+    EXPECT_EQ(touchpad.click_mode, mir_touchpad_click_mode_area_to_click);
+    EXPECT_EQ(touchpad.scroll_mode, mir_touchpad_scroll_mode_edge_scroll);
+}
+
+TEST_F(CAPIWrapperTest, TouchpadClickModeOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_touchpad_click_mode_options_count(), Eq(3));
+}
+
+TEST_F(CAPIWrapperTest, TouchpadClickModeOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_touchpad_click_mode_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_touchpad_click_mode_option(i).name, Ne(nullptr));
+    }
+}
+
+TEST_F(CAPIWrapperTest, TouchpadScrollModeOptionsCount)
+{
+    ASSERT_THAT(miracle_config_get_touchpad_scroll_mode_options_count(), Eq(4));
+}
+
+TEST_F(CAPIWrapperTest, TouchpadScrollModeOptionsCanBeFound)
+{
+    for (uint i = 0; i < miracle_config_get_touchpad_scroll_mode_options_count(); i++)
+    {
+        ASSERT_THAT(miracle_config_get_touchpad_scroll_mode_option(i).name, Ne(nullptr));
+    }
+}
+
 TEST_F(CAPIWrapperTest, CanSetKeymap)
 {
     miracle_keymap_t keymap = {
@@ -929,6 +984,21 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
         &wrapper->config,
         &mouse_config);
 
+    miracle_touchpad_config_t touchpad_config = {
+        true, // disable_while_typing
+        true, // disable_with_external_mouse
+        -0.25f, // acceleration_bias
+        1.3f, // vscroll_speed
+        0.9f, // hscroll_speed
+        false, // tap_to_click
+        true, // middle_mouse_button_emulation
+        mir_touchpad_click_mode_finger_count, // click_mode
+        mir_touchpad_scroll_mode_two_finger_scroll // scroll_mode
+    };
+    miracle_config_set_touchpad_config(
+        &wrapper->config,
+        &touchpad_config);
+
     miracle_keymap_t keymap = {
         true,
         "fr",
@@ -1026,6 +1096,17 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(mouse.hscroll_speed, 0.5);
 #endif
     EXPECT_EQ(mouse.acceleration, mir_pointer_acceleration_adaptive);
+
+    auto const touchpad = miracle_config_get_touchpad_config(loaded_config);
+    EXPECT_EQ(touchpad.disable_while_typing, true);
+    EXPECT_EQ(touchpad.disable_with_external_mouse, true);
+    EXPECT_EQ(touchpad.acceleration_bias, -0.25f);
+    EXPECT_EQ(touchpad.vscroll_speed, 1.3f);
+    EXPECT_EQ(touchpad.hscroll_speed, 0.9f);
+    EXPECT_EQ(touchpad.tap_to_click, false);
+    EXPECT_EQ(touchpad.middle_mouse_button_emulation, true);
+    EXPECT_EQ(touchpad.click_mode, mir_touchpad_click_mode_finger_count);
+    EXPECT_EQ(touchpad.scroll_mode, mir_touchpad_scroll_mode_two_finger_scroll);
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
     auto const keymap_result = miracle_config_get_keymap(loaded_config);

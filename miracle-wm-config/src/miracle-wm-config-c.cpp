@@ -5,6 +5,7 @@
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
+#include <miracle/touchpad.h>
 #include <vector>
 
 extern "C"
@@ -306,6 +307,32 @@ extern "C"
         default:
             return { "none", i };
         }
+    }
+
+    uint miracle_config_get_touchpad_click_mode_options_count()
+    {
+        return miracle::mir_touchpad_click_mode_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_touchpad_click_mode_option(uint i)
+    {
+        return {
+            miracle::mir_touchpad_click_mode_opts[i].first,
+            miracle::mir_touchpad_click_mode_opts[i].second
+        };
+    }
+
+    uint miracle_config_get_touchpad_scroll_mode_options_count()
+    {
+        return miracle::mir_touchpad_scroll_mode_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_touchpad_scroll_mode_option(uint i)
+    {
+        return {
+            miracle::mir_touchpad_scroll_mode_opts[i].first,
+            miracle::mir_touchpad_scroll_mode_opts[i].second
+        };
     }
 
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
@@ -978,6 +1005,38 @@ extern "C"
         data->mouse_configuration->vscroll_speed(mouse_config->vscroll_speed);
         data->mouse_configuration->hscroll_speed(mouse_config->hscroll_speed);
         data->mouse_configuration->acceleration(static_cast<MirPointerAcceleration>(mouse_config->acceleration));
+    }
+
+    miracle_touchpad_config_t miracle_config_get_touchpad_config(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->touchpad->disable_while_typing,
+            data->touchpad->disable_with_external_mouse,
+            data->touchpad->acceleration_bias,
+            data->touchpad->vscroll_speed,
+            data->touchpad->hscroll_speed,
+            data->touchpad->tap_to_click,
+            data->touchpad->middle_mouse_button_emulation,
+            static_cast<uint>(data->touchpad->click_mode),
+            static_cast<uint>(data->touchpad->scroll_mode)
+        };
+    }
+
+    void miracle_config_set_touchpad_config(
+        miracle_config_data_t* config,
+        miracle_touchpad_config_t* touchpad_config)
+    {
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->touchpad->disable_while_typing = touchpad_config->disable_while_typing;
+        data->touchpad->disable_with_external_mouse = touchpad_config->disable_with_external_mouse;
+        data->touchpad->acceleration_bias = touchpad_config->acceleration_bias;
+        data->touchpad->vscroll_speed = touchpad_config->vscroll_speed;
+        data->touchpad->hscroll_speed = touchpad_config->hscroll_speed;
+        data->touchpad->tap_to_click = touchpad_config->tap_to_click;
+        data->touchpad->middle_mouse_button_emulation = touchpad_config->middle_mouse_button_emulation;
+        data->touchpad->click_mode = static_cast<MirTouchpadClickMode>(touchpad_config->click_mode);
+        data->touchpad->scroll_mode = static_cast<MirTouchpadScrollMode>(touchpad_config->scroll_mode);
     }
 
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)

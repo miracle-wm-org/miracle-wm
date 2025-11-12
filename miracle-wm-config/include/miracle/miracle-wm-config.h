@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/glm.hpp>
 #include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
+#include <mir_toolkit/mir_input_device_types.h>
 #include <miral/input_configuration.h>
 #include <miral/version.h>
 #include <optional>
@@ -177,6 +178,22 @@ struct MIRACLE_WM_CONFIG_API StickyKeysConfiguration
     bool operator==(const StickyKeysConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
+{
+    // Follows the pattern from miral::InputConfiguration::Touchpad
+    bool disable_while_typing = false;
+    bool disable_with_external_mouse = false;
+    float acceleration_bias = 0.0f;
+    float vscroll_speed = 1.0f;
+    float hscroll_speed = 1.0f;
+    bool tap_to_click = true;
+    bool middle_mouse_button_emulation = false;
+    MirTouchpadClickMode click_mode = mir_touchpad_click_mode_none;
+    MirTouchpadScrollMode scroll_mode = mir_touchpad_scroll_mode_two_finger_scroll;
+
+    bool operator==(const TouchpadConfiguration&) const = default;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -205,6 +222,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<CursorConfiguration> cursor;
     miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
     miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
+    miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
 
     /// Other configuration files to include in addition to this one.
