@@ -188,7 +188,7 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
     float hscroll_speed = 1.0f;
     bool tap_to_click = true;
     bool middle_mouse_button_emulation = false;
-    MirTouchpadClickMode click_mode = mir_touchpad_click_mode_finger_count;
+    MirTouchpadClickMode click_mode = mir_touchpad_click_mode_none;
     MirTouchpadScrollMode scroll_mode = mir_touchpad_scroll_mode_two_finger_scroll;
 
     bool operator==(const TouchpadConfiguration&) const = default;
