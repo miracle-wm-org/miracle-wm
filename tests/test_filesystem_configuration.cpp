@@ -710,6 +710,8 @@ TEST_F(FilesystemConfigurationTest, CanReadTouchpad)
     touchpad_node["hscroll_speed"] = 0.8;
     touchpad_node["tap_to_click"] = false;
     touchpad_node["middle_mouse_button_emulation"] = true;
+    touchpad_node["click_mode"] = "area_to_click";
+    touchpad_node["scroll_mode"] = "edge_scroll";
 
     YAML::Node root;
     root["touchpad"] = touchpad_node;
@@ -724,6 +726,8 @@ TEST_F(FilesystemConfigurationTest, CanReadTouchpad)
     EXPECT_THAT(touchpad.hscroll_speed, testing::FloatEq(0.8f));
     EXPECT_THAT(touchpad.tap_to_click, testing::Eq(false));
     EXPECT_THAT(touchpad.middle_mouse_button_emulation, testing::Eq(true));
+    EXPECT_THAT(touchpad.click_mode, testing::Eq(mir_touchpad_click_mode_area_to_click));
+    EXPECT_THAT(touchpad.scroll_mode, testing::Eq(mir_touchpad_scroll_mode_edge_scroll));
 }
 
 TEST_F(FilesystemConfigurationTest, CanReadIncludes)

@@ -143,6 +143,8 @@ int main(int argc, char const* argv[])
             touchpad_config.hscroll_speed(static_cast<double>(miracle_touchpad_config.hscroll_speed));
             touchpad_config.tap_to_click(miracle_touchpad_config.tap_to_click);
             touchpad_config.middle_mouse_button_emulation(miracle_touchpad_config.middle_mouse_button_emulation);
+            touchpad_config.click_mode(miracle_touchpad_config.click_mode);
+            touchpad_config.scroll_mode(miracle_touchpad_config.scroll_mode);
             input_configuration.touchpad(touchpad_config);
 
             // TODO(mattkae): Due to a bug in Mir, it is generally unsafe to reload

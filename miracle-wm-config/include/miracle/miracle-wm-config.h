@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/glm.hpp>
 #include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
+#include <mir_toolkit/mir_input_device_types.h>
 #include <miral/input_configuration.h>
 #include <miral/version.h>
 #include <optional>
@@ -187,6 +188,8 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
     float hscroll_speed = 1.0f;
     bool tap_to_click = true;
     bool middle_mouse_button_emulation = false;
+    MirTouchpadClickMode click_mode = mir_touchpad_click_mode_finger_count;
+    MirTouchpadScrollMode scroll_mode = mir_touchpad_scroll_mode_two_finger_scroll;
 
     bool operator==(const TouchpadConfiguration&) const = default;
 };

@@ -185,6 +185,10 @@ extern "C"
     miracle_config_option_t miracle_config_get_handedness_option(uint i);
     uint miracle_config_get_acceleration_options_count();
     miracle_config_option_t miracle_config_get_acceleration_option(uint i);
+    uint miracle_config_get_touchpad_click_mode_options_count();
+    miracle_config_option_t miracle_config_get_touchpad_click_mode_option(uint i);
+    uint miracle_config_get_touchpad_scroll_mode_options_count();
+    miracle_config_option_t miracle_config_get_touchpad_scroll_mode_option(uint i);
 
     /// Retrieve the standard miracle config path.
     ///
@@ -1027,6 +1031,18 @@ extern "C"
         ///
         /// Defaults to false.
         bool middle_mouse_button_emulation;
+
+        /// The click mode for the touchpad.
+        ///
+        /// Use #miracle_config_get_touchpad_click_mode_option to list the options.
+        /// Defaults to finger_count.
+        uint click_mode;
+
+        /// The scroll mode for the touchpad.
+        ///
+        /// Use #miracle_config_get_touchpad_scroll_mode_option to list the options.
+        /// Defaults to two_finger_scroll.
+        uint scroll_mode;
     } miracle_touchpad_config_t;
 
     /// Retrieve the touchpad config.

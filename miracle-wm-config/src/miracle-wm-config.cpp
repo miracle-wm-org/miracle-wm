@@ -155,6 +155,64 @@ std::string to_string_acceleration(MirPointerAcceleration acceleration)
     }
 }
 
+std::optional<MirTouchpadClickMode> from_string_touchpad_click_mode(std::string const& str, ParsingContext&)
+{
+    if (str == "none")
+        return mir_touchpad_click_mode_none;
+    else if (str == "area_to_click")
+        return mir_touchpad_click_mode_area_to_click;
+    else if (str == "finger_count")
+        return mir_touchpad_click_mode_finger_count;
+    else
+        return std::nullopt;
+}
+
+std::string to_string_touchpad_click_mode(MirTouchpadClickMode click_mode)
+{
+    switch (click_mode)
+    {
+    case mir_touchpad_click_mode_none:
+        return "none";
+    case mir_touchpad_click_mode_area_to_click:
+        return "area_to_click";
+    case mir_touchpad_click_mode_finger_count:
+        return "finger_count";
+    default:
+        return "finger_count";
+    }
+}
+
+std::optional<MirTouchpadScrollMode> from_string_touchpad_scroll_mode(std::string const& str, ParsingContext&)
+{
+    if (str == "none")
+        return mir_touchpad_scroll_mode_none;
+    else if (str == "two_finger_scroll")
+        return mir_touchpad_scroll_mode_two_finger_scroll;
+    else if (str == "edge_scroll")
+        return mir_touchpad_scroll_mode_edge_scroll;
+    else if (str == "button_down_scroll")
+        return mir_touchpad_scroll_mode_button_down_scroll;
+    else
+        return std::nullopt;
+}
+
+std::string to_string_touchpad_scroll_mode(MirTouchpadScrollMode scroll_mode)
+{
+    switch (scroll_mode)
+    {
+    case mir_touchpad_scroll_mode_none:
+        return "none";
+    case mir_touchpad_scroll_mode_two_finger_scroll:
+        return "two_finger_scroll";
+    case mir_touchpad_scroll_mode_edge_scroll:
+        return "edge_scroll";
+    case mir_touchpad_scroll_mode_button_down_scroll:
+        return "button_down_scroll";
+    default:
+        return "two_finger_scroll";
+    }
+}
+
 int program_exists(std::string const& name)
 {
     std::stringstream out;
@@ -900,6 +958,22 @@ void read_touchpad(YAML::Node const& node, ParsingContext& context)
         touchpad_config.acceleration_bias = static_cast<float>(acceleration_bias);
     }
 
+    auto const click_mode = try_parse_string_to_optional_value<std::optional<MirTouchpadClickMode>>(
+        node,
+        "click_mode",
+        from_string_touchpad_click_mode,
+        context);
+    if (click_mode.has_value())
+        touchpad_config.click_mode = click_mode.value();
+
+    auto const scroll_mode = try_parse_string_to_optional_value<std::optional<MirTouchpadScrollMode>>(
+        node,
+        "scroll_mode",
+        from_string_touchpad_scroll_mode,
+        context);
+    if (scroll_mode.has_value())
+        touchpad_config.scroll_mode = scroll_mode.value();
+
     context.result.config.touchpad = touchpad_config;
 }
 
@@ -1423,6 +1497,8 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "acceleration_bias" << YAML::Value << config.touchpad->acceleration_bias;
         out << YAML::Key << "vscroll_speed" << YAML::Value << config.touchpad->vscroll_speed;
         out << YAML::Key << "hscroll_speed" << YAML::Value << config.touchpad->hscroll_speed;
+        out << YAML::Key << "click_mode" << YAML::Value << to_string_touchpad_click_mode(config.touchpad->click_mode);
+        out << YAML::Key << "scroll_mode" << YAML::Value << to_string_touchpad_scroll_mode(config.touchpad->scroll_mode);
 
         out << YAML::EndMap;
     }

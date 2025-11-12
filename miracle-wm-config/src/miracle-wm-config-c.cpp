@@ -5,6 +5,7 @@
 #include <miracle/miracle-wm-config-c.h>
 #include <miracle/miracle-wm-config.h>
 #include <miracle/mouse_button.h>
+#include <miracle/touchpad.h>
 #include <vector>
 
 extern "C"
@@ -306,6 +307,32 @@ extern "C"
         default:
             return { "none", i };
         }
+    }
+
+    uint miracle_config_get_touchpad_click_mode_options_count()
+    {
+        return miracle::mir_touchpad_click_mode_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_touchpad_click_mode_option(uint i)
+    {
+        return {
+            miracle::mir_touchpad_click_mode_opts[i].first,
+            miracle::mir_touchpad_click_mode_opts[i].second
+        };
+    }
+
+    uint miracle_config_get_touchpad_scroll_mode_options_count()
+    {
+        return miracle::mir_touchpad_scroll_mode_opts.size();
+    }
+
+    miracle_config_option_t miracle_config_get_touchpad_scroll_mode_option(uint i)
+    {
+        return {
+            miracle::mir_touchpad_scroll_mode_opts[i].first,
+            miracle::mir_touchpad_scroll_mode_opts[i].second
+        };
     }
 
     uint miracle_config_get_primary_button(const miracle_config_data_t* config)
@@ -990,7 +1017,9 @@ extern "C"
             data->touchpad->vscroll_speed,
             data->touchpad->hscroll_speed,
             data->touchpad->tap_to_click,
-            data->touchpad->middle_mouse_button_emulation
+            data->touchpad->middle_mouse_button_emulation,
+            static_cast<uint>(data->touchpad->click_mode),
+            static_cast<uint>(data->touchpad->scroll_mode)
         };
     }
 
@@ -1006,6 +1035,8 @@ extern "C"
         data->touchpad->hscroll_speed = touchpad_config->hscroll_speed;
         data->touchpad->tap_to_click = touchpad_config->tap_to_click;
         data->touchpad->middle_mouse_button_emulation = touchpad_config->middle_mouse_button_emulation;
+        data->touchpad->click_mode = static_cast<MirTouchpadClickMode>(touchpad_config->click_mode);
+        data->touchpad->scroll_mode = static_cast<MirTouchpadScrollMode>(touchpad_config->scroll_mode);
     }
 
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)
