@@ -980,6 +980,34 @@ extern "C"
         data->mouse_configuration->acceleration(static_cast<MirPointerAcceleration>(mouse_config->acceleration));
     }
 
+    miracle_touchpad_config_t miracle_config_get_touchpad_config(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return {
+            data->touchpad->disable_while_typing,
+            data->touchpad->disable_with_external_mouse,
+            data->touchpad->acceleration_bias,
+            data->touchpad->vscroll_speed,
+            data->touchpad->hscroll_speed,
+            data->touchpad->tap_to_click,
+            data->touchpad->middle_mouse_button_emulation
+        };
+    }
+
+    void miracle_config_set_touchpad_config(
+        miracle_config_data_t* config,
+        miracle_touchpad_config_t* touchpad_config)
+    {
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->touchpad->disable_while_typing = touchpad_config->disable_while_typing;
+        data->touchpad->disable_with_external_mouse = touchpad_config->disable_with_external_mouse;
+        data->touchpad->acceleration_bias = touchpad_config->acceleration_bias;
+        data->touchpad->vscroll_speed = touchpad_config->vscroll_speed;
+        data->touchpad->hscroll_speed = touchpad_config->hscroll_speed;
+        data->touchpad->tap_to_click = touchpad_config->tap_to_click;
+        data->touchpad->middle_mouse_button_emulation = touchpad_config->middle_mouse_button_emulation;
+    }
+
     miracle_keymap_t miracle_config_get_keymap(const miracle_config_data_t* config)
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);

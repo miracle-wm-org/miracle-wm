@@ -343,6 +343,12 @@ StickyKeysConfiguration FilesystemConfiguration::sticky_keys() const
     return options.sticky_keys;
 }
 
+TouchpadConfiguration FilesystemConfiguration::touchpad() const
+{
+    std::lock_guard lock(mutex);
+    return options.touchpad;
+}
+
 MagnifierConfiguration FilesystemConfiguration::magnifier() const
 {
     std::lock_guard lock(mutex);

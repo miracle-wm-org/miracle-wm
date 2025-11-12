@@ -86,6 +86,7 @@ public:
     [[nodiscard]] virtual CursorConfiguration cursor() const = 0;
     [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
+    [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -132,6 +133,7 @@ public:
     [[nodiscard]] CursorConfiguration cursor() const override;
     [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
+    [[nodiscard]] TouchpadConfiguration touchpad() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

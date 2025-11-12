@@ -876,6 +876,33 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
     context.result.config.mouse_configuration = mouse_configuration;
 }
 
+void read_touchpad(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::TouchpadConfiguration touchpad_config;
+
+    try_parse_value(node, "disable_while_typing", touchpad_config.disable_while_typing, context, true);
+    try_parse_value(node, "disable_with_external_mouse", touchpad_config.disable_with_external_mouse, context, true);
+    try_parse_value(node, "tap_to_click", touchpad_config.tap_to_click, context, true);
+    try_parse_value(node, "middle_mouse_button_emulation", touchpad_config.middle_mouse_button_emulation, context, true);
+
+    double vscroll_speed;
+    if (try_parse_value(node, "vscroll_speed", vscroll_speed, context, true))
+        touchpad_config.vscroll_speed = static_cast<float>(vscroll_speed);
+
+    double hscroll_speed;
+    if (try_parse_value(node, "hscroll_speed", hscroll_speed, context, true))
+        touchpad_config.hscroll_speed = static_cast<float>(hscroll_speed);
+
+    double acceleration_bias;
+    if (try_parse_value(node, "acceleration_bias", acceleration_bias, context, true))
+    {
+        acceleration_bias = std::clamp(acceleration_bias, -1.0, 1.0);
+        touchpad_config.acceleration_bias = static_cast<float>(acceleration_bias);
+    }
+
+    context.result.config.touchpad = touchpad_config;
+}
+
 void read_keyboard(YAML::Node const& node, ParsingContext& context)
 {
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 3, 0)
@@ -1055,6 +1082,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_drag_and_drop(config["drag_and_drop"], context);
         if (config["mouse"])
             read_mouse(config["mouse"], context);
+        if (config["touchpad"])
+            read_touchpad(config["touchpad"], context);
         if (config["keyboard"])
             read_keyboard(config["keyboard"], context);
         if (config["hover_click"])
@@ -1378,6 +1407,22 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "acceleration_bias" << YAML::Value << config.mouse_configuration->acceleration_bias().value();
         if (config.mouse_configuration->acceleration() != std::nullopt)
             out << YAML::Key << "acceleration" << YAML::Value << to_string_acceleration(config.mouse_configuration->acceleration().value());
+
+        out << YAML::EndMap;
+    }
+
+    // Save touchpad config only if we're different from the default touchpad config
+    if (!config.touchpad.is_default_value)
+    {
+        out << YAML::Key << "touchpad" << YAML::Value << YAML::BeginMap;
+
+        out << YAML::Key << "disable_while_typing" << YAML::Value << config.touchpad->disable_while_typing;
+        out << YAML::Key << "disable_with_external_mouse" << YAML::Value << config.touchpad->disable_with_external_mouse;
+        out << YAML::Key << "tap_to_click" << YAML::Value << config.touchpad->tap_to_click;
+        out << YAML::Key << "middle_mouse_button_emulation" << YAML::Value << config.touchpad->middle_mouse_button_emulation;
+        out << YAML::Key << "acceleration_bias" << YAML::Value << config.touchpad->acceleration_bias;
+        out << YAML::Key << "vscroll_speed" << YAML::Value << config.touchpad->vscroll_speed;
+        out << YAML::Key << "hscroll_speed" << YAML::Value << config.touchpad->hscroll_speed;
 
         out << YAML::EndMap;
     }

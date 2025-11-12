@@ -132,6 +132,19 @@ int main(int argc, char const* argv[])
         void on_config_changed(miracle::Config const& config) override
         {
             input_configuration.mouse(config.mouse());
+
+            // Configure touchpad
+            auto touchpad_config = miral::InputConfiguration::Touchpad {};
+            auto const miracle_touchpad_config = config.touchpad();
+            touchpad_config.disable_while_typing(miracle_touchpad_config.disable_while_typing);
+            touchpad_config.disable_with_external_mouse(miracle_touchpad_config.disable_with_external_mouse);
+            touchpad_config.acceleration_bias(static_cast<double>(miracle_touchpad_config.acceleration_bias));
+            touchpad_config.vscroll_speed(static_cast<double>(miracle_touchpad_config.vscroll_speed));
+            touchpad_config.hscroll_speed(static_cast<double>(miracle_touchpad_config.hscroll_speed));
+            touchpad_config.tap_to_click(miracle_touchpad_config.tap_to_click);
+            touchpad_config.middle_mouse_button_emulation(miracle_touchpad_config.middle_mouse_button_emulation);
+            input_configuration.touchpad(touchpad_config);
+
             // TODO(mattkae): Due to a bug in Mir, it is generally unsafe to reload
             //  the keyboard configuration after the first load, as dead clients (e.g.
             //  swayvnc) can cause the internal listeners in Mir to be fail.

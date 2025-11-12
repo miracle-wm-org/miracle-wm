@@ -700,6 +700,32 @@ TEST_F(FilesystemConfigurationTest, CanReadStickyKeys)
     EXPECT_THAT(sticky_keys.should_disable_if_two_keys_are_pressed_together, testing::Eq(false));
 }
 
+TEST_F(FilesystemConfigurationTest, CanReadTouchpad)
+{
+    YAML::Node touchpad_node;
+    touchpad_node["disable_while_typing"] = true;
+    touchpad_node["disable_with_external_mouse"] = false;
+    touchpad_node["acceleration_bias"] = -0.3;
+    touchpad_node["vscroll_speed"] = 1.5;
+    touchpad_node["hscroll_speed"] = 0.8;
+    touchpad_node["tap_to_click"] = false;
+    touchpad_node["middle_mouse_button_emulation"] = true;
+
+    YAML::Node root;
+    root["touchpad"] = touchpad_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const touchpad = config.touchpad();
+    EXPECT_THAT(touchpad.disable_while_typing, testing::Eq(true));
+    EXPECT_THAT(touchpad.disable_with_external_mouse, testing::Eq(false));
+    EXPECT_THAT(touchpad.acceleration_bias, testing::FloatEq(-0.3f));
+    EXPECT_THAT(touchpad.vscroll_speed, testing::FloatEq(1.5f));
+    EXPECT_THAT(touchpad.hscroll_speed, testing::FloatEq(0.8f));
+    EXPECT_THAT(touchpad.tap_to_click, testing::Eq(false));
+    EXPECT_THAT(touchpad.middle_mouse_button_emulation, testing::Eq(true));
+}
+
 TEST_F(FilesystemConfigurationTest, CanReadIncludes)
 {
     const std::string include_path = std::filesystem::current_path() / "test_include.yaml";
