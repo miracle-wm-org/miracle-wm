@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/cursor_focus_mode.h"
 #include "miracle/gaps.h"
 #include "miracle/keyboard.h"
+#include "miracle/touchpad.h"
 #include "miral/hover_click.h"
 #include <cstdlib>
 #include <filesystem>
@@ -157,60 +158,42 @@ std::string to_string_acceleration(MirPointerAcceleration acceleration)
 
 std::optional<MirTouchpadClickMode> from_string_touchpad_click_mode(std::string const& str, ParsingContext&)
 {
-    if (str == "none")
-        return mir_touchpad_click_mode_none;
-    else if (str == "area_to_click")
-        return mir_touchpad_click_mode_area_to_click;
-    else if (str == "finger_count")
-        return mir_touchpad_click_mode_finger_count;
-    else
-        return std::nullopt;
+    for (const auto& [name, value] : miracle::mir_touchpad_click_mode_opts)
+    {
+        if (str == name)
+            return static_cast<MirTouchpadClickMode>(value);
+    }
+    return std::nullopt;
 }
 
 std::string to_string_touchpad_click_mode(MirTouchpadClickMode click_mode)
 {
-    switch (click_mode)
+    for (const auto& [name, value] : miracle::mir_touchpad_click_mode_opts)
     {
-    case mir_touchpad_click_mode_none:
-        return "none";
-    case mir_touchpad_click_mode_area_to_click:
-        return "area_to_click";
-    case mir_touchpad_click_mode_finger_count:
-        return "finger_count";
-    default:
-        return "finger_count";
+        if (static_cast<uint>(click_mode) == value)
+            return name;
     }
+    return "finger_count"; // default fallback
 }
 
 std::optional<MirTouchpadScrollMode> from_string_touchpad_scroll_mode(std::string const& str, ParsingContext&)
 {
-    if (str == "none")
-        return mir_touchpad_scroll_mode_none;
-    else if (str == "two_finger_scroll")
-        return mir_touchpad_scroll_mode_two_finger_scroll;
-    else if (str == "edge_scroll")
-        return mir_touchpad_scroll_mode_edge_scroll;
-    else if (str == "button_down_scroll")
-        return mir_touchpad_scroll_mode_button_down_scroll;
-    else
-        return std::nullopt;
+    for (const auto& [name, value] : miracle::mir_touchpad_scroll_mode_opts)
+    {
+        if (str == name)
+            return static_cast<MirTouchpadScrollMode>(value);
+    }
+    return std::nullopt;
 }
 
 std::string to_string_touchpad_scroll_mode(MirTouchpadScrollMode scroll_mode)
 {
-    switch (scroll_mode)
+    for (const auto& [name, value] : miracle::mir_touchpad_scroll_mode_opts)
     {
-    case mir_touchpad_scroll_mode_none:
-        return "none";
-    case mir_touchpad_scroll_mode_two_finger_scroll:
-        return "two_finger_scroll";
-    case mir_touchpad_scroll_mode_edge_scroll:
-        return "edge_scroll";
-    case mir_touchpad_scroll_mode_button_down_scroll:
-        return "button_down_scroll";
-    default:
-        return "two_finger_scroll";
+        if (static_cast<uint>(value) == static_cast<uint>(scroll_mode))
+            return name;
     }
+    return "two_finger_scroll"; // default fallback
 }
 
 int program_exists(std::string const& name)
