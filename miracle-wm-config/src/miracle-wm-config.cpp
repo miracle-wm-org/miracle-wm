@@ -1721,6 +1721,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.mouse_configuration->merge(*mouse_configuration);
     result.keyboard_configuration->merge(*other.keyboard_configuration);
     result.keyboard_configuration->merge(*keyboard_configuration);
+    result.touchpad = other.touchpad.is_set() ? other.touchpad : touchpad;
     result.keymap = other.keymap.is_set() ? other.keymap : keymap;
     result.hover_click = other.hover_click.is_set() ? other.hover_click : hover_click;
     result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : simulated_secondary_click;

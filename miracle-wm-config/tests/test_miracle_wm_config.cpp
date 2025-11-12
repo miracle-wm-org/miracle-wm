@@ -102,6 +102,14 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     first.magnifier = miracle::MagnifierConfiguration {
         .enabled = false
     };
+    first.touchpad = miracle::TouchpadConfiguration {
+        .disable_while_typing = true,
+        .acceleration_bias = 1.0f,
+        .vscroll_speed = 1.1f,
+        .hscroll_speed = 1.2f,
+        .tap_to_click = false,
+        .middle_mouse_button_emulation = true
+    };
 
     miracle::ConfigData second;
     second.primary_modifier = mir_input_event_modifier_shift;
@@ -167,6 +175,14 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     second.magnifier = miracle::MagnifierConfiguration {
         .enabled = true
     };
+    second.touchpad = miracle::TouchpadConfiguration {
+        .disable_while_typing = false,
+        .acceleration_bias = 3.0f,
+        .vscroll_speed = 2.1f,
+        .hscroll_speed = 2.2f,
+        .tap_to_click = true,
+        .middle_mouse_button_emulation = false
+    };
 
     auto const merged = first.merge_with(second);
     EXPECT_THAT(*merged.primary_modifier, Eq(mir_input_event_modifier_shift));
@@ -207,6 +223,12 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     EXPECT_THAT(merged.slow_keys->enabled, Eq(true));
     EXPECT_THAT(merged.sticky_keys->enabled, Eq(true));
     EXPECT_THAT(merged.magnifier->enabled, Eq(true));
+    EXPECT_THAT(merged.touchpad->disable_while_typing, Eq(false));
+    EXPECT_THAT(merged.touchpad->acceleration_bias, Eq(3.0f));
+    EXPECT_THAT(merged.touchpad->vscroll_speed, Eq(2.1f));
+    EXPECT_THAT(merged.touchpad->hscroll_speed, Eq(2.2f));
+    EXPECT_THAT(merged.touchpad->tap_to_click, Eq(true));
+    EXPECT_THAT(merged.touchpad->middle_mouse_button_emulation, Eq(false));
 }
 
 TEST_F(KeymapConfigurationTest, KeymapLanguageOnly)
