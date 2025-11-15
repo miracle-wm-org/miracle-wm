@@ -23,13 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class Policy;
 
 class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
 public:
     explicit Output(
-        Policy* policy,
         std::string name,
         int id,
         geom::Rectangle const& area,
@@ -80,7 +78,6 @@ public:
 private:
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
-    Policy* policy;
     std::string name_;
     int id_;
     geom::Rectangle area;
