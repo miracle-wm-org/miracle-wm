@@ -176,7 +176,6 @@ Policy::Policy(
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
-            this,
             state,
             config,
             window_controller,

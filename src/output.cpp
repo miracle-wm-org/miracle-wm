@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "leaf_container.h"
 #include "mir_version_manager.h"
-#include "policy.h"
 #include "vector_helpers.h"
 #include "workspace.h"
 #include "workspace_manager.h"
@@ -41,7 +40,6 @@ using namespace miracle;
 namespace mg = mir::graphics;
 
 Output::Output(
-    Policy* policy,
     std::string name,
     int id,
     geom::Rectangle const& area,
@@ -50,7 +48,6 @@ Output::Output(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator) :
-    policy { policy },
     name_ { std::move(name) },
     id_ { id },
     area { area },
@@ -82,21 +79,13 @@ std::shared_ptr<Container> Output::intersect(float x, float y)
     if (animator->is_animating(handle))
         return nullptr;
 
-    if (auto const active_workspace = active())
+    // Intersect a window. If the window is on the currently active workspace
+    // or the window is a shell component, then return it.
+    auto const window = window_controller->window_at(x, y);
+    if (auto const result = window_controller->get_container(window))
     {
-        std::shared_ptr<Container> result = nullptr;
-        active_workspace->for_each_window([&](std::shared_ptr<Container> const& container)
-        {
-            if (container->get_visible_area().contains(geom::Point(x, y)))
-            {
-                result = container;
-                return true;
-            }
-
-            return false;
-        });
-
-        return result;
+        if (result->get_workspace() == active() || result->get_type() == ContainerType::shell)
+            return result;
     }
 
     return nullptr;

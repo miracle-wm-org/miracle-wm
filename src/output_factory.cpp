@@ -26,13 +26,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 MiralOutputFactory::MiralOutputFactory(
-    Policy* policy,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<DisplayConfig> const& display_config) :
-    policy { policy },
     state { state },
     config { config },
     window_controller { window_controller },
@@ -52,7 +50,6 @@ std::shared_ptr<OutputInterface> MiralOutputFactory::create(
     }
 
     return std::make_shared<Output>(
-        policy,
         std::move(name),
         id,
         area,
