@@ -19,22 +19,24 @@ package-repositories:
 
 apps:
   miracle-wm:
-    command: &_command usr/local/bin/miracle-wm
+    command: usr/bin/miracle-wm
     environment: &_environment
       # Prep for Mir
       MIR_SERVER_PLATFORM_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/mir/server-platform
-      __EGL_VENDOR_LIBRARY_DIRS: $SNAP/etc/glvnd/egl_vendor.d:$SNAP/usr/share/glvnd/egl_vendor.d
-      LIBGL_DRIVERS_PATH: $SNAP/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
+      __EGL_VENDOR_LIBRARY_DIRS: ${SNAP}/etc/glvnd/egl_vendor.d:${SNAP}/usr/share/glvnd/egl_vendor.d
+      GBM_BACKENDS_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gbm
+      LIBGL_DRIVERS_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/dri
       LIBINPUT_QUIRKS_DIR: ${SNAP}/usr/share/libinput
       PATH: ${SNAP}/bin/:${SNAP}/usr/bin/:${SNAP}/usr/local/bin/:${PATH}
-      # For "reasons" this is being set despite this being a classic snap. This overwrites the nonsense
-      LD_LIBRARY_PATH: ""
+      DRIRC_CONFIGDIR: ${SNAP}/usr/share/drirc.d
 
   miracle-wm-sensible-terminal:
-    command: usr/local/bin/miracle-wm-sensible-terminal
+    command: usr/bin/miracle-wm-sensible-terminal
+    environment: *_environment
 
   miraclemsg:
-    command: usr/local/bin/miraclemsg
+    command: usr/bin/miraclemsg
+    environment: *_environment
 
 parts:
   miracle-wm:
@@ -54,6 +56,7 @@ parts:
     cmake-parameters:
       - -DSNAP_BUILD=ON
       - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
     source: .
     build-packages:
       - pkg-config
@@ -83,6 +86,8 @@ parts:
       - libjson-c-dev
       - libgtest-dev
       - libgmock-dev
+      - libboost-filesystem-dev
+      - libboost-system-dev
     stage-packages:
       - libmiral7
       - mir-graphics-drivers-desktop
@@ -109,7 +114,9 @@ parts:
       - -usr/share/man
       - -usr/share/pkgconfig
       - -usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgallium*
-
+      - -usr/include
+      - -usr/lib/*/pkgconfig
+      
   session:
     plugin: dump
     source: session
