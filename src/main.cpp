@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/cursor_scale.h>
 #include <miral/custom_renderer.h>
+#include <miral/decorations.h>
 #include <miral/external_client.h>
 #include <miral/hover_click.h>
 #include <miral/keymap.h>
@@ -255,6 +256,7 @@ int main(int argc, char const* argv[])
             cursor_scale,
             slow_keys,
             sticky_keys,
+            Decorations::always_csd(),
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
