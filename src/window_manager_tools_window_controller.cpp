@@ -199,7 +199,10 @@ WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
 
 void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationFrameResult const& asr)
 {
-    controller->process_animation(asr, container.lock());
+    if (auto const locked = container.lock())
+        controller->process_animation(asr, locked);
+    else
+        mir::log_warning("WindowAnimation::on_tick: container is no longer valid");
 }
 
 void WindowManagerToolsWindowController::process_animation(
