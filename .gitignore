@@ -42,3 +42,6 @@ temp-build
 .idea
 .aider*
 cmake-build-debug
+
+# PPA publishing history (local tracking)
+.ppa_history
