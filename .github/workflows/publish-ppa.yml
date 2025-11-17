@@ -57,6 +57,35 @@ jobs:
         echo "DEBFULLNAME=Matthew Kosarek" >> $GITHUB_ENV
         echo "GPGKEY=$GPG_KEY_ID" >> $GITHUB_ENV
 
+    - name: Configure git
+      run: |
+        git config user.name "miracle-wm-bot"
+        git config user.email "matthew@matthewkosarek.xyz"
+
+    - name: Update changelog and move tag
+      env:
+        VERSION: ${{ steps.get_version.outputs.version }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Update the main repo's changelog
+        DEBEMAIL="matthew@matthewkosarek.xyz" DEBFULLNAME="Matthew Kosarek" dch -v ${VERSION}-1 "Release version $VERSION"
+        
+        # Add recent commits (get commits since last tag)
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "HEAD~5")
+        git log --oneline --no-merges ${LAST_TAG}..HEAD | head -5 | while read commit; do
+          if [ -n "$commit" ]; then
+            commit_msg=$(echo "$commit" | sed 's/^[a-f0-9]* //')
+            DEBEMAIL="matthew@matthewkosarek.xyz" DEBFULLNAME="Matthew Kosarek" dch -a "* $commit_msg"
+          fi
+        done
+        
+        # Commit the changelog update (but don't move the tag)
+        git add debian/changelog
+        git commit -m "Update changelog for version $VERSION [skip ci]"
+        
+        # Push the new commit (tag stays where it was)
+        git push origin HEAD
+
     - name: Publish to PPA
       run: |
         chmod +x tools/publish-ppa.sh
