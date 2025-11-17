@@ -30,9 +30,9 @@ if [ "$version" = "auto" ]; then
     cd - >/dev/null
 fi
 
-# Default to quantal quokka and noble numbat if no distros specified
+# Default to questing quokka and noble numbat if no distros specified
 if [ ${#distros[@]} -eq 0 ]; then
-    distros=("noble" "jammy")
+    distros=("noble" "questing")
 fi
 
 dir=$(dirname $0)
