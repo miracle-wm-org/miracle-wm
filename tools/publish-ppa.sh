@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e  # Exit on any error
 
-# Set email for changelog entries
-export DEBEMAIL="matthew@matthewkosarek.xyz"
-export DEBFULLNAME="Matthew Kosarek"
+# Set email for changelog entries (can be overridden by environment)
+export DEBEMAIL="${DEBEMAIL:-matthew@matthewkosarek.xyz}"
+export DEBFULLNAME="${DEBFULLNAME:-Matthew Kosarek}"
 
 if (( $# < 1 )); then
     echo "Usage: ./publish-ppa.sh <NEW_VERSION> [DISTRO1] [DISTRO2] ..."
@@ -30,9 +30,9 @@ if [ "$version" = "auto" ]; then
     cd - >/dev/null
 fi
 
-# Default to current LTS if no distros specified
+# Default to quantal quokka and noble numbat if no distros specified
 if [ ${#distros[@]} -eq 0 ]; then
-    distros=("noble")
+    distros=("noble" "jammy")
 fi
 
 dir=$(dirname $0)
@@ -79,7 +79,12 @@ for distro in "${distros[@]}"; do
     rm -f debian/files  # Clean debian/files before each build
     
     echo "Building source package for $distro..."
-    debuild -S -sa -d
+    # Use -k option to specify GPG key if GPGKEY is set
+    if [ -n "$GPGKEY" ]; then
+        debuild -S -sa -d -k"$GPGKEY"
+    else
+        debuild -S -sa -d
+    fi
     
     # Upload
     echo "Uploading to PPA..."
