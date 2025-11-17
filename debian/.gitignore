@@ -1,0 +1,12 @@
+# Ignore build artifacts
+*.tar.gz
+*.tar.xz
+*.dsc
+*.changes
+*.build
+*.upload
+.debhelper/
+debian/files
+debian/.debhelper/
+debian/tmp/
+debian/miracle-wm/
