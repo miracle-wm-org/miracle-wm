@@ -177,6 +177,11 @@ namespace test
             return {};
         }
 
+        bool get_workspace_back_and_forth() const override
+        {
+            return true;
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;

@@ -349,6 +349,12 @@ TouchpadConfiguration FilesystemConfiguration::touchpad() const
     return options.touchpad;
 }
 
+bool FilesystemConfiguration::get_workspace_back_and_forth() const
+{
+    std::lock_guard lock(mutex);
+    return options.workspace_back_and_forth;
+}
+
 MagnifierConfiguration FilesystemConfiguration::magnifier() const
 {
     std::lock_guard lock(mutex);
