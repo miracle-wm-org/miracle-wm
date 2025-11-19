@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "direction.h"
 
 #include <memory>
-#include <miracle/gaps.h>
+#include <miracle/cpp/gaps.h>
 #include <miral/window_manager_tools.h>
 
 namespace miracle

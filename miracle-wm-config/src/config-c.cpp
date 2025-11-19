@@ -1,11 +1,27 @@
-#include <miracle/animation_definition_internal.h>
-#include <miracle/cursor_focus_mode.h>
-#include <miracle/default_key_command.h>
-#include <miracle/keyboard.h>
-#include <miracle/miracle-wm-config-c.h>
-#include <miracle/miracle-wm-config.h>
-#include <miracle/mouse_button.h>
-#include <miracle/touchpad.h>
+/**
+Copyright (C) 2024  Matthew Kosarek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**/
+
+#include <miracle/config.h>
+#include <miracle/cpp/config-cpp.h>
+#include <miracle/cpp/cursor_focus_mode.h>
+#include <miracle/cpp/default_key_command.h>
+#include <miracle/cpp/keyboard.h>
+#include <miracle/cpp/touchpad.h>
+#include <miracle/cpp/mouse_button.h>
 #include <vector>
 
 extern "C"
@@ -798,7 +814,7 @@ extern "C"
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
-        def = miracle::internal::default_animation_definitions[index];
+        def = miracle::ConfigData::get_default_animation_definition(static_cast<miracle::AnimateableEvent>(index));
     }
 
     miracle_built_in_animation_t miracle_animateable_event_get_animation(

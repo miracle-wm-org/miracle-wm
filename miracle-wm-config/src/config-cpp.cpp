@@ -15,13 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "miracle/miracle-wm-config.h"
-#include "miracle/animation_definition_internal.h"
-#include "miracle/cursor_focus_mode.h"
-#include "miracle/gaps.h"
-#include "miracle/keyboard.h"
-#include "miracle/touchpad.h"
-#include "miral/hover_click.h"
+#include "miracle/cpp/config-cpp.h"
+#include "miracle/cpp/cursor_focus_mode.h"
+#include "miracle/cpp/gaps.h"
+#include "miracle/cpp/keyboard.h"
+#include "miracle/cpp/touchpad.h"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -43,6 +41,37 @@ class BadConversion;
 
 namespace
 {
+static std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
+    { miracle::AnimationType::built_in,
+     true,
+     0.2f,
+     { miracle::BuiltInAnimationDefinition {
+            miracle::BultInAnimationType::fade,
+            miracle::EaseFunction::linear,
+        } } },
+    { miracle::AnimationType::built_in,
+     true,
+     0.25f,
+     { miracle::BuiltInAnimationDefinition {
+            miracle::BultInAnimationType::slide,
+            miracle::EaseFunction::linear,
+        } } },
+    { miracle::AnimationType::built_in,
+     true,
+     0.3f,
+     { miracle::BuiltInAnimationDefinition {
+            miracle::BultInAnimationType::fade,
+            miracle::EaseFunction::linear,
+        } } },
+    { miracle::AnimationType::built_in,
+     true,
+     0.25f,
+     { miracle::BuiltInAnimationDefinition {
+            miracle::BultInAnimationType::slide,
+            miracle::EaseFunction::ease_out_sine,
+        } } }
+});
+
 struct ParsingContext
 {
     miracle::ConfigLoadResult result;
@@ -1101,7 +1130,7 @@ void read_workspace_back_and_forth(YAML::Node const& node, ParsingContext& conte
 }
 
 miracle::ConfigData::ConfigData() :
-    animation_definitions { internal::default_animation_definitions }
+    animation_definitions { default_animation_definitions }
 {
 }
 
@@ -1747,4 +1776,9 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
     result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : workspace_back_and_forth;
     return result;
+}
+
+miracle::AnimationDefinition miracle::ConfigData::get_default_animation_definition(AnimateableEvent event)
+{
+    return default_animation_definitions[static_cast<uint32_t>(event)];
 }

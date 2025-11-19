@@ -230,6 +230,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<std::vector<std::string>> includes;
 
     ConfigData merge_with(ConfigData& other);
+    static AnimationDefinition get_default_animation_definition(AnimateableEvent event);
 };
 
 enum class ErrorLevel

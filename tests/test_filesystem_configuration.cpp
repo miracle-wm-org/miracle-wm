@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gmock/gmock-function-mocker.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <miracle/animation_definition.h>
+#include <miracle/cpp/animation_definition.h>
 #include <miral/runner.h>
 #include <vector>
 #include <yaml-cpp/node/node.h>
