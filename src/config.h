@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_CONFIG_H
 #define MIRACLEWM_CONFIG_H
 
-#include "../miracle-wm-config/include/miracle/gaps.h"
 #include "container.h"
-#include <miracle/miracle-wm-config.h>
+#include "miracle/cpp/gaps.h"
+#include <miracle/cpp/config-cpp.h>
 #include <miral/version.h>
 
 #include <functional>

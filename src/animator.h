@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <condition_variable>
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
-#include <miracle/animation_definition.h>
+#include <miracle/cpp/animation_definition.h>
 #include <mutex>
 #include <optional>
 #include <thread>

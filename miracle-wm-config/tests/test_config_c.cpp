@@ -20,9 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gtest/gtest.h>
 #include <linux/input-event-codes.h>
 #include <mir/version.h>
-#include <miracle/animation_definition_internal.h>
-#include <miracle/miracle-wm-config-c.h>
-#include <miracle/miracle-wm-config.h>
+#include <miracle/config.h>
+#include <miracle/cpp/config-cpp.h>
 
 using namespace testing;
 

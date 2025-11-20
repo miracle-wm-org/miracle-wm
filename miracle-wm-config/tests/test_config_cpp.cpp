@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <miracle/miracle-wm-config.h>
+#include <miracle/cpp/config-cpp.h>
 #include <vector>
 
 using namespace testing;

@@ -9,13 +9,13 @@ find_package(GTest REQUIRED)
 
 add_library(miracle-wm-config
     SHARED
-    src/miracle-wm-config.cpp include/miracle/miracle-wm-config.h
-    include/miracle/animation_definition.h
-    include/miracle/container_type.h
-    include/miracle/default_key_command.h
-    include/miracle/cursor_focus_mode.h
-    include/miracle/modifiers.h
-    src/miracle-wm-config-c.cpp include/miracle/miracle-wm-config-c.h)
+    src/config-cpp.cpp include/miracle/cpp/config-cpp.h
+    include/miracle/cpp/animation_definition.h
+    include/miracle/cpp/container_type.h
+    include/miracle/cpp/default_key_command.h
+    include/miracle/cpp/cursor_focus_mode.h
+    include/miracle/cpp/modifiers.h
+    src/config-c.cpp include/miracle/config.h)
 
 set_target_properties(miracle-wm-config PROPERTIES
     CXX_STANDARD 20
@@ -61,8 +61,8 @@ install(
 
 # Tests
 add_executable(test_miracle_wm_config_c_api
-    tests/test_miracle_wm_config_c_api.cpp
-    tests/test_miracle_wm_config.cpp
+    tests/test_config_c.cpp
+    tests/test_config_cpp.cpp
 )
 
 target_include_directories(test_miracle_wm_config_c_api PRIVATE

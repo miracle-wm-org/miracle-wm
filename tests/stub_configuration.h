@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_STUB_CONFIGURATION_H
 
 #include "config.h"
-#include "miracle/miracle-wm-config.h"
+#include "miracle/cpp/config-cpp.h"
 
 namespace miracle
 {
