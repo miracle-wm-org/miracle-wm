@@ -71,7 +71,6 @@ private:
             AnimationDefinition const& definition,
             mir::geometry::Rectangle const& from,
             mir::geometry::Rectangle const& to,
-            mir::geometry::Rectangle const& current,
             WindowManagerToolsWindowController* controller,
             std::shared_ptr<Container> const& container,
             float opacity_start,

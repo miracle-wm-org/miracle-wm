@@ -37,12 +37,11 @@ public:
         AnimationDefinition const& definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current,
         glm::mat4 const& transform,
         glm::mat4 const& workspace_transform,
         mir::geometry::Rectangle const& output_area,
         std::function<void()> const& on_finish) :
-        MultiBuiltInAnimation(handle, definition, from, to, current, 1.f, 0.f),
+        MultiBuiltInAnimation(handle, definition, from, to, 1.f, 0.f),
         compositor_state(state),
         surface_(surface),
         on_finish(on_finish)
@@ -117,7 +116,6 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
         config->get_animation_definition(AnimateableEvent::window_close),
         container->get_visible_area(),
         geom::Rectangle {},
-        container->get_visible_area(),
         container->get_transform(),
         container->get_output_transform() * container->get_workspace_transform(),
         output_area,
