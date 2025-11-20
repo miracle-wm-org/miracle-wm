@@ -96,7 +96,6 @@ public:
         BuiltInAnimationDefinition definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current,
         float opacity_start,
         float opacity_end);
 
@@ -110,7 +109,6 @@ public:
 private:
     float duration_seconds;
     BuiltInAnimationDefinition definition;
-    mir::geometry::Rectangle current;
     mir::geometry::Rectangle from;
     mir::geometry::Rectangle to;
     float const opacity_start;
@@ -125,7 +123,6 @@ public:
         AnimationDefinition const& definition,
         mir::geometry::Rectangle const& from,
         mir::geometry::Rectangle const& to,
-        mir::geometry::Rectangle const& current,
         float opacity_start,
         float opacity_end);
 

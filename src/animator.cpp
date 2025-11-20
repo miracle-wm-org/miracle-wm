@@ -33,23 +33,6 @@ namespace geom = mir::geometry;
 
 namespace
 {
-glm::vec2 to_glm_vec2(mir::geometry::Point const& p)
-{
-    return { p.x.as_int(), p.y.as_int() };
-}
-
-float get_percent_complete(float const target, float const real)
-{
-    if (target == 0)
-        return 1.f;
-
-    float const percent = real / target;
-    if (std::isinf(percent) != 0 || percent > 1.f)
-        return 1.f;
-    else
-        return percent;
-}
-
 float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
 {
     if (x < 1 / defintion.d1)
@@ -252,46 +235,16 @@ BuiltInAnimation::BuiltInAnimation(
     BuiltInAnimationDefinition definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current_,
     float opacity_start,
     float opacity_end) :
     Animation { handle },
     duration_seconds { duration_seconds },
     definition { definition },
-    current { current_ },
     from { from },
     to { to },
     opacity_start { opacity_start },
     opacity_end { opacity_end }
 {
-    switch (definition.type)
-    {
-    case BultInAnimationType::slide:
-    {
-        // Find out the percentage that we're already through the move. This could be negative, by design.
-        glm::vec2 end = to_glm_vec2(to.top_left);
-        glm::vec2 start = to_glm_vec2(from.top_left);
-        glm::vec2 real_start = to_glm_vec2(current.top_left);
-        auto percent_x = get_percent_complete(end.x - start.x, real_start.x - start.x);
-        auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
-
-        // Find out the percentage that we're already through the resize. This could be negative, by design.
-        float width_change = static_cast<float>(to.size.width.as_int() - from.size.width.as_int());
-        float height_change = static_cast<float>(to.size.height.as_int() - from.size.height.as_int());
-        float real_width_change = static_cast<float>(current.size.width.as_int() - from.size.width.as_int());
-        float real_height_change = static_cast<float>(current.size.height.as_int() - from.size.height.as_int());
-
-        float percent_w = get_percent_complete(width_change, real_width_change);
-        float percent_h = get_percent_complete(height_change, real_height_change);
-
-        float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
-        percentage = std::clamp(percentage, 0.f, 1.f);
-        runtime_seconds = percentage * duration_seconds;
-        break;
-    }
-    default:
-        break;
-    }
 }
 
 MultiBuiltInAnimation::MultiBuiltInAnimation(
@@ -299,7 +252,6 @@ MultiBuiltInAnimation::MultiBuiltInAnimation(
     AnimationDefinition const& definition,
     mir::geometry::Rectangle const& from,
     mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current,
     float opacity_start,
     float opacity_end) :
     Animation(handle)
@@ -307,15 +259,14 @@ MultiBuiltInAnimation::MultiBuiltInAnimation(
 
     for (auto const& def : definition.animations)
     {
-        animations.emplace_back(BuiltInAnimation(
+        animations.emplace_back(
             handle,
             definition.duration_seconds,
             def,
             from,
             to,
-            current,
             opacity_start,
-            opacity_end));
+            opacity_end);
     }
 }
 
@@ -348,13 +299,13 @@ AnimationFrameResult BuiltInAnimation::init()
         // Sliding is funky. We resize immediately but remain in the same position. The transformation
         // and position are interpolated over time to give the illusion of moving and growing.
         const auto [position, clip_area_size] = slide(0, from, to);
-        current.top_left.x = geom::X { position.x };
-        current.top_left.y = geom::Y { position.y };
-        current.size.width = geom::Width { clip_area_size.x };
-        current.size.height = geom::Height { clip_area_size.y };
+        auto const next = geom::Rectangle {
+            geom::Point { position.x,       position.y       },
+            geom::Size { clip_area_size.x, clip_area_size.y }
+        };
         return {
             false,
-            current,
+            next,
             std::nullopt,
             std::nullopt
         };
@@ -363,10 +314,7 @@ AnimationFrameResult BuiltInAnimation::init()
         return { false, std::nullopt, std::nullopt, opacity_start };
     case BultInAnimationType::disabled:
     default:
-    {
-        current = to;
-        return { true, current, std::nullopt, std::nullopt };
-    }
+        return { true, to, std::nullopt, std::nullopt };
     }
 }
 
@@ -387,13 +335,13 @@ AnimationFrameResult BuiltInAnimation::step(float dt)
     {
         auto const p = ease(definition, t);
         const auto [position, clip_area_size] = slide(p, from, to);
-        current.top_left.x = geom::X { position.x };
-        current.top_left.y = geom::Y { position.y };
-        current.size.width = geom::Width { clip_area_size.x };
-        current.size.height = geom::Height { clip_area_size.y };
+        auto const next = geom::Rectangle {
+            geom::Point { position.x,       position.y       },
+            geom::Size { clip_area_size.x, clip_area_size.y }
+        };
         return {
             false,
-            current,
+            next,
             std::nullopt,
             1.f
         };
