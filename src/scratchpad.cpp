@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "scratchpad.h"
 #include "container.h"
+#include "geometry_helpers.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "scratchpad_state.h"
@@ -74,9 +75,10 @@ void Scratchpad::toggle(ScratchpadItem& other)
         other.container->show();
         miral::WindowSpecification spec;
         spec.depth_layer() = mir_depth_layer_above;
+        using namespace miracle::geometry_helpers::gl;
         spec.top_left() = {
-            output_extents.top_left.x.as_int() + static_cast<int>(static_cast<float>(output_extents.size.width.as_int() - window.size().width.as_int()) / 2.f),
-            output_extents.top_left.y.as_int() + static_cast<int>(static_cast<float>(output_extents.size.height.as_int() - window.size().height.as_int()) / 2.f),
+            x_int(output_extents.top_left) + static_cast<int>(static_cast<float>(width_int(output_extents.size) - width_int(window.size())) / 2.f),
+            y_int(output_extents.top_left) + static_cast<int>(static_cast<float>(height_int(output_extents.size) - height_int(window.size())) / 2.f),
         };
         window_controller->modify(window, spec);
         window_controller->noclip(window);
