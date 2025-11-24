@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "animator.h"
+#include "geometry_helpers.h"
 #include <algorithm>
 #include <chrono>
 #include <glm/gtx/transform.hpp>
@@ -183,6 +184,7 @@ struct SlideResult
 
 inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle const& to)
 {
+    using namespace miracle::geometry_helpers;
     auto const distance = to.top_left - from.top_left;
     float const dx = static_cast<float>(distance.dx.as_int()) * p;
     float const dy = static_cast<float>(distance.dy.as_int()) * p;
@@ -191,8 +193,8 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
     float const clip_scale_y = interpolate_scale(p, static_cast<float>(from.size.height.as_value()), static_cast<float>(to.size.height.as_value()));
 
     return {
-        .position = glm::vec2(static_cast<float>(from.top_left.x.as_int()) + dx, static_cast<float>(from.top_left.y.as_int()) + dy),
-        .clip_area_size = glm::vec2(static_cast<float>(to.size.width.as_int()) * clip_scale_x, static_cast<float>(to.size.height.as_int()) * clip_scale_y)
+        .position = to_glm(from.top_left) + glm::vec2(dx, dy),
+        .clip_area_size = to_glm(to.size) * glm::vec2(clip_scale_x, clip_scale_y)
     };
 }
 }

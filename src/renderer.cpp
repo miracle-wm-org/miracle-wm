@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "renderer.h"
 #include "compositor_state.h"
 #include "config.h"
+#include "geometry_helpers.h"
 #include "math_helpers.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
@@ -331,8 +332,8 @@ private:
         glBindTexture(GL_TEXTURE_2D, tex);
         glTexImage2D(GL_TEXTURE_2D, 0,
             GL_RGBA,
-            size.width.as_value(),
-            size.height.as_value(),
+            miracle::geometry_helpers::gl::width_value(size),
+            miracle::geometry_helpers::gl::height_value(size),
             0,
             GL_RGBA,
             GL_UNSIGNED_BYTE,
@@ -553,17 +554,18 @@ void Renderer::draw(
         }
 
         // Then we invert and calculate the scissor x and y.
-        const auto scissor_x = intersection->top_left.x.as_int() - viewport.top_left.x.as_int();
+        using namespace miracle::geometry_helpers::gl;
+        const auto scissor_x = x_int(intersection->top_left) - x_int(viewport.top_left);
         int scissor_y = 0;
         switch (output_surface->layout())
         {
         case mir::graphics::gl::OutputSurface::Layout::GL:
-            scissor_y = viewport.size.height.as_int()
-                - (intersection->top_left.y.as_int() - viewport.top_left.y.as_int())
-                - intersection->size.height.as_int();
+            scissor_y = height_int(viewport.size)
+                - (y_int(intersection->top_left) - y_int(viewport.top_left))
+                - height_int(intersection->size);
             break;
         case mir::graphics::gl::OutputSurface::Layout::TopRowFirst:
-            scissor_y = intersection->top_left.y.as_int() - viewport.top_left.y.as_int();
+            scissor_y = y_int(intersection->top_left) - y_int(viewport.top_left);
             break;
         }
 
@@ -573,8 +575,8 @@ void Renderer::draw(
         glScissor(
             static_cast<GLint>(scissor.x * x_scale),
             static_cast<GLint>(scissor.y * y_scale),
-            static_cast<GLint>(intersection->size.width.as_int() * x_scale),
-            static_cast<GLint>(intersection->size.height.as_int() * y_scale));
+            static_cast<GLint>(width_int(intersection->size) * x_scale),
+            static_cast<GLint>(height_int(intersection->size) * y_scale));
     }
     auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
@@ -605,8 +607,9 @@ void Renderer::draw(
 
     glActiveTexture(GL_TEXTURE0);
 
-    auto const centerx = surface_pos.x.as_int() + static_cast<GLfloat>(surface_size.width.as_int()) / 2.0f;
-    auto const centery = surface_pos.y.as_int() + static_cast<GLfloat>(surface_size.height.as_int()) / 2.0f;
+    using namespace miracle::geometry_helpers::gl;
+    auto const centerx = x(surface_pos) + width(surface_size) / 2.0f;
+    auto const centery = y(surface_pos) + height(surface_size) / 2.0f;
     glUniform2f(prog->center_uniform, centerx, centery);
 
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
@@ -617,7 +620,7 @@ void Renderer::draw(
     glUniform1f(prog->border_radius_uniform, content_radius);
 
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(surface_size.width.as_value()), static_cast<GLfloat>(surface_size.height.as_value()));
+    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(miracle::geometry_helpers::gl::width_value(surface_size)), static_cast<GLfloat>(miracle::geometry_helpers::gl::height_value(surface_size)));
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
@@ -733,22 +736,23 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
 
     // Next, we set model-specific transforms
+    using namespace miracle::geometry_helpers;
     float const alpha = data.data.alpha * data.data.workspace_alpha;
     glm::mat4 border_transform = glm::scale(
         glm::translate(
             glm::mat4(1.0),
-            glm::vec3(border_rect.top_left.x.as_value(), border_rect.top_left.y.as_value(), 0)),
-        glm::vec3(border_rect.size.width.as_value(), border_rect.size.height.as_value(), 1));
+            glm::vec3(gl::x(border_rect.top_left), gl::y(border_rect.top_left), 0)),
+        glm::vec3(gl::width(border_rect.size), gl::height(border_rect.size), 1));
 
-    auto const centerx = static_cast<GLfloat>(border_rect.top_left.x.as_int() + border_rect.size.width.as_int()) / 2.0f;
-    auto const centery = static_cast<GLfloat>(border_rect.top_left.y.as_int() + border_rect.size.height.as_int()) / 2.0f;
+    auto const centerx = gl::x(border_rect.top_left) + gl::width(border_rect.size) / 2.0f;
+    auto const centery = gl::y(border_rect.top_left) + gl::height(border_rect.size) / 2.0f;
     glUniform2f(prog->center_uniform, centerx, centery);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.transform));
     glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(border_transform));
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(border_rect.size.width.as_value()), static_cast<GLfloat>(border_rect.size.height.as_value()));
+    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(gl::width_value(border_rect.size)), static_cast<GLfloat>(gl::height_value(border_rect.size)));
 
     // Now we can render our model. This should be as easy
     glBindBuffer(GL_ARRAY_BUFFER, border_model.vbo);
