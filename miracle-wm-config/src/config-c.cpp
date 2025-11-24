@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miracle/cpp/cursor_focus_mode.h>
 #include <miracle/cpp/default_key_command.h>
 #include <miracle/cpp/keyboard.h>
-#include <miracle/cpp/touchpad.h>
 #include <miracle/cpp/mouse_button.h>
+#include <miracle/cpp/touchpad.h>
 #include <vector>
 
 extern "C"

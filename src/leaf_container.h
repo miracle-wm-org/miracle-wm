@@ -145,8 +145,13 @@ private:
     float alpha = 1.f;
     float workspace_alpha = 1.f;
 
+    // Cache for visible area calculation
+    mutable std::optional<geom::Rectangle> cached_visible_area;
+    mutable bool visible_area_dirty = true;
+
     /// Trigger a rerender on the surface.
     void rerender();
+    void invalidate_visible_area_cache();
     static void handle_resize(Container* container, Direction direction, int amount);
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
 };

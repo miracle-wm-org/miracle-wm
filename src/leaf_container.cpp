@@ -211,6 +211,11 @@ void LeafContainer::set_state(MirWindowState state)
 
 geom::Rectangle LeafContainer::get_visible_area() const
 {
+    if (!visible_area_dirty && cached_visible_area.has_value())
+    {
+        return cached_visible_area.value();
+    }
+
     // TODO: Could cache these half values in the config
     // TODO: Inner gaps only support X and Y for now, but the data model has support
     //  for different gaps on all sides. That is a bit too much trouble to implement
@@ -253,10 +258,13 @@ geom::Rectangle LeafContainer::get_visible_area() const
     y += border_size;
     height -= 2 * border_size;
 
-    return {
+    cached_visible_area = geom::Rectangle {
         geom::Point { x,     y      },
         geom::Size { width, height }
     };
+    visible_area_dirty = false;
+
+    return cached_visible_area.value();
 }
 
 void LeafContainer::constrain()
@@ -594,6 +602,7 @@ void LeafContainer::commit_changes()
         auto previous = get_visible_area();
         logical_area = next_logical_area.value();
         next_logical_area.reset();
+        invalidate_visible_area_cache();
         if (!is_fullscreen())
         {
             auto next_visible_area = get_visible_area();
@@ -1196,6 +1205,12 @@ MirDepthLayer LeafContainer::get_depth_layer(bool is_fullscreen, bool is_anchore
         return mir_depth_layer_above;
     else
         return !is_anchored ? mir_depth_layer_always_on_top : mir_depth_layer_application;
+}
+
+void LeafContainer::invalidate_visible_area_cache()
+{
+    visible_area_dirty = true;
+    cached_visible_area.reset();
 }
 
 nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
