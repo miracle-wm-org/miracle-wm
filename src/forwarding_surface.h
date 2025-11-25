@@ -42,17 +42,11 @@ public:
     void consume(const std::shared_ptr<MirEvent const>& event) override;
     auto visible_on_lock_screen() const -> bool override;
     auto content_offset() const -> mir::geometry::Displacement override;
-#ifdef MIR_VERSION_2_20_OR_LESSER
-    auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override;
-#endif
-    auto wayland_surface() -> const mir::wayland::Weak<mir::frontend::WlSurface>& override;
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer) override;
     void register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void register_early_observer(const std::weak_ptr<mir::scene::SurfaceObserver>& observer, mir::Executor& executor) override;
     void unregister_interest(const mir::scene::SurfaceObserver& observer) override;
-#ifdef MIR_VERSION_2_19_OR_GREATER
     void initial_placement_done() override;
-#endif
     std::string name() const override;
     mir::geometry::Size content_size() const override;
     mir::geometry::Rectangle input_bounds() const override;
@@ -81,9 +75,7 @@ public:
     int query(MirWindowAttrib attrib) const override;
     void rename(const std::string& title) override;
     void set_streams(const std::list<mir::scene::StreamInfo>& streams) override;
-#ifdef MIR_VERSION_2_21_OR_GREATER
     std::list<mir::scene::StreamInfo> get_streams() const override;
-#endif
     void set_confine_pointer_state(MirPointerConfinementState state) override;
     MirPointerConfinementState confine_pointer_state() const override;
     void placed_relative(const mir::geometry::Rectangle& placement) override;
@@ -100,11 +92,8 @@ public:
     void set_window_margins(mir::geometry::DeltaY top, mir::geometry::DeltaX left, mir::geometry::DeltaY bottom, mir::geometry::DeltaX right) override;
     auto focus_mode() const -> MirFocusMode override;
     void set_focus_mode(MirFocusMode focus_mode) override;
-#ifdef MIR_VERSION_2_21_OR_GREATER
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge> flags) override { surface_->set_tiled_edges(flags); }
-#endif
-#ifdef MIR_VERSION_2_22_OR_GREATER
     void set_mirror_mode(MirMirrorMode mirror_mode) override { surface_->set_mirror_mode(mirror_mode); }
     auto min_width() const -> mir::geometry::Width override { return surface_->min_width(); }
     auto max_width() const -> mir::geometry::Width override { return surface_->max_width(); }
@@ -114,10 +103,12 @@ public:
     void set_max_width(mir::geometry::Width width) override { surface_->set_max_width(width); }
     void set_min_height(mir::geometry::Height height) override { surface_->set_min_height(height); }
     void set_max_height(mir::geometry::Height height) override { surface_->set_max_height(height); }
-#endif
 
 #ifdef MIR_VERSION_2_24_OR_GREATER
     void set_opaque_region(mir::geometry::Rectangles const& region) override { surface_->set_opaque_region(region); }
+    auto wayland_surface() -> const mir::wayland::Weak<mir::frontend::WlSurface>& { }
+#else
+    auto wayland_surface() -> const mir::wayland::Weak<mir::frontend::WlSurface>& override { return surface_->wayland_surface(); }
 #endif
 
 private:

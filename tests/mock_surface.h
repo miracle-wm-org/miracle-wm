@@ -28,14 +28,8 @@ namespace test
     class MockSurface : public mir::scene::Surface
     {
     public:
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 19)
         MOCK_METHOD(void, initial_placement_done, (), (override));
-#endif
         MOCK_METHOD(mir::geometry::Displacement, content_offset, (), (const, override));
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
-        MOCK_METHOD(std::shared_ptr<mir::frontend::BufferStream>, primary_buffer_stream, (), (const, override));
-#endif
-        MOCK_METHOD((mir::wayland::Weak<mir::frontend::WlSurface> const&), wayland_surface, (), (override));
         MOCK_METHOD(bool, input_area_contains, (mir::geometry::Point const&), (const, override));
         MOCK_METHOD(mir::input::InputReceptionMode, reception_mode, (), (const, override));
         MOCK_METHOD(void, consume, (std::shared_ptr<MirEvent const> const&), (override));
@@ -88,12 +82,9 @@ namespace test
         MOCK_METHOD(void, set_window_margins, (mir::geometry::DeltaY, mir::geometry::DeltaX, mir::geometry::DeltaY, mir::geometry::DeltaX), (override));
         MOCK_METHOD(MirFocusMode, focus_mode, (), (const, override));
         MOCK_METHOD(void, set_focus_mode, (MirFocusMode), (override));
-#ifdef MIR_VERSION_2_21_OR_GREATER
         MOCK_METHOD(mir::Flags<MirTiledEdge>, tiled_edges, (), (const, override));
         MOCK_METHOD(void, set_tiled_edges, (mir::Flags<MirTiledEdge>), (override));
         MOCK_METHOD(std::list<mir::scene::StreamInfo>, get_streams, (), (const, override));
-#endif
-#ifdef MIR_VERSION_2_22_OR_GREATER
         MOCK_METHOD(void, set_mirror_mode, (MirMirrorMode), (override));
         MOCK_METHOD(mir::geometry::Width, min_width, (), (const, override));
         MOCK_METHOD(mir::geometry::Width, max_width, (), (const, override));
@@ -103,10 +94,10 @@ namespace test
         MOCK_METHOD(void, set_max_width, (mir::geometry::Width), (override));
         MOCK_METHOD(void, set_min_height, (mir::geometry::Height), (override));
         MOCK_METHOD(void, set_max_height, (mir::geometry::Height), (override));
-#endif
-
 #ifdef MIR_VERSION_2_24_OR_GREATER
         MOCK_METHOD(void, set_opaque_region, (mir::geometry::Rectangles const&), (override));
+#else
+        MOCK_METHOD((mir::wayland::Weak<mir::frontend::WlSurface> const&), wayland_surface, (), (override));
 #endif
     };
 
