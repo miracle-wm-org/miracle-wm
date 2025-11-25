@@ -53,11 +53,7 @@ struct OutputConfigDetails
     MirPowerMode power_mode;
     MirPixelFormat current_format;
     bool is_primary;
-#ifdef MIR_VERSION_2_22_OR_GREATER
     mir::graphics::DisplayInfo display_info;
-#else
-    std::vector<uint8_t> edid;
-#endif
 };
 
 typedef std::vector<OutputConfigDetails> OutputConfigDetailList;
