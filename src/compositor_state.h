@@ -57,8 +57,6 @@ class CompositorState
 public:
     CompositorState();
     mir::geometry::Point cursor_position;
-    uint32_t modifiers = 0;
-    bool has_clicked_floating_window = false;
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
 
