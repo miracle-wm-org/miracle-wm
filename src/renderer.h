@@ -62,9 +62,7 @@ public:
     void set_viewport(mir::geometry::Rectangle const& rect) override;
     void set_output_transform(glm::mat2 const&) override;
     auto render(mir::graphics::RenderableList const&) const -> std::unique_ptr<mir::graphics::Framebuffer> override;
-#ifdef MIR_VERSION_2_21_OR_GREATER
     void set_output_filter(MirOutputFilter filter) override;
-#endif
 
     // This is called _without_ a GL context:
     void suspend() override;

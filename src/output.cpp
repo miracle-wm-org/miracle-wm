@@ -32,9 +32,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
-#ifndef MIR_VERSION_2_22_OR_GREATER
-#include <mir/graphics/edid.h>
-#endif
 
 using namespace miracle;
 namespace mg = mir::graphics;
@@ -429,29 +426,9 @@ nlohmann::json Output::to_json(bool is_focused) const
         break;
     }
 
-#ifdef MIR_VERSION_2_22_OR_GREATER
     auto const make = output_config.display_info.vendor.value_or("Unknown");
     auto const model = output_config.display_info.model.value_or("Unknown");
     auto const serial = output_config.display_info.serial.value_or("0x00000000");
-#else
-    std::string make = "Unknown";
-    std::string model = "Unknown";
-    std::string serial = "0x00000000";
-    if (output_config.edid.size() >= mg::Edid::minimum_size)
-    {
-        auto const edid = reinterpret_cast<mg::Edid const*>(output_config.edid.data());
-        mg::Edid::Manufacturer man;
-        edid->get_manufacturer(man);
-        mg::Edid::MonitorName name;
-        edid->get_monitor_name(name);
-
-        make = man;
-        model = name;
-#ifdef MIR_VERSION_2_21_OR_GREATER
-        serial = edid->serial_number();
-#endif
-    }
-#endif
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
@@ -552,29 +529,9 @@ nlohmann::json Output::get_outputs_json(bool) const
         break;
     }
 
-#ifdef MIR_VERSION_2_22_OR_GREATER
     auto const make = output_config.display_info.vendor.value_or("Unknown");
     auto const model = output_config.display_info.model.value_or("Unknown");
     auto const serial = output_config.display_info.serial.value_or("0x00000000");
-#else
-    std::string make = "Unknown";
-    std::string model = "Unknown";
-    std::string serial = "0x00000000";
-    if (output_config.edid.size() >= mg::Edid::minimum_size)
-    {
-        auto const edid = reinterpret_cast<mg::Edid const*>(output_config.edid.data());
-        mg::Edid::Manufacturer man;
-        edid->get_manufacturer(man);
-        mg::Edid::MonitorName name;
-        edid->get_monitor_name(name);
-
-        make = man;
-        model = name;
-#ifdef MIR_VERSION_2_21_OR_GREATER
-        serial = edid->serial_number();
-#endif
-    }
-#endif
 
     return {
         { "name",             name_                                         },

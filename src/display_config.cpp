@@ -210,12 +210,7 @@ public:
                 output.custom_attribute.contains("primary")
                     ? output.custom_attribute.at("primary") == "true"
                     : false,
-#ifdef MIR_VERSION_2_22_OR_GREATER
-                output.display_info
-#else
-                output.edid
-#endif
-            });
+                output.display_info });
         });
 
         auto copy = conf.clone();

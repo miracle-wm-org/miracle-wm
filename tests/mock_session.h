@@ -17,10 +17,10 @@
 #ifndef MOCK_SESSION_H
 #define MOCK_SESSION_H
 
+#include "mir_version_manager.h"
 #include <gmock/gmock.h>
 #include <mir/scene/session.h>
 #include <mir/shell/surface_specification.h>
-#include <mir/version.h>
 
 namespace miracle
 {
@@ -32,18 +32,21 @@ namespace test
         MOCK_METHOD(pid_t, process_id, (), (const, override));
         MOCK_METHOD(mir::Fd, socket_fd, (), (const, override));
         MOCK_METHOD(std::string, name, (), (const, override));
-        MOCK_METHOD(void, send_error, (mir::ClientVisibleError const& error), (override));
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, default_surface, (), (const, override));
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION < 22)
-        MOCK_METHOD(void, send_input_config, (MirInputConfig const& config), (override));
-        MOCK_METHOD(void, set_lifecycle_state, (MirLifecycleState state), (override));
-#endif
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, start_prompt_session, (), (override));
         MOCK_METHOD(void, stop_prompt_session, (), (override));
         MOCK_METHOD(void, suspend_prompt_session, (), (override));
         MOCK_METHOD(void, resume_prompt_session, (), (override));
+#ifdef MIR_VERSION_2_24_OR_GREATER
+        MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, create_surface,
+            (std::shared_ptr<Session> const& session,
+                mir::shell::SurfaceSpecification const& params,
+                std::shared_ptr<mir::scene::SurfaceObserver> const& observer,
+                mir::Executor* observer_executor),
+            (override));
+#else
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, create_surface,
             (std::shared_ptr<Session> const& session,
                 mir::wayland::Weak<mir::frontend::WlSurface> const& wayland_surface,
@@ -51,6 +54,8 @@ namespace test
                 std::shared_ptr<mir::scene::SurfaceObserver> const& observer,
                 mir::Executor* observer_executor),
             (override));
+        MOCK_METHOD(void, send_error, (mir::ClientVisibleError const& error), (override));
+#endif
         MOCK_METHOD(void, destroy_surface, (std::shared_ptr<mir::scene::Surface> const& surface), (override));
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, surface_after,
             (std::shared_ptr<mir::scene::Surface> const& surface),
