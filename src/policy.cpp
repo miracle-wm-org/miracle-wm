@@ -235,7 +235,6 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
-    state->modifiers = modifiers;
 
     if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
     {
@@ -437,7 +436,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     {
         if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
         {
-            if (state->modifiers == config->get_primary_modifier())
+            if (modifiers == config->get_primary_modifier())
             {
                 // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
                 if (state->mode() != WindowManagerMode::selecting)
