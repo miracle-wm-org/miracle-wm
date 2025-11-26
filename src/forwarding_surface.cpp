@@ -77,13 +77,11 @@ public:
         return animating_surface.get();
     }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 22)
     MirOrientation orientation() const override { return mir_orientation_normal; }
     auto mirror_mode() const -> MirMirrorMode override
     {
         return renderable ? renderable->mirror_mode() : mir_mirror_mode_none;
     }
-#endif
 
 #ifdef MIR_VERSION_2_24_OR_GREATER
     auto opaque_region() const -> std::optional<mir::geometry::Rectangles> override
@@ -131,18 +129,6 @@ mir::geometry::Displacement ForwardingSurface::content_offset() const
     return surface_->content_offset();
 }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION <= 20)
-std::shared_ptr<mir::frontend::BufferStream> ForwardingSurface::primary_buffer_stream() const
-{
-    return surface_->primary_buffer_stream();
-}
-#endif
-
-const mir::wayland::Weak<mir::frontend::WlSurface>& ForwardingSurface::wayland_surface()
-{
-    return surface_->wayland_surface();
-}
-
 void ForwardingSurface::register_interest(const std::weak_ptr<mir::scene::SurfaceObserver>& observer)
 {
     surface_->register_interest(observer);
@@ -163,12 +149,10 @@ void ForwardingSurface::unregister_interest(const mir::scene::SurfaceObserver& o
     surface_->unregister_interest(observer);
 }
 
-#if (MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 19)
 void ForwardingSurface::initial_placement_done()
 {
     surface_->initial_placement_done();
 }
-#endif
 
 std::string ForwardingSurface::name() const
 {
@@ -315,12 +299,10 @@ void ForwardingSurface::set_streams(const std::list<mir::scene::StreamInfo>& str
     surface_->set_streams(streams);
 }
 
-#ifdef MIR_VERSION_2_21_OR_GREATER
 std::list<mir::scene::StreamInfo> ForwardingSurface::get_streams() const
 {
     return surface_->get_streams();
 }
-#endif
 
 void ForwardingSurface::set_confine_pointer_state(MirPointerConfinementState state)
 {

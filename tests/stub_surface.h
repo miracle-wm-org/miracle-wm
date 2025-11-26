@@ -25,24 +25,11 @@ namespace miracle::test
 class StubSurface : public mir::scene::Surface
 {
 public:
-#ifdef MIR_VERSION_2_19_OR_GREATER
     void initial_placement_done() override { }
-#endif
 
     auto content_offset() const -> mir::geometry::Displacement override
     {
         return mir::geometry::Displacement();
-    }
-#ifdef MIR_VERSION_2_20_OR_LESSER
-    auto primary_buffer_stream() const -> std::shared_ptr<mir::frontend::BufferStream> override
-    {
-        return std::shared_ptr<mir::frontend::BufferStream>();
-    }
-#endif
-
-    auto wayland_surface() -> mir::wayland::Weak<mir::frontend::WlSurface> const& override
-    {
-        throw std::logic_error("Unimplemented");
     }
 
     bool input_area_contains(mir::geometry::Point const& point) const override
@@ -280,16 +267,13 @@ public:
     {
     }
 
-#ifdef MIR_VERSION_2_21_OR_GREATER
     auto tiled_edges() const -> mir::Flags<MirTiledEdge> override { return mir::Flags { mir_tiled_edge_none }; }
     void set_tiled_edges(mir::Flags<MirTiledEdge>) override { }
     std::list<mir::scene::StreamInfo> get_streams() const override
     {
         return std::list<mir::scene::StreamInfo>();
     }
-#endif
 
-#ifdef MIR_VERSION_2_22_OR_GREATER
     void set_mirror_mode(MirMirrorMode) override
     {
     }
@@ -302,10 +286,14 @@ public:
     void set_max_width(mir::geometry::Width width) override { }
     void set_min_height(mir::geometry::Height height) override { }
     void set_max_height(mir::geometry::Height height) override { }
-#endif
 
 #ifdef MIR_VERSION_2_24_OR_GREATER
     void set_opaque_region(mir::geometry::Rectangles const& region) override { }
+#else
+    auto wayland_surface() -> mir::wayland::Weak<mir::frontend::WlSurface> const& override
+    {
+        throw std::logic_error("Unimplemented");
+    }
 #endif
 };
 }

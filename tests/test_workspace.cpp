@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "passthrough_server_action_queue.h"
 #include "stub_configuration.h"
-#include "stub_session.h"
 #include "stub_surface.h"
 #include "stub_window_controller.h"
 #include "window_controller.h"
@@ -95,12 +94,10 @@ public:
         miral::ApplicationInfo app_info;
         auto const hint = target_workspace->allocate_position(app_info, spec, { ContainerType::leaf, parent });
 
-        auto const session = std::make_shared<test::StubSession>();
-        sessions.push_back(session);
         auto const surface = std::make_shared<test::StubSurface>();
         surfaces.push_back(surface);
 
-        miral::Window const window(session, surface);
+        miral::Window const window(nullptr, surface);
         miral::WindowInfo const info(window, spec);
         auto leaf = target_workspace->create_container(info, hint);
         pairs.push_back({ window, leaf, geom::Rectangle(), mir_window_state_restored, std::nullopt });
@@ -112,7 +109,6 @@ public:
     }
 
     std::shared_ptr<CompositorState> state;
-    std::vector<std::shared_ptr<test::StubSession>> sessions;
     std::vector<std::shared_ptr<test::StubSurface>> surfaces;
     std::vector<StubWindowData> pairs;
     std::shared_ptr<test::MockOutput> output;
