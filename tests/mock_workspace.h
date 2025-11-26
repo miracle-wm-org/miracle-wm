@@ -74,8 +74,6 @@ namespace test
         MOCK_METHOD(void, name, (std::optional<std::string> const&), (override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
-        MOCK_METHOD(void, on_animation_start, (bool), (override));
-        MOCK_METHOD(void, on_animation_end, (bool), (override));
 
         MOCK_METHOD(std::optional<Gaps>, outer_gaps, (), (const, override));
         MOCK_METHOD(void, outer_gaps, (std::optional<Gaps> const&), (override));
