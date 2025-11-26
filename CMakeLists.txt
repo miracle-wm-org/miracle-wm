@@ -123,6 +123,7 @@ add_library(miracle-wm-implementation STATIC
         src/ipc_command_executor.cpp
         src/render_data_manager.cpp
         src/animator.cpp
+        src/animation.cpp
         src/program_factory.cpp
         src/mode_observer.cpp
         src/shell_component_container.cpp

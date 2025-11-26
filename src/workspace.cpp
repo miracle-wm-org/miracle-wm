@@ -125,17 +125,6 @@ public:
     {
     }
 
-    AnimationFrameResult init() override
-    {
-        auto const lock = state->lock();
-        auto const locked = workspace.lock();
-        if (!locked)
-            return {};
-
-        locked->on_animation_start(is_hiding);
-        return MultiBuiltInAnimation::init();
-    }
-
     void on_tick(AnimationFrameResult const& asr) override
     {
         auto const lock = state->lock();
@@ -338,7 +327,6 @@ void Workspace::show(geom::Point const& origin)
 {
     if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
-        on_animation_start(false);
         on_animation_end(false);
         return;
     }
@@ -356,6 +344,7 @@ void Workspace::show(geom::Point const& origin)
         false);
 
     animator->append(animation);
+    on_animation_start(false);
 }
 
 void Workspace::hide(geom::Point const& end)
@@ -379,6 +368,7 @@ void Workspace::hide(geom::Point const& end)
         true);
 
     animator->append(animation);
+    on_animation_start(true);
 }
 
 bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> const& f) const

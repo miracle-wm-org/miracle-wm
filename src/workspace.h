@@ -75,8 +75,7 @@ public:
     void set_output(std::shared_ptr<OutputInterface> const&) override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
-    void on_animation_start(bool is_hiding) override;
-    void on_animation_end(bool is_hiding) override;
+    void on_animation_end(bool is_hiding);
     [[nodiscard]] uint32_t id() const override { return id_; }
     [[nodiscard]] std::optional<int> num() const override { return num_; }
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
@@ -129,6 +128,8 @@ private:
     std::optional<Gaps> workspace_inner_gaps;
     glm::mat4 transform_ = glm::mat4(1.f);
     float alpha_ = 1.f;
+
+    void on_animation_start(bool is_hiding);
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();
