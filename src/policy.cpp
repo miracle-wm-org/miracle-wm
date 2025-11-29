@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_manager.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -205,7 +206,8 @@ Policy::Policy(
         config,
         animator)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
+    plugin_manager(std::make_unique<PluginManager>())
 {
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);

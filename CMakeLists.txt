@@ -45,10 +45,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
+option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+
 if(COMPILING_AGAINST_DEV)
     set(COMPILING_AGAINST_DEV 1)
 else()
     set(COMPILING_AGAINST_DEV 0)
+endif()
+
+if(ENABLE_PLUGIN_SYSTEM)
+    set(ENABLE_PLUGIN_SYSTEM 1)
+else()
+    set(ENABLE_PLUGIN_SYSTEM 0)
 endif()
 
 # ----------------------------------------
@@ -96,6 +104,8 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+find_path(WASMEDGE_INCLUDE_DIR wasmedge/wasmedge.h)
+find_library(WASMEDGE_LIB wasmedge)
 
 include(GNUInstallDirs)
 
@@ -150,9 +160,10 @@ add_library(miracle-wm-implementation STATIC
         src/binding_event.cpp
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
+        src/plugin_manager.cpp
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV})
+target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -186,6 +197,10 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+if (ENABLE_PLUGIN_SYSTEM)
+    target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
+endif()
+
 target_link_libraries(miracle-wm-implementation
         ${MIRAL_LDFLAGS}
         ${MIRRENDERER_LDFLAGS}
@@ -203,6 +218,10 @@ target_link_libraries(miracle-wm-implementation
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-config
 )
+
+if (ENABLE_PLUGIN_SYSTEM)
+    target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
+endif()
 
 # ----------------------------------------
 # miracle-wm executable
