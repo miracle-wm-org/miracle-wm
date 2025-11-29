@@ -143,19 +143,19 @@ public:
         size_t second_index);
 
 private:
+    std::vector<std::shared_ptr<Container>> container_list;
+    std::weak_ptr<ParentContainer> parent;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     geom::Rectangle logical_area;
     std::weak_ptr<WorkspaceInterface> workspace;
-    std::weak_ptr<ParentContainer> parent;
     LayoutScheme scheme = LayoutScheme::horizontal;
-    bool is_anchored;
+    bool is_anchored = false;
     bool pinned_ = false;
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
     bool is_shown = false;
 
-    std::vector<std::shared_ptr<Container>> container_list;
     std::shared_ptr<LeafContainer> pending_node;
 
     geom::Rectangle create_space(std::optional<size_t> index);

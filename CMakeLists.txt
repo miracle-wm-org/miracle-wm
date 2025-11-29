@@ -145,7 +145,6 @@ add_library(miracle-wm-implementation STATIC
         src/wlr-ouput-management-unstable-v1.cpp
         src/output_listener.cpp
         src/display_config.cpp
-        src/tilling_algorithms.cpp
         src/window_observer.cpp
         src/config_observer.cpp
         src/binding_event.cpp

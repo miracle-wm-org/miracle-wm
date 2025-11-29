@@ -46,6 +46,10 @@ ParentContainer::ParentContainer(
     scheme { config->get_default_layout_scheme() },
     is_anchored { is_anchored }
 {
+    // Parents typically hold around 2 to 8 sub containers inside
+    // of them. Reserving at least 4 spots is a relatively safe
+    // optimization.
+    container_list.reserve(4);
 }
 
 geom::Rectangle ParentContainer::get_area() const
@@ -91,101 +95,21 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
 {
     auto const placement_area = get_logical_area();
     geom::Rectangle pending_logical_rect;
-    std::vector<TilePosition> positions;
-    positions.reserve(container_list.size());
     auto const pending_index = index.value_or(container_list.size());
     if (scheme == LayoutScheme::horizontal)
-    {
-        for (auto const& node : container_list)
-            positions.push_back(TilePosition {
-                static_cast<double>(node->get_logical_area().size.width.as_int()),
-                static_cast<double>(node->get_logical_area().top_left.x.as_int()) });
-
-        auto const result = insert_node(positions,
-            placement_area.size.width.as_int(),
-            placement_area.top_left.x.as_int(),
+        pending_logical_rect = insert_node(container_list,
+            false,
+            placement_area,
             pending_index);
-
-        size_t cursor = 0;
-        for (size_t i = 0; i < result.positions.size(); i++)
-        {
-            auto const& pos = result.positions[i];
-            if (i == pending_index)
-            {
-                pending_logical_rect = {
-                    geom::Point {
-                                 pos.position,
-                                 placement_area.top_left.y.as_int()  },
-                    geom::Size {
-                                 pos.size,
-                                 placement_area.size.height.as_int() }
-                };
-            }
-            else
-            {
-                container_list[cursor]->set_logical_area({
-                                                             geom::Point {
-                                                                          pos.position,
-                                                                          placement_area.top_left.y.as_int()  },
-                                                             geom::Size {
-                                                                          pos.size,
-                                                                          placement_area.size.height.as_int() }
-                },
-                    true);
-                cursor++;
-            }
-        }
-    }
     else if (scheme == LayoutScheme::vertical)
-    {
-        for (auto const& node : container_list)
-            positions.push_back(TilePosition {
-                static_cast<double>(node->get_logical_area().size.height.as_int()),
-                static_cast<double>(node->get_logical_area().top_left.y.as_int()) });
-
-        auto const result = insert_node(positions,
-            placement_area.size.height.as_int(),
-            placement_area.top_left.y.as_int(),
+        pending_logical_rect = insert_node(container_list,
+            true,
+            placement_area,
             pending_index);
-
-        size_t cursor = 0;
-        for (size_t i = 0; i < result.positions.size(); i++)
-        {
-            auto const& pos = result.positions[i];
-            if (i == pending_index)
-            {
-                pending_logical_rect = {
-                    geom::Point {
-                                 placement_area.top_left.x.as_int(),
-                                 pos.position },
-                    geom::Size {
-                                 placement_area.size.width.as_int(),
-                                 pos.size     }
-                };
-            }
-            else
-            {
-                container_list[cursor]->set_logical_area({
-                                                             geom::Point {
-                                                                          placement_area.top_left.x.as_int(),
-                                                                          pos.position },
-                                                             geom::Size {
-                                                                          placement_area.size.width.as_int(),
-                                                                          pos.size     }
-                },
-                    true);
-                cursor++;
-            }
-        }
-    }
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
-    {
         pending_logical_rect = placement_area;
-    }
     else
-    {
         mir::fatal_error("Invalid scheme during create_space");
-    }
 
     return pending_logical_rect;
 }
@@ -196,16 +120,15 @@ miral::WindowSpecification ParentContainer::place_new_window(
     std::optional<size_t> index;
     for (size_t i = 0; i < container_list.size(); i++)
     {
-        auto const& node = container_list[i];
-        if (node == state->focused_container())
+        if (container_list[i] == state->focused_container())
         {
             index = i + 1;
             break;
         }
     }
 
-    auto container = create_space_for_window(index);
-    auto rect = container->get_visible_area();
+    auto const container = create_space_for_window(index);
+    auto const rect = container->get_visible_area();
 
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;
@@ -249,7 +172,7 @@ std::shared_ptr<LeafContainer> ParentContainer::create_space_for_window(std::opt
         config,
         as_parent(shared_from_this()),
         state);
-    container_list.insert(container_list.begin() + static_cast<std::vector<std::shared_ptr<miracle::Container>>::difference_type>(index), pending_node);
+    container_list.insert(container_list.begin() + static_cast<std::vector<std::shared_ptr<Container>>::difference_type>(index), pending_node);
     return pending_node;
 }
 
@@ -261,7 +184,7 @@ std::shared_ptr<LeafContainer> ParentContainer::confirm_window(miral::Window con
         pending_node = create_space_for_window(-1);
     }
 
-    mir::log_info("Parent on workspace %s receiving new window", !workspace.expired() ? workspace.lock()->display_name().c_str() : "nullptr");
+    mir::log_debug("Parent on workspace %s receiving new window", !workspace.expired() ? workspace.lock()->display_name().c_str() : "nullptr");
     auto retval = pending_node;
     pending_node->associate_to_window(window);
     pending_node->set_parent(as_parent(shared_from_this()));

@@ -15,28 +15,130 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef TILING_ALGORITHMS_H
-#define TILING_ALGORITHMS_H
+#ifndef MIRACLE_TILING_ALGORITHMS_H
+#define MIRACLE_TILING_ALGORITHMS_H
+#include "container.h"
 #include <vector>
+
+namespace geom = mir::geometry;
 
 namespace miracle
 {
-struct TilePosition
+/// Insert a node in the provided \p containers at the \p insertion_index.
+///
+/// Callers should call #ParentContainer::commit after.
+///
+/// \param containers the containers in the group
+/// \param is_vertical whether or not the layout scheme is vertical
+/// \param container_area the available area for the group
+/// \param insertion_index the desired insertion index.
+/// \returns the rectangle describing the newly placed container
+geom::Rectangle insert_node(
+    std::vector<std::shared_ptr<Container>> const& containers,
+    bool is_vertical,
+    geom::Rectangle const& container_area,
+    size_t const insertion_index)
 {
-    double size;
-    double position;
-};
+    if (containers.empty())
+        return container_area;
 
-struct TileInsert
-{
-    std::vector<TilePosition> const positions;
-};
+    double const total_container_size = is_vertical ? container_area.size.height.as_int() : container_area.size.width.as_int();
+    double const container_start = is_vertical ? container_area.top_left.y.as_int() : container_area.top_left.x.as_int();
+    double const requested_item_size = floor(total_container_size / static_cast<double>(containers.size() + 1));
+    double total_size_used = 0;
 
-TileInsert insert_node(
-    std::vector<TilePosition> const& existing_positions,
-    double const total_container_size,
-    double const container_start,
-    size_t const insertion_index);
+    double next_position = container_start;
+    geom::Rectangle new_container_area;
+    for (size_t i = 0; i < containers.size(); i++)
+    {
+        if (i == insertion_index)
+        {
+            geom::Point position = container_area.top_left;
+            geom::Size size = container_area.size;
+            if (is_vertical)
+            {
+                position.y = geom::Y { next_position };
+                size.height = geom::Height { requested_item_size };
+            }
+            else
+            {
+                position.x = geom::X { next_position };
+                size.width = geom::Width { requested_item_size };
+            }
+            new_container_area = geom::Rectangle { position, size };
+            next_position = next_position + requested_item_size;
+            total_size_used += requested_item_size;
+        }
+
+        auto const size = is_vertical ? containers[i]->get_logical_area().size.height.as_int()
+                                      : containers[i]->get_logical_area().size.width.as_int();
+        double const percent_to_shrink = size / total_container_size;
+        double const reduction = requested_item_size * percent_to_shrink;
+        double const new_size = size - reduction;
+        auto const& container = containers[i];
+        if (is_vertical)
+        {
+            container->set_logical_area({
+                                            geom::Point {
+                                                         container_area.top_left.x,
+                                                         next_position },
+                                            geom::Size {
+                                                         container_area.size.width,
+                                                         new_size      }
+            },
+                true);
+        }
+        else
+        {
+            container->set_logical_area({
+                                            geom::Point {
+                                                         next_position,
+                                                         container_area.top_left.y,
+                                                         },
+                                            geom::Size {
+                                                         new_size,
+                                                         container_area.size.height,
+                                                         }
+            },
+                true);
+        }
+        next_position = next_position + new_size;
+        total_size_used += new_size;
+    }
+
+    /// If we have any leftover size, we're going to give it all to the last
+    if (insertion_index >= containers.size())
+    {
+        geom::Point position = container_area.top_left;
+        geom::Size size = container_area.size;
+        total_size_used += requested_item_size;
+        double const remaining_size = total_container_size - total_size_used;
+        if (is_vertical)
+        {
+            position.y = geom::Y { next_position };
+            size.height = geom::Height { requested_item_size + remaining_size };
+        }
+        else
+        {
+            position.x = geom::X { next_position };
+            size.width = geom::Width { requested_item_size + remaining_size };
+        }
+
+        new_container_area = geom::Rectangle { position, size };
+    }
+    else
+    {
+        double const remaining_size = total_container_size - total_size_used;
+        auto last_area = containers.back()->get_logical_area();
+        if (is_vertical)
+            last_area.size.height = geom::Height { last_area.size.height.as_int() + remaining_size };
+        else
+            last_area.size.width = geom::Width { last_area.size.width.as_int() + remaining_size };
+        containers.back()->set_logical_area(last_area, true);
+    }
+
+    return new_container_area;
+}
 }
 
-#endif // TILING_ALGORITHMS_H
+#endif // MIRACLE_TILING_ALGORITHMS_H
