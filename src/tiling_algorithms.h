@@ -28,22 +28,22 @@ namespace miracle
 ///
 /// Callers should call #ParentContainer::commit after.
 ///
+/// \tparam IsVertical whether or not the layout scheme is vertical
 /// \param containers the containers in the group
-/// \param is_vertical whether or not the layout scheme is vertical
 /// \param container_area the available area for the group
 /// \param insertion_index the desired insertion index.
 /// \returns the rectangle describing the newly placed container
-geom::Rectangle insert_node(
+template <bool IsVertical>
+inline geom::Rectangle insert_node(
     std::vector<std::shared_ptr<Container>> const& containers,
-    bool is_vertical,
     geom::Rectangle const& container_area,
     size_t const insertion_index)
 {
     if (containers.empty())
         return container_area;
 
-    double const total_container_size = is_vertical ? container_area.size.height.as_int() : container_area.size.width.as_int();
-    double const container_start = is_vertical ? container_area.top_left.y.as_int() : container_area.top_left.x.as_int();
+    double const total_container_size = IsVertical ? container_area.size.height.as_int() : container_area.size.width.as_int();
+    double const container_start = IsVertical ? container_area.top_left.y.as_int() : container_area.top_left.x.as_int();
     double const requested_item_size = floor(total_container_size / static_cast<double>(containers.size() + 1));
     double total_size_used = 0;
 
@@ -55,7 +55,7 @@ geom::Rectangle insert_node(
         {
             geom::Point position = container_area.top_left;
             geom::Size size = container_area.size;
-            if (is_vertical)
+            if constexpr (IsVertical)
             {
                 position.y = geom::Y { next_position };
                 size.height = geom::Height { requested_item_size };
@@ -70,13 +70,13 @@ geom::Rectangle insert_node(
             total_size_used += requested_item_size;
         }
 
-        auto const size = is_vertical ? containers[i]->get_logical_area().size.height.as_int()
-                                      : containers[i]->get_logical_area().size.width.as_int();
+        auto const size = IsVertical ? containers[i]->get_logical_area().size.height.as_int()
+                                     : containers[i]->get_logical_area().size.width.as_int();
         double const percent_to_shrink = size / total_container_size;
         double const reduction = requested_item_size * percent_to_shrink;
         double const new_size = size - reduction;
         auto const& container = containers[i];
-        if (is_vertical)
+        if constexpr (IsVertical)
         {
             container->set_logical_area({
                                             geom::Point {
@@ -113,7 +113,7 @@ geom::Rectangle insert_node(
         geom::Size size = container_area.size;
         total_size_used += requested_item_size;
         double const remaining_size = total_container_size - total_size_used;
-        if (is_vertical)
+        if constexpr (IsVertical)
         {
             position.y = geom::Y { next_position };
             size.height = geom::Height { requested_item_size + remaining_size };
@@ -130,7 +130,7 @@ geom::Rectangle insert_node(
     {
         double const remaining_size = total_container_size - total_size_used;
         auto last_area = containers.back()->get_logical_area();
-        if (is_vertical)
+        if constexpr (IsVertical)
             last_area.size.height = geom::Height { last_area.size.height.as_int() + remaining_size };
         else
             last_area.size.width = geom::Width { last_area.size.width.as_int() + remaining_size };

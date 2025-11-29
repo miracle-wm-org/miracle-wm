@@ -158,6 +158,10 @@ namespace test
             return nullptr;
         }
 
+        void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override
+        {
+        }
+
         std::shared_ptr<OutputInterface> get_output() const override
         {
             return nullptr;

@@ -97,13 +97,11 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
     geom::Rectangle pending_logical_rect;
     auto const pending_index = index.value_or(container_list.size());
     if (scheme == LayoutScheme::horizontal)
-        pending_logical_rect = insert_node(container_list,
-            false,
+        pending_logical_rect = insert_node<false>(container_list,
             placement_area,
             pending_index);
     else if (scheme == LayoutScheme::vertical)
-        pending_logical_rect = insert_node(container_list,
-            true,
+        pending_logical_rect = insert_node<true>(container_list,
             placement_area,
             pending_index);
     else if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
