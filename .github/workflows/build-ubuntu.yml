@@ -18,50 +18,48 @@ jobs:
         ppa: [release, rc, dev]
         compiler: [gcc, clang]
         
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-24.04
-    name: Ubuntu 25.10 Build & Test (container)
-    container:
-      image: ubuntu:25.10
+    name: Ubuntu Build & Test
 
     steps:
-    - name: Install basic tools
-      run: |
-        apt update
-        apt install -y git sudo software-properties-common curl ca-certificates lsb-release gnupg
-
     - uses: actions/checkout@v3
     
     - name: Add PPA
       run: | 
         sudo apt-add-repository ppa:mir-team/${{ matrix.ppa }}
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
 
     - name: Install dependencies
       run: |
-        sudo apt install -y gcc g++ clang cmake
-        sudo apt install -y libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
+        sudo apt install gcc-13  g++-13
+        sudo apt install clang
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+        sudo apt install libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
           libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
           libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev libgtest-dev libgmock-dev \
           mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev
           
-        sudo apt install -y mir-platform-graphics-virtual xwayland \
+        sudo apt install mir-platform-graphics-virtual xwayland \
           mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
 
     - name: Configure CMake
       run: |
-        EXTRA_FLAGS=""
-        if [ "${{ matrix.ppa }}" = "dev" ]; then
-          EXTRA_FLAGS="$EXTRA_FLAGS -DCOMPILING_AGAINST_DEV=1"
-        fi
-        if [ "${{ matrix.compiler }}" = "clang" ]; then
-          CC=clang
-          CXX=clang++
-        fi
-
-        cmake -B ${{ github.workspace }}/build \
-              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-              -DEND_TO_END_TESTS=1 \
-              $EXTRA_FLAGS
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.ppa }}" = "dev" ]; then
+            EXTRA_FLAGS+="-DCOMPILING_AGAINST_DEV=1"
+          fi
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            export CC=clang
+            export CXX=clang++
+          fi
+          cmake -B ${{ github.workspace }}/build \
+                -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+                -DEND_TO_END_TESTS=1 \
+                $EXTRA_FLAGS
 
     - name: Build
       run:  cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
