@@ -18,13 +18,17 @@ jobs:
         ppa: [release, rc, dev]
         compiler: [gcc, clang]
         
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-24.04
-    name: Ubuntu Build & Test
+    name: Ubuntu 25.10 Build & Test (container)
+    container:
+      image: ubuntu:25.10
 
     steps:
+    - name: Install basic tools
+      run: |
+        apt update
+        apt install -y git sudo software-properties-common curl ca-certificates lsb-release gnupg
+
     - uses: actions/checkout@v3
     
     - name: Add PPA
