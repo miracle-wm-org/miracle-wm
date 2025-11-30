@@ -61,6 +61,8 @@ namespace miracle
 {
 class PluginManager
 {
+public:
+    PluginManager() = default;
 };
 }
 #endif
