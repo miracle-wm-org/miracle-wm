@@ -50,19 +50,20 @@ jobs:
 
     - name: Configure CMake
       run: |
-          EXTRA_FLAGS=""
-          if [ "${{ matrix.ppa }}" = "dev" ]; then
-            EXTRA_FLAGS+="-DCOMPILING_AGAINST_DEV=1"
-          fi
-          if [ "${{ matrix.compiler }}" = "clang" ]; then
-            export CC=clang
-            export CXX=clang++
-          fi
-          cmake -B ${{ github.workspace }}/build \
-                -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-                -DEND_TO_END_TESTS=1 \
-                -DENABLE_PLUGIN_SYSTEM=1 \
-                $EXTRA_FLAGS
+        EXTRA_FLAGS=""
+        if [ "${{ matrix.ppa }}" = "dev" ]; then
+          EXTRA_FLAGS="$EXTRA_FLAGS -DCOMPILING_AGAINST_DEV=1"
+        fi
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          CC=clang
+          CXX=clang++
+        fi
+
+        cmake -B ${{ github.workspace }}/build \
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DEND_TO_END_TESTS=1 \
+              -DENABLE_PLUGIN_SYSTEM=1 \
+              $EXTRA_FLAGS
 
     - name: Build
       run:  cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
