@@ -7,70 +7,82 @@ on:
     branches: [ "develop" ]
 
 env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
 
 jobs:
+      
   build-and-test:
     strategy:
       matrix:
         ppa: [release, rc, dev]
         compiler: [gcc, clang]
         
-    name: Ubuntu 25.10 Build & Test (ppa:${{ matrix.ppa }}, ${{ matrix.compiler }})
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-24.04
+    name: Ubuntu 25.10 Build & Test (container)
+    container:
+      image: ubuntu:25.10
+
     steps:
-      - name: Setup Podman
-        run: |
-          sudo apt update
-          sudo apt-get -y install podman
-          podman pull ubuntu:25.10
+    - name: Install basic tools
+      run: |
+        apt update
+        apt install -y git sudo software-properties-common curl ca-certificates lsb-release gnupg
+
+    - uses: actions/checkout@v3
+    
+    - name: Add PPA
+      run: | 
+        sudo apt-add-repository ppa:mir-team/${{ matrix.ppa }}
+        sudo apt update
+
+    - name: Install dependencies
+      run: |
+        sudo apt install -y gcc g++ clang cmake
+        sudo apt install -y libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
+          libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
+          libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev libgtest-dev libgmock-dev \
+          mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev
           
-      - name: Get source
-        uses: actions/checkout@v3
-        with:
-          path: 'miracle-wm'
-          
-      - name: Create container and run tests
-        run: |
-          {
-              echo 'FROM ubuntu:25.10'
-              echo '# set TZ to ensure the test using timestamp'
-              echo 'ENV TZ=America/New_York'
-              echo 'ENV DEBIAN_FRONTEND=noninteractive'
-              echo 'RUN apt update'
-              echo 'RUN apt install -y git sudo software-properties-common curl ca-certificates lsb-release gnupg'
-              echo 'RUN apt-add-repository ppa:mir-team/${{ matrix.ppa }}'
-              echo 'RUN apt update'
-              echo 'RUN apt install -y gcc g++ clang cmake'
-              echo 'RUN apt install -y libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \'
-              echo '  libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \'
-              echo '  libmiroil-dev libmirrenderer-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev libgmock-dev \'
-              echo '  mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \'
-              echo '  libwasmedge-dev python3 python3-pip python3-venv'
-              echo 'RUN apt install -y mir-platform-graphics-virtual xwayland \'
-              echo '  mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess'
-              echo 'RUN apt clean'
-              echo 'COPY miracle-wm miracle-wm'
-              echo 'WORKDIR /miracle-wm'
-              
-              if [ "${{ matrix.ppa }}" = "dev" ]; then
-                echo 'RUN cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DEND_TO_END_TESTS=1 -DCOMPILING_AGAINST_DEV=1 -DENABLE_PLUGIN_SYSTEM=1'
-              else
-                echo 'RUN cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DEND_TO_END_TESTS=1 -DENABLE_PLUGIN_SYSTEM=1'
-              fi
-              
-              if [ "${{ matrix.compiler }}" = "clang" ]; then
-                echo 'ENV CC=clang'
-                echo 'ENV CXX=clang++'
-              fi
-              
-              echo 'RUN cmake --build build --config ${{ env.BUILD_TYPE }}'
-              echo 'RUN cmake --install build --config ${{ env.BUILD_TYPE }}'
-              echo 'WORKDIR /miracle-wm/build'
-              echo 'RUN ./tests/miracle-wm-tests'
-              echo 'RUN ./miracle-wm-config/test_miracle_wm_config_c_api'
-              echo 'WORKDIR /miracle-wm'
-              echo 'RUN python3 tools/check_license.py'
-          } > podmanfile
-          podman build --tag ubuntu2510miraclewm-${{ matrix.ppa }}-${{ matrix.compiler }} -f ./podmanfile
+        sudo apt install -y mir-platform-graphics-virtual xwayland \
+          mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
+
+    - name: Configure CMake
+      run: |
+        EXTRA_FLAGS=""
+        if [ "${{ matrix.ppa }}" = "dev" ]; then
+          EXTRA_FLAGS="$EXTRA_FLAGS -DCOMPILING_AGAINST_DEV=1"
+        fi
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          CC=clang
+          CXX=clang++
+        fi
+
+        cmake -B ${{ github.workspace }}/build \
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DEND_TO_END_TESTS=1 \
+              $EXTRA_FLAGS
+
+    - name: Build
+      run:  cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Install
+      run: sudo cmake --install ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Unit Tests
+      run: cd ${{github.workspace}}/build && ./tests/miracle-wm-tests
+
+    - name: miracle-wm-config unit tests
+      run: cd ${{github.workspace}}/build && ./miracle-wm-config/test_miracle_wm_config_c_api
+
+    - name: IPC Tests
+      if: false 
+      run: |
+        cd ${{github.workspace}}/tests/ipc
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+        MIRACLE_IPC_TEST_BIN=/usr/local/bin/miracle-wm pytest -s
+
+    - name: Check Licenses
+      run: python tools/check_license.py
