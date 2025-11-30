@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_PLUGIN_MANAGER_H
 #define MIRACLEWM_PLUGIN_MANAGER_H
 
-#ifdef ENABLE_PLUGIN_SYSTEM
+#if ENABLE_PLUGIN_SYSTEM
 #include <memory>
 #include <wasmedge/wasmedge.h>
 namespace miracle
