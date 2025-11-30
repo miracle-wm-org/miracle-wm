@@ -45,7 +45,7 @@ jobs:
           mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
           libwasmedge-dev
           
-        sudo apt install mir-platform-graphics-virtual xwayland \
+        sudo apt install -y mir-platform-graphics-virtual xwayland \
           mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
 
     - name: Configure CMake
