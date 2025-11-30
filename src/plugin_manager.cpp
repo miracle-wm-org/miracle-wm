@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-#ifdef ENABLE_PLUGIN_SYSTEM
+#if ENABLE_PLUGIN_SYSTEM
 PluginManager::PluginManager() :
     configure_context(WasmEdge_ConfigureCreate()),
     store_context(WasmEdge_StoreCreate()),
