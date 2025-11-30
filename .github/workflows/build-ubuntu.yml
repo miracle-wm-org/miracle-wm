@@ -73,7 +73,7 @@ jobs:
 
     - name: Show WasmEdge runtime libraries
       run: |
-        ldd ./build/tests/miracle-wm-test || true
+        ldd ./build/tests/miracle-wm-tests || true
 
     - name: Unit Tests
       run: cd ${{github.workspace}}/build && ./tests/miracle-wm-tests
