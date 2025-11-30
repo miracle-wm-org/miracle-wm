@@ -59,6 +59,7 @@ class OutputListenerMultiplexer;
 class DisplayConfig;
 class WindowObserverRegistrar;
 class MagnifierWrapper;
+class PluginManager;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -142,6 +143,7 @@ private:
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::unique_ptr<MagnifierWrapper> magnifier;
+    std::unique_ptr<PluginManager> plugin_manager;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
