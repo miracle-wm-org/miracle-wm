@@ -20,8 +20,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 #if ENABLE_PLUGIN_SYSTEM
+namespace
+{
+WasmEdge_ConfigureContext* create_configure_context()
+{
+    auto const context = WasmEdge_ConfigureCreate();
+    WasmEdge_ConfigureAddHostRegistration(context, WasmEdge_HostRegistration_Wasi);
+    return context;
+}
+}
+
 PluginManager::PluginManager() :
-    configure_context(WasmEdge_ConfigureCreate()),
+    configure_context(create_configure_context()),
     store_context(WasmEdge_StoreCreate()),
     vm_context(WasmEdge_VMCreate(configure_context.get(), store_context.get()))
 {
