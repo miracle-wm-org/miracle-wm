@@ -34,7 +34,6 @@ jobs:
     - name: Add PPA
       run: | 
         sudo apt-add-repository ppa:mir-team/${{ matrix.ppa }}
-        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
 
     - name: Install dependencies
