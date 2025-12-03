@@ -219,6 +219,7 @@ Policy::Policy(
     animator_loop->start();
 
     plugin_manager->load_wasm_module("/home/matthew/Github/miracle-wm/plugins/plugin-playground/target/wasm32-wasip1/release/plugin_playground.wasm");
+    plugin_manager->add_points(geom::Point{10, 10}, geom::Point{20, 20});
 }
 
 Policy::~Policy()

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 
 #if ENABLE_PLUGIN_SYSTEM
+#include <bitset>
 #include <memory>
 #include <mir/geometry/point.h>
 #include <wasmedge/wasmedge.h>
@@ -57,7 +58,7 @@ public:
     /// \param first The first point to add.
     /// \param second The second point to add.
     /// \returns The sum of the two points.
-    /// mir::geometry::Point add_points(mir::geometry::Point first, mir::geometry::Point second);
+    mir::geometry::Point add_points(mir::geometry::Point first, mir::geometry::Point second);
 
 private:
     template <auto DeleteFn>
@@ -91,13 +92,27 @@ private:
     using ExecutorPtr = std::unique_ptr<WasmEdge_ExecutorContext,
         WasmEdgeDeleter<WasmEdge_ExecutorDelete>>;
 
+    using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
+        WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
+
+    enum class ProvidedFunction : std::size_t
+    {
+        add_points = 0,
+    };
+
+    struct ModuleInstance
+    {
+        ModuleInstancePtr module_context;
+        std::bitset<sizeof(uint8_t)> provided_functions;
+    };
+
     ConfigurePtr configure_context;
     StorePtr store_context;
     LoaderPtr loader_context;
     ValidtorPtr validator_context;
     ExecutorPtr executor_context;
-
     PluginHandle next_plugin_handle = 1;
+    std::vector<ModuleInstance> loaded_modules;
 };
 }
 #else
