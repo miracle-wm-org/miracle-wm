@@ -217,6 +217,8 @@ Policy::Policy(
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     animator_loop->start();
+
+    plugin_manager->load_wasm_module("/home/matthew/Github/miracle-wm/plugins/plugin-playground/target/wasm32-wasip1/release/plugin_playground.wasm");
 }
 
 Policy::~Policy()
