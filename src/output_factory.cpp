@@ -30,12 +30,14 @@ MiralOutputFactory::MiralOutputFactory(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<DisplayConfig> const& display_config) :
+    std::shared_ptr<DisplayConfig> const& display_config,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
     state { state },
     config { config },
     window_controller { window_controller },
     animator { animator },
-    display_config { display_config }
+    display_config { display_config },
+    server_action_queue { server_action_queue }
 {
 }
 
@@ -57,5 +59,6 @@ std::shared_ptr<OutputInterface> MiralOutputFactory::create(
         state,
         config,
         window_controller,
-        animator);
+        animator,
+        server_action_queue);
 }

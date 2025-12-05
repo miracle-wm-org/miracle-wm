@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output.h"
+#include "passthrough_server_action_queue.h"
 #include "stub_configuration.h"
 #include "workspace_observer.h"
 #include <gmock/gmock.h>
@@ -39,7 +40,7 @@ protected:
     {
         // Create mock dependencies
         window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
-        animator = std::make_shared<Animator>(nullptr);
+        animator = std::make_shared<Animator>();
         state = std::make_shared<CompositorState>();
         config = std::make_shared<test::StubConfiguration>();
 
@@ -55,7 +56,8 @@ protected:
             state,
             config,
             window_controller,
-            animator);
+            animator,
+            std::make_shared<PassthroughServerActionQueue>());
 
         // Add workspace to the output
         auto registrar = std::make_shared<WorkspaceObserverRegistrar>();

@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_ANIMATION_H
 #define MIRACLE_WM_ANIMATION_H
 
+#include "plugin_manager.h"
+#include <functional>
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
 #include <miracle/cpp/animation_definition.h>
@@ -27,6 +29,14 @@ namespace miracle
 {
 /// Unique handle provided to track animators
 typedef uint32_t AnimationHandle;
+
+struct AnimationData
+{
+    mir::geometry::Rectangle area_start;
+    mir::geometry::Rectangle area_end;
+    float opacity_start;
+    float opacity_end;
+};
 
 /// Data provided when the animation ticks.
 ///
@@ -54,72 +64,40 @@ struct AnimationFrameResult
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
 
-/// Interface that defines an animation.
+/// An animation managed by the #Animator.
+///
+/// When an animation is created, it is provided with an
+/// #AnimationDefinition that defines how the animation should
+/// behave.
 class Animation
 {
 public:
-    explicit Animation(AnimationHandle handle);
+    /// Construct a new animation.
+    ///
+    /// \param handle The handle of the animated object.
+    /// \param definition The definition of the animation.
+    /// \param data The data for the animation.
+    Animation(
+        AnimationHandle handle,
+        AnimationDefinition const& definition,
+        AnimationData&& data,
+        std::function<void(AnimationFrameResult const&)>&& on_tick);
     virtual ~Animation() = default;
     [[nodiscard]] AnimationHandle handle() const;
     virtual void mark_for_removal();
     [[nodiscard]] virtual bool is_being_removed() const;
-    virtual AnimationFrameResult tick(float dt) = 0;
-    virtual void on_tick(AnimationFrameResult const&) = 0;
-
-protected:
-    float runtime_seconds = 0.f;
+    bool tick(float dt);
 
 private:
+    AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
+
+    float runtime_seconds = 0.f;
     AnimationHandle handle_;
+    AnimationDefinition definition_;
+    AnimationData data_;
+    std::function<void(AnimationFrameResult const&)> on_tick;
     bool is_being_removed_ = false;
 };
-
-class BuiltInAnimation : public Animation
-{
-public:
-    BuiltInAnimation(
-        AnimationHandle handle,
-        float duration_seconds,
-        BuiltInAnimationDefinition definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        float opacity_start,
-        float opacity_end);
-
-    AnimationFrameResult tick(float dt) override;
-
-    /// TODO: We shouldn't provide an empty function implementation here, but
-    ///  it is useful for MultiBuiltInAnimation
-    void on_tick(AnimationFrameResult const& result) override { }
-
-private:
-    float duration_seconds;
-    BuiltInAnimationDefinition definition;
-    mir::geometry::Rectangle from;
-    mir::geometry::Rectangle to;
-    float const opacity_start;
-    float const opacity_end;
-};
-
-class MultiBuiltInAnimation : public Animation
-{
-public:
-    MultiBuiltInAnimation(
-        AnimationHandle handle,
-        AnimationDefinition const& definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        float opacity_start,
-        float opacity_end);
-
-    MultiBuiltInAnimation& operator=(MultiBuiltInAnimation const& other) = default;
-
-    AnimationFrameResult tick(float dt) override;
-
-private:
-    std::vector<BuiltInAnimation> animations;
-};
-
 }
 
 #endif // MIRACLE_WM_ANIMATION_H

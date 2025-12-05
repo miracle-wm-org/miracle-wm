@@ -190,8 +190,15 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
 }
 }
 
-Animation::Animation(AnimationHandle handle) :
-    handle_ { handle }
+Animation::Animation(
+    AnimationHandle handle,
+    AnimationDefinition const& definition,
+    AnimationData&& data,
+    std::function<void(AnimationFrameResult const&)>&& on_tick) :
+    handle_ { handle },
+    definition_ { definition },
+    data_ { std::move(data) },
+    on_tick { std::move(on_tick) }
 {
 }
 
@@ -210,72 +217,41 @@ bool Animation::is_being_removed() const
     return is_being_removed_;
 }
 
-BuiltInAnimation::BuiltInAnimation(
-    AnimationHandle handle,
-    float duration_seconds,
-    BuiltInAnimationDefinition definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    float opacity_start,
-    float opacity_end) :
-    Animation { handle },
-    duration_seconds { duration_seconds },
-    definition { definition },
-    from { from },
-    to { to },
-    opacity_start { opacity_start },
-    opacity_end { opacity_end }
-{
-}
-
-MultiBuiltInAnimation::MultiBuiltInAnimation(
-    AnimationHandle handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    float opacity_start,
-    float opacity_end) :
-    Animation(handle)
-{
-
-    for (auto const& def : definition.animations)
-    {
-        animations.emplace_back(
-            handle,
-            definition.duration_seconds,
-            def,
-            from,
-            to,
-            opacity_start,
-            opacity_end);
-    }
-}
-
-AnimationFrameResult MultiBuiltInAnimation::tick(float dt)
-{
-    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
-    for (auto& anim : animations)
-        result = anim.tick(dt).merge(result);
-    return result;
-}
-
-AnimationFrameResult BuiltInAnimation::tick(float dt)
+bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
-    float const t = (runtime_seconds / duration_seconds);
-
-    if (runtime_seconds >= duration_seconds)
+    float const t = (runtime_seconds / definition_.duration_seconds);
+    if (runtime_seconds >= definition_.duration_seconds)
     {
-        return { true, to, glm::mat4(1.f),
-            definition.type == BultInAnimationType::fade ? opacity_end : 1.f };
+        on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
+        return true;
     }
 
-    switch (definition.type)
+    switch (definition_.type)
+    {
+    case AnimationType::built_in:
+    {
+        AnimationFrameResult result;
+        for (auto const& builtin_def : definition_.animations)
+            result = tick_built_in(builtin_def, t).merge(result);
+        on_tick(result);
+        return result.is_complete;
+    }
+    case AnimationType::plugin:
+        return true;
+    default:
+        return true;
+    }
+}
+
+AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t)
+{
+    switch (builtin_def.type)
     {
     case BultInAnimationType::slide:
     {
-        auto const p = ease(definition, t);
-        const auto [position, clip_area_size] = slide(p, from, to);
+        auto const p = ease(builtin_def, t);
+        const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
         auto const next = geom::Rectangle {
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
@@ -289,16 +265,15 @@ AnimationFrameResult BuiltInAnimation::tick(float dt)
     }
     case BultInAnimationType::grow:
     {
-        auto const p = ease(definition, t);
+        auto const p = ease(builtin_def, t);
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));
-        ;
         return { false, std::nullopt, transform, std::nullopt };
     }
     case BultInAnimationType::shrink:
     {
-        auto const p = 1.f - ease(definition, t);
+        auto const p = 1.f - ease(builtin_def, t);
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));
@@ -306,12 +281,12 @@ AnimationFrameResult BuiltInAnimation::tick(float dt)
     }
     case BultInAnimationType::fade:
     {
-        auto const p = ease(definition, t);
-        float opacity_diff = opacity_end - opacity_start;
-        return { false, std::nullopt, std::nullopt, opacity_start + opacity_diff * p };
+        auto const p = ease(builtin_def, t);
+        float const opacity_diff = data_.opacity_end - data_.opacity_start;
+        return { false, std::nullopt, std::nullopt, data_.opacity_start + opacity_diff * p };
     }
     case BultInAnimationType::disabled:
     default:
-        return { true, to, std::nullopt, std::nullopt };
+        return { true, data_.area_end, std::nullopt, std::nullopt };
     }
 }

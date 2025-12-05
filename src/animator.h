@@ -41,8 +41,6 @@ namespace miracle
 class Animator
 {
 public:
-    explicit Animator(std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
-
     /// Registers a new animation handle.
     ///
     /// Components that want to animate must provide a valid handler before

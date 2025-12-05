@@ -38,11 +38,6 @@ AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& oth
     };
 }
 
-Animator::Animator(std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
-    server_action_queue(server_action_queue)
-{
-}
-
 AnimationHandle Animator::register_animateable()
 {
     std::lock_guard<std::mutex> lock(processing_lock);
@@ -58,10 +53,7 @@ void Animator::append(std::shared_ptr<Animation> const& animation)
             other->mark_for_removal();
     }
     active.push_back(animation);
-    server_action_queue->enqueue(this, [animation = animation]()
-    {
-        animation->on_tick(animation->tick(0.f));
-    });
+    animation->tick(0.f); // Initial tick to set starting values.
     cv.notify_one();
 }
 
@@ -74,14 +66,7 @@ void Animator::tick(float dt)
         if (item->is_being_removed())
             continue;
 
-        auto result = item->tick(dt);
-
-        server_action_queue->enqueue(this, [item = item, result = result]()
-        {
-            item->on_tick(result);
-        });
-
-        if (result.is_complete)
+        if (item->tick(dt))
             item->mark_for_removal();
     }
 

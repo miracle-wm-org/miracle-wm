@@ -25,16 +25,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "window_helpers.h"
 #include <mir/log.h>
+#include <mir/server_action_queue.h>
 
 using namespace miracle;
+
+namespace
+{
+auto create_window_animation_callback(std::weak_ptr<Container> const& container, WindowManagerToolsWindowController* controller, std::shared_ptr<mir::ServerActionQueue> const& action_queue)
+{
+    return [container_weak = container, controller, action_queue](
+               AnimationFrameResult const& result)
+    {
+        action_queue->enqueue(controller, [container_weak = container_weak, result = result, controller]
+        {
+            if (auto const container = container_weak.lock())
+                controller->process_animation(result, container);
+        });
+    };
+}
+}
 
 WindowManagerToolsWindowController::WindowManagerToolsWindowController(
     miral::WindowManagerTools const& tools,
     std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config) :
     tools { tools },
     animator { animator },
+    server_action_queue { server_action_queue },
     state { state },
     config { config }
 {
@@ -63,17 +82,11 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
         return;
     }
 
-    auto const animation = std::make_shared<WindowAnimation>(
+    animator->append(std::make_shared<Animation>(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_open),
-        rect,
-        rect,
-        this,
-        container,
-        0,
-        1);
-
-    animator->append(animation);
+        AnimationData(rect, rect, 0, 1),
+        create_window_animation_callback(container, this, server_action_queue)));
 }
 
 void WindowManagerToolsWindowController::set_rectangle(
@@ -106,17 +119,11 @@ void WindowManagerToolsWindowController::set_rectangle(
         return;
     }
 
-    auto const animation = std::make_shared<WindowAnimation>(
+    animator->append(std::make_shared<Animation>(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
-        from,
-        to,
-        this,
-        container,
-        1,
-        1);
-
-    animator->append(animation);
+        AnimationData(from, to, 1, 1),
+        create_window_animation_callback(container, this, server_action_queue)));
 }
 
 MirWindowState WindowManagerToolsWindowController::get_state(miral::Window const& window)
@@ -177,29 +184,6 @@ void WindowManagerToolsWindowController::raise(miral::Window const& window)
 void WindowManagerToolsWindowController::send_to_back(miral::Window const& window)
 {
     tools.send_tree_to_back(window);
-}
-
-WindowManagerToolsWindowController::WindowAnimation::WindowAnimation(
-    AnimationHandle const& handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    WindowManagerToolsWindowController* controller,
-    std::shared_ptr<Container> const& container,
-    float opacity_start,
-    float opacity_end) :
-    MultiBuiltInAnimation(handle, definition, from, to, opacity_start, opacity_end),
-    controller { controller },
-    container { container }
-{
-}
-
-void WindowManagerToolsWindowController::WindowAnimation::on_tick(AnimationFrameResult const& asr)
-{
-    if (auto const locked = container.lock())
-        controller->process_animation(asr, locked);
-    else
-        mir::log_warning("WindowAnimation::on_tick: container is no longer valid");
 }
 
 void WindowManagerToolsWindowController::process_animation(

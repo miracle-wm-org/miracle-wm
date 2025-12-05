@@ -44,7 +44,8 @@ Output::Output(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
     name_ { std::move(name) },
     id_ { id },
     area { area },
@@ -53,6 +54,7 @@ Output::Output(
     config { config },
     window_controller { window_controller },
     animator { animator },
+    server_action_queue { server_action_queue },
     handle { animator->register_animateable() }
 {
 }
@@ -178,7 +180,7 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     auto const new_workspace = std::make_shared<Workspace>(
-        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar, animator);
+        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar, animator, server_action_queue);
     insert_workspace_sorted(new_workspace);
 }
 

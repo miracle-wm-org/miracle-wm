@@ -39,8 +39,8 @@ extern "C"
 
     typedef struct
     {
-        /// The percentage completed of the animation.
-        float p;
+        /// The runtime of the animation frame in seconds.
+        float runtime_seconds;
 
         /// The origin area, packed with x, y, w, and h.
         float origin[4];
@@ -57,15 +57,15 @@ extern "C"
 
     typedef struct
     {
-        /// If set to `true`, the animation is considered completed.
+        /// If set to `TRUE`, the animation is considered completed.
         ///
         /// At this point, the animated object will be moved to its destination
         /// with the appropriate opacity. The animation will be removed from the
         /// system.
-        bool completed;
+        int32_t completed;
 
-        /// If `true`, #area is set.
-        bool has_area;
+        /// If `TRUE`, #area is set.
+        int32_t has_area;
 
         /// The area as a packed rectangle of x, y, width, and height.
         ///
@@ -76,16 +76,16 @@ extern "C"
         /// the #transform if you want to animate the scale.
         float area[4];
 
-        /// If `true`, #transform is set.
-        bool has_transform;
+        /// If `TRUE`, #transform is set.
+        int32_t has_transform;
 
         /// The transform to apply to the animated object.
         ///
         /// This transform is backed by a glm::mat4, which is a column-major transform.
         float transform[16];
 
-        /// If `true`, #opacity is set.
-        bool has_opacity;
+        /// If `TRUE`, #opacity is set.
+        int32_t has_opacity;
 
         /// The opacity of the object.
         ///

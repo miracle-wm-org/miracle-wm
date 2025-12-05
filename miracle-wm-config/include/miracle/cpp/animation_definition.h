@@ -133,6 +133,7 @@ struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
 enum class AnimationType
 {
     built_in,
+    plugin,
     max
 };
 

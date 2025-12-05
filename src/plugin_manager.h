@@ -19,10 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 
 #if ENABLE_PLUGIN_SYSTEM
+#include "miracle/plugin.h"
 #include <bitset>
 #include <memory>
 #include <mir/geometry/point.h>
+#include <mutex>
 #include <wasmedge/wasmedge.h>
+
 namespace miracle
 {
 typedef uint32_t PluginHandle;
@@ -60,6 +63,18 @@ public:
     /// \returns The sum of the two points.
     mir::geometry::Point add_points(mir::geometry::Point first, mir::geometry::Point second);
 
+    /// Animate a frame using the provided plugin handle and frame data.
+    ///
+    /// If \p handle does not correspond to a loaded plugin, the function will
+    /// return a resulting indicating that the animation is finished.
+    ////
+    /// \param handle The plugin handle to use for animation.
+    /// \param frame_data The frame data to animate.
+    /// \returns The result of the animation frame.
+    miracle_plugin_animation_frame_result_t animate_frame(
+        PluginHandle handle,
+        miracle_plugin_animation_frame_data_t const& frame_data);
+
 private:
     template <auto DeleteFn>
     struct WasmEdgeDeleter
@@ -95,17 +110,22 @@ private:
     using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
         WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
 
-    enum class ProvidedFunction : std::size_t
+    enum class ProvidedFunction : std::uint8_t
     {
-        add_points = 0,
+        add_points,
+        animate,
+        max
     };
 
     struct ModuleInstance
     {
         ModuleInstancePtr module_context;
-        std::bitset<sizeof(uint8_t)> provided_functions;
+        std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
+        PluginHandle handle;
+        std::string path;
     };
 
+    std::mutex mutex;
     ConfigurePtr configure_context;
     StorePtr store_context;
     LoaderPtr loader_context;
