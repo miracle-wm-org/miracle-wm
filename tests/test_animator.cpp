@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "animator.h"
+#include "plugin_manager.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -33,13 +34,13 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
         AnimationType::built_in,
         false,
         1.f,
-        { BuiltInAnimationDefinition {
+        BuiltInAnimationList { BuiltInAnimationDefinition {
             .type = BultInAnimationType::slide,
             .function = EaseFunction::linear,
         } }
     };
     bool was_called = false;
-    auto const animation = std::make_shared<Animation>(
+    animator.append(Animation(
         handle,
         definition,
         AnimationData {
@@ -53,8 +54,8 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
         [&](AnimationFrameResult const&)
     {
         was_called = true;
-    });
-    animator.append(animation);
+    },
+        std::shared_ptr<PluginManager>()));
     animator.tick(0.16f);
     EXPECT_EQ(was_called, true);
 }
@@ -67,13 +68,13 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
         AnimationType::built_in,
         false,
         1.f,
-        { BuiltInAnimationDefinition {
+        BuiltInAnimationList { BuiltInAnimationDefinition {
             .type = BultInAnimationType::fade,
             .function = EaseFunction::linear,
         } }
     };
     float opacity = -1.f;
-    auto const animation = std::make_shared<Animation>(
+    animator.append(Animation(
         handle,
         definition,
         AnimationData {
@@ -87,8 +88,9 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
         [&](AnimationFrameResult const& asr)
     {
         opacity = asr.opacity.value();
-    });
-    animator.append(animation);
+        return false;
+    },
+        std::shared_ptr<PluginManager>()));
     EXPECT_THAT(opacity, testing::Eq(0.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.75f));
@@ -102,13 +104,13 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
         AnimationType::built_in,
         false,
         1.f,
-        { BuiltInAnimationDefinition {
+        BuiltInAnimationList { BuiltInAnimationDefinition {
             .type = BultInAnimationType::fade,
             .function = EaseFunction::linear,
         } }
     };
     float opacity = -1.f;
-    auto const animation = std::make_shared<Animation>(
+    animator.append(Animation(
         handle,
         definition,
         AnimationData {
@@ -124,8 +126,8 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
         [&](AnimationFrameResult const& asr)
     {
         opacity = asr.opacity.value();
-    });
-    animator.append(animation);
+    },
+        std::shared_ptr<PluginManager>()));
     EXPECT_THAT(opacity, testing::Eq(1.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.25f));

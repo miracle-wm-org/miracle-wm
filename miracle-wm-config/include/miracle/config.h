@@ -175,8 +175,41 @@ extern "C"
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
     uint miracle_config_get_built_in_key_command_options_count();
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
+
+    /// Retrieve the number of builtanimation type options.
+    ///
+    /// Each built-in animation type option may be retrieved with
+    /// #miracle_config_get_animation_type_option.
+    ///
+    /// \returns the number of animation type options
     uint miracle_config_get_animation_type_options_count();
+
+    /// Retrieve an animation type option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_animation_type_options_count
+    /// results in undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_animation_type_option(uint i);
+
+    /// Retrieve the number of built-in animation type options.
+    ///
+    /// Each built-in animation type option may be retrieved with
+    /// #miracle_config_get_built_in_animation_type_option.
+    ///
+    /// \returns the number of built-in animation type options
+    uint miracle_config_get_built_in_animation_type_options_count();
+
+    /// Retrieve a built-in animation type option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_built_in_animation_type_options_count
+    /// results in undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
+    miracle_config_option_t miracle_config_get_built_in_animation_type_option(uint i);
+
     uint miracle_config_get_ease_function_options_count();
     miracle_config_option_t miracle_config_get_ease_function_option(uint i);
     uint miracle_config_get_layout_options_count();
@@ -697,18 +730,31 @@ extern "C"
         /// If `true`, this event has not been altered from its default yet.
         bool is_default;
 
+        /// The type of the animation.
+        ///
+        /// Use #miracle_config_get_animation_type_options_count to get the available
+        /// animation types.
+        uint type;
+
         /// The duration of the animation in seconds.
         float duration_seconds;
 
         /// The number of animations that are run concurrently when this event happens.
         ///
+        /// This is only set when #type is set to "built_in".
+        ///
         /// Each animateable event is built from a number of animations
         /// that run concurrent to each other. This enables the user to
         /// combine animations in fun and unique ways.
         ///
-        /// Use #miracle_animateable_event_get_animation to get an animation at a particular
+        /// Use #miracle_animateable_event_get_animation_part to get an animation at a particular
         /// index. There exists other methods to update each animation and add more as well.
-        size_t num_animations;
+        size_t num_parts;
+
+        /// The path to the plugin that provides this animation.
+        ///
+        /// This is only set when #type is set to "plugin".
+        const char* plugin_path;
 
         /// Opaque pointer.
         void* _internal;
@@ -802,7 +848,7 @@ extern "C"
     /// \param animateable_event the animateable event
     /// \param index the index
     /// \returns the animation at the index
-    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+    miracle_built_in_animation_t miracle_animateable_event_get_animation_part(
         miracle_animateable_event_t* animateable_event,
         size_t index);
 

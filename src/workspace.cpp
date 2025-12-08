@@ -116,7 +116,8 @@ Workspace::Workspace(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<mir::ServerActionQueue> const& action_queue) :
+    std::shared_ptr<mir::ServerActionQueue> const& action_queue,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     output { output },
     id_ { id },
     num_ { num },
@@ -127,6 +128,7 @@ Workspace::Workspace(
     config { config },
     animator { animator },
     server_action_queue { action_queue },
+    plugin_manager { plugin_manager },
     animation_handle { animator->register_animateable() }
 {
 }
@@ -281,7 +283,7 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
-    animator->append(std::make_shared<Animation>(
+    animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
         AnimationData(geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
@@ -312,7 +314,7 @@ void Workspace::show(geom::Point const& origin)
             if (asr.is_complete)
                 locked->on_animation_end(false);
         });
-    }));
+    }, plugin_manager));
     on_animation_start(false);
 }
 
@@ -325,7 +327,7 @@ void Workspace::hide(geom::Point const& end)
     }
 
     auto const area = root()->get_logical_area();
-    animator->append(std::make_shared<Animation>(
+    animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
         AnimationData(geom::Rectangle(geom::Point(0, 0), area.size), geom::Rectangle(end, area.size), 1.f, 0.f),
@@ -356,7 +358,7 @@ void Workspace::hide(geom::Point const& end)
             if (asr.is_complete)
                 locked->on_animation_end(true);
         });
-    }));
+    }, plugin_manager));
     on_animation_start(true);
 }
 

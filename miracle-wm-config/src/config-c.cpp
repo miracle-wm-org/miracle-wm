@@ -254,10 +254,23 @@ extern "C"
 
     uint miracle_config_get_animation_type_options_count()
     {
-        return static_cast<uint>(miracle::BultInAnimationType::max);
+        return static_cast<uint>(miracle::AnimationType::max);
     }
 
     miracle_config_option_t miracle_config_get_animation_type_option(uint i)
+    {
+        return {
+            miracle::animation_type_strings[i],
+            i
+        };
+    }
+
+    uint miracle_config_get_built_in_animation_type_options_count()
+    {
+        return static_cast<uint>(miracle::BultInAnimationType::max);
+    }
+
+    miracle_config_option_t miracle_config_get_built_in_animation_type_option(uint i)
     {
         return {
             miracle::built_in_animation_type_strings[i],
@@ -785,14 +798,28 @@ extern "C"
         miracle_config_data_t* config,
         size_t index)
     {
-        auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        auto def = &data->animation_definitions.value[index];
+        auto const data = static_cast<miracle::ConfigData*>(config->_internal);
+        auto const& def = &data->animation_definitions.value[index];
+
+        size_t built_in_animations;
+        if (std::holds_alternative<miracle::BuiltInAnimationList>(def->data))
+            built_in_animations = std::get<miracle::BuiltInAnimationList>(def->data).size();
+        else
+            built_in_animations = 0;
+
+        std::string plugin_path;
+        if (std::holds_alternative<miracle::PluginAnimationDefinition>(def->data))
+            plugin_path = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_path;
+        else
+            plugin_path = "";
 
         return {
             miracle::animateable_event_strings[index],
             def->is_default,
+            static_cast<uint>(def->type),
             def->duration_seconds,
-            def->animations.size(),
+            built_in_animations,
+            plugin_path.c_str(),
             static_cast<void*>(def)
         };
     }
@@ -805,7 +832,16 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
         def.is_default = false;
+        def.type = static_cast<miracle::AnimationType>(definition->type);
         def.duration_seconds = definition->duration_seconds;
+        switch (def.type)
+        {
+        case miracle::AnimationType::plugin:
+            def.data = miracle::PluginAnimationDefinition { definition->plugin_path };
+            break;
+        default:
+            break;
+        }
     }
 
     void miracle_config_reset_animation_definition(
@@ -817,12 +853,12 @@ extern "C"
         def = miracle::ConfigData::get_default_animation_definition(static_cast<miracle::AnimateableEvent>(index));
     }
 
-    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+    miracle_built_in_animation_t miracle_animateable_event_get_animation_part(
         miracle_animateable_event_t* animateable_event,
         size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
-        auto const animation = def->animations[index];
+        auto const animation = std::get<miracle::BuiltInAnimationList>(def->data)[index];
         return {
             static_cast<uint>(animation.type),
             static_cast<uint>(animation.function),
@@ -840,9 +876,15 @@ extern "C"
         miracle_animateable_event_t* animateable_event,
         miracle_built_in_animation_t animation)
     {
-        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        auto const def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        if (def->type != miracle::AnimationType::built_in)
+        {
+            def->type = miracle::AnimationType::built_in;
+            def->data = miracle::BuiltInAnimationList {};
+        }
+
         def->is_default = false;
-        def->animations.push_back(miracle::BuiltInAnimationDefinition {
+        std::get<miracle::BuiltInAnimationList>(def->data).push_back(miracle::BuiltInAnimationDefinition {
             static_cast<miracle::BultInAnimationType>(animation.type),
             static_cast<miracle::EaseFunction>(animation.function),
             animation.c1,
@@ -859,9 +901,15 @@ extern "C"
         size_t index,
         miracle_built_in_animation_t animation)
     {
-        auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        auto const def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        if (def->type != miracle::AnimationType::built_in)
+        {
+            def->type = miracle::AnimationType::built_in;
+            def->data = miracle::BuiltInAnimationList {};
+        }
+
         def->is_default = false;
-        auto& animation_def = def->animations[index];
+        auto& animation_def = std::get<miracle::BuiltInAnimationList>(def->data)[index];
         animation_def.type = static_cast<miracle::BultInAnimationType>(animation.type);
         animation_def.function = static_cast<miracle::EaseFunction>(animation.function);
         animation_def.c1 = animation.c1;
@@ -878,8 +926,18 @@ extern "C"
         size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
+        if (def->type != miracle::AnimationType::built_in)
+        {
+            def->type = miracle::AnimationType::built_in;
+            def->data = miracle::BuiltInAnimationList {};
+        }
+
         def->is_default = false;
-        def->animations.erase(def->animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));
+
+        auto& built_in_animations = std::get<miracle::BuiltInAnimationList>(def->data);
+        if (index >= built_in_animations.size())
+            return;
+        built_in_animations.erase(built_in_animations.begin() + static_cast<std::vector<miracle::BuiltInAnimationDefinition>::difference_type>(index));
     }
 
     size_t miracle_config_get_workspace_config_count(const miracle_config_data_t* config)

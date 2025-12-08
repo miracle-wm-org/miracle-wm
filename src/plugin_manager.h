@@ -136,12 +136,34 @@ private:
 };
 }
 #else
+#include "miracle/plugin.h"
+#include <cstdint>
+#include <mir/geometry/point.h>
+#include <string>
 namespace miracle
 {
+typedef uint32_t PluginHandle;
+
+struct PluginLoadResult
+{
+    bool success = false;
+    PluginHandle handle = 0;
+    std::string error;
+};
+
 class PluginManager
 {
 public:
     PluginManager() = default;
+    PluginLoadResult load_wasm_module(std::string const&) { return PluginLoadResult {
+        .success = false,
+        .error = "Platform does not support plugins"
+    }; }
+    /// bool unload_wasm_module(PluginHandle handle);
+    mir::geometry::Point add_points(mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
+    miracle_plugin_animation_frame_result_t animate_frame(
+        PluginHandle,
+        miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
 };
 }
 #endif

@@ -53,7 +53,7 @@ public:
     void tick(float dt);
 
     /// Append a new animation to the queue.
-    void append(std::shared_ptr<Animation> const& animation);
+    void append(Animation&& animation);
 
     /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
@@ -65,7 +65,7 @@ public:
 
 private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::vector<std::shared_ptr<Animation>> active;
+    std::vector<Animation> active;
     std::thread run_thread;
     std::condition_variable cv;
     std::mutex processing_lock;

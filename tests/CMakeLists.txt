@@ -17,7 +17,6 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 option(END_TO_END_TESTS "Include end-to-end tests?" OFF)
 
 set(SOURCES
-    mock_animation.h
     mock_command_controller.h
     mock_configuration.h
     mock_container.h

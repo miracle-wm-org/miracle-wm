@@ -57,7 +57,8 @@ protected:
             config,
             window_controller,
             animator,
-            std::make_shared<PassthroughServerActionQueue>());
+            std::make_shared<PassthroughServerActionQueue>(),
+            std::make_shared<PluginManager>());
 
         // Add workspace to the output
         auto registrar = std::make_shared<WorkspaceObserverRegistrar>();

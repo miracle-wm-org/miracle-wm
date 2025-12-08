@@ -34,6 +34,7 @@ public:
     WindowManagerToolsWindowController(
         miral::WindowManagerTools const&,
         std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<PluginManager> const& plugin_manager,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& config);
@@ -61,6 +62,7 @@ public:
 private:
     miral::WindowManagerTools tools;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;

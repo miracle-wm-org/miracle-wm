@@ -131,16 +131,16 @@ TEST_F(CAPIWrapperTest, BultInKeyboardCommandsCanBeFound)
     }
 }
 
-TEST_F(CAPIWrapperTest, AnimationTypeOptionsCount)
+TEST_F(CAPIWrapperTest, BuiltInAnimationTypeOptionsCount)
 {
-    ASSERT_THAT(miracle_config_get_animation_type_options_count(), Eq(static_cast<uint>(miracle::BultInAnimationType::max)));
+    ASSERT_THAT(miracle_config_get_built_in_animation_type_options_count(), Eq(static_cast<uint>(miracle::BultInAnimationType::max)));
 }
 
-TEST_F(CAPIWrapperTest, AnimationTypeOptionsCanBeFound)
+TEST_F(CAPIWrapperTest, BuiltInAnimationTypeOptionsCanBeFound)
 {
-    for (uint i = 0; i < miracle_config_get_animation_type_options_count(); i++)
+    for (uint i = 0; i < miracle_config_get_built_in_animation_type_options_count(); i++)
     {
-        ASSERT_THAT(miracle_config_get_animation_type_option(i).name, Ne(nullptr));
+        ASSERT_THAT(miracle_config_get_built_in_animation_type_option(i).name, Ne(nullptr));
     }
 }
 
@@ -544,7 +544,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
         0);
 
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
-    EXPECT_EQ(result.num_animations, 1);
+    EXPECT_EQ(result.num_parts, 1);
     EXPECT_FALSE(result.is_default);
 }
 

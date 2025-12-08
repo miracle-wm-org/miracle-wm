@@ -16,9 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define GLM_ENABLE_EXPERIMENTAL
+#define MIR_LOG_COMPONENT "animation"
 #include "animation.h"
 #include "geometry_helpers.h"
+#include "plugin_manager.h"
 #include <glm/gtx/transform.hpp>
+#include <mir/log.h>
 
 using namespace miracle;
 namespace geom = mir::geometry;
@@ -194,11 +197,13 @@ Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,
     AnimationData&& data,
-    std::function<void(AnimationFrameResult const&)>&& on_tick) :
+    std::function<void(AnimationFrameResult const&)>&& on_tick,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     handle_ { handle },
     definition_ { definition },
     data_ { std::move(data) },
-    on_tick { std::move(on_tick) }
+    on_tick { std::move(on_tick) },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -223,7 +228,7 @@ bool Animation::tick(float dt)
     float const t = (runtime_seconds / definition_.duration_seconds);
     if (runtime_seconds >= definition_.duration_seconds)
     {
-        on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
+        on_tick(finish());
         return true;
     }
 
@@ -232,16 +237,73 @@ bool Animation::tick(float dt)
     case AnimationType::built_in:
     {
         AnimationFrameResult result;
-        for (auto const& builtin_def : definition_.animations)
+        for (auto const& builtin_def : std::get<BuiltInAnimationList>(definition_.data))
             result = tick_built_in(builtin_def, t).merge(result);
         on_tick(result);
+        if (result.is_complete)
+            on_tick(finish());
         return result.is_complete;
     }
     case AnimationType::plugin:
-        return true;
+    {
+        auto const path = std::get<PluginAnimationDefinition>(definition_.data).plugin_path;
+        auto const result = plugin_manager->load_wasm_module(path);
+        if (!result.success)
+        {
+            mir::log_error("Animation plugin failed to load: %s", path.c_str());
+            on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
+            return true;
+        }
+
+        miracle_plugin_animation_frame_data_t frame_data;
+        frame_data.runtime_seconds = runtime_seconds;
+        frame_data.duration_seconds = definition_.duration_seconds;
+        frame_data.origin[0] = static_cast<float>(data_.area_start.top_left.x.as_int());
+        frame_data.origin[1] = static_cast<float>(data_.area_start.top_left.y.as_int());
+        frame_data.origin[2] = static_cast<float>(data_.area_start.size.width.as_value());
+        frame_data.origin[3] = static_cast<float>(data_.area_start.size.height.as_value());
+        frame_data.destination[0] = static_cast<float>(data_.area_end.top_left.x.as_int());
+        frame_data.destination[1] = static_cast<float>(data_.area_end.top_left.y.as_int());
+        frame_data.destination[2] = static_cast<float>(data_.area_end.size.width.as_value());
+        frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
+        frame_data.opacity_start = data_.opacity_start;
+        frame_data.opacity_end = data_.opacity_end;
+        auto const frame_result = plugin_manager->animate_frame(result.handle, frame_data);
+        AnimationFrameResult animation_result;
+        animation_result.is_complete = frame_result.completed != 0;
+        if (frame_result.has_area != 0)
+        {
+            animation_result.rectangle = geom::Rectangle {
+                geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
+                geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
+            };
+        }
+        if (frame_result.has_transform != 0)
+        {
+            glm::mat4 transform;
+            std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
+            animation_result.transform = transform;
+        }
+        else
+            animation_result.transform = glm::mat4(1.f);
+        if (frame_result.has_opacity != 0)
+        {
+            animation_result.opacity = frame_result.opacity;
+        }
+        on_tick(animation_result);
+        if (animation_result.is_complete)
+            on_tick(finish());
+        return animation_result.is_complete;
+    }
     default:
+        on_tick(finish());
         return true;
     }
+}
+
+AnimationFrameResult Animation::finish() const
+{
+    return { true, data_.area_end, glm::mat4(1.f), data_.opacity_end };
 }
 
 AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t)

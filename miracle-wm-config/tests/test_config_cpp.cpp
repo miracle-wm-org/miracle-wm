@@ -64,7 +64,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     first.animation_definitions.value[0] = miracle::AnimationDefinition {
         .type = miracle::AnimationType::built_in,
         .duration_seconds = 5,
-        .animations = first_animations
+        .data = first_animations
     };
     first.workspace_configs->push_back(miracle::WorkspaceConfig {
         .num = 2,
@@ -137,7 +137,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     second.animation_definitions.value[0] = miracle::AnimationDefinition {
         .type = miracle::AnimationType::built_in,
         .duration_seconds = 8,
-        .animations = second_animations
+        .data = second_animations
     };
     second.workspace_configs->push_back(miracle::WorkspaceConfig {
         .num = 2,
@@ -202,7 +202,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     EXPECT_THAT(merged.environment_variables.value[1].value, Eq("first"));
     EXPECT_THAT(merged.border_config->size, Eq(8));
     EXPECT_THAT(*merged.animations_enabled, Eq(true));
-    EXPECT_THAT(merged.animation_definitions.value[0].animations[0].type, Eq(miracle::BultInAnimationType::fade));
+    EXPECT_THAT(std::get<miracle::BuiltInAnimationList>(merged.animation_definitions.value[0].data)[0].type, Eq(miracle::BultInAnimationType::fade));
     EXPECT_THAT(merged.animation_definitions.value[0].duration_seconds, Eq(5));
     EXPECT_THAT(merged.workspace_configs->size(), Eq(2));
     EXPECT_THAT(merged.workspace_configs.value[0].num, Eq(2));

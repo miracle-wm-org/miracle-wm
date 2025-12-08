@@ -6,7 +6,8 @@ pub struct Point {
 
 #[repr(C)]
 pub struct MiracleAnimationFrameData {
-    p: f32,
+    runtime_seconds: f32,
+    duration_seconds: f32,
     origin: [f32; 4],
     destination: [f32; 4],
     opacity_start: f32,
@@ -36,13 +37,16 @@ pub extern "C" fn add_points(a: Point, b: Point) -> Point {
 pub extern "C" fn animate(
     data: MiracleAnimationFrameData,
 ) -> MiracleAnimationFrameResult {
+
+    let progress = data.runtime_seconds / data.duration_seconds;
+    let opacity = data.opacity_start + (data.opacity_end - data.opacity_start) * progress;
     MiracleAnimationFrameResult {
-        completed: 1,
+        completed: 0,
         has_area: 1,
-        area: [data.origin[0], data.origin[1], data.destination[0], data.destination[1]],
+        area: [data.destination[0], data.destination[1], data.destination[2], data.destination[3]],
         has_transform: 0,
         transform: [0.0; 16],
         has_opacity: 1,
-        opacity: data.opacity_start + (data.opacity_end - data.opacity_start) * data.p,
+        opacity,
     }
 }

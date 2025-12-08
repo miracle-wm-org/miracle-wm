@@ -170,8 +170,9 @@ Policy::Policy(
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
+    plugin_manager(std::make_shared<PluginManager>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, server.the_main_loop(), state, config)),
+        tools, animator, plugin_manager, server.the_main_loop(), state, config)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
@@ -182,7 +183,8 @@ Policy::Policy(
             window_controller,
             animator,
             display_config,
-            server.the_main_loop()))),
+            server.the_main_loop(),
+            plugin_manager))),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this)),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
@@ -205,10 +207,10 @@ Policy::Policy(
         server.the_surface_stack(),
         state,
         config,
-        animator)),
+        animator,
+        plugin_manager)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
-    plugin_manager(std::make_unique<PluginManager>())
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
@@ -218,10 +220,6 @@ Policy::Policy(
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     animator_loop->start();
-
-    auto const r = plugin_manager->load_wasm_module("/home/matthew/Github/miracle-wm/plugins/plugin-playground/target/wasm32-wasip1/release/plugin_playground.wasm");
-    plugin_manager->add_points(geom::Point { 10, 10 }, geom::Point { 20, 20 });
-    plugin_manager->animate_frame(r.handle, miracle_plugin_animation_frame_data_t {});
 }
 
 Policy::~Policy()

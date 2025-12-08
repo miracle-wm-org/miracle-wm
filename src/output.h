@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class PluginManager;
 
 class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
@@ -36,7 +37,8 @@ public:
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<PluginManager> const& plugin_manager);
     ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
@@ -92,6 +94,7 @@ private:
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     AnimationHandle handle;
+    std::shared_ptr<PluginManager> plugin_manager;
 
     /// The transform applied to the entire output..
     glm::mat4 transform = glm::mat4(1.f);

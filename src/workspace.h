@@ -32,6 +32,7 @@ class Config;
 class CompositorState;
 class WorkspaceObserverRegistrar;
 class Animator;
+class PluginManager;
 
 struct WorkspaceIdentifier
 {
@@ -52,7 +53,8 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
         std::shared_ptr<Animator> const& animator,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<PluginManager> const& plugin_manager);
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
@@ -123,6 +125,7 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<PluginManager> plugin_manager;
     AnimationHandle animation_handle;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;

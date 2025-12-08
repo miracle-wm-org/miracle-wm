@@ -21,12 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_manager.h"
 #include <functional>
 #include <glm/glm.hpp>
+#include <memory>
 #include <mir/geometry/rectangle.h>
 #include <miracle/cpp/animation_definition.h>
 #include <optional>
 
 namespace miracle
 {
+class PluginManager;
+
 /// Unique handle provided to track animators
 typedef uint32_t AnimationHandle;
 
@@ -81,7 +84,8 @@ public:
         AnimationHandle handle,
         AnimationDefinition const& definition,
         AnimationData&& data,
-        std::function<void(AnimationFrameResult const&)>&& on_tick);
+        std::function<void(AnimationFrameResult const&)>&& on_tick,
+        std::shared_ptr<PluginManager> const& plugin_manager);
     virtual ~Animation() = default;
     [[nodiscard]] AnimationHandle handle() const;
     virtual void mark_for_removal();
@@ -90,6 +94,7 @@ public:
 
 private:
     AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
+    AnimationFrameResult finish() const;
 
     float runtime_seconds = 0.f;
     AnimationHandle handle_;
@@ -97,6 +102,7 @@ private:
     AnimationData data_;
     std::function<void(AnimationFrameResult const&)> on_tick;
     bool is_being_removed_ = false;
+    std::shared_ptr<PluginManager> plugin_manager;
 };
 }
 

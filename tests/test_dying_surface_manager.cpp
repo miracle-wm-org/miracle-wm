@@ -45,7 +45,8 @@ public:
             surface_stack,
             compositor_state,
             config,
-            animator)
+            animator,
+            std::make_shared<PluginManager>())
     {
     }
 

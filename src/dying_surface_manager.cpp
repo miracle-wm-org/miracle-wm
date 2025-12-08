@@ -29,11 +29,13 @@ DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
-    animator(animator)
+    animator(animator),
+    plugin_manager(plugin_manager)
 {
 }
 
@@ -56,7 +58,9 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
             .transform = container->get_transform(),
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
             .output_area = output_area });
-    auto const animation = std::make_shared<Animation>(
+
+    surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
+    animator->append(Animation(
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
         AnimationData {
@@ -82,8 +86,5 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
             compositor_state->render_data_manager()->remove(id);
             compositor_state->render_data_manager()->remove(id);
         }
-    });
-
-    surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
-    animator->append(animation);
+    }, plugin_manager));
 }

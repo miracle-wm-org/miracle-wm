@@ -44,16 +44,16 @@ AnimationHandle Animator::register_animateable()
     return next_handle++;
 }
 
-void Animator::append(std::shared_ptr<Animation> const& animation)
+void Animator::append(Animation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto const& other : active)
+    for (auto& other : active)
     {
-        if (other->handle() == animation->handle())
-            other->mark_for_removal();
+        if (other.handle() == animation.handle())
+            other.mark_for_removal();
     }
-    active.push_back(animation);
-    animation->tick(0.f); // Initial tick to set starting values.
+    animation.tick(0.f); // Initial tick to set starting values.
+    active.push_back(std::move(animation));
     cv.notify_one();
 }
 
@@ -61,36 +61,36 @@ void Animator::tick(float dt)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
 
-    for (auto const& item : active)
+    for (auto& item : active)
     {
-        if (item->is_being_removed())
+        if (item.is_being_removed())
             continue;
 
-        if (item->tick(dt))
-            item->mark_for_removal();
+        if (item.tick(dt))
+            item.mark_for_removal();
     }
 
-    std::erase_if(active, [](std::shared_ptr<Animation> const& animation)
+    std::erase_if(active, [](Animation const& animation)
     {
-        return animation->is_being_removed();
+        return animation.is_being_removed();
     });
 }
 
 void Animator::remove_by_animation_handle(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto const& animation : active)
+    for (auto& animation : active)
     {
-        if (animation->handle() == handle)
-            animation->mark_for_removal();
+        if (animation.handle() == handle)
+            animation.mark_for_removal();
     }
 }
 
 bool Animator::is_animating(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    return std::any_of(active.begin(), active.end(), [handle](std::shared_ptr<Animation> const& animation)
+    return std::ranges::any_of(active, [handle](Animation const& animation)
     {
-        return animation->handle() == handle;
+        return animation.handle() == handle;
     });
 }
