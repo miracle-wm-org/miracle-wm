@@ -90,7 +90,7 @@ find_package(PkgConfig)
 
 set(MIR_MINIMUM_VERSION 2.18)
 pkg_check_modules(MIRAL REQUIRED miral>=5.1)
-pkg_check_modules(MIRRENDERER REQUIRED mirrenderer>=${MIR_MINIMUM_VERSION})
+pkg_check_modules(MIRRENDERER mirrenderer>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRPLATFORM REQUIRED mirplatform>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON REQUIRED mircommon>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON_INTERNAL REQUIRED mircommon-internal>=${MIR_MINIMUM_VERSION})
