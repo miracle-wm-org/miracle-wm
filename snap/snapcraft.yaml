@@ -58,6 +58,10 @@ parts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
     source: .
+    override-build: |
+      apt-get install -y libmirrenderer-dev || true
+      apt-get install -y mir-renderer-gl-dev || true
+      snapcraftctl build
     build-packages:
       - pkg-config
       - libmiral-dev
@@ -66,6 +70,7 @@ parts:
       - libmirserver-internal-dev
       - mirtest-dev
       - mirtest-internal-dev
+      - libmirplatform-dev
       - libfreetype6-dev
       - libwayland-dev
       - libxkbcommon-dev
@@ -81,7 +86,6 @@ parts:
       - libevdev2
       - nlohmann-json3-dev
       - libgles2-mesa-dev
-      - libmirrenderer-dev
       - libmirwayland-dev
       - libjson-c-dev
       - libgtest-dev
