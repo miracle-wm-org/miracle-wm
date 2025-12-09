@@ -807,7 +807,7 @@ extern "C"
         else
             built_in_animations = 0;
 
-        std::string plugin_path;
+        static thread_local std::string plugin_path;
         if (std::holds_alternative<miracle::PluginAnimationDefinition>(def->data))
             plugin_path = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_path;
         else
