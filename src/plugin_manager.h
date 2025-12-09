@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/geometry/point.h>
 #include <mutex>
+#include <vector>
 #include <wasmedge/wasmedge.h>
 
 namespace miracle
@@ -52,7 +53,7 @@ public:
     /// Attempt to unload the WebAssembly module associated with \p handle.
     ///
     /// \returns `true` if the module was unloaded, `false` otherwise.
-    /// bool unload_wasm_module(PluginHandle handle);
+    bool unload_wasm_module(PluginHandle handle);
 
     /// Example function that adds two points together.
     ///

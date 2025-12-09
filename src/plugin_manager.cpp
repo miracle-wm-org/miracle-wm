@@ -131,6 +131,15 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
     };
 }
 
+bool PluginManager::unload_wasm_module(PluginHandle handle)
+{
+    auto const erased = std::erase_if(loaded_modules, [handle](auto const& module)
+    {
+        return module.handle == handle;
+    });
+    return erased > 0;
+}
+
 mir::geometry::Point PluginManager::add_points(mir::geometry::Point first, mir::geometry::Point second)
 {
     std::lock_guard lock(mutex);

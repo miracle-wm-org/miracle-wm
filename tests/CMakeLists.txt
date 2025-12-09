@@ -13,8 +13,9 @@ pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 find_package(GTest REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
+option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
 
-option(END_TO_END_TESTS "Include end-to-end tests?" OFF)
+set(ENABLE_PLUGIN_SYSTEM 1)
 
 set(SOURCES
     mock_command_controller.h
@@ -44,6 +45,7 @@ set(SOURCES
     test_ipc_message_handler.cpp
     test_ipc_command_executor.cpp
     test_workspace_manager.cpp
+    test_plugin_manager.cpp
     stub_configuration.h
     stub_surface.h
     stub_window_controller.h
@@ -78,7 +80,6 @@ target_link_libraries(miracle-wm-tests
     pthread
     GTest::GTest GTest::Main GTest::gmock)
 
-target_compile_definitions(miracle-wm-tests PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV})
+target_compile_definitions(miracle-wm-tests PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
 
 enable_testing()
-
