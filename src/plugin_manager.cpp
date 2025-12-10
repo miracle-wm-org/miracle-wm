@@ -118,7 +118,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
         ModuleInstancePtr { module_context },
         provided_functions,
         handle,
-        path });
+        name });
 
     return PluginLoadResult {
         .success = true,
