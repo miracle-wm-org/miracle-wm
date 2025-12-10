@@ -807,11 +807,11 @@ extern "C"
         else
             built_in_animations = 0;
 
-        static thread_local std::string plugin_path;
+        static thread_local std::string plugin_name;
         if (std::holds_alternative<miracle::PluginAnimationDefinition>(def->data))
-            plugin_path = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_path;
+            plugin_name = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_name;
         else
-            plugin_path = "";
+            plugin_name = "";
 
         return {
             miracle::animateable_event_strings[index],
@@ -819,7 +819,7 @@ extern "C"
             static_cast<uint>(def->type),
             def->duration_seconds,
             built_in_animations,
-            plugin_path.c_str(),
+            plugin_name.c_str(),
             static_cast<void*>(def)
         };
     }
@@ -837,7 +837,7 @@ extern "C"
         switch (def.type)
         {
         case miracle::AnimationType::plugin:
-            def.data = miracle::PluginAnimationDefinition { definition->plugin_path };
+            def.data = miracle::PluginAnimationDefinition { definition->plugin_name };
             break;
         default:
             break;

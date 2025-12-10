@@ -41,20 +41,15 @@ PluginManager::PluginManager() :
 {
 }
 
-PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
+PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& name)
 {
     std::lock_guard lock(mutex);
-    for (auto const& module : loaded_modules)
+    auto const erased = std::erase_if(loaded_modules, [&name](auto const& module)
     {
-        if (module.path == path)
-        {
-            mir::log_info("Module at path %s is already loaded.", path.c_str());
-            return PluginLoadResult {
-                .success = true,
-                .handle = module.handle,
-            };
-        }
-    }
+        return module.name == name;
+    });
+    if (erased > 0)
+        mir::log_info("Module with name %s was already loaded, unloading previous instance.", name.c_str());
 
     // First, load the module.
     WasmEdge_ASTModuleContext* ast_module_context = nullptr;
@@ -80,7 +75,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
     }
 
     // Next, let's register the module context into the store by its name.
-    auto const module_name = WasmEdge_StringCreateByCString("mod");
+    auto const module_name = WasmEdge_StringCreateByCString(name.c_str());
     WasmEdge_ModuleInstanceContext* module_context = nullptr;
     r = WasmEdge_ExecutorRegister(executor_context.get(), &module_context, store_context.get(), ast_module_context, module_name);
     WasmEdge_StringDelete(module_name);
@@ -131,13 +126,32 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
     };
 }
 
+PluginHandle PluginManager::get_wasm_module(std::string const& name)
+{
+    std::lock_guard lock(mutex);
+    for (auto const& module : loaded_modules)
+    {
+        if (module.name == name)
+            return module.handle;
+    }
+
+    return 0;
+}
+
 bool PluginManager::unload_wasm_module(PluginHandle handle)
 {
+    std::lock_guard lock(mutex);
     auto const erased = std::erase_if(loaded_modules, [handle](auto const& module)
     {
         return module.handle == handle;
     });
     return erased > 0;
+}
+
+void PluginManager::unload_all()
+{
+    std::lock_guard lock(mutex);
+    loaded_modules.clear();
 }
 
 mir::geometry::Point PluginManager::add_points(mir::geometry::Point first, mir::geometry::Point second)

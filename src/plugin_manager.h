@@ -47,13 +47,24 @@ public:
     ///
     /// Callers may use the #PluginLoadResult::handle to unload the module later.
     ///
+    /// \param path The filesystem path to the WebAssembly module.
+    /// \param name The name of the module.
     /// \returns a load result.
-    PluginLoadResult load_wasm_module(std::string const& path);
+    PluginLoadResult load_wasm_module(std::string const& path, std::string const& name);
+
+    /// Get the WebAssembly module associated with \p name.
+    ///
+    /// \param name The name of the module.
+    /// \returns The plugin handle, or 0 if not found.
+    PluginHandle get_wasm_module(std::string const& name);
 
     /// Attempt to unload the WebAssembly module associated with \p handle.
     ///
     /// \returns `true` if the module was unloaded, `false` otherwise.
     bool unload_wasm_module(PluginHandle handle);
+
+    /// Unload all loaded WebAssembly modules.
+    void unload_all();
 
     /// Example function that adds two points together.
     ///
@@ -123,7 +134,7 @@ private:
         ModuleInstancePtr module_context;
         std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
         PluginHandle handle;
-        std::string path;
+        std::string name;
     };
 
     std::mutex mutex;

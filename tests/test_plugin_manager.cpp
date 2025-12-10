@@ -26,7 +26,7 @@ using miracle::PluginManager;
 TEST(PluginManagerTest, LoadInvalidPathFailsAndHasNoHandle)
 {
     PluginManager pm;
-    PluginLoadResult const res = pm.load_wasm_module("/definitely/not/a/real/module.wasm");
+    PluginLoadResult const res = pm.load_wasm_module("/definitely/not/a/real/module.wasm", "module");
 
     EXPECT_FALSE(res.success);
     EXPECT_EQ(res.handle, 0);

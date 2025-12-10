@@ -484,6 +484,33 @@ void read_includes(YAML::Node const& node, ParsingContext& context)
     context.result.config.includes = std::move(includes);
 }
 
+void read_plugins(YAML::Node const& node, ParsingContext& context)
+{
+    if (!node.IsSequence())
+    {
+        context.builder << "Expected list of plugins";
+        create_error(node, context);
+        return;
+    }
+
+    std::vector<miracle::PluginConfiguration> plugins;
+    for (auto const& plugin_node : node)
+    {
+        std::string path;
+        if (!try_parse_value(plugin_node, "path", path, context))
+            return;
+
+        std::string name;
+        if (!try_parse_value(plugin_node, "name", name, context))
+            return;
+        miracle::PluginConfiguration plugin_config;
+        plugin_config.path = path;
+        plugin_config.name = name;
+        plugins.push_back(plugin_config);
+    }
+    context.result.config.plugins = std::move(plugins);
+}
+
 void read_action_key(YAML::Node const& node, ParsingContext& context)
 {
     if (auto const modifier = try_parse_string_to_optional_value<std::optional<uint>>(node, try_parse_modifier, context))
@@ -876,21 +903,21 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
         case miracle::AnimationType::plugin:
         {
-            if (!animation_node["plugin_path"])
+            if (!animation_node["plugin_name"])
             {
                 context.builder << "Plugin animation definitions must have a 'plugin_name' key";
                 create_error(animation_node, context);
                 break;
             }
-            std::string plugin_path;
-            if (!try_parse_value(animation_node, "plugin_path", plugin_path, context))
+            std::string plugin_name;
+            if (!try_parse_value(animation_node, "plugin_name", plugin_name, context))
             {
                 context.builder << "Plugin animation definitions must have a valid 'plugin_name' key";
                 create_error(animation_node, context);
                 break;
             }
 
-            definition.data = miracle::PluginAnimationDefinition { plugin_path };
+            definition.data = miracle::PluginAnimationDefinition { plugin_name };
             success = true;
             break;
         }
@@ -1172,6 +1199,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
         YAML::Node config = YAML::LoadFile(path);
         if (config["includes"])
             read_includes(config["includes"], context);
+        if (config["plugins"])
+            read_plugins(config["plugins"], context);
         if (config["action_key"])
             read_action_key(config["action_key"], context);
         if (config["default_action_overrides"])
@@ -1269,6 +1298,20 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         for (auto const& include : *config.includes)
             out << include;
 
+        out << YAML::EndSeq;
+    }
+
+    // Save plugins
+    if (config.plugins.is_set())
+    {
+        out << YAML::Key << "plugins" << YAML::Value << YAML::BeginSeq;
+        for (auto const& plugin : *config.plugins)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "path" << YAML::Value << plugin.path;
+            out << YAML::Key << "name" << YAML::Value << plugin.name;
+            out << YAML::EndMap;
+        }
         out << YAML::EndSeq;
     }
 
@@ -1485,7 +1528,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                 out << YAML::EndSeq;
                 break;
             case AnimationType::plugin:
-                out << YAML::Key << "plugin_path" << YAML::Value << std::get<PluginAnimationDefinition>(def.data).plugin_path;
+                out << YAML::Key << "plugin_name" << YAML::Value << std::get<PluginAnimationDefinition>(def.data).plugin_name;
                 break;
             default:
                 break;

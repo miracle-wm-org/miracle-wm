@@ -754,7 +754,7 @@ extern "C"
         /// The path to the plugin that provides this animation.
         ///
         /// This is only set when #type is set to "plugin".
-        const char* plugin_path;
+        const char* plugin_name;
 
         /// Opaque pointer.
         void* _internal;
