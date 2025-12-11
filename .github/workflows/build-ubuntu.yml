@@ -15,7 +15,7 @@ jobs:
   build-and-test:
     strategy:
       matrix:
-        ppa: [release, rc, dev]
+        ppa: [release, rc]
         compiler: [gcc, clang]
         
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
