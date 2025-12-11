@@ -167,11 +167,13 @@ class PluginManager
 {
 public:
     PluginManager() = default;
-    PluginLoadResult load_wasm_module(std::string const&) { return PluginLoadResult {
+    PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
     }; }
-    /// bool unload_wasm_module(PluginHandle handle);
+    void unload_all() { }
+    PluginHandle get_wasm_module(std::string const&) { return 0; }
+    bool unload_wasm_module(PluginHandle) { return false; }
     mir::geometry::Point add_points(mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle,
