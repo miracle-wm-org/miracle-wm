@@ -31,7 +31,7 @@ namespace test
         void operator()(mir::Server& server) override { }
         void reload() override { }
         [[nodiscard]] std::string const& get_filename() const override { return filename; }
-        std::vector<PluginConfiguration> const& get_plugins() const { return plugins; }
+        std::vector<PluginConfiguration> const& get_plugins() const override { return plugins; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
         [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override
         {
