@@ -13,9 +13,6 @@ pkg_check_modules(MIRTEST mirtest REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 find_package(GTest REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
-option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
-
-set(ENABLE_PLUGIN_SYSTEM 1)
 
 set(SOURCES
     mock_command_controller.h
