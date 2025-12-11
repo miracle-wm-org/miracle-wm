@@ -1,4 +1,3 @@
-
 /**
 Copyright (C) 2025  Matthew Kosarek
 
@@ -1180,6 +1179,58 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(miracle_config_get_workspace_back_and_forth(&wrapper->config), false);
 
     // Clean up
+    miracle_config_free(load_result);
+    std::remove(temp_path);
+}
+
+TEST_F(CAPIWrapperTest, CanAddPlugins)
+{
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_config_add_plugin(&wrapper->config, &plugin);
+    EXPECT_EQ(miracle_config_get_plugin_count(&wrapper->config), 1);
+    auto got = miracle_config_get_plugin(&wrapper->config, 0);
+    EXPECT_STREQ(got.path, "/usr/lib/miracle/plugins/libsample.wasm");
+    EXPECT_STREQ(got.name, "sample");
+}
+
+TEST_F(CAPIWrapperTest, CanSetPlugins)
+{
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_config_add_plugin(&wrapper->config, &plugin);
+
+    plugin = { "/opt/plugins/libother.wasm", "other" };
+    miracle_config_set_plugin(&wrapper->config, 0, &plugin);
+
+    auto got = miracle_config_get_plugin(&wrapper->config, 0);
+    EXPECT_STREQ(got.path, "/opt/plugins/libother.wasm");
+    EXPECT_STREQ(got.name, "other");
+}
+
+TEST_F(CAPIWrapperTest, CanRemovePlugins)
+{
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_config_add_plugin(&wrapper->config, &plugin);
+    EXPECT_TRUE(miracle_config_remove_plugin(&wrapper->config, 0));
+    EXPECT_EQ(miracle_config_get_plugin_count(&wrapper->config), 0);
+}
+
+TEST_F(CAPIWrapperTest, PluginsRoundTrip)
+{
+    const char* temp_path = "/tmp/miracle_test_plugins.yaml";
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_config_add_plugin(&wrapper->config, &plugin);
+    plugin = { "/opt/plugins/libother.wasm", "other" };
+    miracle_config_add_plugin(&wrapper->config, &plugin);
+
+    auto save_result = miracle_config_save(temp_path, &wrapper->config);
+    ASSERT_TRUE(save_result->success);
+    miracle_save_result_free(save_result);
+
+    auto load_result = miracle_config_load(temp_path);
+    ASSERT_EQ(miracle_config_get_error_count(load_result), 0);
+    auto loaded = miracle_config_get_data(load_result);
+    ASSERT_EQ(miracle_config_get_plugin_count(loaded), 2);
+
     miracle_config_free(load_result);
     std::remove(temp_path);
 }

@@ -332,6 +332,51 @@ extern "C"
     /// \param index the index to modify
     void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index);
 
+    /// Defines a plugin entry in the configuration.
+    typedef struct
+    {
+        /// The path to the plugin shared object or directory.
+        const char* path;
+
+        /// The logical name of the plugin.
+        const char* name;
+    } miracle_plugin_t;
+
+    /// Retrieve the number of plugins configured.
+    ///
+    /// \param config the config
+    /// \returns the number of plugins
+    size_t miracle_config_get_plugin_count(const miracle_config_data_t* config);
+
+    /// Retrieve a plugin at a particular index.
+    ///
+    /// Use #miracle_config_get_plugin_count to get the number of plugins available.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the plugin entry
+    miracle_plugin_t miracle_config_get_plugin(const miracle_config_data_t* config, size_t index);
+
+    /// Add a new plugin entry.
+    ///
+    /// \param config the config
+    /// \param plugin the plugin to add
+    void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin);
+
+    /// Modify a plugin entry at a particular index.
+    ///
+    /// \param config the config
+    /// \param index the index to modify
+    /// \param plugin the new plugin value
+    void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin);
+
+    /// Remove a plugin entry at a particular index.
+    ///
+    /// \param config the config
+    /// \param index the index to remove
+    /// \returns `true` if removed successfully, otherwise `false`
+    bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index);
+
     /// Retrieve the primary modifier.
     ///
     /// The modifier will be one of those found by calling #miracle_config_get_modifier_option.

@@ -751,6 +751,49 @@ extern "C"
         return true;
     }
 
+    size_t miracle_config_get_plugin_count(const miracle_config_data_t* config)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        return data->plugins->size();
+    }
+
+    miracle_plugin_t miracle_config_get_plugin(const miracle_config_data_t* config, size_t index)
+    {
+        auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
+        if (index >= data->plugins->size())
+            return { nullptr, nullptr };
+
+        static thread_local std::string path_copy;
+        static thread_local std::string name_copy;
+        auto const& plugin = data->plugins.value[index];
+        path_copy = plugin.path;
+        name_copy = plugin.name;
+        return { path_copy.c_str(), name_copy.c_str() };
+    }
+
+    void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        data->plugins->push_back(miracle::PluginConfiguration { plugin->path, plugin->name });
+    }
+
+    void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->plugins->size())
+            return;
+        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path, plugin->name };
+    }
+
+    bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index)
+    {
+        auto data = static_cast<miracle::ConfigData*>(config->_internal);
+        if (index >= data->plugins->size())
+            return false;
+        data->plugins->erase(data->plugins->begin() + static_cast<std::vector<miracle::PluginConfiguration>::difference_type>(index));
+        return true;
+    }
+
     size_t miracle_config_get_key_command_count()
     {
         return static_cast<int>(miracle::DefaultKeyCommand::MAX);
