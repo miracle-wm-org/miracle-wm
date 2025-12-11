@@ -41,32 +41,32 @@ class BadConversion;
 
 namespace
 {
-static std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
+const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
     { miracle::AnimationType::built_in,
      true,
      0.2f,
-     { miracle::BuiltInAnimationDefinition {
+     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
     { miracle::AnimationType::built_in,
      true,
      0.25f,
-     { miracle::BuiltInAnimationDefinition {
+     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
             miracle::EaseFunction::linear,
         } } },
     { miracle::AnimationType::built_in,
      true,
      0.3f,
-     { miracle::BuiltInAnimationDefinition {
+     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
     { miracle::AnimationType::built_in,
      true,
      0.25f,
-     { miracle::BuiltInAnimationDefinition {
+     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
             miracle::EaseFunction::ease_out_sine,
         } } }
@@ -123,7 +123,18 @@ std::optional<miracle::EaseFunction> from_string_ease_function(std::string const
     return std::nullopt;
 }
 
-std::optional<miracle::BultInAnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
+std::optional<miracle::AnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
+{
+    for (size_t i = 0; i < miracle::animation_type_strings.size(); i++)
+    {
+        if (miracle::animation_type_strings[i] == str)
+            return static_cast<miracle::AnimationType>(i);
+    }
+
+    return std::nullopt;
+}
+
+std::optional<miracle::BultInAnimationType> from_string_built_in_animation_type(std::string const& str, ParsingContext& context)
 {
     for (size_t i = 0; i < miracle::built_in_animation_type_strings.size(); i++)
     {
@@ -473,6 +484,33 @@ void read_includes(YAML::Node const& node, ParsingContext& context)
     context.result.config.includes = std::move(includes);
 }
 
+void read_plugins(YAML::Node const& node, ParsingContext& context)
+{
+    if (!node.IsSequence())
+    {
+        context.builder << "Expected list of plugins";
+        create_error(node, context);
+        return;
+    }
+
+    std::vector<miracle::PluginConfiguration> plugins;
+    for (auto const& plugin_node : node)
+    {
+        std::string path;
+        if (!try_parse_value(plugin_node, "path", path, context))
+            return;
+
+        std::string name;
+        if (!try_parse_value(plugin_node, "name", name, context))
+            return;
+        miracle::PluginConfiguration plugin_config;
+        plugin_config.path = path;
+        plugin_config.name = name;
+        plugins.push_back(plugin_config);
+    }
+    context.result.config.plugins = std::move(plugins);
+}
+
 void read_action_key(YAML::Node const& node, ParsingContext& context)
 {
     if (auto const modifier = try_parse_string_to_optional_value<std::optional<uint>>(node, try_parse_modifier, context))
@@ -776,7 +814,7 @@ namespace
         auto const& type = try_parse_string_to_optional_value<std::optional<miracle::BultInAnimationType>>(
             node,
             "type",
-            from_string_animation_type,
+            from_string_built_in_animation_type,
             context);
         if (!type)
             return false;
@@ -803,37 +841,6 @@ namespace
 
 void read_animation_definitions(YAML::Node const& animation_node_list, ParsingContext& context)
 {
-    /// Animation definitions can be defined multiple ways.
-    ///
-    /// The first way allows users to define multiple animations running simulatenously:
-    ///
-    /// ```yaml
-    /// animations:
-    ///     - event: window_open
-    ///       duration: 1000
-    ///       list:
-    ///           - type: slide
-    ///             function: linear
-    ///             ...
-    /// ```
-    ///
-    /// This method empowers users to combine animations from multiple sources.
-    ///
-    /// The second way is the flat structure which was the original of the project:
-    ///
-    /// ```yaml
-    /// animations:
-    ///     - event: window_open
-    ///       duration: 1000
-    ///       type: slide
-    ///       function: linear
-    ///       ...
-    /// ```
-    ///
-    /// The latter has the limitation of only supporting a single entry.
-    ///
-    /// TODO: Deprecate the latter
-    /// TODO: Add sequential animations
     if (!animation_node_list.IsSequence())
     {
         context.builder << "Animation definitions must be a sequence";
@@ -843,41 +850,90 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
 
     for (auto const& animation_node : animation_node_list)
     {
-        auto const& event = try_parse_string_to_optional_value<std::optional<miracle::AnimateableEvent>>(
+        auto const event = try_parse_string_to_optional_value<std::optional<miracle::AnimateableEvent>>(
             animation_node,
             "event",
             from_string_animateable_event,
             context);
         if (!event)
-            continue;
-
-        std::vector<miracle::BuiltInAnimationDefinition> animations;
-
-        if (animation_node["list"])
         {
-            if (!animation_node["list"].IsSequence())
-                continue;
+            context.builder << "Animation definition is missing or has invalid 'event' key";
+            create_error(animation_node, context);
+            continue;
+        }
 
-            for (auto const built_in_animation_node : animation_node["list"])
+        auto const event_as_int = static_cast<size_t>(event.value());
+        auto const type = try_parse_string_to_optional_value<std::optional<miracle::AnimationType>>(
+            animation_node,
+            "type",
+            from_string_animation_type,
+            context);
+        if (!type)
+        {
+            context.builder << "Animation definition is missing or has invalid 'type' key";
+            create_error(animation_node, context);
+            continue;
+        }
+
+        miracle::AnimationDefinition definition;
+        definition.type = type.value();
+        bool success = false;
+        switch (type.value())
+        {
+        case miracle::AnimationType::built_in:
+        {
+            miracle::BuiltInAnimationList animations;
+            if (!animation_node["parts"].IsSequence())
+            {
+                context.builder << "Built-in animation definitions must have an 'animation_list' key with a list of animations";
+                create_error(animation_node, context);
+                break;
+            }
+
+            for (auto const built_in_animation_node : animation_node["parts"])
             {
                 miracle::BuiltInAnimationDefinition animation_def;
                 if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
                     animations.push_back(animation_def);
             }
+
+            definition.data = animations;
+            success = true;
+            break;
         }
-        else
+        case miracle::AnimationType::plugin:
         {
-            miracle::BuiltInAnimationDefinition animation_def;
-            if (try_read_built_in_animation_definition(animation_node, context, animation_def))
-                animations.push_back(animation_def);
-            else
-                continue;
+            if (!animation_node["plugin_name"])
+            {
+                context.builder << "Plugin animation definitions must have a 'plugin_name' key";
+                create_error(animation_node, context);
+                break;
+            }
+            std::string plugin_name;
+            if (!try_parse_value(animation_node, "plugin_name", plugin_name, context))
+            {
+                context.builder << "Plugin animation definitions must have a valid 'plugin_name' key";
+                create_error(animation_node, context);
+                break;
+            }
+
+            definition.data = miracle::PluginAnimationDefinition { plugin_name };
+            success = true;
+            break;
+        }
+        default:
+            context.builder << "Unsupported animation type in definition";
+            create_error(animation_node, context);
+            break;
         }
 
-        size_t const event_as_int = static_cast<size_t>(event.value());
-        context.result.config.animation_definitions.value[event_as_int].is_default = false;
-        try_parse_value(animation_node, "duration", context.result.config.animation_definitions.value[event_as_int].duration_seconds, context, true);
-        context.result.config.animation_definitions.value[event_as_int].animations = animations;
+        if (success)
+        {
+            definition.is_default = false;
+            // Parse the optional 'duration' value
+            try_parse_value(animation_node, "duration", definition.duration_seconds, context, true);
+            context.result.config.animation_definitions.value[event_as_int] = definition;
+        }
     }
 }
 
@@ -1143,6 +1199,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
         YAML::Node config = YAML::LoadFile(path);
         if (config["includes"])
             read_includes(config["includes"], context);
+        if (config["plugins"])
+            read_plugins(config["plugins"], context);
         if (config["action_key"])
             read_action_key(config["action_key"], context);
         if (config["default_action_overrides"])
@@ -1240,6 +1298,20 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         for (auto const& include : *config.includes)
             out << include;
 
+        out << YAML::EndSeq;
+    }
+
+    // Save plugins
+    if (config.plugins.is_set())
+    {
+        out << YAML::Key << "plugins" << YAML::Value << YAML::BeginSeq;
+        for (auto const& plugin : *config.plugins)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "path" << YAML::Value << plugin.path;
+            out << YAML::Key << "name" << YAML::Value << plugin.name;
+            out << YAML::EndMap;
+        }
         out << YAML::EndSeq;
     }
 
@@ -1428,28 +1500,39 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
             if (def.duration_seconds != 0.f)
                 out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
-            out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(def.type)];
+            out << YAML::Key << "type" << YAML::Value << animation_type_strings[static_cast<uint32_t>(def.type)];
 
-            out << YAML::Key << "list" << YAML::Value << YAML::BeginSeq;
-            for (auto const& animation : def.animations)
+            switch (def.type)
             {
-                out << YAML::BeginMap;
-                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
-                if (animation.c1 != 0.f)
-                    out << YAML::Key << "c1" << YAML::Value << animation.c1;
-                if (animation.c2 != 0.f)
-                    out << YAML::Key << "c2" << YAML::Value << animation.c2;
-                if (animation.c3 != 0.f)
-                    out << YAML::Key << "c3" << YAML::Value << animation.c3;
-                if (animation.c4 != 0.f)
-                    out << YAML::Key << "c4" << YAML::Value << animation.c4;
-                if (animation.n1 != 0.f)
-                    out << YAML::Key << "n1" << YAML::Value << animation.n1;
-                if (animation.d1 != 0.f)
-                    out << YAML::Key << "d1" << YAML::Value << animation.d1;
-                out << YAML::EndMap;
+            case AnimationType::built_in:
+                out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
+                for (auto const& animation : std::get<BuiltInAnimationList>(def.data))
+                {
+                    out << YAML::BeginMap;
+                    out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
+                    out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
+                    if (animation.c1 != 0.f)
+                        out << YAML::Key << "c1" << YAML::Value << animation.c1;
+                    if (animation.c2 != 0.f)
+                        out << YAML::Key << "c2" << YAML::Value << animation.c2;
+                    if (animation.c3 != 0.f)
+                        out << YAML::Key << "c3" << YAML::Value << animation.c3;
+                    if (animation.c4 != 0.f)
+                        out << YAML::Key << "c4" << YAML::Value << animation.c4;
+                    if (animation.n1 != 0.f)
+                        out << YAML::Key << "n1" << YAML::Value << animation.n1;
+                    if (animation.d1 != 0.f)
+                        out << YAML::Key << "d1" << YAML::Value << animation.d1;
+                    out << YAML::EndMap;
+                }
+                out << YAML::EndSeq;
+                break;
+            case AnimationType::plugin:
+                out << YAML::Key << "plugin_name" << YAML::Value << std::get<PluginAnimationDefinition>(def.data).plugin_name;
+                break;
+            default:
+                break;
             }
-            out << YAML::EndSeq;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;

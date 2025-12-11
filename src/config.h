@@ -53,6 +53,7 @@ public:
     virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
+    [[nodiscard]] virtual std::vector<PluginConfiguration> const& get_plugins() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
@@ -102,6 +103,7 @@ public:
     void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
+    [[nodiscard]] std::vector<PluginConfiguration> const& get_plugins() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;

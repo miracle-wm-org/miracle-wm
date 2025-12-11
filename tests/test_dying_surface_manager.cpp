@@ -26,8 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_surface_stack.h"
-#include "mock_window_controller.h"
-#include "passthrough_server_action_queue.h"
 
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -42,12 +40,13 @@ public:
         surface_stack(std::make_shared<test::MockSurfaceStack>()),
         compositor_state(std::make_shared<CompositorState>()),
         config(std::make_shared<test::MockConfig>()),
-        animator(std::make_shared<Animator>(std::make_shared<PassthroughServerActionQueue>())),
+        animator(std::make_shared<Animator>()),
         dying_surface_manager(
             surface_stack,
             compositor_state,
             config,
-            animator)
+            animator,
+            std::make_shared<PluginManager>())
     {
     }
 

@@ -20,6 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "output_factory_interface.h"
 
+namespace mir
+{
+class ServerActionQueue;
+}
+
 namespace miracle
 {
 class WorkspaceManager;
@@ -28,6 +33,7 @@ class Config;
 class WindowController;
 class Animator;
 class DisplayConfig;
+class PluginManager;
 
 class MiralOutputFactory : public OutputFactoryInterface
 {
@@ -37,7 +43,9 @@ public:
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&,
-        std::shared_ptr<DisplayConfig> const& display_config);
+        std::shared_ptr<DisplayConfig> const& display_config,
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<PluginManager> const& plugin_manager);
     std::shared_ptr<OutputInterface> create(
         std::string name,
         int id,
@@ -49,6 +57,8 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<DisplayConfig> display_config;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<PluginManager> plugin_manager;
 };
 
 }

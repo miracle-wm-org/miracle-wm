@@ -42,6 +42,7 @@ namespace test
 
         MOCK_METHOD(void, reload, (), (override));
         MOCK_METHOD(std::string const&, get_filename, (), (const, override));
+        MOCK_METHOD(std::vector<PluginConfiguration> const&, get_plugins, (), (const, override));
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
         MOCK_METHOD(CustomKeyCommand const*, matches_custom_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers), (const, override));
         MOCK_METHOD(bool, matches_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f), (const, override));

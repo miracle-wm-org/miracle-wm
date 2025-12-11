@@ -25,76 +25,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-namespace
-{
-class RawSurfaceAnimation final : public MultiBuiltInAnimation
-{
-public:
-    RawSurfaceAnimation(
-        std::shared_ptr<CompositorState> const& state,
-        std::shared_ptr<mir::scene::Surface> const& surface,
-        AnimationHandle const& handle,
-        AnimationDefinition const& definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        glm::mat4 const& transform,
-        glm::mat4 const& workspace_transform,
-        mir::geometry::Rectangle const& output_area,
-        std::function<void()> const& on_finish) :
-        MultiBuiltInAnimation(handle, definition, from, to, 1.f, 0.f),
-        compositor_state(state),
-        surface_(surface),
-        on_finish(on_finish)
-    {
-        id = compositor_state->render_data_manager()->add(
-            { .surface = surface.get(),
-                .needs_outline = true,
-                .is_focused = false,
-                .transform = transform,
-                .workspace_transform = workspace_transform,
-                .output_area = output_area });
-    }
-
-    ~RawSurfaceAnimation() override
-    {
-        compositor_state->render_data_manager()->remove(id);
-    }
-
-    void on_tick(AnimationFrameResult const& result) override
-    {
-        if (result.transform)
-        {
-            compositor_state->render_data_manager()->transform_change(id, result.transform.value());
-            surface_->set_transformation(result.transform.value());
-        }
-
-        if (result.opacity)
-        {
-            compositor_state->render_data_manager()->alpha_change(id, result.opacity.value());
-            surface_->set_alpha(result.opacity.value());
-        }
-
-        if (result.is_complete)
-            on_finish();
-    }
-
-private:
-    RenderDataManagerId id;
-    std::shared_ptr<CompositorState> compositor_state;
-    std::shared_ptr<mir::scene::Surface> surface_;
-    std::function<void()> on_finish;
-};
-}
-
 DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
-    animator(animator)
+    animator(animator),
+    plugin_manager(plugin_manager)
 {
 }
 
@@ -109,21 +50,41 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
     auto const output_area = container->get_output()->get_area();
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
-    auto const raw_surface_animation = std::make_shared<RawSurfaceAnimation>(
-        compositor_state,
-        animating_surface,
-        animator->register_animateable(),
-        config->get_animation_definition(AnimateableEvent::window_close),
-        container->get_visible_area(),
-        geom::Rectangle {},
-        container->get_transform(),
-        container->get_output_transform() * container->get_workspace_transform(),
-        output_area,
-        [surface_stack = surface_stack, animating_surface = animating_surface]
-    {
-        surface_stack->remove_surface(animating_surface);
-    });
+    auto const handle = animator->register_animateable();
+    auto const id = compositor_state->render_data_manager()->add(
+        { .surface = surface.get(),
+            .needs_outline = true,
+            .is_focused = false,
+            .transform = container->get_transform(),
+            .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
+            .output_area = output_area });
 
     surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
-    animator->append(raw_surface_animation);
+    animator->append(Animation(
+        handle,
+        config->get_animation_definition(AnimateableEvent::window_close),
+        AnimationData {
+            container->get_visible_area(),
+            geom::Rectangle {},
+            1, 0 },
+        [compositor_state = compositor_state, animating_surface, id = id](AnimationFrameResult const& result)
+    {
+        if (result.transform)
+        {
+            compositor_state->render_data_manager()->transform_change(id, result.transform.value());
+            animating_surface->set_transformation(result.transform.value());
+        }
+
+        if (result.opacity)
+        {
+            compositor_state->render_data_manager()->alpha_change(id, result.opacity.value());
+            animating_surface->set_alpha(result.opacity.value());
+        }
+
+        if (result.is_complete)
+        {
+            compositor_state->render_data_manager()->remove(id);
+            compositor_state->render_data_manager()->remove(id);
+        }
+    }, plugin_manager));
 }

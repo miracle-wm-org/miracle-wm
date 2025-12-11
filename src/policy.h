@@ -122,6 +122,7 @@ private:
     std::shared_ptr<OutputListenerMultiplexer> output_listener;
     std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
@@ -143,7 +144,6 @@ private:
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::unique_ptr<MagnifierWrapper> magnifier;
-    std::unique_ptr<PluginManager> plugin_manager;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

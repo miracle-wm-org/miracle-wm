@@ -175,8 +175,41 @@ extern "C"
     miracle_config_option_t miracle_config_get_keyboard_actions_option(uint i);
     uint miracle_config_get_built_in_key_command_options_count();
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
+
+    /// Retrieve the number of builtanimation type options.
+    ///
+    /// Each built-in animation type option may be retrieved with
+    /// #miracle_config_get_animation_type_option.
+    ///
+    /// \returns the number of animation type options
     uint miracle_config_get_animation_type_options_count();
+
+    /// Retrieve an animation type option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_animation_type_options_count
+    /// results in undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
     miracle_config_option_t miracle_config_get_animation_type_option(uint i);
+
+    /// Retrieve the number of built-in animation type options.
+    ///
+    /// Each built-in animation type option may be retrieved with
+    /// #miracle_config_get_built_in_animation_type_option.
+    ///
+    /// \returns the number of built-in animation type options
+    uint miracle_config_get_built_in_animation_type_options_count();
+
+    /// Retrieve a built-in animation type option at a particular index.
+    ///
+    /// Providing an index greater than #miracle_config_get_built_in_animation_type_options_count
+    /// results in undefined behavior.
+    ///
+    /// \param i the provided index
+    /// \returns the option at the provided index
+    miracle_config_option_t miracle_config_get_built_in_animation_type_option(uint i);
+
     uint miracle_config_get_ease_function_options_count();
     miracle_config_option_t miracle_config_get_ease_function_option(uint i);
     uint miracle_config_get_layout_options_count();
@@ -298,6 +331,51 @@ extern "C"
     /// \param value the value to set
     /// \param index the index to modify
     void miracle_config_set_include(const miracle_config_data_t* config, const char* value, size_t index);
+
+    /// Defines a plugin entry in the configuration.
+    typedef struct
+    {
+        /// The path to the plugin shared object or directory.
+        const char* path;
+
+        /// The logical name of the plugin.
+        const char* name;
+    } miracle_plugin_t;
+
+    /// Retrieve the number of plugins configured.
+    ///
+    /// \param config the config
+    /// \returns the number of plugins
+    size_t miracle_config_get_plugin_count(const miracle_config_data_t* config);
+
+    /// Retrieve a plugin at a particular index.
+    ///
+    /// Use #miracle_config_get_plugin_count to get the number of plugins available.
+    ///
+    /// \param config the config
+    /// \param index the index
+    /// \returns the plugin entry
+    miracle_plugin_t miracle_config_get_plugin(const miracle_config_data_t* config, size_t index);
+
+    /// Add a new plugin entry.
+    ///
+    /// \param config the config
+    /// \param plugin the plugin to add
+    void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin);
+
+    /// Modify a plugin entry at a particular index.
+    ///
+    /// \param config the config
+    /// \param index the index to modify
+    /// \param plugin the new plugin value
+    void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin);
+
+    /// Remove a plugin entry at a particular index.
+    ///
+    /// \param config the config
+    /// \param index the index to remove
+    /// \returns `true` if removed successfully, otherwise `false`
+    bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index);
 
     /// Retrieve the primary modifier.
     ///
@@ -697,18 +775,31 @@ extern "C"
         /// If `true`, this event has not been altered from its default yet.
         bool is_default;
 
+        /// The type of the animation.
+        ///
+        /// Use #miracle_config_get_animation_type_options_count to get the available
+        /// animation types.
+        uint type;
+
         /// The duration of the animation in seconds.
         float duration_seconds;
 
         /// The number of animations that are run concurrently when this event happens.
         ///
+        /// This is only set when #type is set to "built_in".
+        ///
         /// Each animateable event is built from a number of animations
         /// that run concurrent to each other. This enables the user to
         /// combine animations in fun and unique ways.
         ///
-        /// Use #miracle_animateable_event_get_animation to get an animation at a particular
+        /// Use #miracle_animateable_event_get_animation_part to get an animation at a particular
         /// index. There exists other methods to update each animation and add more as well.
-        size_t num_animations;
+        size_t num_parts;
+
+        /// The path to the plugin that provides this animation.
+        ///
+        /// This is only set when #type is set to "plugin".
+        const char* plugin_name;
 
         /// Opaque pointer.
         void* _internal;
@@ -802,7 +893,7 @@ extern "C"
     /// \param animateable_event the animateable event
     /// \param index the index
     /// \returns the animation at the index
-    miracle_built_in_animation_t miracle_animateable_event_get_animation(
+    miracle_built_in_animation_t miracle_animateable_event_get_animation_part(
         miracle_animateable_event_t* animateable_event,
         size_t index);
 

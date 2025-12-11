@@ -34,6 +34,7 @@ class CompositorState;
 class Container;
 class Config;
 class Animator;
+class PluginManager;
 
 /// When a [Container] is removed, we notify this service which
 /// manages any visual interaction on the container as it closes.
@@ -45,7 +46,8 @@ public:
         std::shared_ptr<mir::shell::SurfaceStack> const& surface_stack,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
-        std::shared_ptr<Animator> const& animator);
+        std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<PluginManager> const& plugin_manager);
 
     void animate_dying_surface(std::shared_ptr<Container> const& container);
 
@@ -54,6 +56,7 @@ private:
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<PluginManager> plugin_manager;
 };
 
 } // miracle

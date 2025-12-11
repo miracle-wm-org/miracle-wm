@@ -16,9 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define GLM_ENABLE_EXPERIMENTAL
+#define MIR_LOG_COMPONENT "animation"
 #include "animation.h"
 #include "geometry_helpers.h"
+#include "plugin_manager.h"
 #include <glm/gtx/transform.hpp>
+#include <mir/log.h>
 
 using namespace miracle;
 namespace geom = mir::geometry;
@@ -190,8 +193,17 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
 }
 }
 
-Animation::Animation(AnimationHandle handle) :
-    handle_ { handle }
+Animation::Animation(
+    AnimationHandle handle,
+    AnimationDefinition const& definition,
+    AnimationData&& data,
+    std::function<void(AnimationFrameResult const&)>&& on_tick,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
+    handle_ { handle },
+    definition_ { definition },
+    data_ { std::move(data) },
+    on_tick { std::move(on_tick) },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -210,72 +222,98 @@ bool Animation::is_being_removed() const
     return is_being_removed_;
 }
 
-BuiltInAnimation::BuiltInAnimation(
-    AnimationHandle handle,
-    float duration_seconds,
-    BuiltInAnimationDefinition definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    float opacity_start,
-    float opacity_end) :
-    Animation { handle },
-    duration_seconds { duration_seconds },
-    definition { definition },
-    from { from },
-    to { to },
-    opacity_start { opacity_start },
-    opacity_end { opacity_end }
-{
-}
-
-MultiBuiltInAnimation::MultiBuiltInAnimation(
-    AnimationHandle handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    float opacity_start,
-    float opacity_end) :
-    Animation(handle)
-{
-
-    for (auto const& def : definition.animations)
-    {
-        animations.emplace_back(
-            handle,
-            definition.duration_seconds,
-            def,
-            from,
-            to,
-            opacity_start,
-            opacity_end);
-    }
-}
-
-AnimationFrameResult MultiBuiltInAnimation::tick(float dt)
-{
-    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
-    for (auto& anim : animations)
-        result = anim.tick(dt).merge(result);
-    return result;
-}
-
-AnimationFrameResult BuiltInAnimation::tick(float dt)
+bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
-    float const t = (runtime_seconds / duration_seconds);
-
-    if (runtime_seconds >= duration_seconds)
+    float const t = (runtime_seconds / definition_.duration_seconds);
+    if (runtime_seconds >= definition_.duration_seconds)
     {
-        return { true, to, glm::mat4(1.f),
-            definition.type == BultInAnimationType::fade ? opacity_end : 1.f };
+        on_tick(finish());
+        return true;
     }
 
-    switch (definition.type)
+    switch (definition_.type)
+    {
+    case AnimationType::built_in:
+    {
+        AnimationFrameResult result;
+        for (auto const& builtin_def : std::get<BuiltInAnimationList>(definition_.data))
+            result = tick_built_in(builtin_def, t).merge(result);
+        on_tick(result);
+        if (result.is_complete)
+            on_tick(finish());
+        return result.is_complete;
+    }
+    case AnimationType::plugin:
+    {
+        auto const name = std::get<PluginAnimationDefinition>(definition_.data).plugin_name;
+        auto const handle = plugin_manager->get_wasm_module(name);
+        if (handle == 0)
+        {
+            mir::log_error("Animation plugin failed to load: %s", name.c_str());
+            on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
+            return true;
+        }
+
+        miracle_plugin_animation_frame_data_t frame_data;
+        frame_data.runtime_seconds = runtime_seconds;
+        frame_data.duration_seconds = definition_.duration_seconds;
+        frame_data.origin[0] = static_cast<float>(data_.area_start.top_left.x.as_int());
+        frame_data.origin[1] = static_cast<float>(data_.area_start.top_left.y.as_int());
+        frame_data.origin[2] = static_cast<float>(data_.area_start.size.width.as_value());
+        frame_data.origin[3] = static_cast<float>(data_.area_start.size.height.as_value());
+        frame_data.destination[0] = static_cast<float>(data_.area_end.top_left.x.as_int());
+        frame_data.destination[1] = static_cast<float>(data_.area_end.top_left.y.as_int());
+        frame_data.destination[2] = static_cast<float>(data_.area_end.size.width.as_value());
+        frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
+        frame_data.opacity_start = data_.opacity_start;
+        frame_data.opacity_end = data_.opacity_end;
+        auto const frame_result = plugin_manager->animate_frame(handle, frame_data);
+        AnimationFrameResult animation_result;
+        animation_result.is_complete = frame_result.completed != 0;
+        if (frame_result.has_area != 0)
+        {
+            animation_result.rectangle = geom::Rectangle {
+                geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
+                geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
+            };
+        }
+        if (frame_result.has_transform != 0)
+        {
+            glm::mat4 transform;
+            std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
+            animation_result.transform = transform;
+        }
+        else
+            animation_result.transform = glm::mat4(1.f);
+        if (frame_result.has_opacity != 0)
+        {
+            animation_result.opacity = frame_result.opacity;
+        }
+        on_tick(animation_result);
+        if (animation_result.is_complete)
+            on_tick(finish());
+        return animation_result.is_complete;
+    }
+    default:
+        on_tick(finish());
+        return true;
+    }
+}
+
+AnimationFrameResult Animation::finish() const
+{
+    return { true, data_.area_end, glm::mat4(1.f), data_.opacity_end };
+}
+
+AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t)
+{
+    switch (builtin_def.type)
     {
     case BultInAnimationType::slide:
     {
-        auto const p = ease(definition, t);
-        const auto [position, clip_area_size] = slide(p, from, to);
+        auto const p = ease(builtin_def, t);
+        const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
         auto const next = geom::Rectangle {
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
@@ -289,16 +327,15 @@ AnimationFrameResult BuiltInAnimation::tick(float dt)
     }
     case BultInAnimationType::grow:
     {
-        auto const p = ease(definition, t);
+        auto const p = ease(builtin_def, t);
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));
-        ;
         return { false, std::nullopt, transform, std::nullopt };
     }
     case BultInAnimationType::shrink:
     {
-        auto const p = 1.f - ease(definition, t);
+        auto const p = 1.f - ease(builtin_def, t);
         glm::mat4 const transform = glm::scale(
             glm::mat4(1.f),
             glm::vec3(p, p, 1.f));
@@ -306,12 +343,12 @@ AnimationFrameResult BuiltInAnimation::tick(float dt)
     }
     case BultInAnimationType::fade:
     {
-        auto const p = ease(definition, t);
-        float opacity_diff = opacity_end - opacity_start;
-        return { false, std::nullopt, std::nullopt, opacity_start + opacity_diff * p };
+        auto const p = ease(builtin_def, t);
+        float const opacity_diff = data_.opacity_end - data_.opacity_start;
+        return { false, std::nullopt, std::nullopt, data_.opacity_start + opacity_diff * p };
     }
     case BultInAnimationType::disabled:
     default:
-        return { true, to, std::nullopt, std::nullopt };
+        return { true, data_.area_end, std::nullopt, std::nullopt };
     }
 }

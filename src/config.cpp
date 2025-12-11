@@ -19,9 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include "config_observer.h"
-#include "file_helpers.h"
+#include "miracle/cpp/file_helpers.h"
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <glib-2.0/glib.h>
@@ -364,6 +363,11 @@ MagnifierConfiguration FilesystemConfiguration::magnifier() const
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
+}
+
+std::vector<PluginConfiguration> const& FilesystemConfiguration::get_plugins() const
+{
+    return *options.plugins;
 }
 
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const

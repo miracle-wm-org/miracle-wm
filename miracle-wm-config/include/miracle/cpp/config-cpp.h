@@ -194,6 +194,12 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
     bool operator==(const TouchpadConfiguration&) const = default;
 };
 
+struct MIRACLE_WM_CONFIG_API PluginConfiguration
+{
+    std::string path;
+    std::string name;
+};
+
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
     ConfigData();
@@ -225,6 +231,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth = true;
+    miracle::WithDefaultFlag<std::vector<PluginConfiguration>> plugins;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

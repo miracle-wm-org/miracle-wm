@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "math_helpers.h"
 #include "output_interface.h"
-#include "output_manager.h"
 #include "parent_container.h"
 #include "shell_component_container.h"
 #include "workspace_observer.h"
@@ -33,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
+#include <mir/server_action_queue.h>
 #include <miral/zone.h>
 
 using namespace miracle;
@@ -104,59 +104,6 @@ geom::Rectangle get_output_area(std::shared_ptr<OutputInterface> const& output)
 
     return output->get_area();
 }
-
-class WorkspaceAnimation : public MultiBuiltInAnimation
-{
-public:
-    WorkspaceAnimation(
-        AnimationHandle handle,
-        AnimationDefinition const& definition,
-        mir::geometry::Rectangle const& from,
-        mir::geometry::Rectangle const& to,
-        float opacity_start,
-        float opacity_end,
-        std::shared_ptr<Workspace> const& workspace,
-        std::shared_ptr<CompositorState> const& state,
-        bool is_hiding) :
-        MultiBuiltInAnimation(handle, definition, from, to, opacity_start, opacity_end),
-        workspace(workspace),
-        state(state),
-        is_hiding(is_hiding)
-    {
-    }
-
-    void on_tick(AnimationFrameResult const& asr) override
-    {
-        auto const lock = state->lock();
-        auto const locked = workspace.lock();
-        if (!locked)
-            return;
-
-        glm::mat4 matrix(1.f);
-        if (asr.transform)
-            matrix = matrix * asr.transform.value();
-        if (asr.rectangle)
-        {
-            matrix = glm::translate(
-                matrix,
-                glm::vec3(
-                    asr.rectangle->top_left.x.as_value(),
-                    asr.rectangle->top_left.y.as_value(),
-                    0));
-        }
-
-        float const alpha = asr.opacity ? *asr.opacity : 1.f;
-        locked->transform(matrix);
-        locked->alpha(alpha);
-        if (asr.is_complete)
-            locked->on_animation_end(is_hiding);
-    }
-
-private:
-    std::weak_ptr<Workspace> workspace;
-    std::shared_ptr<CompositorState> state;
-    bool is_hiding;
-};
 }
 
 Workspace::Workspace(
@@ -168,7 +115,9 @@ Workspace::Workspace(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<mir::ServerActionQueue> const& action_queue,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     output { output },
     id_ { id },
     num_ { num },
@@ -178,6 +127,8 @@ Workspace::Workspace(
     registry { registry },
     config { config },
     animator { animator },
+    server_action_queue { action_queue },
+    plugin_manager { plugin_manager },
     animation_handle { animator->register_animateable() }
 {
 }
@@ -332,18 +283,38 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
-    auto const animation = std::make_shared<WorkspaceAnimation>(
+    animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        geom::Rectangle(origin, area.size),
-        geom::Rectangle(geom::Point(0, 0), area.size),
-        0,
-        1,
-        shared_from_this(),
-        state,
-        false);
+        AnimationData(geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
+        [this](AnimationFrameResult const& asr)
+    {
+        server_action_queue->enqueue(this, [asr = asr, this]()
+        {
+            auto const locked = shared_from_this();
+            if (!locked)
+                return;
 
-    animator->append(animation);
+            glm::mat4 matrix(1.f);
+            if (asr.transform)
+                matrix = matrix * asr.transform.value();
+            if (asr.rectangle)
+            {
+                matrix = glm::translate(
+                    matrix,
+                    glm::vec3(
+                        asr.rectangle->top_left.x.as_value(),
+                        asr.rectangle->top_left.y.as_value(),
+                        0));
+            }
+
+            float const alpha = asr.opacity ? *asr.opacity : 1.f;
+            locked->transform(matrix);
+            locked->alpha(alpha);
+            if (asr.is_complete)
+                locked->on_animation_end(false);
+        });
+    }, plugin_manager));
     on_animation_start(false);
 }
 
@@ -356,18 +327,38 @@ void Workspace::hide(geom::Point const& end)
     }
 
     auto const area = root()->get_logical_area();
-    auto const animation = std::make_shared<WorkspaceAnimation>(
+    animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        geom::Rectangle(geom::Point(0, 0), area.size),
-        geom::Rectangle(end, area.size),
-        1,
-        0,
-        shared_from_this(),
-        state,
-        true);
+        AnimationData(geom::Rectangle(geom::Point(0, 0), area.size), geom::Rectangle(end, area.size), 1.f, 0.f),
+        [this](AnimationFrameResult const& asr)
+    {
+        server_action_queue->enqueue(this, [asr = asr, this]()
+        {
+            auto const locked = shared_from_this();
+            if (!locked)
+                return;
 
-    animator->append(animation);
+            glm::mat4 matrix(1.f);
+            if (asr.transform)
+                matrix = matrix * asr.transform.value();
+            if (asr.rectangle)
+            {
+                matrix = glm::translate(
+                    matrix,
+                    glm::vec3(
+                        asr.rectangle->top_left.x.as_value(),
+                        asr.rectangle->top_left.y.as_value(),
+                        0));
+            }
+
+            float const alpha = asr.opacity ? *asr.opacity : 1.f;
+            locked->transform(matrix);
+            locked->alpha(alpha);
+            if (asr.is_complete)
+                locked->on_animation_end(true);
+        });
+    }, plugin_manager));
     on_animation_start(true);
 }
 
