@@ -79,4 +79,45 @@ target_link_libraries(miracle-wm-tests
 
 target_compile_definitions(miracle-wm-tests PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
 
+# Precompiled headers for faster test compilation
+# Note: Can't reuse from implementation due to C++20 vs C++23 difference
+target_precompile_headers(miracle-wm-tests PRIVATE
+        # C++ Standard Library
+        <memory>
+        <vector>
+        <string>
+        <optional>
+        <map>
+        <algorithm>
+        <functional>
+        <filesystem>
+
+        # GLM (CRITICAL - template-heavy, used by almost all tests)
+        <glm/glm.hpp>
+
+        # MIRAL headers (frequently used)
+        <miral/window_manager_tools.h>
+        <miral/window.h>
+        <miral/window_info.h>
+        <miral/window_specification.h>
+        <miral/application_info.h>
+        <miral/output.h>
+        <miral/zone.h>
+
+        # Mir headers
+        <mir/geometry/rectangle.h>
+        <mir/geometry/point.h>
+        <mir/scene/surface.h>
+        <mir/scene/session.h>
+        <mir_toolkit/common.h>
+
+        # Third-party libraries
+        <nlohmann/json.hpp>
+        <yaml-cpp/yaml.h>
+
+        # GTest/GMock
+        <gtest/gtest.h>
+        <gmock/gmock.h>
+)
+
 enable_testing()
