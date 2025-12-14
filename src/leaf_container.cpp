@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_listener.h"
 #include "container_scope.h"
 #include "output_interface.h"
-#include "output_manager.h"
 #include "parent_container.h"
 #include "window_helpers.h"
 #include "workspace_interface.h"
@@ -34,7 +33,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/scene/session.h>
 #include <mir/scene/surface.h>
-#include <mir_toolkit/common.h>
 
 using namespace miracle;
 

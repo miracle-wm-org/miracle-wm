@@ -36,7 +36,6 @@ namespace miracle
 
 class Config;
 class CompositorState;
-class RenderDataManager;
 class OutputManager;
 
 /// A [LeafContainer] always contains a single window.

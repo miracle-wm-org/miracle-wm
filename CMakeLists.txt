@@ -46,6 +46,7 @@ option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
 option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(ENABLE_TESTS "Build unit tests" ON)
 
 if(COMPILING_AGAINST_DEV)
     set(COMPILING_AGAINST_DEV 1)
@@ -290,7 +291,9 @@ install(
 # ----------------------------------------
 # Subdirectories
 # ----------------------------------------
+if (ENABLE_TESTS)
 add_subdirectory(tests/)
+endif()
 add_subdirectory(miracle-wm-config/)
 add_subdirectory(protocols/)
 
