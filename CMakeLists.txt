@@ -46,6 +46,7 @@ option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
 option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(ENABLE_TESTS "Build unit tests" ON)
 
 if(COMPILING_AGAINST_DEV)
     set(COMPILING_AGAINST_DEV 1)
@@ -169,15 +170,33 @@ target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_D
 # Precompiled headers for speed
 # ----------------------------------------
 target_precompile_headers(miracle-wm-implementation PRIVATE
+        # C++ Standard Library (most frequently used)
+        <memory>
         <vector>
         <string>
-        <map>
-        <memory>
+        <mutex>
+        <algorithm>
         <optional>
+        <map>
         <utility>
+        <functional>
+
+        # Third-party libraries (frequent)
+        # NOTE: mir/log.h is NOT included here because it requires MIR_LOG_COMPONENT to be defined first
+        <miral/window_manager_tools.h>
+        <mir/geometry/rectangle.h>
+        <mir/geometry/point.h>
+        <mir/scene/surface.h>
+        <mir/scene/session.h>
+        <miral/window.h>
         <glm/glm.hpp>
         <nlohmann/json.hpp>
         <yaml-cpp/yaml.h>
+
+        # OpenGL
+        <GLES2/gl2.h>
+
+        # PCRE2
         <jpcre2.h>
         <pcre2.h>
 )
@@ -272,7 +291,9 @@ install(
 # ----------------------------------------
 # Subdirectories
 # ----------------------------------------
+if (ENABLE_TESTS)
 add_subdirectory(tests/)
+endif()
 add_subdirectory(miracle-wm-config/)
 add_subdirectory(protocols/)
 

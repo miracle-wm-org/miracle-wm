@@ -25,8 +25,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_observer.h"
 #include "workspace_observer.h"
 #include <mir/fd.h>
-#include <mir/main_loop.h>
 #include <vector>
+
+namespace mir
+{
+class MainLoop;
+}
 
 namespace miracle
 {

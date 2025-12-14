@@ -18,14 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WINDOW_HELPERS_H
 #define MIRACLEWM_WINDOW_HELPERS_H
 
-#include "container.h"
 #include <miral/window_info.h>
-#include <miral/window_manager_tools.h>
+#include <miral/window_specification.h>
 
 namespace miracle
 {
-class LeafContainer;
-
 namespace window_helpers
 {
     miral::WindowSpecification copy_from(miral::WindowInfo const&);
