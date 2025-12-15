@@ -569,14 +569,15 @@ void Renderer::draw(
             break;
         }
 
-        glm::vec4 const scissor = data.data.workspace_transform * glm::vec4(scissor_x, scissor_y, 0, 1);
+        glm::vec4 const scissor = display_transform * data.data.workspace_transform * glm::vec4(scissor_x, scissor_y, 0, 1);
+        glm::vec4 const size = display_transform * data.data.workspace_transform * glm::vec4(width_int(intersection->size), height_int(intersection->size), 0, 0);
 
         glEnable(GL_SCISSOR_TEST);
         glScissor(
             static_cast<GLint>(scissor.x * x_scale),
             static_cast<GLint>(scissor.y * y_scale),
-            static_cast<GLint>(width_int(intersection->size) * x_scale),
-            static_cast<GLint>(height_int(intersection->size) * y_scale));
+            static_cast<GLint>(size.x * x_scale),
+            static_cast<GLint>(size.y * y_scale));
     }
     auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
