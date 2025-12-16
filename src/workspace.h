@@ -55,6 +55,7 @@ public:
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
+    ~Workspace();
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;

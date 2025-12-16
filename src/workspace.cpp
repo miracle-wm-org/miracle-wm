@@ -133,6 +133,11 @@ Workspace::Workspace(
 {
 }
 
+Workspace::~Workspace()
+{
+    animator->remove_by_animation_handle(animation_handle);
+}
+
 std::shared_ptr<ParentContainer> Workspace::root() const
 {
     if (!root_)
@@ -283,37 +288,41 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
+    std::weak_ptr<Workspace> const that = shared_from_this();
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
         AnimationData(geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
-        [this](AnimationFrameResult const& asr)
+        [that = that](AnimationFrameResult const& asr)
     {
-        server_action_queue->enqueue(this, [asr = asr, this]()
+        if (auto const locked = that.lock())
         {
-            auto const locked = shared_from_this();
-            if (!locked)
-                return;
-
-            glm::mat4 matrix(1.f);
-            if (asr.transform)
-                matrix = matrix * asr.transform.value();
-            if (asr.rectangle)
+            locked->server_action_queue->enqueue(locked.get(), [asr = asr, that = that]()
             {
-                matrix = glm::translate(
-                    matrix,
-                    glm::vec3(
-                        asr.rectangle->top_left.x.as_value(),
-                        asr.rectangle->top_left.y.as_value(),
-                        0));
-            }
+                auto const locked = that.lock();
+                if (!locked)
+                    return;
 
-            float const alpha = asr.opacity ? *asr.opacity : 1.f;
-            locked->transform(matrix);
-            locked->alpha(alpha);
-            if (asr.is_complete)
-                locked->on_animation_end(false);
-        });
+                glm::mat4 matrix(1.f);
+                if (asr.transform)
+                    matrix = matrix * asr.transform.value();
+                if (asr.rectangle)
+                {
+                    matrix = glm::translate(
+                        matrix,
+                        glm::vec3(
+                            asr.rectangle->top_left.x.as_value(),
+                            asr.rectangle->top_left.y.as_value(),
+                            0));
+                }
+
+                float const alpha = asr.opacity ? *asr.opacity : 1.f;
+                locked->transform(matrix);
+                locked->alpha(alpha);
+                if (asr.is_complete)
+                    locked->on_animation_end(false);
+            });
+        }
     }, plugin_manager));
     on_animation_start(false);
 }
