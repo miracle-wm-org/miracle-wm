@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PLUGIN_H
 #define MIRACLE_WM_PLUGIN_H
 
+#include <mir_toolkit/common.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -36,6 +37,16 @@ extern "C"
         /// The y coordinate.
         int32_t y;
     } miracle_point_t;
+
+    /// A size with integer dimensions.
+    typedef struct
+    {
+        /// The width.
+        int32_t w;
+
+        /// The height.
+        int32_t h;
+    } miracle_size_t;
 
     typedef struct
     {
@@ -96,6 +107,96 @@ extern "C"
         float opacity;
     } miracle_plugin_animation_frame_result_t;
 
+    /// Describes the properties of an application.
+    ///
+    /// Plugin authors may use this information in relation to
+    typedef struct
+    {
+        /// The name of the application.
+        const char* application_name;
+    } miracle_application_info_t;
+
+    /// Describes the properties of a window.
+    ///
+    /// Plugin authors may use this information to decide on the placement of a window.
+    ///
+    /// Use #miracle_plugin_get_application to get the application from which this window
+    /// originated.
+    ///
+    /// Use #miracle_plugin_get_workspace to get the workspace of the window.
+    typedef struct
+    {
+        /// The type of this window.
+        MirWindowType window_type;
+
+        /// The state of the window.
+        MirWindowState state;
+
+        /// The position of the window.
+        miracle_point_t top_left;
+
+        /// The size of the window.
+        miracle_size_t size;
+
+        /// The title of the window.
+        const char* title;
+
+        /// The depth layer of the window.
+        MirDepthLayer depth_layer;
+    } miracle_window_info_t;
+
+    typedef struct
+    {
+        /// If set to `TRUE`, the placement is set and will override Miracle's internal
+        /// placement strategy.
+        int32_t is_set;
+
+        /// The top left position of the window.
+        ///
+        /// This value is only used if #is_set is `TRUE`.
+        miracle_point_t top_left;
+
+        /// The size of the window.
+        ///
+        /// This value is only used if #is_set is `TRUE`.
+        ///
+        /// This value may not be honored by the window itself, meaning that
+        /// it will be clipped by the compositor.
+        miracle_size_t size;
+
+        /// The depth layer of the window.
+        ///
+        /// Plugin authors are encouraged to use #miracle_window_info_t::depth_layer
+        /// unless they would like to force the window into a different depth for
+        /// whatever reason.
+        MirDepthLayer depth_layer;
+    } miracle_placement_t;
+
+    typedef struct
+    {
+
+    } miracle_workspace_t;
+
+    /// Describes an output.
+    typedef struct
+    {
+        /// The position of the output.
+        miracle_point_t position;
+
+        /// The size of the output.
+        miracle_size_t size;
+
+        /// The name of the output.
+        const char* name;
+    } miracle_output_t;
+
+    /// Given the \p window_info, retrieve the #miracle_application_info.
+    ///
+    /// \param window_info the window info
+    /// \returns the application info for the window
+    miracle_application_info_t miracle_plugin_get_application(miracle_window_info_t* window_info);
+
+    miracle_workspace_t miracle_plugin_get_workspace(miracle_window_info_t* window_info);
 #ifdef __cplusplus
 }
 #endif
