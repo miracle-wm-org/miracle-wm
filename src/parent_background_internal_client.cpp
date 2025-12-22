@@ -50,6 +50,7 @@ struct ParentBackgroundInternalClient::Impl
     void* shm_data = nullptr;
     size_t shm_size = 0;
 
+    mir::geometry::Rectangle rectangle;
     int width = 800;
     int height = 600;
 
@@ -59,6 +60,8 @@ struct ParentBackgroundInternalClient::Impl
 
     bool configured = false;
     std::weak_ptr<mir::scene::Session> session;
+
+    Impl(mir::geometry::Rectangle const& rect) : rectangle(rect), width(rect.size.width.as_int()), height(rect.size.height.as_int()) {}
 };
 
 namespace
@@ -94,9 +97,12 @@ namespace
     }
 }
 
-ParentBackgroundInternalClient::ParentBackgroundInternalClient() :
-    impl(std::make_unique<Impl>())
+ParentBackgroundInternalClient::ParentBackgroundInternalClient(mir::geometry::Rectangle const& rectangle) :
+    impl(std::make_unique<Impl>(rectangle))
 {
+    mir::log_info("ParentBackgroundInternalClient: Created with rectangle pos=(%d,%d) size=%dx%d",
+        rectangle.top_left.x.as_int(), rectangle.top_left.y.as_int(),
+        rectangle.size.width.as_int(), rectangle.size.height.as_int());
 }
 
 ParentBackgroundInternalClient::~ParentBackgroundInternalClient()

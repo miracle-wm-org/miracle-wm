@@ -35,6 +35,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/server_action_queue.h>
 #include <miral/zone.h>
 
+#include "shell_application_manager.h"
+
 using namespace miracle;
 
 namespace
@@ -243,7 +245,7 @@ std::shared_ptr<Container> Workspace::create_container(
         break;
     }
     case ContainerType::shell:
-        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller);
+        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
         break;
     default:
         mir::log_error("Unsupported window type: %d", (int)hint.container_type);

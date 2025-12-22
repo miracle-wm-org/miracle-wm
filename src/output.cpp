@@ -34,6 +34,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/window_info.h>
 #include <miral/zone.h>
 
+#include "shell_application_manager.h"
+
 using namespace miracle;
 namespace mg = mir::graphics;
 
@@ -132,6 +134,12 @@ AllocationHint Output::allocate_position(
     miral::WindowSpecification& requested_specification,
     AllocationHint hint)
 {
+    if (shell_application_manager->is_registered(app_info.application()))
+    {
+        hint.container_type = ContainerType::shell;
+        return hint;
+    }
+
     auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
     auto const is_attached = requested_specification.attached_edges().is_set();
     auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden

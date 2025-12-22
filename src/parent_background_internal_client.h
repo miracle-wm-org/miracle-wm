@@ -36,7 +36,7 @@ namespace miracle
 class ParentBackgroundInternalClient
 {
 public:
-    ParentBackgroundInternalClient();
+    ParentBackgroundInternalClient(mir::geometry::Rectangle const& rectangle);
     ~ParentBackgroundInternalClient();
 
     /// Called when the Wayland display connection is established.

@@ -30,7 +30,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <miral/internal_client.h>
 
+#include "auto_restarting_launcher.h"
+
 using namespace miracle;
+
+ParentContainer::ParentContainerBackgroundPositioner::ParentContainerBackgroundPositioner(ParentContainer* parent) : parent { parent } {}
+void ParentContainer::ParentContainerBackgroundPositioner::handle_ready(std::shared_ptr<Container> const& in)
+{
+    container = in;
+    in->set_logical_area(parent->get_logical_area(), false);
+}
+
+void ParentContainer::ParentContainerBackgroundPositioner::set_area(mir::geometry::Rectangle const& area)
+{
+    if (auto sh_container = container.lock())
+    {
+        sh_container->set_logical_area(area, false);
+    }
+}
 
 ParentContainer::ParentContainer(
     miral::InternalClientLauncher& internal_client_launcher,
@@ -63,7 +80,7 @@ ParentContainer::ParentContainer(
         // Start up the internal client that will display the background for this floating parent
         mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");
 
-        auto background_client = std::make_shared<ParentBackgroundInternalClient>();
+        auto background_client = std::make_shared<ParentBackgroundInternalClient>(logical_area);
 
         internal_client_launcher.launch(
             [background_client](wl_display* display)
@@ -72,15 +89,17 @@ ParentContainer::ParentContainer(
         },
             [this, background_client, shell_application_manager](std::weak_ptr<mir::scene::Session> const& session)
         {
-            (*background_client)(session);
-
             // Register the application with the shell application manager
             if (auto app = session.lock())
             {
                 background_app = app;
-                shell_application_manager->register_app(app, ShellApplicationType::parent_container_background);
+                auto const positioner = std::make_shared<ParentContainerBackgroundPositioner>(this);
+                background_positioner = positioner;
+                shell_application_manager->register_app(app, ShellApplicationType::parent_container_background, positioner);
                 mir::log_info("Registered parent background application with ShellApplicationManager");
             }
+
+            (*background_client)(session);
         });
     }
 }
@@ -270,6 +289,12 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     auto current_logical_area = get_logical_area();
     logical_area = target_rect;
     auto target_placement_area = get_logical_area();
+
+    if (auto const background_positioner_sh = background_positioner.lock())
+    {
+        background_positioner_sh->set_area(target_placement_area);
+    }
+
     std::vector<geom::Rectangle> pending_size_updates;
     pending_size_updates.reserve(container_list.size());
     if (scheme == LayoutScheme::horizontal)

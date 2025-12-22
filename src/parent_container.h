@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "layout_scheme.h"
+#include "shell_application_manager.h"
 #include "mir/geometry/forward.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
@@ -35,7 +36,6 @@ class LeafContainer;
 class Config;
 class CompositorState;
 class OutputManager;
-class ShellApplicationManager;
 
 /// A parent container used to define the layout of containers beneath it.
 class ParentContainer : public Container
@@ -147,6 +147,18 @@ public:
         size_t second_index);
 
 private:
+    class ParentContainerBackgroundPositioner : public ShellComponentDelegate
+    {
+    public:
+        explicit ParentContainerBackgroundPositioner(ParentContainer* parent);
+        void handle_ready(std::shared_ptr<Container> const& in) override;
+        void set_area(mir::geometry::Rectangle const& area);
+
+    private:
+        ParentContainer* parent;
+        std::weak_ptr<Container> container;
+    };
+
     std::vector<std::shared_ptr<Container>> container_list;
     std::weak_ptr<ParentContainer> parent;
     miral::InternalClientLauncher internal_client_launcher;
@@ -168,6 +180,7 @@ private:
 
     /// The background internal client application, if spawned
     std::optional<miral::Application> background_app;
+    std::weak_ptr<ParentContainerBackgroundPositioner> background_positioner;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();
