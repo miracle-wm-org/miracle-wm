@@ -21,9 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "layout_scheme.h"
 #include "mir/geometry/forward.h"
-#include "miral/window_specification.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
+#include <miral/internal_client.h>
+#include <miral/window_specification.h>
 
 namespace geom = mir::geometry;
 
@@ -34,12 +35,15 @@ class LeafContainer;
 class Config;
 class CompositorState;
 class OutputManager;
+class ShellApplicationManager;
 
 /// A parent container used to define the layout of containers beneath it.
 class ParentContainer : public Container
 {
 public:
     ParentContainer(
+        miral::InternalClientLauncher& internal_client_launcher,
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
@@ -145,6 +149,8 @@ public:
 private:
     std::vector<std::shared_ptr<Container>> container_list;
     std::weak_ptr<ParentContainer> parent;
+    miral::InternalClientLauncher internal_client_launcher;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
@@ -159,6 +165,9 @@ private:
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
     bool is_shown = false;
     std::shared_ptr<LeafContainer> pending_node;
+
+    /// The background internal client application, if spawned
+    std::optional<miral::Application> background_app;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();

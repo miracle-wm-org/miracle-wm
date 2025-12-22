@@ -22,14 +22,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
+#include "parent_background_internal_client.h"
+#include "shell_application_manager.h"
 #include "tiling_algorithms.h"
 #include "workspace_interface.h"
 #include <cmath>
 #include <mir/log.h>
+#include <miral/internal_client.h>
 
 using namespace miracle;
 
 ParentContainer::ParentContainer(
+    miral::InternalClientLauncher& internal_client_launcher,
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Config> const& config,
@@ -37,6 +42,8 @@ ParentContainer::ParentContainer(
     std::shared_ptr<WorkspaceInterface> const& workspace,
     std::shared_ptr<ParentContainer> const& parent,
     bool is_anchored) :
+    internal_client_launcher { internal_client_launcher },
+    shell_application_manager { shell_application_manager },
     state { state },
     window_controller { window_controller },
     config { config },
@@ -50,6 +57,32 @@ ParentContainer::ParentContainer(
     // of them. Reserving at least 4 spots is a relatively safe
     // optimization.
     container_list.reserve(4);
+
+    if (!parent && !is_anchored)
+    {
+        // Start up the internal client that will display the background for this floating parent
+        mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");
+
+        auto background_client = std::make_shared<ParentBackgroundInternalClient>();
+
+        internal_client_launcher.launch(
+            [background_client](wl_display* display)
+        {
+            (*background_client)(display);
+        },
+            [this, background_client, shell_application_manager](std::weak_ptr<mir::scene::Session> const& session)
+        {
+            (*background_client)(session);
+
+            // Register the application with the shell application manager
+            if (auto app = session.lock())
+            {
+                background_app = app;
+                shell_application_manager->register_app(app, ShellApplicationType::parent_container_background);
+                mir::log_info("Registered parent background application with ShellApplicationManager");
+            }
+        });
+    }
 }
 
 geom::Rectangle ParentContainer::get_area() const
@@ -212,6 +245,8 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     }
 
     auto new_parent_node = std::make_shared<ParentContainer>(
+        internal_client_launcher,
+        shell_application_manager,
         state,
         window_controller,
         config,

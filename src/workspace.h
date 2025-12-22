@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_interface.h"
 
 #include <memory>
+#include <miral/internal_client.h>
 #include <miral/window_manager_tools.h>
 
 namespace miracle
@@ -33,6 +34,7 @@ class CompositorState;
 class WorkspaceObserverRegistrar;
 class Animator;
 class PluginManager;
+class ShellApplicationManager;
 
 struct WorkspaceIdentifier
 {
@@ -44,6 +46,8 @@ class Workspace : public WorkspaceInterface, public std::enable_shared_from_this
 {
 public:
     Workspace(
+        miral::InternalClientLauncher& internal_client_launcher,
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<OutputInterface> const& output,
         uint32_t id,
         std::optional<int> num,
@@ -114,6 +118,8 @@ private:
 
     std::shared_ptr<ParentContainer> root() const;
 
+    mutable miral::InternalClientLauncher internal_client_launcher;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::weak_ptr<OutputInterface> output;
     uint32_t id_;
     std::optional<int> num_;

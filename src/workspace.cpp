@@ -107,6 +107,8 @@ geom::Rectangle get_output_area(std::shared_ptr<OutputInterface> const& output)
 }
 
 Workspace::Workspace(
+    miral::InternalClientLauncher& internal_client_launcher,
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<OutputInterface> const& output,
     uint32_t id,
     std::optional<int> num,
@@ -118,6 +120,8 @@ Workspace::Workspace(
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<mir::ServerActionQueue> const& action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
+    internal_client_launcher { internal_client_launcher },
+    shell_application_manager { shell_application_manager },
     output { output },
     id_ { id },
     num_ { num },
@@ -144,7 +148,15 @@ std::shared_ptr<ParentContainer> Workspace::root() const
     {
         auto mutable_ws = std::const_pointer_cast<Workspace>(shared_from_this());
         root_ = std::make_shared<ParentContainer>(
-            state, window_controller, config, get_output_area(output.lock()), mutable_ws, nullptr, true);
+            internal_client_launcher,
+            shell_application_manager,
+            state,
+            window_controller,
+            config,
+            get_output_area(output.lock()),
+            mutable_ws,
+            nullptr,
+            true);
     }
 
     return root_;
@@ -420,7 +432,15 @@ void Workspace::transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> c
 std::shared_ptr<ParentContainer> Workspace::create_floating_tree(mir::geometry::Rectangle const& area)
 {
     auto floating = std::make_shared<ParentContainer>(
-        state, window_controller, config, area, shared_from_this(), nullptr, false);
+        internal_client_launcher,
+        shell_application_manager,
+        state,
+        window_controller,
+        config,
+        area,
+        shared_from_this(),
+        nullptr,
+        false);
     floating_trees.push_back(floating);
     return floating;
 }
@@ -493,6 +513,8 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
             return {};
 
         auto after_root_lane = std::make_shared<ParentContainer>(
+            internal_client_launcher,
+            shell_application_manager,
             state,
             window_controller,
             config,

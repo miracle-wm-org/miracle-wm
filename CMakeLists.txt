@@ -119,6 +119,7 @@ add_library(miracle-wm-implementation STATIC
         src/window_helpers.cpp
         src/config.cpp
         src/output.cpp
+        src/parent_background_internal_client.cpp
         src/workspace_manager.cpp
         src/ipc_message_handler.cpp
         src/ipc_connection_manager.cpp
@@ -162,6 +163,7 @@ add_library(miracle-wm-implementation STATIC
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
         src/plugin_manager.cpp
+        src/shell_application_manager.cpp
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
@@ -236,6 +238,7 @@ target_link_libraries(miracle-wm-implementation
         PkgConfig::GLESv2
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-config
+        xdg-shell-protocol
 )
 
 if (ENABLE_PLUGIN_SYSTEM)

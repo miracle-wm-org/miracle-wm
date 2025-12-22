@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_manager.h"
 #include "parent_container.h"
 #include "plugin_manager.h"
+#include "shell_application_manager.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -163,6 +164,7 @@ Policy::Policy(
     miral::WindowManagerTools const& tools,
     mir::Server& server,
     miral::ExternalClientLauncher& external_client_launcher,
+    miral::InternalClientLauncher& internal_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
@@ -181,8 +183,11 @@ Policy::Policy(
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
+    shell_application_manager(std::make_shared<ShellApplicationManager>()),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
+            internal_client_launcher,
+            shell_application_manager,
             state,
             config,
             window_controller,

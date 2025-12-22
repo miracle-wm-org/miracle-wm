@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_OUTPUT_FACTORY_H
 
 #include "output_factory_interface.h"
+#include <miral/internal_client.h>
 
 namespace mir
 {
@@ -34,11 +35,14 @@ class WindowController;
 class Animator;
 class DisplayConfig;
 class PluginManager;
+class ShellApplicationManager;
 
 class MiralOutputFactory : public OutputFactoryInterface
 {
 public:
     MiralOutputFactory(
+        miral::InternalClientLauncher& internal_client_launcher,
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
@@ -52,6 +56,8 @@ public:
         mir::geometry::Rectangle area) override;
 
 private:
+    miral::InternalClientLauncher internal_client_launcher;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
