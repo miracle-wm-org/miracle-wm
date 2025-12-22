@@ -612,6 +612,17 @@ void ParentContainer::toggle_layout(bool cycle_thru_all)
     relayout();
 }
 
+void ParentContainer::raise_children()
+{
+    for (auto const& container : container_list)
+    {
+        if (auto const window = container->window())
+            window_controller->raise(*window);
+        else if (container->is_lane())
+            as_parent(container)->raise_children();
+    }
+}
+
 void ParentContainer::on_focus_gained()
 {
     if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
@@ -622,6 +633,11 @@ void ParentContainer::on_focus_gained()
                 window_controller->send_to_back(container->window().value());
         }
     }
+
+    if (auto const sh_parent = parent.lock())
+        sh_parent->on_focus_gained();
+    else if (!anchored())
+        raise_children();
 }
 
 void ParentContainer::on_focus_lost()
@@ -769,16 +785,15 @@ bool ParentContainer::move(Direction direction)
 
 bool ParentContainer::move_by(float dx, float dy)
 {
-    if (auto sh_parent = parent.lock())
+    if (auto const sh_parent = parent.lock())
         return sh_parent->move_by(dx, dy);
 
-    // Cannot move an anchored parent
     if (is_anchored)
         return false;
 
     auto area = logical_area;
-    area.top_left.x = geom::X { (float)area.top_left.x.as_int() + dx };
-    area.top_left.y = geom::Y { (float)area.top_left.y.as_int() + dy };
+    area.top_left.x = geom::X { static_cast<float>(area.top_left.x.as_int()) + dx };
+    area.top_left.y = geom::Y { static_cast<float>(area.top_left.y.as_int()) + dy };
     set_logical_area(area, false);
     commit_changes();
     return true;
@@ -791,6 +806,9 @@ bool ParentContainer::move_by(Direction direction, int pixels)
 
 bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
+    if (auto const sh_parent = parent.lock())
+        return sh_parent->move_to(x, y, with_animations);
+
     if (is_anchored)
         return false;
 

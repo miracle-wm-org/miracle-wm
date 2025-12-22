@@ -31,6 +31,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
+#include <miral/application.h>
+#include <miral/window.h>
 
 using namespace miracle;
 using namespace testing;
@@ -43,8 +45,9 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
-        geom::Rectangle const& area) :
-        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace, nullptr, true))
+        geom::Rectangle const& area,
+        bool is_anchored = true) :
+        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace, nullptr, is_anchored))
     {
     }
 
@@ -56,9 +59,9 @@ public:
 class ParentContainerTest : public Test
 {
 public:
-    [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area) const
+    [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area, bool is_anchored = true) const
     {
-        return { state, window_controller, config, area };
+        return ParentContainerData { state, window_controller, config, area, is_anchored };
     }
 
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
@@ -66,6 +69,37 @@ public:
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<test::MockWorkspace> workspace = std::make_shared<test::MockWorkspace>();
 };
+
+TEST_F(ParentContainerTest, WhenParentReceivesFocusThenChildrenAreRaised)
+{
+    // Arrange
+    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }), false);
+    std::shared_ptr<test::MockContainer> const child1 = std::make_shared<NiceMock<test::MockContainer>>();
+    std::shared_ptr<test::MockContainer> const child2 = std::make_shared<NiceMock<test::MockContainer>>();
+    parent_data.parent->graft_existing(child1, 0);
+    parent_data.parent->graft_existing(child2, 1);
+
+    auto const session = std::make_shared<testing::NiceMock<test::MockSession>>();
+    auto const surface = std::make_shared<testing::NiceMock<test::MockSurface>>();
+    miral::Application const app = session;
+    miral::Window window(app, surface);
+
+    ON_CALL(*child1, window())
+        .WillByDefault(Return(window));
+    ON_CALL(*child2, window())
+        .WillByDefault(Return(window));
+
+    // We're allowing the leak because GMock is mad for a reason that
+    // we don't currently care much about
+    Mock::AllowLeak(child1.get());
+    Mock::AllowLeak(child2.get());
+
+    // Expect
+    EXPECT_CALL(*window_controller, raise).Times(2);
+
+    // Act
+    parent_data.parent->on_focus_gained();
+}
 
 class ParentContainerSwapTest : public ParentContainerTest
 {
