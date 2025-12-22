@@ -151,15 +151,18 @@ private:
     geom::Rectangle logical_area;
     std::weak_ptr<WorkspaceInterface> workspace;
     LayoutScheme scheme = LayoutScheme::horizontal;
+
+    /// Whether this parent container is anchored to the workspace and cannot be moved.
+    /// This will only be `true` for the root container of a workspace.
     bool is_anchored = false;
     bool pinned_ = false;
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
     bool is_shown = false;
-
     std::shared_ptr<LeafContainer> pending_node;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();
+    void raise_children();
 };
 
 } // miracle
