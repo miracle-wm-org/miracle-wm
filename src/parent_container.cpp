@@ -34,18 +34,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+namespace
+{
+    geom::Rectangle get_background_area(geom::Rectangle const& area)
+    {
+        const int padding = 8;
+        return geom::Rectangle(
+            geom::Point(
+                area.top_left.x.as_int() - padding,
+                area.top_left.y.as_int() - padding),
+            geom::Size(
+                area.size.width.as_int() + 2 * padding,
+                area.size.height.as_int() + 2 * padding));
+    }
+};
+
 ParentContainer::ParentContainerBackgroundPositioner::ParentContainerBackgroundPositioner(ParentContainer* parent) : parent { parent } {}
 void ParentContainer::ParentContainerBackgroundPositioner::handle_ready(std::shared_ptr<Container> const& in)
 {
     container = in;
-    in->set_logical_area(parent->get_logical_area(), false);
+    in->set_logical_area(get_background_area(parent->get_logical_area()), false);
 }
 
 void ParentContainer::ParentContainerBackgroundPositioner::set_area(mir::geometry::Rectangle const& area)
 {
-    if (auto sh_container = container.lock())
+    if (auto const sh_container = container.lock())
     {
-        sh_container->set_logical_area(area, false);
+        sh_container->set_logical_area(get_background_area(area), false);
     }
 }
 
@@ -74,20 +89,52 @@ ParentContainer::ParentContainer(
     // of them. Reserving at least 4 spots is a relatively safe
     // optimization.
     container_list.reserve(4);
+    update_background_client_area();
+}
 
-    if (!parent && !is_anchored)
+ParentContainer::~ParentContainer()
+{
+    try_remove_background_client();
+}
+
+geom::Rectangle ParentContainer::get_area() const
+{
+    return logical_area;
+}
+
+void ParentContainer::try_remove_background_client()
+{
+    if (background_client)
+    {
+        background_client->stop();
+        background_client = nullptr;
+    }
+
+    if (background_app.has_value())
+    {
+        shell_application_manager->unregister_app(*background_app);
+        background_app.reset();
+    }
+
+    background_positioner.reset();
+}
+
+void ParentContainer::update_background_client_area()
+{
+    try_remove_background_client();
+    if (parent.expired() && !is_anchored)
     {
         // Start up the internal client that will display the background for this floating parent
         mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");
 
-        auto background_client = std::make_shared<ParentBackgroundInternalClient>(logical_area);
+        background_client = std::make_shared<ParentBackgroundInternalClient>(logical_area);
 
         internal_client_launcher.launch(
-            [background_client](wl_display* display)
+            [this](wl_display* display)
         {
             (*background_client)(display);
         },
-            [this, background_client, shell_application_manager](std::weak_ptr<mir::scene::Session> const& session)
+            [this](std::weak_ptr<mir::scene::Session> const& session)
         {
             // Register the application with the shell application manager
             if (auto app = session.lock())
@@ -102,11 +149,6 @@ ParentContainer::ParentContainer(
             (*background_client)(session);
         });
     }
-}
-
-geom::Rectangle ParentContainer::get_area() const
-{
-    return logical_area;
 }
 
 geom::Rectangle ParentContainer::get_logical_area() const
@@ -934,6 +976,7 @@ bool ParentContainer::matches(ContainerScope const&) const
 bool ParentContainer::set_anchored(bool anchor)
 {
     is_anchored = anchor;
+    update_background_client_area();
     return true;
 }
 

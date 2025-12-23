@@ -31,8 +31,9 @@ namespace geom = mir::geometry;
 
 namespace miracle
 {
+    class ParentBackgroundInternalClient;
 
-class LeafContainer;
+    class LeafContainer;
 class Config;
 class CompositorState;
 class OutputManager;
@@ -51,7 +52,7 @@ public:
         std::shared_ptr<WorkspaceInterface> const& workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
-    ~ParentContainer() override = default;
+    ~ParentContainer() override;
     virtual geom::Rectangle get_area() const;
     geom::Rectangle get_logical_area() const override;
     geom::Rectangle get_visible_area() const override;
@@ -179,12 +180,15 @@ private:
     std::shared_ptr<LeafContainer> pending_node;
 
     /// The background internal client application, if spawned
+    std::shared_ptr<ParentBackgroundInternalClient> background_client;
     std::optional<miral::Application> background_app;
     std::weak_ptr<ParentContainerBackgroundPositioner> background_positioner;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();
     void raise_children();
+    void update_background_client_area();
+    void try_remove_background_client();
 };
 
 } // miracle

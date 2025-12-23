@@ -57,6 +57,8 @@ public:
     /// \param radius Border radius in pixels
     void set_border_radius(float radius);
 
+    void stop();
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl;

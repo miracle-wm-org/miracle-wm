@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <sys/eventfd.h>
+#include <poll.h>
 
 namespace miracle
 {
@@ -61,7 +63,22 @@ struct ParentBackgroundInternalClient::Impl
     bool configured = false;
     std::weak_ptr<mir::scene::Session> session;
 
-    Impl(mir::geometry::Rectangle const& rect) : rectangle(rect), width(rect.size.width.as_int()), height(rect.size.height.as_int()) {}
+    int quit_eventfd = -1;
+
+    Impl(mir::geometry::Rectangle const& rect) : rectangle(rect), width(rect.size.width.as_int()), height(rect.size.height.as_int())
+    {
+        quit_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+        if (quit_eventfd < 0)
+        {
+            mir::log_error("Failed to create eventfd");
+        }
+    }
+
+    ~Impl()
+    {
+        if (quit_eventfd >= 0)
+            close(quit_eventfd);
+    }
 };
 
 namespace
@@ -208,10 +225,49 @@ void ParentBackgroundInternalClient::operator()(wl_display* display)
     // Commit to trigger configure
     wl_surface_commit(impl->surface);
 
-    // Run event loop
-    while (!should_quit && wl_display_dispatch(display) != -1)
+    // Run event loop with poll() to allow interruption via eventfd
+    int wl_fd = wl_display_get_fd(display);
+    struct pollfd fds[2];
+    fds[0].fd = wl_fd;
+    fds[0].events = POLLIN;
+    fds[1].fd = impl->quit_eventfd;
+    fds[1].events = POLLIN;
+
+    while (!should_quit)
     {
-        // Event loop continues until should_quit is set
+        // Flush outgoing requests
+        while (wl_display_prepare_read(display) != 0)
+            wl_display_dispatch_pending(display);
+
+        wl_display_flush(display);
+
+        // Wait for events on either Wayland or quit eventfd
+        int ret = poll(fds, 2, -1);
+        if (ret < 0)
+        {
+            wl_display_cancel_read(display);
+            mir::log_error("poll failed");
+            break;
+        }
+
+        // Check if quit was signaled
+        if (fds[1].revents & POLLIN)
+        {
+            wl_display_cancel_read(display);
+            mir::log_info("Quit signal received");
+            break;
+        }
+
+        // Read and dispatch Wayland events
+        if (fds[0].revents & POLLIN)
+        {
+            wl_display_read_events(display);
+            wl_display_dispatch_pending(display);
+        }
+        else
+        {
+            wl_display_cancel_read(display);
+        }
     }
 
     mir::log_info("ParentBackgroundInternalClient: Exiting event loop");
@@ -232,6 +288,21 @@ void ParentBackgroundInternalClient::set_gradient_colors(float top_color[4], flo
 void ParentBackgroundInternalClient::set_border_radius(float radius)
 {
     impl->border_radius = radius;
+}
+
+void ParentBackgroundInternalClient::stop()
+{
+    should_quit = true;
+
+    // Signal the eventfd to wake up the event loop
+    if (impl->quit_eventfd >= 0)
+    {
+        uint64_t value = 1;
+        if (write(impl->quit_eventfd, &value, sizeof(value)) != sizeof(value))
+        {
+            mir::log_error("Failed to write to quit_eventfd");
+        }
+    }
 }
 
 void ParentBackgroundInternalClient::registry_handle_global(
@@ -307,7 +378,39 @@ void ParentBackgroundInternalClient::xdg_toplevel_configure(
 {
     auto* client = static_cast<ParentBackgroundInternalClient*>(data);
 
-    if (width > 0 && height > 0)
+    if (width > 0 && height > 0 && client->impl->configured)
+    {
+        // Only resize if dimensions actually changed
+        if (client->impl->width != width || client->impl->height != height)
+        {
+            client->impl->width = width;
+            client->impl->height = height;
+            mir::log_info("Toplevel resizing to %dx%d", width, height);
+
+            // Clean up old buffer
+            if (client->impl->buffer)
+            {
+                wl_buffer_destroy(client->impl->buffer);
+                client->impl->buffer = nullptr;
+            }
+
+            if (client->impl->shm_data)
+            {
+                munmap(client->impl->shm_data, client->impl->shm_size);
+                client->impl->shm_data = nullptr;
+            }
+
+            // Create new buffer with new size
+            client->create_shm_buffer(width, height);
+            client->draw_gradient();
+            client->apply_rounded_corners();
+
+            // Attach and commit the new buffer
+            wl_surface_attach(client->impl->surface, client->impl->buffer, 0, 0);
+            wl_surface_commit(client->impl->surface);
+        }
+    }
+    else if (width > 0 && height > 0)
     {
         client->impl->width = width;
         client->impl->height = height;
@@ -396,22 +499,29 @@ void ParentBackgroundInternalClient::apply_rounded_corners()
     float radius = impl->border_radius;
 
     // Apply rounded corners to all four corners
-    auto apply_corner = [&](int cx, int cy, int x_start, int y_start, int x_dir, int y_dir)
+    // Only process pixels in the corner squares (radius x radius)
+    auto apply_corner = [&](int corner_x, int corner_y, bool is_left, bool is_top)
     {
         int radius_ceil = static_cast<int>(std::ceil(radius));
 
-        for (int dy = 0; dy < radius_ceil; ++dy)
+        // Define the corner square boundaries
+        int x_start = is_left ? 0 : impl->width - radius_ceil;
+        int x_end = is_left ? radius_ceil : impl->width;
+        int y_start = is_top ? 0 : impl->height - radius_ceil;
+        int y_end = is_top ? radius_ceil : impl->height;
+
+        // Center of the arc circle
+        float center_x = is_left ? radius : static_cast<float>(impl->width) - radius;
+        float center_y = is_top ? radius : static_cast<float>(impl->height) - radius;
+
+        for (int y = y_start; y < y_end; ++y)
         {
-            for (int dx = 0; dx < radius_ceil; ++dx)
+            for (int x = x_start; x < x_end; ++x)
             {
-                int x = x_start + dx * x_dir;
-                int y = y_start + dy * y_dir;
-
-                if (x < 0 || x >= impl->width || y < 0 || y >= impl->height)
-                    continue;
-
                 // Calculate distance from corner center
-                float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                float dx = static_cast<float>(x) + 0.5f - center_x;
+                float dy = static_cast<float>(y) + 0.5f - center_y;
+                float dist = std::sqrt(dx * dx + dy * dy);
 
                 // If outside the radius, make transparent
                 if (dist > radius)
@@ -432,16 +542,16 @@ void ParentBackgroundInternalClient::apply_rounded_corners()
     };
 
     // Top-left corner
-    apply_corner(0, 0, 0, 0, 1, 1);
+    apply_corner(0, 0, true, true);
 
     // Top-right corner
-    apply_corner(impl->width - 1, 0, impl->width - 1, 0, -1, 1);
+    apply_corner(impl->width - 1, 0, false, true);
 
     // Bottom-left corner
-    apply_corner(0, impl->height - 1, 0, impl->height - 1, 1, -1);
+    apply_corner(0, impl->height - 1, true, false);
 
     // Bottom-right corner
-    apply_corner(impl->width - 1, impl->height - 1, impl->width - 1, impl->height - 1, -1, -1);
+    apply_corner(impl->width - 1, impl->height - 1, false, false);
 }
 
 } // namespace miracle
