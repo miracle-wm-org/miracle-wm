@@ -40,7 +40,6 @@ using namespace miracle;
 namespace mg = mir::graphics;
 
 Output::Output(
-    miral::InternalClientLauncher& internal_client_launcher,
     std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::string name,
     int id,
@@ -52,7 +51,6 @@ Output::Output(
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
-    internal_client_launcher { internal_client_launcher },
     shell_application_manager { shell_application_manager },
     name_ { std::move(name) },
     id_ { id },
@@ -195,7 +193,6 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     auto const new_workspace = std::make_shared<Workspace>(
-        internal_client_launcher,
         shell_application_manager,
         shared_from_this(),
         data.id,

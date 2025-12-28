@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PARENT_BACKGROUND_INTERNAL_CLIENT_H
 #define MIRACLE_WM_PARENT_BACKGROUND_INTERNAL_CLIENT_H
 
+#include "shell_application_spawner.h"
 #include <memory>
 #include <wayland-client.h>
 
@@ -33,11 +34,11 @@ namespace miracle
 ///
 /// This client is designed to be used as a visual background for parent containers
 /// in the tiling window manager, providing a decorative element with smooth gradients.
-class ParentBackgroundInternalClient
+class ParentBackgroundInternalClient : public ShellApplication
 {
 public:
-    ParentBackgroundInternalClient(mir::geometry::Rectangle const& rectangle);
-    ~ParentBackgroundInternalClient();
+    ParentBackgroundInternalClient();
+    ~ParentBackgroundInternalClient() override;
 
     /// Called when the Wayland display connection is established.
     /// This is the main entry point that sets up the client and runs the event loop.
@@ -48,16 +49,9 @@ public:
     /// \param session The Mir session (weak pointer)
     void operator()(std::weak_ptr<mir::scene::Session> const& session);
 
-    /// Set the gradient colors
-    /// \param top_color Top color of the gradient (RGBA, values 0.0-1.0)
-    /// \param bottom_color Bottom color of the gradient (RGBA, values 0.0-1.0)
-    void set_gradient_colors(float top_color[4], float bottom_color[4]);
+    void stop() override;
 
-    /// Set the border radius
-    /// \param radius Border radius in pixels
-    void set_border_radius(float radius);
-
-    void stop();
+    miral::Application application() override;
 
 private:
     struct Impl;

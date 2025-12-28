@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "display_config.h"
 #include "output_interface.h"
-#include <miral/internal_client.h>
 
 namespace miracle
 {
@@ -31,7 +30,6 @@ class Output final : public OutputInterface, public std::enable_shared_from_this
 {
 public:
     explicit Output(
-        miral::InternalClientLauncher& internal_client_launcher,
         std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::string name,
         int id,
@@ -85,7 +83,6 @@ public:
 private:
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
-    miral::InternalClientLauncher internal_client_launcher;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::string name_;
     int id_;

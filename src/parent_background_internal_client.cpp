@@ -28,10 +28,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <cstring>
 #include <fcntl.h>
+#include <poll.h>
+#include <sys/eventfd.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#include <sys/eventfd.h>
-#include <poll.h>
 
 namespace miracle
 {
@@ -52,12 +52,11 @@ struct ParentBackgroundInternalClient::Impl
     void* shm_data = nullptr;
     size_t shm_size = 0;
 
-    mir::geometry::Rectangle rectangle;
     int width = 800;
     int height = 600;
 
-    float top_color[4] = { 0.2f, 0.3f, 0.5f, 1.0f }; // Bluish top
-    float bottom_color[4] = { 0.1f, 0.15f, 0.25f, 1.0f }; // Darker blue bottom
+    float top_color[4] = { 0.2f, 0.3f, 0.5f, 0.5f }; // Bluish top
+    float bottom_color[4] = { 0.1f, 0.15f, 0.25f, 0.5f }; // Darker blue bottom
     float border_radius = 8.0f;
 
     bool configured = false;
@@ -65,7 +64,7 @@ struct ParentBackgroundInternalClient::Impl
 
     int quit_eventfd = -1;
 
-    Impl(mir::geometry::Rectangle const& rect) : rectangle(rect), width(rect.size.width.as_int()), height(rect.size.height.as_int())
+    Impl()
     {
         quit_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         if (quit_eventfd < 0)
@@ -114,12 +113,9 @@ namespace
     }
 }
 
-ParentBackgroundInternalClient::ParentBackgroundInternalClient(mir::geometry::Rectangle const& rectangle) :
-    impl(std::make_unique<Impl>(rectangle))
+ParentBackgroundInternalClient::ParentBackgroundInternalClient() :
+    impl(std::make_unique<Impl>())
 {
-    mir::log_info("ParentBackgroundInternalClient: Created with rectangle pos=(%d,%d) size=%dx%d",
-        rectangle.top_left.x.as_int(), rectangle.top_left.y.as_int(),
-        rectangle.size.width.as_int(), rectangle.size.height.as_int());
 }
 
 ParentBackgroundInternalClient::~ParentBackgroundInternalClient()
@@ -279,17 +275,6 @@ void ParentBackgroundInternalClient::operator()(std::weak_ptr<mir::scene::Sessio
     mir::log_info("ParentBackgroundInternalClient: Session connected");
 }
 
-void ParentBackgroundInternalClient::set_gradient_colors(float top_color[4], float bottom_color[4])
-{
-    std::memcpy(impl->top_color, top_color, sizeof(float) * 4);
-    std::memcpy(impl->bottom_color, bottom_color, sizeof(float) * 4);
-}
-
-void ParentBackgroundInternalClient::set_border_radius(float radius)
-{
-    impl->border_radius = radius;
-}
-
 void ParentBackgroundInternalClient::stop()
 {
     should_quit = true;
@@ -303,6 +288,11 @@ void ParentBackgroundInternalClient::stop()
             mir::log_error("Failed to write to quit_eventfd");
         }
     }
+}
+
+miral::Application ParentBackgroundInternalClient::application()
+{
+    return impl->session.lock();
 }
 
 void ParentBackgroundInternalClient::registry_handle_global(

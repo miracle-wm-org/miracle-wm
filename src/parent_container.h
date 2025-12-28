@@ -20,20 +20,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "layout_scheme.h"
-#include "shell_application_manager.h"
 #include "mir/geometry/forward.h"
+#include "shell_application_manager.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
-#include <miral/internal_client.h>
 #include <miral/window_specification.h>
 
 namespace geom = mir::geometry;
 
 namespace miracle
 {
-    class ParentBackgroundInternalClient;
+class ParentBackgroundInternalClient;
 
-    class LeafContainer;
+class LeafContainer;
 class Config;
 class CompositorState;
 class OutputManager;
@@ -43,7 +42,6 @@ class ParentContainer : public Container
 {
 public:
     ParentContainer(
-        miral::InternalClientLauncher& internal_client_launcher,
         std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
@@ -148,7 +146,7 @@ public:
         size_t second_index);
 
 private:
-    class ParentContainerBackgroundPositioner : public ShellComponentDelegate
+    class ParentContainerBackgroundPositioner : public ShellApplicationDelegate
     {
     public:
         explicit ParentContainerBackgroundPositioner(ParentContainer* parent);
@@ -162,7 +160,6 @@ private:
 
     std::vector<std::shared_ptr<Container>> container_list;
     std::weak_ptr<ParentContainer> parent;
-    miral::InternalClientLauncher internal_client_launcher;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
@@ -179,10 +176,8 @@ private:
     bool is_shown = false;
     std::shared_ptr<LeafContainer> pending_node;
 
-    /// The background internal client application, if spawned
-    std::shared_ptr<ParentBackgroundInternalClient> background_client;
-    std::optional<miral::Application> background_app;
-    std::weak_ptr<ParentContainerBackgroundPositioner> background_positioner;
+    std::optional<ShellApplicationId> shell_application_id;
+    std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();

@@ -163,7 +163,9 @@ add_library(miracle-wm-implementation STATIC
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
         src/plugin_manager.cpp
-        src/shell_application_manager.cpp
+        src/shell_application_manager.cpp src/shell_application_manager.h
+        src/shell_application_spawner.h
+        src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})

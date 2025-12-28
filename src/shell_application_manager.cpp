@@ -18,27 +18,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "shell_application_manager.h"
 #include <algorithm>
 
-void miracle::ShellApplicationManager::register_app(miral::Application const& application, ShellApplicationType type, std::shared_ptr<ShellComponentDelegate> const& delegate)
+miracle::ShellApplicationManager::ShellApplicationManager(std::unique_ptr<ShellApplicationSpawner> spawner) :
+    spawner(std::move(spawner))
 {
-    switch (type)
-    {
-    case ShellApplicationType::parent_container_background:
-        registered_apps.push_back({
-            .type = type,
-            .application = application,
-            .delegate = std::move(delegate)
-        });
-        break;
-    }
 }
 
-void miracle::ShellApplicationManager::unregister_app(miral::Application const& application)
+miracle::ShellApplicationId miracle::ShellApplicationManager::spawn(ShellApplicationRole type, std::shared_ptr<ShellApplicationDelegate> const& delegate)
+{
+    registered_apps.push_back({ .role = type,
+        .id = next_id++,
+        .application = spawner->spawn(type),
+        .delegate = std::move(delegate) });
+    return registered_apps.back().id;
+}
+
+void miracle::ShellApplicationManager::stop(ShellApplicationId app_id)
 {
     std::erase_if(
         registered_apps,
-        [&application](auto const& app)
+        [&app_id](auto const& app)
     {
-        return app.application == application;
+        if (app.id == app_id)
+        {
+            app.application->stop();
+            return true;
+        }
+
+        return false;
     });
 }
 
@@ -47,15 +53,15 @@ bool miracle::ShellApplicationManager::is_registered(miral::Application const& a
     return std::ranges::any_of(registered_apps,
         [&application](auto const& app)
     {
-        return app.application == application;
+        return app.application->application() == application;
     });
 }
 
-std::shared_ptr<miracle::ShellComponentDelegate> miracle::ShellApplicationManager::delegate(miral::Application const& application) const
+std::shared_ptr<miracle::ShellApplicationDelegate> miracle::ShellApplicationManager::delegate(miral::Application const& application) const
 {
     for (auto const& app : registered_apps)
     {
-        if (app.application == application)
+        if (app.application->application() == application)
             return app.delegate;
     }
 

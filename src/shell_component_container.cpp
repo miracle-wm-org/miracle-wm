@@ -28,7 +28,7 @@ namespace miracle
 ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<ShellComponentDelegate>&& delegate) :
+    std::shared_ptr<ShellApplicationDelegate>&& delegate) :
     window_ { window_ },
     window_controller { window_controller },
     delegate { std::move(delegate) }

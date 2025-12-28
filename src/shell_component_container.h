@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class WindowController;
-class ShellComponentDelegate;
+class ShellApplicationDelegate;
 
 class ShellComponentContainer : public Container
 {
@@ -31,7 +31,7 @@ public:
     ShellComponentContainer(
         miral::Window const&,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<ShellComponentDelegate>&& delegate);
+        std::shared_ptr<ShellApplicationDelegate>&& delegate);
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 
@@ -103,7 +103,7 @@ public:
 private:
     miral::Window window_;
     std::shared_ptr<WindowController> window_controller;
-    std::shared_ptr<ShellComponentDelegate> delegate;
+    std::shared_ptr<ShellApplicationDelegate> delegate;
     uint32_t handle_ = 0;
     glm::mat4 transform_ = glm::mat4(1.f);
 };
