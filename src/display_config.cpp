@@ -26,10 +26,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <mir/graphics/display_configuration_policy.h>
 #include <mir/log.h>
+#include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
 #include <mutex>
+#include <sys/inotify.h>
 #include <yaml-cpp/yaml.h>
 
 namespace mg = mir::graphics;
@@ -545,6 +547,14 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 {
 }
 
+miracle::DisplayConfig::~DisplayConfig()
+{
+    if (main_loop)
+    {
+        main_loop->unregister_fd_handler(this);
+    }
+}
+
 void miracle::DisplayConfig::reload()
 {
     if (self->has_config_file() && self->try_load_from_file())
@@ -593,5 +603,60 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
             self->display_configuration_controller = server.the_display_configuration_controller();
         });
         return self;
+    });
+
+    server.add_init_callback([this, &server]
+    {
+        main_loop = server.the_main_loop();
+        if (main_loop != nullptr)
+        {
+            _watch(main_loop);
+        }
+        else
+        {
+            mir::log_warning("Cannot watch for configuration changes because main_loop is not set");
+        }
+    });
+}
+
+void miracle::DisplayConfig::_watch(std::shared_ptr<mir::MainLoop> const& main_loop)
+{
+    inotify_fd = mir::Fd { inotify_init1(IN_CLOEXEC) };
+    file_watch = inotify_add_watch(inotify_fd, self->path.c_str(), IN_MODIFY);
+
+    if (file_watch < 0)
+    {
+        mir::log_error("Unable to watch the config file.");
+        return;
+    }
+
+    main_loop->register_fd_handler({ inotify_fd }, this, [&](int file_fd)
+    {
+        size_t constexpr sizeof_inotify_event = sizeof(inotify_event);
+
+        alignas(inotify_event) char buffer[sizeof(inotify_event) + NAME_MAX + 1];
+
+        auto const readsize = read(inotify_fd, buffer, sizeof(buffer));
+        if (readsize < static_cast<ssize_t>(sizeof_inotify_event))
+        {
+            return;
+        }
+
+        auto raw_buffer = buffer;
+        while (raw_buffer != buffer + readsize)
+        {
+            auto& event = reinterpret_cast<inotify_event&>(*raw_buffer);
+            if (event.mask & IN_MODIFY)
+            {
+                mir::log_info("Display config file has been modified.Trying to reload...");
+                reload();
+            }
+            if (event.mask & IN_IGNORED)
+            {
+                // Some editors do not edit file in place, that causes watch to drop, re-adding it here
+                file_watch = inotify_add_watch(inotify_fd, self->path.c_str(), IN_MODIFY);
+            }
+            raw_buffer += sizeof_inotify_event + event.len;
+        }
     });
 }
