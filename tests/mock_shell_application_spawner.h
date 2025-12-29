@@ -15,14 +15,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_FEATURE_FLAGS_H
-#define MIRACLE_WM_FEATURE_FLAGS_H
+#ifndef MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H
+#define MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H
 
-#define MIRACLE_FEATURE_FLAG_MULTI_SELECT false
-#define MIRACLE_FEATURE_FLAG_DRAG_AND_DROP true
-namespace miracle::feature
+#include "shell_application_spawner.h"
+#include <gmock/gmock.h>
+
+namespace miracle::test
 {
-constexpr bool parent_container_wallpapers = false;
+class MockShellApplication : public ShellApplication
+{
+public:
+    MOCK_METHOD(void, stop, (), (override));
+    MOCK_METHOD(miral::Application, application, (), (override));
+};
+
+class MockShellApplicationSpawner : public ShellApplicationSpawner
+{
+public:
+    MOCK_METHOD(std::unique_ptr<ShellApplication>, spawn, (ShellApplicationRole role), (override));
+};
 }
 
-#endif // MIRACLE_WM_FEATURE_FLAGS_H
+#endif // MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H

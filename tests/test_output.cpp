@@ -18,10 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "mock_container.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output.h"
 #include "passthrough_server_action_queue.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "workspace_observer.h"
 #include <gmock/gmock.h>
@@ -43,9 +45,12 @@ protected:
         animator = std::make_shared<Animator>();
         state = std::make_shared<CompositorState>();
         config = std::make_shared<test::StubConfiguration>();
+        shell_application_manager = std::make_shared<ShellApplicationManager>(
+            std::make_unique<NiceMock<test::MockShellApplicationSpawner>>());
 
         // Create the Output
         output = std::make_shared<Output>(
+            shell_application_manager,
             "TestOutput",
             1, // id
             geom::Rectangle {
@@ -77,6 +82,7 @@ protected:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<test::StubConfiguration> config;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<WorkspaceInterface> actual_workspace;
 };
 

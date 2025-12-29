@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config_observer.h"
 #include "display_config.h"
 #include "output_listener.h"
+#include "parent_background_internal_client.h"
 #include "policy.h"
 #include "renderer.h"
 #include "version.h"
@@ -35,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/decorations.h>
 #include <miral/external_client.h>
 #include <miral/hover_click.h>
+#include <miral/internal_client.h>
 #include <miral/keymap.h>
 #include <miral/magnifier.h>
 #include <miral/runner.h>

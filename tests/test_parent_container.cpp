@@ -22,11 +22,13 @@
 #include "mock_container.h"
 #include "mock_output_factory.h"
 #include "mock_session.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -42,12 +44,13 @@ class ParentContainerData
 {
 public:
     ParentContainerData(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
         geom::Rectangle const& area,
         bool is_anchored = true) :
-        parent(std::make_shared<ParentContainer>(state, window_controller, config, area, workspace, nullptr, is_anchored))
+        parent(std::make_shared<ParentContainer>(shell_application_manager, state, window_controller, config, area, workspace, nullptr, is_anchored))
     {
     }
 
@@ -61,9 +64,11 @@ class ParentContainerTest : public Test
 public:
     [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area, bool is_anchored = true) const
     {
-        return ParentContainerData { state, window_controller, config, area, is_anchored };
+        return ParentContainerData { shell_application_manager, state, window_controller, config, area, is_anchored };
     }
 
+    std::shared_ptr<ShellApplicationManager> shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<NiceMock<test::MockShellApplicationSpawner>>());
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
