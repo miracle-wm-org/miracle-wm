@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container.h"
+#include "feature_flags.h"
 #include "leaf_container.h"
 #include "output_interface.h"
 #include "shell_application_manager.h"
 #include "tiling_algorithms.h"
 #include "workspace_interface.h"
-#include "feature_flags.h"
 #include <cmath>
 #include <mir/log.h>
 
