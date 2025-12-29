@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "shell_application_manager.h"
 #include "tiling_algorithms.h"
 #include "workspace_interface.h"
+#include "feature_flags.h"
 #include <cmath>
 #include <mir/log.h>
 
@@ -120,7 +121,7 @@ void ParentContainer::try_remove_background_client()
 void ParentContainer::update_background_client_area()
 {
     try_remove_background_client();
-    if (parent.expired() && !is_anchored)
+    if (parent.expired() && !is_anchored && feature::parent_container_wallpapers)
     {
         // Start up the internal client that will display the background for this floating parent
         mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");

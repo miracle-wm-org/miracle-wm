@@ -20,5 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIRACLE_FEATURE_FLAG_MULTI_SELECT false
 #define MIRACLE_FEATURE_FLAG_DRAG_AND_DROP true
+namespace miracle::feature
+{
+    constexpr bool parent_container_wallpapers = false;
+}
 
 #endif // MIRACLE_WM_FEATURE_FLAGS_H
