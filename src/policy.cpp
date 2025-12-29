@@ -163,7 +163,6 @@ Policy::Policy(
     miral::WindowManagerTools const& tools,
     mir::Server& server,
     miral::ExternalClientLauncher& external_client_launcher,
-    miral::InternalClientLauncher& internal_client_launcher,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<OutputListenerMultiplexer> const& output_listener,

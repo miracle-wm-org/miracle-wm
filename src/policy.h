@@ -44,7 +44,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miral
 {
 class ExternalClientLauncher;
-class InternalClientLauncher;
 }
 
 namespace miracle
@@ -70,7 +69,6 @@ public:
         miral::WindowManagerTools const&,
         mir::Server&,
         miral::ExternalClientLauncher& external_client_launcher,
-        miral::InternalClientLauncher& internal_client_launcher,
         std::shared_ptr<Config> const&,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<OutputListenerMultiplexer> const& output_listener,

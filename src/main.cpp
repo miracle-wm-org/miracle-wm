@@ -55,7 +55,6 @@ class PolicyLoader
 {
 public:
     PolicyLoader(ExternalClientLauncher& launcher,
-        InternalClientLauncher& internal_client_launcher,
         std::shared_ptr<miracle::Config> const& config,
         std::shared_ptr<miracle::CompositorState> const& compositor_state,
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
@@ -63,7 +62,6 @@ public:
         std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
         Magnifier const& magnifier) :
         launcher(launcher),
-        internal_client_launcher(internal_client_launcher),
         config(config),
         compositor_state(compositor_state),
         output_listener(output_listener),
@@ -77,14 +75,13 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, internal_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
 
 private:
     ExternalClientLauncher& launcher;
-    InternalClientLauncher& internal_client_launcher;
     std::shared_ptr<miracle::Config> config;
     std::shared_ptr<miracle::CompositorState> compositor_state;
     std::shared_ptr<WindowManagerOptions> options;
@@ -103,7 +100,6 @@ int main(int argc, char const* argv[])
     auto display_config = std::make_shared<miracle::DisplayConfig>();
 
     ExternalClientLauncher external_client_launcher;
-    InternalClientLauncher internal_client_launcher;
     InputConfiguration input_configuration;
     Magnifier magnifier;
     HoverClick hover_click = HoverClick::disabled();
@@ -249,9 +245,8 @@ int main(int argc, char const* argv[])
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, internal_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
             wayland_extensions,
-            internal_client_launcher,
             X11Support {}.default_to_enabled(),
             keymap,
             *display_config,

@@ -40,7 +40,8 @@ void miracle::ShellApplicationManager::stop(ShellApplicationId app_id)
     {
         if (app.id == app_id)
         {
-            app.application->stop();
+            if (app.application)
+                app.application->stop();
             return true;
         }
 

@@ -110,7 +110,10 @@ geom::Rectangle ParentContainer::get_area() const
 void ParentContainer::try_remove_background_client()
 {
     if (shell_application_id)
+    {
         shell_application_manager->stop(shell_application_id.value());
+        shell_application_id.reset();
+    }
     shell_application_positioner.reset();
 }
 

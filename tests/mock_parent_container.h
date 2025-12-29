@@ -14,6 +14,7 @@ namespace test
     {
     public:
         MockParentContainer(
+            std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
             std::shared_ptr<CompositorState> const& state,
             std::shared_ptr<WindowController> const& window_controller,
             std::shared_ptr<Config> const& config,
@@ -21,7 +22,7 @@ namespace test
             std::shared_ptr<WorkspaceInterface> const& workspace,
             std::shared_ptr<ParentContainer> const& parent,
             bool is_anchored) :
-            ParentContainer(state, window_controller, config, area, workspace, parent, is_anchored)
+            ParentContainer(shell_application_manager, state, window_controller, config, area, workspace, parent, is_anchored)
         {
         }
 
