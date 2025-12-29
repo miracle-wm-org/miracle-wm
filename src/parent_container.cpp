@@ -51,6 +51,12 @@ ParentContainer::ParentContainerBackgroundPositioner::ParentContainerBackgroundP
     parent { parent }
 {
 }
+
+void ParentContainer::ParentContainerBackgroundPositioner::place_window(miral::WindowSpecification& specification)
+{
+    specification.focus_mode() = mir_focus_mode_disabled;
+}
+
 void ParentContainer::ParentContainerBackgroundPositioner::handle_ready(std::shared_ptr<Container> const& in)
 {
     container = in;

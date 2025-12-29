@@ -20,17 +20,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "shell_application_spawner.h"
 #include <miral/internal_client.h>
+#include <vector>
+
+namespace mir
+{
+class Server;
+}
 
 namespace miracle
 {
 class InternalShellApplicationSpawner : public ShellApplicationSpawner
 {
 public:
-    explicit InternalShellApplicationSpawner(miral::InternalClientLauncher const& launcher);
+    explicit InternalShellApplicationSpawner(mir::Server& server);
     std::unique_ptr<ShellApplication> spawn(ShellApplicationRole role) override;
 
 private:
-    miral::InternalClientLauncher launcher;
+    mir::Server& server;
+
+    struct ClientPoolItem
+    {
+        miral::InternalClientLauncher launcher;
+        bool is_taken = false;
+    };
+    std::vector<ClientPoolItem> client_pool;
 };
 
 }

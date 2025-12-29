@@ -182,7 +182,7 @@ Policy::Policy(
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
-    shell_application_manager(std::make_shared<ShellApplicationManager>(std::make_unique<InternalShellApplicationSpawner>(internal_client_launcher))),
+    shell_application_manager(std::make_shared<ShellApplicationManager>(std::make_unique<InternalShellApplicationSpawner>(server))),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
             shell_application_manager,
@@ -511,6 +511,9 @@ auto Policy::place_new_window(
     }
 
     auto new_spec = requested_specification;
+    if (auto const delegate = shell_application_manager->delegate(app_info.application()))
+        delegate->place_window(new_spec);
+
     pending_allocation = output_manager->focused()->allocate_position(app_info, new_spec, {});
     return new_spec;
 }

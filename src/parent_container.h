@@ -150,6 +150,7 @@ private:
     {
     public:
         explicit ParentContainerBackgroundPositioner(ParentContainer* parent);
+        void place_window(miral::WindowSpecification& specification) override;
         void handle_ready(std::shared_ptr<Container> const& in) override;
         void set_area(mir::geometry::Rectangle const& area);
 

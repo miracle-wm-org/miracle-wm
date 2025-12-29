@@ -90,9 +90,10 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
-    window_controller->select_active_window(window_);
     if (delegate)
         delegate->handle_ready(shared_from_this());
+    else
+        window_controller->select_active_window(window_);
 }
 
 void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)

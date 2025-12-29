@@ -34,6 +34,7 @@ class ShellApplicationDelegate
 {
 public:
     virtual ~ShellApplicationDelegate() = default;
+    virtual void place_window(miral::WindowSpecification& specification) = 0;
     virtual void handle_ready(std::shared_ptr<Container> const&) = 0;
 };
 

@@ -87,13 +87,10 @@ private:
         void* data,
         xdg_toplevel* xdg_toplevel);
 
-    // Shared memory buffer management
     void create_shm_buffer(int width, int height);
     void draw_gradient();
     void apply_rounded_corners();
-
-    // Event loop control
-    bool should_quit = false;
+    void cleanup_wayland_objects();
 };
 
 } // namespace miracle

@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <poll.h>
 #include <sys/eventfd.h>
 #include <sys/mman.h>
+#include <thread>
 #include <unistd.h>
 
 namespace miracle
@@ -38,6 +39,8 @@ namespace miracle
 
 struct ParentBackgroundInternalClient::Impl
 {
+    std::mutex mutex;
+
     wl_display* display = nullptr;
     wl_registry* registry = nullptr;
     wl_compositor* compositor = nullptr;
@@ -120,46 +123,31 @@ ParentBackgroundInternalClient::ParentBackgroundInternalClient() :
 
 ParentBackgroundInternalClient::~ParentBackgroundInternalClient()
 {
-    if (impl->buffer)
-        wl_buffer_destroy(impl->buffer);
-
+    // Cleanup is now done in stop() before the display becomes invalid
+    // The destructor only handles munmap which doesn't require a valid display
+    std::lock_guard<std::mutex> lock(impl->mutex);
     if (impl->shm_data)
+    {
         munmap(impl->shm_data, impl->shm_size);
-
-    if (impl->xdg_toplevel)
-        xdg_toplevel_destroy(impl->xdg_toplevel);
-
-    if (impl->xdg_surface)
-        xdg_surface_destroy(impl->xdg_surface);
-
-    if (impl->surface)
-        wl_surface_destroy(impl->surface);
-
-    if (impl->xdg_wm_base)
-        xdg_wm_base_destroy(impl->xdg_wm_base);
-
-    if (impl->compositor)
-        wl_compositor_destroy(impl->compositor);
-
-    if (impl->shm)
-        wl_shm_destroy(impl->shm);
-
-    if (impl->registry)
-        wl_registry_destroy(impl->registry);
+        impl->shm_data = nullptr;
+    }
 }
 
 void ParentBackgroundInternalClient::operator()(wl_display* display)
 {
     mir::log_info("ParentBackgroundInternalClient: Starting internal client");
 
-    impl->display = display;
-
-    // Get the registry
-    impl->registry = wl_display_get_registry(display);
-    if (!impl->registry)
     {
-        mir::log_error("Failed to get Wayland registry");
-        return;
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        impl->display = display;
+
+        // Get the registry
+        impl->registry = wl_display_get_registry(display);
+        if (!impl->registry)
+        {
+            mir::log_error("Failed to get Wayland registry");
+            return;
+        }
     }
 
     static const struct wl_registry_listener registry_listener = {
@@ -167,45 +155,54 @@ void ParentBackgroundInternalClient::operator()(wl_display* display)
         registry_handle_global_remove
     };
 
-    wl_registry_add_listener(impl->registry, &registry_listener, this);
+    {
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        wl_registry_add_listener(impl->registry, &registry_listener, this);
+    }
 
     // Roundtrip to get globals
     wl_display_roundtrip(display);
 
-    if (!impl->compositor || !impl->shm || !impl->xdg_wm_base)
     {
-        mir::log_error("Required Wayland globals not available");
-        return;
-    }
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        if (!impl->compositor || !impl->shm || !impl->xdg_wm_base)
+        {
+            mir::log_error("Required Wayland globals not available");
+            return;
+        }
 
-    // Create surface
-    impl->surface = wl_compositor_create_surface(impl->compositor);
-    if (!impl->surface)
-    {
-        mir::log_error("Failed to create Wayland surface");
-        return;
-    }
+        // Create surface
+        impl->surface = wl_compositor_create_surface(impl->compositor);
+        if (!impl->surface)
+        {
+            mir::log_error("Failed to create Wayland surface");
+            return;
+        }
 
-    // Create XDG surface
-    impl->xdg_surface = xdg_wm_base_get_xdg_surface(impl->xdg_wm_base, impl->surface);
-    if (!impl->xdg_surface)
-    {
-        mir::log_error("Failed to create XDG surface");
-        return;
+        // Create XDG surface
+        impl->xdg_surface = xdg_wm_base_get_xdg_surface(impl->xdg_wm_base, impl->surface);
+        if (!impl->xdg_surface)
+        {
+            mir::log_error("Failed to create XDG surface");
+            return;
+        }
     }
 
     static const struct xdg_surface_listener xdg_surface_listener = {
         xdg_surface_configure
     };
 
-    xdg_surface_add_listener(impl->xdg_surface, &xdg_surface_listener, this);
-
-    // Create XDG toplevel
-    impl->xdg_toplevel = xdg_surface_get_toplevel(impl->xdg_surface);
-    if (!impl->xdg_toplevel)
     {
-        mir::log_error("Failed to create XDG toplevel");
-        return;
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        xdg_surface_add_listener(impl->xdg_surface, &xdg_surface_listener, this);
+
+        // Create XDG toplevel
+        impl->xdg_toplevel = xdg_surface_get_toplevel(impl->xdg_surface);
+        if (!impl->xdg_toplevel)
+        {
+            mir::log_error("Failed to create XDG toplevel");
+            return;
+        }
     }
 
     static const struct xdg_toplevel_listener xdg_toplevel_listener = {
@@ -213,52 +210,46 @@ void ParentBackgroundInternalClient::operator()(wl_display* display)
         xdg_toplevel_close
     };
 
-    xdg_toplevel_add_listener(impl->xdg_toplevel, &xdg_toplevel_listener, this);
-
-    xdg_toplevel_set_title(impl->xdg_toplevel, "Parent Background");
-    xdg_toplevel_set_app_id(impl->xdg_toplevel, "miracle.parent_background");
-
-    // Commit to trigger configure
-    wl_surface_commit(impl->surface);
-
-    // Run event loop with poll() to allow interruption via eventfd
-    int wl_fd = wl_display_get_fd(display);
-    struct pollfd fds[2];
-    fds[0].fd = wl_fd;
-    fds[0].events = POLLIN;
-    fds[1].fd = impl->quit_eventfd;
-    fds[1].events = POLLIN;
-
-    while (!should_quit)
     {
-        // Flush outgoing requests
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        xdg_toplevel_add_listener(impl->xdg_toplevel, &xdg_toplevel_listener, this);
+
+        xdg_toplevel_set_title(impl->xdg_toplevel, "Parent Background");
+        xdg_toplevel_set_app_id(impl->xdg_toplevel, "miracle.parent_background");
+
+        // Commit to trigger configure
+        wl_surface_commit(impl->surface);
+    }
+
+    // Standard Mir internal client event loop pattern
+    enum FdIndices
+    {
+        display_fd = 0,
+        shutdown,
+        indices
+    };
+
+    pollfd fds[indices];
+    fds[display_fd] = { wl_display_get_fd(display), POLLIN, 0 };
+    fds[shutdown] = { impl->quit_eventfd, POLLIN, 0 };
+
+    while (!(fds[shutdown].revents & (POLLIN | POLLERR)))
+    {
         while (wl_display_prepare_read(display) != 0)
-            wl_display_dispatch_pending(display);
+        {
+            if (wl_display_dispatch_pending(display) == -1)
+                mir::log_error("Failed to dispatch Wayland events");
+        }
 
         wl_display_flush(display);
 
-        // Wait for events on either Wayland or quit eventfd
-        int ret = poll(fds, 2, -1);
-        if (ret < 0)
-        {
-            wl_display_cancel_read(display);
-            mir::log_error("poll failed");
-            break;
-        }
+        if (poll(fds, indices, -1) == -1)
+            mir::log_error("Failed to wait for Wayland events");
 
-        // Check if quit was signaled
-        if (fds[1].revents & POLLIN)
+        if (fds[display_fd].revents & (POLLIN | POLLERR))
         {
-            wl_display_cancel_read(display);
-            mir::log_info("Quit signal received");
-            break;
-        }
-
-        // Read and dispatch Wayland events
-        if (fds[0].revents & POLLIN)
-        {
-            wl_display_read_events(display);
-            wl_display_dispatch_pending(display);
+            if (wl_display_read_events(display))
+                mir::log_error("Failed to read Wayland events");
         }
         else
         {
@@ -271,15 +262,17 @@ void ParentBackgroundInternalClient::operator()(wl_display* display)
 
 void ParentBackgroundInternalClient::operator()(std::weak_ptr<mir::scene::Session> const& session)
 {
+    std::lock_guard<std::mutex> lock(impl->mutex);
     impl->session = session;
     mir::log_info("ParentBackgroundInternalClient: Session connected");
 }
 
 void ParentBackgroundInternalClient::stop()
 {
-    should_quit = true;
+    cleanup_wayland_objects();
 
     // Signal the eventfd to wake up the event loop
+    // The event loop will handle cleanup before exiting
     if (impl->quit_eventfd >= 0)
     {
         uint64_t value = 1;
@@ -290,8 +283,70 @@ void ParentBackgroundInternalClient::stop()
     }
 }
 
+void ParentBackgroundInternalClient::cleanup_wayland_objects()
+{
+    mir::log_info("ParentBackgroundInternalClient: Cleaning up Wayland objects");
+    std::lock_guard<std::mutex> lock(impl->mutex);
+
+    // Clean up Wayland objects while the display is still valid
+    if (impl->buffer)
+    {
+        wl_buffer_destroy(impl->buffer);
+        impl->buffer = nullptr;
+    }
+
+    if (impl->xdg_toplevel)
+    {
+        xdg_toplevel_destroy(impl->xdg_toplevel);
+        impl->xdg_toplevel = nullptr;
+    }
+
+    if (impl->xdg_surface)
+    {
+        xdg_surface_destroy(impl->xdg_surface);
+        impl->xdg_surface = nullptr;
+    }
+
+    if (impl->surface)
+    {
+        wl_surface_destroy(impl->surface);
+        impl->surface = nullptr;
+    }
+
+    if (impl->xdg_wm_base)
+    {
+        xdg_wm_base_destroy(impl->xdg_wm_base);
+        impl->xdg_wm_base = nullptr;
+    }
+
+    if (impl->compositor)
+    {
+        wl_compositor_destroy(impl->compositor);
+        impl->compositor = nullptr;
+    }
+
+    if (impl->shm)
+    {
+        wl_shm_destroy(impl->shm);
+        impl->shm = nullptr;
+    }
+
+    if (impl->registry)
+    {
+        wl_registry_destroy(impl->registry);
+        impl->registry = nullptr;
+    }
+
+    // Flush the display to ensure destroy requests are sent
+    if (impl->display)
+    {
+        wl_display_flush(impl->display);
+    }
+}
+
 miral::Application ParentBackgroundInternalClient::application()
 {
+    std::lock_guard<std::mutex> lock(impl->mutex);
     return impl->session.lock();
 }
 
@@ -303,6 +358,7 @@ void ParentBackgroundInternalClient::registry_handle_global(
     uint32_t version)
 {
     auto* client = static_cast<ParentBackgroundInternalClient*>(data);
+    std::lock_guard<std::mutex> lock(client->impl->mutex);
 
     if (strcmp(interface, wl_compositor_interface.name) == 0)
     {
@@ -342,20 +398,23 @@ void ParentBackgroundInternalClient::xdg_surface_configure(
 
     xdg_surface_ack_configure(xdg_surface, serial);
 
-    if (!client->impl->configured)
     {
-        client->impl->configured = true;
+        std::lock_guard<std::mutex> lock(client->impl->mutex);
+        if (!client->impl->configured)
+        {
+            client->impl->configured = true;
 
-        // Create and draw the buffer
-        client->create_shm_buffer(client->impl->width, client->impl->height);
-        client->draw_gradient();
-        client->apply_rounded_corners();
+            // Create and draw the buffer
+            client->create_shm_buffer(client->impl->width, client->impl->height);
+            client->draw_gradient();
+            client->apply_rounded_corners();
 
-        // Attach and commit
-        wl_surface_attach(client->impl->surface, client->impl->buffer, 0, 0);
-        wl_surface_commit(client->impl->surface);
+            // Attach and commit
+            wl_surface_attach(client->impl->surface, client->impl->buffer, 0, 0);
+            wl_surface_commit(client->impl->surface);
 
-        mir::log_info("Surface configured and drawn");
+            mir::log_info("Surface configured and drawn");
+        }
     }
 }
 
@@ -367,6 +426,7 @@ void ParentBackgroundInternalClient::xdg_toplevel_configure(
     wl_array* /*states*/)
 {
     auto* client = static_cast<ParentBackgroundInternalClient*>(data);
+    std::lock_guard<std::mutex> lock(client->impl->mutex);
 
     if (width > 0 && height > 0 && client->impl->configured)
     {
@@ -413,7 +473,6 @@ void ParentBackgroundInternalClient::xdg_toplevel_close(
     xdg_toplevel* /*xdg_toplevel*/)
 {
     auto* client = static_cast<ParentBackgroundInternalClient*>(data);
-    client->should_quit = true;
     mir::log_info("Toplevel close requested");
 }
 

@@ -23,8 +23,37 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-InternalShellApplicationSpawner::InternalShellApplicationSpawner(miral::InternalClientLauncher const& launcher) :
-    launcher(launcher)
+namespace
+{
+class NotifyingInternalApplication : public ShellApplication
+{
+public:
+    NotifyingInternalApplication(
+        std::unique_ptr<ShellApplication> application,
+        std::function<void()>&& on_destroyed) :
+        app(std::move(application)),
+        on_destroyed(std::move(on_destroyed))
+    {
+    }
+
+    void stop() override
+    {
+        app->stop();
+    }
+
+    miral::Application application() override
+    {
+        return app->application();
+    }
+
+private:
+    std::unique_ptr<ShellApplication> app;
+    std::function<void()> on_destroyed;
+};
+}
+
+InternalShellApplicationSpawner::InternalShellApplicationSpawner(mir::Server& server) :
+    server(server)
 {
 }
 
@@ -34,9 +63,31 @@ std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(ShellAp
     {
     case ShellApplicationRole::parent_container_background:
     {
+        size_t i = 0;
+        for (i = 0; i < client_pool.size(); ++i)
+        {
+            if (!client_pool[i].is_taken)
+                break;
+        }
+
+        if (i == client_pool.size())
+        {
+            miral::InternalClientLauncher launcher;
+            launcher(server);
+            client_pool.push_back({ launcher, true });
+        }
+
         auto background_client = std::make_unique<ParentBackgroundInternalClient>();
-        launcher.launch(*background_client);
-        return background_client;
+        client_pool[i].launcher(server);
+        client_pool[i].launcher.launch(*background_client);
+
+        auto wrapper_client = std::make_unique<NotifyingInternalApplication>(
+            std::move(background_client),
+            [this, i]
+        {
+            client_pool[i].is_taken = false;
+        });
+        return wrapper_client;
     }
     }
 
