@@ -20,10 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class FeatureFlagsTest : public testing::Test
 {
-public:
 };
 
-TEST_F(FeatureFlagsTest, DragAndDropIsFalse)
+TEST_F(FeatureFlagsTest, VerifyFeatureFlags)
 {
-    EXPECT_EQ(MIRACLE_FEATURE_FLAG_DRAG_AND_DROP, true);
+    EXPECT_EQ(miracle::feature::multi_select, static_cast<bool>(FEATURE_MULTI_SELECT));
+    EXPECT_EQ(miracle::feature::parent_container_wallpapers, static_cast<bool>(FEATURE_PARENT_CONTAINER_WALLPAPERS));
+    EXPECT_EQ(miracle::feature::plugin_system, static_cast<bool>(FEATURE_PLUGIN_SYSTEM));
 }

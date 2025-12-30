@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_PLUGIN_MANAGER_H
 #define MIRACLEWM_PLUGIN_MANAGER_H
 
-#if ENABLE_PLUGIN_SYSTEM
+#if FEATURE_PLUGIN_SYSTEM
 #include "miracle/plugin.h"
 #include <bitset>
 #include <memory>

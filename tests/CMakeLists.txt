@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_BINARY_DIR}/../src
 )
 
 find_package(PkgConfig)
@@ -77,7 +78,12 @@ target_link_libraries(miracle-wm-tests
     pthread
     GTest::GTest GTest::Main GTest::gmock)
 
-target_compile_definitions(miracle-wm-tests PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
+target_compile_definitions(miracle-wm-tests PRIVATE
+    COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
+    FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM}
+    FEATURE_MULTI_SELECT=${FEATURE_MULTI_SELECT}
+    FEATURE_PARENT_CONTAINER_WALLPAPERS=${FEATURE_PARENT_CONTAINER_WALLPAPERS}
+)
 
 # Precompiled headers for faster test compilation
 # Note: Can't reuse from implementation due to C++20 vs C++23 difference
