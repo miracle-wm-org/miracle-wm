@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace mir
 {
 class Server;
+class MainLoop;
 }
 
 namespace miracle
@@ -76,6 +77,7 @@ public:
 
     DisplayConfig();
     explicit DisplayConfig(std::string const& path);
+    ~DisplayConfig();
     void reload();
     void test(std::vector<OutputConfig> const& configs);
     void write();
@@ -87,6 +89,11 @@ public:
 private:
     class Self;
     std::shared_ptr<Self> self;
+    std::shared_ptr<mir::MainLoop> main_loop;
+    mir::Fd inotify_fd;
+    int file_watch = 0;
+
+    void _watch(std::shared_ptr<mir::MainLoop> const& main_loop);
 };
 
 } // miracle
