@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "AutoRestartingLauncher"
 #include "auto_restarting_launcher.h"
-#include "file_helpers.h"
+#include "miracle/cpp/file_helpers.h"
 #include <mir/log.h>
 #include <miral/runner.h>
 #include <sys/wait.h>

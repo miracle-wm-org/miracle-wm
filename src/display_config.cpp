@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "display_config.h"
 
-#include "miracle/miracle-wm-config.h"
+#include "miracle/cpp/config-cpp.h"
 #include "output.h"
 
 #include <filesystem>

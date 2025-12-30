@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,203 +16,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define MIR_LOG_COMPONENT "animator"
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include "animator.h"
+#include "geometry_helpers.h"
 #include <algorithm>
 #include <chrono>
-#include <glm/gtx/transform.hpp>
-#include <mir/log.h>
 #include <mir/server_action_queue.h>
-#include <utility>
 #include <vector>
 
 using namespace miracle;
 using namespace std::chrono_literals;
 namespace geom = mir::geometry;
-
-namespace
-{
-glm::vec2 to_glm_vec2(mir::geometry::Point const& p)
-{
-    return { p.x.as_int(), p.y.as_int() };
-}
-
-float get_percent_complete(float const target, float const real)
-{
-    if (target == 0)
-        return 1.f;
-
-    float const percent = real / target;
-    if (std::isinf(percent) != 0 || percent > 1.f)
-        return 1.f;
-    else
-        return percent;
-}
-
-float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
-{
-    if (x < 1 / defintion.d1)
-    {
-        return defintion.n1 * x * x;
-    }
-    else if (x < 2 / defintion.d1)
-    {
-        x = x - 1.5f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.75f;
-    }
-    else if (x < 2.5 / defintion.d1)
-    {
-        x = x - 2.25f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.9375f;
-    }
-    else
-    {
-        x = x - 2.625f;
-        return defintion.n1 * (x / defintion.d1) * x + 0.984375f;
-    }
-}
-
-float ease(BuiltInAnimationDefinition const& defintion, float t)
-{
-    // https://easings.net/
-    switch (defintion.function)
-    {
-    case EaseFunction::linear:
-        return t;
-    case EaseFunction::ease_in_sine:
-        return 1 - cosf((t * static_cast<float>(M_PI)) / 2.f);
-    case EaseFunction::ease_in_out_sine:
-        return -(cosf(static_cast<float>(M_PI) * t) - 1) / 2;
-    case EaseFunction::ease_out_sine:
-        return sinf((t * static_cast<float>(M_PI)) / 2.f);
-    case EaseFunction::ease_in_quad:
-        return t * t;
-    case EaseFunction::ease_out_quad:
-        return 1 - (1 - t) * (1 - t);
-    case EaseFunction::ease_in_out_quad:
-        return t < 0.5 ? 2 * t * t : 1 - powf(-2 * t + 2, 2) / 2;
-    case EaseFunction::ease_in_cubic:
-        return t * t * t;
-    case EaseFunction::ease_out_cubic:
-        return 1 - powf(1 - t, 3);
-    case EaseFunction::ease_in_out_cubic:
-        return t < 0.5 ? 4 * t * t * t : 1 - powf(-2 * t + 2, 3) / 2;
-    case EaseFunction::ease_in_quart:
-        return t * t * t * t;
-    case EaseFunction::ease_out_quart:
-        return 1 - powf(1 - t, 4);
-    case EaseFunction::ease_in_out_quart:
-        return t < 0.5 ? 8 * t * t * t * t : 1 - powf(-2 * t + 2, 4) / 2;
-    case EaseFunction::ease_in_quint:
-        return t * t * t * t * t;
-    case EaseFunction::ease_out_quint:
-        return 1 - powf(1 - t, 5);
-    case EaseFunction::ease_in_out_quint:
-        return t < 0.5 ? 16 * t * t * t * t * t : 1 - powf(-2 * t + 2, 5) / 2;
-    case EaseFunction::ease_in_expo:
-        return t == 0 ? 0 : powf(2, 10 * t - 10);
-    case EaseFunction::ease_out_expo:
-        return t == 1 ? 1 : 1 - powf(2, -10 * t);
-    case EaseFunction::ease_in_out_expo:
-        return t == 0
-            ? 0
-            : t == 1
-            ? 1
-            : t < 0.5 ? powf(2, 20 * t - 10) / 2
-                      : (2 - powf(2, -20 * t + 10)) / 2;
-    case EaseFunction::ease_in_circ:
-        return 1 - sqrtf(1 - powf(t, 2));
-    case EaseFunction::ease_out_circ:
-        return sqrtf(1 - powf(t - 1, 2));
-    case EaseFunction::ease_in_out_circ:
-        return t < 0.5f
-            ? (1 - sqrtf(1 - powf(2 * t, 2))) / 2
-            : (sqrtf(1 - powf(-2 * t + 2, 2)) + 1) / 2;
-    case EaseFunction::ease_in_back:
-        return defintion.c3 * t * t * t - defintion.c1 * t * t;
-    case EaseFunction::ease_out_back:
-    {
-        return 1 + defintion.c3 * powf(t - 1, 3) + defintion.c1 * powf(t - 1, 2);
-    }
-    case EaseFunction::ease_in_out_back:
-        return t < 0.5
-            ? (powf(2 * t, 2) * ((defintion.c2 + 1) * 2 * t - defintion.c2)) / 2
-            : (powf(2 * t - 2, 2) * ((defintion.c2 + 1) * (t * 2 - 2) + defintion.c2) + 2) / 2;
-    case EaseFunction::ease_in_elastic:
-        return t == 0
-            ? 0
-            : t == 1
-            ? 1
-            : -powf(2, 10 * t - 10) * sinf((t * 10 - 10.75f) * defintion.c4);
-    case EaseFunction::ease_out_elastic:
-        return t == 0
-            ? 0
-            : t == 1
-            ? 1
-            : powf(2, -10 * t) * sinf((t * 10 - 0.75f) * defintion.c4) + 1;
-    case EaseFunction::ease_in_out_elastic:
-        return t == 0
-            ? 0
-            : t == 1
-            ? 1
-            : t < 0.5
-            ? -(powf(2, 20 * t - 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2
-            : (powf(2, -20 * t + 10) * sinf((20 * t - 11.125f) * defintion.c5)) / 2 + 1;
-    case EaseFunction::ease_in_bounce:
-        return 1 - ease_out_bounce(defintion, 1 - t);
-    case EaseFunction::ease_out_bounce:
-        return ease_out_bounce(defintion, t);
-    case EaseFunction::ease_in_out_bounce:
-        return t < 0.5
-            ? (1 - ease_out_bounce(defintion, 1 - 2 * t)) / 2
-            : (1 + ease_out_bounce(defintion, 2 * t - 1)) / 2;
-    default:
-        return 1.f;
-    }
-}
-
-float interpolate_scale(float const p, float const start, float const end)
-{
-    float const diff = end - start;
-    if (diff == 0)
-        return 1.f;
-
-    // We want to find the percentage that we should scale relative
-    // to the [start] value. For example, if we are growing from 200
-    // to 250, and p=0.5, then we should be at width 225, which would
-    // be a scale up of 225 / 220;
-    float const current = start + diff * p;
-    return current / end;
-}
-
-struct SlideResult
-{
-    /// The current position that the surface should be in.
-    /// This should also be used as the clip area position.
-    glm::vec2 position;
-
-    /// The current size of the clip area. The surface should NOT
-    /// be set to this size, as it has already been set on init().
-    /// This size is strictly meant for the clip area.
-    glm::vec2 clip_area_size;
-};
-
-inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle const& to)
-{
-    auto const distance = to.top_left - from.top_left;
-    float const dx = static_cast<float>(distance.dx.as_int()) * p;
-    float const dy = static_cast<float>(distance.dy.as_int()) * p;
-
-    float const clip_scale_x = interpolate_scale(p, static_cast<float>(from.size.width.as_value()), static_cast<float>(to.size.width.as_value()));
-    float const clip_scale_y = interpolate_scale(p, static_cast<float>(from.size.height.as_value()), static_cast<float>(to.size.height.as_value()));
-
-    return {
-        .position = glm::vec2(static_cast<float>(from.top_left.x.as_int()) + dx, static_cast<float>(from.top_left.y.as_int()) + dy),
-        .clip_area_size = glm::vec2(static_cast<float>(to.size.width.as_int()) * clip_scale_x, static_cast<float>(to.size.height.as_int()) * clip_scale_y)
-    };
-}
-}
 
 AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& other) const
 {
@@ -224,233 +38,22 @@ AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& oth
     };
 }
 
-AnimationHandle const miracle::none_animation_handle = 0;
-
-Animation::Animation(AnimationHandle handle) :
-    handle { handle }
-{
-}
-
-AnimationHandle Animation::get_handle() const
-{
-    return handle;
-}
-
-void Animation::mark_for_removal()
-{
-    is_being_removed_ = true;
-}
-
-bool Animation::is_being_removed() const
-{
-    return is_being_removed_;
-}
-
-BuiltInAnimation::BuiltInAnimation(
-    AnimationHandle handle,
-    float duration_seconds,
-    BuiltInAnimationDefinition definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current_,
-    float opacity_start,
-    float opacity_end) :
-    Animation { handle },
-    duration_seconds { duration_seconds },
-    definition { definition },
-    current { current_ },
-    from { from },
-    to { to },
-    opacity_start { opacity_start },
-    opacity_end { opacity_end }
-{
-    switch (definition.type)
-    {
-    case BultInAnimationType::slide:
-    {
-        // Find out the percentage that we're already through the move. This could be negative, by design.
-        glm::vec2 end = to_glm_vec2(to.top_left);
-        glm::vec2 start = to_glm_vec2(from.top_left);
-        glm::vec2 real_start = to_glm_vec2(current.top_left);
-        auto percent_x = get_percent_complete(end.x - start.x, real_start.x - start.x);
-        auto percent_y = get_percent_complete(end.y - start.y, real_start.y - start.y);
-
-        // Find out the percentage that we're already through the resize. This could be negative, by design.
-        float width_change = static_cast<float>(to.size.width.as_int() - from.size.width.as_int());
-        float height_change = static_cast<float>(to.size.height.as_int() - from.size.height.as_int());
-        float real_width_change = static_cast<float>(current.size.width.as_int() - from.size.width.as_int());
-        float real_height_change = static_cast<float>(current.size.height.as_int() - from.size.height.as_int());
-
-        float percent_w = get_percent_complete(width_change, real_width_change);
-        float percent_h = get_percent_complete(height_change, real_height_change);
-
-        float percentage = std::min(percent_x, std::min(percent_y, std::min(percent_w, percent_h)));
-        percentage = std::clamp(percentage, 0.f, 1.f);
-        runtime_seconds = percentage * duration_seconds;
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-MultiBuiltInAnimation::MultiBuiltInAnimation(
-    AnimationHandle handle,
-    AnimationDefinition const& definition,
-    mir::geometry::Rectangle const& from,
-    mir::geometry::Rectangle const& to,
-    mir::geometry::Rectangle const& current,
-    float opacity_start,
-    float opacity_end) :
-    Animation(handle)
-{
-
-    for (auto const& def : definition.animations)
-    {
-        animations.emplace_back(BuiltInAnimation(
-            handle,
-            definition.duration_seconds,
-            def,
-            from,
-            to,
-            current,
-            opacity_start,
-            opacity_end));
-    }
-}
-
-AnimationFrameResult MultiBuiltInAnimation::init()
-{
-    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
-    for (auto& anim : animations)
-        result = anim.init().merge(result);
-    return result;
-}
-
-AnimationFrameResult MultiBuiltInAnimation::step(float dt)
-{
-    AnimationFrameResult result(false, std::nullopt, std::nullopt, std::nullopt);
-    for (auto& anim : animations)
-        result = anim.step(dt).merge(result);
-    return result;
-}
-
-AnimationFrameResult BuiltInAnimation::init()
-{
-    switch (definition.type)
-    {
-    case BultInAnimationType::grow:
-        return { false, std::nullopt, glm::mat4(0.f), std::nullopt };
-    case BultInAnimationType::shrink:
-        return { false, std::nullopt, glm::mat4(1.f), std::nullopt };
-    case BultInAnimationType::slide:
-    {
-        // Sliding is funky. We resize immediately but remain in the same position. The transformation
-        // and position are interpolated over time to give the illusion of moving and growing.
-        const auto [position, clip_area_size] = slide(0, from, to);
-        current.top_left.x = geom::X { position.x };
-        current.top_left.y = geom::Y { position.y };
-        current.size.width = geom::Width { clip_area_size.x };
-        current.size.height = geom::Height { clip_area_size.y };
-        return {
-            false,
-            current,
-            std::nullopt,
-            std::nullopt
-        };
-    }
-    case BultInAnimationType::fade:
-        return { false, std::nullopt, std::nullopt, opacity_start };
-    case BultInAnimationType::disabled:
-    default:
-    {
-        current = to;
-        return { true, current, std::nullopt, std::nullopt };
-    }
-    }
-}
-
-AnimationFrameResult BuiltInAnimation::step(float dt)
-{
-    runtime_seconds += dt;
-    float const t = (runtime_seconds / duration_seconds);
-
-    if (runtime_seconds >= duration_seconds)
-    {
-        return { true, to, glm::mat4(1.f),
-            definition.type == BultInAnimationType::fade ? opacity_end : 1.f };
-    }
-
-    switch (definition.type)
-    {
-    case BultInAnimationType::slide:
-    {
-        auto const p = ease(definition, t);
-        const auto [position, clip_area_size] = slide(p, from, to);
-        current.top_left.x = geom::X { position.x };
-        current.top_left.y = geom::Y { position.y };
-        current.size.width = geom::Width { clip_area_size.x };
-        current.size.height = geom::Height { clip_area_size.y };
-        return {
-            false,
-            current,
-            std::nullopt,
-            1.f
-        };
-    }
-    case BultInAnimationType::grow:
-    {
-        auto const p = ease(definition, t);
-        glm::mat4 const transform = glm::scale(
-            glm::mat4(1.f),
-            glm::vec3(p, p, 1.f));
-        ;
-        return { false, std::nullopt, transform, std::nullopt };
-    }
-    case BultInAnimationType::shrink:
-    {
-        auto const p = 1.f - ease(definition, t);
-        glm::mat4 const transform = glm::scale(
-            glm::mat4(1.f),
-            glm::vec3(p, p, 1.f));
-        return { false, std::nullopt, transform, std::nullopt };
-    }
-    case BultInAnimationType::fade:
-    {
-        auto const p = ease(definition, t);
-        float opacity_diff = opacity_end - opacity_start;
-        return { false, std::nullopt, std::nullopt, opacity_start + opacity_diff * p };
-    }
-    case BultInAnimationType::disabled:
-    default:
-        return { true, to, std::nullopt, std::nullopt };
-    }
-}
-
-Animator::Animator(std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
-    server_action_queue(server_action_queue)
-{
-}
-
 AnimationHandle Animator::register_animateable()
 {
     std::lock_guard<std::mutex> lock(processing_lock);
     return next_handle++;
 }
 
-void Animator::append(std::shared_ptr<Animation> const& animation)
+void Animator::append(Animation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto const& other : active)
+    for (auto& other : active)
     {
-        if (other->get_handle() == animation->get_handle())
-            other->mark_for_removal();
+        if (other.handle() == animation.handle())
+            other.mark_for_removal();
     }
-    active.push_back(animation);
-    server_action_queue->enqueue(this, [animation = animation]()
-    {
-        animation->on_tick(animation->init());
-    });
+    animation.tick(0.f); // Initial tick to set starting values.
+    active.push_back(std::move(animation));
     cv.notify_one();
 }
 
@@ -458,43 +61,36 @@ void Animator::tick(float dt)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
 
-    for (auto const& item : active)
+    for (auto& item : active)
     {
-        if (item->is_being_removed())
+        if (item.is_being_removed())
             continue;
 
-        auto result = item->step(dt);
-
-        server_action_queue->enqueue(this, [item = item, result = result]()
-        {
-            item->on_tick(result);
-        });
-
-        if (result.is_complete)
-            item->mark_for_removal();
+        if (item.tick(dt))
+            item.mark_for_removal();
     }
 
-    std::erase_if(active, [](std::shared_ptr<Animation> const& animation)
+    std::erase_if(active, [](Animation const& animation)
     {
-        return animation->is_being_removed();
+        return animation.is_being_removed();
     });
 }
 
 void Animator::remove_by_animation_handle(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto const& animation : active)
+    for (auto& animation : active)
     {
-        if (animation->get_handle() == handle)
-            animation->mark_for_removal();
+        if (animation.handle() == handle)
+            animation.mark_for_removal();
     }
 }
 
 bool Animator::is_animating(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    return std::any_of(active.begin(), active.end(), [handle](std::shared_ptr<Animation> const& animation)
+    return std::ranges::any_of(active, [handle](Animation const& animation)
     {
-        return animation->get_handle() == handle;
+        return animation.handle() == handle;
     });
 }

@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,11 +27,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_listener.h"
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
+#include "internal_shell_application_spawner.h"
 #include "magnifier_wrapper.h"
 #include "output_factory.h"
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_manager.h"
+#include "shell_application_manager.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -40,8 +43,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/server.h>
 #include <mir_toolkit/events/enums.h>
-#include <miral/application_info.h>
-#include <miral/runner.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <mutex>
@@ -146,6 +147,11 @@ public:
 
         policy.magnifier->set_scale(config.magnifier().scale);
         policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
+
+        policy.plugin_manager->unload_all();
+        for (auto const& plugin : config.get_plugins())
+            policy.plugin_manager->load_wasm_module(plugin.path, plugin.name);
+
         has_loaded_once = true;
     }
 
@@ -168,19 +174,24 @@ Policy::Policy(
     state { state },
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
-    animator(std::make_shared<Animator>(server.the_main_loop())),
+    animator(std::make_shared<Animator>()),
+    plugin_manager(std::make_shared<PluginManager>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, state, config)),
+        tools, animator, plugin_manager, server.the_main_loop(), state, config)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
+    shell_application_manager(std::make_shared<ShellApplicationManager>(std::make_unique<InternalShellApplicationSpawner>(server))),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
+            shell_application_manager,
             state,
             config,
             window_controller,
             animator,
-            display_config))),
+            display_config,
+            server.the_main_loop(),
+            plugin_manager))),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this)),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
@@ -203,7 +214,8 @@ Policy::Policy(
         server.the_surface_stack(),
         state,
         config,
-        animator)),
+        animator,
+        plugin_manager)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
@@ -235,7 +247,6 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
-    state->modifiers = modifiers;
 
     if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
     {
@@ -437,7 +448,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     {
         if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
         {
-            if (state->modifiers == config->get_primary_modifier())
+            if (modifiers == config->get_primary_modifier())
             {
                 // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
                 if (state->mode() != WindowManagerMode::selecting)
@@ -499,6 +510,9 @@ auto Policy::place_new_window(
     }
 
     auto new_spec = requested_specification;
+    if (auto const delegate = shell_application_manager->delegate(app_info.application()))
+        delegate->place_window(new_spec);
+
     pending_allocation = output_manager->focused()->allocate_position(app_info, new_spec, {});
     return new_spec;
 }

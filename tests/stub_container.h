@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -156,6 +156,10 @@ namespace test
         std::shared_ptr<WorkspaceInterface> get_workspace() const override
         {
             return nullptr;
+        }
+
+        void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override
+        {
         }
 
         std::shared_ptr<OutputInterface> get_output() const override

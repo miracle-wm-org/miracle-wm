@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ namespace test
 
         MOCK_METHOD(void, reload, (), (override));
         MOCK_METHOD(std::string const&, get_filename, (), (const, override));
+        MOCK_METHOD(std::vector<PluginConfiguration> const&, get_plugins, (), (const, override));
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
         MOCK_METHOD(CustomKeyCommand const*, matches_custom_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers), (const, override));
         MOCK_METHOD(bool, matches_key_command, (MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f), (const, override));
@@ -75,6 +76,7 @@ namespace test
         MOCK_METHOD(SlowKeysConfiguration, slow_keys, (), (const, override));
         MOCK_METHOD(StickyKeysConfiguration, sticky_keys, (), (const, override));
         MOCK_METHOD(TouchpadConfiguration, touchpad, (), (const, override));
+        MOCK_METHOD(bool, get_workspace_back_and_forth, (), (const, override));
     };
 }
 }

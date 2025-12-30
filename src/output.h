@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,11 +23,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class PluginManager;
+class ShellApplicationManager;
 
 class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
 public:
     explicit Output(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::string name,
         int id,
         geom::Rectangle const& area,
@@ -35,7 +38,9 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
-        std::shared_ptr<Animator> const&);
+        std::shared_ptr<Animator> const&,
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<PluginManager> const& plugin_manager);
     ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
@@ -78,6 +83,7 @@ public:
 private:
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::string name_;
     int id_;
     geom::Rectangle area;
@@ -86,10 +92,12 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::weak_ptr<WorkspaceInterface> active_workspace;
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     AnimationHandle handle;
+    std::shared_ptr<PluginManager> plugin_manager;
 
     /// The transform applied to the entire output..
     glm::mat4 transform = glm::mat4(1.f);

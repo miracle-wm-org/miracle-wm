@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,7 +36,6 @@ namespace miracle
 
 class Config;
 class CompositorState;
-class RenderDataManager;
 class OutputManager;
 
 /// A [LeafContainer] always contains a single window.
@@ -145,8 +144,13 @@ private:
     float alpha = 1.f;
     float workspace_alpha = 1.f;
 
+    // Cache for visible area calculation
+    mutable std::optional<geom::Rectangle> cached_visible_area;
+    mutable bool visible_area_dirty = true;
+
     /// Trigger a rerender on the surface.
     void rerender();
+    void invalidate_visible_area_cache();
     static void handle_resize(Container* container, Direction direction, int amount);
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
 };

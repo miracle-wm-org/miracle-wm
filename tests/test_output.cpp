@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,9 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "mock_container.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output.h"
+#include "passthrough_server_action_queue.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "workspace_observer.h"
 #include <gmock/gmock.h>
@@ -39,12 +42,15 @@ protected:
     {
         // Create mock dependencies
         window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
-        animator = std::make_shared<Animator>(nullptr);
+        animator = std::make_shared<Animator>();
         state = std::make_shared<CompositorState>();
         config = std::make_shared<test::StubConfiguration>();
+        shell_application_manager = std::make_shared<ShellApplicationManager>(
+            std::make_unique<NiceMock<test::MockShellApplicationSpawner>>());
 
         // Create the Output
         output = std::make_shared<Output>(
+            shell_application_manager,
             "TestOutput",
             1, // id
             geom::Rectangle {
@@ -55,7 +61,9 @@ protected:
             state,
             config,
             window_controller,
-            animator);
+            animator,
+            std::make_shared<PassthroughServerActionQueue>(),
+            std::make_shared<PluginManager>());
 
         // Add workspace to the output
         auto registrar = std::make_shared<WorkspaceObserverRegistrar>();
@@ -74,6 +82,7 @@ protected:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<test::StubConfiguration> config;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<WorkspaceInterface> actual_workspace;
 };
 

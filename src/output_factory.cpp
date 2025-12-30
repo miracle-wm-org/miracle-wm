@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,16 +26,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 MiralOutputFactory::MiralOutputFactory(
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<DisplayConfig> const& display_config) :
+    std::shared_ptr<DisplayConfig> const& display_config,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
+    shell_application_manager { shell_application_manager },
     state { state },
     config { config },
     window_controller { window_controller },
     animator { animator },
-    display_config { display_config }
+    display_config { display_config },
+    server_action_queue { server_action_queue },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -50,6 +56,7 @@ std::shared_ptr<OutputInterface> MiralOutputFactory::create(
     }
 
     return std::make_shared<Output>(
+        shell_application_manager,
         std::move(name),
         id,
         area,
@@ -57,5 +64,7 @@ std::shared_ptr<OutputInterface> MiralOutputFactory::create(
         state,
         config,
         window_controller,
-        animator);
+        animator,
+        server_action_queue,
+        plugin_manager);
 }

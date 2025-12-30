@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,9 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
+#include "mock_shell_application_spawner.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "passthrough_server_action_queue.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "stub_surface.h"
 #include "stub_window_controller.h"
@@ -71,7 +73,10 @@ public:
         state(std::make_shared<CompositorState>()),
         output(create_output(OUTPUT_SIZE)),
         window_controller(std::make_shared<StubWindowController>(pairs)),
+        shell_application_manager(std::make_shared<ShellApplicationManager>(
+            std::make_unique<NiceMock<test::MockShellApplicationSpawner>>())),
         workspace(std::make_shared<Workspace>(
+            shell_application_manager,
             output,
             0,
             0,
@@ -80,7 +85,9 @@ public:
             window_controller,
             state,
             registry,
-            animator))
+            animator,
+            std::make_shared<PassthroughServerActionQueue>(),
+            plugin_manager))
     {
     }
 
@@ -113,8 +120,10 @@ public:
     std::vector<StubWindowData> pairs;
     std::shared_ptr<test::MockOutput> output;
     std::shared_ptr<StubWindowController> window_controller;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
-    std::shared_ptr<Animator> animator = std::make_shared<Animator>(std::make_shared<PassthroughServerActionQueue>());
+    std::shared_ptr<Animator> animator = std::make_shared<Animator>();
+    std::shared_ptr<PluginManager> plugin_manager = std::make_shared<PluginManager>();
     std::shared_ptr<Workspace> workspace;
 };
 
@@ -224,6 +233,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
 {
     auto other_output = create_output(OTHER_OUTPUT_SIZE);
     auto const other = std::make_shared<Workspace>(
+        shell_application_manager,
         other_output,
         1,
         1,
@@ -232,7 +242,9 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
         window_controller,
         state,
         registry,
-        animator);
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        plugin_manager);
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf(std::nullopt, other.get());
 
@@ -248,6 +260,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
 {
     auto const other_output = create_output(OTHER_OUTPUT_SIZE);
     auto other = std::make_shared<Workspace>(
+        shell_application_manager,
         other_output,
         1,
         1,
@@ -256,7 +269,9 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         window_controller,
         state,
         registry,
-        animator);
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        plugin_manager);
     auto leaf1 = create_leaf();
 
     ASSERT_EQ(leaf1->get_workspace(), workspace);
@@ -307,6 +322,7 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
     ON_CALL(*output, get_app_zones())
         .WillByDefault(ReturnRef(zones));
     auto const other = std::make_shared<Workspace>(
+        shell_application_manager,
         output,
         1,
         1,
@@ -315,7 +331,9 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
         window_controller,
         state,
         registry,
-        animator);
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        plugin_manager);
 
     // Assert that the first tree (w/o app zones) is equal to the output size.
     ASSERT_EQ(other->get_root()->get_logical_area(), zone_bounds);

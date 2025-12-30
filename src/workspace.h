@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@ class Config;
 class CompositorState;
 class WorkspaceObserverRegistrar;
 class Animator;
+class PluginManager;
+class ShellApplicationManager;
 
 struct WorkspaceIdentifier
 {
@@ -43,6 +45,7 @@ class Workspace : public WorkspaceInterface, public std::enable_shared_from_this
 {
 public:
     Workspace(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<OutputInterface> const& output,
         uint32_t id,
         std::optional<int> num,
@@ -51,7 +54,10 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
-        std::shared_ptr<Animator> const& animator);
+        std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<PluginManager> const& plugin_manager);
+    ~Workspace();
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
@@ -75,8 +81,7 @@ public:
     void set_output(std::shared_ptr<OutputInterface> const&) override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
-    void on_animation_start(bool is_hiding) override;
-    void on_animation_end(bool is_hiding) override;
+    void on_animation_end(bool is_hiding);
     [[nodiscard]] uint32_t id() const override { return id_; }
     [[nodiscard]] std::optional<int> num() const override { return num_; }
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
@@ -111,6 +116,7 @@ private:
 
     std::shared_ptr<ParentContainer> root() const;
 
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::weak_ptr<OutputInterface> output;
     uint32_t id_;
     std::optional<int> num_;
@@ -122,6 +128,8 @@ private:
     std::shared_ptr<WorkspaceObserverRegistrar> registry;
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<PluginManager> plugin_manager;
     AnimationHandle animation_handle;
     bool is_showing = false;
     std::weak_ptr<Container> last_selected_container;
@@ -129,6 +137,8 @@ private:
     std::optional<Gaps> workspace_inner_gaps;
     glm::mat4 transform_ = glm::mat4(1.f);
     float alpha_ = 1.f;
+
+    void on_animation_start(bool is_hiding);
 
     /// Retrieves the container that is currently being used for layout
     std::shared_ptr<ParentContainer> get_layout_container();

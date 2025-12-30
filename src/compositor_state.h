@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -57,8 +57,6 @@ class CompositorState
 public:
     CompositorState();
     mir::geometry::Point cursor_position;
-    uint32_t modifiers = 0;
-    bool has_clicked_floating_window = false;
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
 

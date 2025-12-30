@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,14 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "layout_scheme.h"
 #include "mir/geometry/forward.h"
-#include "miral/window_specification.h"
+#include "shell_application_manager.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
+#include <miral/window_specification.h>
 
 namespace geom = mir::geometry;
 
 namespace miracle
 {
+class ParentBackgroundInternalClient;
 
 class LeafContainer;
 class Config;
@@ -40,6 +42,7 @@ class ParentContainer : public Container
 {
 public:
     ParentContainer(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
@@ -47,7 +50,7 @@ public:
         std::shared_ptr<WorkspaceInterface> const& workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
-    ~ParentContainer() override = default;
+    ~ParentContainer() override;
     virtual geom::Rectangle get_area() const;
     geom::Rectangle get_logical_area() const override;
     geom::Rectangle get_visible_area() const override;
@@ -143,23 +146,45 @@ public:
         size_t second_index);
 
 private:
+    class ParentContainerBackgroundPositioner : public ShellApplicationDelegate
+    {
+    public:
+        explicit ParentContainerBackgroundPositioner(ParentContainer* parent);
+        void place_window(miral::WindowSpecification& specification) override;
+        void handle_ready(std::shared_ptr<Container> const& in) override;
+        void set_area(mir::geometry::Rectangle const& area);
+
+    private:
+        ParentContainer* parent;
+        std::weak_ptr<Container> container;
+    };
+
+    std::vector<std::shared_ptr<Container>> container_list;
+    std::weak_ptr<ParentContainer> parent;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     geom::Rectangle logical_area;
     std::weak_ptr<WorkspaceInterface> workspace;
-    std::weak_ptr<ParentContainer> parent;
     LayoutScheme scheme = LayoutScheme::horizontal;
-    bool is_anchored;
+
+    /// Whether this parent container is anchored to the workspace and cannot be moved.
+    /// This will only be `true` for the root container of a workspace.
+    bool is_anchored = false;
     bool pinned_ = false;
     ScratchpadState scratchpad_state_ = ScratchpadState::none;
     bool is_shown = false;
-
-    std::vector<std::shared_ptr<Container>> container_list;
     std::shared_ptr<LeafContainer> pending_node;
+
+    std::optional<ShellApplicationId> shell_application_id;
+    std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     void relayout();
+    void raise_children();
+    void update_background_client_area();
+    void try_remove_background_client();
 };
 
 } // miracle

@@ -1,13 +1,4 @@
 miracle-wm (0.8.3-local) UNRELEASED; urgency=medium
-
-  * Release version 0.8.1
-  * Recent changes:
-  * * task: Ubuntu release script to be run when a release is tagged
-    (#707)
-  * * (#697) bugfix: null check on the container in
-    WindowAnimation::on_tick (#706)
-  * * (#700) bugfix: shell components can be intersected and interacted
-    with properly again (#705)
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -15,6 +6,17 @@ miracle-wm (0.8.3-local) UNRELEASED; urgency=medium
   * * task: bump version to 0.8.2 (#709)
 
  -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Tue, 30 Dec 2025 10:48:14 -0500
+
+miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
+  * Release version 0.8.2
+  * Recent changes:
+  * * task: bump version to 0.8.2 (#709)
+  * * task: improve releasing so that the changelog winds up in git
+    history (#708)
+  * * task: Ubuntu release script to be run when a release is tagged
+    (#707)
+
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Mon, 17 Nov 2025 08:39:27 -0500
 
 miracle-wm (0.8.0-questing) noble; urgency=medium
   - Update to version 0.8.0

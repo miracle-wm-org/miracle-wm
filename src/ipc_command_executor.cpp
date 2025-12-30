@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -523,7 +523,7 @@ IpcValidationResult IpcCommandExecutor::process_move(IpcCommand const& command, 
         if (!indexer.next())
             return IpcValidationResult::create_failure("'move window/container' expected a third argument", true);
 
-        auto const back_and_forth = std::ranges::find(command.options, "--no-auto-back-and-forth") == command.options.end();
+        auto const back_and_forth = !std::ranges::contains(command.options, "--no-auto-back-and-forth");
         auto const& arg1 = indexer.current();
         if (arg1 != "to")
             return IpcValidationResult::create_failure("Expected 'to' after 'move window/container ...'", true);
@@ -845,26 +845,26 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
         return IpcValidationResult::create_success();
     }
 
-    auto const back_and_forth = std::ranges::find(command.options, "--no-auto-back-and-forth") == command.options.end();
+    auto const allow_back_and_forth = !std::ranges::contains(command.options, "--no-auto-back-and-forth");
 
     if (int number; try_get_number(arg0, number))
     {
         // Check if we just have "workspace number"
         if (!indexer.next())
         {
-            command_controller->select_workspace(number, back_and_forth);
+            command_controller->select_workspace(number, allow_back_and_forth);
             return IpcValidationResult::create_success();
         }
 
         // We have "workspace number <name>"
         auto const& arg1 = &indexer.current();
-        command_controller->select_workspace(*arg1, back_and_forth);
+        command_controller->select_workspace(*arg1, allow_back_and_forth);
         return IpcValidationResult::create_success();
     }
     else
     {
         // We have "workspace <name>"
-        command_controller->select_workspace(arg0, back_and_forth);
+        command_controller->select_workspace(arg0, allow_back_and_forth);
         return IpcValidationResult::create_success();
     }
 }

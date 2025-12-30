@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "command_controller.h"
 #include "config.h"
 #include "container_listener.h"
+#include "geometry_helpers.h"
 #include "leaf_container.h"
 #include "math_helpers.h"
 #include "mode_observer.h"
@@ -396,29 +397,31 @@ bool CommandController::try_move_to_center_of_active_output(std::vector<Containe
     auto const& active_output = output_manager->focused();
     auto const active = state->focused_container().get();
     auto const area = active_output->get_area();
-    float const x = static_cast<float>(area.size.width.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
-    float const y = static_cast<float>(area.size.height.as_int()) / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
-    return try_move_to(x, false, y, false, scope);
+    using namespace miracle::geometry_helpers::gl;
+    float const x_pos = width(area.size) / 2.f - width(active->get_visible_area().size) / 2.f;
+    float const y_pos = height(area.size) / 2.f - height(active->get_visible_area().size) / 2.f;
+    return try_move_to(x_pos, false, y_pos, false, scope);
 }
 
 bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> const& scope)
 {
     auto const lock = state->lock();
-    float x = 0, y = 0;
+    using namespace miracle::geometry_helpers::gl;
+    float max_x = 0, max_y = 0;
     for (auto const& output : output_manager->outputs())
     {
         auto area = output->get_area();
-        float const end_x = static_cast<float>(area.size.width.as_int() + area.top_left.x.as_int());
-        float const end_y = static_cast<float>(area.size.height.as_int() + area.top_left.y.as_int());
-        if (end_x > x)
-            x = end_x;
-        if (end_y > y)
-            y = end_y;
+        float const end_x = width(area.size) + x(area.top_left);
+        float const end_y = height(area.size) + y(area.top_left);
+        if (end_x > max_x)
+            max_x = end_x;
+        if (end_y > max_y)
+            max_y = end_y;
     }
 
     auto const active = state->focused_container();
-    float const x_pos = x / 2.f - static_cast<float>(active->get_visible_area().size.width.as_int()) / 2.f;
-    float const y_pos = y / 2.f - static_cast<float>(active->get_visible_area().size.height.as_int()) / 2.f;
+    float const x_pos = max_x / 2.f - width(active->get_visible_area().size) / 2.f;
+    float const y_pos = max_y / 2.f - height(active->get_visible_area().size) / 2.f;
     return try_move_to(static_cast<int>(x_pos), false, static_cast<int>(y_pos), false, scope);
 }
 
@@ -721,7 +724,7 @@ bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const&
     return result;
 }
 
-bool CommandController::select_workspace(int number, bool back_and_forth)
+bool CommandController::select_workspace(int number, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
@@ -735,11 +738,11 @@ bool CommandController::select_workspace(int number, bool back_and_forth)
     }
 
     mir::log_info("select_workspace: %d", number);
-    workspace_manager->request_workspace(focused.get(), number, back_and_forth);
+    workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth);
     return true;
 }
 
-bool CommandController::select_workspace(std::string const& name, bool back_and_forth)
+bool CommandController::select_workspace(std::string const& name, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
@@ -752,7 +755,7 @@ bool CommandController::select_workspace(std::string const& name, bool back_and_
         return false;
     }
 
-    return workspace_manager->request_workspace(focused.get(), name, back_and_forth);
+    return workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth);
 }
 
 bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> const& scope)
@@ -839,7 +842,7 @@ bool CommandController::prev_workspace_on_output()
     return false;
 }
 
-bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool back_and_forth)
+bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (!can_move_container())
@@ -858,14 +861,14 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
             continue;
 
         container->get_output()->delete_container(container);
-        if (workspace_manager->request_workspace(output_manager->focused().get(), number, back_and_forth))
+        if (workspace_manager->request_workspace(output_manager->focused().get(), number, allow_back_and_forth))
             output_manager->focused()->graft(container);
     }
 
     return true;
 }
 
-bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool back_and_forth)
+bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
     if (!can_move_container())
@@ -890,7 +893,7 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
         container->get_output()->delete_container(container);
         state->unfocus_container(container);
 
-        if (workspace_manager->request_workspace(focused.get(), name, back_and_forth))
+        if (workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth))
             focused->graft(container);
     }
 

@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,13 +23,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class WindowController;
+class ShellApplicationDelegate;
 
 class ShellComponentContainer : public Container
 {
 public:
     ShellComponentContainer(
         miral::Window const&,
-        std::shared_ptr<WindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<ShellApplicationDelegate>&& delegate);
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 
@@ -101,6 +103,7 @@ public:
 private:
     miral::Window window_;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<ShellApplicationDelegate> delegate;
     uint32_t handle_ = 0;
     glm::mat4 transform_ = glm::mat4(1.f);
 };

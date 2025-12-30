@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,13 +30,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/gtx/transform.hpp>
 #include <memory>
 #include <mir/log.h>
+#include <miral/application_info.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
+
+#include "shell_application_manager.h"
 
 using namespace miracle;
 namespace mg = mir::graphics;
 
 Output::Output(
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::string name,
     int id,
     geom::Rectangle const& area,
@@ -44,7 +48,10 @@ Output::Output(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<Animator> const& animator) :
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
+    shell_application_manager { shell_application_manager },
     name_ { std::move(name) },
     id_ { id },
     area { area },
@@ -53,7 +60,9 @@ Output::Output(
     config { config },
     window_controller { window_controller },
     animator { animator },
-    handle { animator->register_animateable() }
+    server_action_queue { server_action_queue },
+    handle { animator->register_animateable() },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -123,6 +132,12 @@ AllocationHint Output::allocate_position(
     miral::WindowSpecification& requested_specification,
     AllocationHint hint)
 {
+    if (shell_application_manager->is_registered(app_info.application()))
+    {
+        hint.container_type = ContainerType::shell;
+        return hint;
+    }
+
     auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
     auto const is_attached = requested_specification.attached_edges().is_set();
     auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
@@ -178,7 +193,18 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     auto const new_workspace = std::make_shared<Workspace>(
-        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar, animator);
+        shell_application_manager,
+        shared_from_this(),
+        data.id,
+        data.num,
+        data.name,
+        config,
+        window_controller,
+        state,
+        data.registrar,
+        animator,
+        server_action_queue,
+        plugin_manager);
     insert_workspace_sorted(new_workspace);
 }
 

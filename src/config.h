@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_CONFIG_H
 #define MIRACLEWM_CONFIG_H
 
-#include "../miracle-wm-config/include/miracle/gaps.h"
 #include "container.h"
-#include <miracle/miracle-wm-config.h>
+#include "miracle/cpp/gaps.h"
+#include <miracle/cpp/config-cpp.h>
 #include <miral/version.h>
 
 #include <functional>
@@ -53,6 +53,7 @@ public:
     virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
+    [[nodiscard]] virtual std::vector<PluginConfiguration> const& get_plugins() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
@@ -87,6 +88,7 @@ public:
     [[nodiscard]] virtual SlowKeysConfiguration slow_keys() const = 0;
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
     [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
+    [[nodiscard]] virtual bool get_workspace_back_and_forth() const = 0;
 };
 
 class FilesystemConfiguration : public Config
@@ -101,6 +103,7 @@ public:
     void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
+    [[nodiscard]] std::vector<PluginConfiguration> const& get_plugins() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
@@ -134,6 +137,7 @@ public:
     [[nodiscard]] SlowKeysConfiguration slow_keys() const override;
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
     [[nodiscard]] TouchpadConfiguration touchpad() const override;
+    [[nodiscard]] bool get_workspace_back_and_forth() const override;
 
 private:
     uint process_modifier_internal(uint modifier) const;

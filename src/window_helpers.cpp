@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,10 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#define MIR_LOG_COMPONENT "window_helpers"
-
 #include "window_helpers.h"
-#include "leaf_container.h"
+
+namespace geom = mir::geometry;
 
 miral::WindowSpecification miracle::window_helpers::copy_from(miral::WindowInfo const& info)
 {

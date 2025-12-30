@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,14 +20,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/scene/session.h>
 #include <mir/scene/surface.h>
 
+#include "shell_application_manager.h"
+
 namespace miracle
 {
 
 ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<ShellApplicationDelegate>&& delegate) :
     window_ { window_ },
-    window_controller { window_controller }
+    window_controller { window_controller },
+    delegate { std::move(delegate) }
 {
 }
 
@@ -53,7 +57,7 @@ mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 
 void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const& rectangle, bool with_animations)
 {
-    window_controller->set_rectangle(window_, get_visible_area(), rectangle);
+    window_controller->set_rectangle(window_, get_visible_area(), rectangle, with_animations);
 }
 
 mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
@@ -86,7 +90,10 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
-    window_controller->select_active_window(window_);
+    if (delegate)
+        delegate->handle_ready(shared_from_this());
+    else
+        window_controller->select_active_window(window_);
 }
 
 void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)

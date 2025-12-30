@@ -9,11 +9,11 @@
 
 #include <optional>
 
-#include "mir/fd.h"
+#include <mir/fd.h>
 #include <wayland-server-core.h>
 
-#include "mir/wayland/global.h"
-#include "mir/wayland/resource.h"
+#include <mir/wayland/global.h>
+#include <mir/wayland/resource.h>
 
 namespace mir
 {

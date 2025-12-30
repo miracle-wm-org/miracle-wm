@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,9 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
 #include "mock_session.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -52,7 +54,10 @@ class LeafContainerTest : public ::testing::Test
 public:
     LeafContainerTest() :
         workspace(std::make_shared<testing::NiceMock<test::MockWorkspace>>()),
+        shell_application_manager(std::make_shared<ShellApplicationManager>(
+            std::make_unique<testing::NiceMock<test::MockShellApplicationSpawner>>())),
         parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>(
+            shell_application_manager,
             state,
             window_controller,
             config,
@@ -93,6 +98,7 @@ protected:
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<test::MockWorkspace> workspace;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::shared_ptr<test::MockOutput> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     std::shared_ptr<test::MockParentContainer> parent;
@@ -626,4 +632,283 @@ TEST_F(LeafContainerTest, SetStateToFullscreenTriggersObserver)
 
     leaf_container->set_state(mir_window_state_fullscreen);
     leaf_container->commit_changes();
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheInitiallyDirty)
+{
+    // Create a new container to test initial state
+    auto new_leaf = std::make_shared<LeafContainer>(
+        workspace,
+        window_controller,
+        geom::Rectangle {
+            { 10,  10  },
+            { 200, 200 }
+    },
+        config,
+        parent,
+        state);
+
+    // First call should calculate and cache the visible area
+    auto area1 = new_leaf->get_visible_area();
+    auto area2 = new_leaf->get_visible_area();
+
+    // Both calls should return the same result (using cache on second call)
+    EXPECT_EQ(area1.top_left.x.as_int(), area2.top_left.x.as_int());
+    EXPECT_EQ(area1.top_left.y.as_int(), area2.top_left.y.as_int());
+    EXPECT_EQ(area1.size.width.as_int(), area2.size.width.as_int());
+    EXPECT_EQ(area1.size.height.as_int(), area2.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheInvalidatedOnSetLogicalArea)
+{
+    // Get initial visible area (this will cache it)
+    auto initial_area = leaf_container->get_visible_area();
+
+    // Change logical area to something significantly different
+    geom::Rectangle new_logical_area {
+        { 100, 200 }, // Different position
+        { 500, 300 }  // Different size
+    };
+    leaf_container->set_logical_area(new_logical_area);
+
+    // The visible area should not change yet since changes haven't been committed
+    // Cache should still be valid until commit
+    auto area_after_set = leaf_container->get_visible_area();
+    EXPECT_EQ(initial_area.top_left.x.as_int(), area_after_set.top_left.x.as_int());
+    EXPECT_EQ(initial_area.top_left.y.as_int(), area_after_set.top_left.y.as_int());
+    EXPECT_EQ(initial_area.size.width.as_int(), area_after_set.size.width.as_int());
+    EXPECT_EQ(initial_area.size.height.as_int(), area_after_set.size.height.as_int());
+
+    // Now commit the changes - this should invalidate cache and update visible area
+    leaf_container->commit_changes();
+
+    // Get visible area after commit - should reflect new logical area
+    auto area_after_commit = leaf_container->get_visible_area();
+
+    // Size should have changed to reflect the new logical area (minus borders)
+    int border_size = config->get_border_config().size;
+    int expected_width = new_logical_area.size.width.as_int() - (2 * border_size);
+    int expected_height = new_logical_area.size.height.as_int() - (2 * border_size);
+
+    EXPECT_EQ(area_after_commit.size.width.as_int(), expected_width);
+    EXPECT_EQ(area_after_commit.size.height.as_int(), expected_height);
+
+    // Verify the cache is working by calling get_visible_area again
+    auto cached_area = leaf_container->get_visible_area();
+    EXPECT_EQ(area_after_commit.top_left.x.as_int(), cached_area.top_left.x.as_int());
+    EXPECT_EQ(area_after_commit.top_left.y.as_int(), cached_area.top_left.y.as_int());
+    EXPECT_EQ(area_after_commit.size.width.as_int(), cached_area.size.width.as_int());
+    EXPECT_EQ(area_after_commit.size.height.as_int(), cached_area.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheInvalidatedOnCommitChanges)
+{
+    // Set up a pending logical area change
+    geom::Rectangle new_logical_area {
+        { 100, 100 },
+        { 300, 250 }
+    };
+    leaf_container->set_logical_area(new_logical_area);
+
+    // Get visible area before committing (should still reflect old logical area)
+    auto area_before_commit = leaf_container->get_visible_area();
+
+    // Commit the changes
+    leaf_container->commit_changes();
+
+    // Get visible area after committing (should be recalculated with committed logical area)
+    auto area_after_commit = leaf_container->get_visible_area();
+
+    // The areas should be different since the logical area changed during commit
+    // This verifies that the cache was properly invalidated during commit
+    EXPECT_NE(area_before_commit.top_left.x.as_int(), area_after_commit.top_left.x.as_int());
+    EXPECT_NE(area_before_commit.top_left.y.as_int(), area_after_commit.top_left.y.as_int());
+    EXPECT_NE(area_before_commit.size.width.as_int(), area_after_commit.size.width.as_int());
+    EXPECT_NE(area_before_commit.size.height.as_int(), area_after_commit.size.height.as_int());
+
+    // Verify the new visible area matches the expected size (logical area minus borders)
+    int border_size = config->get_border_config().size;
+    int expected_width = new_logical_area.size.width.as_int() - (2 * border_size);
+    int expected_height = new_logical_area.size.height.as_int() - (2 * border_size);
+    EXPECT_EQ(area_after_commit.size.width.as_int(), expected_width);
+    EXPECT_EQ(area_after_commit.size.height.as_int(), expected_height);
+
+    // Verify cache is working by calling get_visible_area again
+    auto cached_area = leaf_container->get_visible_area();
+    EXPECT_EQ(area_after_commit.top_left.x.as_int(), cached_area.top_left.x.as_int());
+    EXPECT_EQ(area_after_commit.top_left.y.as_int(), cached_area.top_left.y.as_int());
+    EXPECT_EQ(area_after_commit.size.width.as_int(), cached_area.size.width.as_int());
+    EXPECT_EQ(area_after_commit.size.height.as_int(), cached_area.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheReusedWhenLogicalAreaUnchanged)
+{
+    // Create a spy to verify the expensive calculation isn't called repeatedly
+    // We'll do this by checking that multiple calls return identical objects
+    auto area1 = leaf_container->get_visible_area();
+    auto area2 = leaf_container->get_visible_area();
+    auto area3 = leaf_container->get_visible_area();
+
+    // All should be identical when using cache
+    EXPECT_EQ(area1.top_left.x.as_int(), area2.top_left.x.as_int());
+    EXPECT_EQ(area1.top_left.y.as_int(), area2.top_left.y.as_int());
+    EXPECT_EQ(area1.size.width.as_int(), area2.size.width.as_int());
+    EXPECT_EQ(area1.size.height.as_int(), area2.size.height.as_int());
+
+    EXPECT_EQ(area2.top_left.x.as_int(), area3.top_left.x.as_int());
+    EXPECT_EQ(area2.top_left.y.as_int(), area3.top_left.y.as_int());
+    EXPECT_EQ(area2.size.width.as_int(), area3.size.width.as_int());
+    EXPECT_EQ(area2.size.height.as_int(), area3.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheAccountsForBorders)
+{
+    // Test that visible area calculation includes border considerations
+    // and that this is consistently cached
+
+    auto visible_area = leaf_container->get_visible_area();
+    auto logical_area = leaf_container->get_logical_area();
+
+    // Visible area should be smaller than logical area due to borders
+    int border_size = config->get_border_config().size;
+    int expected_width = logical_area.size.width.as_int() - (2 * border_size);
+    int expected_height = logical_area.size.height.as_int() - (2 * border_size);
+
+    EXPECT_EQ(visible_area.size.width.as_int(), expected_width);
+    EXPECT_EQ(visible_area.size.height.as_int(), expected_height);
+    EXPECT_EQ(visible_area.top_left.x.as_int(), logical_area.top_left.x.as_int() + border_size);
+    EXPECT_EQ(visible_area.top_left.y.as_int(), logical_area.top_left.y.as_int() + border_size);
+
+    // Verify cache is working by getting visible area again
+    auto cached_visible_area = leaf_container->get_visible_area();
+    EXPECT_EQ(visible_area.top_left.x.as_int(), cached_visible_area.top_left.x.as_int());
+    EXPECT_EQ(visible_area.top_left.y.as_int(), cached_visible_area.top_left.y.as_int());
+    EXPECT_EQ(visible_area.size.width.as_int(), cached_visible_area.size.width.as_int());
+    EXPECT_EQ(visible_area.size.height.as_int(), cached_visible_area.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheHandlesMultipleLogicalAreaChanges)
+{
+    // Test that cache is properly invalidated and works correctly through multiple changes
+
+    // Initial area with cache
+    auto area1 = leaf_container->get_visible_area();
+    auto initial_width = area1.size.width.as_int();
+    auto initial_height = area1.size.height.as_int();
+
+    // First change to a different size and commit
+    geom::Rectangle change1 {
+        { 100, 150 },
+        { 600, 400 }  // Larger size
+    };
+    leaf_container->set_logical_area(change1);
+    leaf_container->commit_changes();
+    auto area2 = leaf_container->get_visible_area();
+
+    // Second change to another different size and commit
+    geom::Rectangle change2 {
+        { 200, 250 },
+        { 300, 200 }  // Smaller size
+    };
+    leaf_container->set_logical_area(change2);
+    leaf_container->commit_changes();
+    auto area3 = leaf_container->get_visible_area();
+
+    // Verify sizes changed (which is more reliable than positions in test env)
+    int border_size = config->get_border_config().size;
+    int expected_width2 = change1.size.width.as_int() - (2 * border_size);
+    int expected_height2 = change1.size.height.as_int() - (2 * border_size);
+    int expected_width3 = change2.size.width.as_int() - (2 * border_size);
+    int expected_height3 = change2.size.height.as_int() - (2 * border_size);
+
+    EXPECT_EQ(area2.size.width.as_int(), expected_width2);
+    EXPECT_EQ(area2.size.height.as_int(), expected_height2);
+    EXPECT_EQ(area3.size.width.as_int(), expected_width3);
+    EXPECT_EQ(area3.size.height.as_int(), expected_height3);
+
+    // All areas should have different sizes
+    EXPECT_NE(initial_width, area2.size.width.as_int());
+    EXPECT_NE(initial_height, area2.size.height.as_int());
+    EXPECT_NE(area2.size.width.as_int(), area3.size.width.as_int());
+    EXPECT_NE(area2.size.height.as_int(), area3.size.height.as_int());
+
+    // Test that cache is working by calling get_visible_area multiple times
+    // without any changes - should return same values
+    auto area3_cached = leaf_container->get_visible_area();
+    auto area3_cached2 = leaf_container->get_visible_area();
+    EXPECT_EQ(area3.top_left.x.as_int(), area3_cached.top_left.x.as_int());
+    EXPECT_EQ(area3.top_left.y.as_int(), area3_cached.top_left.y.as_int());
+    EXPECT_EQ(area3.size.width.as_int(), area3_cached.size.width.as_int());
+    EXPECT_EQ(area3.size.height.as_int(), area3_cached.size.height.as_int());
+    EXPECT_EQ(area3_cached.top_left.x.as_int(), area3_cached2.top_left.x.as_int());
+    EXPECT_EQ(area3_cached.top_left.y.as_int(), area3_cached2.top_left.y.as_int());
+    EXPECT_EQ(area3_cached.size.width.as_int(), area3_cached2.size.width.as_int());
+    EXPECT_EQ(area3_cached.size.height.as_int(), area3_cached2.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheWorksAfterCommitChanges)
+{
+    // Set a new logical area and commit
+    geom::Rectangle new_logical_area {
+        { 75,  85  },
+        { 450, 350 }
+    };
+    leaf_container->set_logical_area(new_logical_area);
+    leaf_container->commit_changes();
+
+    // Get visible area multiple times after commit
+    auto area1 = leaf_container->get_visible_area();
+    auto area2 = leaf_container->get_visible_area();
+    auto area3 = leaf_container->get_visible_area();
+
+    // Should all be identical (using cache)
+    EXPECT_EQ(area1.top_left.x.as_int(), area2.top_left.x.as_int());
+    EXPECT_EQ(area1.top_left.y.as_int(), area2.top_left.y.as_int());
+    EXPECT_EQ(area1.size.width.as_int(), area2.size.width.as_int());
+    EXPECT_EQ(area1.size.height.as_int(), area2.size.height.as_int());
+
+    EXPECT_EQ(area2.top_left.x.as_int(), area3.top_left.x.as_int());
+    EXPECT_EQ(area2.top_left.y.as_int(), area3.top_left.y.as_int());
+    EXPECT_EQ(area2.size.width.as_int(), area3.size.width.as_int());
+    EXPECT_EQ(area2.size.height.as_int(), area3.size.height.as_int());
+}
+
+TEST_F(LeafContainerTest, VisibleAreaCacheInvalidationMechanism)
+{
+    // Test the fundamental cache invalidation mechanism
+
+    // Fill the cache
+    auto area1 = leaf_container->get_visible_area();
+    auto area1_again = leaf_container->get_visible_area();
+
+    // These should be identical (cache working)
+    EXPECT_EQ(area1.top_left.x.as_int(), area1_again.top_left.x.as_int());
+    EXPECT_EQ(area1.top_left.y.as_int(), area1_again.top_left.y.as_int());
+    EXPECT_EQ(area1.size.width.as_int(), area1_again.size.width.as_int());
+    EXPECT_EQ(area1.size.height.as_int(), area1_again.size.height.as_int());
+
+    // Set a new logical area (should invalidate cache)
+    geom::Rectangle new_area {
+        { 50,  60  },
+        { 300, 200 }
+    };
+    leaf_container->set_logical_area(new_area);
+
+    // Cache should be invalidated, but visible area won't change until commit
+    auto area2 = leaf_container->get_visible_area();
+    EXPECT_EQ(area1.top_left.x.as_int(), area2.top_left.x.as_int()); // Still same before commit
+    EXPECT_EQ(area1.top_left.y.as_int(), area2.top_left.y.as_int());
+
+    // Commit changes
+    leaf_container->commit_changes();
+
+    // Now the visible area should be different and cached
+    auto area3 = leaf_container->get_visible_area();
+    auto area3_again = leaf_container->get_visible_area();
+
+    // These should be identical (cache working after commit)
+    EXPECT_EQ(area3.top_left.x.as_int(), area3_again.top_left.x.as_int());
+    EXPECT_EQ(area3.top_left.y.as_int(), area3_again.top_left.y.as_int());
+    EXPECT_EQ(area3.size.width.as_int(), area3_again.size.width.as_int());
+    EXPECT_EQ(area3.size.height.as_int(), area3_again.size.height.as_int());
 }

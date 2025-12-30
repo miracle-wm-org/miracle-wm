@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,9 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config.h"
 #include "config_observer.h"
-#include "file_helpers.h"
+#include "miracle/cpp/file_helpers.h"
 
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <glib-2.0/glib.h>
@@ -349,6 +348,12 @@ TouchpadConfiguration FilesystemConfiguration::touchpad() const
     return options.touchpad;
 }
 
+bool FilesystemConfiguration::get_workspace_back_and_forth() const
+{
+    std::lock_guard lock(mutex);
+    return options.workspace_back_and_forth;
+}
+
 MagnifierConfiguration FilesystemConfiguration::magnifier() const
 {
     std::lock_guard lock(mutex);
@@ -358,6 +363,11 @@ MagnifierConfiguration FilesystemConfiguration::magnifier() const
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
+}
+
+std::vector<PluginConfiguration> const& FilesystemConfiguration::get_plugins() const
+{
+    return *options.plugins;
 }
 
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const

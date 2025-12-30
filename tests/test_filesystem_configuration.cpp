@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gmock/gmock-function-mocker.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <miracle/animation_definition.h>
+#include <miracle/cpp/animation_definition.h>
 #include <miral/runner.h>
 #include <vector>
 #include <yaml-cpp/node/node.h>
@@ -536,25 +536,6 @@ class FilesystemConfigurationTestAnimationTypes : public FilesystemConfiguration
 {
 };
 
-TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationType)
-{
-    auto param = GetParam();
-    YAML::Node animations_node;
-    YAML::Node animation;
-    animation["event"] = "window_open";
-    animation["type"] = param.value;
-    animation["function"] = "linear";
-    animations_node.push_back(animation);
-
-    YAML::Node root;
-    root["animations"] = animations_node;
-    write_yaml_node(root);
-
-    FilesystemConfiguration config(registrar, path, true);
-    auto def = config.get_animation_definition(AnimateableEvent::window_open);
-    EXPECT_EQ(def.animations[0].type, param.expected);
-}
-
 TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimationList)
 {
     auto param = GetParam();
@@ -567,8 +548,9 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
 
     YAML::Node animation;
     animation["duration"] = 1000;
+    animation["type"] = "built_in";
     animation["event"] = "window_open";
-    animation["list"] = list;
+    animation["parts"] = list;
 
     YAML::Node animations_node;
     animations_node.push_back(animation);
@@ -578,8 +560,8 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
     write_yaml_node(root);
 
     FilesystemConfiguration config(registrar, path, true);
-    auto def = config.get_animation_definition(AnimateableEvent::window_open);
-    EXPECT_EQ(def.animations[0].type, param.expected);
+    auto const def = config.get_animation_definition(AnimateableEvent::window_open);
+    EXPECT_EQ(std::get<miracle::BuiltInAnimationList>(def.data)[0].type, param.expected);
 }
 
 TEST_F(FilesystemConfigurationTest, CanReadSimulatedSecondaryClick)

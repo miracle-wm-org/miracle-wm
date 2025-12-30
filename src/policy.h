@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -59,6 +59,8 @@ class OutputListenerMultiplexer;
 class DisplayConfig;
 class WindowObserverRegistrar;
 class MagnifierWrapper;
+class PluginManager;
+class ShellApplicationManager;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -121,10 +123,12 @@ private:
     std::shared_ptr<OutputListenerMultiplexer> output_listener;
     std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
     std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<Self> self;

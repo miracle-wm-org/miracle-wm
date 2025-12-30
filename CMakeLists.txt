@@ -45,10 +45,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
+option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(ENABLE_TESTS "Build unit tests" ON)
+
 if(COMPILING_AGAINST_DEV)
     set(COMPILING_AGAINST_DEV 1)
 else()
     set(COMPILING_AGAINST_DEV 0)
+endif()
+
+if(ENABLE_PLUGIN_SYSTEM)
+    set(ENABLE_PLUGIN_SYSTEM 1)
+else()
+    set(ENABLE_PLUGIN_SYSTEM 0)
 endif()
 
 # ----------------------------------------
@@ -82,7 +91,7 @@ find_package(PkgConfig)
 
 set(MIR_MINIMUM_VERSION 2.18)
 pkg_check_modules(MIRAL REQUIRED miral>=5.1)
-pkg_check_modules(MIRRENDERER REQUIRED mirrenderer>=${MIR_MINIMUM_VERSION})
+pkg_check_modules(MIRRENDERER mirrenderer>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRPLATFORM REQUIRED mirplatform>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON REQUIRED mircommon>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON_INTERNAL REQUIRED mircommon-internal>=${MIR_MINIMUM_VERSION})
@@ -96,6 +105,8 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+find_path(WASMEDGE_INCLUDE_DIR wasmedge/wasmedge.h)
+find_library(WASMEDGE_LIB wasmedge)
 
 include(GNUInstallDirs)
 
@@ -108,6 +119,7 @@ add_library(miracle-wm-implementation STATIC
         src/window_helpers.cpp
         src/config.cpp
         src/output.cpp
+        src/parent_background_internal_client.cpp
         src/workspace_manager.cpp
         src/ipc_message_handler.cpp
         src/ipc_connection_manager.cpp
@@ -123,6 +135,7 @@ add_library(miracle-wm-implementation STATIC
         src/ipc_command_executor.cpp
         src/render_data_manager.cpp
         src/animator.cpp
+        src/animation.cpp
         src/program_factory.cpp
         src/mode_observer.cpp
         src/shell_component_container.cpp
@@ -144,29 +157,50 @@ add_library(miracle-wm-implementation STATIC
         src/wlr-ouput-management-unstable-v1.cpp
         src/output_listener.cpp
         src/display_config.cpp
-        src/tilling_algorithms.cpp
         src/window_observer.cpp
         src/config_observer.cpp
         src/binding_event.cpp
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
+        src/plugin_manager.cpp
+        src/shell_application_manager.cpp src/shell_application_manager.h
+        src/shell_application_spawner.h
+        src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV})
+target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
 
 # ----------------------------------------
 # Precompiled headers for speed
 # ----------------------------------------
 target_precompile_headers(miracle-wm-implementation PRIVATE
+        # C++ Standard Library (most frequently used)
+        <memory>
         <vector>
         <string>
-        <map>
-        <memory>
+        <mutex>
+        <algorithm>
         <optional>
+        <map>
         <utility>
+        <functional>
+
+        # Third-party libraries (frequent)
+        # NOTE: mir/log.h is NOT included here because it requires MIR_LOG_COMPONENT to be defined first
+        <miral/window_manager_tools.h>
+        <mir/geometry/rectangle.h>
+        <mir/geometry/point.h>
+        <mir/scene/surface.h>
+        <mir/scene/session.h>
+        <miral/window.h>
         <glm/glm.hpp>
         <nlohmann/json.hpp>
         <yaml-cpp/yaml.h>
+
+        # OpenGL
+        <GLES2/gl2.h>
+
+        # PCRE2
         <jpcre2.h>
         <pcre2.h>
 )
@@ -186,6 +220,10 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+if (ENABLE_PLUGIN_SYSTEM)
+    target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
+endif()
+
 target_link_libraries(miracle-wm-implementation
         ${MIRAL_LDFLAGS}
         ${MIRRENDERER_LDFLAGS}
@@ -202,7 +240,12 @@ target_link_libraries(miracle-wm-implementation
         PkgConfig::GLESv2
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-config
+        xdg-shell-protocol
 )
+
+if (ENABLE_PLUGIN_SYSTEM)
+    target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
+endif()
 
 # ----------------------------------------
 # miracle-wm executable
@@ -253,7 +296,9 @@ install(
 # ----------------------------------------
 # Subdirectories
 # ----------------------------------------
+if (ENABLE_TESTS)
 add_subdirectory(tests/)
+endif()
 add_subdirectory(miracle-wm-config/)
 add_subdirectory(protocols/)
 

@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "constants.h"
 #include "feature_flags.h"
+#include "geometry_helpers.h"
 #include "output_manager.h"
 
 #include <mir/log.h>
@@ -130,8 +131,8 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
         command_controller->select_container(intersected);
         cursor_start_x = x;
         cursor_start_y = y;
-        container_start_x = static_cast<float>(intersected->get_visible_area().top_left.x.as_int());
-        container_start_y = static_cast<float>(intersected->get_visible_area().top_left.y.as_int());
+        container_start_x = miracle::geometry_helpers::gl::x(intersected->get_visible_area().top_left);
+        container_start_y = miracle::geometry_helpers::gl::y(intersected->get_visible_area().top_left);
         current_x = x;
         current_y = y;
         return true;

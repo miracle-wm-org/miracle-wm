@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "tessellation_helpers.h"
+#include "geometry_helpers.h"
 #include "mir/graphics/buffer.h"
 #include "mir/graphics/renderable.h"
 
@@ -50,12 +51,13 @@ auto tex_coords_from_rect(geom::Size buffer_size, geom::RectangleD sample_rect) 
 mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     mg::Renderable const& renderable, geom::Displacement const& offset, bool const is_flipped)
 {
+    using namespace miracle::geometry_helpers::gl;
     auto rect = renderable.screen_position();
     rect.top_left = rect.top_left - offset;
-    GLfloat const left = static_cast<GLfloat>(rect.top_left.x.as_int());
-    GLfloat const right = left + static_cast<GLfloat>(rect.size.width.as_int());
-    GLfloat const top = static_cast<GLfloat>(rect.top_left.y.as_int());
-    GLfloat const bottom = top + static_cast<GLfloat>(rect.size.height.as_int());
+    GLfloat const left = x(rect.top_left);
+    GLfloat const right = left + width(rect.size);
+    GLfloat const top = y(rect.top_left);
+    GLfloat const bottom = top + height(rect.size);
 
     mgl::Primitive rectangle;
     rectangle.type = GL_TRIANGLE_STRIP;

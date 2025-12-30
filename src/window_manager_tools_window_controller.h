@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,6 +34,8 @@ public:
     WindowManagerToolsWindowController(
         miral::WindowManagerTools const&,
         std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<PluginManager> const& plugin_manager,
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& config);
     void open(miral::Window const&) override;
@@ -60,28 +62,10 @@ public:
 private:
     miral::WindowManagerTools tools;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<PluginManager> plugin_manager;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
-
-    class WindowAnimation : public MultiBuiltInAnimation
-    {
-    public:
-        WindowAnimation(
-            AnimationHandle const& handle,
-            AnimationDefinition const& definition,
-            mir::geometry::Rectangle const& from,
-            mir::geometry::Rectangle const& to,
-            mir::geometry::Rectangle const& current,
-            WindowManagerToolsWindowController* controller,
-            std::shared_ptr<Container> const& container,
-            float opacity_start,
-            float opacity_end);
-        void on_tick(AnimationFrameResult const&) override;
-
-    private:
-        WindowManagerToolsWindowController* controller;
-        std::weak_ptr<Container> container;
-    };
 };
 }
 

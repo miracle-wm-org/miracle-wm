@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,10 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_workspace.h"
 #include "mode_observer.h"
 #include "resize_service.h"
 #include "scratchpad.h"
+#include "shell_application_manager.h"
 #include "stub_window_controller.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
@@ -76,9 +78,11 @@ public:
 
 TEST_F(ResizeServiceTest, CanStartResizing)
 {
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -104,9 +108,11 @@ TEST_F(ResizeServiceTest, CanStartResizing)
 
 TEST_F(ResizeServiceTest, CannotResizeWhenParentHasMoreThanOneChild)
 {
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -157,9 +163,11 @@ TEST_F(ResizeServiceTest, CannotResizeNonLeafContainer)
 
 TEST_F(ResizeServiceTest, ResizeNorthEdge)
 {
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -185,8 +193,10 @@ TEST_F(ResizeServiceTest, ResizeNorthEdge)
 TEST_F(ResizeServiceTest, ResizeSouthEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -212,8 +222,10 @@ TEST_F(ResizeServiceTest, ResizeSouthEdge)
 TEST_F(ResizeServiceTest, ResizeEastEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -239,8 +251,10 @@ TEST_F(ResizeServiceTest, ResizeEastEdge)
 TEST_F(ResizeServiceTest, ResizeWestEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -266,8 +280,10 @@ TEST_F(ResizeServiceTest, ResizeWestEdge)
 TEST_F(ResizeServiceTest, ResizeNorthEastEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -293,8 +309,10 @@ TEST_F(ResizeServiceTest, ResizeNorthEastEdge)
 TEST_F(ResizeServiceTest, ResizeNorthWestEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -320,8 +338,10 @@ TEST_F(ResizeServiceTest, ResizeNorthWestEdge)
 TEST_F(ResizeServiceTest, ResizeSouthEastEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -347,8 +367,10 @@ TEST_F(ResizeServiceTest, ResizeSouthEastEdge)
 TEST_F(ResizeServiceTest, ResizeSouthWestEdge)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(geom::Point(100, 100), geom::Size(200, 200)), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));
@@ -374,8 +396,10 @@ TEST_F(ResizeServiceTest, ResizeSouthWestEdge)
 TEST_F(ResizeServiceTest, StopsResizingWhenButtonReleased)
 {
     auto const container = std::make_shared<::testing::NiceMock<test::MockContainer>>();
+    auto shell_application_manager = std::make_shared<ShellApplicationManager>(
+        std::make_unique<::testing::NiceMock<test::MockShellApplicationSpawner>>());
     auto const parent = std::make_shared<::testing::NiceMock<test::MockParentContainer>>(
-        state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
+        shell_application_manager, state, window_controller, config, geom::Rectangle(), nullptr, nullptr, false);
 
     ON_CALL(*container, get_type())
         .WillByDefault(::testing::Return(ContainerType::leaf));

@@ -1,5 +1,5 @@
 /**
-Copyright (C) 2024  Matthew Kosarek
+Copyright (C) 2025  Matthew Kosarek
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "direction.h"
 
 #include <memory>
-#include <miracle/gaps.h>
+#include <miracle/cpp/gaps.h>
 #include <miral/window_manager_tools.h>
 
 namespace miracle
@@ -88,8 +88,6 @@ public:
 
     [[nodiscard]] virtual bool is_empty() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;
-    virtual void on_animation_start(bool is_hiding) = 0;
-    virtual void on_animation_end(bool is_hiding) = 0;
 
     [[nodiscard]] virtual uint32_t id() const = 0;
     [[nodiscard]] virtual std::optional<int> num() const = 0;
