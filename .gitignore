@@ -45,3 +45,6 @@ cmake-build-debug
 
 # PPA publishing history (local tracking)
 .ppa_history
+
+# Generated files
+src/version.h
