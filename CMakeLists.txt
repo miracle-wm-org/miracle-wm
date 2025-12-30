@@ -111,6 +111,15 @@ find_library(WASMEDGE_LIB wasmedge)
 include(GNUInstallDirs)
 
 # ----------------------------------------
+# Generate version.h from template
+# ----------------------------------------
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/src/version.h
+    @ONLY
+)
+
+# ----------------------------------------
 # miracle-wm-implementation library
 # ----------------------------------------
 add_library(miracle-wm-implementation STATIC
@@ -218,6 +227,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
         ${XKBCOMMON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/src
 )
 
 if (ENABLE_PLUGIN_SYSTEM)
