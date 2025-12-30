@@ -18,13 +18,3 @@ This only works if you have the GPG key that is associated in launchpad.
 
 1. Run `./tools/publish-ppa.sh X.Y.Z` following the tag of a release.
 2. Commit the changelog, for historical purposes.
-
-## Step 4: RPM Release
-Before following these steps, make sure that you've at least followed [this tutorial](https://www.redhat.com/sysadmin/create-rpm-package).
-
-1. `fkinit`
-2. `rpmdev-bumpspec -n 0.3.0 -c "Update to 0.3.0" miracle-wm.spec`
-3. `rpmdev-spectool -g miracle-wm.spec`
-4. `fedpkg new-sources miracle-wm-0.3.0.tar.gz`
-5. `fedpkg ci -m "Update to 0.3.0"`
-6. `fedpkg push && fedpkg build`
