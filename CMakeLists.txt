@@ -45,7 +45,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
-option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
 option(ENABLE_TESTS "Build unit tests" ON)
 
 if(COMPILING_AGAINST_DEV)
@@ -54,10 +53,27 @@ else()
     set(COMPILING_AGAINST_DEV 0)
 endif()
 
-if(ENABLE_PLUGIN_SYSTEM)
-    set(ENABLE_PLUGIN_SYSTEM 1)
+# Feature flags
+option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(FEATURE_MULTI_SELECT "Enable multi-select feature" OFF)
+option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
+
+if(FEATURE_PLUGIN_SYSTEM)
+    set(FEATURE_PLUGIN_SYSTEM 1)
 else()
-    set(ENABLE_PLUGIN_SYSTEM 0)
+    set(FEATURE_PLUGIN_SYSTEM 0)
+endif()
+
+if(FEATURE_MULTI_SELECT)
+    set(FEATURE_MULTI_SELECT 1)
+else()
+    set(FEATURE_MULTI_SELECT 0)
+endif()
+
+if(FEATURE_PARENT_CONTAINER_WALLPAPERS)
+    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 1)
+else()
+    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 0)
 endif()
 
 # ----------------------------------------
@@ -111,11 +127,17 @@ find_library(WASMEDGE_LIB wasmedge)
 include(GNUInstallDirs)
 
 # ----------------------------------------
-# Generate version.h from template
+# Generate version.h and feature_flags.h from templates
 # ----------------------------------------
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/src/version.h
+    @ONLY
+)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/feature_flags.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/src/feature_flags.h
     @ONLY
 )
 
@@ -177,7 +199,7 @@ add_library(miracle-wm-implementation STATIC
         src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
+target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -230,7 +252,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${CMAKE_CURRENT_BINARY_DIR}/src
 )
 
-if (ENABLE_PLUGIN_SYSTEM)
+if (FEATURE_PLUGIN_SYSTEM)
     target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
 endif()
 
@@ -253,7 +275,7 @@ target_link_libraries(miracle-wm-implementation
         xdg-shell-protocol
 )
 
-if (ENABLE_PLUGIN_SYSTEM)
+if (FEATURE_PLUGIN_SYSTEM)
     target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
 endif()
 

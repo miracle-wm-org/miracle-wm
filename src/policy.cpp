@@ -446,7 +446,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
-        if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
+        if (feature::multi_select && action == mir_pointer_action_button_down)
         {
             if (modifiers == config->get_primary_modifier())
             {

@@ -35,7 +35,7 @@ jobs:
               echo 'RUN dnf clean all'
               echo 'COPY miracle-wm miracle-wm'
               echo 'WORKDIR /miracle-wm'
-              echo 'RUN cmake -DENABLE_PLUGIN_SYSTEM=1 -Bbuild'
+              echo 'RUN cmake -DFEATURE_PLUGIN_SYSTEM=1 -Bbuild'
               echo 'RUN cmake --build build'
               echo 'WORKDIR /miracle-wm/build'
               echo 'RUN make install'
