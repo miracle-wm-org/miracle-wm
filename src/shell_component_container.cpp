@@ -105,10 +105,6 @@ void ShellComponentContainer::handle_request_move(MirInputEvent const* input_eve
 {
 }
 
-void ShellComponentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
-{
-}
-
 void ShellComponentContainer::handle_raise()
 {
     window_controller->select_active_window(window_);

@@ -78,7 +78,19 @@ public:
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
-    virtual void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) = 0;
+
+    /// Begin resizing this container on the given \p edge.
+    ///
+    /// \returns `true` if resizing is valid, otherwise `false`.
+    virtual bool start_resize(MirResizeEdge edge) = 0;
+
+    /// Handle a resize request to the provided coordinates.
+    ///
+    /// \param edge the edge on which this resize is performed
+    /// \param x the x coordinate
+    /// \param y the y coordinate
+    virtual void handle_resize(MirResizeEdge edge, float x, float y) = 0;
+
     virtual void handle_raise() = 0;
     virtual bool resize(Direction direction, int pixels) = 0;
     virtual bool set_size(std::optional<int> const& width, std::optional<int> const& height) = 0;
@@ -157,6 +169,27 @@ public:
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
     static std::shared_ptr<ContainerGroupContainer> as_group(std::shared_ptr<Container> const&);
+    static void handle_resize_within_parent(ParentContainer* parent, Container* child, MirResizeEdge edge, float x, float y);
+
+    /// Returns the neighbor to the north of this container, or `nullptr` if not found.
+    ///
+    /// \returns north neighbor
+    std::shared_ptr<Container> neighbor_north() const;
+
+    /// Returns the neighbor to the east of this container, or `nullptr` if not found.
+    ///
+    /// \returns east neighbor
+    std::shared_ptr<Container> neighbor_east() const;
+
+    /// Returns the neighbor to the south of this container, or `nullptr` if not found.
+    ///
+    /// \returns south neighbor
+    std::shared_ptr<Container> neighbor_south() const;
+
+    /// Returns the neighbor to the west of this container, or `nullptr` if not found.
+    ///
+    /// \returns west neighbor
+    std::shared_ptr<Container> neighbor_west() const;
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;

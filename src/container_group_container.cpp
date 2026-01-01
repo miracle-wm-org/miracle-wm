@@ -154,15 +154,6 @@ void ContainerGroupContainer::handle_request_move(MirInputEvent const* input_eve
     }
 }
 
-void ContainerGroupContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
-{
-    for (auto const& container : containers)
-    {
-        if (auto c = container.lock())
-            c->handle_request_resize(input_event, edge);
-    }
-}
-
 void ContainerGroupContainer::handle_raise()
 {
     for (auto const& container : containers)

@@ -358,7 +358,7 @@ void LeafContainer::handle_raise()
 {
 }
 
-bool LeafContainer::resize(miracle::Direction direction, int pixels)
+bool LeafContainer::resize(Direction direction, int pixels)
 {
     handle_resize(this, direction, pixels);
     return true;
@@ -366,16 +366,16 @@ bool LeafContainer::resize(miracle::Direction direction, int pixels)
 
 void LeafContainer::handle_resize(Container* container, Direction direction, int amount)
 {
-    auto sh_parent = container->get_parent().lock();
+    auto const sh_parent = container->get_parent().lock();
     if (!sh_parent)
         return;
 
-    bool is_vertical = direction == Direction::up || direction == Direction::down;
-    bool is_main_axis_movement = (is_vertical && sh_parent->get_direction() == LayoutScheme::vertical)
+    bool const is_vertical = direction == Direction::up || direction == Direction::down;
+    bool const is_main_axis_movement = (is_vertical && sh_parent->get_direction() == LayoutScheme::vertical)
         || (!is_vertical && sh_parent->get_direction() == LayoutScheme::horizontal);
 
-    bool is_negative = direction == Direction::left || direction == Direction::up;
-    auto resize_amount = is_negative ? -amount : amount;
+    bool const is_negative = direction == Direction::left || direction == Direction::up;
+    auto const resize_amount = is_negative ? -amount : amount;
     if (!sh_parent->anchored() && sh_parent->num_nodes() == 1)
     {
         // In this case, we resize are resizing a floating tree with a single container
@@ -402,11 +402,11 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
         return;
     }
 
-    auto nodes = sh_parent->get_sub_nodes();
+    auto const nodes = sh_parent->get_sub_nodes();
     std::vector<geom::Rectangle> pending_node_resizes;
     if (is_vertical)
     {
-        int height_for_others = (int)floor(-(double)resize_amount / static_cast<double>(nodes.size() - 1));
+        int const height_for_others = (int)floor(-(double)resize_amount / static_cast<double>(nodes.size() - 1));
         int total_height = 0;
         for (size_t i = 0; i < nodes.size(); i++)
         {
@@ -434,12 +434,12 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
         }
 
         // Due to some rounding errors, we may have to extend the final node
-        int leftover_height = sh_parent->get_logical_area().size.height.as_int() - total_height;
+        int const leftover_height = sh_parent->get_logical_area().size.height.as_int() - total_height;
         pending_node_resizes.back().size.height = geom::Height { pending_node_resizes.back().size.height.as_int() + leftover_height };
     }
     else
     {
-        int width_for_others = (int)floor((double)-resize_amount / static_cast<double>(nodes.size() - 1));
+        int const width_for_others = (int)floor((double)-resize_amount / static_cast<double>(nodes.size() - 1));
         int total_width = 0;
         for (size_t i = 0; i < nodes.size(); i++)
         {
@@ -467,7 +467,7 @@ void LeafContainer::handle_resize(Container* container, Direction direction, int
         }
 
         // Due to some rounding errors, we may have to extend the final node
-        int leftover_width = sh_parent->get_logical_area().size.width.as_int() - total_width;
+        int const leftover_width = sh_parent->get_logical_area().size.width.as_int() - total_width;
         pending_node_resizes.back().size.width = geom::Width { pending_node_resizes.back().size.width.as_int() + leftover_width };
     }
 
@@ -622,8 +622,34 @@ void LeafContainer::handle_request_move(MirInputEvent const* input_event)
 {
 }
 
-void LeafContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
+void LeafContainer::handle_resize(MirResizeEdge edge, float x, float y)
 {
+    if (auto const sh_parent = parent.lock())
+    {
+        switch (sh_parent->get_layout())
+        {
+        case LayoutScheme::horizontal:
+        {
+            switch (edge)
+            {
+            case mir_resize_edge_east:
+                break;
+            case mir_resize_edge_west:
+                break;
+            case mir_resize_edge_south:
+            case mir_resize_edge_north:
+                // In these cases, we redelegate the movement to the parent.
+                break;
+            }
+            break;
+        }
+        case LayoutScheme::vertical:
+            break;
+        default:
+            sh_parent->handle_resize(edge, x, y);
+            break;
+        }
+    }
 }
 
 void LeafContainer::request_horizontal_layout()

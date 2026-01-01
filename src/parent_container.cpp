@@ -633,8 +633,12 @@ void ParentContainer::handle_request_move(MirInputEvent const* input_event)
 {
 }
 
-void ParentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
+bool ParentContainer::start_resize(MirResizeEdge edge)
 {
+    // If we're a floating parent container who contains a single node,
+    // every edge is ok to resize by.
+    if (!is_anchored && parent.expired() && num_nodes() == 1)
+        return true;
 }
 
 void ParentContainer::handle_raise()

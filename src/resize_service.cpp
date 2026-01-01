@@ -58,20 +58,18 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
         return false;
     }
 
+    container->handle_resize(resize_edge, x, y);
+
+    // First, ask the container for its resize node. This might be a `nullptr`
+    // meaning that the container will refuse to be resized. Containers take
+    // the resize edge into consideration when evaluating which container is
+    // appropriate.
+
     // When we resize the container, we're actually resizing the parent
     auto const parent = container->get_parent().lock();
-    if (parent->anchored())
-    {
-        stop();
-        return false;
-    }
 
-    // If the parent has more than 1 node suddenly, we need to stop resizing.
-    if (parent->num_nodes() != 1)
-    {
-        stop();
-        return false;
-    }
+    // TODO: If we have received a new container, that should disrupt us and
+    //  stop the resizer.
 
     auto const rect = parent->get_area();
     int const current_x = rect.top_left.x.as_int();
@@ -149,24 +147,7 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
 
 void ResizeService::handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge)
 {
-    // Only leaf containers can be resized
-    if (container->get_type() != ContainerType::leaf)
-        return;
-
-    // Only unanchored containers can be resized
-    if (container->anchored())
-        return;
-
-    auto const parent = container->get_parent().lock();
-    if (!parent)
-        return;
-
-    // Only containers that exist in their own tiling grid can be resized for now
-    // TODO: Allow all containers to be resized, but this is trickier
-    if (parent->get_parent().lock() != nullptr || parent->num_nodes() != 1)
-        return;
-
-    if (action == mir_pointer_action_button_down)
+    if (action == mir_pointer_action_button_down && container->start_resize(edge))
     {
         is_resizing = true;
         resizing_container = container;

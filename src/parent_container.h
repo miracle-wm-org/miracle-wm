@@ -84,7 +84,8 @@ public:
     void handle_ready() override;
     void handle_modify(miral::WindowSpecification const& specification) override;
     void handle_request_move(MirInputEvent const* input_event) override;
-    void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
+    bool start_resize(MirResizeEdge edge) override;
+    void handle_resize(MirResizeEdge edge, float x, float y) override;
     void handle_raise() override;
     bool resize(Direction direction, int pixels) override;
     bool set_size(std::optional<int> const& width, std::optional<int> const& height) override;

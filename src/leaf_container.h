@@ -76,7 +76,8 @@ public:
     void on_move_to(geom::Point const&) override;
     void on_resize(geom::Size const&) override { }
     void handle_request_move(MirInputEvent const* input_event) override;
-    void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
+    bool start_resize(MirResizeEdge edge) override;
+    void handle_resize(MirResizeEdge edge, float x, float y) override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
