@@ -154,8 +154,9 @@ geom::Rectangle calculate_resized_rectangle(
 void Container::handle_resize_within_parent(ParentContainer* parent, Container* child, MirResizeEdge edge, float x, float y)
 {
     // First, calculate the new desired rectangle of the child.
+    auto const old_rectangle = child->get_logical_area();
     auto const new_rectangle = calculate_resized_rectangle(
-        child->get_logical_area(),
+        old_rectangle,
         edge,
         child->get_min_width(),
         child->get_min_height(),
@@ -163,6 +164,7 @@ void Container::handle_resize_within_parent(ParentContainer* parent, Container* 
 
     // Next, calculate how much we need to take away from or add to the surrounding containers.
     // This will most likely be the container adjacent to this one in either direction.
+
 
     switch (parent->get_layout())
     {
