@@ -75,125 +75,147 @@ std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Con
 
 namespace
 {
-geom::Rectangle calculate_resized_rectangle(
-    geom::Rectangle const& rect,
-    MirResizeEdge edge,
-    int min_width,
-    int min_height,
-    float x,
-    float y)
+geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x, int y)
 {
-    int const current_x = rect.top_left.x.as_int();
-    int const current_y = rect.top_left.y.as_int();
-    int const current_width = rect.size.width.as_int();
-    int const current_height = rect.size.height.as_int();
+    auto const current_rectangle = container->get_logical_area();
+    int const current_x = current_rectangle.top_left.x.as_int();
+    int const current_y = current_rectangle.top_left.y.as_int();
+    int const current_width = current_rectangle.size.width.as_int();
+    int const current_height = current_rectangle.size.height.as_int();
 
-    // Calculate new size to keep edge at cursor position
     int new_x = current_x;
     int new_y = current_y;
     int new_width = current_width;
     int new_height = current_height;
+    int const min_height = container->get_min_height();
+    int const min_width = container->get_min_width();
 
     switch (edge)
     {
     case mir_resize_edge_north:
-        new_height = current_y + current_height - static_cast<int>(y);
+        new_height = current_y + current_height - y;
         new_y = current_y + (current_height - new_height);
         break;
     case mir_resize_edge_south:
-        new_height = static_cast<int>(y) - current_y;
+        new_height = std::max(y - current_y, min_height);
         break;
     case mir_resize_edge_east:
-        new_width = static_cast<int>(x) - current_x;
+        new_width = std::max(x - current_x, min_width);
         break;
     case mir_resize_edge_west:
-        new_width = current_x + current_width - static_cast<int>(x);
+        new_width = std::max(current_x + current_width - x, min_width);
         new_x = current_x + (current_width - new_width);
         break;
     case mir_resize_edge_northeast:
-        new_width = static_cast<int>(x) - current_x;
-        new_height = current_y + current_height - static_cast<int>(y);
+        new_width = std::max(x - current_x, min_width);
+        new_height = std::max(current_y + current_height - y, min_height);
         new_y = current_y + (current_height - new_height);
         break;
     case mir_resize_edge_northwest:
-        new_width = current_x + current_width - static_cast<int>(x);
-        new_height = current_y + current_height - static_cast<int>(y);
+        new_width = std::max(current_x + current_width - x, min_width);
+        new_height = std::max(current_y + current_height - y, min_height);
         new_x = current_x + (current_width - new_width);
         new_y = current_y + (current_height - new_height);
         break;
     case mir_resize_edge_southeast:
-        new_width = static_cast<int>(x) - current_x;
-        new_height = static_cast<int>(y) - current_y;
+        new_width = std::max(x - current_x, min_width);
+        new_height = std::max(y - current_y, min_height);
         break;
     case mir_resize_edge_southwest:
-        new_width = current_x + current_width - static_cast<int>(x);
-        new_height = static_cast<int>(y) - current_y;
+        new_width = std::max(current_x + current_width - x, min_width);
+        new_height = std::max(y - current_y, min_height);
         new_x = current_x + (current_width - new_width);
         break;
     default:
-        return {};
-    }
-
-    if (new_width < min_width)
-    {
-        new_width = min_width;
-        new_x = current_x;
-    }
-    if (new_height < min_height)
-    {
-        new_height = min_height;
-        new_y = current_y;
-    }
-
-    return geom::Rectangle(
-         geom::Point(new_x, new_y),
-         geom::Size(new_width, new_height));
-}
-}
-
-void Container::handle_resize_within_parent(ParentContainer* parent, Container* child, MirResizeEdge edge, float x, float y)
-{
-    // First, calculate the new desired rectangle of the child.
-    auto const old_rectangle = child->get_logical_area();
-    auto const new_rectangle = calculate_resized_rectangle(
-        old_rectangle,
-        edge,
-        child->get_min_width(),
-        child->get_min_height(),
-        x, y);
-
-    // Next, calculate how much we need to take away from or add to the surrounding containers.
-    // This will most likely be the container adjacent to this one in either direction.
-
-
-    switch (parent->get_layout())
-    {
-    case LayoutScheme::horizontal:
-    {
-        switch (edge)
-        {
-        case mir_resize_edge_east:
-            break;
-        case mir_resize_edge_west:
-        {
-            auto const i = parent->get_index_of_node(child);
-            // A child on the left side cannot be resized from the west.
-            if (i == 0)
-                return;
-
-
-            break;
-        }
-        case mir_resize_edge_south:
-        case mir_resize_edge_north:
-            // In these cases, we redelegate the movement to the parent.
-            break;
-        default:
-            // TODO: Unsupported
-            return;
-        }
         break;
     }
+
+    return geom::Rectangle(geom::Point(new_x, new_y), geom::Size(new_width, new_height));
+}
+}
+
+void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y)
+{
+    bool const with_animations = true;
+    auto const current_rectangle = container->get_logical_area();
+    auto const next_rectangle = resize_internal(container, edge, static_cast<int>(x), static_cast<int>(y));
+    auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.size.width.as_int();
+    auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.size.height.as_int();
+
+    switch (edge)
+    {
+    case mir_resize_edge_north:
+    {
+        auto const north = container->neighbor_north();
+        if (!north)
+        {
+            mir::log_info("Cannot resize container from south without north neighbor");
+            return;
+        }
+
+        auto const north_rectangle = resize_internal(north.get(), mir_resize_edge_south, 0, height_diff);
+        container->set_logical_area(current_rectangle, with_animations);
+        north->set_logical_area(north_rectangle, with_animations);
+        container->commit_changes();
+        north->commit_changes();
+        break;
+    }
+    case mir_resize_edge_south:
+    {
+        auto const south = container->neighbor_south();
+        if (!south)
+        {
+            mir::log_info("Cannot resize container from south without south neighbor");
+            return;
+        }
+
+        auto const south_rectangle = resize_internal(south.get(), mir_resize_edge_north, 0, height_diff);
+        container->set_logical_area(current_rectangle, with_animations);
+        south->set_logical_area(south_rectangle, with_animations);
+        container->commit_changes();
+        south->commit_changes();
+        break;
+    }
+    case mir_resize_edge_east:
+    {
+        auto const east = container->neighbor_east();
+        if (!east)
+        {
+            mir::log_info("Cannot resize container from east without east neighbor");
+            return;
+        }
+
+        auto const east_rectangle = resize_internal(east.get(), mir_resize_edge_west, width_diff, 0);
+        container->set_logical_area(current_rectangle, with_animations);
+        east->set_logical_area(east_rectangle, with_animations);
+        container->commit_changes();
+        east->commit_changes();
+        break;
+    }
+    case mir_resize_edge_west:
+    {
+        auto const west = container->neighbor_west();
+        if (!west)
+        {
+            mir::log_info("Cannot resize container from west without west neighbor");
+            return;
+        }
+
+        auto const west_rectangle = resize_internal(west.get(), mir_resize_edge_east, width_diff, 0);
+        container->set_logical_area(current_rectangle, with_animations);
+        west->set_logical_area(west_rectangle, with_animations);
+        container->commit_changes();
+        west->commit_changes();
+        break;
+    }
+    case mir_resize_edge_northeast:
+        break;
+    case mir_resize_edge_northwest:
+        break;
+    case mir_resize_edge_southeast:
+        break;
+    case mir_resize_edge_southwest:
+        break;
     default:
         break;
     }

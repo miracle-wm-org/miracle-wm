@@ -169,7 +169,7 @@ public:
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
     static std::shared_ptr<ContainerGroupContainer> as_group(std::shared_ptr<Container> const&);
-    static void handle_resize_within_parent(ParentContainer* parent, Container* child, MirResizeEdge edge, float x, float y);
+    static void execute_resize(Container* container, MirResizeEdge edge, float x, float y);
 
     /// Returns the neighbor to the north of this container, or `nullptr` if not found.
     ///

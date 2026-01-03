@@ -366,115 +366,22 @@ bool LeafContainer::resize(Direction direction, int pixels)
 
 void LeafContainer::handle_resize(Container* container, Direction direction, int amount)
 {
-    auto const sh_parent = container->get_parent().lock();
-    if (!sh_parent)
-        return;
-
-    bool const is_vertical = direction == Direction::up || direction == Direction::down;
-    bool const is_main_axis_movement = (is_vertical && sh_parent->get_direction() == LayoutScheme::vertical)
-        || (!is_vertical && sh_parent->get_direction() == LayoutScheme::horizontal);
-
-    bool const is_negative = direction == Direction::left || direction == Direction::up;
-    auto const resize_amount = is_negative ? -amount : amount;
-    if (!sh_parent->anchored() && sh_parent->num_nodes() == 1)
+    switch (direction)
     {
-        // In this case, we resize are resizing a floating tree with a single container
-        // inside of it, so we'll just set the size of the parent.
-        auto rectangle = sh_parent->get_area();
-        if (is_vertical)
-            rectangle.size.height = geom::Height { rectangle.size.height.as_int() + resize_amount };
-        else
-            rectangle.size.width = geom::Width { rectangle.size.width.as_int() + resize_amount };
-
-        sh_parent->set_logical_area(rectangle);
-        sh_parent->commit_changes();
-        return;
-    }
-    else if (is_main_axis_movement && sh_parent->num_nodes() == 1)
-    {
-        // Can't resize if we only have ourselves!
-        return;
-    }
-
-    if (!is_main_axis_movement)
-    {
-        handle_resize(sh_parent.get(), direction, amount);
-        return;
-    }
-
-    auto const nodes = sh_parent->get_sub_nodes();
-    std::vector<geom::Rectangle> pending_node_resizes;
-    if (is_vertical)
-    {
-        int const height_for_others = (int)floor(-(double)resize_amount / static_cast<double>(nodes.size() - 1));
-        int total_height = 0;
-        for (size_t i = 0; i < nodes.size(); i++)
-        {
-            auto const& other_node = nodes[i];
-            auto other_rect = other_node->get_logical_area();
-            if (container == other_node.get())
-                other_rect.size.height = geom::Height { other_rect.size.height.as_int() + resize_amount };
-            else
-                other_rect.size.height = geom::Height { other_rect.size.height.as_int() + height_for_others };
-
-            if (i != 0)
-            {
-                auto const& prev_rect = pending_node_resizes[i - 1];
-                other_rect.top_left.y = geom::Y { prev_rect.top_left.y.as_int() + prev_rect.size.height.as_int() };
-            }
-
-            if (other_rect.size.height.as_int() <= static_cast<int>(other_node->get_min_height()))
-            {
-                mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
-                return;
-            }
-
-            total_height += other_rect.size.height.as_int();
-            pending_node_resizes.push_back(other_rect);
-        }
-
-        // Due to some rounding errors, we may have to extend the final node
-        int const leftover_height = sh_parent->get_logical_area().size.height.as_int() - total_height;
-        pending_node_resizes.back().size.height = geom::Height { pending_node_resizes.back().size.height.as_int() + leftover_height };
-    }
-    else
-    {
-        int const width_for_others = (int)floor((double)-resize_amount / static_cast<double>(nodes.size() - 1));
-        int total_width = 0;
-        for (size_t i = 0; i < nodes.size(); i++)
-        {
-            auto const& other_node = nodes[i];
-            auto other_rect = other_node->get_logical_area();
-            if (container == other_node.get())
-                other_rect.size.width = geom::Width { other_rect.size.width.as_int() + resize_amount };
-            else
-                other_rect.size.width = geom::Width { other_rect.size.width.as_int() + width_for_others };
-
-            if (i != 0)
-            {
-                auto const& prev_rect = pending_node_resizes[i - 1];
-                other_rect.top_left.x = geom::X { prev_rect.top_left.x.as_int() + prev_rect.size.width.as_int() };
-            }
-
-            if (other_rect.size.width.as_int() <= static_cast<int>(other_node->get_min_width()))
-            {
-                mir::log_warning("Unable to resize a rectangle that would cause another to be negative");
-                return;
-            }
-
-            total_width += other_rect.size.width.as_int();
-            pending_node_resizes.push_back(other_rect);
-        }
-
-        // Due to some rounding errors, we may have to extend the final node
-        int const leftover_width = sh_parent->get_logical_area().size.width.as_int() - total_width;
-        pending_node_resizes.back().size.width = geom::Width { pending_node_resizes.back().size.width.as_int() + leftover_width };
-    }
-
-    for (size_t i = 0; i < nodes.size(); i++)
-    {
-        nodes[i]->set_logical_area(pending_node_resizes[i], true);
-        nodes[i]->commit_changes();
+    case Direction::left:
+        execute_resize(container, mir_resize_edge_east, -amount, 0);
+        break;
+    case Direction::right:
+        execute_resize(container, mir_resize_edge_east, amount, 0);
+        break;
+    case Direction::down:
+        execute_resize(container, mir_resize_edge_south, 0, amount);
+        break;
+    case Direction::up:
+        execute_resize(container, mir_resize_edge_south, 0, -amount);
+        break;
+    default:
+        break;
     }
 }
 
