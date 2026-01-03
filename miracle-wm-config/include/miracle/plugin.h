@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PLUGIN_H
 #define MIRACLE_WM_PLUGIN_H
 
+#include <cstdint>
 #include <mir_toolkit/common.h>
 #include <stdint.h>
 
@@ -143,6 +144,9 @@ extern "C"
 
         /// The depth layer of the window.
         MirDepthLayer depth_layer;
+
+        /// Opaque pointer to internal data.
+        void* internal;
     } miracle_window_info_t;
 
     typedef struct
@@ -172,9 +176,27 @@ extern "C"
         MirDepthLayer depth_layer;
     } miracle_placement_t;
 
+    /// Describes a workspace.
     typedef struct
     {
+        /// If `TRUE`, #number is set.
+        int32_t has_number;
 
+        /// The number of the workspace.
+        ///
+        /// Only valid if #has_number is `TRUE`.
+        uint32_t number;
+
+        /// If `TRUE`, #name is set.
+        int32_t has_name;
+
+        /// The name of the workspace.
+        ///
+        /// Only valid if #has_name is `TRUE`.
+        const char* name;
+
+        /// Opaque pointer to internal data.
+        void* internal;
     } miracle_workspace_t;
 
     /// Describes an output.
@@ -196,7 +218,32 @@ extern "C"
     /// \returns the application info for the window
     miracle_application_info_t miracle_plugin_get_application(miracle_window_info_t* window_info);
 
-    miracle_workspace_t miracle_plugin_get_workspace(miracle_window_info_t* window_info);
+    /// Given the \p window_info, retrieve the #miracle_workspace_t of that the window is on.
+    ///
+    /// If the window has yet to be placed, this will represent the tenative workspace.
+    /// \param window_info the window info
+    /// \returns the workspace that the window is on
+    miracle_workspace_t miracle_plugin_get_workspace_from_window(miracle_window_info_t* window_info);
+
+    /// Given the \p workspace, retrieve the #miracle_output_t to which it belongs.
+    ///
+    /// \param workspace a workspace
+    /// \returns the output to which the workspace belongs
+    miracle_output_t miracle_plugin_get_output_from_workspace(miracle_workspace_t* workspace);
+
+    /// Retrive the number of outputs.
+    ///
+    /// \returns the number of outputs
+    uint32_t miracle_plugin_num_outputs();
+
+    /// Retrive an output by the \p index.
+    ///
+    /// Outputs appear in no specific order. Querying an index beyond #miracle_plugin_num_outputs
+    /// is undefined.
+    ///
+    /// \param index the index
+    /// \returns the output at the index
+    miracle_output_t miracle_plugin_get_output(uint32_t index);
 #ifdef __cplusplus
 }
 #endif

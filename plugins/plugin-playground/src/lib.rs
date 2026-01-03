@@ -34,19 +34,24 @@ pub extern "C" fn add_points(a: Point, b: Point) -> Point {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn animate(
-    data: MiracleAnimationFrameData,
-) -> MiracleAnimationFrameResult {
-
+pub extern "C" fn animate(data: MiracleAnimationFrameData) -> MiracleAnimationFrameResult {
     let progress = data.runtime_seconds / data.duration_seconds;
     let opacity = data.opacity_start + (data.opacity_end - data.opacity_start) * progress;
     MiracleAnimationFrameResult {
         completed: 0,
         has_area: 1,
-        area: [data.destination[0], data.destination[1], data.destination[2], data.destination[3]],
+        area: [
+            data.destination[0],
+            data.destination[1],
+            data.destination[2],
+            data.destination[3],
+        ],
         has_transform: 0,
         transform: [0.0; 16],
         has_opacity: 1,
         opacity,
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn place_new_window() {}
