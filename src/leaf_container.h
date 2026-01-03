@@ -76,8 +76,6 @@ public:
     void on_move_to(geom::Point const&) override;
     void on_resize(geom::Size const&) override { }
     void handle_request_move(MirInputEvent const* input_event) override;
-    bool start_resize(MirResizeEdge edge) override;
-    void handle_resize(MirResizeEdge edge, float x, float y) override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
@@ -152,7 +150,6 @@ private:
     /// Trigger a rerender on the surface.
     void rerender();
     void invalidate_visible_area_cache();
-    static void handle_resize(Container* container, Direction direction, int amount);
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
 };
 

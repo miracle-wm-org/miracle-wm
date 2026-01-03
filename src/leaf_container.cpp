@@ -360,29 +360,24 @@ void LeafContainer::handle_raise()
 
 bool LeafContainer::resize(Direction direction, int pixels)
 {
-    handle_resize(this, direction, pixels);
-    return true;
-}
-
-void LeafContainer::handle_resize(Container* container, Direction direction, int amount)
-{
     switch (direction)
     {
     case Direction::left:
-        execute_resize(container, mir_resize_edge_east, -amount, 0);
+        execute_resize(this, mir_resize_edge_east, -pixels, 0);
         break;
     case Direction::right:
-        execute_resize(container, mir_resize_edge_east, amount, 0);
+        execute_resize(this, mir_resize_edge_east, pixels, 0);
         break;
     case Direction::down:
-        execute_resize(container, mir_resize_edge_south, 0, amount);
+        execute_resize(this, mir_resize_edge_south, 0, pixels);
         break;
     case Direction::up:
-        execute_resize(container, mir_resize_edge_south, 0, -amount);
+        execute_resize(this, mir_resize_edge_south, 0, -pixels);
         break;
     default:
         break;
     }
+    return true;
 }
 
 bool LeafContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
@@ -527,36 +522,6 @@ void LeafContainer::commit_changes()
 
 void LeafContainer::handle_request_move(MirInputEvent const* input_event)
 {
-}
-
-void LeafContainer::handle_resize(MirResizeEdge edge, float x, float y)
-{
-    if (auto const sh_parent = parent.lock())
-    {
-        switch (sh_parent->get_layout())
-        {
-        case LayoutScheme::horizontal:
-        {
-            switch (edge)
-            {
-            case mir_resize_edge_east:
-                break;
-            case mir_resize_edge_west:
-                break;
-            case mir_resize_edge_south:
-            case mir_resize_edge_north:
-                // In these cases, we redelegate the movement to the parent.
-                break;
-            }
-            break;
-        }
-        case LayoutScheme::vertical:
-            break;
-        default:
-            sh_parent->handle_resize(edge, x, y);
-            break;
-        }
-    }
 }
 
 void LeafContainer::request_horizontal_layout()

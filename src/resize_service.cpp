@@ -58,96 +58,12 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
         return false;
     }
 
-    container->handle_resize(resize_edge, x, y);
-
-    // First, ask the container for its resize node. This might be a `nullptr`
-    // meaning that the container will refuse to be resized. Containers take
-    // the resize edge into consideration when evaluating which container is
-    // appropriate.
-
-    // When we resize the container, we're actually resizing the parent
-    auto const parent = container->get_parent().lock();
-
-    // TODO: If we have received a new container, that should disrupt us and
-    //  stop the resizer.
-
-    auto const rect = parent->get_area();
-    int const current_x = rect.top_left.x.as_int();
-    int const current_y = rect.top_left.y.as_int();
-    int const current_width = rect.size.width.as_int();
-    int const current_height = rect.size.height.as_int();
-
-    // Calculate new size to keep edge at cursor position
-    int new_x = current_x;
-    int new_y = current_y;
-    int new_width = current_width;
-    int new_height = current_height;
-
-    switch (resize_edge)
-    {
-    case mir_resize_edge_north:
-        new_height = current_y + current_height - static_cast<int>(y);
-        new_y = current_y + (current_height - new_height);
-        break;
-    case mir_resize_edge_south:
-        new_height = static_cast<int>(y) - current_y;
-        break;
-    case mir_resize_edge_east:
-        new_width = static_cast<int>(x) - current_x;
-        break;
-    case mir_resize_edge_west:
-        new_width = current_x + current_width - static_cast<int>(x);
-        new_x = current_x + (current_width - new_width);
-        break;
-    case mir_resize_edge_northeast:
-        new_width = static_cast<int>(x) - current_x;
-        new_height = current_y + current_height - static_cast<int>(y);
-        new_y = current_y + (current_height - new_height);
-        break;
-    case mir_resize_edge_northwest:
-        new_width = current_x + current_width - static_cast<int>(x);
-        new_height = current_y + current_height - static_cast<int>(y);
-        new_x = current_x + (current_width - new_width);
-        new_y = current_y + (current_height - new_height);
-        break;
-    case mir_resize_edge_southeast:
-        new_width = static_cast<int>(x) - current_x;
-        new_height = static_cast<int>(y) - current_y;
-        break;
-    case mir_resize_edge_southwest:
-        new_width = current_x + current_width - static_cast<int>(x);
-        new_height = static_cast<int>(y) - current_y;
-        new_x = current_x + (current_width - new_width);
-        break;
-    default:
-        return false;
-    }
-
-    constexpr int MIN_SIZE = 50;
-    if (new_width < MIN_SIZE)
-    {
-        new_width = MIN_SIZE;
-        new_x = current_x;
-    }
-    if (new_height < MIN_SIZE)
-    {
-        new_height = MIN_SIZE;
-        new_y = current_y;
-    }
-
-    // Set new size
-    parent->set_logical_area(geom::Rectangle(
-                                 geom::Point(new_x, new_y),
-                                 geom::Size(new_width, new_height)),
-        false);
-    parent->commit_changes();
-
-    return true;
+    Container::execute_resize(container.get(), resize_edge, x, y);
 }
 
 void ResizeService::handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge)
 {
-    if (action == mir_pointer_action_button_down && container->start_resize(edge))
+    if (action == mir_pointer_action_button_down && !is_resizing)
     {
         is_resizing = true;
         resizing_container = container;

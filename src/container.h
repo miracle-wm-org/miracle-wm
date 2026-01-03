@@ -78,19 +78,6 @@ public:
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
-
-    /// Begin resizing this container on the given \p edge.
-    ///
-    /// \returns `true` if resizing is valid, otherwise `false`.
-    virtual bool start_resize(MirResizeEdge edge) = 0;
-
-    /// Handle a resize request to the provided coordinates.
-    ///
-    /// \param edge the edge on which this resize is performed
-    /// \param x the x coordinate
-    /// \param y the y coordinate
-    virtual void handle_resize(MirResizeEdge edge, float x, float y) = 0;
-
     virtual void handle_raise() = 0;
     virtual bool resize(Direction direction, int pixels) = 0;
     virtual bool set_size(std::optional<int> const& width, std::optional<int> const& height) = 0;
