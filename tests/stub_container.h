@@ -93,10 +93,6 @@ namespace test
         {
         }
 
-        void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override
-        {
-        }
-
         void handle_raise() override
         {
         }

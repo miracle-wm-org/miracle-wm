@@ -633,10 +633,6 @@ void ParentContainer::handle_request_move(MirInputEvent const* input_event)
 {
 }
 
-void ParentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
-{
-}
-
 void ParentContainer::handle_raise()
 {
     for (auto const& node : container_list)

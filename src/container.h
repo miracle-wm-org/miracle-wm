@@ -78,7 +78,6 @@ public:
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
-    virtual void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) = 0;
     virtual void handle_raise() = 0;
     virtual bool resize(Direction direction, int pixels) = 0;
     virtual bool set_size(std::optional<int> const& width, std::optional<int> const& height) = 0;
@@ -157,6 +156,34 @@ public:
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
     static std::shared_ptr<ContainerGroupContainer> as_group(std::shared_ptr<Container> const&);
+
+    /// Resizes the provided \p container on the \p edge by the \p x and \p y diffs.
+    static void execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations);
+
+    /// Returns the neighbor to the north of this container, or `nullptr` if not found.
+    ///
+    /// \returns north neighbor
+    virtual std::shared_ptr<Container> neighbor_north() const;
+
+    /// Returns the neighbor to the east of this container, or `nullptr` if not found.
+    ///
+    /// \returns east neighbor
+    virtual std::shared_ptr<Container> neighbor_east() const;
+
+    /// Returns the neighbor to the south of this container, or `nullptr` if not found.
+    ///
+    /// \returns south neighbor
+    virtual std::shared_ptr<Container> neighbor_south() const;
+
+    /// Returns the neighbor to the west of this container, or `nullptr` if not found.
+    ///
+    /// \returns west neighbor
+    virtual std::shared_ptr<Container> neighbor_west() const;
+
+    /// Returns the root of this container tree.
+    ///
+    /// \returns the root
+    virtual std::shared_ptr<Container> root();
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;

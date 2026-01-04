@@ -37,9 +37,9 @@ set(SOURCES
     test_scratchpad.cpp
     test_command_controller.cpp
     test_dying_surface_manager.cpp
-    test_resize_service.cpp
     test_tiling_algorithms.cpp
     test_parent_container.cpp
+    test_container.cpp
     test_ipc_message_handler.cpp
     test_ipc_command_executor.cpp
     test_workspace_manager.cpp
