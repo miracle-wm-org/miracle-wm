@@ -75,7 +75,7 @@ std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Con
 
 namespace
 {
-geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x, int y)
+geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x_diff, int y_diff)
 {
     auto const current_rectangle = container->get_logical_area();
     int const current_x = current_rectangle.top_left.x.as_int();
@@ -90,41 +90,57 @@ geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x,
     int const min_height = container->get_min_height();
     int const min_width = container->get_min_width();
 
+    auto const set_north = [&]
+    {
+        new_height = std::max(current_height + y_diff, min_height);
+        new_y = current_y + (current_height - new_height);
+    };
+
+    auto const set_south = [&]
+    {
+        new_height = std::max(current_height + y_diff, min_height);
+    };
+
+    auto const set_east = [&]
+    {
+        new_width = std::max(current_width + x_diff, min_width);
+    };
+
+    auto const set_west = [&]
+    {
+        new_width = std::max(current_width + x_diff, min_width);
+        new_x = current_x + (current_width - new_width);
+    };
+
     switch (edge)
     {
     case mir_resize_edge_north:
-        new_height = current_y + current_height - y;
-        new_y = current_y + (current_height - new_height);
+        set_north();
         break;
     case mir_resize_edge_south:
-        new_height = std::max(y - current_y, min_height);
+        set_south();
         break;
     case mir_resize_edge_east:
-        new_width = std::max(x - current_x, min_width);
+        set_east();
         break;
     case mir_resize_edge_west:
-        new_width = std::max(current_x + current_width - x, min_width);
-        new_x = current_x + (current_width - new_width);
+        set_west();
         break;
     case mir_resize_edge_northeast:
-        new_width = std::max(x - current_x, min_width);
-        new_height = std::max(current_y + current_height - y, min_height);
-        new_y = current_y + (current_height - new_height);
+        set_north();
+        set_east();
         break;
     case mir_resize_edge_northwest:
-        new_width = std::max(current_x + current_width - x, min_width);
-        new_height = std::max(current_y + current_height - y, min_height);
-        new_x = current_x + (current_width - new_width);
-        new_y = current_y + (current_height - new_height);
+        set_north();
+        set_west();
         break;
     case mir_resize_edge_southeast:
-        new_width = std::max(x - current_x, min_width);
-        new_height = std::max(y - current_y, min_height);
+        set_south();
+        set_east();
         break;
     case mir_resize_edge_southwest:
-        new_width = std::max(current_x + current_width - x, min_width);
-        new_height = std::max(y - current_y, min_height);
-        new_x = current_x + (current_width - new_width);
+        set_south();
+        set_west();
         break;
     default:
         break;
@@ -154,7 +170,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const north_rectangle = resize_internal(north.get(), mir_resize_edge_south, 0, height_diff);
-        container->set_logical_area(current_rectangle, with_animations);
+        container->set_logical_area(next_rectangle, with_animations);
         north->set_logical_area(north_rectangle, with_animations);
         container->commit_changes();
         north->commit_changes();
@@ -170,7 +186,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const south_rectangle = resize_internal(south.get(), mir_resize_edge_north, 0, height_diff);
-        container->set_logical_area(current_rectangle, with_animations);
+        container->set_logical_area(next_rectangle, with_animations);
         south->set_logical_area(south_rectangle, with_animations);
         container->commit_changes();
         south->commit_changes();
@@ -186,7 +202,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const east_rectangle = resize_internal(east.get(), mir_resize_edge_west, width_diff, 0);
-        container->set_logical_area(current_rectangle, with_animations);
+        container->set_logical_area(next_rectangle, with_animations);
         east->set_logical_area(east_rectangle, with_animations);
         container->commit_changes();
         east->commit_changes();
@@ -202,7 +218,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const west_rectangle = resize_internal(west.get(), mir_resize_edge_east, width_diff, 0);
-        container->set_logical_area(current_rectangle, with_animations);
+        container->set_logical_area(next_rectangle, with_animations);
         west->set_logical_area(west_rectangle, with_animations);
         container->commit_changes();
         west->commit_changes();
