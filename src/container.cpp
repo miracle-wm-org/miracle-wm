@@ -173,21 +173,31 @@ ResizeResult resize_internal(Container* container, MirResizeEdge edge, int x_dif
 
 void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations)
 {
-    auto const current_rectangle = container->get_logical_area();
-    auto const next_rectangle = resize_internal(container, edge, static_cast<int>(x), static_cast<int>(y));
-    auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
-    auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
-
     switch (edge)
     {
     case mir_resize_edge_north:
     {
+        // A note on this algorithm, which applies to all cases:
+        //
+        // When we resize a container, we find the container adjacent to this one which
+        // we want to take size from or give size to. The trick here is that we then use
+        // this adjacent container to resolve the container that contains [container],
+        // which may indeed differ from [container] itself. This is why we resolve the
+        // neighbor's neighbor immediately after resolving the neighbor.
+        //
+        // If the neighbor will be clamped when it is resized, we do not bother going
+        // through with the resize.
         auto const north = container->neighbor_north();
         if (!north)
         {
             mir::log_info("Cannot resize container from south without north neighbor");
             return;
         }
+
+        auto const south = north->neighbor_south();
+        auto const current_rectangle = south->get_logical_area();
+        auto const next_rectangle = resize_internal(south.get(), edge, static_cast<int>(x), static_cast<int>(y));
+        auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
 
         auto const north_rectangle = resize_internal(north.get(), mir_resize_edge_south, 0, height_diff);
         if (north_rectangle.clamped)
@@ -196,9 +206,9 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
-        container->set_logical_area(next_rectangle.rect, with_animations);
+        south->set_logical_area(next_rectangle.rect, with_animations);
         north->set_logical_area(north_rectangle.rect, with_animations);
-        container->commit_changes();
+        south->commit_changes();
         north->commit_changes();
         break;
     }
@@ -211,6 +221,11 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
+        auto const north = south->neighbor_north();
+        auto const current_rectangle = north->get_logical_area();
+        auto const next_rectangle = resize_internal(north.get(), edge, static_cast<int>(x), static_cast<int>(y));
+        auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
+
         auto const south_rectangle = resize_internal(south.get(), mir_resize_edge_north, 0, height_diff);
         if (south_rectangle.clamped)
         {
@@ -218,9 +233,9 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
-        container->set_logical_area(next_rectangle.rect, with_animations);
+        north->set_logical_area(next_rectangle.rect, with_animations);
         south->set_logical_area(south_rectangle.rect, with_animations);
-        container->commit_changes();
+        north->commit_changes();
         south->commit_changes();
         break;
     }
@@ -233,6 +248,11 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
+        auto const west = east->neighbor_west();
+        auto const current_rectangle = west->get_logical_area();
+        auto const next_rectangle = resize_internal(west.get(), edge, static_cast<int>(x), static_cast<int>(y));
+        auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
+
         auto const east_rectangle = resize_internal(east.get(), mir_resize_edge_west, width_diff, 0);
         if (east_rectangle.clamped)
         {
@@ -240,9 +260,9 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
-        container->set_logical_area(next_rectangle.rect, with_animations);
+        west->set_logical_area(next_rectangle.rect, with_animations);
         east->set_logical_area(east_rectangle.rect, with_animations);
-        container->commit_changes();
+        west->commit_changes();
         east->commit_changes();
         break;
     }
@@ -255,6 +275,11 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
+        auto const east = west->neighbor_west();
+        auto const current_rectangle = east->get_logical_area();
+        auto const next_rectangle = resize_internal(east.get(), edge, static_cast<int>(x), static_cast<int>(y));
+        auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
+
         auto const west_rectangle = resize_internal(west.get(), mir_resize_edge_east, width_diff, 0);
         if (west_rectangle.clamped)
         {
@@ -262,19 +287,17 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
-        container->set_logical_area(next_rectangle.rect, with_animations);
+        east->set_logical_area(next_rectangle.rect, with_animations);
         west->set_logical_area(west_rectangle.rect, with_animations);
-        container->commit_changes();
+        east->commit_changes();
         west->commit_changes();
         break;
     }
     case mir_resize_edge_northeast:
-        break;
     case mir_resize_edge_northwest:
-        break;
     case mir_resize_edge_southeast:
-        break;
     case mir_resize_edge_southwest:
+        mir::log_warning("Resize edge is currently unsupported");
         break;
     default:
         break;
