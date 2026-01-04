@@ -163,27 +163,27 @@ public:
     /// Returns the neighbor to the north of this container, or `nullptr` if not found.
     ///
     /// \returns north neighbor
-    std::shared_ptr<Container> neighbor_north() const;
+    virtual std::shared_ptr<Container> neighbor_north() const;
 
     /// Returns the neighbor to the east of this container, or `nullptr` if not found.
     ///
     /// \returns east neighbor
-    std::shared_ptr<Container> neighbor_east() const;
+    virtual std::shared_ptr<Container> neighbor_east() const;
 
     /// Returns the neighbor to the south of this container, or `nullptr` if not found.
     ///
     /// \returns south neighbor
-    std::shared_ptr<Container> neighbor_south() const;
+    virtual std::shared_ptr<Container> neighbor_south() const;
 
     /// Returns the neighbor to the west of this container, or `nullptr` if not found.
     ///
     /// \returns west neighbor
-    std::shared_ptr<Container> neighbor_west() const;
+    virtual std::shared_ptr<Container> neighbor_west() const;
 
     /// Returns the root of this container tree.
     ///
     /// \returns the root
-    std::shared_ptr<Container> root();
+    virtual std::shared_ptr<Container> root();
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
