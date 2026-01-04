@@ -180,6 +180,11 @@ public:
     /// \returns west neighbor
     std::shared_ptr<Container> neighbor_west() const;
 
+    /// Returns the root of this container tree.
+    ///
+    /// \returns the root
+    std::shared_ptr<Container> root();
+
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
     std::vector<std::string> marks;

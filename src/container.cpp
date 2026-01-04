@@ -187,9 +187,21 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         //
         // If the neighbor will be clamped when it is resized, we do not bother going
         // through with the resize.
+        //
+        // If the container is in an unanchored floating grid and lacks a neighrbor,
+        // let's resize the whole grid.
         auto const north = container->neighbor_north();
         if (!north)
         {
+            if (!container->anchored())
+            {
+                auto const root = container->root();
+                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
+                root->set_logical_area(root_rect.rect, with_animations);
+                root->commit_changes();
+                return;
+            }
+
             mir::log_info("Cannot resize container from south without north neighbor");
             return;
         }
@@ -217,6 +229,15 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         auto const south = container->neighbor_south();
         if (!south)
         {
+            if (!container->anchored())
+            {
+                auto const root = container->root();
+                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
+                root->set_logical_area(root_rect.rect, with_animations);
+                root->commit_changes();
+                return;
+            }
+
             mir::log_info("Cannot resize container from south without south neighbor");
             return;
         }
@@ -244,6 +265,15 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         auto const east = container->neighbor_east();
         if (!east)
         {
+            if (!container->anchored())
+            {
+                auto const root = container->root();
+                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
+                root->set_logical_area(root_rect.rect, with_animations);
+                root->commit_changes();
+                return;
+            }
+
             mir::log_info("Cannot resize container from east without east neighbor");
             return;
         }
@@ -271,6 +301,15 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         auto const west = container->neighbor_west();
         if (!west)
         {
+            if (!container->anchored())
+            {
+                auto const root = container->root();
+                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
+                root->set_logical_area(root_rect.rect, with_animations);
+                root->commit_changes();
+                return;
+            }
+
             mir::log_info("Cannot resize container from west without west neighbor");
             return;
         }
@@ -523,4 +562,12 @@ std::shared_ptr<Container> Container::neighbor_south() const
 std::shared_ptr<Container> Container::neighbor_west() const
 {
     return get_west_neighbor(this);
+}
+
+std::shared_ptr<Container> Container::root()
+{
+    if (auto const sh = get_parent().lock())
+        return sh->root();
+
+    return shared_from_this();
 }
