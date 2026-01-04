@@ -75,8 +75,15 @@ std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Con
 
 namespace
 {
-geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x_diff, int y_diff)
+struct ResizeResult
 {
+    geom::Rectangle rect;
+    bool clamped;
+};
+
+ResizeResult resize_internal(Container* container, MirResizeEdge edge, int x_diff, int y_diff)
+{
+    bool clamped = false;
     auto const current_rectangle = container->get_logical_area();
     int const current_x = current_rectangle.top_left.x.as_int();
     int const current_y = current_rectangle.top_left.y.as_int();
@@ -87,28 +94,39 @@ geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x_
     int new_y = current_y;
     int new_width = current_width;
     int new_height = current_height;
-    int const min_height = container->get_min_height();
-    int const min_width = container->get_min_width();
+    int const min_height = static_cast<int>(container->get_min_height());
+    int const min_width = static_cast<int>(container->get_min_width());
+
+    auto clamp = [&clamped](int value, int min)
+    {
+        if (value <= min)
+        {
+            clamped = true;
+            value = min;
+        }
+
+        return value;
+    };
 
     auto const set_north = [&]
     {
-        new_height = std::max(current_height + y_diff, min_height);
+        new_height = clamp(current_height + y_diff, min_height);
         new_y = current_y + (current_height - new_height);
     };
 
     auto const set_south = [&]
     {
-        new_height = std::max(current_height + y_diff, min_height);
+        new_height = clamp(current_height + y_diff, min_height);
     };
 
     auto const set_east = [&]
     {
-        new_width = std::max(current_width + x_diff, min_width);
+        new_width = clamp(current_width + x_diff, min_width);
     };
 
     auto const set_west = [&]
     {
-        new_width = std::max(current_width + x_diff, min_width);
+        new_width = clamp(current_width + x_diff, min_width);
         new_x = current_x + (current_width - new_width);
     };
 
@@ -146,17 +164,19 @@ geom::Rectangle resize_internal(Container* container, MirResizeEdge edge, int x_
         break;
     }
 
-    return geom::Rectangle(geom::Point(new_x, new_y), geom::Size(new_width, new_height));
+    return {
+        geom::Rectangle(geom::Point(new_x, new_y), geom::Size(new_width, new_height)),
+        clamped
+    };
 }
 }
 
-void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y)
+void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations)
 {
-    bool const with_animations = true;
     auto const current_rectangle = container->get_logical_area();
     auto const next_rectangle = resize_internal(container, edge, static_cast<int>(x), static_cast<int>(y));
-    auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.size.width.as_int();
-    auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.size.height.as_int();
+    auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
+    auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
 
     switch (edge)
     {
@@ -170,8 +190,14 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const north_rectangle = resize_internal(north.get(), mir_resize_edge_south, 0, height_diff);
-        container->set_logical_area(next_rectangle, with_animations);
-        north->set_logical_area(north_rectangle, with_animations);
+        if (north_rectangle.clamped)
+        {
+            mir::log_info("North rectangle is as small as it can get, not resizing");
+            return;
+        }
+
+        container->set_logical_area(next_rectangle.rect, with_animations);
+        north->set_logical_area(north_rectangle.rect, with_animations);
         container->commit_changes();
         north->commit_changes();
         break;
@@ -186,8 +212,14 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const south_rectangle = resize_internal(south.get(), mir_resize_edge_north, 0, height_diff);
-        container->set_logical_area(next_rectangle, with_animations);
-        south->set_logical_area(south_rectangle, with_animations);
+        if (south_rectangle.clamped)
+        {
+            mir::log_info("South rectangle is as small as it can get, not resizing");
+            return;
+        }
+
+        container->set_logical_area(next_rectangle.rect, with_animations);
+        south->set_logical_area(south_rectangle.rect, with_animations);
         container->commit_changes();
         south->commit_changes();
         break;
@@ -202,8 +234,14 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const east_rectangle = resize_internal(east.get(), mir_resize_edge_west, width_diff, 0);
-        container->set_logical_area(next_rectangle, with_animations);
-        east->set_logical_area(east_rectangle, with_animations);
+        if (east_rectangle.clamped)
+        {
+            mir::log_info("East rectangle is as small as it can get, not resizing");
+            return;
+        }
+
+        container->set_logical_area(next_rectangle.rect, with_animations);
+        east->set_logical_area(east_rectangle.rect, with_animations);
         container->commit_changes();
         east->commit_changes();
         break;
@@ -218,8 +256,14 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         }
 
         auto const west_rectangle = resize_internal(west.get(), mir_resize_edge_east, width_diff, 0);
-        container->set_logical_area(next_rectangle, with_animations);
-        west->set_logical_area(west_rectangle, with_animations);
+        if (west_rectangle.clamped)
+        {
+            mir::log_info("West rectangle is as small as it can get, not resizing");
+            return;
+        }
+
+        container->set_logical_area(next_rectangle.rect, with_animations);
+        west->set_logical_area(west_rectangle.rect, with_animations);
         container->commit_changes();
         west->commit_changes();
         break;
@@ -361,7 +405,8 @@ bool has_bottom_neighbor(Container const* container)
 
 bool has_left_neighbor(Container const* container)
 {
-    return get_west_neighbor(container) != nullptr;;
+    return get_west_neighbor(container) != nullptr;
+    ;
 }
 
 bool has_top_neighbor(Container const* container)

@@ -58,7 +58,29 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
         return false;
     }
 
-    Container::execute_resize(container.get(), resize_edge, x, y);
+    float x_diff = 0;
+    float y_diff = 0;
+    auto const area = container->get_visible_area();
+    switch (resize_edge)
+    {
+    case mir_resize_edge_west:
+        x_diff = area.left().as_value() - x;
+        break;
+    case mir_resize_edge_east:
+        x_diff = x - area.right().as_value();
+        break;
+    case mir_resize_edge_south:
+        y_diff = y - area.bottom().as_value();
+        break;
+    case mir_resize_edge_north:
+        y_diff = area.top().as_value() - y;
+        break;
+    default:
+        break;
+    }
+
+    Container::execute_resize(container.get(), resize_edge, x_diff, y_diff, false);
+    return true;
 }
 
 void ResizeService::handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge)

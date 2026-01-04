@@ -363,16 +363,28 @@ bool LeafContainer::resize(Direction direction, int pixels)
     switch (direction)
     {
     case Direction::left:
-        execute_resize(this, mir_resize_edge_east, -pixels, 0);
+        if (neighbor_east())
+            execute_resize(this, mir_resize_edge_east, -pixels, 0, true); // Shrink in east
+        else if (neighbor_west())
+            execute_resize(this, mir_resize_edge_west, pixels, 0, true); // Grow in west
         break;
     case Direction::right:
-        execute_resize(this, mir_resize_edge_east, pixels, 0);
+        if (neighbor_east())
+            execute_resize(this, mir_resize_edge_east, pixels, 0, true); // Grow in east
+        else if (neighbor_west())
+            execute_resize(this, mir_resize_edge_west, -pixels, 0, true); // Shrink in west
         break;
     case Direction::down:
-        execute_resize(this, mir_resize_edge_south, 0, pixels);
+        if (neighbor_south())
+            execute_resize(this, mir_resize_edge_south, 0, pixels, true); // Grow in south
+        else if (neighbor_north())
+            execute_resize(this, mir_resize_edge_north, 0, -pixels, true); // Shrink in north
         break;
     case Direction::up:
-        execute_resize(this, mir_resize_edge_south, 0, -pixels);
+        if (neighbor_south())
+            execute_resize(this, mir_resize_edge_south, 0, -pixels, true); // Shrink in south
+        else if (neighbor_north())
+            execute_resize(this, mir_resize_edge_north, 0, pixels, true); // Grow in north
         break;
     default:
         break;
