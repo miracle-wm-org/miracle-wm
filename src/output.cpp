@@ -429,11 +429,14 @@ nlohmann::json Output::to_json(bool is_focused) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
     nlohmann::json current_mode_node;
-    current_mode_node["width"] = current_mode.size.width.as_int();
-    current_mode_node["height"] = current_mode.size.height.as_int();
-    current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+    if (output_config.current_mode_index != std::numeric_limits<unsigned>::max())
+    {
+        auto const& current_mode = output_config.modes[output_config.current_mode_index];
+        current_mode_node["width"] = current_mode.size.width.as_int();
+        current_mode_node["height"] = current_mode.size.height.as_int();
+        current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+    }
 
     nlohmann::json transform;
     switch (output_config.orientation)
@@ -528,11 +531,14 @@ nlohmann::json Output::get_outputs_json(bool) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
     nlohmann::json current_mode_node;
-    current_mode_node["width"] = current_mode.size.width.as_int();
-    current_mode_node["height"] = current_mode.size.height.as_int();
-    current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+    if (output_config.current_mode_index != std::numeric_limits<unsigned>::max())
+    {
+        auto const& current_mode = output_config.modes[output_config.current_mode_index];
+        current_mode_node["width"] = current_mode.size.width.as_int();
+        current_mode_node["height"] = current_mode.size.height.as_int();
+        current_mode_node["refresh"] = current_mode.vrefresh_hz * 1000;
+    }
 
     auto const primary = is_primary();
 

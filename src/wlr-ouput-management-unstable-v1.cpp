@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <limits>
 #define MIR_LOG_COMPONENT "wlr-output-management-unstable-v1"
 
 #include "wlr-ouput-management-unstable-v1.h"
@@ -505,7 +506,10 @@ void WlrOutputHeadV1::send_initial()
     send_description_event("");
     send_physical_size_event(output.physical_size_mm().width, output.physical_size_mm().height);
     send_enabled_event(output.used());
-    send_current_mode_event(modes[config.current_mode_index]->resource);
+    if (config.current_mode_index != std::numeric_limits<unsigned>::max())
+    {
+        send_current_mode_event(modes[config.current_mode_index]->resource);
+    }
     send_position_event(output.extents().top_left.x.as_int(), output.extents().top_left.y.as_int());
     // TODO: Send the transform event via send_transform_event()
     send_scale_event(output.scale());
@@ -526,7 +530,7 @@ void WlrOutputHeadV1::update(miral::Output const& updated, OutputConfigDetails c
     if (output.used() != updated.used())
         send_enabled_event(updated.used());
 
-    if (config.current_mode_index != updated_config.current_mode_index)
+    if (config.current_mode_index != updated_config.current_mode_index && updated_config.current_mode_index != std::numeric_limits<unsigned>::max())
         send_current_mode_event(modes[updated_config.current_mode_index]->resource);
 
     if (output.extents() != updated.extents())
