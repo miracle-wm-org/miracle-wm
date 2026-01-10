@@ -39,10 +39,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-auto select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> uint32_t
+auto select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> std::optional<uint32_t>
 {
     if (modes.empty())
-        return std::numeric_limits<uint32_t>::max();
+        return std::nullopt;
 
     if (mode_index >= modes.size())
         return 0;
@@ -196,6 +196,7 @@ public:
         cached.clear();
         conf.for_each_output([&](mg::DisplayConfigurationOutput const& output)
         {
+            auto const current_mode_index = select_mode_index(output.current_mode_index, output.modes);
             cached.push_back(OutputConfigDetails {
                 output.name,
                 output.card_id,
@@ -205,7 +206,7 @@ public:
                 output.orientation,
                 output.logical_group_id,
                 output.modes,
-                output.current_mode_index,
+                current_mode_index,
                 output.used,
                 output.power_mode,
                 output.current_format,
@@ -389,8 +390,8 @@ private:
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.top_left = position;
-            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            output.current_mode_index = preferred_mode_index;
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            output.current_mode_index = preferred_mode_index.value_or(0);
             output.logical_group_id = empty_group_id;
             output.orientation = mir_orientation_normal;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
@@ -414,9 +415,9 @@ private:
             config.name = output.name;
             config.position = position;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            auto const& mode = preferred_mode_index < output.modes.size()
-                ? output.modes[preferred_mode_index]
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            auto const& mode = preferred_mode_index
+                ? output.modes[*preferred_mode_index]
                 : output.modes[0];
             config.size = mode.size;
             config.refresh = mode.vrefresh_hz;
@@ -479,8 +480,8 @@ private:
             mir::log_info("Output position is (%d, %d)", output.top_left.x.as_int(), output.top_left.y.as_int());
 
             auto const& modes = output.modes;
-            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
-            output.current_mode_index = preferred_mode_index;
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
+            output.current_mode_index = preferred_mode_index.value_or(0);
 
             if (card.size)
             {

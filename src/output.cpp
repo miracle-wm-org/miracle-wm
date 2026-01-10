@@ -421,7 +421,9 @@ nlohmann::json Output::to_json(bool is_focused) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
+    auto const current_mode = output_config.current_mode_index && output_config.current_mode_index < output_config.modes.size()
+        ? output_config.modes[*output_config.current_mode_index]
+        : mir::graphics::DisplayConfigurationMode(mir::geometry::Size(0, 0), 0);
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();
@@ -520,7 +522,9 @@ nlohmann::json Output::get_outputs_json(bool) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
+    auto const current_mode = output_config.current_mode_index && output_config.current_mode_index < output_config.modes.size()
+        ? output_config.modes[*output_config.current_mode_index]
+        : mir::graphics::DisplayConfigurationMode(mir::geometry::Size(0, 0), 0);
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();

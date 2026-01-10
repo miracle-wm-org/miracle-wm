@@ -49,7 +49,7 @@ struct OutputConfigDetails
     MirOrientation orientation;
     mir::graphics::DisplayConfigurationLogicalGroupId group_id;
     std::vector<mir::graphics::DisplayConfigurationMode> modes;
-    size_t current_mode_index;
+    std::optional<size_t> current_mode_index;
     bool used;
     MirPowerMode power_mode;
     MirPixelFormat current_format;
