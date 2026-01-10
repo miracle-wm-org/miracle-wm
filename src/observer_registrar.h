@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <functional>
 #include <memory>
 #include <vector>
+#include <mutex>
 
 namespace miracle
 {
