@@ -306,7 +306,7 @@ else()
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
 endif()
 
-configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
+configure_file(session/usr/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 install(PROGRAMS
