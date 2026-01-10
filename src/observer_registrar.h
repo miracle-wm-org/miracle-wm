@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace miracle
