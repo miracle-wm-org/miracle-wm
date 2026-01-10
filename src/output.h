@@ -41,7 +41,6 @@ public:
         std::shared_ptr<Animator> const&,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
-    ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
     std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;
@@ -96,7 +95,6 @@ private:
     std::weak_ptr<WorkspaceInterface> active_workspace;
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::vector<miral::Zone> application_zone_list;
-    AnimationHandle handle;
     std::shared_ptr<PluginManager> plugin_manager;
 
     /// The transform applied to the entire output..

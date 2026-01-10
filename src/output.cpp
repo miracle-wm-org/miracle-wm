@@ -61,14 +61,8 @@ Output::Output(
     window_controller { window_controller },
     animator { animator },
     server_action_queue { server_action_queue },
-    handle { animator->register_animateable() },
     plugin_manager { plugin_manager }
 {
-}
-
-Output::~Output()
-{
-    animator->remove_by_animation_handle(handle);
 }
 
 std::shared_ptr<WorkspaceInterface> Output::active() const
@@ -81,10 +75,6 @@ std::shared_ptr<WorkspaceInterface> Output::active() const
 
 std::shared_ptr<Container> Output::intersect(float x, float y)
 {
-    // If the output is animating, then we can't trust any pointer events.
-    if (animator->is_animating(handle))
-        return nullptr;
-
     // Intersect a window. If the window is on the currently active workspace
     // or the window is a shell component, then return it.
     auto const window = window_controller->window_at(x, y);
