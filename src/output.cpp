@@ -65,6 +65,8 @@ Output::Output(
 {
 }
 
+Output::~Output() = default;
+
 std::shared_ptr<WorkspaceInterface> Output::active() const
 {
     if (active_workspace.expired())

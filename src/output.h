@@ -29,7 +29,7 @@ class ShellApplicationManager;
 class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
 public:
-    explicit Output(
+    Output(
         std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::string name,
         int id,
@@ -41,6 +41,7 @@ public:
         std::shared_ptr<Animator> const&,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
+    ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
     std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;
