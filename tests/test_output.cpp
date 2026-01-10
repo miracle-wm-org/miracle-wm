@@ -226,25 +226,59 @@ TEST_F(OutputIntersectTest, HandlesDifferentCoordinates)
 TEST_F(OutputTest, OutputToJsonWithUnsetCurrentMode)
 {
     auto const output = std::make_shared<Output>(
-            shell_application_manager,
-            "TestOutput",
-            1, // id
-            geom::Rectangle {
-                { 0,    0    },
-                { 1920, 1080 }
-        }, // area
-            OutputConfigDetails {}, // output_config
-            state,
-            config,
-            window_controller,
-            animator,
-            std::make_shared<PassthroughServerActionQueue>(),
-            std::make_shared<PluginManager>());
-    EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(
-        nlohmann::json({
-            {"width", 0},
-            {"height", 0},
-            {"refresh", 0}
-        })
-    ));
+        shell_application_manager,
+        "TestOutput",
+        1, // id
+        geom::Rectangle {
+            { 0,    0    },
+            { 1920, 1080 }
+    },
+        OutputConfigDetails {},
+        state,
+        config,
+        window_controller,
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        std::make_shared<PluginManager>());
+    EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                                     { "width",   0 },
+                                                                     { "height",  0 },
+                                                                     { "refresh", 0 }
+    })));
+    EXPECT_THAT(output->to_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                            { "width",   0 },
+                                                            { "height",  0 },
+                                                            { "refresh", 0 }
+    })));
+}
+
+TEST_F(OutputTest, OutputToJsonWithInvalidCurrentMode)
+{
+    OutputConfigDetails details;
+    details.current_mode_index = 10000;
+    auto const output = std::make_shared<Output>(
+        shell_application_manager,
+        "TestOutput",
+        1, // id
+        geom::Rectangle {
+            { 0,    0    },
+            { 1920, 1080 }
+    },
+        details,
+        state,
+        config,
+        window_controller,
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        std::make_shared<PluginManager>());
+    EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                                     { "width",   0 },
+                                                                     { "height",  0 },
+                                                                     { "refresh", 0 }
+    })));
+    EXPECT_THAT(output->to_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                            { "width",   0 },
+                                                            { "height",  0 },
+                                                            { "refresh", 0 }
+    })));
 }
