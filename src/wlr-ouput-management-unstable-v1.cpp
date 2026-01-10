@@ -505,7 +505,8 @@ void WlrOutputHeadV1::send_initial()
     send_description_event("");
     send_physical_size_event(output.physical_size_mm().width, output.physical_size_mm().height);
     send_enabled_event(output.used());
-    send_current_mode_event(modes[config.current_mode_index]->resource);
+    if (config.current_mode_index)
+        send_current_mode_event(modes[*config.current_mode_index]->resource);
     send_position_event(output.extents().top_left.x.as_int(), output.extents().top_left.y.as_int());
     // TODO: Send the transform event via send_transform_event()
     send_scale_event(output.scale());
@@ -526,8 +527,8 @@ void WlrOutputHeadV1::update(miral::Output const& updated, OutputConfigDetails c
     if (output.used() != updated.used())
         send_enabled_event(updated.used());
 
-    if (config.current_mode_index != updated_config.current_mode_index)
-        send_current_mode_event(modes[updated_config.current_mode_index]->resource);
+    if (config.current_mode_index != updated_config.current_mode_index && updated_config.current_mode_index)
+        send_current_mode_event(modes[*updated_config.current_mode_index]->resource);
 
     if (output.extents() != updated.extents())
         send_position_event(updated.extents().top_left.x.as_int(), updated.extents().top_left.y.as_int());
