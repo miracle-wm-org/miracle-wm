@@ -49,6 +49,15 @@ extern "C"
         int32_t h;
     } miracle_size_t;
 
+    /// Provides context for a call from the plugin system into
+    /// Miracle's internals. Plugin authors must supply this as a
+    /// parameter when they want to query the system.
+    typedef struct
+    {
+        /// Opaque pointer to internal data.
+        void* internal;
+    } miracle_context_t;
+
     typedef struct
     {
         /// The runtime of the animation frame in seconds.
@@ -145,7 +154,9 @@ extern "C"
         /// The depth layer of the window.
         MirDepthLayer depth_layer;
 
-        /// Opaque pointer to internal data.
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky!
         void* internal;
     } miracle_window_info_t;
 
@@ -194,9 +205,6 @@ extern "C"
         ///
         /// Only valid if #has_name is `TRUE`.
         const char* name;
-
-        /// Opaque pointer to internal data.
-        void* internal;
     } miracle_workspace_t;
 
     /// Describes an output.
@@ -212,38 +220,43 @@ extern "C"
         const char* name;
     } miracle_output_t;
 
-    /// Given the \p window_info, retrieve the #miracle_application_info.
+    /// Retrieve the #miracle_application_info for a given window.
     ///
+    /// \param context the context
     /// \param window_info the window info
     /// \returns the application info for the window
-    miracle_application_info_t miracle_plugin_get_application(miracle_window_info_t* window_info);
+    miracle_application_info_t miracle_plugin_get_application(miracle_context_t* context, miracle_window_info_t* window_info);
 
-    /// Given the \p window_info, retrieve the #miracle_workspace_t of that the window is on.
+    /// Retrieve the #miracle_workspace_t of that the window is on.
     ///
     /// If the window has yet to be placed, this will represent the tenative workspace.
+    /// \param context the context
     /// \param window_info the window info
     /// \returns the workspace that the window is on
-    miracle_workspace_t miracle_plugin_get_workspace_from_window(miracle_window_info_t* window_info);
+    miracle_workspace_t miracle_plugin_get_workspace_from_window(miracle_context_t* context, miracle_window_info_t* window_info);
 
-    /// Given the \p workspace, retrieve the #miracle_output_t to which it belongs.
+    /// Retrieve the #miracle_output_t that a window is on.
     ///
+    /// \param context the context
     /// \param workspace a workspace
     /// \returns the output to which the workspace belongs
-    miracle_output_t miracle_plugin_get_output_from_workspace(miracle_workspace_t* workspace);
+    miracle_output_t miracle_plugin_get_output_from_workspace(miracle_context_t* context, miracle_workspace_t* workspace);
 
     /// Retrive the number of outputs.
     ///
+    /// \param context the context
     /// \returns the number of outputs
-    uint32_t miracle_plugin_num_outputs();
+    uint32_t miracle_plugin_num_outputs(miracle_context_t* context);
 
     /// Retrive an output by the \p index.
     ///
     /// Outputs appear in no specific order. Querying an index beyond #miracle_plugin_num_outputs
     /// is undefined.
     ///
+    /// \param context the context
     /// \param index the index
     /// \returns the output at the index
-    miracle_output_t miracle_plugin_get_output(uint32_t index);
+    miracle_output_t miracle_plugin_get_output(miracle_context_t* context, uint32_t index);
 #ifdef __cplusplus
 }
 #endif
