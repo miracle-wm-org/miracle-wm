@@ -386,7 +386,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeEastStoppedByMinimumSize)
 // === West Edge Tests ===
 TEST_F(ContainerExecuteResizeTest, ResizeWestWithoutNeighborAndAnchored)
 {
-    ON_CALL(*container, neighbor_west())
+    ON_CALL(*container, neighbor_east())
         .WillByDefault(Return(nullptr));
 
     EXPECT_CALL(*container, set_logical_area(_, _))
@@ -402,7 +402,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeWestWithoutNeighborAndUnanchored)
     auto root = std::make_shared<NiceMock<test::MockContainer>>();
     Mock::AllowLeak(root.get());
 
-    ON_CALL(*container, neighbor_west())
+    ON_CALL(*container, neighbor_east())
         .WillByDefault(Return(nullptr));
     ON_CALL(*container, anchored())
         .WillByDefault(Return(false));
@@ -433,7 +433,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeWestExpandsCurrentAndShrinksNeighbor)
         .WillByDefault(Return(west_neighbor));
     // Note: there's likely a bug in container.cpp:317 - it calls neighbor_west() twice
     // For this test to pass with current code, we need to return container for neighbor_west of west_neighbor
-    ON_CALL(*west_neighbor, neighbor_west())
+    ON_CALL(*west_neighbor, neighbor_east())
         .WillByDefault(Return(container));
 
     // Resize west by -50 (move left edge left)
@@ -460,7 +460,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeWestStoppedByMinimumSize)
 
     ON_CALL(*container, neighbor_west())
         .WillByDefault(Return(west_neighbor));
-    ON_CALL(*west_neighbor, neighbor_west())
+    ON_CALL(*west_neighbor, neighbor_east())
         .WillByDefault(Return(container));
 
     // Try to resize west by +360, container tries to shrink to 40 (below min 50), gets clamped at 50
