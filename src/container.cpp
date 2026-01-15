@@ -314,7 +314,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
             return;
         }
 
-        auto const east = west->neighbor_west();
+        auto const east = west->neighbor_east();
         auto const current_rectangle = east->get_logical_area();
         auto const next_rectangle = resize_internal(east.get(), edge, static_cast<int>(x), static_cast<int>(y));
         auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
