@@ -14,6 +14,7 @@ namespace test
     {
     public:
         MockParentContainer(
+            std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
             std::shared_ptr<CompositorState> const& state,
             std::shared_ptr<WindowController> const& window_controller,
             std::shared_ptr<Config> const& config,
@@ -21,7 +22,7 @@ namespace test
             std::shared_ptr<WorkspaceInterface> const& workspace,
             std::shared_ptr<ParentContainer> const& parent,
             bool is_anchored) :
-            ParentContainer(state, window_controller, config, area, workspace, parent, is_anchored)
+            ParentContainer(shell_application_manager, state, window_controller, config, area, workspace, parent, is_anchored)
         {
         }
 
@@ -42,7 +43,6 @@ namespace test
         MOCK_METHOD(void, handle_ready, (), (override));
         MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&), (override));
         MOCK_METHOD(void, handle_request_move, (MirInputEvent const*), (override));
-        MOCK_METHOD(void, handle_request_resize, (MirInputEvent const*, MirResizeEdge), (override));
         MOCK_METHOD(void, handle_raise, (), (override));
         MOCK_METHOD(bool, resize, (Direction, int), (override));
         MOCK_METHOD(bool, set_size, (std::optional<int> const&, std::optional<int> const&), (override));

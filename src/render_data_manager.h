@@ -32,7 +32,7 @@ typedef int RenderDataManagerId;
 struct RenderData
 {
     RenderDataManagerId id = 0;
-    mir::scene::Surface const* surface;
+    mir::scene::Surface const* surface = nullptr;
     bool needs_outline = false;
     bool is_focused = false;
     glm::mat4 transform = glm::mat4(1.f);

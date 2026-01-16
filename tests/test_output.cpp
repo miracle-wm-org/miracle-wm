@@ -18,10 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "mock_container.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output.h"
 #include "passthrough_server_action_queue.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "workspace_observer.h"
 #include <gmock/gmock.h>
@@ -33,9 +35,9 @@ using namespace miracle;
 using ::testing::NiceMock;
 using ::testing::Return;
 
-class OutputIntersectTest : public ::testing::Test
+class OutputTest : public ::testing::Test
 {
-protected:
+public:
     void SetUp() override
     {
         // Create mock dependencies
@@ -43,9 +45,27 @@ protected:
         animator = std::make_shared<Animator>();
         state = std::make_shared<CompositorState>();
         config = std::make_shared<test::StubConfiguration>();
+        shell_application_manager = std::make_shared<ShellApplicationManager>(
+            std::make_unique<NiceMock<test::MockShellApplicationSpawner>>());
+    }
 
-        // Create the Output
+    std::shared_ptr<NiceMock<test::MockWindowController>> window_controller;
+    std::shared_ptr<Animator> animator;
+    std::shared_ptr<CompositorState> state;
+    std::shared_ptr<test::StubConfiguration> config;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
+    std::shared_ptr<WorkspaceInterface> actual_workspace;
+};
+
+class OutputIntersectTest : public OutputTest
+{
+protected:
+    void SetUp() override
+    {
+        OutputTest::SetUp();
+
         output = std::make_shared<Output>(
+            shell_application_manager,
             "TestOutput",
             1, // id
             geom::Rectangle {
@@ -60,24 +80,16 @@ protected:
             std::make_shared<PassthroughServerActionQueue>(),
             std::make_shared<PluginManager>());
 
-        // Add workspace to the output
-        auto registrar = std::make_shared<WorkspaceObserverRegistrar>();
+        auto const registrar = std::make_shared<WorkspaceObserverRegistrar>();
         output->advise_new_workspace(WorkspaceCreationData {
             .id = 1,
             .num = std::nullopt,
             .name = std::string("workspace1"),
             .registrar = registrar });
-
-        // The output creates its own workspace, so we need to get a reference to the actual active workspace
         actual_workspace = output->active();
     }
 
     std::shared_ptr<Output> output;
-    std::shared_ptr<NiceMock<test::MockWindowController>> window_controller;
-    std::shared_ptr<Animator> animator;
-    std::shared_ptr<CompositorState> state;
-    std::shared_ptr<test::StubConfiguration> config;
-    std::shared_ptr<WorkspaceInterface> actual_workspace;
 };
 
 TEST_F(OutputIntersectTest, ReturnsNullWhenNoWindowAtPosition)
@@ -209,4 +221,64 @@ TEST_F(OutputIntersectTest, HandlesDifferentCoordinates)
 
     // Assert
     EXPECT_EQ(result, mock_container);
+}
+
+TEST_F(OutputTest, OutputToJsonWithUnsetCurrentMode)
+{
+    auto const output = std::make_shared<Output>(
+        shell_application_manager,
+        "TestOutput",
+        1, // id
+        geom::Rectangle {
+            { 0,    0    },
+            { 1920, 1080 }
+    },
+        OutputConfigDetails {},
+        state,
+        config,
+        window_controller,
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        std::make_shared<PluginManager>());
+    EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                                     { "width",   0 },
+                                                                     { "height",  0 },
+                                                                     { "refresh", 0 }
+    })));
+    EXPECT_THAT(output->to_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                            { "width",   0 },
+                                                            { "height",  0 },
+                                                            { "refresh", 0 }
+    })));
+}
+
+TEST_F(OutputTest, OutputToJsonWithInvalidCurrentMode)
+{
+    OutputConfigDetails details;
+    details.current_mode_index = 10000;
+    auto const output = std::make_shared<Output>(
+        shell_application_manager,
+        "TestOutput",
+        1, // id
+        geom::Rectangle {
+            { 0,    0    },
+            { 1920, 1080 }
+    },
+        details,
+        state,
+        config,
+        window_controller,
+        animator,
+        std::make_shared<PassthroughServerActionQueue>(),
+        std::make_shared<PluginManager>());
+    EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                                     { "width",   0 },
+                                                                     { "height",  0 },
+                                                                     { "refresh", 0 }
+    })));
+    EXPECT_THAT(output->to_json(false)["current_mode"], testing::Eq(nlohmann::json({
+                                                            { "width",   0 },
+                                                            { "height",  0 },
+                                                            { "refresh", 0 }
+    })));
 }

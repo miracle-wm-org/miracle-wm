@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16) # PCH support needs 3.16+
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
-project(miracle-wm VERSION 0.8.2)
+project(miracle-wm VERSION 0.8.3)
 
 # ----------------------------------------
 # Speed tweaks
@@ -45,7 +45,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(SNAP_BUILD "Building as a snap?" OFF)
 option(SYSTEMD_INTEGRATION "Specifies that the systemd integration script will run at startup" OFF)
 option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
-option(ENABLE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
 option(ENABLE_TESTS "Build unit tests" ON)
 
 if(COMPILING_AGAINST_DEV)
@@ -54,10 +53,27 @@ else()
     set(COMPILING_AGAINST_DEV 0)
 endif()
 
-if(ENABLE_PLUGIN_SYSTEM)
-    set(ENABLE_PLUGIN_SYSTEM 1)
+# Feature flags
+option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(FEATURE_MULTI_SELECT "Enable multi-select feature" OFF)
+option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
+
+if(FEATURE_PLUGIN_SYSTEM)
+    set(FEATURE_PLUGIN_SYSTEM 1)
 else()
-    set(ENABLE_PLUGIN_SYSTEM 0)
+    set(FEATURE_PLUGIN_SYSTEM 0)
+endif()
+
+if(FEATURE_MULTI_SELECT)
+    set(FEATURE_MULTI_SELECT 1)
+else()
+    set(FEATURE_MULTI_SELECT 0)
+endif()
+
+if(FEATURE_PARENT_CONTAINER_WALLPAPERS)
+    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 1)
+else()
+    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 0)
 endif()
 
 # ----------------------------------------
@@ -111,6 +127,21 @@ find_library(WASMEDGE_LIB wasmedge)
 include(GNUInstallDirs)
 
 # ----------------------------------------
+# Generate version.h and feature_flags.h from templates
+# ----------------------------------------
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/src/version.h
+    @ONLY
+)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/feature_flags.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/src/feature_flags.h
+    @ONLY
+)
+
+# ----------------------------------------
 # miracle-wm-implementation library
 # ----------------------------------------
 add_library(miracle-wm-implementation STATIC
@@ -119,6 +150,7 @@ add_library(miracle-wm-implementation STATIC
         src/window_helpers.cpp
         src/config.cpp
         src/output.cpp
+        src/parent_background_internal_client.cpp
         src/workspace_manager.cpp
         src/ipc_message_handler.cpp
         src/ipc_connection_manager.cpp
@@ -163,9 +195,12 @@ add_library(miracle-wm-implementation STATIC
         src/math_helpers.cpp
         src/plugin_manager.cpp
         src/real_plugin_bridge.h src/real_plugin_bridge.cpp
+        src/shell_application_manager.cpp src/shell_application_manager.h
+        src/shell_application_spawner.h
+        src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} ENABLE_PLUGIN_SYSTEM=${ENABLE_PLUGIN_SYSTEM})
+target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -215,9 +250,10 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
         ${XKBCOMMON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/src
 )
 
-if (ENABLE_PLUGIN_SYSTEM)
+if (FEATURE_PLUGIN_SYSTEM)
     target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
 endif()
 
@@ -237,9 +273,10 @@ target_link_libraries(miracle-wm-implementation
         PkgConfig::GLESv2
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-config
+        xdg-shell-protocol
 )
 
-if (ENABLE_PLUGIN_SYSTEM)
+if (FEATURE_PLUGIN_SYSTEM)
     target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
 endif()
 
@@ -270,7 +307,7 @@ else()
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
 endif()
 
-configure_file(session/usr/local/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
+configure_file(session/usr/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions)
 
 install(PROGRAMS

@@ -24,11 +24,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class PluginManager;
+class ShellApplicationManager;
 
 class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
 {
 public:
-    explicit Output(
+    Output(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::string name,
         int id,
         geom::Rectangle const& area,
@@ -81,6 +83,7 @@ public:
 private:
     void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
 
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::string name_;
     int id_;
     geom::Rectangle area;
@@ -93,7 +96,6 @@ private:
     std::weak_ptr<WorkspaceInterface> active_workspace;
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::vector<miral::Zone> application_zone_list;
-    AnimationHandle handle;
     std::shared_ptr<PluginManager> plugin_manager;
 
     /// The transform applied to the entire output..

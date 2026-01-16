@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 MiralOutputFactory::MiralOutputFactory(
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
@@ -33,6 +34,7 @@ MiralOutputFactory::MiralOutputFactory(
     std::shared_ptr<DisplayConfig> const& display_config,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
+    shell_application_manager { shell_application_manager },
     state { state },
     config { config },
     window_controller { window_controller },
@@ -54,6 +56,7 @@ std::shared_ptr<OutputInterface> MiralOutputFactory::create(
     }
 
     return std::make_shared<Output>(
+        shell_application_manager,
         std::move(name),
         id,
         area,

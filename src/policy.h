@@ -60,6 +60,7 @@ class DisplayConfig;
 class WindowObserverRegistrar;
 class MagnifierWrapper;
 class PluginManager;
+class ShellApplicationManager;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -127,6 +128,7 @@ private:
     std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
     std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<Self> self;

@@ -15,13 +15,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_VERSION_H
-#define MIRACLE_WM_VERSION_H
+#ifndef MIRACLE_WM_FEATURE_FLAGS_H
+#define MIRACLE_WM_FEATURE_FLAGS_H
 
-#define MIRACLE_WM_MAJOR 0
-#define MIRACLE_WM_MINOR 8
-#define MIRACLE_WM_PATCH 3
+namespace miracle::feature
+{
+constexpr bool multi_select = @FEATURE_MULTI_SELECT@;
+constexpr bool parent_container_wallpapers = @FEATURE_PARENT_CONTAINER_WALLPAPERS@;
+constexpr bool plugin_system = @FEATURE_PLUGIN_SYSTEM@;
+}
 
-#define MIRACLE_VERSION_STRING "0.8.3"
-
-#endif // MIRACLE_WM_VERSION_H
+#endif // MIRACLE_WM_FEATURE_FLAGS_H

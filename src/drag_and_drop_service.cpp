@@ -43,7 +43,7 @@ DragAndDropService::DragAndDropService(
 
 bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers, MirPointerButtons buttons)
 {
-    if (!MIRACLE_FEATURE_FLAG_DRAG_AND_DROP || !config->drag_and_drop().enabled)
+    if (!config->drag_and_drop().enabled)
         return false;
 
     if (state.mode() == WindowManagerMode::dragging)

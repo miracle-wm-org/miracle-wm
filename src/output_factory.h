@@ -34,11 +34,13 @@ class WindowController;
 class Animator;
 class DisplayConfig;
 class PluginManager;
+class ShellApplicationManager;
 
 class MiralOutputFactory : public OutputFactoryInterface
 {
 public:
     MiralOutputFactory(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
@@ -52,6 +54,7 @@ public:
         mir::geometry::Rectangle area) override;
 
 private:
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;

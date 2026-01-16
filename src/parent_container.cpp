@@ -20,16 +20,60 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "container.h"
+#include "feature_flags.h"
 #include "leaf_container.h"
 #include "output_interface.h"
+#include "shell_application_manager.h"
 #include "tiling_algorithms.h"
 #include "workspace_interface.h"
 #include <cmath>
 #include <mir/log.h>
 
+#include "auto_restarting_launcher.h"
+
 using namespace miracle;
 
+namespace
+{
+geom::Rectangle get_background_area(geom::Rectangle const& area)
+{
+    const int padding = 8;
+    return geom::Rectangle(
+        geom::Point(
+            area.top_left.x.as_int() - padding,
+            area.top_left.y.as_int() - padding),
+        geom::Size(
+            area.size.width.as_int() + 2 * padding,
+            area.size.height.as_int() + 2 * padding));
+}
+};
+
+ParentContainer::ParentContainerBackgroundPositioner::ParentContainerBackgroundPositioner(ParentContainer* parent) :
+    parent { parent }
+{
+}
+
+void ParentContainer::ParentContainerBackgroundPositioner::place_window(miral::WindowSpecification& specification)
+{
+    specification.focus_mode() = mir_focus_mode_disabled;
+}
+
+void ParentContainer::ParentContainerBackgroundPositioner::handle_ready(std::shared_ptr<Container> const& in)
+{
+    container = in;
+    in->set_logical_area(get_background_area(parent->get_logical_area()), false);
+}
+
+void ParentContainer::ParentContainerBackgroundPositioner::set_area(mir::geometry::Rectangle const& area)
+{
+    if (auto const sh_container = container.lock())
+    {
+        sh_container->set_logical_area(get_background_area(area), false);
+    }
+}
+
 ParentContainer::ParentContainer(
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Config> const& config,
@@ -37,6 +81,7 @@ ParentContainer::ParentContainer(
     std::shared_ptr<WorkspaceInterface> const& workspace,
     std::shared_ptr<ParentContainer> const& parent,
     bool is_anchored) :
+    shell_application_manager { shell_application_manager },
     state { state },
     window_controller { window_controller },
     config { config },
@@ -50,11 +95,40 @@ ParentContainer::ParentContainer(
     // of them. Reserving at least 4 spots is a relatively safe
     // optimization.
     container_list.reserve(4);
+    update_background_client_area();
+}
+
+ParentContainer::~ParentContainer()
+{
+    try_remove_background_client();
 }
 
 geom::Rectangle ParentContainer::get_area() const
 {
     return logical_area;
+}
+
+void ParentContainer::try_remove_background_client()
+{
+    if (shell_application_id)
+    {
+        shell_application_manager->stop(shell_application_id.value());
+        shell_application_id.reset();
+    }
+    shell_application_positioner.reset();
+}
+
+void ParentContainer::update_background_client_area()
+{
+    try_remove_background_client();
+    if (parent.expired() && !is_anchored && feature::parent_container_wallpapers)
+    {
+        // Start up the internal client that will display the background for this floating parent
+        mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");
+        auto const positioner = std::make_shared<ParentContainerBackgroundPositioner>(this);
+        shell_application_id = shell_application_manager->spawn(ShellApplicationRole::parent_container_background, positioner);
+        shell_application_positioner = positioner;
+    }
 }
 
 geom::Rectangle ParentContainer::get_logical_area() const
@@ -212,6 +286,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     }
 
     auto new_parent_node = std::make_shared<ParentContainer>(
+        shell_application_manager,
         state,
         window_controller,
         config,
@@ -235,6 +310,12 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     auto current_logical_area = get_logical_area();
     logical_area = target_rect;
     auto target_placement_area = get_logical_area();
+
+    if (auto const background_positioner_sh = shell_application_positioner.lock())
+    {
+        background_positioner_sh->set_area(target_placement_area);
+    }
+
     std::vector<geom::Rectangle> pending_size_updates;
     pending_size_updates.reserve(container_list.size());
     if (scheme == LayoutScheme::horizontal)
@@ -552,10 +633,6 @@ void ParentContainer::handle_request_move(MirInputEvent const* input_event)
 {
 }
 
-void ParentContainer::handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge)
-{
-}
-
 void ParentContainer::handle_raise()
 {
     for (auto const& node : container_list)
@@ -612,6 +689,17 @@ void ParentContainer::toggle_layout(bool cycle_thru_all)
     relayout();
 }
 
+void ParentContainer::raise_children()
+{
+    for (auto const& container : container_list)
+    {
+        if (auto const window = container->window())
+            window_controller->raise(*window);
+        else if (container->is_lane())
+            as_parent(container)->raise_children();
+    }
+}
+
 void ParentContainer::on_focus_gained()
 {
     if (scheme == LayoutScheme::tabbing || scheme == LayoutScheme::stacking)
@@ -622,6 +710,11 @@ void ParentContainer::on_focus_gained()
                 window_controller->send_to_back(container->window().value());
         }
     }
+
+    if (auto const sh_parent = parent.lock())
+        sh_parent->on_focus_gained();
+    else if (!anchored())
+        raise_children();
 }
 
 void ParentContainer::on_focus_lost()
@@ -769,16 +862,15 @@ bool ParentContainer::move(Direction direction)
 
 bool ParentContainer::move_by(float dx, float dy)
 {
-    if (auto sh_parent = parent.lock())
+    if (auto const sh_parent = parent.lock())
         return sh_parent->move_by(dx, dy);
 
-    // Cannot move an anchored parent
     if (is_anchored)
         return false;
 
     auto area = logical_area;
-    area.top_left.x = geom::X { (float)area.top_left.x.as_int() + dx };
-    area.top_left.y = geom::Y { (float)area.top_left.y.as_int() + dy };
+    area.top_left.x = geom::X { static_cast<float>(area.top_left.x.as_int()) + dx };
+    area.top_left.y = geom::Y { static_cast<float>(area.top_left.y.as_int()) + dy };
     set_logical_area(area, false);
     commit_changes();
     return true;
@@ -791,6 +883,9 @@ bool ParentContainer::move_by(Direction direction, int pixels)
 
 bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
+    if (auto const sh_parent = parent.lock())
+        return sh_parent->move_to(x, y, with_animations);
+
     if (is_anchored)
         return false;
 
@@ -856,6 +951,7 @@ bool ParentContainer::matches(ContainerScope const&) const
 bool ParentContainer::set_anchored(bool anchor)
 {
     is_anchored = anchor;
+    update_background_client_area();
     return true;
 }
 

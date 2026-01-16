@@ -23,13 +23,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class WindowController;
+class ShellApplicationDelegate;
 
 class ShellComponentContainer : public Container
 {
 public:
     ShellComponentContainer(
         miral::Window const&,
-        std::shared_ptr<WindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<ShellApplicationDelegate>&& delegate);
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 
@@ -46,7 +48,6 @@ public:
     void handle_ready() override;
     void handle_modify(miral::WindowSpecification const& specification) override;
     void handle_request_move(MirInputEvent const* input_event) override;
-    void handle_request_resize(MirInputEvent const* input_event, MirResizeEdge edge) override;
     void handle_raise() override;
     bool resize(Direction direction, int pixels) override;
     bool set_size(std::optional<int> const& width, std::optional<int> const& height) override;
@@ -101,6 +102,7 @@ public:
 private:
     miral::Window window_;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<ShellApplicationDelegate> delegate;
     uint32_t handle_ = 0;
     glm::mat4 transform_ = glm::mat4(1.f);
 };

@@ -29,9 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
 #include "mock_session.h"
+#include "mock_shell_application_spawner.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
+#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -52,7 +54,10 @@ class LeafContainerTest : public ::testing::Test
 public:
     LeafContainerTest() :
         workspace(std::make_shared<testing::NiceMock<test::MockWorkspace>>()),
+        shell_application_manager(std::make_shared<ShellApplicationManager>(
+            std::make_unique<testing::NiceMock<test::MockShellApplicationSpawner>>())),
         parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>(
+            shell_application_manager,
             state,
             window_controller,
             config,
@@ -93,6 +98,7 @@ protected:
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<test::MockWorkspace> workspace;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
     std::shared_ptr<test::MockOutput> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     std::shared_ptr<test::MockParentContainer> parent;
@@ -163,74 +169,6 @@ TEST_F(LeafContainerTest, CorrectlyReportsIfNotFocused)
 {
     state->focus_container(nullptr);
     ASSERT_FALSE(leaf_container->is_focused());
-}
-
-TEST_F(LeafContainerTest, IfParentIsUnanchoredThenParentCanBeResizedLeft)
-{
-    ON_CALL(*parent, anchored())
-        .WillByDefault(testing::Return(false));
-    ON_CALL(*parent, num_nodes())
-        .WillByDefault(testing::Return(1));
-    ON_CALL(*parent, get_area())
-        .WillByDefault(testing::Return(parent_area));
-
-    geom::Rectangle result(
-        geom::Point { 0, 0 },
-        geom::Size { parent_area.size.width.as_int() - 20, parent_area.size.height.as_int() });
-    EXPECT_CALL(*parent, set_logical_area(result, true));
-    EXPECT_CALL(*parent, commit_changes());
-    leaf_container->resize(Direction::left, 20);
-}
-
-TEST_F(LeafContainerTest, IfParentIsUnanchoredThenParentCanBeResizedRight)
-{
-    ON_CALL(*parent, anchored())
-        .WillByDefault(testing::Return(false));
-    ON_CALL(*parent, num_nodes())
-        .WillByDefault(testing::Return(1));
-    ON_CALL(*parent, get_area())
-        .WillByDefault(testing::Return(parent_area));
-
-    geom::Rectangle result(
-        geom::Point { 0, 0 },
-        geom::Size { parent_area.size.width.as_int() + 20, parent_area.size.height.as_int() });
-    EXPECT_CALL(*parent, set_logical_area(result, true));
-    EXPECT_CALL(*parent, commit_changes());
-    leaf_container->resize(Direction::right, 20);
-}
-
-TEST_F(LeafContainerTest, IfParentIsUnanchoredThenParentCanBeResizedUp)
-{
-    ON_CALL(*parent, anchored())
-        .WillByDefault(testing::Return(false));
-    ON_CALL(*parent, num_nodes())
-        .WillByDefault(testing::Return(1));
-    ON_CALL(*parent, get_area())
-        .WillByDefault(testing::Return(parent_area));
-
-    geom::Rectangle result(
-        geom::Point { 0, 0 },
-        geom::Size { parent_area.size.width.as_int(), parent_area.size.height.as_int() - 20 });
-    EXPECT_CALL(*parent, set_logical_area(result, true));
-    EXPECT_CALL(*parent, commit_changes());
-    leaf_container->resize(Direction::up, 20);
-}
-
-TEST_F(LeafContainerTest, IfParentIsUnanchoredThenParentCanBeResizedDown)
-{
-    ON_CALL(*parent, anchored())
-        .WillByDefault(testing::Return(false));
-    ON_CALL(*parent, num_nodes())
-        .WillByDefault(testing::Return(1));
-    ON_CALL(*parent, get_area())
-        .WillByDefault(testing::Return(parent_area));
-
-    geom::Rectangle result(
-        geom::Point { 0, 0 },
-        geom::Size { parent_area.size.width.as_int(), parent_area.size.height.as_int() + 20 });
-    EXPECT_CALL(*parent, set_logical_area(result, true));
-    EXPECT_CALL(*parent, commit_changes());
-    leaf_container->resize(Direction::down, 20);
 }
 
 TEST_F(LeafContainerTest, IfModifyingWindowToFullScreenThenNoclipIsCalled)

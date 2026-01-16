@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-#if ENABLE_PLUGIN_SYSTEM
+#if FEATURE_PLUGIN_SYSTEM
 namespace
 {
 WasmEdge_ConfigureContext* create_configure_context()

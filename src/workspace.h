@@ -33,6 +33,7 @@ class CompositorState;
 class WorkspaceObserverRegistrar;
 class Animator;
 class PluginManager;
+class ShellApplicationManager;
 
 struct WorkspaceIdentifier
 {
@@ -44,6 +45,7 @@ class Workspace : public WorkspaceInterface, public std::enable_shared_from_this
 {
 public:
     Workspace(
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<OutputInterface> const& output,
         uint32_t id,
         std::optional<int> num,
@@ -55,7 +57,7 @@ public:
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
-    ~Workspace();
+    ~Workspace() override;
 
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
@@ -114,6 +116,7 @@ private:
 
     std::shared_ptr<ParentContainer> root() const;
 
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::weak_ptr<OutputInterface> output;
     uint32_t id_;
     std::optional<int> num_;

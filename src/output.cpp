@@ -30,13 +30,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/gtx/transform.hpp>
 #include <memory>
 #include <mir/log.h>
+#include <miral/application_info.h>
 #include <miral/window_info.h>
 #include <miral/zone.h>
+
+#include "shell_application_manager.h"
 
 using namespace miracle;
 namespace mg = mir::graphics;
 
 Output::Output(
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::string name,
     int id,
     geom::Rectangle const& area,
@@ -47,6 +51,7 @@ Output::Output(
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
+    shell_application_manager { shell_application_manager },
     name_ { std::move(name) },
     id_ { id },
     area { area },
@@ -56,15 +61,11 @@ Output::Output(
     window_controller { window_controller },
     animator { animator },
     server_action_queue { server_action_queue },
-    handle { animator->register_animateable() },
     plugin_manager { plugin_manager }
 {
 }
 
-Output::~Output()
-{
-    animator->remove_by_animation_handle(handle);
-}
+Output::~Output() = default;
 
 std::shared_ptr<WorkspaceInterface> Output::active() const
 {
@@ -76,10 +77,6 @@ std::shared_ptr<WorkspaceInterface> Output::active() const
 
 std::shared_ptr<Container> Output::intersect(float x, float y)
 {
-    // If the output is animating, then we can't trust any pointer events.
-    if (animator->is_animating(handle))
-        return nullptr;
-
     // Intersect a window. If the window is on the currently active workspace
     // or the window is a shell component, then return it.
     auto const window = window_controller->window_at(x, y);
@@ -127,6 +124,12 @@ AllocationHint Output::allocate_position(
     miral::WindowSpecification& requested_specification,
     AllocationHint hint)
 {
+    if (shell_application_manager->is_registered(app_info.application()))
+    {
+        hint.container_type = ContainerType::shell;
+        return hint;
+    }
+
     auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
     auto const is_attached = requested_specification.attached_edges().is_set();
     auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
@@ -182,7 +185,18 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 {
     // Workspaces are always kept in sorted order with numbered workspaces in front followed by all other workspaces
     auto const new_workspace = std::make_shared<Workspace>(
-        shared_from_this(), data.id, data.num, data.name, config, window_controller, state, data.registrar, animator, server_action_queue, plugin_manager);
+        shell_application_manager,
+        shared_from_this(),
+        data.id,
+        data.num,
+        data.name,
+        config,
+        window_controller,
+        state,
+        data.registrar,
+        animator,
+        server_action_queue,
+        plugin_manager);
     insert_workspace_sorted(new_workspace);
 }
 
@@ -407,7 +421,9 @@ nlohmann::json Output::to_json(bool is_focused) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
+    auto const current_mode = output_config.current_mode_index && output_config.current_mode_index < output_config.modes.size()
+        ? output_config.modes[*output_config.current_mode_index]
+        : mir::graphics::DisplayConfigurationMode(mir::geometry::Size(0, 0), 0);
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();
@@ -506,7 +522,9 @@ nlohmann::json Output::get_outputs_json(bool) const
         modes_node.push_back(mode_node);
     }
 
-    auto const& current_mode = output_config.modes[output_config.current_mode_index];
+    auto const current_mode = output_config.current_mode_index && output_config.current_mode_index < output_config.modes.size()
+        ? output_config.modes[*output_config.current_mode_index]
+        : mir::graphics::DisplayConfigurationMode(mir::geometry::Size(0, 0), 0);
     nlohmann::json current_mode_node;
     current_mode_node["width"] = current_mode.size.width.as_int();
     current_mode_node["height"] = current_mode.size.height.as_int();

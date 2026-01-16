@@ -43,7 +43,6 @@ namespace test
         MOCK_METHOD(void, handle_ready, (), (override));
         MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&), (override));
         MOCK_METHOD(void, handle_request_move, (MirInputEvent const*), (override));
-        MOCK_METHOD(void, handle_request_resize, (MirInputEvent const*, MirResizeEdge), (override));
         MOCK_METHOD(void, handle_raise, (), (override));
         MOCK_METHOD(bool, resize, (Direction, int), (override));
         MOCK_METHOD(bool, set_size, (std::optional<int> const&, std::optional<int> const&), (override));
@@ -93,6 +92,11 @@ namespace test
         MOCK_METHOD(bool, matches, (ContainerScope const&), (const, override));
         MOCK_METHOD(std::vector<std::string> const&, get_marks, (), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
+        MOCK_METHOD(std::shared_ptr<Container>, neighbor_north, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<Container>, neighbor_east, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<Container>, neighbor_south, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<Container>, neighbor_west, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<Container>, root, (), (override));
     };
 }
 }

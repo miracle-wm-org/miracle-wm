@@ -27,12 +27,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_listener.h"
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
+#include "internal_shell_application_spawner.h"
 #include "magnifier_wrapper.h"
 #include "output_factory.h"
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "plugin_manager.h"
+#include "shell_application_manager.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -41,8 +43,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/server.h>
 #include <mir_toolkit/events/enums.h>
-#include <miral/application_info.h>
-#include <miral/runner.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <mutex>
@@ -181,8 +181,10 @@ Policy::Policy(
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
+    shell_application_manager(std::make_shared<ShellApplicationManager>(std::make_unique<InternalShellApplicationSpawner>(server))),
     output_manager(std::make_shared<OutputManager>(
         std::make_unique<MiralOutputFactory>(
+            shell_application_manager,
             state,
             config,
             window_controller,
@@ -444,7 +446,7 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
-        if (MIRACLE_FEATURE_FLAG_MULTI_SELECT && action == mir_pointer_action_button_down)
+        if (feature::multi_select && action == mir_pointer_action_button_down)
         {
             if (modifiers == config->get_primary_modifier())
             {
@@ -508,6 +510,9 @@ auto Policy::place_new_window(
     }
 
     auto new_spec = requested_specification;
+    if (auto const delegate = shell_application_manager->delegate(app_info.application()))
+        delegate->place_window(new_spec);
+
     pending_allocation = output_manager->focused()->allocate_position(app_info, new_spec, {});
     return new_spec;
 }

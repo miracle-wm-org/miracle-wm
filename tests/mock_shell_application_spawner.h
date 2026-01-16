@@ -15,13 +15,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_VERSION_H
-#define MIRACLE_WM_VERSION_H
+#ifndef MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H
+#define MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H
 
-#define MIRACLE_WM_MAJOR 0
-#define MIRACLE_WM_MINOR 8
-#define MIRACLE_WM_PATCH 3
+#include "shell_application_spawner.h"
+#include <gmock/gmock.h>
 
-#define MIRACLE_VERSION_STRING "0.8.3"
+namespace miracle::test
+{
+class MockShellApplication : public ShellApplication
+{
+public:
+    MOCK_METHOD(void, stop, (), (override));
+    MOCK_METHOD(miral::Application, application, (), (override));
+};
 
-#endif // MIRACLE_WM_VERSION_H
+class MockShellApplicationSpawner : public ShellApplicationSpawner
+{
+public:
+    MOCK_METHOD(std::unique_ptr<ShellApplication>, spawn, (ShellApplicationRole role), (override));
+};
+}
+
+#endif // MIRACLE_WM_MOCK_SHELL_APPLICATION_SPAWNER_H

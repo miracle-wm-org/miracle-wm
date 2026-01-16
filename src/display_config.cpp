@@ -26,10 +26,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <mir/graphics/display_configuration_policy.h>
 #include <mir/log.h>
+#include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
 #include <mutex>
+#include <sys/inotify.h>
 #include <yaml-cpp/yaml.h>
 
 namespace mg = mir::graphics;
@@ -37,10 +39,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-auto select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> uint32_t
+auto select_mode_index(uint32_t mode_index, std::vector<mg::DisplayConfigurationMode> const& modes) -> std::optional<uint32_t>
 {
     if (modes.empty())
-        return std::numeric_limits<uint32_t>::max();
+        return std::nullopt;
 
     if (mode_index >= modes.size())
         return 0;
@@ -194,6 +196,7 @@ public:
         cached.clear();
         conf.for_each_output([&](mg::DisplayConfigurationOutput const& output)
         {
+            auto const current_mode_index = select_mode_index(output.current_mode_index, output.modes);
             cached.push_back(OutputConfigDetails {
                 output.name,
                 output.card_id,
@@ -203,7 +206,7 @@ public:
                 output.orientation,
                 output.logical_group_id,
                 output.modes,
-                output.current_mode_index,
+                current_mode_index,
                 output.used,
                 output.power_mode,
                 output.current_format,
@@ -387,8 +390,8 @@ private:
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.top_left = position;
-            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            output.current_mode_index = preferred_mode_index;
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            output.current_mode_index = preferred_mode_index.value_or(0);
             output.logical_group_id = empty_group_id;
             output.orientation = mir_orientation_normal;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
@@ -412,9 +415,9 @@ private:
             config.name = output.name;
             config.position = position;
             position.x = geom::X { position.x.as_int() + output.extents().size.width.as_int() };
-            size_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
-            auto const& mode = preferred_mode_index < output.modes.size()
-                ? output.modes[preferred_mode_index]
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, output.modes) };
+            auto const& mode = preferred_mode_index
+                ? output.modes[*preferred_mode_index]
                 : output.modes[0];
             config.size = mode.size;
             config.refresh = mode.vrefresh_hz;
@@ -477,8 +480,8 @@ private:
             mir::log_info("Output position is (%d, %d)", output.top_left.x.as_int(), output.top_left.y.as_int());
 
             auto const& modes = output.modes;
-            uint32_t const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
-            output.current_mode_index = preferred_mode_index;
+            auto const preferred_mode_index { select_mode_index(output.preferred_mode_index, modes) };
+            output.current_mode_index = preferred_mode_index.value_or(0);
 
             if (card.size)
             {
@@ -545,6 +548,14 @@ miracle::DisplayConfig::DisplayConfig(std::string const& path) :
 {
 }
 
+miracle::DisplayConfig::~DisplayConfig()
+{
+    if (main_loop)
+    {
+        main_loop->unregister_fd_handler(this);
+    }
+}
+
 void miracle::DisplayConfig::reload()
 {
     if (self->has_config_file() && self->try_load_from_file())
@@ -593,5 +604,60 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
             self->display_configuration_controller = server.the_display_configuration_controller();
         });
         return self;
+    });
+
+    server.add_init_callback([this, &server]
+    {
+        main_loop = server.the_main_loop();
+        if (main_loop != nullptr)
+        {
+            _watch(main_loop);
+        }
+        else
+        {
+            mir::log_warning("Cannot watch for configuration changes because main_loop is not set");
+        }
+    });
+}
+
+void miracle::DisplayConfig::_watch(std::shared_ptr<mir::MainLoop> const& main_loop)
+{
+    inotify_fd = mir::Fd { inotify_init1(IN_CLOEXEC) };
+    file_watch = inotify_add_watch(inotify_fd, self->path.c_str(), IN_MODIFY);
+
+    if (file_watch < 0)
+    {
+        mir::log_error("Unable to watch the config file.");
+        return;
+    }
+
+    main_loop->register_fd_handler({ inotify_fd }, this, [&](int file_fd)
+    {
+        size_t constexpr sizeof_inotify_event = sizeof(inotify_event);
+
+        alignas(inotify_event) char buffer[sizeof(inotify_event) + NAME_MAX + 1];
+
+        auto const readsize = read(inotify_fd, buffer, sizeof(buffer));
+        if (readsize < static_cast<ssize_t>(sizeof_inotify_event))
+        {
+            return;
+        }
+
+        auto raw_buffer = buffer;
+        while (raw_buffer != buffer + readsize)
+        {
+            auto& event = reinterpret_cast<inotify_event&>(*raw_buffer);
+            if (event.mask & IN_MODIFY)
+            {
+                mir::log_info("Display config file has been modified.Trying to reload...");
+                reload();
+            }
+            if (event.mask & IN_IGNORED)
+            {
+                // Some editors do not edit file in place, that causes watch to drop, re-adding it here
+                file_watch = inotify_add_watch(inotify_fd, self->path.c_str(), IN_MODIFY);
+            }
+            raw_buffer += sizeof_inotify_event + event.len;
+        }
     });
 }
