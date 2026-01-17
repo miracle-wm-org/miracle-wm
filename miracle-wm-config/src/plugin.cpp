@@ -27,30 +27,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 miracle_application_info_t miracle_plugin_get_application(miracle_context_t* context, miracle_window_info_t* window_info)
 {
-    miracle::PluginBridge* bridge = reinterpret_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
     return bridge->application(*window_info);
 }
 
 miracle_workspace_t miracle_plugin_get_workspace_from_window(miracle_context_t* context, miracle_window_info_t* window_info)
 {
-    miracle::PluginBridge* bridge = reinterpret_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
     return bridge->workspace(*window_info);
 }
 
 miracle_output_t miracle_plugin_get_output_from_workspace(miracle_context_t* context, miracle_workspace_t* workspace)
 {
-    miracle::PluginBridge* bridge = reinterpret_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
     return bridge->output(*workspace);
 }
 
 uint32_t miracle_plugin_num_outputs(miracle_context_t* context)
 {
-    miracle::PluginBridge* bridge = reinterpret_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
     return bridge->num_outputs();
 }
 
 miracle_output_t miracle_plugin_get_output(miracle_context_t* context, uint32_t index)
 {
-    miracle::PluginBridge* bridge = reinterpret_cast<miracle::PluginBridge*>(context->internal);
-    return bridge->output_by_index(index);
+    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    return bridge->output_at(index);
 }

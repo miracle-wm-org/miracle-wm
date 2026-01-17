@@ -18,11 +18,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_MANAGED_CONTAINER
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
+#include "container.h"
+#include "plugin_manager.h"
+
 namespace miracle
 {
-class PluginManagerContainer
+/// A container that is managed by a plugin.
+///
+/// The idea of this class is to allow plugins to create and manage
+/// containers that can be used by Miracle in the same way as normal
+/// containers. This would allow for more advanced plugin functionality,
+/// such as custom tiling algorithms or container behaviors.
+///
+/// Unlike #ShellComponentContainer, a plugin managed container can be
+/// associated with a specific workspace. However, it is *not* associated
+/// with a tiling grid, like other containers.
+class PluginManagedContainer : public Container
 {
 public:
+    PluginManagedContainer(
+        PluginHandle plugin_handle,
+        miral::Window const& window);
+
+private:
+    PluginHandle plugin_handle;
 };
 }
 
