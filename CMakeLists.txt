@@ -198,6 +198,7 @@ add_library(miracle-wm-implementation STATIC
         src/shell_application_manager.cpp src/shell_application_manager.h
         src/shell_application_spawner.h
         src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
+        src/plugin_managed_container.h src/plugin_managed_container.cpp
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
