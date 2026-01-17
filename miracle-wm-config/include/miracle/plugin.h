@@ -190,6 +190,11 @@ extern "C"
     /// Describes a workspace.
     typedef struct
     {
+        /// If `TRUE`, the workspace is set.
+        ///
+        /// This will be `FALSE` for windows that have not yet been placed.
+        int32_t is_set;
+
         /// If `TRUE`, #number is set.
         int32_t has_number;
 
@@ -205,11 +210,19 @@ extern "C"
         ///
         /// Only valid if #has_name is `TRUE`.
         const char* name;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky.
+        void* internal;
     } miracle_workspace_t;
 
     /// Describes an output.
     typedef struct
     {
+        /// If `TRUE`, the output is set, otherwise `FALSE`.
+        int32_t is_set;
+
         /// The position of the output.
         miracle_point_t position;
 
@@ -218,6 +231,14 @@ extern "C"
 
         /// The name of the output.
         const char* name;
+
+        /// If `TRUE`, the output is the primary output, otherwise `FALSE`.
+        int32_t is_primary;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky.
+        void* internal;
     } miracle_output_t;
 
     /// Retrieve the #miracle_application_info for a given window.

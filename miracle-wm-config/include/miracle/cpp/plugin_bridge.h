@@ -37,7 +37,9 @@ public:
     virtual miracle_workspace_t workspace(miracle_window_info_t const& window_info) = 0;
     virtual miracle_output_t output(miracle_workspace_t const& workspace) = 0;
     virtual uint32_t num_outputs() = 0;
-    virtual miracle_output_t output_by_index(uint32_t index) = 0;
+    virtual miracle_output_t output_at(uint32_t index) = 0;
+    virtual uint32_t num_workspaces_on_output(miracle_output_t const& output) = 0;
+    virtual miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index) = 0;
 };
 }
 

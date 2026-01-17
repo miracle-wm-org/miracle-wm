@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_REAL_PLUGIN_BRIDGE_H
 
 #include "miracle/cpp/plugin_bridge.h"
-#include "output_manager.h"
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 #include <variant>
@@ -27,6 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class Container;
+class OutputManager;
+class WindowManagerToolsWindowController;
 
 /// This is the information expected to be on a #miracle_window_info_t.
 ///
@@ -35,18 +36,26 @@ class Container;
 struct PluginWindowInfo
 {
     miral::ApplicationInfo const& app_info;
-    std::variant<miral::WindowSpecification const&, miral::WindowInfo const&> window_info;
+    std::variant<miral::WindowSpecification, miral::WindowInfo> window_info;
 };
 
 class RealPluginBridge : public PluginBridge
 {
 public:
-    RealPluginBridge(std::shared_ptr<OutputManager> const&);
+    RealPluginBridge(
+        std::shared_ptr<OutputManager> const& output_manager,
+        std::shared_ptr<WindowManagerToolsWindowController> const& window_controller);
     miracle_application_info_t application(miracle_window_info_t const& window_info) override;
     miracle_workspace_t workspace(miracle_window_info_t const& window_info) override;
     miracle_output_t output(miracle_workspace_t const& workspace) override;
     uint32_t num_outputs() override;
-    miracle_output_t output_by_index(uint32_t index) override;
+    miracle_output_t output_at(uint32_t index) override;
+    uint32_t num_workspaces_on_output(miracle_output_t const& output) override;
+    miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index) override;
+
+private:
+    std::shared_ptr<OutputManager> output_manager;
+    std::shared_ptr<WindowManagerToolsWindowController> window_controller;
 };
 }
 
