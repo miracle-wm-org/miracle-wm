@@ -61,6 +61,7 @@ class WindowObserverRegistrar;
 class MagnifierWrapper;
 class PluginManager;
 class ShellApplicationManager;
+class PluginBridge;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -146,6 +147,7 @@ private:
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::unique_ptr<MagnifierWrapper> magnifier;
+    std::unique_ptr<PluginBridge> plugin_bridge;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

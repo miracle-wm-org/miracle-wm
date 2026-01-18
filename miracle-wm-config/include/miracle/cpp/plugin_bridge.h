@@ -19,7 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_PLUGIN_BRIDGE_H
 
 #include "../plugin.h"
-#include <memory>
+#include <mir/geometry/point.h>
+#include <mir/geometry/size.h>
 
 namespace miracle
 {
@@ -41,6 +42,27 @@ public:
     virtual uint32_t num_workspaces_on_output(miracle_output_t const& output) = 0;
     virtual miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index) = 0;
 };
+
+inline miracle_point_t from_point(mir::geometry::Point const& point)
+{
+    return { point.x.as_int(), point.y.as_int() };
+}
+
+inline mir::geometry::Point from_point(miracle_point_t const& point)
+{
+    return { point.x, point.y };
+}
+
+inline miracle_size_t from_size(mir::geometry::Size const& size)
+{
+    return { size.width.as_int(), size.height.as_int() };
+}
+
+inline mir::geometry::Size from_size(miracle_size_t const& size)
+{
+    return { size.w, size.h };
+}
+
 }
 
 #endif

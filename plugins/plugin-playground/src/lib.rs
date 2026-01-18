@@ -53,5 +53,44 @@ pub extern "C" fn animate(data: MiracleAnimationFrameData) -> MiracleAnimationFr
     }
 }
 
+#[repr(C)]
+pub struct Size {
+    pub w: i32,
+    pub h: i32,
+}
+
+#[repr(C)]
+pub struct MiracleWindowInfo {
+    pub window_type: i32,
+    pub state: i32,
+    pub top_left: Point,
+    pub size: Size,
+    pub title: *const i8,
+    pub depth_layer: i32,
+    pub internal: *mut core::ffi::c_void,
+}
+
+#[repr(C)]
+pub struct MiraclePlacement {
+    pub is_set: i32,
+    pub top_left: Point,
+    pub size: Size,
+    pub depth_layer: i32,
+}
+
+#[repr(C)]
+pub struct MiracleContext {
+    pub internal: *mut core::ffi::c_void,
+}
+
 #[unsafe(no_mangle)]
-pub extern "C" fn place_new_window() {}
+pub extern "C" fn place_new_window(result: *mut MiraclePlacement, _context: *const MiracleContext, _window_info: *const MiracleWindowInfo) {
+    unsafe {
+        (*result).is_set = 1;
+        (*result).top_left.x = 100;
+        (*result).top_left.y = 100;
+        (*result).size.w = 800;
+        (*result).size.h = 600;
+        (*result).depth_layer = 2;
+    }
+}

@@ -87,6 +87,19 @@ public:
         PluginHandle handle,
         miracle_plugin_animation_frame_data_t const& frame_data);
 
+    /// Place a new window using the provided handle and window info.
+    ///
+    /// If \p handle does not correspond to a loaded plugin, the function
+    /// will return a result indicating that the placement was not handled.
+    ///
+    /// \param handle the plugin handle to use
+    /// \param window_info the window being placed
+    /// \returns the placement
+    miracle_placement_t place_new_window(
+        PluginHandle handle,
+        miracle_context_t const& context,
+        miracle_window_info_t const& window_info);
+
 private:
     template <auto DeleteFn>
     struct WasmEdgeDeleter
@@ -126,6 +139,7 @@ private:
     {
         add_points,
         animate,
+        place_new_window,
         max
     };
 
@@ -178,6 +192,10 @@ public:
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle,
         miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
+    miracle_placement_t place_new_window(
+        PluginHandle,
+        miracle_context_t const&,
+        miracle_window_info_t const&) { return miracle_placement_t {}; }
 };
 }
 #endif

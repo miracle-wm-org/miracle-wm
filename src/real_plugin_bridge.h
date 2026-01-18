@@ -57,6 +57,9 @@ private:
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
 };
+
+miracle_window_info_t new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
+void free_window_info(miracle_window_info_t const& window_info);
 }
 
 #endif

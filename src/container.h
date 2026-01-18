@@ -55,10 +55,13 @@ ContainerType container_type_from_string(std::string const& str);
 class Container : public std::enable_shared_from_this<Container>, public ObserverRegistrar<ContainerListener>
 {
 public:
-    virtual ~Container() = default;
+    ~Container() override = default;
     virtual ContainerType get_type() const = 0;
 
+    /// Show the container.
     virtual void show() = 0;
+
+    /// Hide the container.
     virtual void hide() = 0;
 
     /// Commits any changes made to this node to the screen. This must
@@ -67,10 +70,30 @@ public:
     /// been made for a particular operation.
     virtual void commit_changes() = 0;
 
+    /// Retrieve the logical area of the container.
+    ///
+    /// \returns the logical area
     [[nodiscard]] virtual geom::Rectangle get_logical_area() const = 0;
-    virtual void set_logical_area(geom::Rectangle const&, bool with_animations) = 0;
+
+    /// Set the logical area of the container.
+    ///
+    /// \param area the new area
+    /// \param with_animations whether or not to animate the change
+    virtual void set_logical_area(geom::Rectangle const& area, bool with_animations) = 0;
+
+    /// Retrieve the visible area of the container.
+    ///
+    /// This area may be different than the logical area and be used to clip it.
+    ///
+    /// \returns the visible area
     [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
+
+    /// Constrain the container to its current visible area.
+    ///
+    /// TODO: Can we remove this?
     virtual void constrain() = 0;
+
+    /// Retrieve the parent container of this container, if one exists.
     virtual std::weak_ptr<ParentContainer> get_parent() const = 0;
     virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
     virtual size_t get_min_height() const = 0;

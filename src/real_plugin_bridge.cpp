@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "container.h"
 #include "real_plugin_bridge.h"
+#include "container.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "window_manager_tools_window_controller.h"
@@ -57,13 +57,20 @@ miracle_output_t from_output(std::shared_ptr<OutputInterface> const& output)
     auto const area = output->get_area();
     return {
         .is_set = true,
-        .position = miracle_point_t { area.top_left.x.as_int(), area.top_left.y.as_int() },
-        .size = miracle_size_t { area.size.width.as_int(), area.size.height.as_int() },
+        .position = from_point(area.top_left),
+        .size = from_size(area.size),
         .name = output->name().c_str(),
         .is_primary = output->is_primary(),
         .internal = static_cast<void*>(output.get())
     };
 }
+}
+
+RealPluginBridge::RealPluginBridge(std::shared_ptr<OutputManager> const& output_manager,
+    std::shared_ptr<WindowManagerToolsWindowController> const& window_controller) :
+    output_manager(output_manager),
+    window_controller(window_controller)
+{
 }
 
 miracle_application_info_t RealPluginBridge::application(miracle_window_info_t const& window_info)
@@ -124,4 +131,22 @@ miracle_workspace_t RealPluginBridge::workspace_on_output_at(miracle_output_t co
         return from_workspace(nullptr);
 
     return from_workspace(miracle_output->get_workspaces()[index]);
+}
+
+miracle_window_info_t miracle::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
+{
+    return {
+        .window_type = spec.type().value_or(mir_window_type_normal),
+        .state = spec.state().value_or(mir_window_state_restored),
+        .top_left = from_point(spec.top_left().value_or(geom::Point())),
+        .size = from_size(spec.size().value_or(geom::Size(800, 600))),
+        .title = spec.name().value_or("").c_str(),
+        .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
+        .internal = new PluginWindowInfo(app_info, spec)
+    };
+}
+
+void miracle::free_window_info(miracle_window_info_t const& window_info)
+{
+    delete static_cast<PluginWindowInfo*>(window_info.internal);
 }
