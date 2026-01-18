@@ -224,43 +224,14 @@ AllocationHint Workspace::allocate_position(
     }
 
     requested_specification = parent->place_new_window(requested_specification);
-    return { ContainerType::leaf, parent };
-}
-
-std::shared_ptr<Container> Workspace::create_container(
-    miral::WindowInfo const& window_info,
-    AllocationHint const& hint)
-{
-    std::shared_ptr<Container> container = nullptr;
-    miral::WindowSpecification spec;
-    switch (hint.container_type)
-    {
-    case ContainerType::leaf:
-    {
-        assert(hint.parent.has_value());
-        container = hint.parent.value()->confirm_window(window_info.window());
-        break;
-    }
-    case ContainerType::shell:
-        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
-        break;
-    default:
-        mir::log_error("Unsupported window type: %d", (int)hint.container_type);
-        break;
-    }
-
-    spec.userdata() = container;
-    spec.min_width() = mir::geometry::Width(0);
-    spec.min_height() = mir::geometry::Height(0);
-    window_controller->modify(window_info.window(), spec);
-    return container;
+    return { ContainerType::regular, parent };
 }
 
 void Workspace::delete_container(std::shared_ptr<Container> const& container)
 {
     switch (container->get_type())
     {
-    case ContainerType::leaf:
+    case ContainerType::regular:
     {
         auto const parent = handle_remove_container(container);
         parent->commit_changes();
@@ -572,7 +543,7 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
         floating_trees.push_back(parent);
         break;
     }
-    case ContainerType::leaf:
+    case ContainerType::regular:
         root()->graft_existing(container, static_cast<int>(root()->num_nodes()));
         root()->commit_changes();
         break;

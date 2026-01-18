@@ -41,7 +41,7 @@ DyingSurfaceManager::DyingSurfaceManager(
 
 void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const& container)
 {
-    if (container->get_type() != ContainerType::leaf)
+    if (container->get_type() != ContainerType::regular)
         return;
 
     if (!config->are_animations_enabled())

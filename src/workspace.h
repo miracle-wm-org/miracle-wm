@@ -66,8 +66,6 @@ public:
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification& requested_specification,
         AllocationHint const& hint) override;
-    std::shared_ptr<Container> create_container(
-        miral::WindowInfo const& window_info, AllocationHint const& type) override;
     void delete_container(std::shared_ptr<Container> const& container) override;
     bool move_container(Direction direction, Container&) override;
     bool add_to_root(Container& to_move) override;

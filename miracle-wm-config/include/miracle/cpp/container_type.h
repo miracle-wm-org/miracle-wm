@@ -26,7 +26,7 @@ namespace miracle
 enum class MIRACLE_WM_CONFIG_API ContainerType
 {
     none,
-    leaf,
+    regular,
     shell,
     parent,
     group,
@@ -36,7 +36,7 @@ enum class MIRACLE_WM_CONFIG_API ContainerType
 
 constexpr std::array<const char*, static_cast<int>(ContainerType::max)> container_type_strings = {
     "none",
-    "leaf",
+    "regular",
     "shell",
     "parent",
     "group",

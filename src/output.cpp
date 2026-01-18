@@ -104,7 +104,7 @@ std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_
         if (ignore_selected && container == state->focused_container())
             return false;
 
-        if (container->get_type() != ContainerType::leaf)
+        if (container->get_type() != ContainerType::regular)
             return false;
 
         if (container->get_visible_area().contains(geom::Point(x, y)))
@@ -117,44 +117,6 @@ std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_
     });
 
     return result;
-}
-
-AllocationHint Output::allocate_position(
-    miral::ApplicationInfo const& app_info,
-    miral::WindowSpecification& requested_specification,
-    AllocationHint hint)
-{
-    if (shell_application_manager->is_registered(app_info.application()))
-    {
-        hint.container_type = ContainerType::shell;
-        return hint;
-    }
-
-    auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-    auto const is_attached = requested_specification.attached_edges().is_set();
-    auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
-        || requested_specification.state() == mir_window_state_attached;
-    if (has_exclusive_rect || is_attached || wrong_leaf_state)
-        hint.container_type = ContainerType::shell;
-    else
-    {
-        auto const t = requested_specification.type();
-        if (t == mir_window_type_normal || t == mir_window_type_freestyle)
-            hint.container_type = ContainerType::leaf;
-        else
-            hint.container_type = ContainerType::shell; // This is probably a tooltip or something
-    }
-
-    if (hint.container_type == ContainerType::shell)
-        return hint;
-
-    return active()->allocate_position(app_info, requested_specification, hint);
-}
-
-std::shared_ptr<Container> Output::create_container(
-    miral::WindowInfo const& window_info, AllocationHint const& hint) const
-{
-    return active()->create_container(window_info, hint);
 }
 
 void Output::delete_container(std::shared_ptr<Container> const& container)

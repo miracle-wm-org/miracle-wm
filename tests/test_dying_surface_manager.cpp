@@ -65,7 +65,7 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
 
     // Pre-conditions for starting the animation
     EXPECT_CALL(*container, get_type())
-        .WillOnce(testing::Return(ContainerType::leaf));
+        .WillOnce(testing::Return(ContainerType::regular));
     EXPECT_CALL(*config, are_animations_enabled())
         .WillOnce(testing::Return(true));
     EXPECT_CALL(*container, get_output())

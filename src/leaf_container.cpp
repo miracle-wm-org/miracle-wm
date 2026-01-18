@@ -129,7 +129,7 @@ inline bool needs_outline(Container const& container)
 {
     auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
     container.window().value();
-    return (container.get_type() == ContainerType::leaf)
+    return (container.get_type() == ContainerType::regular)
         && (surface == nullptr || !surface->parent());
 }
 
@@ -683,7 +683,7 @@ bool LeafContainer::is_focused() const
 
 ContainerType LeafContainer::get_type() const
 {
-    return ContainerType::leaf;
+    return ContainerType::regular;
 }
 
 bool LeafContainer::select_next(Direction direction)

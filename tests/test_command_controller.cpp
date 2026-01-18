@@ -337,7 +337,7 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToResizing)
 
     auto const container = std::make_shared<NiceMock<test::MockContainer>>();
     EXPECT_CALL(*container, get_type())
-        .WillOnce(Return(ContainerType::leaf));
+        .WillOnce(Return(ContainerType::regular));
     state->add(container);
     state->focus_container(container);
 
@@ -351,7 +351,7 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
 
     auto const container = std::make_shared<NiceMock<test::MockContainer>>();
     EXPECT_CALL(*container, get_type())
-        .WillOnce(Return(ContainerType::leaf));
+        .WillOnce(Return(ContainerType::regular));
     state->add(container);
     state->focus_container(container);
 

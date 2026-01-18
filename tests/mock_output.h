@@ -31,14 +31,6 @@ namespace test
     public:
         MOCK_METHOD(std::shared_ptr<Container>, intersect, (float x, float y), (override));
         MOCK_METHOD(std::shared_ptr<Container>, intersect_leaf, (float x, float y, bool ignore_selected), (override));
-        MOCK_METHOD(AllocationHint, allocate_position,
-            (miral::ApplicationInfo const& app_info,
-                miral::WindowSpecification& requested_specification,
-                AllocationHint hint),
-            (override));
-        MOCK_METHOD(std::shared_ptr<Container>, create_container,
-            (miral::WindowInfo const& window_info, AllocationHint const& hint),
-            (const, override));
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(void, advise_new_workspace, (WorkspaceCreationData const&&), (override));
         MOCK_METHOD(void, advise_workspace_deleted, (WorkspaceManager&, uint32_t id), (override));

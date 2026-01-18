@@ -187,7 +187,7 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenContainerNotOnActiveWorkspaceAndNotSh
     EXPECT_CALL(*mock_container, get_workspace())
         .WillOnce(Return(different_workspace));
     EXPECT_CALL(*mock_container, get_type())
-        .WillOnce(Return(ContainerType::leaf));
+        .WillOnce(Return(ContainerType::regular));
 
     // Act
     auto result = output->intersect(100.0f, 100.0f);
