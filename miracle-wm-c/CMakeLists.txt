@@ -66,7 +66,7 @@ add_executable(test_miracle_wm_c_api
 )
 
 target_include_directories(test_miracle_wm_c_api PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${MIRCORE_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
     ${MIRAL_INCLUDE_DIRS}
