@@ -33,7 +33,7 @@ using namespace miracle;
 ContainerType miracle::container_type_from_string(std::string const& str)
 {
     if (str == "tiled")
-        return ContainerType::leaf;
+        return ContainerType::regular;
     else if (str == "shell")
         return ContainerType::shell;
     else
@@ -345,7 +345,7 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
 
 bool Container::is_leaf()
 {
-    return get_type() == ContainerType::leaf;
+    return get_type() == ContainerType::regular;
 }
 
 bool Container::is_lane()

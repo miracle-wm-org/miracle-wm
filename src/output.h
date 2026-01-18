@@ -45,12 +45,6 @@ public:
 
     std::shared_ptr<Container> intersect(float x, float y) override;
     std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;
-    AllocationHint allocate_position(
-        miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification& requested_specification,
-        AllocationHint hint = AllocationHint()) override;
-    [[nodiscard]] std::shared_ptr<Container> create_container(
-        miral::WindowInfo const& window_info, AllocationHint const& hint) const override;
     void delete_container(std::shared_ptr<Container> const& container) override;
     void advise_new_workspace(WorkspaceCreationData const&&) override;
     void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) override;

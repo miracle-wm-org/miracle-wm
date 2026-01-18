@@ -66,7 +66,7 @@ void CommandController::try_toggle_resize_mode()
         return;
     }
 
-    if (state->focused_container()->get_type() != ContainerType::leaf)
+    if (state->focused_container()->get_type() != ContainerType::regular)
     {
         set_mode(WindowManagerMode::normal);
         return;
@@ -585,7 +585,7 @@ bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope
     if (!container)
         return false;
 
-    if (container->get_type() != ContainerType::leaf)
+    if (container->get_type() != ContainerType::regular)
         return false;
 
     if (auto const parent = Container::as_parent(container->get_parent().lock()))
@@ -608,7 +608,7 @@ bool CommandController::try_select_next(std::vector<ContainerScope> const& scope
     if (!container)
         return false;
 
-    if (container->get_type() != ContainerType::leaf)
+    if (container->get_type() != ContainerType::regular)
         return false;
 
     if (auto const parent = Container::as_parent(container->get_parent().lock()))
@@ -1055,7 +1055,7 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
 {
     switch (container->get_type())
     {
-    case ContainerType::leaf:
+    case ContainerType::regular:
     {
         auto focused_output = output_manager->focused();
         if (!focused_output)

@@ -43,7 +43,7 @@ TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
 
     auto container = std::make_shared<test::MockContainer>();
     EXPECT_CALL(*container, get_type())
-        .WillOnce(::testing::Return(ContainerType::leaf));
+        .WillOnce(::testing::Return(ContainerType::regular));
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));
@@ -99,7 +99,7 @@ TEST_F(ScratchpadTest, CanShowContainer)
     Scratchpad scratchpad(window_controller, output_manager);
     auto container = std::make_shared<test::MockContainer>();
     EXPECT_CALL(*container, get_type())
-        .WillOnce(::testing::Return(ContainerType::leaf));
+        .WillOnce(::testing::Return(ContainerType::regular));
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));

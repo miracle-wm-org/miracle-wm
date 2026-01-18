@@ -205,9 +205,9 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
     ON_CALL(*workspace, is_empty())
         .WillByDefault(::testing::Return(false));
     ON_CALL(*container_drag, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
+        .WillByDefault(::testing::Return(ContainerType::regular));
     ON_CALL(*other_container, get_type())
-        .WillByDefault(::testing::Return(ContainerType::leaf));
+        .WillByDefault(::testing::Return(ContainerType::regular));
     ON_CALL(*container_drag, get_workspace())
         .WillByDefault(::testing::Return(nullptr));
 

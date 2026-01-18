@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "plugin_manager.h"
 #include "shell_application_manager.h"
+#include "shell_component_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -509,11 +510,40 @@ auto Policy::place_new_window(
         return requested_specification;
     }
 
+    // Place the incoming window according to the following criteria:
+    // 1. If it belongs to a shell application, delegate placement to it
+    // 2. If it meets the criteria of a shell component, call it one
+    // 3. If it is a regular window, allocate it as such on the current workspace
     auto new_spec = requested_specification;
-    if (auto const delegate = shell_application_manager->delegate(app_info.application()))
-        delegate->place_window(new_spec);
+    AllocationHint hint;
+    if (shell_application_manager->is_registered(app_info.application()))
+    {
+        if (auto const delegate = shell_application_manager->delegate(app_info.application()))
+            delegate->place_window(new_spec);
+        hint.container_type = ContainerType::shell;
+    }
+    else
+    {
+        auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
+        auto const is_attached = requested_specification.attached_edges().is_set();
+        auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
+            || requested_specification.state() == mir_window_state_attached;
+        if (has_exclusive_rect || is_attached || wrong_leaf_state)
+            hint.container_type = ContainerType::shell;
+        else
+        {
+            auto const t = requested_specification.type();
+            if (t == mir_window_type_normal || t == mir_window_type_freestyle)
+                hint.container_type = ContainerType::regular;
+            else
+                hint.container_type = ContainerType::shell; // This is probably a tooltip or something
+        }
 
-    pending_allocation = output_manager->focused()->allocate_position(app_info, new_spec, {});
+        if (hint.container_type != ContainerType::shell)
+            hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, {});
+    }
+
+    pending_allocation = hint;
     return new_spec;
 }
 
@@ -526,7 +556,27 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    auto const container = output_manager->focused()->create_container(window_info, pending_allocation);
+    miral::WindowSpecification spec;
+    std::shared_ptr<Container> container;
+    switch (pending_allocation.container_type)
+    {
+    case ContainerType::regular:
+    {
+        assert(pending_allocation.parent.has_value());
+        container = pending_allocation.parent.value()->confirm_window(window_info.window());
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+        break;
+    }
+    case ContainerType::shell:
+    default:
+        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
+        break;
+    }
+
+    spec.userdata() = container;
+    window_controller->modify(window_info.window(), spec);
+
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);
