@@ -16,12 +16,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_managed_container.h"
-
+#include "compositor_state.h"
+#include "output_interface.h"
 #include "window_controller.h"
 #include "workspace_interface.h"
 #include <mir/scene/surface.h>
 
 using namespace miracle;
+
+namespace
+{
+inline glm::mat4 workspace_transform(Container const& container)
+{
+    return container.get_output_transform() * container.get_workspace_transform();
+}
+}
 
 ContainerType PluginManagedContainer::get_type() const
 {
@@ -53,12 +62,21 @@ void PluginManagedContainer::set_logical_area(
 PluginManagedContainer::PluginManagedContainer(
     PluginHandle plugin_handle,
     miral::Window const& window,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<WorkspaceInterface> const& workspace) :
     plugin_handle { plugin_handle },
     window_ { window },
     cached { mir_window_state_restored },
-    window_controller { window_controller }
+    window_controller { window_controller },
+    compositor_state { compositor_state },
+    workspace_ { workspace }
 {
+}
+
+PluginManagedContainer::~PluginManagedContainer()
+{
+    compositor_state->render_data_manager()->remove(render_id);
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -97,6 +115,17 @@ size_t PluginManagedContainer::get_min_width() const
 void PluginManagedContainer::handle_ready()
 {
     window_controller->select_active_window(window_);
+    auto const output = get_output();
+    render_id = compositor_state->render_data_manager()->add({
+        RenderData {
+                    .surface = window_.operator std::shared_ptr<mir::scene::Surface>().get(),
+                    .needs_outline = true,
+                    .is_focused = is_focused(),
+                    .transform = get_transform(),
+                    .workspace_transform = workspace_transform(*this),
+                    .workspace_alpha = workspace_.expired() ? 1.f : workspace_.lock()->alpha(),
+                    .output_area = output ? std::optional(output->get_area()) : std::nullopt }
+    });
 }
 
 void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)

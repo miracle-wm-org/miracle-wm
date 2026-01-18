@@ -470,7 +470,7 @@ Renderer::DrawData Renderer::get_draw_data(
             if (item.surface == surface.value())
             {
                 result.data = item;
-                if (!item.output_area.overlaps(viewport))
+                if (item.output_area && !item.output_area->overlaps(viewport))
                 {
                     result.enabled = false;
                     return result;
@@ -705,9 +705,9 @@ void Renderer::draw(
 
 void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
 {
-    auto const clip_area_opt = surface.clip_area();
+    auto clip_area_opt = surface.clip_area();
     if (!clip_area_opt)
-        return;
+        clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
 
     // First, we select the border shader as our shader
     auto const* const prog = &program_factory->border().data;

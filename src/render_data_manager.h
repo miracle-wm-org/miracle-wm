@@ -39,7 +39,7 @@ struct RenderData
     glm::mat4 workspace_transform = glm::mat4(1.f);
     float alpha = 1.f;
     float workspace_alpha = 1.f;
-    mir::geometry::Rectangle output_area = mir::geometry::Rectangle();
+    std::optional<mir::geometry::Rectangle> output_area;
 };
 
 class RenderDataManager

@@ -588,7 +588,9 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         container = std::make_shared<PluginManagedContainer>(
             0,
             window_info.window(),
-            window_controller);
+            window_controller,
+            state,
+            output_manager->focused()->active());
         break;
     case ContainerType::shell:
     default:

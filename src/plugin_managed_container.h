@@ -20,10 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "plugin_manager.h"
+#include "render_data_manager.h"
 
 namespace miracle
 {
 class WindowController;
+class CompositorState;
 
 /// A container that is managed by a plugin.
 ///
@@ -41,7 +43,10 @@ public:
     PluginManagedContainer(
         PluginHandle plugin_handle,
         miral::Window const& window,
-        std::shared_ptr<WindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<CompositorState> const& compositor_state,
+        std::shared_ptr<WorkspaceInterface> const& workspace);
+    ~PluginManagedContainer() override;
 
     void show() override;
     void hide() override;
@@ -113,11 +118,13 @@ private:
     miral::Window window_;
     MirWindowState cached;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<CompositorState> compositor_state;
     std::weak_ptr<WorkspaceInterface> workspace_;
     glm::mat4 transform_ = glm::mat4(1.f);
     glm::mat4 workspace_transform_ = glm::mat4(1.f);
     uint32_t handle_ = 0;
     bool is_focused_ = false;
+    RenderDataManagerId render_id = -1;
 };
 }
 
