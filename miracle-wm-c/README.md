@@ -1,4 +1,4 @@
-# miracle-wm-lib
+# miracle-wm-c
 A C API for interacting with `miracle-wm`.
 
 The headers of interest will all be found in `include/miracle`. Consumers of
