@@ -75,7 +75,7 @@ target_include_directories(test_miracle_wm_c_api PRIVATE
 )
 
 target_link_libraries(test_miracle_wm_c_api
-    miracle-wm-config
+    miracle-wm-c
     GTest::GTest
     GTest::Main
     ${MIRCORE_LDFLAGS}
