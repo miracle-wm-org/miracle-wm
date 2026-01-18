@@ -57,7 +57,7 @@ endif()
 add_executable(miracle-wm-tests ${SOURCES})
 
 target_include_directories(miracle-wm-tests PUBLIC SYSTEM
-    ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
+        ${PROJECT_SOURCE_DIR}/miracle-wm-lib/include
     ${PROJECT_SOURCE_DIR}/miraclemsg
     ${MIRAL_INCLUDE_DIRS}
     ${MIRSERVER_INCLUDE_DIRS}
@@ -67,7 +67,7 @@ target_include_directories(miracle-wm-tests PUBLIC SYSTEM
 
 target_link_libraries(miracle-wm-tests
     miracle-wm-implementation
-    miracle-wm-config
+    miracle-wm-lib
     miracle-ipc
     ${GTEST_LIBRARIES}
     ${MIRAL_LDFLAGS}
