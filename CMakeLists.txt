@@ -248,7 +248,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${MIRSERVER_INCLUDE_DIRS}
         ${MIRWAYLAND_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/miracle-wm-config/include
+        ${PROJECT_SOURCE_DIR}/miracle-wm-c/include
         ${XKBCOMMON_INCLUDE_DIRS}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_BINARY_DIR}/src
@@ -273,7 +273,7 @@ target_link_libraries(miracle-wm-implementation
         PkgConfig::EGL
         PkgConfig::GLESv2
         -lpcre2-8 -lpcre2-16 -lpcre2-32
-        miracle-wm-config
+        miracle-wm-c
         xdg-shell-protocol
 )
 
@@ -333,7 +333,7 @@ install(
 if (ENABLE_TESTS)
 add_subdirectory(tests/)
 endif()
-add_subdirectory(miracle-wm-config/)
+add_subdirectory(miracle-wm-c/)
 add_subdirectory(protocols/)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # Disable warnings for miraclemsg, since its a fork
