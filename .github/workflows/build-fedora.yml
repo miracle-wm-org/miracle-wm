@@ -42,6 +42,6 @@ jobs:
               echo 'WORKDIR /miracle-wm'
               echo 'RUN ./build/tests/miracle-wm-tests'
               echo 'WORKDIR /miracle-wm/build'
-              echo 'RUN ./miracle-wm-config/test_miracle_wm_config_c_api'
+              echo 'RUN ./miracle-wm-c/test_miracle_wm_c_api '
           } > podmanfile
           podman build --tag fedoralatestmiraclewm -f ./podmanfile
