@@ -1,43 +1,24 @@
-#[repr(C)]
-pub struct Point {
-    pub x: i32,
-    pub y: i32,
-}
-
-#[repr(C)]
-pub struct MiracleAnimationFrameData {
-    runtime_seconds: f32,
-    duration_seconds: f32,
-    origin: [f32; 4],
-    destination: [f32; 4],
-    opacity_start: f32,
-    opacity_end: f32,
-}
-
-#[repr(C)]
-pub struct MiracleAnimationFrameResult {
-    completed: i32,
-    has_area: i32,
-    area: [f32; 4],
-    has_transform: i32,
-    transform: [f32; 16],
-    has_opacity: i32,
-    opacity: f32,
-}
+use miracle_plugin_rs::{
+    miracle_context_t, miracle_placement_t, miracle_plugin_animation_frame_data_t,
+    miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
+    MirDepthLayer_mir_depth_layer_application,
+};
 
 #[unsafe(no_mangle)]
-pub extern "C" fn add_points(a: Point, b: Point) -> Point {
-    Point {
+pub extern "C" fn add_points(a: miracle_point_t, b: miracle_point_t) -> miracle_point_t {
+    miracle_point_t {
         x: a.x + b.x,
         y: a.y + b.y,
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn animate(data: MiracleAnimationFrameData) -> MiracleAnimationFrameResult {
+pub extern "C" fn animate(
+    data: miracle_plugin_animation_frame_data_t,
+) -> miracle_plugin_animation_frame_result_t {
     let progress = data.runtime_seconds / data.duration_seconds;
     let opacity = data.opacity_start + (data.opacity_end - data.opacity_start) * progress;
-    MiracleAnimationFrameResult {
+    miracle_plugin_animation_frame_result_t {
         completed: 0,
         has_area: 1,
         area: [
@@ -53,44 +34,18 @@ pub extern "C" fn animate(data: MiracleAnimationFrameData) -> MiracleAnimationFr
     }
 }
 
-#[repr(C)]
-pub struct Size {
-    pub w: i32,
-    pub h: i32,
-}
-
-#[repr(C)]
-pub struct MiracleWindowInfo {
-    pub window_type: i32,
-    pub state: i32,
-    pub top_left: Point,
-    pub size: Size,
-    pub title: *const i8,
-    pub depth_layer: i32,
-    pub internal: *mut core::ffi::c_void,
-}
-
-#[repr(C)]
-pub struct MiraclePlacement {
-    pub is_set: i32,
-    pub top_left: Point,
-    pub size: Size,
-    pub depth_layer: i32,
-}
-
-#[repr(C)]
-pub struct MiracleContext {
-    pub internal: *mut core::ffi::c_void,
-}
-
 #[unsafe(no_mangle)]
-pub extern "C" fn place_new_window(result: *mut MiraclePlacement, _context: *const MiracleContext, _window_info: *const MiracleWindowInfo) {
+pub extern "C" fn place_new_window(
+    result: *mut miracle_placement_t,
+    _context: *const miracle_context_t,
+    _window_info: *const miracle_window_info_t,
+) {
     unsafe {
         (*result).is_set = 1;
         (*result).top_left.x = 100;
         (*result).top_left.y = 100;
         (*result).size.w = 800;
         (*result).size.h = 600;
-        (*result).depth_layer = 2;
+        (*result).depth_layer = MirDepthLayer_mir_depth_layer_application;
     }
 }
