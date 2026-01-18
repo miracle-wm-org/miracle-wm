@@ -73,7 +73,7 @@ jobs:
       run: cd ${{github.workspace}}/build && ./tests/miracle-wm-tests
 
     - name: miracle-wm-config unit tests
-      run: cd ${{github.workspace}}/build && ./miracle-wm-config/test_miracle_wm_config_c_api
+      run: cd ${{github.workspace}}/build && ./miracle-wm-c/test_miracle_wm_c_api 
 
     - name: IPC Tests
       if: false 
