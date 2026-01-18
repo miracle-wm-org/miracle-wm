@@ -51,10 +51,6 @@ public:
         AllocationHint const& hint)
         = 0;
 
-    virtual std::shared_ptr<Container> create_container(
-        miral::WindowInfo const& window_info, AllocationHint const& type)
-        = 0;
-
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual bool move_container(Direction direction, Container&) = 0;
     virtual bool add_to_root(Container& to_move) = 0;

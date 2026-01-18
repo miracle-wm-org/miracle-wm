@@ -58,7 +58,7 @@ public:
     miral::WindowSpecification place_new_window(
         miral::WindowSpecification const& requested_specification);
     std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
-    std::shared_ptr<LeafContainer> confirm_window(miral::Window const&);
+    std::shared_ptr<Container> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Container> const& node, int index);
     std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
     void set_logical_area(geom::Rectangle const& target_rect, bool with_animations = true) override;

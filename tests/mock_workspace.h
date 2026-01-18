@@ -41,9 +41,6 @@ namespace test
                 AllocationHint const& hint),
             (override));
 
-        MOCK_METHOD(std::shared_ptr<Container>, create_container,
-            (miral::WindowInfo const& window_info, AllocationHint const& type), (override));
-
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(bool, move_container, (Direction direction, Container&), (override));
         MOCK_METHOD(void, show, (geom::Point const&), (override));
