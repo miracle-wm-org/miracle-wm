@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PLUGIN_H
 #define MIRACLE_WM_PLUGIN_H
 
-#include <stdint.h>
 #include <mir_toolkit/common.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C"
