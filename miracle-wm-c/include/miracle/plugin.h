@@ -118,7 +118,8 @@ extern "C"
 
     /// Describes the properties of an application.
     ///
-    /// Plugin authors may use this information in relation to
+    /// Plugin authors may use #miracle_plugin_get_application to get the application
+    /// given a window.
     typedef struct
     {
         /// The name of the application.
@@ -159,32 +160,67 @@ extern "C"
         void* internal;
     } miracle_window_info_t;
 
+    /// The type of the container.
+    enum miracle_container_type
+    {
+        /// The container has a single window in it.
+        window,
+
+        /// The container has multiple children in it.
+        parent
+    };
+
+    /// Describes a layout for a container.
+    enum miracle_layout_scheme
+    {
+        /// None layout.
+        none,
+
+        /// A horizontal layout.
+        horizontal,
+
+        /// A vertical layout.
+        vertical,
+
+        /// A tabbed layout.
+        tabbed,
+
+        /// A stacked layout.
+        stacking
+    };
+
+    /// Describes a container in a tree.
+    ///
+    /// A container may either a parent or a window. Parent containers
+    /// have children, which can be retrieved via #miracle_plugin_get_child_from_container.
+    ///
+    /// The window of a window container can be retrieved via
+    /// #miracle_plugin_get_window_info_from_container.
     typedef struct
     {
-        /// If set to `TRUE`, the placement is set and will override Miracle's internal
-        /// placement strategy.
-        int32_t is_set;
+        /// The type of the container.
+        miracle_container_type type;
 
-        /// The top left position of the window.
+        /// If `TRUE`, the container is floating within its workspace.
         ///
-        /// This value is only used if #is_set is `TRUE`.
-        miracle_point_t top_left;
+        /// This is only set if #type is #parent.
+        int32_t is_floating;
 
-        /// The size of the window.
+        /// Describes how a container is laying out its content.
         ///
-        /// This value is only used if #is_set is `TRUE`.
-        ///
-        /// This value may not be honored by the window itself, meaning that
-        /// it will be clipped by the compositor.
-        miracle_size_t size;
+        /// This is only set if #type is #parent.
+        miracle_layout_scheme layout_scheme;
 
-        /// The depth layer of the window.
+        /// The number of child containers inside of this container.
         ///
-        /// Plugin authors are encouraged to use #miracle_window_info_t::depth_layer
-        /// unless they would like to force the window into a different depth for
-        /// whatever reason.
-        MirDepthLayer depth_layer;
-    } miracle_placement_t;
+        /// Use #miracle_plugin_get_child_from_container to query the container by index.
+        uint32_t num_child_containers;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky!
+        void* internal;
+    } miracle_container_t;
 
     /// Describes a workspace.
     typedef struct
@@ -209,6 +245,12 @@ extern "C"
         ///
         /// Only valid if #has_name is `TRUE`.
         const char* name;
+
+        /// The number of container trees in this workspace.
+        ///
+        /// Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.
+        /// Each tree is represented by a #miracle_container_t which is the root of the tree.
+        uint32_t num_trees;
 
         /// Pointer to internal data.
         ///
@@ -240,6 +282,80 @@ extern "C"
         void* internal;
     } miracle_output_t;
 
+    /// Describes the placement strategy for a window.
+    ///
+    /// This is used by #miracle_placement_t.
+    enum miracle_window_management_strategy_t
+    {
+        /// Describes a window that will be placed in the tiling grid.
+        tiled,
+
+        /// Describes a window whose behavior is entirely determined by
+        /// the plugin.
+        freestyle
+    };
+
+    typedef struct
+    {
+        /// The parent container that this window should be placed inside.
+        ///
+        /// If the container has #miracle_container_t::type of #window, then
+        /// the #layout_scheme will be applied to that window to form a new
+        /// parent before placing the window at the #index.
+        ///
+        /// If the container has #miracle_container_t::type of #parent, then
+        /// the #layout_scheme will be ignored and the window will be placed at
+        /// the #index.
+        miracle_container_t parent;
+
+        uint32_t index;
+        miracle_layout_scheme layout_scheme;
+    } miracle_tiled_placement_t;
+
+    typedef struct
+    {
+        /// The top left position of the window.
+        miracle_point_t top_left;
+
+        /// The depth layer of the window.
+        ///
+        /// Plugin authors are encouraged to use #miracle_window_info_t::depth_layer
+        /// unless they would like to force the window into a different depth for
+        /// whatever reason.
+        MirDepthLayer depth_layer;
+
+        /// The workspace that this window should be placed on.
+        ///
+        /// If `NULL`, the window will always be shown.
+        ///
+        /// Defaults to the currently selected workspace.
+        miracle_workspace_t* workspace;
+
+        /// The size of the window.
+        ///
+        /// This value may not be honored by the window itself.
+        miracle_size_t size;
+    } miracle_freestyle_placement_t;
+
+    typedef struct
+    {
+        /// The placement strategy for this window.
+        ///
+        /// Defaults to the inherited value from the active workspace, which is
+        /// most likely #tiled.
+        miracle_window_management_strategy_t strategy;
+
+        /// The freestyle placement strategy.
+        ///
+        /// This is only honored if #strategy is #freestyle.
+        miracle_freestyle_placement_t freestyle_placement;
+
+        /// The titled placement strategy.
+        ///
+        /// This is only honored if #strategy is #tiled.
+        miracle_tiled_placement_t titled_placement;
+    } miracle_placement_t;
+
     /// Retrieve the #miracle_application_info for a given window.
     ///
     /// \param context the context
@@ -262,13 +378,13 @@ extern "C"
     /// \returns the output to which the workspace belongs
     miracle_output_t miracle_plugin_get_output_from_workspace(miracle_context_t* context, miracle_workspace_t* workspace);
 
-    /// Retrive the number of outputs.
+    /// Retrieve the number of outputs.
     ///
     /// \param context the context
     /// \returns the number of outputs
     uint32_t miracle_plugin_num_outputs(miracle_context_t* context);
 
-    /// Retrive an output by the \p index.
+    /// Retrieve an output by the \p index.
     ///
     /// Outputs appear in no specific order. Querying an index beyond #miracle_plugin_num_outputs
     /// is undefined.
@@ -277,6 +393,42 @@ extern "C"
     /// \param index the index
     /// \returns the output at the index
     miracle_output_t miracle_plugin_get_output(miracle_context_t* context, uint32_t index);
+
+    /// Retrieve a tree by the \p index.
+    ///
+    /// Trees appear in no specific order. Querying an index beyond #miracle_workspace_t::num_trees
+    /// is undefined.
+    ///
+    /// Each workspace is guaranteed to return at least one tree, but they may return more if there are
+    /// floating trees associated with the workspace.
+    ///
+    /// \param context the context
+    /// \param workspace the workspace
+    /// \param index the index
+    /// \returns the container at the index
+    miracle_container_t miracle_plugin_get_workspace_tree(miracle_context_t* context, miracle_workspace_t* workspace, uint32_t index);
+
+    /// Retrieve a child container from a parent \p container.
+    ///
+    /// Children will be returned in the order that they appear in the \p container. Querying an index beyond
+    /// #miracle_container_t::num_trees is undefined.
+    ///
+    /// This is only defined when the \p container has #miracle_container_t::type of #miracle_container_type::parent.
+    ///
+    /// \param context the context
+    /// \param container the container
+    /// \param index the index
+    /// \returns the child container at the index
+    miracle_container_t miracle_plugin_get_child_from_container(miracle_context_t* context, miracle_container_t* container, uint32_t index);
+
+    /// Retrieve window information from a window \p container.
+    ///
+    /// This is only defined when the \p container has #miracle_container_t::type of #miracle_container_type::window.
+    ///
+    /// \param context the context
+    /// \param container the container
+    /// \returns the window info of the container
+    miracle_window_info_t miracle_plugin_get_window_info_from_container(miracle_context_t* context, miracle_container_t* container);
 #ifdef __cplusplus
 }
 #endif
