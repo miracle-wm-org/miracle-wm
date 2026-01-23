@@ -41,6 +41,9 @@ public:
     virtual miracle_output_t output_at(uint32_t index) = 0;
     virtual uint32_t num_workspaces_on_output(miracle_output_t const& output) = 0;
     virtual miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index) = 0;
+    virtual miracle_container_t tree_at_index(miracle_workspace_t const& workspace, uint32_t index) = 0;
+    virtual miracle_container_t child_at(miracle_container_t const& parent, uint32_t index) = 0;
+    virtual miracle_window_info_t get_window(miracle_container_t const& container) = 0;
 };
 
 inline miracle_point_t from_point(mir::geometry::Point const& point)

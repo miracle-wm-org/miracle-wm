@@ -1,7 +1,9 @@
 use miracle_plugin_rs::{
-    miracle_context_t, miracle_placement_t, miracle_plugin_animation_frame_data_t,
-    miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
-    MirDepthLayer_mir_depth_layer_application,
+    Context, DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
+    bindings::{
+        miracle_context_t, miracle_placement_t, miracle_plugin_animation_frame_data_t,
+        miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
+    },
 };
 
 #[unsafe(no_mangle)]
@@ -37,15 +39,25 @@ pub extern "C" fn animate(
 #[unsafe(no_mangle)]
 pub extern "C" fn place_new_window(
     result: *mut miracle_placement_t,
-    _context: *const miracle_context_t,
-    _window_info: *const miracle_window_info_t,
+    context: *const miracle_context_t,
+    window_info: *const miracle_window_info_t,
 ) {
+    let mut context = Context::from_raw(unsafe { *context.as_ref().unwrap() });
+    let window_info = unsafe { WindowInfo::from_c(window_info.as_ref().unwrap()) };
+    let application = context.get_application(&window_info);
+    let mut placement: Placement = Default::default();
+    if application.name == "gedit" {
+        placement.strategy = WindowManagementStrategy::Freestyle;
+        placement.freestyle.top_left.x = 100;
+        placement.freestyle.top_left.y = 100;
+        placement.freestyle.size.width = 800;
+        placement.freestyle.size.height = 600;
+        placement.freestyle.depth_layer = DepthLayer::Application;
+    } else {
+        placement.strategy = WindowManagementStrategy::System;
+    }
+
     unsafe {
-        (*result).is_set = 1;
-        (*result).top_left.x = 100;
-        (*result).top_left.y = 100;
-        (*result).size.w = 800;
-        (*result).size.h = 600;
-        (*result).depth_layer = MirDepthLayer_mir_depth_layer_application;
+        placement.set_c(&mut *result);
     }
 }

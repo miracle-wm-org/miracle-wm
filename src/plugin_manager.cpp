@@ -404,7 +404,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_warning("Module with handle %u not found or doesn't provide 'place_new_window' function.", handle);
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -417,7 +417,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Memory not found in module.");
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -438,7 +438,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Failed to write context to WASM memory: %s", WasmEdge_ResultGetMessage(r));
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -454,7 +454,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -476,7 +476,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Function 'place_new_window' not found in module.");
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -492,7 +492,7 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Failed to invoke 'place_new_window' function: %s", WasmEdge_ResultGetMessage(r));
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
 
@@ -503,12 +503,9 @@ miracle_placement_t PluginManager::place_new_window(
     {
         mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
         return miracle_placement_t {
-            .is_set = 0
+            .strategy = miracle_window_management_strategy_system
         };
     }
-
-    mir::log_info("Successfully placed new window: is_set=%d, top_left=(%d, %d), size=(%d, %d)",
-        result.is_set, result.top_left.x, result.top_left.y, result.size.w, result.size.h);
 
     return result;
 }

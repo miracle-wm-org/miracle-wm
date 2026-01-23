@@ -220,9 +220,9 @@ Policy::Policy(
         animator,
         plugin_manager)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
-    plugin_bridge(std::make_unique<RealPluginBridge>(output_manager, window_controller))
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
+    plugin_manager->load_wasm_module("/home/matthew/Github/miracle-wm/plugins/plugin-playground/target/wasm32-wasip1/release/plugin_playground.wasm", "playground");
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
@@ -522,14 +522,17 @@ auto Policy::place_new_window(
     auto new_spec = requested_specification;
 
     auto const handle = plugin_manager->get_wasm_module("playground");
+    auto const plugin_bridge = std::make_unique<RealPluginBridge>(output_manager, window_controller);
     auto const context_t = miracle_context_t { .internal = plugin_bridge.get() };
-    auto const window_info_t = new_window_info(app_info, requested_specification);
+    auto const window_info_t = plugin_bridge->new_window_info(app_info, requested_specification);
     auto const plugin_placement = plugin_manager->place_new_window(handle, context_t, window_info_t);
-    if (plugin_placement.is_set)
+    if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
-        new_spec.top_left() = from_point(plugin_placement.top_left);
-        new_spec.size() = from_size(plugin_placement.size);
+        new_spec.top_left() = from_point(plugin_placement.freestyle_placement.top_left);
+        new_spec.size() = from_size(plugin_placement.freestyle_placement.size);
+        new_spec.depth_layer() = plugin_placement.freestyle_placement.depth_layer;
+        // TODO: Handle workspace
     }
     else if (shell_application_manager->is_registered(app_info.application()))
     {
@@ -558,7 +561,6 @@ auto Policy::place_new_window(
             hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, {});
     }
 
-    free_window_info(window_info_t);
     pending_allocation = hint;
     return new_spec;
 }

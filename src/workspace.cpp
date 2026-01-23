@@ -623,6 +623,15 @@ float Workspace::alpha() const
     return alpha_;
 }
 
+std::vector<std::shared_ptr<ParentContainer>> Workspace::trees() const
+{
+    std::vector<std::shared_ptr<ParentContainer>> result;
+    result.push_back(root_);
+    for (auto const& floating : floating_trees)
+        result.push_back(floating);
+    return result;
+}
+
 void Workspace::on_animation_start(bool is_hiding)
 {
     // HACK: miral will try to select a newly visible window if none is currently

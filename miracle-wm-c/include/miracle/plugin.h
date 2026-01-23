@@ -289,12 +289,16 @@ extern "C"
     /// This is used by #miracle_placement_t.
     typedef enum miracle_window_management_strategy_t
     {
+        /// If selected, the plugin lets miracle place the window according
+        /// to its own strategy.
+        miracle_window_management_strategy_system,
+
         /// Describes a window that will be placed in the tiling grid.
-        tiled,
+        miracle_window_management_strategy_tiled,
 
         /// Describes a window whose behavior is entirely determined by
         /// the plugin.
-        freestyle
+        miracle_window_management_strategy_freestyle
     } miracle_window_management_strategy_t;
 
     /// Describes a tiled placement which is controlled by the plugin system.
@@ -350,18 +354,17 @@ extern "C"
     {
         /// The placement strategy for this window.
         ///
-        /// Defaults to the inherited value from the active workspace, which is
-        /// most likely #tiled.
+        /// Defaults to the #miracle_window_management_strategy_system.
         miracle_window_management_strategy_t strategy;
 
         /// The freestyle placement strategy.
         ///
-        /// This is only honored if #strategy is #freestyle.
+        /// This is only honored if #strategy is #miracle_window_management_strategy_freestyle.
         miracle_freestyle_placement_t freestyle_placement;
 
         /// The titled placement strategy.
         ///
-        /// This is only honored if #strategy is #tiled.
+        /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
         miracle_tiled_placement_t titled_placement;
     } miracle_placement_t;
 
@@ -392,7 +395,7 @@ extern "C"
     ///
     /// \param context the context
     /// \returns the number of outputs
-    uint32_t miracle_get_outputs(miracle_context_t* context);
+    uint32_t miracle_get_num_outputs(miracle_context_t* context);
 
     /// Retrieve an output by the \p index.
     ///

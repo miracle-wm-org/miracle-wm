@@ -29,16 +29,6 @@ class Container;
 class OutputManager;
 class WindowManagerToolsWindowController;
 
-/// This is the information expected to be on a #miracle_window_info_t.
-///
-/// This is implied for now, but that is okay in my opinion since the
-/// information is local.
-struct PluginWindowInfo
-{
-    miral::ApplicationInfo const& app_info;
-    std::variant<miral::WindowSpecification, miral::WindowInfo> window_info;
-};
-
 class RealPluginBridge : public PluginBridge
 {
 public:
@@ -52,14 +42,23 @@ public:
     miracle_output_t output_at(uint32_t index) override;
     uint32_t num_workspaces_on_output(miracle_output_t const& output) override;
     miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index) override;
-
+    miracle_container_t tree_at_index(miracle_workspace_t const& workspace, uint32_t index) override;
+    miracle_container_t child_at(miracle_container_t const& parent, uint32_t index) override;
+    miracle_window_info_t get_window(miracle_container_t const& container) override;
+    miracle_window_info_t new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
 private:
+    /// This is the information expected to be on a #miracle_window_info_t.
+    struct PluginWindowInfo
+    {
+        miral::ApplicationInfo const& app_info;
+        std::variant<miral::WindowSpecification, miral::Window> window_info;
+    };
+
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
+    std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
 };
 
-miracle_window_info_t new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
-void free_window_info(miracle_window_info_t const& window_info);
 }
 
 #endif

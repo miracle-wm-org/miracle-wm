@@ -173,6 +173,7 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
             .transform = glm::mat4(1.f),
             .workspace_transform = glm::mat4(1.f),
             .workspace_alpha = 0.5f,
+            .output_area =  mir::geometry::Rectangle()
         });
     }
 

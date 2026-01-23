@@ -455,10 +455,15 @@ impl Default for miracle_output_t {
         }
     }
 }
+#[doc = " If selected, the plugin lets miracle place the window according\n to its own strategy."]
+pub const miracle_window_management_strategy_t_miracle_window_management_strategy_system:
+    miracle_window_management_strategy_t = 0;
 #[doc = " Describes a window that will be placed in the tiling grid."]
-pub const miracle_window_management_strategy_t_tiled: miracle_window_management_strategy_t = 0;
+pub const miracle_window_management_strategy_t_miracle_window_management_strategy_tiled:
+    miracle_window_management_strategy_t = 1;
 #[doc = " Describes a window whose behavior is entirely determined by\n the plugin."]
-pub const miracle_window_management_strategy_t_freestyle: miracle_window_management_strategy_t = 1;
+pub const miracle_window_management_strategy_t_miracle_window_management_strategy_freestyle:
+    miracle_window_management_strategy_t = 2;
 #[doc = " Describes the placement strategy for a window.\n\n This is used by #miracle_placement_t."]
 pub type miracle_window_management_strategy_t = ::std::os::raw::c_uint;
 #[doc = " Describes a tiled placement which is controlled by the plugin system."]
@@ -506,11 +511,11 @@ impl Default for miracle_freestyle_placement_t {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct miracle_placement_t {
-    #[doc = " The placement strategy for this window.\n\n Defaults to the inherited value from the active workspace, which is\n most likely #tiled."]
+    #[doc = " The placement strategy for this window.\n\n Defaults to the #miracle_window_management_strategy_system."]
     pub strategy: miracle_window_management_strategy_t,
-    #[doc = " The freestyle placement strategy.\n\n This is only honored if #strategy is #freestyle."]
+    #[doc = " The freestyle placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_freestyle."]
     pub freestyle_placement: miracle_freestyle_placement_t,
-    #[doc = " The titled placement strategy.\n\n This is only honored if #strategy is #tiled."]
+    #[doc = " The titled placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_tiled."]
     pub titled_placement: miracle_tiled_placement_t,
 }
 impl Default for miracle_placement_t {

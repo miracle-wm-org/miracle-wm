@@ -8,5 +8,8 @@ license = "GPL-3.0-or-later"
 [lib]
 crate-type = ["rlib"]
 
+[dependencies]
+bitflags = "2"
+
 [build-dependencies]
 bindgen = "0.71"
