@@ -4,16 +4,17 @@ use std::path::PathBuf;
 fn main() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let manifest_path = PathBuf::from(&manifest_dir);
-    let plugin_header = manifest_path.join("../miracle-wm-config/include/miracle/plugin.h");
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let bindings_file = out_path.join("bindings.rs");
+    let plugin_header = manifest_path.join("../miracle-wm-c/include/miracle/plugin.h");
+    let bindings_file = manifest_path.join("src/bindings.rs");
 
     println!("cargo:rerun-if-changed={}", plugin_header.display());
 
     let target = env::var("TARGET").unwrap();
 
     if !target.contains("wasm") {
-        panic!("miracle-plugin-rs only supports wasm targets. Use --target wasm32-unknown-unknown or wasm32-wasip1");
+        panic!(
+            "miracle-plugin-rs only supports wasm targets. Use --target wasm32-unknown-unknown or wasm32-wasip1"
+        );
     }
 
     let mut builder = bindgen::Builder::default()
@@ -37,7 +38,6 @@ fn main() {
         .clang_arg("-xc")
         // Undefine __cplusplus so the header skips extern "C" blocks
         .clang_arg("-U__cplusplus");
-
 
     let bindings = builder.generate().expect("Unable to generate bindings");
 

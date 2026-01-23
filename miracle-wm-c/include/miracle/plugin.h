@@ -143,6 +143,8 @@ extern "C"
         MirWindowState state;
 
         /// The position of the window.
+        ///
+        /// If the window has not yet been placed, this will be arbitrary.
         miracle_point_t top_left;
 
         /// The size of the window.
@@ -161,33 +163,33 @@ extern "C"
     } miracle_window_info_t;
 
     /// The type of the container.
-    enum miracle_container_type
+    typedef enum miracle_container_type
     {
         /// The container has a single window in it.
-        window,
+        miracle_container_type_window,
 
         /// The container has multiple children in it.
-        parent
-    };
+        miracle_container_type_parent
+    } miracle_container_type;
 
     /// Describes a layout for a container.
-    enum miracle_layout_scheme
+    typedef enum miracle_layout_scheme
     {
         /// None layout.
-        none,
+        miracle_layout_scheme_none,
 
         /// A horizontal layout.
-        horizontal,
+        miracle_layout_scheme_horizontal,
 
         /// A vertical layout.
-        vertical,
+        miracle_layout_scheme_vertical,
 
         /// A tabbed layout.
-        tabbed,
+        miracle_layout_scheme_tabbed,
 
         /// A stacked layout.
-        stacking
-    };
+        miracle_layout_scheme_stacking
+    } miracle_layout_scheme;
 
     /// Describes a container in a tree.
     ///
@@ -199,16 +201,16 @@ extern "C"
     typedef struct
     {
         /// The type of the container.
-        miracle_container_type type;
+        enum miracle_container_type type;
 
         /// If `TRUE`, the container is floating within its workspace.
         ///
-        /// This is only set if #type is #parent.
+        /// This is only set if #type is #miracle_container_type_parent.
         int32_t is_floating;
 
         /// Describes how a container is laying out its content.
         ///
-        /// This is only set if #type is #parent.
+        /// This is only set if #type is #miracle_container_type_parent.
         miracle_layout_scheme layout_scheme;
 
         /// The number of child containers inside of this container.
@@ -285,7 +287,7 @@ extern "C"
     /// Describes the placement strategy for a window.
     ///
     /// This is used by #miracle_placement_t.
-    enum miracle_window_management_strategy_t
+    typedef enum miracle_window_management_strategy_t
     {
         /// Describes a window that will be placed in the tiling grid.
         tiled,
@@ -293,25 +295,32 @@ extern "C"
         /// Describes a window whose behavior is entirely determined by
         /// the plugin.
         freestyle
-    };
+    } miracle_window_management_strategy_t;
 
+    /// Describes a tiled placement which is controlled by the plugin system.
     typedef struct
     {
         /// The parent container that this window should be placed inside.
         ///
-        /// If the container has #miracle_container_t::type of #window, then
+        /// If the container has #miracle_container_t::type of #miracle_container_type_window, then
         /// the #layout_scheme will be applied to that window to form a new
         /// parent before placing the window at the #index.
         ///
-        /// If the container has #miracle_container_t::type of #parent, then
+        /// If the container has #miracle_container_t::type of #miracle_container_type_parent, then
         /// the #layout_scheme will be ignored and the window will be placed at
         /// the #index.
         miracle_container_t parent;
 
+        /// The index at which this container will be placed within the parent.
         uint32_t index;
+
+        /// The requested layout scheme of the new parent.
+        ///
+        /// This will only be used if #miracle_container_type_parent has #miracle_container_t::type of #miracle_container_type_parent.
         miracle_layout_scheme layout_scheme;
     } miracle_tiled_placement_t;
 
+    /// Describes a freestyle placement which is fully controlled by the plugin.
     typedef struct
     {
         /// The top left position of the window.
@@ -361,28 +370,29 @@ extern "C"
     /// \param context the context
     /// \param window_info the window info
     /// \returns the application info for the window
-    miracle_application_info_t miracle_plugin_get_application(miracle_context_t* context, miracle_window_info_t* window_info);
+    miracle_application_info_t miracle_window_info_get_application(miracle_context_t* context, miracle_window_info_t* window_info);
 
     /// Retrieve the #miracle_workspace_t of that the window is on.
     ///
-    /// If the window has yet to be placed, this will represent the tenative workspace.
+    /// If the window has yet to be placed, this will represent the tentative workspace.
+    ///
     /// \param context the context
     /// \param window_info the window info
     /// \returns the workspace that the window is on
-    miracle_workspace_t miracle_plugin_get_workspace_from_window(miracle_context_t* context, miracle_window_info_t* window_info);
+    miracle_workspace_t miracle_window_info_get_workspace(miracle_context_t* context, miracle_window_info_t* window_info);
 
     /// Retrieve the #miracle_output_t that a window is on.
     ///
     /// \param context the context
     /// \param workspace a workspace
     /// \returns the output to which the workspace belongs
-    miracle_output_t miracle_plugin_get_output_from_workspace(miracle_context_t* context, miracle_workspace_t* workspace);
+    miracle_output_t miracle_workspace_get_output(miracle_context_t* context, miracle_workspace_t* workspace);
 
     /// Retrieve the number of outputs.
     ///
     /// \param context the context
     /// \returns the number of outputs
-    uint32_t miracle_plugin_num_outputs(miracle_context_t* context);
+    uint32_t miracle_get_outputs(miracle_context_t* context);
 
     /// Retrieve an output by the \p index.
     ///
@@ -392,7 +402,7 @@ extern "C"
     /// \param context the context
     /// \param index the index
     /// \returns the output at the index
-    miracle_output_t miracle_plugin_get_output(miracle_context_t* context, uint32_t index);
+    miracle_output_t miracle_get_output_at(miracle_context_t* context, uint32_t index);
 
     /// Retrieve a tree by the \p index.
     ///
@@ -406,7 +416,7 @@ extern "C"
     /// \param workspace the workspace
     /// \param index the index
     /// \returns the container at the index
-    miracle_container_t miracle_plugin_get_workspace_tree(miracle_context_t* context, miracle_workspace_t* workspace, uint32_t index);
+    miracle_container_t miracle_workspace_get_tree(miracle_context_t* context, miracle_workspace_t* workspace, uint32_t index);
 
     /// Retrieve a child container from a parent \p container.
     ///
@@ -419,7 +429,7 @@ extern "C"
     /// \param container the container
     /// \param index the index
     /// \returns the child container at the index
-    miracle_container_t miracle_plugin_get_child_from_container(miracle_context_t* context, miracle_container_t* container, uint32_t index);
+    miracle_container_t miracle_container_get_child_at(miracle_context_t* context, miracle_container_t* container, uint32_t index);
 
     /// Retrieve window information from a window \p container.
     ///
@@ -428,7 +438,7 @@ extern "C"
     /// \param context the context
     /// \param container the container
     /// \returns the window info of the container
-    miracle_window_info_t miracle_plugin_get_window_info_from_container(miracle_context_t* context, miracle_container_t* container);
+    miracle_window_info_t miracle_container_get_window(miracle_context_t* context, miracle_container_t* container);
 #ifdef __cplusplus
 }
 #endif
