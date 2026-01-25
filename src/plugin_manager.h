@@ -135,6 +135,9 @@ private:
     using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
         WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
 
+    using FunctionTypePtr = std::unique_ptr<WasmEdge_FunctionTypeContext,
+        WasmEdgeDeleter<WasmEdge_FunctionTypeDelete>>;
+
     enum class ProvidedFunction : std::uint8_t
     {
         add_points,
@@ -151,12 +154,16 @@ private:
         std::string name;
     };
 
+    void create_host_module();
+
     std::mutex mutex;
     ConfigurePtr configure_context;
     StorePtr store_context;
     LoaderPtr loader_context;
     ValidtorPtr validator_context;
     ExecutorPtr executor_context;
+    ModuleInstancePtr wasi_module_instance;
+    ModuleInstancePtr host_module;
     PluginHandle next_plugin_handle = 1;
     std::vector<ModuleInstance> loaded_modules;
 };

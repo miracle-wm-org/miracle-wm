@@ -54,7 +54,7 @@ extern "C"
     typedef struct
     {
         /// Opaque pointer to internal data.
-        void* internal;
+        uint64_t internal;
     } miracle_context_t;
 
     typedef struct
@@ -159,7 +159,7 @@ extern "C"
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky!
-        void* internal;
+        uint64_t internal;
     } miracle_window_info_t;
 
     /// The type of the container.
@@ -201,6 +201,8 @@ extern "C"
     typedef struct
     {
         /// The type of the container.
+        ///
+        /// This is a #miracle_container_type.
         enum miracle_container_type type;
 
         /// If `TRUE`, the container is floating within its workspace.
@@ -221,7 +223,7 @@ extern "C"
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky!
-        void* internal;
+        uint64_t internal;
     } miracle_container_t;
 
     /// Describes a workspace.
@@ -257,7 +259,7 @@ extern "C"
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky.
-        void* internal;
+        uint64_t internal;
     } miracle_workspace_t;
 
     /// Describes an output.
@@ -281,7 +283,7 @@ extern "C"
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky.
-        void* internal;
+        uint64_t internal;
     } miracle_output_t;
 
     /// Describes the placement strategy for a window.
@@ -339,10 +341,12 @@ extern "C"
 
         /// The workspace that this window should be placed on.
         ///
-        /// If `NULL`, the window will always be shown.
+        /// If `0`, the window will always be shown.
         ///
         /// Defaults to the currently selected workspace.
-        miracle_workspace_t* workspace;
+        ///
+        /// This is a 32-bit WASM linear memory pointer to a miracle_workspace_t.
+        uint32_t workspace;
 
         /// The size of the window.
         ///
@@ -354,8 +358,10 @@ extern "C"
     {
         /// The placement strategy for this window.
         ///
+        /// This is miracle_window_management_strategy_t.
+        ///
         /// Defaults to the #miracle_window_management_strategy_system.
-        miracle_window_management_strategy_t strategy;
+        uint32_t strategy;
 
         /// The freestyle placement strategy.
         ///

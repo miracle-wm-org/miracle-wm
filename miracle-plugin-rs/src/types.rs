@@ -1129,7 +1129,7 @@ pub struct WindowInfo {
     /// The depth layer of the window.
     pub depth_layer: DepthLayer,
     /// Internal pointer for C interop.
-    internal: *mut std::ffi::c_void,
+    internal: u64,
 }
 
 impl WindowInfo {
@@ -1187,7 +1187,7 @@ pub struct Container {
     /// The number of child containers.
     pub num_children: u32,
     /// Internal pointer for C interop.
-    internal: *mut std::ffi::c_void,
+    internal: u64,
 }
 
 impl Container {
@@ -1233,7 +1233,7 @@ pub struct Workspace {
     /// The number of container trees in this workspace.
     pub num_trees: u32,
     /// Internal pointer for C interop.
-    internal: *mut std::ffi::c_void,
+    internal: u64,
 }
 
 impl Workspace {
@@ -1266,7 +1266,7 @@ impl Workspace {
     }
 
     /// Get the internal pointer for C interop.
-    pub fn internal_ptr(&self) -> *mut std::ffi::c_void {
+    pub fn internal_ptr(&self) -> u64 {
         self.internal
     }
 
@@ -1301,7 +1301,7 @@ pub struct Output {
     /// Whether this is the primary output.
     pub is_primary: bool,
     /// Internal pointer for C interop.
-    internal: *mut std::ffi::c_void,
+    internal: u64,
 }
 
 impl Output {
@@ -1331,7 +1331,7 @@ impl Output {
     }
 
     /// Get the internal pointer for C interop.
-    pub fn internal_ptr(&self) -> *mut std::ffi::c_void {
+    pub fn internal_ptr(&self) -> u64 {
         self.internal
     }
 }
@@ -1368,27 +1368,17 @@ impl From<bindings::miracle_tiled_placement_t> for TiledPlacement {
 }
 
 /// Freestyle placement configuration.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct FreestylePlacement {
     /// The top left position.
     pub top_left: Point,
     /// The depth layer.
     pub depth_layer: DepthLayer,
-    /// The workspace (null for always visible).
-    pub workspace: *mut bindings::miracle_workspace_t,
+    /// The workspace (0 for always visible).
+    /// This is a 32-bit WASM linear memory pointer.
+    pub workspace: u32,
     /// The size.
     pub size: Size,
-}
-
-impl Default for FreestylePlacement {
-    fn default() -> Self {
-        Self {
-            top_left: Point::default(),
-            depth_layer: DepthLayer::default(),
-            workspace: std::ptr::null_mut(),
-            size: Size::default(),
-        }
-    }
 }
 
 impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {

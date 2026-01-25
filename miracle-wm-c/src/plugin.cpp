@@ -20,48 +20,48 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 miracle_application_info_t miracle_window_info_get_application(miracle_context_t* context, miracle_window_info_t* window_info)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->application(*window_info);
 }
 
 miracle_workspace_t miracle_window_info_get_workspace(miracle_context_t* context, miracle_window_info_t* window_info)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->workspace(*window_info);
 }
 
 miracle_output_t miracle_workspace_get_output(miracle_context_t* context, miracle_workspace_t* workspace)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->output(*workspace);
 }
 
 uint32_t miracle_get_num_outputs(miracle_context_t* context)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->num_outputs();
 }
 
 miracle_output_t miracle_get_output_at(miracle_context_t* context, uint32_t index)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->output_at(index);
 }
 
 miracle_container_t miracle_workspace_get_tree(miracle_context_t* context, miracle_workspace_t* workspace, uint32_t index)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->tree_at_index(*workspace, index);
 }
 
 miracle_container_t miracle_container_get_child_at(miracle_context_t* context, miracle_container_t* container, uint32_t index)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->child_at(*container, index);
 }
 
 miracle_window_info_t miracle_container_get_window(miracle_context_t* context, miracle_container_t* container)
 {
-    auto const bridge = static_cast<miracle::PluginBridge*>(context->internal);
+    auto const bridge = static_cast<miracle::PluginBridge*>(reinterpret_cast<void*>(context->internal));
     return bridge->get_window(*container);
 }

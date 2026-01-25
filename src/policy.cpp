@@ -523,7 +523,7 @@ auto Policy::place_new_window(
 
     auto const handle = plugin_manager->get_wasm_module("playground");
     auto const plugin_bridge = std::make_unique<RealPluginBridge>(output_manager, window_controller);
-    auto const context_t = miracle_context_t { .internal = plugin_bridge.get() };
+    auto const context_t = miracle_context_t { .internal = reinterpret_cast<uint64_t>(plugin_bridge.get()) };
     auto const window_info_t = plugin_bridge->new_window_info(app_info, requested_specification);
     auto const plugin_placement = plugin_manager->place_new_window(handle, context_t, window_info_t);
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)

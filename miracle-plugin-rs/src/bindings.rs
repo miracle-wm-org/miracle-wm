@@ -267,19 +267,10 @@ pub struct miracle_size_t {
 }
 #[doc = " Provides context for a call from the plugin system into\n Miracle's internals. Plugin authors must supply this as a\n parameter when they want to query the system."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_context_t {
     #[doc = " Opaque pointer to internal data."]
-    pub internal: *mut ::std::os::raw::c_void,
-}
-impl Default for miracle_context_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
+    pub internal: u64,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -348,7 +339,7 @@ pub struct miracle_window_info_t {
     #[doc = " The depth layer of the window."]
     pub depth_layer: MirDepthLayer,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
-    pub internal: *mut ::std::os::raw::c_void,
+    pub internal: u64,
 }
 impl Default for miracle_window_info_t {
     fn default() -> Self {
@@ -381,7 +372,7 @@ pub type miracle_layout_scheme = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct miracle_container_t {
-    #[doc = " The type of the container."]
+    #[doc = " The type of the container.\n\n This is a #miracle_container_type."]
     pub type_: miracle_container_type,
     #[doc = " If `TRUE`, the container is floating within its workspace.\n\n This is only set if #type is #miracle_container_type_parent."]
     pub is_floating: i32,
@@ -390,7 +381,7 @@ pub struct miracle_container_t {
     #[doc = " The number of child containers inside of this container.\n\n Use #miracle_plugin_get_child_from_container to query the container by index."]
     pub num_child_containers: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
-    pub internal: *mut ::std::os::raw::c_void,
+    pub internal: u64,
 }
 impl Default for miracle_container_t {
     fn default() -> Self {
@@ -418,7 +409,7 @@ pub struct miracle_workspace_t {
     #[doc = " The number of container trees in this workspace.\n\n Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.\n Each tree is represented by a #miracle_container_t which is the root of the tree."]
     pub num_trees: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
-    pub internal: *mut ::std::os::raw::c_void,
+    pub internal: u64,
 }
 impl Default for miracle_workspace_t {
     fn default() -> Self {
@@ -444,7 +435,7 @@ pub struct miracle_output_t {
     #[doc = " If `TRUE`, the output is the primary output, otherwise `FALSE`."]
     pub is_primary: i32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
-    pub internal: *mut ::std::os::raw::c_void,
+    pub internal: u64,
 }
 impl Default for miracle_output_t {
     fn default() -> Self {
@@ -494,8 +485,8 @@ pub struct miracle_freestyle_placement_t {
     pub top_left: miracle_point_t,
     #[doc = " The depth layer of the window.\n\n Plugin authors are encouraged to use #miracle_window_info_t::depth_layer\n unless they would like to force the window into a different depth for\n whatever reason."]
     pub depth_layer: MirDepthLayer,
-    #[doc = " The workspace that this window should be placed on.\n\n If `NULL`, the window will always be shown.\n\n Defaults to the currently selected workspace."]
-    pub workspace: *mut miracle_workspace_t,
+    #[doc = " The workspace that this window should be placed on.\n\n If `0`, the window will always be shown.\n\n Defaults to the currently selected workspace.\n\n This is a 32-bit WASM linear memory pointer to a miracle_workspace_t."]
+    pub workspace: u32,
     #[doc = " The size of the window.\n\n This value may not be honored by the window itself."]
     pub size: miracle_size_t,
 }
@@ -511,8 +502,8 @@ impl Default for miracle_freestyle_placement_t {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct miracle_placement_t {
-    #[doc = " The placement strategy for this window.\n\n Defaults to the #miracle_window_management_strategy_system."]
-    pub strategy: miracle_window_management_strategy_t,
+    #[doc = " The placement strategy for this window.\n\n This is miracle_window_management_strategy_t.\n\n Defaults to the #miracle_window_management_strategy_system."]
+    pub strategy: u32,
     #[doc = " The freestyle placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_freestyle."]
     pub freestyle_placement: miracle_freestyle_placement_t,
     #[doc = " The titled placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_tiled."]

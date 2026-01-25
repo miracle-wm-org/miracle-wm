@@ -51,7 +51,7 @@ miracle_workspace_t from_workspace(std::shared_ptr<WorkspaceInterface> const& wo
         .has_name = workspace->name().has_value(),
         .name = workspace->name().value_or("").c_str(),
         .num_trees = static_cast<uint32_t>(workspace->trees().size()),
-        .internal = static_cast<void*>(workspace.get())
+        .internal = reinterpret_cast<uint64_t>(workspace.get())
     };
 }
 
@@ -67,7 +67,7 @@ miracle_output_t from_output(std::shared_ptr<OutputInterface> const& output)
         .size = from_size(area.size),
         .name = output->name().c_str(),
         .is_primary = output->is_primary(),
-        .internal = static_cast<void*>(output.get())
+        .internal = reinterpret_cast<uint64_t>(output.get())
     };
 }
 
@@ -96,7 +96,7 @@ miracle_container_t from_parent(std::shared_ptr<ParentContainer> const& containe
         .is_floating = !container->anchored(),
         .layout_scheme = from_scheme(container->get_scheme()),
         .num_child_containers = static_cast<uint32_t>(container->num_nodes()),
-        .internal = static_cast<void*>(container.get())
+        .internal = reinterpret_cast<uint64_t>(container.get())
     };
 }
 
@@ -107,11 +107,11 @@ miracle_container_t from_child(std::shared_ptr<LeafContainer> const& container)
         .is_floating = 0,
         .layout_scheme = miracle_layout_scheme_none,
         .num_child_containers = 0,
-        .internal = static_cast<void*>(container.get())
+        .internal = reinterpret_cast<uint64_t>(container.get())
     };
 }
 
-miracle_window_info_t from_window(miral::WindowInfo const& window_info, void* internal)
+miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t internal)
 {
     return {
         .window_type = window_info.type(),
@@ -134,13 +134,13 @@ RealPluginBridge::RealPluginBridge(std::shared_ptr<OutputManager> const& output_
 
 miracle_application_info_t RealPluginBridge::application(miracle_window_info_t const& window_info)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(window_info.internal);
+    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_info.internal));
     return from_app_info(plugin_window_info->app_info);
 }
 
 miracle_workspace_t RealPluginBridge::workspace(miracle_window_info_t const& window_info)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(window_info.internal);
+    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_info.internal));
     if (std::holds_alternative<miral::Window>(plugin_window_info->window_info))
     {
         miral::WindowInfo const& miral_window_info = window_controller->info_for(std::get<miral::Window>(plugin_window_info->window_info));
@@ -153,7 +153,7 @@ miracle_workspace_t RealPluginBridge::workspace(miracle_window_info_t const& win
 
 miracle_output_t RealPluginBridge::output(miracle_workspace_t const& workspace)
 {
-    auto const miracle_workspace = static_cast<WorkspaceInterface*>(workspace.internal);
+    auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
     if (!miracle_workspace)
     {
         return {
@@ -176,7 +176,7 @@ miracle_output_t RealPluginBridge::output_at(uint32_t index)
 
 uint32_t RealPluginBridge::num_workspaces_on_output(miracle_output_t const& output)
 {
-    auto const miracle_output = static_cast<OutputInterface*>(output.internal);
+    auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output.internal));
     if (!miracle_output)
         return 0;
 
@@ -185,7 +185,7 @@ uint32_t RealPluginBridge::num_workspaces_on_output(miracle_output_t const& outp
 
 miracle_workspace_t RealPluginBridge::workspace_on_output_at(miracle_output_t const& output, uint32_t index)
 {
-    auto const miracle_output = static_cast<OutputInterface*>(output.internal);
+    auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output.internal));
     if (!miracle_output)
         return from_workspace(nullptr);
 
@@ -194,14 +194,14 @@ miracle_workspace_t RealPluginBridge::workspace_on_output_at(miracle_output_t co
 
 miracle_container_t RealPluginBridge::tree_at_index(miracle_workspace_t const& workspace, uint32_t index)
 {
-    auto const miracle_workspace = static_cast<WorkspaceInterface*>(workspace.internal);
+    auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
     auto const trees = miracle_workspace->trees();
     return from_parent(trees[index]);
 }
 
 miracle_container_t RealPluginBridge::child_at(miracle_container_t const& parent, uint32_t index)
 {
-    auto const parent_container = static_cast<ParentContainer*>(parent.internal);
+    auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent.internal));
     auto const child = parent_container->at(index);
     if (child->get_type() == ContainerType::parent)
         return from_parent(Container::as_parent(child));
@@ -212,13 +212,13 @@ miracle_container_t RealPluginBridge::child_at(miracle_container_t const& parent
 miracle_window_info_t RealPluginBridge::get_window(miracle_container_t const& container)
 {
     // TODO: Expect this to be of type window
-    auto const leaf = static_cast<LeafContainer*>(container.internal);
+    auto const leaf = static_cast<LeafContainer*>(reinterpret_cast<void*>(container.internal));
     miral::Window window = leaf->window().value();
     miral::WindowInfo const& window_info = window_controller->info_for(window);
     miral::ApplicationInfo const& app_info = window_controller->app_info(window);
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window);
     plugin_window_infos.push_back(plugin_window_info);
-    return from_window(window_info, plugin_window_info.get());
+    return from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()));
 }
 
 miracle_window_info_t RealPluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
@@ -232,6 +232,6 @@ miracle_window_info_t RealPluginBridge::new_window_info(miral::ApplicationInfo c
         .size = from_size(spec.size().value_or(geom::Size(800, 600))),
         .title = spec.name().value_or("").c_str(),
         .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
-        .internal = plugin_window_info.get()
+        .internal = reinterpret_cast<uint64_t>(plugin_window_info.get())
     };
 }
