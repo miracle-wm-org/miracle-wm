@@ -16,7 +16,7 @@ add_library(miracle-wm-c
     include/miracle/cpp/cursor_focus_mode.h
     include/miracle/cpp/modifiers.h
     src/config-c.cpp include/miracle/config.h
-    include/miracle/plugin.h src/plugin.cpp)
+    include/miracle/plugin.h)
 
 set_target_properties(miracle-wm-c PROPERTIES
     CXX_STANDARD 20

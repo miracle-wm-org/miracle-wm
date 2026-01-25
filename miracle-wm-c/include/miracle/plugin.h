@@ -150,9 +150,6 @@ extern "C"
         /// The size of the window.
         miracle_size_t size;
 
-        /// The title of the window.
-        const char* title;
-
         /// The depth layer of the window.
         MirDepthLayer depth_layer;
 
@@ -373,81 +370,6 @@ extern "C"
         /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
         miracle_tiled_placement_t titled_placement;
     } miracle_placement_t;
-
-    /// Retrieve the #miracle_application_info for a given window.
-    ///
-    /// \param context the context
-    /// \param window_info the window info
-    /// \returns the application info for the window
-    miracle_application_info_t miracle_window_info_get_application(miracle_context_t* context, miracle_window_info_t* window_info);
-
-    /// Retrieve the #miracle_workspace_t of that the window is on.
-    ///
-    /// If the window has yet to be placed, this will represent the tentative workspace.
-    ///
-    /// \param context the context
-    /// \param window_info the window info
-    /// \returns the workspace that the window is on
-    miracle_workspace_t miracle_window_info_get_workspace(miracle_context_t* context, miracle_window_info_t* window_info);
-
-    /// Retrieve the #miracle_output_t that a window is on.
-    ///
-    /// \param context the context
-    /// \param workspace a workspace
-    /// \returns the output to which the workspace belongs
-    miracle_output_t miracle_workspace_get_output(miracle_context_t* context, miracle_workspace_t* workspace);
-
-    /// Retrieve the number of outputs.
-    ///
-    /// \param context the context
-    /// \returns the number of outputs
-    uint32_t miracle_get_num_outputs(miracle_context_t* context);
-
-    /// Retrieve an output by the \p index.
-    ///
-    /// Outputs appear in no specific order. Querying an index beyond #miracle_plugin_num_outputs
-    /// is undefined.
-    ///
-    /// \param context the context
-    /// \param index the index
-    /// \returns the output at the index
-    miracle_output_t miracle_get_output_at(miracle_context_t* context, uint32_t index);
-
-    /// Retrieve a tree by the \p index.
-    ///
-    /// Trees appear in no specific order. Querying an index beyond #miracle_workspace_t::num_trees
-    /// is undefined.
-    ///
-    /// Each workspace is guaranteed to return at least one tree, but they may return more if there are
-    /// floating trees associated with the workspace.
-    ///
-    /// \param context the context
-    /// \param workspace the workspace
-    /// \param index the index
-    /// \returns the container at the index
-    miracle_container_t miracle_workspace_get_tree(miracle_context_t* context, miracle_workspace_t* workspace, uint32_t index);
-
-    /// Retrieve a child container from a parent \p container.
-    ///
-    /// Children will be returned in the order that they appear in the \p container. Querying an index beyond
-    /// #miracle_container_t::num_trees is undefined.
-    ///
-    /// This is only defined when the \p container has #miracle_container_t::type of #miracle_container_type::parent.
-    ///
-    /// \param context the context
-    /// \param container the container
-    /// \param index the index
-    /// \returns the child container at the index
-    miracle_container_t miracle_container_get_child_at(miracle_context_t* context, miracle_container_t* container, uint32_t index);
-
-    /// Retrieve window information from a window \p container.
-    ///
-    /// This is only defined when the \p container has #miracle_container_t::type of #miracle_container_type::window.
-    ///
-    /// \param context the context
-    /// \param container the container
-    /// \returns the window info of the container
-    miracle_window_info_t miracle_container_get_window(miracle_context_t* context, miracle_container_t* container);
 #ifdef __cplusplus
 }
 #endif

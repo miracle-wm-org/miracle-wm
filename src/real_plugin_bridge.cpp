@@ -30,8 +30,6 @@ using namespace miracle;
 
 namespace
 {
-
-
 miracle_application_info_t from_app_info(miral::ApplicationInfo const& info)
 {
     return {
@@ -118,7 +116,6 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
         .state = window_info.state(),
         .top_left = from_point(window_info.window().top_left()),
         .size = from_size(window_info.window().size()),
-        .title = window_info.name().c_str(),
         .depth_layer = window_info.depth_layer(),
         .internal = internal
     };
@@ -230,7 +227,6 @@ miracle_window_info_t RealPluginBridge::new_window_info(miral::ApplicationInfo c
         .state = spec.state().value_or(mir_window_state_restored),
         .top_left = from_point(spec.top_left().value_or(geom::Point())),
         .size = from_size(spec.size().value_or(geom::Size(800, 600))),
-        .title = spec.name().value_or("").c_str(),
         .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
         .internal = reinterpret_cast<uint64_t>(plugin_window_info.get())
     };

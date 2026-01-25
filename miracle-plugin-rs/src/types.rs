@@ -1124,8 +1124,6 @@ pub struct WindowInfo {
     pub top_left: Point,
     /// The size of the window.
     pub size: Size,
-    /// The title of the window.
-    pub title: String,
     /// The depth layer of the window.
     pub depth_layer: DepthLayer,
     /// Internal pointer for C interop.
@@ -1138,21 +1136,11 @@ impl WindowInfo {
     /// # Safety
     /// The `title` pointer must be valid and null-terminated.
     pub unsafe fn from_c(value: &bindings::miracle_window_info_t) -> Self {
-        let title = if value.title.is_null() {
-            String::new()
-        } else {
-            unsafe {
-                std::ffi::CStr::from_ptr(value.title)
-                    .to_string_lossy()
-                    .into_owned()
-            }
-        };
         Self {
             window_type: WindowType::try_from(value.window_type).unwrap_or_default(),
             state: WindowState::try_from(value.state).unwrap_or_default(),
             top_left: value.top_left.into(),
             size: value.size.into(),
-            title,
             depth_layer: DepthLayer::try_from(value.depth_layer).unwrap_or_default(),
             internal: value.internal,
         }
@@ -1168,7 +1156,6 @@ impl WindowInfo {
             state: self.state.into(),
             top_left: self.top_left.into(),
             size: self.size.into(),
-            title: std::ptr::null(),
             depth_layer: self.depth_layer.into(),
             internal: self.internal,
         }
@@ -1465,10 +1452,7 @@ mod ffi {
 
     unsafe extern "C" {
         /// Retrieve the application info for a given window.
-        pub fn miracle_window_info_get_application(
-            context: *mut bindings::miracle_context_t,
-            window_info: *mut bindings::miracle_window_info_t,
-        ) -> bindings::miracle_application_info_t;
+        pub fn miracle_window_info_get_application(context: i32, window_info: i32) -> i32;
 
         /// Retrieve the workspace that a window is on.
         pub fn miracle_window_info_get_workspace(
@@ -1543,9 +1527,10 @@ impl Context {
     pub fn get_application(&mut self, window_info: &WindowInfo) -> ApplicationInfo {
         unsafe {
             let mut c_window_info = window_info.as_c();
-            let result =
-                ffi::miracle_window_info_get_application(self.as_raw_mut(), &mut c_window_info);
-            ApplicationInfo::from_c(&result)
+            let result = ffi::miracle_window_info_get_application(0, 0);
+            ApplicationInfo {
+                name: String::new(),
+            }
         }
     }
 

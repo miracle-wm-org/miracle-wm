@@ -22,6 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+#if FEATURE_PLUGIN_SYSTEM
+namespace
+{
 // Helper to get memory instance from calling frame
 WasmEdge_MemoryInstanceContext* get_memory_from_frame(
     WasmEdge_CallingFrameContext const* frame)
@@ -35,11 +38,6 @@ WasmEdge_MemoryInstanceContext* get_memory_from_frame(
     WasmEdge_StringDelete(memory_name);
     return memory;
 }
-
-// Fixed offset in WASM memory for string data returned by host functions.
-// This is a simple approach - a more robust solution would use WASM-side allocation.
-constexpr uint32_t HOST_STRING_BUFFER_OFFSET = 65536; // 64KB into memory
-constexpr uint32_t HOST_STRING_BUFFER_SIZE = 4096;    // 4KB buffer for strings
 
 // Host function: miracle_window_info_get_application
 // WASM signature: (context_ptr: i32, window_info_ptr: i32) -> i32
@@ -57,286 +55,13 @@ WasmEdge_Result host_miracle_window_info_get_application(
         return WasmEdge_Result_Fail;
     }
 
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const window_info_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const context_ptr = WasmEdge_ValueGetI32(params[0]);
+    int32_t const window_info_ptr = WasmEdge_ValueGetI32(params[1]);
 
-    // Read the context and window_info from WASM memory
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("host_miracle_window_info_get_application: failed to read context");
-        return r;
-    }
-
-    miracle_window_info_t window_info;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&window_info), window_info_ptr, sizeof(window_info));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("host_miracle_window_info_get_application: failed to read window_info");
-        return r;
-    }
-
-    // Get the application info using the C API
-    miracle_application_info_t result = miracle_window_info_get_application(&context, &window_info);
-
-    // Copy the application name string into WASM linear memory
-    // so that the WASM module can access it
-    if (result.application_name != nullptr)
-    {
-        size_t const name_len = std::strlen(result.application_name);
-        if (name_len + 1 <= HOST_STRING_BUFFER_SIZE)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory,
-                reinterpret_cast<uint8_t const*>(result.application_name),
-                HOST_STRING_BUFFER_OFFSET,
-                static_cast<uint32_t>(name_len + 1)); // +1 for null terminator
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("host_miracle_window_info_get_application: failed to write string to WASM memory");
-                returns[0] = WasmEdge_ValueGenI32(0); // Return null pointer on error
-                return WasmEdge_Result_Success;
-            }
-            returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(HOST_STRING_BUFFER_OFFSET));
-        }
-        else
-        {
-            mir::log_warning("host_miracle_window_info_get_application: application name too long, truncating");
-            returns[0] = WasmEdge_ValueGenI32(0);
-        }
-    }
-    else
-    {
-        returns[0] = WasmEdge_ValueGenI32(0); // Return null pointer
-    }
-
+    returns[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
 }
 
-// Host function: miracle_window_info_get_workspace
-// Signature: (result_ptr: i32, context_ptr: i32, window_info_ptr: i32) -> void
-WasmEdge_Result host_miracle_window_info_get_workspace(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-    {
-        mir::log_error("host_miracle_window_info_get_workspace: memory not found");
-        return WasmEdge_Result_Fail;
-    }
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const window_info_ptr = WasmEdge_ValueGetI32(params[2]);
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_window_info_t window_info;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&window_info), window_info_ptr, sizeof(window_info));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_workspace_t result = miracle_window_info_get_workspace(&context, &window_info);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    return WasmEdge_Result_Success;
-}
-
-// Host function: miracle_workspace_get_output
-// Signature: (result_ptr: i32, context_ptr: i32, workspace_ptr: i32) -> void
-WasmEdge_Result host_miracle_workspace_get_output(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const workspace_ptr = WasmEdge_ValueGetI32(params[2]);
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_workspace_t workspace;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&workspace), workspace_ptr, sizeof(workspace));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_output_t result = miracle_workspace_get_output(&context, &workspace);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    return r;
-}
-
-// Host function: miracle_get_num_outputs
-// Signature: (context_ptr: i32) -> i32
-WasmEdge_Result host_miracle_get_num_outputs(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* returns)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[0]);
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    uint32_t const result = miracle_get_num_outputs(&context);
-    returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(result));
-
-    return WasmEdge_Result_Success;
-}
-
-// Host function: miracle_get_output_at
-// Signature: (result_ptr: i32, context_ptr: i32, index: i32) -> void
-WasmEdge_Result host_miracle_get_output_at(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const index = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[2]));
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_output_t result = miracle_get_output_at(&context, index);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    return r;
-}
-
-// Host function: miracle_workspace_get_tree
-// Signature: (result_ptr: i32, context_ptr: i32, workspace_ptr: i32, index: i32) -> void
-WasmEdge_Result host_miracle_workspace_get_tree(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const workspace_ptr = WasmEdge_ValueGetI32(params[2]);
-    uint32_t const index = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_workspace_t workspace;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&workspace), workspace_ptr, sizeof(workspace));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_container_t result = miracle_workspace_get_tree(&context, &workspace, index);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    return r;
-}
-
-// Host function: miracle_container_get_child_at
-// Signature: (result_ptr: i32, context_ptr: i32, container_ptr: i32, index: i32) -> void
-WasmEdge_Result host_miracle_container_get_child_at(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const container_ptr = WasmEdge_ValueGetI32(params[2]);
-    uint32_t const index = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[3]));
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_container_t container;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&container), container_ptr, sizeof(container));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_container_t result = miracle_container_get_child_at(&context, &container, index);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    return r;
-}
-
-// Host function: miracle_container_get_window
-// Signature: (result_ptr: i32, context_ptr: i32, container_ptr: i32) -> void
-WasmEdge_Result host_miracle_container_get_window(
-    void* /* data */,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* /* returns */)
-{
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-        return WasmEdge_Result_Fail;
-
-    uint32_t const result_ptr = WasmEdge_ValueGetI32(params[0]);
-    uint32_t const context_ptr = WasmEdge_ValueGetI32(params[1]);
-    uint32_t const container_ptr = WasmEdge_ValueGetI32(params[2]);
-
-    miracle_context_t context;
-    auto r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&context), context_ptr, sizeof(context));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_container_t container;
-    r = WasmEdge_MemoryInstanceGetData(memory, reinterpret_cast<uint8_t*>(&container), container_ptr, sizeof(container));
-    if (!WasmEdge_ResultOK(r))
-        return r;
-
-    miracle_window_info_t result = miracle_container_get_window(&context, &container);
-
-    r = WasmEdge_MemoryInstanceSetData(memory, reinterpret_cast<uint8_t const*>(&result), result_ptr, sizeof(result));
-    return r;
-}
-
-#if FEATURE_PLUGIN_SYSTEM
-namespace
-{
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -428,41 +153,6 @@ void PluginManager::create_host_module()
     add_host_function(module, "miracle_window_info_get_application",
         create_func_type({ i32, i32 }, { i32 }),
         host_miracle_window_info_get_application);
-
-    // miracle_window_info_get_workspace: (result_ptr, context_ptr, window_info_ptr) -> void
-    add_host_function(module, "miracle_window_info_get_workspace",
-        create_func_type({ i32, i32, i32 }, {}),
-        host_miracle_window_info_get_workspace);
-
-    // miracle_workspace_get_output: (result_ptr, context_ptr, workspace_ptr) -> void
-    add_host_function(module, "miracle_workspace_get_output",
-        create_func_type({ i32, i32, i32 }, {}),
-        host_miracle_workspace_get_output);
-
-    // miracle_get_num_outputs: (context_ptr) -> i32
-    add_host_function(module, "miracle_get_num_outputs",
-        create_func_type({ i32 }, { i32 }),
-        host_miracle_get_num_outputs);
-
-    // miracle_get_output_at: (result_ptr, context_ptr, index) -> void
-    add_host_function(module, "miracle_get_output_at",
-        create_func_type({ i32, i32, i32 }, {}),
-        host_miracle_get_output_at);
-
-    // miracle_workspace_get_tree: (result_ptr, context_ptr, workspace_ptr, index) -> void
-    add_host_function(module, "miracle_workspace_get_tree",
-        create_func_type({ i32, i32, i32, i32 }, {}),
-        host_miracle_workspace_get_tree);
-
-    // miracle_container_get_child_at: (result_ptr, context_ptr, container_ptr, index) -> void
-    add_host_function(module, "miracle_container_get_child_at",
-        create_func_type({ i32, i32, i32, i32 }, {}),
-        host_miracle_container_get_child_at);
-
-    // miracle_container_get_window: (result_ptr, context_ptr, container_ptr) -> void
-    add_host_function(module, "miracle_container_get_window",
-        create_func_type({ i32, i32, i32 }, {}),
-        host_miracle_container_get_window);
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);

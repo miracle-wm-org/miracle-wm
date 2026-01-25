@@ -334,8 +334,6 @@ pub struct miracle_window_info_t {
     pub top_left: miracle_point_t,
     #[doc = " The size of the window."]
     pub size: miracle_size_t,
-    #[doc = " The title of the window."]
-    pub title: *const ::std::os::raw::c_char,
     #[doc = " The depth layer of the window."]
     pub depth_layer: MirDepthLayer,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]

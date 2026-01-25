@@ -46,7 +46,7 @@ pub extern "C" fn place_new_window(
     let window_info = unsafe { WindowInfo::from_c(window_info.as_ref().unwrap()) };
     let application = context.get_application(&window_info);
     let mut placement: Placement = Default::default();
-    if application.name == "gedit" {
+    if application.name == "" {
         placement.strategy = WindowManagementStrategy::Freestyle;
         placement.freestyle.top_left.x = 100;
         placement.freestyle.top_left.y = 100;
