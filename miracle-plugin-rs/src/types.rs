@@ -1448,52 +1448,57 @@ impl From<bindings::miracle_placement_t> for Placement {
 ///
 /// These functions are imported from the WASM host (miracle-wm) at runtime.
 mod ffi {
-    use crate::bindings;
+    use crate::bindings::{self, miracle_application_info_t};
 
     unsafe extern "C" {
         /// Retrieve the application info for a given window.
-        pub fn miracle_window_info_get_application(context: i32, window_info: i32) -> i32;
+        /// Returns the internal ID on success, or -1 if the buffer is too small.
+        pub fn miracle_window_info_get_application(
+            window_info_internal: i64,
+            name_buf_ptr: i32,
+            name_buf_len: i32,
+        ) -> i64;
 
-        /// Retrieve the workspace that a window is on.
-        pub fn miracle_window_info_get_workspace(
-            context: *mut bindings::miracle_context_t,
-            window_info: *mut bindings::miracle_window_info_t,
-        ) -> bindings::miracle_workspace_t;
+        // /// Retrieve the workspace that a window is on.
+        // pub fn miracle_window_info_get_workspace(
+        //     context: *mut bindings::miracle_context_t,
+        //     window_info: *mut bindings::miracle_window_info_t,
+        // ) -> bindings::miracle_workspace_t;
 
-        /// Retrieve the output that a workspace is on.
-        pub fn miracle_workspace_get_output(
-            context: *mut bindings::miracle_context_t,
-            workspace: *mut bindings::miracle_workspace_t,
-        ) -> bindings::miracle_output_t;
+        // /// Retrieve the output that a workspace is on.
+        // pub fn miracle_workspace_get_output(
+        //     context: *mut bindings::miracle_context_t,
+        //     workspace: *mut bindings::miracle_workspace_t,
+        // ) -> bindings::miracle_output_t;
 
-        /// Retrieve the number of outputs.
-        pub fn miracle_get_num_outputs(context: *mut bindings::miracle_context_t) -> u32;
+        // /// Retrieve the number of outputs.
+        // pub fn miracle_get_num_outputs(context: *mut bindings::miracle_context_t) -> u32;
 
-        /// Retrieve an output by index.
-        pub fn miracle_get_output_at(
-            context: *mut bindings::miracle_context_t,
-            index: u32,
-        ) -> bindings::miracle_output_t;
+        // /// Retrieve an output by index.
+        // pub fn miracle_get_output_at(
+        //     context: *mut bindings::miracle_context_t,
+        //     index: u32,
+        // ) -> bindings::miracle_output_t;
 
-        /// Retrieve a tree from a workspace by index.
-        pub fn miracle_workspace_get_tree(
-            context: *mut bindings::miracle_context_t,
-            workspace: *mut bindings::miracle_workspace_t,
-            index: u32,
-        ) -> bindings::miracle_container_t;
+        // /// Retrieve a tree from a workspace by index.
+        // pub fn miracle_workspace_get_tree(
+        //     context: *mut bindings::miracle_context_t,
+        //     workspace: *mut bindings::miracle_workspace_t,
+        //     index: u32,
+        // ) -> bindings::miracle_container_t;
 
-        /// Retrieve a child container from a parent container by index.
-        pub fn miracle_container_get_child_at(
-            context: *mut bindings::miracle_context_t,
-            container: *mut bindings::miracle_container_t,
-            index: u32,
-        ) -> bindings::miracle_container_t;
+        // /// Retrieve a child container from a parent container by index.
+        // pub fn miracle_container_get_child_at(
+        //     context: *mut bindings::miracle_context_t,
+        //     container: *mut bindings::miracle_container_t,
+        //     index: u32,
+        // ) -> bindings::miracle_container_t;
 
-        /// Retrieve the window info from a window container.
-        pub fn miracle_container_get_window(
-            context: *mut bindings::miracle_context_t,
-            container: *mut bindings::miracle_container_t,
-        ) -> bindings::miracle_window_info_t;
+        // /// Retrieve the window info from a window container.
+        // pub fn miracle_container_get_window(
+        //     context: *mut bindings::miracle_context_t,
+        //     container: *mut bindings::miracle_container_t,
+        // ) -> bindings::miracle_window_info_t;
     }
 }
 
@@ -1503,144 +1508,143 @@ mod ffi {
 
 /// Opaque context for calling into Miracle's internals.
 #[derive(Debug, Clone, Copy)]
-pub struct Context {
-    raw: bindings::miracle_context_t,
-}
+pub struct Context {}
 
 impl Context {
-    /// Create a context from the raw C struct.
-    pub fn from_raw(raw: bindings::miracle_context_t) -> Self {
-        Self { raw }
-    }
-
-    /// Get the raw C struct.
-    pub fn as_raw(&self) -> &bindings::miracle_context_t {
-        &self.raw
-    }
-
-    /// Get the raw C struct mutably.
-    pub fn as_raw_mut(&mut self) -> &mut bindings::miracle_context_t {
-        &mut self.raw
-    }
-
     /// Get the application info for a window.
-    pub fn get_application(&mut self, window_info: &WindowInfo) -> ApplicationInfo {
+    pub fn get_application(&mut self, window_info: &WindowInfo) -> Option<ApplicationInfo> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
         unsafe {
-            let mut c_window_info = window_info.as_c();
-            let result = ffi::miracle_window_info_get_application(0, 0);
-            ApplicationInfo {
-                name: String::new(),
+            let internal = ffi::miracle_window_info_get_application(
+                window_info.internal as i64,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if internal == -1 {
+                return None;
             }
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(ApplicationInfo { name })
         }
     }
 
-    /// Get the workspace that a window is on.
-    pub fn get_window_workspace(&mut self, window_info: &WindowInfo) -> Workspace {
-        unsafe {
-            let mut c_window_info = window_info.as_c();
-            let result =
-                ffi::miracle_window_info_get_workspace(self.as_raw_mut(), &mut c_window_info);
-            Workspace::from_c(&result)
-        }
-    }
+    // /// Get the workspace that a window is on.
+    // pub fn get_window_workspace(&mut self, window_info: &WindowInfo) -> Workspace {
+    //     unsafe {
+    //         let mut c_window_info = window_info.as_c();
+    //         let result =
+    //             ffi::miracle_window_info_get_workspace(self.as_raw_mut(), &mut c_window_info);
+    //         Workspace::from_c(&result)
+    //     }
+    // }
 
-    /// Get the output that a workspace is on.
-    pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Output {
-        unsafe {
-            let mut c_workspace = workspace.as_c();
-            let result = ffi::miracle_workspace_get_output(self.as_raw_mut(), &mut c_workspace);
-            Output::from_c(&result)
-        }
-    }
+    // /// Get the output that a workspace is on.
+    // pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Output {
+    //     unsafe {
+    //         let mut c_workspace = workspace.as_c();
+    //         let result = ffi::miracle_workspace_get_output(self.as_raw_mut(), &mut c_workspace);
+    //         Output::from_c(&result)
+    //     }
+    // }
 
-    /// Get the number of outputs.
-    pub fn get_output_count(&mut self) -> u32 {
-        unsafe { ffi::miracle_get_num_outputs(self.as_raw_mut()) }
-    }
+    // /// Get the number of outputs.
+    // pub fn get_output_count(&mut self) -> u32 {
+    //     unsafe { ffi::miracle_get_num_outputs(self.as_raw_mut()) }
+    // }
 
-    /// Get an output by index.
-    ///
-    /// Returns `None` if the index is out of bounds.
-    pub fn get_output_at(&mut self, index: u32) -> Option<Output> {
-        if index >= self.get_output_count() {
-            return None;
-        }
-        let result = unsafe { ffi::miracle_get_output_at(self.as_raw_mut(), index) };
-        let output = unsafe { Output::from_c(&result) };
-        if output.is_set { Some(output) } else { None }
-    }
+    // /// Get an output by index.
+    // ///
+    // /// Returns `None` if the index is out of bounds.
+    // pub fn get_output_at(&mut self, index: u32) -> Option<Output> {
+    //     if index >= self.get_output_count() {
+    //         return None;
+    //     }
+    //     let result = unsafe { ffi::miracle_get_output_at(self.as_raw_mut(), index) };
+    //     let output = unsafe { Output::from_c(&result) };
+    //     if output.is_set { Some(output) } else { None }
+    // }
 
-    /// Get all outputs.
-    pub fn get_outputs(&mut self) -> Vec<Output> {
-        let count = self.get_output_count();
-        (0..count).filter_map(|i| self.get_output_at(i)).collect()
-    }
+    // /// Get all outputs.
+    // pub fn get_outputs(&mut self) -> Vec<Output> {
+    //     let count = self.get_output_count();
+    //     (0..count).filter_map(|i| self.get_output_at(i)).collect()
+    // }
 
-    /// Get a tree from a workspace by index.
-    ///
-    /// Returns `None` if the index is out of bounds.
-    pub fn get_workspace_tree(&mut self, workspace: &Workspace, index: u32) -> Option<Container> {
-        if index >= workspace.num_trees {
-            return None;
-        }
-        unsafe {
-            let mut c_workspace = workspace.as_c();
-            let result =
-                ffi::miracle_workspace_get_tree(self.as_raw_mut(), &mut c_workspace, index);
-            Some(Container::from(result))
-        }
-    }
+    // /// Get a tree from a workspace by index.
+    // ///
+    // /// Returns `None` if the index is out of bounds.
+    // pub fn get_workspace_tree(&mut self, workspace: &Workspace, index: u32) -> Option<Container> {
+    //     if index >= workspace.num_trees {
+    //         return None;
+    //     }
+    //     unsafe {
+    //         let mut c_workspace = workspace.as_c();
+    //         let result =
+    //             ffi::miracle_workspace_get_tree(self.as_raw_mut(), &mut c_workspace, index);
+    //         Some(Container::from(result))
+    //     }
+    // }
 
-    /// Get all trees from a workspace.
-    pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {
-        (0..workspace.num_trees)
-            .filter_map(|i| self.get_workspace_tree(workspace, i))
-            .collect()
-    }
+    // /// Get all trees from a workspace.
+    // pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {
+    //     (0..workspace.num_trees)
+    //         .filter_map(|i| self.get_workspace_tree(workspace, i))
+    //         .collect()
+    // }
 
-    /// Get a child container from a parent container by index.
-    ///
-    /// Returns `None` if the index is out of bounds or if the container
-    /// is not of type `Parent`.
-    pub fn get_container_child_at(
-        &mut self,
-        container: &Container,
-        index: u32,
-    ) -> Option<Container> {
-        if container.container_type != ContainerType::Parent || index >= container.num_children {
-            return None;
-        }
-        unsafe {
-            let mut c_container = container.as_c();
-            let result =
-                ffi::miracle_container_get_child_at(self.as_raw_mut(), &mut c_container, index);
-            Some(Container::from(result))
-        }
-    }
+    // /// Get a child container from a parent container by index.
+    // ///
+    // /// Returns `None` if the index is out of bounds or if the container
+    // /// is not of type `Parent`.
+    // pub fn get_container_child_at(
+    //     &mut self,
+    //     container: &Container,
+    //     index: u32,
+    // ) -> Option<Container> {
+    //     if container.container_type != ContainerType::Parent || index >= container.num_children {
+    //         return None;
+    //     }
+    //     unsafe {
+    //         let mut c_container = container.as_c();
+    //         let result =
+    //             ffi::miracle_container_get_child_at(self.as_raw_mut(), &mut c_container, index);
+    //         Some(Container::from(result))
+    //     }
+    // }
 
-    /// Get all children from a parent container.
-    ///
-    /// Returns an empty vector if the container is not of type `Parent`.
-    pub fn get_container_children(&mut self, container: &Container) -> Vec<Container> {
-        if container.container_type != ContainerType::Parent {
-            return Vec::new();
-        }
-        (0..container.num_children)
-            .filter_map(|i| self.get_container_child_at(container, i))
-            .collect()
-    }
+    // /// Get all children from a parent container.
+    // ///
+    // /// Returns an empty vector if the container is not of type `Parent`.
+    // pub fn get_container_children(&mut self, container: &Container) -> Vec<Container> {
+    //     if container.container_type != ContainerType::Parent {
+    //         return Vec::new();
+    //     }
+    //     (0..container.num_children)
+    //         .filter_map(|i| self.get_container_child_at(container, i))
+    //         .collect()
+    // }
 
-    /// Get the window info from a window container.
-    ///
-    /// Returns `None` if the container is not of type `Window`.
-    pub fn get_container_window(&mut self, container: &Container) -> Option<WindowInfo> {
-        if container.container_type != ContainerType::Window {
-            return None;
-        }
-        unsafe {
-            let mut c_container = container.as_c();
-            let result = ffi::miracle_container_get_window(self.as_raw_mut(), &mut c_container);
-            Some(WindowInfo::from_c(&result))
-        }
-    }
+    // /// Get the window info from a window container.
+    // ///
+    // /// Returns `None` if the container is not of type `Window`.
+    // pub fn get_container_window(&mut self, container: &Container) -> Option<WindowInfo> {
+    //     if container.container_type != ContainerType::Window {
+    //         return None;
+    //     }
+    //     unsafe {
+    //         let mut c_container = container.as_c();
+    //         let result = ffi::miracle_container_get_window(self.as_raw_mut(), &mut c_container);
+    //         Some(WindowInfo::from_c(&result))
+    //     }
+    // }
 }

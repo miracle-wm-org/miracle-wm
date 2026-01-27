@@ -31,6 +31,8 @@ namespace miracle
 {
 typedef uint32_t PluginHandle;
 
+class PluginBridge;
+
 struct PluginLoadResult
 {
     bool success = false;
@@ -41,7 +43,7 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager();
+    PluginManager(std::unique_ptr<PluginBridge> bridge);
 
     /// Load a WebAssembly module from the provided \p path.
     ///
@@ -97,8 +99,8 @@ public:
     /// \returns the placement
     miracle_placement_t place_new_window(
         PluginHandle handle,
-        miracle_context_t const& context,
-        miracle_window_info_t const& window_info);
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification const& spec);
 
 private:
     template <auto DeleteFn>
@@ -156,6 +158,7 @@ private:
 
     void create_host_module();
 
+    std::unique_ptr<PluginBridge> bridge;
     std::mutex mutex;
     ConfigurePtr configure_context;
     StorePtr store_context;
@@ -170,12 +173,14 @@ private:
 }
 #else
 #include "miracle/plugin.h"
+#include "plugin_bridge.h"
 #include <cstdint>
 #include <mir/geometry/point.h>
 #include <string>
 namespace miracle
 {
 typedef uint32_t PluginHandle;
+class PluginBridge;
 
 struct PluginLoadResult
 {
@@ -187,7 +192,7 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager() = default;
+    PluginManager(std::unique_ptr<PluginBridge> bridge) : bridge(std::move(bridge)) {}
     PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
@@ -200,9 +205,12 @@ public:
         PluginHandle,
         miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
     miracle_placement_t place_new_window(
-        PluginHandle,
-        miracle_context_t const&,
-        miracle_window_info_t const&) { return miracle_placement_t {}; }
+        PluginHandle handle,
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification const& spec) { return miracle_placement_t {}; }
+
+private:
+    std::unique_ptr<PluginBridge> bridge;
 };
 }
 #endif

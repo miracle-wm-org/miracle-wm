@@ -33,9 +33,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_bridge.h"
 #include "plugin_managed_container.h"
 #include "plugin_manager.h"
-#include "real_plugin_bridge.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
 #include "window_observer.h"
@@ -178,7 +178,7 @@ Policy::Policy(
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
-    plugin_manager(std::make_shared<PluginManager>()),
+    plugin_manager(std::make_shared<PluginManager>(std::make_unique<PluginBridge>(output_manager, window_controller))),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, plugin_manager, server.the_main_loop(), state, config)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
@@ -522,10 +522,7 @@ auto Policy::place_new_window(
     auto new_spec = requested_specification;
 
     auto const handle = plugin_manager->get_wasm_module("playground");
-    auto const plugin_bridge = std::make_unique<RealPluginBridge>(output_manager, window_controller);
-    auto const context_t = miracle_context_t { .internal = reinterpret_cast<uint64_t>(plugin_bridge.get()) };
-    auto const window_info_t = plugin_bridge->new_window_info(app_info, requested_specification);
-    auto const plugin_placement = plugin_manager->place_new_window(handle, context_t, window_info_t);
+    auto const plugin_placement = plugin_manager->place_new_window(handle, app_info, requested_specification);
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;

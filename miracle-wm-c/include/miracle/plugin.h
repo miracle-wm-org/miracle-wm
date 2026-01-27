@@ -48,15 +48,6 @@ extern "C"
         int32_t h;
     } miracle_size_t;
 
-    /// Provides context for a call from the plugin system into
-    /// Miracle's internals. Plugin authors must supply this as a
-    /// parameter when they want to query the system.
-    typedef struct
-    {
-        /// Opaque pointer to internal data.
-        uint64_t internal;
-    } miracle_context_t;
-
     typedef struct
     {
         /// The runtime of the animation frame in seconds.
@@ -124,6 +115,9 @@ extern "C"
     {
         /// The name of the application.
         const char* application_name;
+
+        /// Internal data.
+        uint64_t internal;
     } miracle_application_info_t;
 
     /// Describes the properties of a window.

@@ -17,6 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "plugin_manager"
 #include "plugin_manager.h"
+
+#include "plugin_bridge.h"
+
 #include <cstring>
 #include <mir/log.h>
 
@@ -39,11 +42,8 @@ WasmEdge_MemoryInstanceContext* get_memory_from_frame(
     return memory;
 }
 
-// Host function: miracle_window_info_get_application
-// WASM signature: (context_ptr: i32, window_info_ptr: i32) -> i32
-// Returns a pointer to the application name string in WASM linear memory
 WasmEdge_Result host_miracle_window_info_get_application(
-    void* /* data */,
+    void* data,
     WasmEdge_CallingFrameContext const* frame,
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
@@ -55,10 +55,36 @@ WasmEdge_Result host_miracle_window_info_get_application(
         return WasmEdge_Result_Fail;
     }
 
-    int32_t const context_ptr = WasmEdge_ValueGetI32(params[0]);
-    int32_t const window_info_ptr = WasmEdge_ValueGetI32(params[1]);
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_info_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[2]);
 
-    returns[0] = WasmEdge_ValueGenI32(0);
+    auto const application = bridge->application(window_info_address);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+
+    // Get the application name from host memory
+    char const* app_name = application.application_name;
+    size_t const name_len = app_name ? std::strlen(app_name) : 0;
+
+    // Check if name fits in buffer (need space for null terminator)
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_window_info_get_application: buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI64(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    // Copy name to WASM linear memory
+    if (app_name)
+        std::memcpy(name_buf, app_name, name_len);
+    name_buf[name_len] = '\0';
+
+    // Return the internal ID (WASM already knows the name_buffer_ptr)
+    returns[0] = WasmEdge_ValueGenI64(static_cast<int64_t>(application.internal));
     return WasmEdge_Result_Success;
 }
 
@@ -85,7 +111,7 @@ void add_host_function(
     char const* name,
     WasmEdge_FunctionTypeContext* func_type,
     WasmEdge_HostFunc_t func,
-    void* data = nullptr)
+    void* data)
 {
     auto const func_name = WasmEdge_StringCreateByCString(name);
     auto* func_instance = WasmEdge_FunctionInstanceCreate(func_type, func, data, 0);
@@ -95,7 +121,8 @@ void add_host_function(
 }
 }
 
-PluginManager::PluginManager() :
+PluginManager::PluginManager(std::unique_ptr<PluginBridge> bridge) :
+    bridge(std::move(bridge)),
     configure_context(create_configure_context()),
     store_context(WasmEdge_StoreCreate()),
     loader_context(WasmEdge_LoaderCreate(configure_context.get())),
@@ -147,12 +174,11 @@ void PluginManager::create_host_module()
 
     // Define WasmEdge value types
     WasmEdge_ValType const i32 = WasmEdge_ValTypeGenI32();
+    WasmEdge_ValType const i64 = WasmEdge_ValTypeGenI64();
 
-    // miracle_window_info_get_application: (context_ptr, window_info_ptr) -> i32
-    // Small structs returned directly as i32 in WASM32 ABI
     add_host_function(module, "miracle_window_info_get_application",
-        create_func_type({ i32, i32 }, { i32 }),
-        host_miracle_window_info_get_application);
+        create_func_type({ i64, i32, i32 }, { i64 }),
+        host_miracle_window_info_get_application, bridge.get());
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
@@ -510,10 +536,11 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
 
 miracle_placement_t PluginManager::place_new_window(
     PluginHandle handle,
-    miracle_context_t const& context,
-    miracle_window_info_t const& window_info)
+    miral::ApplicationInfo const& app_info,
+    miral::WindowSpecification const& spec)
 {
     std::lock_guard lock(mutex);
+    auto const window_info_t = bridge->new_window_info(app_info, spec);
     // Find the module with the given handle
     ModuleInstance* target_module = nullptr;
     for (auto& module : loaded_modules)
@@ -549,29 +576,12 @@ miracle_placement_t PluginManager::place_new_window(
 
     // Allocate memory for the structs in WASM linear memory
     uint32_t constexpr result_ptr = 0;
-    uint32_t constexpr context_ptr = sizeof(miracle_placement_t);
-    uint32_t constexpr window_info_ptr = context_ptr + sizeof(miracle_context_t);
-
-    // Write context to WASM memory
-    uint8_t context_buffer[sizeof(miracle_context_t)];
-    std::memcpy(context_buffer, &context, sizeof(context));
-    auto r = WasmEdge_MemoryInstanceSetData(
-        memory_context,
-        context_buffer,
-        context_ptr,
-        sizeof(context_buffer));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to write context to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_placement_t {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
+    uint32_t constexpr window_info_ptr = sizeof(miracle_window_info_t);
 
     // Write window_info to WASM memory
     uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
-    std::memcpy(window_info_buffer, &window_info, sizeof(window_info));
-    r = WasmEdge_MemoryInstanceSetData(
+    std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
+    auto r = WasmEdge_MemoryInstanceSetData(
         memory_context,
         window_info_buffer,
         window_info_ptr,
@@ -586,12 +596,10 @@ miracle_placement_t PluginManager::place_new_window(
 
     // Prepare the parameters
     // param[0]: pointer to result location
-    // param[1]: pointer to context
-    // param[2]: pointer to window_info
-    WasmEdge_Value params[3];
+    // param[1]: pointer to window_info
+    WasmEdge_Value params[2];
     params[0] = WasmEdge_ValueGenI32(result_ptr);
-    params[1] = WasmEdge_ValueGenI32(context_ptr);
-    params[2] = WasmEdge_ValueGenI32(window_info_ptr);
+    params[1] = WasmEdge_ValueGenI32(window_info_ptr);
 
     // Call the function
     auto const func_name = WasmEdge_StringCreateByCString("place_new_window");

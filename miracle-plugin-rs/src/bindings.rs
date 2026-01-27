@@ -265,13 +265,6 @@ pub struct miracle_size_t {
     #[doc = " The height."]
     pub h: i32,
 }
-#[doc = " Provides context for a call from the plugin system into\n Miracle's internals. Plugin authors must supply this as a\n parameter when they want to query the system."]
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct miracle_context_t {
-    #[doc = " Opaque pointer to internal data."]
-    pub internal: u64,
-}
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_plugin_animation_frame_data_t {
@@ -312,6 +305,8 @@ pub struct miracle_plugin_animation_frame_result_t {
 pub struct miracle_application_info_t {
     #[doc = " The name of the application."]
     pub application_name: *const ::std::os::raw::c_char,
+    #[doc = " Internal data."]
+    pub internal: u64,
 }
 impl Default for miracle_application_info_t {
     fn default() -> Self {

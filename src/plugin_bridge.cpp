@@ -15,12 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "real_plugin_bridge.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_bridge.h"
 #include "window_manager_tools_window_controller.h"
 #include "workspace_interface.h"
 #include <miral/application_info.h>
@@ -32,8 +32,10 @@ namespace
 {
 miracle_application_info_t from_app_info(miral::ApplicationInfo const& info)
 {
+    // TODO: Set internal to a unique application ID
     return {
-        .application_name = info.name().c_str()
+        .application_name = info.name().c_str(),
+        .internal = 0
     };
 }
 
@@ -122,20 +124,20 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
 }
 }
 
-RealPluginBridge::RealPluginBridge(std::shared_ptr<OutputManager> const& output_manager,
+PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<WindowManagerToolsWindowController> const& window_controller) :
     output_manager(output_manager),
     window_controller(window_controller)
 {
 }
 
-miracle_application_info_t RealPluginBridge::application(miracle_window_info_t const& window_info)
+miracle_application_info_t PluginBridge::application(uint64_t window_id)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_info.internal));
+    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
     return from_app_info(plugin_window_info->app_info);
 }
 
-miracle_workspace_t RealPluginBridge::workspace(miracle_window_info_t const& window_info)
+miracle_workspace_t PluginBridge::workspace(miracle_window_info_t const& window_info)
 {
     auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_info.internal));
     if (std::holds_alternative<miral::Window>(plugin_window_info->window_info))
@@ -148,7 +150,7 @@ miracle_workspace_t RealPluginBridge::workspace(miracle_window_info_t const& win
     return from_workspace(nullptr);
 }
 
-miracle_output_t RealPluginBridge::output(miracle_workspace_t const& workspace)
+miracle_output_t PluginBridge::output(miracle_workspace_t const& workspace)
 {
     auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
     if (!miracle_workspace)
@@ -161,17 +163,17 @@ miracle_output_t RealPluginBridge::output(miracle_workspace_t const& workspace)
     return from_output(miracle_workspace->get_output());
 }
 
-uint32_t RealPluginBridge::num_outputs()
+uint32_t PluginBridge::num_outputs()
 {
     return output_manager->outputs().size();
 }
 
-miracle_output_t RealPluginBridge::output_at(uint32_t index)
+miracle_output_t PluginBridge::output_at(uint32_t index)
 {
     return from_output(output_manager->outputs()[index]);
 }
 
-uint32_t RealPluginBridge::num_workspaces_on_output(miracle_output_t const& output)
+uint32_t PluginBridge::num_workspaces_on_output(miracle_output_t const& output)
 {
     auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output.internal));
     if (!miracle_output)
@@ -180,7 +182,7 @@ uint32_t RealPluginBridge::num_workspaces_on_output(miracle_output_t const& outp
     return miracle_output->get_workspaces().size();
 }
 
-miracle_workspace_t RealPluginBridge::workspace_on_output_at(miracle_output_t const& output, uint32_t index)
+miracle_workspace_t PluginBridge::workspace_on_output_at(miracle_output_t const& output, uint32_t index)
 {
     auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output.internal));
     if (!miracle_output)
@@ -189,14 +191,14 @@ miracle_workspace_t RealPluginBridge::workspace_on_output_at(miracle_output_t co
     return from_workspace(miracle_output->get_workspaces()[index]);
 }
 
-miracle_container_t RealPluginBridge::tree_at_index(miracle_workspace_t const& workspace, uint32_t index)
+miracle_container_t PluginBridge::tree_at_index(miracle_workspace_t const& workspace, uint32_t index)
 {
     auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
     auto const trees = miracle_workspace->trees();
     return from_parent(trees[index]);
 }
 
-miracle_container_t RealPluginBridge::child_at(miracle_container_t const& parent, uint32_t index)
+miracle_container_t PluginBridge::child_at(miracle_container_t const& parent, uint32_t index)
 {
     auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent.internal));
     auto const child = parent_container->at(index);
@@ -206,7 +208,7 @@ miracle_container_t RealPluginBridge::child_at(miracle_container_t const& parent
     return from_child(Container::as_leaf(child));
 }
 
-miracle_window_info_t RealPluginBridge::get_window(miracle_container_t const& container)
+miracle_window_info_t PluginBridge::get_window(miracle_container_t const& container)
 {
     // TODO: Expect this to be of type window
     auto const leaf = static_cast<LeafContainer*>(reinterpret_cast<void*>(container.internal));
@@ -218,7 +220,7 @@ miracle_window_info_t RealPluginBridge::get_window(miracle_container_t const& co
     return from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()));
 }
 
-miracle_window_info_t RealPluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
+miracle_window_info_t PluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
 {
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, spec);
     plugin_window_infos.push_back(plugin_window_info);

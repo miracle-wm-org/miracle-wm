@@ -1,9 +1,9 @@
 use miracle_plugin_rs::{
+    Context, DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
     bindings::{
-        miracle_context_t, miracle_placement_t, miracle_plugin_animation_frame_data_t,
+        miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
-    Context, DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
 };
 
 #[unsafe(no_mangle)]
@@ -39,20 +39,23 @@ pub extern "C" fn animate(
 #[unsafe(no_mangle)]
 pub extern "C" fn place_new_window(
     result: *mut miracle_placement_t,
-    context: *const miracle_context_t,
     window_info: *const miracle_window_info_t,
 ) {
-    let mut context = Context::from_raw(unsafe { *context.as_ref().unwrap() });
+    let mut context = Context {};
     let window_info = unsafe { WindowInfo::from_c(window_info.as_ref().unwrap()) };
     let application = context.get_application(&window_info);
     let mut placement: Placement = Default::default();
-    if application.name == "" {
-        placement.strategy = WindowManagementStrategy::Freestyle;
-        placement.freestyle.top_left.x = 100;
-        placement.freestyle.top_left.y = 100;
-        placement.freestyle.size.width = 800;
-        placement.freestyle.size.height = 600;
-        placement.freestyle.depth_layer = DepthLayer::Application;
+    if let Some(application) = application {
+        if application.name == "" {
+            placement.strategy = WindowManagementStrategy::Freestyle;
+            placement.freestyle.top_left.x = 100;
+            placement.freestyle.top_left.y = 100;
+            placement.freestyle.size.width = 800;
+            placement.freestyle.size.height = 600;
+            placement.freestyle.depth_layer = DepthLayer::Application;
+        } else {
+            placement.strategy = WindowManagementStrategy::System;
+        }
     } else {
         placement.strategy = WindowManagementStrategy::System;
     }
