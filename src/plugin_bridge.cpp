@@ -30,11 +30,20 @@ using namespace miracle;
 
 namespace
 {
-miracle_application_info_t from_app_info(miral::ApplicationInfo const& info)
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec)
 {
     // TODO: Set internal to a unique application ID
     return {
-        .application_name = info.name().c_str(),
+        .application_name = info.name().empty() ? spec.application_id().value_or("").c_str() : info.name().c_str(),
+        .internal = 0
+    };
+}
+
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowInfo const& window)
+{
+    // TODO: Set internal to a unique application ID
+    return {
+        .application_name = info.name().empty() ? window.application_id().c_str() : info.name().c_str(),
         .internal = 0
     };
 }
@@ -134,7 +143,14 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
 miracle_application_info_t PluginBridge::application(uint64_t window_id)
 {
     auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
-    return from_app_info(plugin_window_info->app_info);
+    if (std::holds_alternative<miral::WindowSpecification>(plugin_window_info->window_info))
+    {
+        miral::WindowSpecification spec = std::get<miral::WindowSpecification>(plugin_window_info->window_info);
+        return from_app_info(plugin_window_info->app_info, spec);
+    }
+
+    miral::Window window = std::get<miral::Window>(plugin_window_info->window_info);
+    return from_app_info(plugin_window_info->app_info, window_controller->info_for(window));
 }
 
 miracle_workspace_t PluginBridge::workspace(miracle_window_info_t const& window_info)
@@ -220,16 +236,19 @@ miracle_window_info_t PluginBridge::get_window(miracle_container_t const& contai
     return from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()));
 }
 
-miracle_window_info_t PluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
+PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
 {
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, spec);
     plugin_window_infos.push_back(plugin_window_info);
-    return {
+    return PluginBridgeObjectHandle<miracle_window_info_t>({
         .window_type = spec.type().value_or(mir_window_type_normal),
         .state = spec.state().value_or(mir_window_state_restored),
         .top_left = from_point(spec.top_left().value_or(geom::Point())),
         .size = from_size(spec.size().value_or(geom::Size(800, 600))),
         .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
         .internal = reinterpret_cast<uint64_t>(plugin_window_info.get())
-    };
+    }, [this, plugin_window_info=plugin_window_info]
+    {
+        std::erase(plugin_window_infos, plugin_window_info);
+    });
 }

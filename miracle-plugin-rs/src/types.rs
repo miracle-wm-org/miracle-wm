@@ -1092,6 +1092,9 @@ impl From<bindings::miracle_plugin_animation_frame_result_t> for AnimationFrameR
 pub struct ApplicationInfo {
     /// The name of the application.
     pub name: String,
+
+    /// The internal id of the application
+    pub internal: u64,
 }
 
 impl ApplicationInfo {
@@ -1109,7 +1112,10 @@ impl ApplicationInfo {
                     .into_owned()
             }
         };
-        Self { name }
+        Self {
+            name,
+            internal: value.internal,
+        }
     }
 }
 
@@ -1534,7 +1540,7 @@ impl Context {
                 .unwrap_or(NAME_BUF_LEN);
             let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-            Some(ApplicationInfo { name })
+            Some(ApplicationInfo { name, internal: internal as u64 })
         }
     }
 

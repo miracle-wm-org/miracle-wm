@@ -540,7 +540,8 @@ miracle_placement_t PluginManager::place_new_window(
     miral::WindowSpecification const& spec)
 {
     std::lock_guard lock(mutex);
-    auto const window_info_t = bridge->new_window_info(app_info, spec);
+    auto const bridge_handle = bridge->new_window_info(app_info, spec);
+    auto const window_info_t = bridge_handle.get();
     // Find the module with the given handle
     ModuleInstance* target_module = nullptr;
     for (auto& module : loaded_modules)
@@ -618,7 +619,7 @@ miracle_placement_t PluginManager::place_new_window(
         executor_context.get(),
         func_context,
         params,
-        3,
+        2,
         nullptr,
         0);
 
