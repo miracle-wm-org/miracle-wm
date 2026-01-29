@@ -220,9 +220,10 @@ extern "C"
     /// Describes a workspace.
     typedef struct
     {
-        /// If `TRUE`, the workspace is set.
+        /// If `TRUE`, the workspace is valid.
         ///
-        /// This will be `FALSE` for windows that have not yet been placed.
+        /// This may be `FALSE` for shell components that are not tethered to a particular
+        /// workspace.
         int32_t is_set;
 
         /// If `TRUE`, #number is set.
@@ -235,11 +236,6 @@ extern "C"
 
         /// If `TRUE`, #name is set.
         int32_t has_name;
-
-        /// The name of the workspace.
-        ///
-        /// Only valid if #has_name is `TRUE`.
-        const char* name;
 
         /// The number of container trees in this workspace.
         ///

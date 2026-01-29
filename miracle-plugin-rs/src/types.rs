@@ -1217,8 +1217,6 @@ impl From<Container> for bindings::miracle_container_t {
 /// Workspace information.
 #[derive(Debug, Clone)]
 pub struct Workspace {
-    /// Whether the workspace is set.
-    pub is_set: bool,
     /// The workspace number (if set).
     pub number: Option<u32>,
     /// The workspace name (if set).
@@ -1231,28 +1229,18 @@ pub struct Workspace {
 
 impl Workspace {
     /// Create from the C struct.
-    ///
-    /// # Safety
-    /// The `name` pointer must be valid and null-terminated if `has_name` is true.
-    pub unsafe fn from_c(value: &bindings::miracle_workspace_t) -> Self {
-        let name = if value.has_name != 0 && !value.name.is_null() {
-            Some(unsafe {
-                std::ffi::CStr::from_ptr(value.name)
-                    .to_string_lossy()
-                    .into_owned()
-            })
-        } else {
-            None
-        };
-
+    pub unsafe fn from_c_with_name(value: &bindings::miracle_workspace_t, name: String) -> Self {
         Self {
-            is_set: value.is_set != 0,
             number: if value.has_number != 0 {
                 Some(value.number)
             } else {
                 None
             },
-            name,
+            name: if value.has_name != 0 {
+                Some(name)
+            } else {
+                None
+            },
             num_trees: value.num_trees,
             internal: value.internal,
         }
@@ -1261,22 +1249,6 @@ impl Workspace {
     /// Get the internal pointer for C interop.
     pub fn internal_ptr(&self) -> u64 {
         self.internal
-    }
-
-    /// Get the raw C struct for interop.
-    ///
-    /// Note: The name pointer will be null in the returned struct.
-    /// Use this only for passing to FFI functions that use the internal pointer.
-    pub fn as_c(&self) -> bindings::miracle_workspace_t {
-        bindings::miracle_workspace_t {
-            is_set: self.is_set as i32,
-            has_number: self.number.is_some() as i32,
-            number: self.number.unwrap_or(0),
-            has_name: self.name.is_some() as i32,
-            name: std::ptr::null(),
-            num_trees: self.num_trees,
-            internal: self.internal,
-        }
     }
 }
 
@@ -1452,11 +1424,13 @@ mod ffi {
             name_buf_len: i32,
         ) -> i64;
 
-        // /// Retrieve the workspace that a window is on.
-        // pub fn miracle_window_info_get_workspace(
-        //     context: *mut bindings::miracle_context_t,
-        //     window_info: *mut bindings::miracle_window_info_t,
-        // ) -> bindings::miracle_workspace_t;
+        /// Retrieve the workspace that a window is on.
+        pub fn miracle_window_info_get_workspace(
+            window_info_internal: i64,
+            out_ptr: i32,
+            name_buf: i32,
+            name_buf_len: i32,
+        ) -> i32;
 
         // /// Retrieve the output that a workspace is on.
         // pub fn miracle_workspace_get_output(
@@ -1536,15 +1510,39 @@ impl Context {
         }
     }
 
-    // /// Get the workspace that a window is on.
-    // pub fn get_window_workspace(&mut self, window_info: &WindowInfo) -> Workspace {
-    //     unsafe {
-    //         let mut c_window_info = window_info.as_c();
-    //         let result =
-    //             ffi::miracle_window_info_get_workspace(self.as_raw_mut(), &mut c_window_info);
-    //         Workspace::from_c(&result)
-    //     }
-    // }
+    /// Get the workspace that a window is on.
+    pub fn get_window_workspace(&mut self, window_info: &WindowInfo) -> Option<Workspace> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_window_info_get_workspace(
+                window_info.internal as i64,
+                workspace.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let workspace = workspace.assume_init();
+            if workspace.is_set == 0 {
+                return None;
+            }
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Workspace::from_c_with_name(&workspace, name))
+        }
+    }
 
     // /// Get the output that a workspace is on.
     // pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Output {

@@ -148,6 +148,55 @@ WasmEdge_Result host_miracle_get_output_at(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_info_get_workspace(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_window_info_get_workspace: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const window_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
+
+    auto const workspace = bridge->workspace(window_address);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* workspace_buf = mem_base + out_ptr;
+    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+
+    // Get the output name from host memory
+    char const* workspace_name = workspace.name.value_or("").c_str();
+    size_t const name_len = std::strlen(workspace_name);
+
+    // Check if name fits in buffer (need space for null terminator)
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    // Copy name to WASM linear memory
+    std::memcpy(name_buf, workspace_name, name_len);
+    name_buf[name_len] = '\0';
+
+    // Return success
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -252,6 +301,10 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_get_output_at",
         create_func_type({ i32, i32, i32, i32 }, { i32 }),
         host_miracle_get_output_at, bridge.get());
+
+    add_host_function(module, "miracle_window_info_get_workspace",
+        create_func_type({ i64, i32, i32, i32 }, { i32 }),
+        host_miracle_window_info_get_workspace, bridge.get());
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);

@@ -48,6 +48,7 @@ pub extern "C" fn place_new_window(
     let num_outputs = context.num_outputs();
     if let Some(application) = application {
         let output = context.get_output_at(0);
+        let workspace = context.get_window_workspace(&window_info);
         if application.name == "gedit" {
             placement.strategy = WindowManagementStrategy::Freestyle;
             if let Some(output) = output {
@@ -57,6 +58,16 @@ pub extern "C" fn place_new_window(
                 placement.freestyle.top_left.x = 100;
                 placement.freestyle.top_left.y = 100;
             }
+
+            if let Some(workspace) = workspace {
+                if let Some(number) = workspace.number {
+                    if number == 2 {
+                        placement.freestyle.top_left.x = 0;
+                        placement.freestyle.top_left.y = 0;
+                    }
+                }
+            }
+
             placement.freestyle.size.width = 800;
             placement.freestyle.size.height = 600;
             placement.freestyle.depth_layer = DepthLayer::Application;

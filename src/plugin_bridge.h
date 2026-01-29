@@ -65,11 +65,17 @@ public:
         std::string name;
     };
 
+    struct WorkspaceResult
+    {
+        miracle_workspace_t workspace;
+        std::optional<std::string> name;
+    };
+
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowManagerToolsWindowController> const& window_controller);
     miracle_application_info_t application(uint64_t window_id);
-    miracle_workspace_t workspace(miracle_window_info_t const& window_info);
+    WorkspaceResult workspace(uint64_t window_id);
     miracle_output_t output(miracle_workspace_t const& workspace);
     uint32_t num_outputs();
     OutputResult output_at(uint32_t index);

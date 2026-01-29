@@ -58,7 +58,6 @@ miracle_workspace_t from_workspace(std::shared_ptr<WorkspaceInterface> const& wo
         .has_number = workspace->num().has_value(),
         .number = static_cast<uint32_t>(workspace->num().value_or(0)),
         .has_name = workspace->name().has_value(),
-        .name = workspace->name().value_or("").c_str(),
         .num_trees = static_cast<uint32_t>(workspace->trees().size()),
         .internal = reinterpret_cast<uint64_t>(workspace.get())
     };
@@ -148,17 +147,25 @@ miracle_application_info_t PluginBridge::application(uint64_t window_id)
     return from_app_info(plugin_window_info->app_info, window_controller->info_for(window));
 }
 
-miracle_workspace_t PluginBridge::workspace(miracle_window_info_t const& window_info)
+PluginBridge::WorkspaceResult PluginBridge::workspace(uint64_t window_id)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_info.internal));
+    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
     if (std::holds_alternative<miral::Window>(plugin_window_info->window_info))
     {
         miral::WindowInfo const& miral_window_info = window_controller->info_for(std::get<miral::Window>(plugin_window_info->window_info));
         if (auto const container = window_controller->get_container(miral_window_info.window()))
-            return from_workspace(container->get_workspace());
+        {
+            if (auto const workspace = container->get_workspace())
+                return { from_workspace(workspace), workspace->name() };
+        }
+    }
+    else
+    {
+        if (auto const workspace = output_manager->focused()->active())
+            return { from_workspace(workspace), workspace->name() };
     }
 
-    return from_workspace(nullptr);
+    return { from_workspace(nullptr), std::nullopt };
 }
 
 miracle_output_t PluginBridge::output(miracle_workspace_t const& workspace)

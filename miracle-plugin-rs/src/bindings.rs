@@ -387,9 +387,9 @@ impl Default for miracle_container_t {
 }
 #[doc = " Describes a workspace."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_workspace_t {
-    #[doc = " If `TRUE`, the workspace is set.\n\n This will be `FALSE` for windows that have not yet been placed."]
+    #[doc = " If `TRUE`, the workspace is valid.\n\n This may be `FALSE` for shell components that are not tethered to a particular\n workspace."]
     pub is_set: i32,
     #[doc = " If `TRUE`, #number is set."]
     pub has_number: i32,
@@ -397,21 +397,10 @@ pub struct miracle_workspace_t {
     pub number: u32,
     #[doc = " If `TRUE`, #name is set."]
     pub has_name: i32,
-    #[doc = " The name of the workspace.\n\n Only valid if #has_name is `TRUE`."]
-    pub name: *const ::std::os::raw::c_char,
     #[doc = " The number of container trees in this workspace.\n\n Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.\n Each tree is represented by a #miracle_container_t which is the root of the tree."]
     pub num_trees: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
-}
-impl Default for miracle_workspace_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
 }
 #[doc = " Describes an output."]
 #[repr(C)]
