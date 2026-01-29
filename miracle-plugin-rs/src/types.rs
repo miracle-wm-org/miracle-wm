@@ -1183,19 +1183,6 @@ pub struct Container {
     internal: u64,
 }
 
-impl Container {
-    /// Get the raw C struct for interop.
-    pub fn as_c(&self) -> bindings::miracle_container_t {
-        bindings::miracle_container_t {
-            type_: self.container_type.into(),
-            is_floating: self.is_floating as i32,
-            layout_scheme: self.layout_scheme.into(),
-            num_child_containers: self.num_children,
-            internal: self.internal,
-        }
-    }
-}
-
 impl From<bindings::miracle_container_t> for Container {
     fn from(value: bindings::miracle_container_t) -> Self {
         Self {
@@ -1205,12 +1192,6 @@ impl From<bindings::miracle_container_t> for Container {
             num_children: value.num_child_containers,
             internal: value.internal,
         }
-    }
-}
-
-impl From<Container> for bindings::miracle_container_t {
-    fn from(value: Container) -> Self {
-        value.as_c()
     }
 }
 
@@ -1224,7 +1205,7 @@ pub struct Workspace {
     /// The number of container trees in this workspace.
     pub num_trees: u32,
     /// Internal pointer for C interop.
-    internal: u64,
+    pub internal: u64,
 }
 
 impl Workspace {
@@ -1451,12 +1432,9 @@ mod ffi {
             name_buf_len: i32,
         ) -> i32;
 
-        // /// Retrieve a tree from a workspace by index.
-        // pub fn miracle_workspace_get_tree(
-        //     context: *mut bindings::miracle_context_t,
-        //     workspace: *mut bindings::miracle_workspace_t,
-        //     index: u32,
-        // ) -> bindings::miracle_container_t;
+        /// Retrieve a tree from a workspace by index.
+        pub fn miracle_workspace_get_tree(workspace_internal: i64, index: u32, out_ptr: i32)
+        -> i32;
 
         // /// Retrieve a child container from a parent container by index.
         // pub fn miracle_container_get_child_at(
@@ -1625,20 +1603,30 @@ impl Context {
         (0..count).filter_map(|i| self.get_output_at(i)).collect()
     }
 
-    // /// Get a tree from a workspace by index.
-    // ///
-    // /// Returns `None` if the index is out of bounds.
-    // pub fn get_workspace_tree(&mut self, workspace: &Workspace, index: u32) -> Option<Container> {
-    //     if index >= workspace.num_trees {
-    //         return None;
-    //     }
-    //     unsafe {
-    //         let mut c_workspace = workspace.as_c();
-    //         let result =
-    //             ffi::miracle_workspace_get_tree(self.as_raw_mut(), &mut c_workspace, index);
-    //         Some(Container::from(result))
-    //     }
-    // }
+    /// Get a tree from a workspace by index.
+    ///
+    /// Returns `None` if the index is out of bounds.
+    pub fn get_workspace_tree(&mut self, workspace: &Workspace, index: u32) -> Option<Container> {
+        if index >= workspace.num_trees {
+            return None;
+        }
+
+        let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        unsafe {
+            let result = ffi::miracle_workspace_get_tree(
+                workspace.internal_ptr() as i64,
+                index,
+                container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let container = container.assume_init();
+            Some(Container::from(container))
+        }
+    }
 
     // /// Get all trees from a workspace.
     // pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {

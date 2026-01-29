@@ -363,27 +363,18 @@ pub const miracle_layout_scheme_miracle_layout_scheme_stacking: miracle_layout_s
 pub type miracle_layout_scheme = ::std::os::raw::c_uint;
 #[doc = " Describes a container in a tree.\n\n A container may either a parent or a window. Parent containers\n have children, which can be retrieved via #miracle_plugin_get_child_from_container.\n\n The window of a window container can be retrieved via\n #miracle_plugin_get_window_info_from_container."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_container_t {
     #[doc = " The type of the container.\n\n This is a #miracle_container_type."]
-    pub type_: miracle_container_type,
+    pub type_: u32,
     #[doc = " If `TRUE`, the container is floating within its workspace.\n\n This is only set if #type is #miracle_container_type_parent."]
     pub is_floating: i32,
-    #[doc = " Describes how a container is laying out its content.\n\n This is only set if #type is #miracle_container_type_parent."]
-    pub layout_scheme: miracle_layout_scheme,
+    #[doc = " Describes how a container is laying out its content.\n\n This is #miracle_layut_scheme.\n\n This is only set if #type is #miracle_container_type_parent."]
+    pub layout_scheme: u32,
     #[doc = " The number of child containers inside of this container.\n\n Use #miracle_plugin_get_child_from_container to query the container by index."]
     pub num_child_containers: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
     pub internal: u64,
-}
-impl Default for miracle_container_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
 }
 #[doc = " Describes a workspace."]
 #[repr(C)]

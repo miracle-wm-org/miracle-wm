@@ -71,6 +71,11 @@ pub extern "C" fn place_new_window(
                         }
                     }
                 }
+
+                if let Some(container) = context.get_workspace_tree(&workspace, 0) {
+                    placement.freestyle.top_left.x = -100;
+                    placement.freestyle.top_left.y = -100;
+                }
             }
 
             placement.freestyle.size.width = 800;

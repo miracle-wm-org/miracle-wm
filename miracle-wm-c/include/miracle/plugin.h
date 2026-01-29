@@ -194,7 +194,7 @@ extern "C"
         /// The type of the container.
         ///
         /// This is a #miracle_container_type.
-        enum miracle_container_type type;
+        uint32_t type;
 
         /// If `TRUE`, the container is floating within its workspace.
         ///
@@ -203,8 +203,10 @@ extern "C"
 
         /// Describes how a container is laying out its content.
         ///
+        /// This is #miracle_layut_scheme.
+        ///
         /// This is only set if #type is #miracle_container_type_parent.
-        miracle_layout_scheme layout_scheme;
+        uint32_t layout_scheme;
 
         /// The number of child containers inside of this container.
         ///

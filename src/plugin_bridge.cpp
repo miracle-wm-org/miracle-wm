@@ -221,9 +221,9 @@ miracle_workspace_t PluginBridge::workspace_on_output_at(miracle_output_t const&
     return from_workspace(miracle_output->get_workspaces()[index]);
 }
 
-miracle_container_t PluginBridge::tree_at_index(miracle_workspace_t const& workspace, uint32_t index)
+miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t index)
 {
-    auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
+    auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_id));
     auto const trees = miracle_workspace->trees();
     return from_parent(trees[index]);
 }
