@@ -256,17 +256,11 @@ extern "C"
     /// Describes an output.
     typedef struct
     {
-        /// If `TRUE`, the output is set, otherwise `FALSE`.
-        int32_t is_set;
-
         /// The position of the output.
         miracle_point_t position;
 
         /// The size of the output.
         miracle_size_t size;
-
-        /// The name of the output.
-        const char* name;
 
         /// If `TRUE`, the output is the primary output, otherwise `FALSE`.
         int32_t is_primary;

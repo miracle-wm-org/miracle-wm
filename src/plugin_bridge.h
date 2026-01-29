@@ -19,10 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_PLUGIN_BRIDGE_H
 
 #include "miracle/plugin.h"
+#include <functional>
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 #include <variant>
-#include <functional>
 
 namespace miracle
 {
@@ -34,7 +34,11 @@ template <typename T>
 class PluginBridgeObjectHandle
 {
 public:
-    explicit PluginBridgeObjectHandle(T&& o, std::function<void()>&& deleter) : o(std::move(o)), deleter(std::move(deleter)) {}
+    explicit PluginBridgeObjectHandle(T&& o, std::function<void()>&& deleter) :
+        o(std::move(o)),
+        deleter(std::move(deleter))
+    {
+    }
     ~PluginBridgeObjectHandle()
     {
         deleter();
@@ -55,6 +59,12 @@ private:
 class PluginBridge
 {
 public:
+    struct OutputResult
+    {
+        miracle_output_t output;
+        std::string name;
+    };
+
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowManagerToolsWindowController> const& window_controller);
@@ -62,13 +72,14 @@ public:
     miracle_workspace_t workspace(miracle_window_info_t const& window_info);
     miracle_output_t output(miracle_workspace_t const& workspace);
     uint32_t num_outputs();
-    miracle_output_t output_at(uint32_t index);
+    OutputResult output_at(uint32_t index);
     uint32_t num_workspaces_on_output(miracle_output_t const& output);
     miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index);
     miracle_container_t tree_at_index(miracle_workspace_t const& workspace, uint32_t index);
     miracle_container_t child_at(miracle_container_t const& parent, uint32_t index);
     miracle_window_info_t get_window(miracle_container_t const& container);
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
+
 private:
     /// This is the information expected to be on a #miracle_window_info_t.
     struct PluginWindowInfo

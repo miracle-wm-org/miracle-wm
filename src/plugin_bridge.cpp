@@ -15,12 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "plugin_bridge.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
-#include "plugin_bridge.h"
 #include "window_manager_tools_window_controller.h"
 #include "workspace_interface.h"
 #include <miral/application_info.h>
@@ -66,15 +66,10 @@ miracle_workspace_t from_workspace(std::shared_ptr<WorkspaceInterface> const& wo
 
 miracle_output_t from_output(std::shared_ptr<OutputInterface> const& output)
 {
-    if (output == nullptr)
-        return { .is_set = false };
-
     auto const area = output->get_area();
     return {
-        .is_set = true,
         .position = from_point(area.top_left),
         .size = from_size(area.size),
-        .name = output->name().c_str(),
         .is_primary = output->is_primary(),
         .internal = reinterpret_cast<uint64_t>(output.get())
     };
@@ -169,12 +164,12 @@ miracle_workspace_t PluginBridge::workspace(miracle_window_info_t const& window_
 miracle_output_t PluginBridge::output(miracle_workspace_t const& workspace)
 {
     auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace.internal));
-    if (!miracle_workspace)
-    {
-        return {
-            .is_set = false,
-        };
-    }
+    // if (!miracle_workspace)
+    // {
+    //     return {
+    //         .is_set = false,
+    //     };
+    // }
 
     return from_output(miracle_workspace->get_output());
 }
@@ -184,9 +179,12 @@ uint32_t PluginBridge::num_outputs()
     return output_manager->outputs().size();
 }
 
-miracle_output_t PluginBridge::output_at(uint32_t index)
+PluginBridge::OutputResult PluginBridge::output_at(uint32_t index)
 {
-    return from_output(output_manager->outputs()[index]);
+    return OutputResult {
+        from_output(output_manager->outputs()[index]),
+        output_manager->outputs()[index]->name()
+    };
 }
 
 uint32_t PluginBridge::num_workspaces_on_output(miracle_output_t const& output)
@@ -240,14 +238,13 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
 {
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, spec);
     plugin_window_infos.push_back(plugin_window_info);
-    return PluginBridgeObjectHandle<miracle_window_info_t>({
-        .window_type = spec.type().value_or(mir_window_type_normal),
-        .state = spec.state().value_or(mir_window_state_restored),
-        .top_left = from_point(spec.top_left().value_or(geom::Point())),
-        .size = from_size(spec.size().value_or(geom::Size(800, 600))),
-        .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
-        .internal = reinterpret_cast<uint64_t>(plugin_window_info.get())
-    }, [this, plugin_window_info=plugin_window_info]
+    return PluginBridgeObjectHandle<miracle_window_info_t>({ .window_type = spec.type().value_or(mir_window_type_normal),
+                                                               .state = spec.state().value_or(mir_window_state_restored),
+                                                               .top_left = from_point(spec.top_left().value_or(geom::Point())),
+                                                               .size = from_size(spec.size().value_or(geom::Size(800, 600))),
+                                                               .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
+                                                               .internal = reinterpret_cast<uint64_t>(plugin_window_info.get()) },
+        [this, plugin_window_info = plugin_window_info]
     {
         std::erase(plugin_window_infos, plugin_window_info);
     });

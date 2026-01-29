@@ -43,7 +43,13 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager(std::unique_ptr<PluginBridge> bridge);
+    /// Initialize the plugin bridge.
+    ///
+    /// This must be called after construction.
+    ///
+    /// TODO: This is a slightly unfortunate thing that I may want to alleviate someday, but
+    ///  for now its not a huge deal.
+    void initialize(std::unique_ptr<PluginBridge> bridge);
 
     /// Load a WebAssembly module from the provided \p path.
     ///
@@ -103,72 +109,78 @@ public:
         miral::WindowSpecification const& spec);
 
 private:
-    template <auto DeleteFn>
-    struct WasmEdgeDeleter
+    struct Self
     {
-        template <typename T>
-        void operator()(T* ptr) const noexcept
+        template <auto DeleteFn>
+        struct WasmEdgeDeleter
         {
-            if (ptr)
+            template <typename T>
+            void operator()(T* ptr) const noexcept
             {
-                DeleteFn(ptr);
+                if (ptr)
+                {
+                    DeleteFn(ptr);
+                }
             }
-        }
+        };
+
+        using ConfigurePtr = std::unique_ptr<WasmEdge_ConfigureContext,
+            WasmEdgeDeleter<WasmEdge_ConfigureDelete>>;
+
+        using StorePtr = std::unique_ptr<WasmEdge_StoreContext,
+            WasmEdgeDeleter<WasmEdge_StoreDelete>>;
+
+        using VMPtr = std::unique_ptr<WasmEdge_VMContext,
+            WasmEdgeDeleter<WasmEdge_VMDelete>>;
+
+        using LoaderPtr = std::unique_ptr<WasmEdge_LoaderContext,
+            WasmEdgeDeleter<WasmEdge_LoaderDelete>>;
+
+        using ValidtorPtr = std::unique_ptr<WasmEdge_ValidatorContext,
+            WasmEdgeDeleter<WasmEdge_ValidatorDelete>>;
+
+        using ExecutorPtr = std::unique_ptr<WasmEdge_ExecutorContext,
+            WasmEdgeDeleter<WasmEdge_ExecutorDelete>>;
+
+        using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
+            WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
+
+        using FunctionTypePtr = std::unique_ptr<WasmEdge_FunctionTypeContext,
+            WasmEdgeDeleter<WasmEdge_FunctionTypeDelete>>;
+
+        enum class ProvidedFunction : std::uint8_t
+        {
+            add_points,
+            animate,
+            place_new_window,
+            max
+        };
+
+        struct ModuleInstance
+        {
+            ModuleInstancePtr module_context;
+            std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
+            PluginHandle handle;
+            std::string name;
+        };
+
+        explicit Self(std::unique_ptr<PluginBridge> bridge);
+        void create_host_module();
+
+        std::unique_ptr<PluginBridge> bridge;
+        ConfigurePtr configure_context;
+        StorePtr store_context;
+        LoaderPtr loader_context;
+        ValidtorPtr validator_context;
+        ExecutorPtr executor_context;
+        ModuleInstancePtr wasi_module_instance;
+        ModuleInstancePtr host_module;
+        PluginHandle next_plugin_handle = 1;
+        std::vector<ModuleInstance> loaded_modules;
     };
 
-    using ConfigurePtr = std::unique_ptr<WasmEdge_ConfigureContext,
-        WasmEdgeDeleter<WasmEdge_ConfigureDelete>>;
-
-    using StorePtr = std::unique_ptr<WasmEdge_StoreContext,
-        WasmEdgeDeleter<WasmEdge_StoreDelete>>;
-
-    using VMPtr = std::unique_ptr<WasmEdge_VMContext,
-        WasmEdgeDeleter<WasmEdge_VMDelete>>;
-
-    using LoaderPtr = std::unique_ptr<WasmEdge_LoaderContext,
-        WasmEdgeDeleter<WasmEdge_LoaderDelete>>;
-
-    using ValidtorPtr = std::unique_ptr<WasmEdge_ValidatorContext,
-        WasmEdgeDeleter<WasmEdge_ValidatorDelete>>;
-
-    using ExecutorPtr = std::unique_ptr<WasmEdge_ExecutorContext,
-        WasmEdgeDeleter<WasmEdge_ExecutorDelete>>;
-
-    using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
-        WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
-
-    using FunctionTypePtr = std::unique_ptr<WasmEdge_FunctionTypeContext,
-        WasmEdgeDeleter<WasmEdge_FunctionTypeDelete>>;
-
-    enum class ProvidedFunction : std::uint8_t
-    {
-        add_points,
-        animate,
-        place_new_window,
-        max
-    };
-
-    struct ModuleInstance
-    {
-        ModuleInstancePtr module_context;
-        std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
-        PluginHandle handle;
-        std::string name;
-    };
-
-    void create_host_module();
-
-    std::unique_ptr<PluginBridge> bridge;
     std::mutex mutex;
-    ConfigurePtr configure_context;
-    StorePtr store_context;
-    LoaderPtr loader_context;
-    ValidtorPtr validator_context;
-    ExecutorPtr executor_context;
-    ModuleInstancePtr wasi_module_instance;
-    ModuleInstancePtr host_module;
-    PluginHandle next_plugin_handle = 1;
-    std::vector<ModuleInstance> loaded_modules;
+    std::unique_ptr<Self> self;
 };
 }
 #else
@@ -192,7 +204,10 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager(std::unique_ptr<PluginBridge> bridge) : bridge(std::move(bridge)) {}
+    PluginManager(std::unique_ptr<PluginBridge> bridge) :
+        bridge(std::move(bridge))
+    {
+    }
     PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"

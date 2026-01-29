@@ -1,9 +1,9 @@
 use miracle_plugin_rs::{
-    Context, DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
+    Context, DepthLayer, Output, Placement, WindowInfo, WindowManagementStrategy,
 };
 
 #[unsafe(no_mangle)]
@@ -45,11 +45,18 @@ pub extern "C" fn place_new_window(
     let window_info = unsafe { WindowInfo::from_c(window_info.as_ref().unwrap()) };
     let application = context.get_application(&window_info);
     let mut placement: Placement = Default::default();
+    let num_outputs = context.num_outputs();
     if let Some(application) = application {
+        let output = context.get_output_at(0);
         if application.name == "gedit" {
             placement.strategy = WindowManagementStrategy::Freestyle;
-            placement.freestyle.top_left.x = 100;
-            placement.freestyle.top_left.y = 100;
+            if let Some(output) = output {
+                placement.freestyle.top_left.x = output.size.width / 2;
+                placement.freestyle.top_left.y = output.size.height / 2;
+            } else {
+                placement.freestyle.top_left.x = 100;
+                placement.freestyle.top_left.y = 100;
+            }
             placement.freestyle.size.width = 800;
             placement.freestyle.size.height = 600;
             placement.freestyle.depth_layer = DepthLayer::Application;

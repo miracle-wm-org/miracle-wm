@@ -1283,8 +1283,6 @@ impl Workspace {
 /// Output information.
 #[derive(Debug, Clone)]
 pub struct Output {
-    /// Whether the output is set.
-    pub is_set: bool,
     /// The position of the output.
     pub position: Point,
     /// The size of the output.
@@ -1298,23 +1296,12 @@ pub struct Output {
 }
 
 impl Output {
-    /// Create from the C struct.
+    /// Create from the C struct and a name string.
     ///
-    /// # Safety
-    /// The `name` pointer must be valid and null-terminated.
-    pub unsafe fn from_c(value: &bindings::miracle_output_t) -> Self {
-        let name = if value.name.is_null() {
-            String::new()
-        } else {
-            unsafe {
-                std::ffi::CStr::from_ptr(value.name)
-                    .to_string_lossy()
-                    .into_owned()
-            }
-        };
-
+    /// The name is passed separately because the C struct doesn't contain
+    /// the name directly (it's written to a separate buffer by the host).
+    pub fn from_c_with_name(value: &bindings::miracle_output_t, name: String) -> Self {
         Self {
-            is_set: value.is_set != 0,
             position: value.position.into(),
             size: value.size.into(),
             name,
@@ -1477,14 +1464,16 @@ mod ffi {
         //     workspace: *mut bindings::miracle_workspace_t,
         // ) -> bindings::miracle_output_t;
 
-        // /// Retrieve the number of outputs.
-        // pub fn miracle_get_num_outputs(context: *mut bindings::miracle_context_t) -> u32;
+        /// Retrieve the number of outputs.
+        pub fn miracle_num_outputs() -> u32;
 
-        // /// Retrieve an output by index.
-        // pub fn miracle_get_output_at(
-        //     context: *mut bindings::miracle_context_t,
-        //     index: u32,
-        // ) -> bindings::miracle_output_t;
+        /// Retrieve an output by index.
+        pub fn miracle_get_output_at(
+            index: u32,
+            out_ptr: i32,
+            name_buf: i32,
+            name_buf_len: i32,
+        ) -> i32;
 
         // /// Retrieve a tree from a workspace by index.
         // pub fn miracle_workspace_get_tree(
@@ -1540,7 +1529,10 @@ impl Context {
                 .unwrap_or(NAME_BUF_LEN);
             let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-            Some(ApplicationInfo { name, internal: internal as u64 })
+            Some(ApplicationInfo {
+                name,
+                internal: internal as u64,
+            })
         }
     }
 
@@ -1563,28 +1555,53 @@ impl Context {
     //     }
     // }
 
-    // /// Get the number of outputs.
-    // pub fn get_output_count(&mut self) -> u32 {
-    //     unsafe { ffi::miracle_get_num_outputs(self.as_raw_mut()) }
-    // }
+    /// Get the number of outputs.
+    pub fn num_outputs(&mut self) -> u32 {
+        unsafe { ffi::miracle_num_outputs() }
+    }
 
-    // /// Get an output by index.
-    // ///
-    // /// Returns `None` if the index is out of bounds.
-    // pub fn get_output_at(&mut self, index: u32) -> Option<Output> {
-    //     if index >= self.get_output_count() {
-    //         return None;
-    //     }
-    //     let result = unsafe { ffi::miracle_get_output_at(self.as_raw_mut(), index) };
-    //     let output = unsafe { Output::from_c(&result) };
-    //     if output.is_set { Some(output) } else { None }
-    // }
+    /// Get an output by index.
+    ///
+    /// Returns `None` if the index is out of bounds or if the call fails.
+    pub fn get_output_at(&mut self, index: u32) -> Option<Output> {
+        if index >= self.num_outputs() {
+            return None;
+        }
 
-    // /// Get all outputs.
-    // pub fn get_outputs(&mut self) -> Vec<Output> {
-    //     let count = self.get_output_count();
-    //     (0..count).filter_map(|i| self.get_output_at(i)).collect()
-    // }
+        const NAME_BUF_LEN: usize = 256;
+        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_get_output_at(
+                index,
+                output.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let output = output.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Output::from_c_with_name(&output, name))
+        }
+    }
+
+    /// Get all outputs.
+    pub fn get_outputs(&mut self) -> Vec<Output> {
+        let count = self.num_outputs();
+        (0..count).filter_map(|i| self.get_output_at(i)).collect()
+    }
 
     // /// Get a tree from a workspace by index.
     // ///

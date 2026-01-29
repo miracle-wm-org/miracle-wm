@@ -415,29 +415,16 @@ impl Default for miracle_workspace_t {
 }
 #[doc = " Describes an output."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_output_t {
-    #[doc = " If `TRUE`, the output is set, otherwise `FALSE`."]
-    pub is_set: i32,
     #[doc = " The position of the output."]
     pub position: miracle_point_t,
     #[doc = " The size of the output."]
     pub size: miracle_size_t,
-    #[doc = " The name of the output."]
-    pub name: *const ::std::os::raw::c_char,
     #[doc = " If `TRUE`, the output is the primary output, otherwise `FALSE`."]
     pub is_primary: i32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
-}
-impl Default for miracle_output_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
 }
 #[doc = " If selected, the plugin lets miracle place the window according\n to its own strategy."]
 pub const miracle_window_management_strategy_t_miracle_window_management_strategy_system:

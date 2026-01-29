@@ -178,7 +178,7 @@ Policy::Policy(
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
-    plugin_manager(std::make_shared<PluginManager>(std::make_unique<PluginBridge>(output_manager, window_controller))),
+    plugin_manager(std::make_shared<PluginManager>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
         tools, animator, plugin_manager, server.the_main_loop(), state, config)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
@@ -222,7 +222,7 @@ Policy::Policy(
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    plugin_manager->load_wasm_module("/home/matthew/Github/miracle-wm/plugins/plugin-playground/target/wasm32-wasip1/release/plugin_playground.wasm", "playground");
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller));
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
