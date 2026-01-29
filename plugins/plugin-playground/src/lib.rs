@@ -1,9 +1,9 @@
 use miracle_plugin_rs::{
+    Context, DepthLayer, Output, Placement, WindowInfo, WindowManagementStrategy,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
-    Context, DepthLayer, Output, Placement, WindowInfo, WindowManagementStrategy,
 };
 
 #[unsafe(no_mangle)]
@@ -62,8 +62,13 @@ pub extern "C" fn place_new_window(
             if let Some(workspace) = workspace {
                 if let Some(number) = workspace.number {
                     if number == 2 {
-                        placement.freestyle.top_left.x = 0;
-                        placement.freestyle.top_left.y = 0;
+                        if let Some(output) = context.get_workspace_output(&workspace) {
+                            placement.freestyle.top_left.x = output.size.width / 4;
+                            placement.freestyle.top_left.y = output.size.height / 4;
+                        } else {
+                            placement.freestyle.top_left.x = 0;
+                            placement.freestyle.top_left.y = 0;
+                        }
                     }
                 }
             }

@@ -79,6 +79,7 @@ public:
     miracle_output_t output(miracle_workspace_t const& workspace);
     uint32_t num_outputs();
     OutputResult output_at(uint32_t index);
+    OutputResult output_for_workspace(uint64_t workspace_id);
     uint32_t num_workspaces_on_output(miracle_output_t const& output);
     miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index);
     miracle_container_t tree_at_index(miracle_workspace_t const& workspace, uint32_t index);

@@ -1432,11 +1432,13 @@ mod ffi {
             name_buf_len: i32,
         ) -> i32;
 
-        // /// Retrieve the output that a workspace is on.
-        // pub fn miracle_workspace_get_output(
-        //     context: *mut bindings::miracle_context_t,
-        //     workspace: *mut bindings::miracle_workspace_t,
-        // ) -> bindings::miracle_output_t;
+        /// Retrieve the output that a workspace is on.
+        pub fn miracle_workspace_get_output(
+            workspace_internal: i64,
+            out_ptr: i32,
+            name_buf: i32,
+            name_buf_len: i32,
+        ) -> i32;
 
         /// Retrieve the number of outputs.
         pub fn miracle_num_outputs() -> u32;
@@ -1544,14 +1546,36 @@ impl Context {
         }
     }
 
-    // /// Get the output that a workspace is on.
-    // pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Output {
-    //     unsafe {
-    //         let mut c_workspace = workspace.as_c();
-    //         let result = ffi::miracle_workspace_get_output(self.as_raw_mut(), &mut c_workspace);
-    //         Output::from_c(&result)
-    //     }
-    // }
+    /// Get the output that a workspace is on.
+    pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Option<Output> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_workspace_get_output(
+                workspace.internal as i64,
+                output.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let output = output.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Output::from_c_with_name(&output, name))
+        }
+    }
 
     /// Get the number of outputs.
     pub fn num_outputs(&mut self) -> u32 {

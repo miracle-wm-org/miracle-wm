@@ -99,27 +99,14 @@ WasmEdge_Result host_miracle_num_outputs(
     return WasmEdge_Result_Success;
 }
 
-WasmEdge_Result host_miracle_get_output_at(
-    void* data,
-    WasmEdge_CallingFrameContext const* frame,
-    WasmEdge_Value const* params,
-    WasmEdge_Value* returns)
+WasmEdge_Result return_output_internal(
+    WasmEdge_MemoryInstanceContext* memory,
+    int32_t const out_ptr,
+    int32_t const name_buffer_ptr,
+    int32_t const name_buffer_length,
+    WasmEdge_Value* returns,
+    PluginBridge::OutputResult const& output)
 {
-    auto* memory = get_memory_from_frame(frame);
-    if (!memory)
-    {
-        mir::log_error("host_miracle_get_output_at: memory not found");
-        return WasmEdge_Result_Fail;
-    }
-
-    auto const bridge = static_cast<PluginBridge*>(data);
-    uint32_t const index = WasmEdge_ValueGetI32(params[0]);
-    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
-    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
-    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
-
-    auto const output = bridge->output_at(index);
-
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     uint8_t* output_buf = mem_base + out_ptr;
     std::memcpy(output_buf, &output.output, sizeof(output.output));
@@ -146,6 +133,52 @@ WasmEdge_Result host_miracle_get_output_at(
     // Return success
     returns[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_get_output_at(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_get_output_at: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint32_t const index = WasmEdge_ValueGetI32(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
+
+    auto const output = bridge->output_at(index);
+    return return_output_internal(memory, out_ptr, name_buffer_ptr, name_buffer_length, returns, output);
+}
+
+WasmEdge_Result host_miracle_workspace_get_output(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_get_output_at: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const workspace_address_ptr = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
+
+    auto const output = bridge->output_for_workspace(workspace_address_ptr);
+    return return_output_internal(memory, out_ptr, name_buffer_ptr, name_buffer_length, returns, output);
 }
 
 WasmEdge_Result host_miracle_window_info_get_workspace(
@@ -305,6 +338,10 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_window_info_get_workspace",
         create_func_type({ i64, i32, i32, i32 }, { i32 }),
         host_miracle_window_info_get_workspace, bridge.get());
+
+    add_host_function(module, "miracle_workspace_get_output",
+        create_func_type({ i64, i32, i32, i32 }, { i32 }),
+        host_miracle_workspace_get_output, bridge.get());
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);

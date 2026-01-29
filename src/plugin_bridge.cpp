@@ -194,6 +194,15 @@ PluginBridge::OutputResult PluginBridge::output_at(uint32_t index)
     };
 }
 
+PluginBridge::OutputResult PluginBridge::output_for_workspace(uint64_t workspace_id)
+{
+    auto const workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_id));
+    return OutputResult {
+        from_output(workspace->get_output()),
+        workspace->get_output()->name()
+    };
+}
+
 uint32_t PluginBridge::num_workspaces_on_output(miracle_output_t const& output)
 {
     auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output.internal));
