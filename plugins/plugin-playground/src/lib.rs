@@ -42,13 +42,14 @@ pub extern "C" fn place_new_window(
     window_info: *const miracle_window_info_t,
 ) {
     let mut context = Context {};
-    let window_info = unsafe { WindowInfo::from_c(window_info.as_ref().unwrap()) };
-    let application = context.get_application(&window_info);
+    // TODO: Pass down the name of the window properly.
+    let window_info =
+        unsafe { WindowInfo::from_c_with_name(window_info.as_ref().unwrap(), String::from("")) };
+    let application = window_info.application();
     let mut placement: Placement = Default::default();
-    let num_outputs = context.num_outputs();
     if let Some(application) = application {
         let output = context.get_output_at(0);
-        let workspace = context.get_window_workspace(&window_info);
+        let workspace = window_info.workspace();
 
         // Note: This is just an example plugin that places gedit windows in specific locations.
         // We are specifically testing out various methods here just to demonstrate the API.
@@ -65,7 +66,7 @@ pub extern "C" fn place_new_window(
             if let Some(workspace) = workspace {
                 if let Some(number) = workspace.number {
                     if number == 2 {
-                        if let Some(output) = context.get_workspace_output(&workspace) {
+                        if let Some(output) = workspace.output() {
                             placement.freestyle.top_left.x = output.size.width / 4;
                             placement.freestyle.top_left.y = output.size.height / 4;
                         } else {
@@ -75,10 +76,10 @@ pub extern "C" fn place_new_window(
                     }
                 }
 
-                if let Some(container) = context.get_workspace_tree(&workspace, 0) {
+                if let Some(container) = workspace.tree_at(0) {
                     placement.freestyle.top_left.x = -100;
                     placement.freestyle.top_left.y = -100;
-                    if let Some(child) = context.get_container_child_at(&container, 0) {
+                    if let Some(child) = container.child_at(0) {
                         placement.freestyle.top_left.x = -400;
                         placement.freestyle.top_left.y = -400;
                     }

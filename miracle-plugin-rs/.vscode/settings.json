@@ -1,0 +1,5 @@
+{
+  "chat.agent.codeBlockProgress": false,
+  "chat.agent.enabled": false,
+  "rust-analyzer.cargo.target": "wasm32-wasip1"
+}

@@ -1132,6 +1132,8 @@ pub struct WindowInfo {
     pub size: Size,
     /// The depth layer of the window.
     pub depth_layer: DepthLayer,
+    /// The name of the window.
+    pub name: String,
     /// Internal pointer for C interop.
     internal: u64,
 }
@@ -1141,29 +1143,79 @@ impl WindowInfo {
     ///
     /// # Safety
     /// The `title` pointer must be valid and null-terminated.
-    pub unsafe fn from_c(value: &bindings::miracle_window_info_t) -> Self {
+    pub unsafe fn from_c_with_name(value: &bindings::miracle_window_info_t, name: String) -> Self {
         Self {
             window_type: WindowType::try_from(value.window_type).unwrap_or_default(),
             state: WindowState::try_from(value.state).unwrap_or_default(),
             top_left: value.top_left.into(),
             size: value.size.into(),
             depth_layer: DepthLayer::try_from(value.depth_layer).unwrap_or_default(),
+            name,
             internal: value.internal,
         }
     }
 
-    /// Get the raw C struct for interop.
-    ///
-    /// Note: The title pointer will be null in the returned struct.
-    /// Use this only for passing to FFI functions that use the internal pointer.
-    pub fn as_c(&self) -> bindings::miracle_window_info_t {
-        bindings::miracle_window_info_t {
-            window_type: self.window_type.into(),
-            state: self.state.into(),
-            top_left: self.top_left.into(),
-            size: self.size.into(),
-            depth_layer: self.depth_layer.into(),
-            internal: self.internal,
+    /// Get the application that owns this window.
+    pub fn application(&self) -> Option<ApplicationInfo> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let internal = ffi::miracle_window_info_get_application(
+                self.internal as i64,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if internal == -1 {
+                return None;
+            }
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(ApplicationInfo {
+                name,
+                internal: internal as u64,
+            })
+        }
+    }
+
+    /// Get the workspace that this window is on.
+    pub fn workspace(&self) -> Option<Workspace> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_window_info_get_workspace(
+                self.internal as i64,
+                workspace.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let workspace = workspace.assume_init();
+            if workspace.is_set == 0 {
+                return None;
+            }
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Workspace::from_c_with_name(&workspace, name))
         }
     }
 }
@@ -1181,6 +1233,84 @@ pub struct Container {
     pub num_children: u32,
     /// Internal pointer for C interop.
     internal: u64,
+}
+
+impl Container {
+    /// Get a child container from the parent container by index.
+    ///
+    /// Returns `None` if the index is out of bounds or if the container
+    /// is not of type `Parent`.
+    pub fn child_at(&self, index: u32) -> Option<Container> {
+        if self.container_type != ContainerType::Parent || index >= self.num_children {
+            return None;
+        }
+
+        let mut child_container =
+            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        unsafe {
+            let result = ffi::miracle_container_get_child_at(
+                self.internal as i64,
+                index,
+                child_container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let child_container = child_container.assume_init();
+            Some(Container::from(child_container))
+        }
+    }
+
+    /// Get all children from a parent container.
+    ///
+    /// Returns an empty vector if the container is not of type `Parent`.
+    pub fn get_children(&self) -> Vec<Container> {
+        if self.container_type != ContainerType::Parent {
+            return Vec::new();
+        }
+        (0..self.num_children)
+            .filter_map(|i| self.child_at(i))
+            .collect()
+    }
+
+    /// Get the window info from a window container.
+    ///
+    /// Returns `None` if the container is not of type `Window`.
+    pub fn window(&self) -> Option<WindowInfo> {
+        if self.container_type != ContainerType::Window {
+            return None;
+        }
+
+        const NAME_BUF_LEN: usize = 256;
+        let mut window = std::mem::MaybeUninit::<crate::bindings::miracle_window_info_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_container_get_window(
+                self.internal as i64,
+                window.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let window = window.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(WindowInfo::from_c_with_name(&window, name))
+        }
+    }
 }
 
 impl From<bindings::miracle_container_t> for Container {
@@ -1227,9 +1357,67 @@ impl Workspace {
         }
     }
 
-    /// Get the internal pointer for C interop.
-    pub fn internal_ptr(&self) -> u64 {
-        self.internal
+    /// Get the output that this workspace is on.
+    pub fn output(&self) -> Option<Output> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_workspace_get_output(
+                self.internal as i64,
+                output.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let output = output.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Output::from_c_with_name(&output, name))
+        }
+    }
+
+    /// Get a tree from the workspace by index.
+    ///
+    /// Returns `None` if the index is out of bounds.
+    pub fn tree_at(&self, index: u32) -> Option<Container> {
+        if index >= self.num_trees {
+            return None;
+        }
+
+        let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        unsafe {
+            let result = ffi::miracle_workspace_get_tree(
+                self.internal as i64,
+                index,
+                container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let container = container.assume_init();
+            Some(Container::from(container))
+        }
+    }
+
+    /// Get all trees from the workspace.
+    pub fn trees(&self) -> Vec<Container> {
+        (0..self.num_trees)
+            .filter_map(|i| self.tree_at(i))
+            .collect()
     }
 }
 
@@ -1443,11 +1631,13 @@ mod ffi {
             out_ptr: i32,
         ) -> i32;
 
-        // /// Retrieve the window info from a window container.
-        // pub fn miracle_container_get_window(
-        //     context: *mut bindings::miracle_context_t,
-        //     container: *mut bindings::miracle_container_t,
-        // ) -> bindings::miracle_window_info_t;
+        /// Retrieve the window info from a window container.
+        pub fn miracle_container_get_window(
+            container_internal: i64,
+            out_ptr: i32,
+            name_buf: i32,
+            name_buf_len: i32,
+        ) -> i32;
     }
 }
 
@@ -1460,101 +1650,6 @@ mod ffi {
 pub struct Context {}
 
 impl Context {
-    /// Get the application info for a window.
-    pub fn get_application(&mut self, window_info: &WindowInfo) -> Option<ApplicationInfo> {
-        const NAME_BUF_LEN: usize = 256;
-        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
-
-        unsafe {
-            let internal = ffi::miracle_window_info_get_application(
-                window_info.internal as i64,
-                name_buf.as_mut_ptr() as i32,
-                NAME_BUF_LEN as i32,
-            );
-
-            if internal == -1 {
-                return None;
-            }
-
-            // Find the null terminator to get the actual string length
-            let name_len = name_buf
-                .iter()
-                .position(|&c| c == 0)
-                .unwrap_or(NAME_BUF_LEN);
-            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
-
-            Some(ApplicationInfo {
-                name,
-                internal: internal as u64,
-            })
-        }
-    }
-
-    /// Get the workspace that a window is on.
-    pub fn get_window_workspace(&mut self, window_info: &WindowInfo) -> Option<Workspace> {
-        const NAME_BUF_LEN: usize = 256;
-        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
-        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
-
-        unsafe {
-            let result = ffi::miracle_window_info_get_workspace(
-                window_info.internal as i64,
-                workspace.as_mut_ptr() as i32,
-                name_buf.as_mut_ptr() as i32,
-                NAME_BUF_LEN as i32,
-            );
-
-            if result != 0 {
-                return None;
-            }
-
-            let workspace = workspace.assume_init();
-            if workspace.is_set == 0 {
-                return None;
-            }
-
-            // Find the null terminator to get the actual string length
-            let name_len = name_buf
-                .iter()
-                .position(|&c| c == 0)
-                .unwrap_or(NAME_BUF_LEN);
-            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
-
-            Some(Workspace::from_c_with_name(&workspace, name))
-        }
-    }
-
-    /// Get the output that a workspace is on.
-    pub fn get_workspace_output(&mut self, workspace: &Workspace) -> Option<Output> {
-        const NAME_BUF_LEN: usize = 256;
-        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
-        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
-
-        unsafe {
-            let result = ffi::miracle_workspace_get_output(
-                workspace.internal as i64,
-                output.as_mut_ptr() as i32,
-                name_buf.as_mut_ptr() as i32,
-                NAME_BUF_LEN as i32,
-            );
-
-            if result != 0 {
-                return None;
-            }
-
-            let output = output.assume_init();
-
-            // Find the null terminator to get the actual string length
-            let name_len = name_buf
-                .iter()
-                .position(|&c| c == 0)
-                .unwrap_or(NAME_BUF_LEN);
-            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
-
-            Some(Output::from_c_with_name(&output, name))
-        }
-    }
-
     /// Get the number of outputs.
     pub fn num_outputs(&mut self) -> u32 {
         unsafe { ffi::miracle_num_outputs() }
@@ -1602,93 +1697,4 @@ impl Context {
         let count = self.num_outputs();
         (0..count).filter_map(|i| self.get_output_at(i)).collect()
     }
-
-    /// Get a tree from a workspace by index.
-    ///
-    /// Returns `None` if the index is out of bounds.
-    pub fn get_workspace_tree(&mut self, workspace: &Workspace, index: u32) -> Option<Container> {
-        if index >= workspace.num_trees {
-            return None;
-        }
-
-        let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
-        unsafe {
-            let result = ffi::miracle_workspace_get_tree(
-                workspace.internal_ptr() as i64,
-                index,
-                container.as_mut_ptr() as i32,
-            );
-
-            if result != 0 {
-                return None;
-            }
-
-            let container = container.assume_init();
-            Some(Container::from(container))
-        }
-    }
-
-    // /// Get all trees from a workspace.
-    pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {
-        (0..workspace.num_trees)
-            .filter_map(|i| self.get_workspace_tree(workspace, i))
-            .collect()
-    }
-
-    /// Get a child container from a parent container by index.
-    ///
-    /// Returns `None` if the index is out of bounds or if the container
-    /// is not of type `Parent`.
-    pub fn get_container_child_at(
-        &mut self,
-        container: &Container,
-        index: u32,
-    ) -> Option<Container> {
-        if container.container_type != ContainerType::Parent || index >= container.num_children {
-            return None;
-        }
-
-        let mut child_container =
-            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
-        unsafe {
-            let result = ffi::miracle_container_get_child_at(
-                container.internal as i64,
-                index,
-                child_container.as_mut_ptr() as i32,
-            );
-
-            if result != 0 {
-                return None;
-            }
-
-            let child_container = child_container.assume_init();
-            Some(Container::from(child_container))
-        }
-    }
-
-    /// Get all children from a parent container.
-    ///
-    /// Returns an empty vector if the container is not of type `Parent`.
-    pub fn get_container_children(&mut self, container: &Container) -> Vec<Container> {
-        if container.container_type != ContainerType::Parent {
-            return Vec::new();
-        }
-        (0..container.num_children)
-            .filter_map(|i| self.get_container_child_at(container, i))
-            .collect()
-    }
-
-    // /// Get the window info from a window container.
-    // ///
-    // /// Returns `None` if the container is not of type `Window`.
-    // pub fn get_container_window(&mut self, container: &Container) -> Option<WindowInfo> {
-    //     if container.container_type != ContainerType::Window {
-    //         return None;
-    //     }
-    //     unsafe {
-    //         let mut c_container = container.as_c();
-    //         let result = ffi::miracle_container_get_window(self.as_raw_mut(), &mut c_container);
-    //         Some(WindowInfo::from_c(&result))
-    //     }
-    // }
 }

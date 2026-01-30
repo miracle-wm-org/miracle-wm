@@ -273,11 +273,11 @@ WasmEdge_Result host_miracle_container_get_child_at(
     }
 
     auto const bridge = static_cast<PluginBridge*>(data);
-    uint64_t const workspace_address = WasmEdge_ValueGetI64(params[0]);
+    uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
     uint32_t const index = WasmEdge_ValueGetI32(params[1]);
     int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
 
-    auto const container = bridge->child_at(workspace_address, index);
+    auto const container = bridge->child_at(container_address, index);
 
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     uint8_t* container_buf = mem_base + out_ptr;
