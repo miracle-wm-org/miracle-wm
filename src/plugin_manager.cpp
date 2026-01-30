@@ -259,6 +259,35 @@ WasmEdge_Result host_miracle_workspace_get_tree(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_container_get_child_at(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_container_get_child_at: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const workspace_address = WasmEdge_ValueGetI64(params[0]);
+    uint32_t const index = WasmEdge_ValueGetI32(params[1]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
+
+    auto const container = bridge->child_at(workspace_address, index);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* container_buf = mem_base + out_ptr;
+    std::memcpy(container_buf, &container, sizeof(container));
+
+    // Return success
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -375,6 +404,10 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_workspace_get_tree",
         create_func_type({ i64, i32, i32 }, { i32 }),
         host_miracle_workspace_get_tree, bridge.get());
+
+    add_host_function(module, "miracle_container_get_child_at",
+        create_func_type({ i64, i32, i32 }, { i32 }),
+        host_miracle_container_get_child_at, bridge.get());
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);

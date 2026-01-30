@@ -49,6 +49,9 @@ pub extern "C" fn place_new_window(
     if let Some(application) = application {
         let output = context.get_output_at(0);
         let workspace = context.get_window_workspace(&window_info);
+
+        // Note: This is just an example plugin that places gedit windows in specific locations.
+        // We are specifically testing out various methods here just to demonstrate the API.
         if application.name == "gedit" {
             placement.strategy = WindowManagementStrategy::Freestyle;
             if let Some(output) = output {
@@ -75,6 +78,10 @@ pub extern "C" fn place_new_window(
                 if let Some(container) = context.get_workspace_tree(&workspace, 0) {
                     placement.freestyle.top_left.x = -100;
                     placement.freestyle.top_left.y = -100;
+                    if let Some(child) = context.get_container_child_at(&container, 0) {
+                        placement.freestyle.top_left.x = -400;
+                        placement.freestyle.top_left.y = -400;
+                    }
                 }
             }
 

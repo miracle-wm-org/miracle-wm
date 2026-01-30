@@ -1436,12 +1436,12 @@ mod ffi {
         pub fn miracle_workspace_get_tree(workspace_internal: i64, index: u32, out_ptr: i32)
         -> i32;
 
-        // /// Retrieve a child container from a parent container by index.
-        // pub fn miracle_container_get_child_at(
-        //     context: *mut bindings::miracle_context_t,
-        //     container: *mut bindings::miracle_container_t,
-        //     index: u32,
-        // ) -> bindings::miracle_container_t;
+        /// Retrieve a child container from a parent container by index.
+        pub fn miracle_container_get_child_at(
+            container_internal: i64,
+            index: u32,
+            out_ptr: i32,
+        ) -> i32;
 
         // /// Retrieve the window info from a window container.
         // pub fn miracle_container_get_window(
@@ -1629,43 +1629,54 @@ impl Context {
     }
 
     // /// Get all trees from a workspace.
-    // pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {
-    //     (0..workspace.num_trees)
-    //         .filter_map(|i| self.get_workspace_tree(workspace, i))
-    //         .collect()
-    // }
+    pub fn get_workspace_trees(&mut self, workspace: &Workspace) -> Vec<Container> {
+        (0..workspace.num_trees)
+            .filter_map(|i| self.get_workspace_tree(workspace, i))
+            .collect()
+    }
 
-    // /// Get a child container from a parent container by index.
-    // ///
-    // /// Returns `None` if the index is out of bounds or if the container
-    // /// is not of type `Parent`.
-    // pub fn get_container_child_at(
-    //     &mut self,
-    //     container: &Container,
-    //     index: u32,
-    // ) -> Option<Container> {
-    //     if container.container_type != ContainerType::Parent || index >= container.num_children {
-    //         return None;
-    //     }
-    //     unsafe {
-    //         let mut c_container = container.as_c();
-    //         let result =
-    //             ffi::miracle_container_get_child_at(self.as_raw_mut(), &mut c_container, index);
-    //         Some(Container::from(result))
-    //     }
-    // }
+    /// Get a child container from a parent container by index.
+    ///
+    /// Returns `None` if the index is out of bounds or if the container
+    /// is not of type `Parent`.
+    pub fn get_container_child_at(
+        &mut self,
+        container: &Container,
+        index: u32,
+    ) -> Option<Container> {
+        if container.container_type != ContainerType::Parent || index >= container.num_children {
+            return None;
+        }
 
-    // /// Get all children from a parent container.
-    // ///
-    // /// Returns an empty vector if the container is not of type `Parent`.
-    // pub fn get_container_children(&mut self, container: &Container) -> Vec<Container> {
-    //     if container.container_type != ContainerType::Parent {
-    //         return Vec::new();
-    //     }
-    //     (0..container.num_children)
-    //         .filter_map(|i| self.get_container_child_at(container, i))
-    //         .collect()
-    // }
+        let mut child_container =
+            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        unsafe {
+            let result = ffi::miracle_container_get_child_at(
+                container.internal as i64,
+                index,
+                child_container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let child_container = child_container.assume_init();
+            Some(Container::from(child_container))
+        }
+    }
+
+    /// Get all children from a parent container.
+    ///
+    /// Returns an empty vector if the container is not of type `Parent`.
+    pub fn get_container_children(&mut self, container: &Container) -> Vec<Container> {
+        if container.container_type != ContainerType::Parent {
+            return Vec::new();
+        }
+        (0..container.num_children)
+            .filter_map(|i| self.get_container_child_at(container, i))
+            .collect()
+    }
 
     // /// Get the window info from a window container.
     // ///

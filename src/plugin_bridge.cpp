@@ -228,9 +228,9 @@ miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t 
     return from_parent(trees[index]);
 }
 
-miracle_container_t PluginBridge::child_at(miracle_container_t const& parent, uint32_t index)
+miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
-    auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent.internal));
+    auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent_id));
     auto const child = parent_container->at(index);
     if (child->get_type() == ContainerType::parent)
         return from_parent(Container::as_parent(child));

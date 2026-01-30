@@ -83,7 +83,7 @@ public:
     uint32_t num_workspaces_on_output(miracle_output_t const& output);
     miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index);
     miracle_container_t tree_at_index(uint64_t workspace_id, uint32_t index);
-    miracle_container_t child_at(miracle_container_t const& parent, uint32_t index);
+    miracle_container_t child_at(uint64_t parent_id, uint32_t index);
     miracle_window_info_t get_window(miracle_container_t const& container);
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
 
