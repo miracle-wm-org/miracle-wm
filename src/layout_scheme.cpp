@@ -46,3 +46,21 @@ miracle::LayoutScheme miracle::get_next_layout(miracle::LayoutScheme scheme)
         next = static_cast<LayoutScheme>(0);
     return next;
 }
+
+miracle::LayoutScheme miracle::from_layout(miracle_layout_scheme scheme)
+{
+    switch (scheme)
+    {
+    case miracle_layout_scheme_horizontal:
+        return LayoutScheme::horizontal;
+    case miracle_layout_scheme_vertical:
+        return LayoutScheme::vertical;
+    case miracle_layout_scheme_none:
+        return LayoutScheme::none;
+    case miracle_layout_scheme_tabbed:
+        return LayoutScheme::tabbing;
+    case miracle_layout_scheme_stacking:
+        return LayoutScheme::stacking;
+
+    }
+}

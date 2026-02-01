@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
 #include "internal_shell_application_spawner.h"
+#include "leaf_container.h"
 #include "magnifier_wrapper.h"
 #include "output_factory.h"
 #include "output_listener.h"
@@ -555,7 +556,26 @@ auto Policy::place_new_window(
         }
 
         if (hint.container_type != ContainerType::shell)
-            hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, {});
+        {
+            if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
+            {
+                auto const tiled_strategy = plugin_placement.tiled_placement;
+                auto const container = static_cast<Container*>(reinterpret_cast<void*>(tiled_strategy.parent.internal));
+                if (container->is_leaf())
+                {
+                    auto const leaf_container = Container::as_leaf(container->shared_from_this());
+                    auto const next_layout = from_layout(tiled_strategy.layout_scheme);
+                    if (next_layout != LayoutScheme::none && leaf_container->set_layout(next_layout))
+                    {
+                        hint.parent = leaf_container->get_parent().lock();
+                        hint.index = tiled_strategy.index;
+                    }
+                    else
+                        mir::log_error("Tiled placement referred to a child container but lacked a layout scheme.");
+                }
+            }
+            hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, hint);
+        }
     }
 
     pending_allocation = hint;

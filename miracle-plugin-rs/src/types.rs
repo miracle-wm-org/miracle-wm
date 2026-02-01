@@ -1583,7 +1583,7 @@ impl Placement {
     pub fn set_c(&self, out: &mut bindings::miracle_placement_t) {
         out.strategy = self.strategy.into();
         out.freestyle_placement = self.freestyle.into();
-        out.titled_placement = self.tiled.into();
+        out.tiled_placement = self.tiled.into();
     }
 }
 
@@ -1592,7 +1592,7 @@ impl From<Placement> for bindings::miracle_placement_t {
         Self {
             strategy: value.strategy.into(),
             freestyle_placement: value.freestyle.into(),
-            titled_placement: value.tiled.into(),
+            tiled_placement: value.tiled.into(),
         }
     }
 }
@@ -1602,7 +1602,7 @@ impl From<bindings::miracle_placement_t> for Placement {
         Self {
             strategy: WindowManagementStrategy::try_from(value.strategy).unwrap_or_default(),
             freestyle: value.freestyle_placement.into(),
-            tiled: value.titled_placement.into(),
+            tiled: value.tiled_placement.into(),
         }
     }
 }

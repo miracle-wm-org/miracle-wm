@@ -469,7 +469,7 @@ pub struct miracle_placement_t {
     #[doc = " The freestyle placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_freestyle."]
     pub freestyle_placement: miracle_freestyle_placement_t,
     #[doc = " The titled placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_tiled."]
-    pub titled_placement: miracle_tiled_placement_t,
+    pub tiled_placement: miracle_tiled_placement_t,
 }
 impl Default for miracle_placement_t {
     fn default() -> Self {

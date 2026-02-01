@@ -187,15 +187,18 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
 }
 
 miral::WindowSpecification ParentContainer::place_new_window(
-    miral::WindowSpecification const& requested_specification)
+    miral::WindowSpecification const& requested_specification,
+    std::optional<size_t> index)
 {
-    std::optional<size_t> index;
-    for (size_t i = 0; i < container_list.size(); i++)
+    if (!index)
     {
-        if (container_list[i] == state->focused_container())
+        for (size_t i = 0; i < container_list.size(); i++)
         {
-            index = i + 1;
-            break;
+            if (container_list[i] == state->focused_container())
+            {
+                index = i + 1;
+                break;
+            }
         }
     }
 

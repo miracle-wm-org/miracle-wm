@@ -56,7 +56,8 @@ public:
     geom::Rectangle get_visible_area() const override;
     virtual size_t num_nodes() const;
     miral::WindowSpecification place_new_window(
-        miral::WindowSpecification const& requested_specification);
+        miral::WindowSpecification const& requested_specification,
+        std::optional<size_t> index);
     std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
     std::shared_ptr<Container> confirm_window(miral::Window const&);
     void graft_existing(std::shared_ptr<Container> const& node, int index);

@@ -357,7 +357,7 @@ extern "C"
         /// The titled placement strategy.
         ///
         /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
-        miracle_tiled_placement_t titled_placement;
+        miracle_tiled_placement_t tiled_placement;
     } miracle_placement_t;
 #ifdef __cplusplus
 }

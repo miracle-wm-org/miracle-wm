@@ -1,9 +1,10 @@
 use miracle_plugin_rs::{
-    DepthLayer, Placement, WindowInfo, WindowManagementStrategy, get_output_at,
+    DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
+    get_output_at,
 };
 
 #[unsafe(no_mangle)]
@@ -46,50 +47,12 @@ pub extern "C" fn place_new_window(
         unsafe { WindowInfo::from_c_with_name(window_info.as_ref().unwrap(), String::from("")) };
     let application = window_info.application();
     let mut placement: Placement = Default::default();
+
+    // Example: Always place gedit on workspace 3.
     if let Some(application) = application {
-        let output = get_output_at(0);
-        let workspace = window_info.workspace();
-
-        // Note: This is just an example plugin that places gedit windows in specific locations.
-        // We are specifically testing out various methods here just to demonstrate the API.
         if application.name == "gedit" {
-            placement.strategy = WindowManagementStrategy::Freestyle;
-            if let Some(output) = output {
-                placement.freestyle.top_left.x = output.size.width / 2;
-                placement.freestyle.top_left.y = output.size.height / 2;
-            } else {
-                placement.freestyle.top_left.x = 100;
-                placement.freestyle.top_left.y = 100;
-            }
-
-            if let Some(workspace) = workspace {
-                if let Some(number) = workspace.number {
-                    if number == 2 {
-                        if let Some(output) = workspace.output() {
-                            placement.freestyle.top_left.x = output.size.width / 4;
-                            placement.freestyle.top_left.y = output.size.height / 4;
-                        } else {
-                            placement.freestyle.top_left.x = 0;
-                            placement.freestyle.top_left.y = 0;
-                        }
-                    }
-                }
-
-                if let Some(container) = workspace.tree_at(0) {
-                    placement.freestyle.top_left.x = -100;
-                    placement.freestyle.top_left.y = -100;
-                    if let Some(child) = container.child_at(0) {
-                        placement.freestyle.top_left.x = -400;
-                        placement.freestyle.top_left.y = -400;
-                    }
-                }
-            }
-
-            placement.freestyle.size.width = 800;
-            placement.freestyle.size.height = 600;
-            placement.freestyle.depth_layer = DepthLayer::Application;
-        } else {
-            placement.strategy = WindowManagementStrategy::System;
+            placement.strategy = WindowManagementStrategy::Tiled;
+            
         }
     } else {
         placement.strategy = WindowManagementStrategy::System;

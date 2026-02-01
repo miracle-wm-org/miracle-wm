@@ -223,7 +223,7 @@ AllocationHint Workspace::allocate_position(
             parent = get_layout_container();
     }
 
-    requested_specification = parent->place_new_window(requested_specification);
+    requested_specification = parent->place_new_window(requested_specification, hint.index);
     return { ContainerType::regular, parent };
 }
 
