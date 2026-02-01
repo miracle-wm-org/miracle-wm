@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
-#include "window_manager_tools_window_controller.h"
+#include "window_controller.h"
 #include "workspace_interface.h"
 #include <miral/application_info.h>
 #include <miral/window_info.h>
@@ -129,7 +129,7 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
 }
 
 PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
-    std::shared_ptr<WindowManagerToolsWindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller) :
     output_manager(output_manager),
     window_controller(window_controller)
 {

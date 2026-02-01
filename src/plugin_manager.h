@@ -43,6 +43,8 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
+    ~PluginManager();
+
     /// Initialize the plugin bridge.
     ///
     /// This must be called after construction.
@@ -165,6 +167,7 @@ private:
         };
 
         explicit Self(std::unique_ptr<PluginBridge> bridge);
+        ~Self();
         void create_host_module();
 
         std::unique_ptr<PluginBridge> bridge;
@@ -204,10 +207,8 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager(std::unique_ptr<PluginBridge> bridge) :
-        bridge(std::move(bridge))
-    {
-    }
+    ~PluginManager() = default;
+    void initialize(std::unique_ptr<PluginBridge>) {};
     PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
@@ -223,9 +224,6 @@ public:
         PluginHandle handle,
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec) { return miracle_placement_t {}; }
-
-private:
-    std::unique_ptr<PluginBridge> bridge;
 };
 }
 #endif

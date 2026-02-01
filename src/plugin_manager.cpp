@@ -455,6 +455,10 @@ PluginManager::Self::Self(std::unique_ptr<PluginBridge> bridge) :
     create_host_module();
 }
 
+PluginManager::Self::~Self() = default;
+
+PluginManager::~PluginManager() = default;
+
 void PluginManager::initialize(std::unique_ptr<PluginBridge> bridge)
 {
     self = std::make_unique<Self>(std::move(bridge));

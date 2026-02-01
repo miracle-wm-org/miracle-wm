@@ -28,7 +28,7 @@ namespace miracle
 {
 class Container;
 class OutputManager;
-class WindowManagerToolsWindowController;
+class WindowController;
 
 template <typename T>
 class PluginBridgeObjectHandle
@@ -79,7 +79,7 @@ public:
 
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
-        std::shared_ptr<WindowManagerToolsWindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -103,7 +103,7 @@ private:
     };
 
     std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<WindowManagerToolsWindowController> window_controller;
+    std::shared_ptr<WindowController> window_controller;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
 };
 
