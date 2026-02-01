@@ -263,6 +263,9 @@ extern "C"
         /// If `TRUE`, the output is the primary output, otherwise `FALSE`.
         int32_t is_primary;
 
+        /// The number of workspaces on this output.
+        uint32_t num_workspaces;
+
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky.

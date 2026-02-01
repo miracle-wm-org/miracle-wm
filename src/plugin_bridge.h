@@ -71,20 +71,27 @@ public:
         std::optional<std::string> name;
     };
 
+    struct WindowResult
+    {
+        miracle_window_info_t window_info;
+        std::string name;
+    };
+
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowManagerToolsWindowController> const& window_controller);
-    miracle_application_info_t application(uint64_t window_id);
-    WorkspaceResult workspace(uint64_t window_id);
-    OutputResult output(uint64_t workspace_id);
+
+    miracle_application_info_t application_from_window(uint64_t window_id);
+    WorkspaceResult workspace_from_window(uint64_t window_id);
     uint32_t num_outputs();
     OutputResult output_at(uint32_t index);
-    OutputResult output_for_workspace(uint64_t workspace_id);
-    uint32_t num_workspaces_on_output(miracle_output_t const& output);
-    miracle_workspace_t workspace_on_output_at(miracle_output_t const& output, uint32_t index);
+    OutputResult output_from_workspace(uint64_t workspace_id);
+    uint32_t num_workspaces_on_output(uint64_t workspace_id);
+    WorkspaceResult workspace_on_output_at_index(uint64_t output_id, uint32_t index);
     miracle_container_t tree_at_index(uint64_t workspace_id, uint32_t index);
     miracle_container_t child_at(uint64_t parent_id, uint32_t index);
-    miracle_window_info_t get_window(miracle_container_t const& container);
+    WindowResult get_window(uint64_t container_address);
+
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
 
 private:

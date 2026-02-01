@@ -1432,6 +1432,8 @@ pub struct Output {
     pub name: String,
     /// Whether this is the primary output.
     pub is_primary: bool,
+    /// The number of workspaces on this output.
+    pub num_workspaces: u32,
     /// Internal pointer for C interop.
     internal: u64,
 }
@@ -1447,13 +1449,44 @@ impl Output {
             size: value.size.into(),
             name,
             is_primary: value.is_primary != 0,
+            num_workspaces: value.num_workspaces,
             internal: value.internal,
         }
     }
 
-    /// Get the internal pointer for C interop.
-    pub fn internal_ptr(&self) -> u64 {
-        self.internal
+    pub fn workspace(&self, index: u32) -> Option<Workspace> {
+        if index >= self.num_workspaces {
+            return None;
+        }
+
+        const NAME_BUF_LEN: usize = 256;
+        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = ffi::miracle_output_get_workspace(
+                self.internal as i64,
+                index,
+                workspace.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let workspace = workspace.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Workspace::from_c_with_name(&workspace, name))
+        }
     }
 }
 
@@ -1638,63 +1671,62 @@ mod ffi {
             name_buf: i32,
             name_buf_len: i32,
         ) -> i32;
+
+        /// Retrieve the workspace on the output by index.
+        pub unsafe fn miracle_output_get_workspace(
+            output_internal: i64,
+            index: u32,
+            out_ptr: i32,
+            name_buf: i32,
+            name_buf_len: i32,
+        ) -> i32;
     }
 }
 
-// ============================================================================
-// Context
-// ============================================================================
+/// Get the number of outputs.
+pub fn num_outputs() -> u32 {
+    unsafe { ffi::miracle_num_outputs() }
+}
 
-/// Opaque context for calling into Miracle's internals.
-#[derive(Debug, Clone, Copy)]
-pub struct Context {}
-
-impl Context {
-    /// Get the number of outputs.
-    pub fn num_outputs(&mut self) -> u32 {
-        unsafe { ffi::miracle_num_outputs() }
+/// Get an output by index.
+///
+/// Returns `None` if the index is out of bounds or if the call fails.
+pub fn get_output_at(index: u32) -> Option<Output> {
+    if index >= num_outputs() {
+        return None;
     }
 
-    /// Get an output by index.
-    ///
-    /// Returns `None` if the index is out of bounds or if the call fails.
-    pub fn get_output_at(&mut self, index: u32) -> Option<Output> {
-        if index >= self.num_outputs() {
+    const NAME_BUF_LEN: usize = 256;
+    let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
+    let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+    unsafe {
+        let result = ffi::miracle_get_output_at(
+            index,
+            output.as_mut_ptr() as i32,
+            name_buf.as_mut_ptr() as i32,
+            NAME_BUF_LEN as i32,
+        );
+
+        if result != 0 {
             return None;
         }
 
-        const NAME_BUF_LEN: usize = 256;
-        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
-        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+        let output = output.assume_init();
 
-        unsafe {
-            let result = ffi::miracle_get_output_at(
-                index,
-                output.as_mut_ptr() as i32,
-                name_buf.as_mut_ptr() as i32,
-                NAME_BUF_LEN as i32,
-            );
+        // Find the null terminator to get the actual string length
+        let name_len = name_buf
+            .iter()
+            .position(|&c| c == 0)
+            .unwrap_or(NAME_BUF_LEN);
+        let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-            if result != 0 {
-                return None;
-            }
-
-            let output = output.assume_init();
-
-            // Find the null terminator to get the actual string length
-            let name_len = name_buf
-                .iter()
-                .position(|&c| c == 0)
-                .unwrap_or(NAME_BUF_LEN);
-            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
-
-            Some(Output::from_c_with_name(&output, name))
-        }
+        Some(Output::from_c_with_name(&output, name))
     }
+}
 
-    /// Get all outputs.
-    pub fn get_outputs(&mut self) -> Vec<Output> {
-        let count = self.num_outputs();
-        (0..count).filter_map(|i| self.get_output_at(i)).collect()
-    }
+/// Get all outputs.
+pub fn get_outputs() -> Vec<Output> {
+    let count = num_outputs();
+    (0..count).filter_map(|i| get_output_at(i)).collect()
 }

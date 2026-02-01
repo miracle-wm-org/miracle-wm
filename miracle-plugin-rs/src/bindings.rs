@@ -403,6 +403,8 @@ pub struct miracle_output_t {
     pub size: miracle_size_t,
     #[doc = " If `TRUE`, the output is the primary output, otherwise `FALSE`."]
     pub is_primary: i32,
+    #[doc = " The number of workspaces on this output."]
+    pub num_workspaces: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
 }

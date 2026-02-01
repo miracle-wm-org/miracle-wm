@@ -1,5 +1,5 @@
 use miracle_plugin_rs::{
-    Context, DepthLayer, Output, Placement, WindowInfo, WindowManagementStrategy,
+    DepthLayer, Placement, WindowInfo, WindowManagementStrategy, get_output_at,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
@@ -41,14 +41,13 @@ pub extern "C" fn place_new_window(
     result: *mut miracle_placement_t,
     window_info: *const miracle_window_info_t,
 ) {
-    let mut context = Context {};
     // TODO: Pass down the name of the window properly.
     let window_info =
         unsafe { WindowInfo::from_c_with_name(window_info.as_ref().unwrap(), String::from("")) };
     let application = window_info.application();
     let mut placement: Placement = Default::default();
     if let Some(application) = application {
-        let output = context.get_output_at(0);
+        let output = get_output_at(0);
         let workspace = window_info.workspace();
 
         // Note: This is just an example plugin that places gedit windows in specific locations.

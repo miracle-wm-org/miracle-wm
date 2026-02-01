@@ -60,7 +60,7 @@ WasmEdge_Result host_miracle_window_info_get_application(
     int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[1]);
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[2]);
 
-    auto const application = bridge->application(window_info_address);
+    auto const application = bridge->application_from_window(window_info_address);
 
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
@@ -177,7 +177,7 @@ WasmEdge_Result host_miracle_workspace_get_output(
     int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
 
-    auto const output = bridge->output_for_workspace(workspace_address_ptr);
+    auto const output = bridge->output_from_workspace(workspace_address_ptr);
     return return_output_internal(memory, out_ptr, name_buffer_ptr, name_buffer_length, returns, output);
 }
 
@@ -200,7 +200,7 @@ WasmEdge_Result host_miracle_window_info_get_workspace(
     int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
 
-    auto const workspace = bridge->workspace(window_address);
+    auto const workspace = bridge->workspace_from_window(window_address);
 
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     uint8_t* workspace_buf = mem_base + out_ptr;
@@ -282,6 +282,102 @@ WasmEdge_Result host_miracle_container_get_child_at(
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     uint8_t* container_buf = mem_base + out_ptr;
     std::memcpy(container_buf, &container, sizeof(container));
+
+    // Return success
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_container_get_window(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_container_get_window: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
+
+    auto const window = bridge->get_window(container_address);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* workspace_buf = mem_base + out_ptr;
+    std::memcpy(workspace_buf, &window.window_info, sizeof(window.window_info));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+    char const* workspace_name = window.name.c_str();
+    size_t const name_len = std::strlen(workspace_name);
+
+    // Check if name fits in buffer (need space for null terminator)
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    // Copy name to WASM linear memory
+    std::memcpy(name_buf, workspace_name, name_len);
+    name_buf[name_len] = '\0';
+
+    // Return success
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_output_get_workspace(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_output_get_workspace: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const output_address = WasmEdge_ValueGetI64(params[0]);
+    uint32_t const index = WasmEdge_ValueGetI32(params[1]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[3]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[4]);
+
+    auto const workspace = bridge->workspace_on_output_at_index(output_address, index);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* workspace_buf = mem_base + out_ptr;
+    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+
+    char const* workspace_name = workspace.name.value_or("").c_str();
+    size_t const name_len = std::strlen(workspace_name);
+
+    // Check if name fits in buffer (need space for null terminator)
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    // Copy name to WASM linear memory
+    std::memcpy(name_buf, workspace_name, name_len);
+    name_buf[name_len] = '\0';
 
     // Return success
     returns[0] = WasmEdge_ValueGenI32(0);
@@ -408,6 +504,14 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_container_get_child_at",
         create_func_type({ i64, i32, i32 }, { i32 }),
         host_miracle_container_get_child_at, bridge.get());
+
+    add_host_function(module, "miracle_container_get_window",
+        create_func_type({ i64, i32, i32, i32 }, { i32 }),
+        host_miracle_container_get_window, bridge.get());
+
+    add_host_function(module, "miracle_output_get_workspace",
+        create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_output_get_workspace, bridge.get());
 
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
