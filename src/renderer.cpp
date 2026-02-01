@@ -539,12 +539,6 @@ void Renderer::draw(
     auto const clip_area = renderable.clip_area();
     if (clip_area)
     {
-        // The clip area is relative to the top-left of the output that it is on.
-        // glScissor's coordinates are in terms of the viewport however, where (x,y)
-        // is the bottom-left corner of the scissor box in viewport coordinates.
-        //
-        // Hence, we need to put the clip area in the coordinates of the viewport itself.
-
         // First, we compute the intersection of the clip area with the viewport.
         auto const intersection = intersect(*clip_area, viewport);
         if (!intersection)
@@ -553,31 +547,61 @@ void Renderer::draw(
             return;
         }
 
-        // Then we invert and calculate the scissor x and y.
+        // Next, we map the viewport-relative clip rectangle to framebuffer pixel coordinates,
+        // accounting for output rotation and surface layout.
         using namespace miracle::geometry_helpers::gl;
-        const auto scissor_x = x_int(intersection->top_left) - x_int(viewport.top_left);
-        int scissor_y = 0;
-        switch (output_surface->layout())
+        int const rel_x = x_int(intersection->top_left) - x_int(viewport.top_left);
+        int const rel_y = y_int(intersection->top_left) - y_int(viewport.top_left);
+        int const rel_w = width_int(intersection->size);
+        int const rel_h = height_int(intersection->size);
+        int const vp_w = width_int(viewport.size);
+        int const vp_h = height_int(viewport.size);
+
+        float fb_x, fb_y, fb_w, fb_h;
+        bool const top_row_first = (output_surface->layout() == mir::graphics::gl::OutputSurface::Layout::TopRowFirst);
+
+        switch (output_rotation)
         {
-        case mir::graphics::gl::OutputSurface::Layout::GL:
-            scissor_y = height_int(viewport.size)
-                - (y_int(intersection->top_left) - y_int(viewport.top_left))
-                - height_int(intersection->size);
+        case OutputRotation::normal:
+            fb_w = rel_w;
+            fb_h = rel_h;
+            fb_x = rel_x;
+            fb_y = top_row_first ? rel_y : (vp_h - rel_y - rel_h);
             break;
-        case mir::graphics::gl::OutputSurface::Layout::TopRowFirst:
-            scissor_y = y_int(intersection->top_left) - y_int(viewport.top_left);
+        case OutputRotation::left_90:
+            fb_w = rel_h;
+            fb_h = rel_w;
+            fb_x = rel_y;
+            fb_y = top_row_first ? (vp_w - rel_x - rel_w) : rel_x;
+            break;
+        case OutputRotation::inverted_180:
+            fb_w = rel_w;
+            fb_h = rel_h;
+            fb_x = vp_w - rel_x - rel_w;
+            fb_y = top_row_first ? (vp_h - rel_y - rel_h) : rel_y;
+            break;
+        case OutputRotation::right_270:
+            fb_w = rel_h;
+            fb_h = rel_w;
+            fb_x = vp_h - rel_y - rel_h;
+            fb_y = top_row_first ? rel_x : (vp_w - rel_x - rel_w);
             break;
         }
 
-        glm::vec4 const scissor = display_transform * data.data.workspace_transform * glm::vec4(scissor_x, scissor_y, 0, 1);
-        glm::vec4 const size = display_transform * data.data.workspace_transform * glm::vec4(width_int(intersection->size), height_int(intersection->size), 0, 0);
+        // Apply the workspace transform to the scissor position and size.
+        glm::vec4 scissor_pos = data.data.workspace_transform * glm::vec4(fb_x, fb_y, 0, 1);
+        glm::vec4 scissor_size = data.data.workspace_transform * glm::vec4(fb_w, fb_h, 0, 0);
+        fb_x = scissor_pos.x;
+        fb_y = scissor_pos.y;
+        fb_w = scissor_size.x;
+        fb_h = scissor_size.y;
 
         glEnable(GL_SCISSOR_TEST);
         glScissor(
-            static_cast<GLint>(scissor.x * x_scale),
-            static_cast<GLint>(scissor.y * y_scale),
-            static_cast<GLint>(size.x * x_scale),
-            static_cast<GLint>(size.y * y_scale));
+            static_cast<GLint>(fb_x * x_scale),
+            static_cast<GLint>(fb_y * y_scale),
+            static_cast<GLint>(fb_w * x_scale),
+            static_cast<GLint>(fb_h * y_scale));
     }
     auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
     auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
@@ -875,6 +899,12 @@ void Renderer::set_output_transform(glm::mat2 const& t)
         } * new_display_transform;
         break;
     }
+
+    // Detect rotation from the 2x2 transform matrix (column-major in glm)
+    if (t[0][0] != 0.0f)
+        output_rotation = (t[0][0] > 0) ? OutputRotation::normal : OutputRotation::inverted_180;
+    else
+        output_rotation = (t[1][0] < 0) ? OutputRotation::left_90 : OutputRotation::right_270;
 
     if (new_display_transform != display_transform)
     {
