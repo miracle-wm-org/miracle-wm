@@ -66,5 +66,9 @@ void free_ipc_response(struct ipc_response* response);
  * Sets the receive timeout for the IPC socket
  */
 bool ipc_set_recv_timeout(int socketfd, struct timeval tv);
+/**
+ * Closes the IPC socket
+ */
+void ipc_close_socket(int socketfd);
 
 #endif

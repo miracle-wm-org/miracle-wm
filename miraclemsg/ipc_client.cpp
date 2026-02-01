@@ -178,6 +178,11 @@ void free_ipc_response(struct ipc_response* response)
     free(response);
 }
 
+void ipc_close_socket(int socketfd)
+{
+    close(socketfd);
+}
+
 char* ipc_single_command(int socketfd, uint32_t type, const char* payload, uint32_t* len)
 {
     char data[IPC_HEADER_SIZE];

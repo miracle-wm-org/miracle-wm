@@ -115,6 +115,11 @@ public:
     /// \returns the alpha value
     virtual float alpha() const = 0;
 
+    /// Returns a list of the trees on this workspace.
+    ///
+    /// \returns a list of trees
+    [[nodiscard]] virtual std::vector<std::shared_ptr<ParentContainer>> trees() const = 0;
+
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_output_focused) const = 0;

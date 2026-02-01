@@ -25,6 +25,14 @@ namespace miracle
 class WindowController;
 class ShellApplicationDelegate;
 
+/// A container for shell components.
+///
+/// A shell component is any non-standard window, including panels,
+/// menus, popups, tooltips and more. The idea behind the shell
+/// component container is that it is a simple passthrough for those
+/// surfaces. By design. shell components are not bound to any output
+/// or workspace. They simply "exist" in the form that the client expects
+/// them to.
 class ShellComponentContainer : public Container
 {
 public:

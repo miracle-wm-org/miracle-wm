@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PLUGIN_H
 #define MIRACLE_WM_PLUGIN_H
 
+#include <mir_toolkit/common.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -36,6 +37,16 @@ extern "C"
         /// The y coordinate.
         int32_t y;
     } miracle_point_t;
+
+    /// A size with integer dimensions.
+    typedef struct
+    {
+        /// The width.
+        int32_t w;
+
+        /// The height.
+        int32_t h;
+    } miracle_size_t;
 
     typedef struct
     {
@@ -96,6 +107,258 @@ extern "C"
         float opacity;
     } miracle_plugin_animation_frame_result_t;
 
+    /// Describes the properties of an application.
+    ///
+    /// Plugin authors may use #miracle_plugin_get_application to get the application
+    /// given a window.
+    typedef struct
+    {
+        /// The name of the application.
+        const char* application_name;
+
+        /// Internal data.
+        uint64_t internal;
+    } miracle_application_info_t;
+
+    /// Describes the properties of a window.
+    ///
+    /// Plugin authors may use this information to decide on the placement of a window.
+    ///
+    /// Use #miracle_plugin_get_application to get the application from which this window
+    /// originated.
+    ///
+    /// Use #miracle_plugin_get_workspace to get the workspace of the window.
+    typedef struct
+    {
+        /// The type of this window.
+        MirWindowType window_type;
+
+        /// The state of the window.
+        MirWindowState state;
+
+        /// The position of the window.
+        ///
+        /// If the window has not yet been placed, this will be arbitrary.
+        miracle_point_t top_left;
+
+        /// The size of the window.
+        miracle_size_t size;
+
+        /// The depth layer of the window.
+        MirDepthLayer depth_layer;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky!
+        uint64_t internal;
+    } miracle_window_info_t;
+
+    /// The type of the container.
+    typedef enum miracle_container_type
+    {
+        /// The container has a single window in it.
+        miracle_container_type_window,
+
+        /// The container has multiple children in it.
+        miracle_container_type_parent
+    } miracle_container_type;
+
+    /// Describes a layout for a container.
+    typedef enum miracle_layout_scheme
+    {
+        /// None layout.
+        miracle_layout_scheme_none,
+
+        /// A horizontal layout.
+        miracle_layout_scheme_horizontal,
+
+        /// A vertical layout.
+        miracle_layout_scheme_vertical,
+
+        /// A tabbed layout.
+        miracle_layout_scheme_tabbed,
+
+        /// A stacked layout.
+        miracle_layout_scheme_stacking
+    } miracle_layout_scheme;
+
+    /// Describes a container in a tree.
+    ///
+    /// A container may either a parent or a window. Parent containers
+    /// have children, which can be retrieved via #miracle_plugin_get_child_from_container.
+    ///
+    /// The window of a window container can be retrieved via
+    /// #miracle_plugin_get_window_info_from_container.
+    typedef struct
+    {
+        /// The type of the container.
+        ///
+        /// This is a #miracle_container_type.
+        uint32_t type;
+
+        /// If `TRUE`, the container is floating within its workspace.
+        ///
+        /// This is only set if #type is #miracle_container_type_parent.
+        int32_t is_floating;
+
+        /// Describes how a container is laying out its content.
+        ///
+        /// This is #miracle_layut_scheme.
+        ///
+        /// This is only set if #type is #miracle_container_type_parent.
+        uint32_t layout_scheme;
+
+        /// The number of child containers inside of this container.
+        ///
+        /// Use #miracle_plugin_get_child_from_container to query the container by index.
+        uint32_t num_child_containers;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky!
+        uint64_t internal;
+    } miracle_container_t;
+
+    /// Describes a workspace.
+    typedef struct
+    {
+        /// If `TRUE`, the workspace is valid.
+        ///
+        /// This may be `FALSE` for shell components that are not tethered to a particular
+        /// workspace.
+        int32_t is_set;
+
+        /// If `TRUE`, #number is set.
+        int32_t has_number;
+
+        /// The number of the workspace.
+        ///
+        /// Only valid if #has_number is `TRUE`.
+        uint32_t number;
+
+        /// If `TRUE`, #name is set.
+        int32_t has_name;
+
+        /// The number of container trees in this workspace.
+        ///
+        /// Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.
+        /// Each tree is represented by a #miracle_container_t which is the root of the tree.
+        uint32_t num_trees;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky.
+        uint64_t internal;
+    } miracle_workspace_t;
+
+    /// Describes an output.
+    typedef struct
+    {
+        /// The position of the output.
+        miracle_point_t position;
+
+        /// The size of the output.
+        miracle_size_t size;
+
+        /// If `TRUE`, the output is the primary output, otherwise `FALSE`.
+        int32_t is_primary;
+
+        /// The number of workspaces on this output.
+        uint32_t num_workspaces;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky.
+        uint64_t internal;
+    } miracle_output_t;
+
+    /// Describes the placement strategy for a window.
+    ///
+    /// This is used by #miracle_placement_t.
+    typedef enum miracle_window_management_strategy_t
+    {
+        /// If selected, the plugin lets miracle place the window according
+        /// to its own strategy.
+        miracle_window_management_strategy_system,
+
+        /// Describes a window that will be placed in the tiling grid.
+        miracle_window_management_strategy_tiled,
+
+        /// Describes a window whose behavior is entirely determined by
+        /// the plugin.
+        miracle_window_management_strategy_freestyle
+    } miracle_window_management_strategy_t;
+
+    /// Describes a tiled placement which is controlled by the plugin system.
+    typedef struct
+    {
+        /// The parent container that this window should be placed inside.
+        ///
+        /// If the container has #miracle_container_t::type of #miracle_container_type_window, then
+        /// the #layout_scheme will be applied to that window to form a new
+        /// parent before placing the window at the #index.
+        ///
+        /// If the container has #miracle_container_t::type of #miracle_container_type_parent, then
+        /// the #layout_scheme will be ignored and the window will be placed at
+        /// the #index.
+        miracle_container_t parent;
+
+        /// The index at which this container will be placed within the parent.
+        uint32_t index;
+
+        /// The requested layout scheme of the new parent.
+        ///
+        /// This will only be used if #miracle_container_type_parent has #miracle_container_t::type of #miracle_container_type_parent.
+        miracle_layout_scheme layout_scheme;
+    } miracle_tiled_placement_t;
+
+    /// Describes a freestyle placement which is fully controlled by the plugin.
+    typedef struct
+    {
+        /// The top left position of the window.
+        miracle_point_t top_left;
+
+        /// The depth layer of the window.
+        ///
+        /// Plugin authors are encouraged to use #miracle_window_info_t::depth_layer
+        /// unless they would like to force the window into a different depth for
+        /// whatever reason.
+        MirDepthLayer depth_layer;
+
+        /// The workspace that this window should be placed on.
+        ///
+        /// If `0`, the window will always be shown.
+        ///
+        /// Defaults to the currently selected workspace.
+        ///
+        /// This is a 32-bit WASM linear memory pointer to a miracle_workspace_t.
+        uint32_t workspace;
+
+        /// The size of the window.
+        ///
+        /// This value may not be honored by the window itself.
+        miracle_size_t size;
+    } miracle_freestyle_placement_t;
+
+    typedef struct
+    {
+        /// The placement strategy for this window.
+        ///
+        /// This is miracle_window_management_strategy_t.
+        ///
+        /// Defaults to the #miracle_window_management_strategy_system.
+        uint32_t strategy;
+
+        /// The freestyle placement strategy.
+        ///
+        /// This is only honored if #strategy is #miracle_window_management_strategy_freestyle.
+        miracle_freestyle_placement_t freestyle_placement;
+
+        /// The titled placement strategy.
+        ///
+        /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
+        miracle_tiled_placement_t titled_placement;
+    } miracle_placement_t;
 #ifdef __cplusplus
 }
 #endif

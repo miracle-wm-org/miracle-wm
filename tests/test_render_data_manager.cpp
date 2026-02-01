@@ -166,14 +166,13 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
     auto const value = GetParam();
     for (int i = 0; i < value; i++)
     {
-        render_data_manager.add({
-            .surface = nullptr,
+        render_data_manager.add({ .surface = nullptr,
             .needs_outline = true,
             .is_focused = true,
             .transform = glm::mat4(1.f),
             .workspace_transform = glm::mat4(1.f),
             .workspace_alpha = 0.5f,
-        });
+            .output_area = mir::geometry::Rectangle() });
     }
 
     auto const result = render_data_manager.get();

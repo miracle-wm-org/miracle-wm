@@ -7,3 +7,4 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
+miracle-plugin-rs = { path = "../../miracle-plugin-rs" }

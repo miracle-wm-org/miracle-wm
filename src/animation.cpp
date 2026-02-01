@@ -246,6 +246,7 @@ bool Animation::tick(float dt)
     }
     case AnimationType::plugin:
     {
+        // TODO: Do not resolve this every time
         auto const name = std::get<PluginAnimationDefinition>(definition_.data).plugin_name;
         auto const handle = plugin_manager->get_wasm_module(name);
         if (handle == 0)

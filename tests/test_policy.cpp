@@ -229,6 +229,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
                                                    { 0,   0   },
                                                    { 800, 600 }
     }));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
@@ -387,6 +388,7 @@ TEST_F(SingleWindowPolicyTest, can_open_ipc_client)
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
     EXPECT_THAT(socket_fd, Ne(-1));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
@@ -438,6 +440,7 @@ TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
     }
 
     thread.join();
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
@@ -452,6 +455,7 @@ TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
     miral::WindowSpecification const spec;
     auto const window = create_window(app, spec);
     EXPECT_THAT(tools().info_for(window).state(), Eq(mir_window_state_fullscreen));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
@@ -481,6 +485,7 @@ TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
     auto const container = compositor_state->focused_container();
     EXPECT_THAT(container->window(), Eq(windowC));
     EXPECT_THAT(container->get_parent().lock()->get_index_of_node(container), Eq(1));
+    ipc_close_socket(socket_fd);
 }
 
 struct LayoutSingleWindowPolicyData
@@ -511,6 +516,7 @@ TEST_P(LayoutSingleWindowPolicyTest, LayoutCommandTest)
 
     auto const container = compositor_state->focused_container();
     EXPECT_THAT(container->get_parent().lock()->get_scheme(), Eq(param.scheme));
+    ipc_close_socket(socket_fd);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -545,6 +551,7 @@ TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
     // (because it gets reassigned!)
     EXPECT_THAT(output_having_workspace_taken->get_workspaces()[0]->num(), Eq(1));
     EXPECT_THAT(compositor_state->focused_container()->get_output()->get_workspaces()[0]->num(), Eq(2));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
@@ -573,6 +580,7 @@ TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
                                                                                      { 800,  0   },
                                                                                      { 1000, 600 }
     }));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToRightOutput)
@@ -601,6 +609,7 @@ TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToRightOutput)
                                                                                      { 800,  0   },
                                                                                      { 1000, 600 }
     }));
+    ipc_close_socket(socket_fd);
 }
 
 class DoubleVerticalWindowPolicyTest : public DoubleWindowPolicyTest
@@ -652,6 +661,7 @@ TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
                                                                                      { 0,   0   },
                                                                                      { 800, 600 }
     }));
+    ipc_close_socket(socket_fd);
 }
 
 TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
@@ -680,4 +690,5 @@ TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
                                                                                      { 0,   600 },
                                                                                      { 800, 800 }
     }));
+    ipc_close_socket(socket_fd);
 }

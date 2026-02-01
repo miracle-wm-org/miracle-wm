@@ -31,6 +31,8 @@ namespace miracle
 {
 typedef uint32_t PluginHandle;
 
+class PluginBridge;
+
 struct PluginLoadResult
 {
     bool success = false;
@@ -41,7 +43,15 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager();
+    ~PluginManager();
+
+    /// Initialize the plugin bridge.
+    ///
+    /// This must be called after construction.
+    ///
+    /// TODO: This is a slightly unfortunate thing that I may want to alleviate someday, but
+    ///  for now its not a huge deal.
+    void initialize(std::unique_ptr<PluginBridge> bridge);
 
     /// Load a WebAssembly module from the provided \p path.
     ///
@@ -87,74 +97,105 @@ public:
         PluginHandle handle,
         miracle_plugin_animation_frame_data_t const& frame_data);
 
+    /// Place a new window using the provided handle and window info.
+    ///
+    /// If \p handle does not correspond to a loaded plugin, the function
+    /// will return a result indicating that the placement was not handled.
+    ///
+    /// \param handle the plugin handle to use
+    /// \param window_info the window being placed
+    /// \returns the placement
+    miracle_placement_t place_new_window(
+        PluginHandle handle,
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification const& spec);
+
 private:
-    template <auto DeleteFn>
-    struct WasmEdgeDeleter
+    struct Self
     {
-        template <typename T>
-        void operator()(T* ptr) const noexcept
+        template <auto DeleteFn>
+        struct WasmEdgeDeleter
         {
-            if (ptr)
+            template <typename T>
+            void operator()(T* ptr) const noexcept
             {
-                DeleteFn(ptr);
+                if (ptr)
+                {
+                    DeleteFn(ptr);
+                }
             }
-        }
-    };
+        };
 
-    using ConfigurePtr = std::unique_ptr<WasmEdge_ConfigureContext,
-        WasmEdgeDeleter<WasmEdge_ConfigureDelete>>;
+        using ConfigurePtr = std::unique_ptr<WasmEdge_ConfigureContext,
+            WasmEdgeDeleter<WasmEdge_ConfigureDelete>>;
 
-    using StorePtr = std::unique_ptr<WasmEdge_StoreContext,
-        WasmEdgeDeleter<WasmEdge_StoreDelete>>;
+        using StorePtr = std::unique_ptr<WasmEdge_StoreContext,
+            WasmEdgeDeleter<WasmEdge_StoreDelete>>;
 
-    using VMPtr = std::unique_ptr<WasmEdge_VMContext,
-        WasmEdgeDeleter<WasmEdge_VMDelete>>;
+        using VMPtr = std::unique_ptr<WasmEdge_VMContext,
+            WasmEdgeDeleter<WasmEdge_VMDelete>>;
 
-    using LoaderPtr = std::unique_ptr<WasmEdge_LoaderContext,
-        WasmEdgeDeleter<WasmEdge_LoaderDelete>>;
+        using LoaderPtr = std::unique_ptr<WasmEdge_LoaderContext,
+            WasmEdgeDeleter<WasmEdge_LoaderDelete>>;
 
-    using ValidtorPtr = std::unique_ptr<WasmEdge_ValidatorContext,
-        WasmEdgeDeleter<WasmEdge_ValidatorDelete>>;
+        using ValidtorPtr = std::unique_ptr<WasmEdge_ValidatorContext,
+            WasmEdgeDeleter<WasmEdge_ValidatorDelete>>;
 
-    using ExecutorPtr = std::unique_ptr<WasmEdge_ExecutorContext,
-        WasmEdgeDeleter<WasmEdge_ExecutorDelete>>;
+        using ExecutorPtr = std::unique_ptr<WasmEdge_ExecutorContext,
+            WasmEdgeDeleter<WasmEdge_ExecutorDelete>>;
 
-    using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
-        WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
+        using ModuleInstancePtr = std::unique_ptr<WasmEdge_ModuleInstanceContext,
+            WasmEdgeDeleter<WasmEdge_ModuleInstanceDelete>>;
 
-    enum class ProvidedFunction : std::uint8_t
-    {
-        add_points,
-        animate,
-        max
-    };
+        using FunctionTypePtr = std::unique_ptr<WasmEdge_FunctionTypeContext,
+            WasmEdgeDeleter<WasmEdge_FunctionTypeDelete>>;
 
-    struct ModuleInstance
-    {
-        ModuleInstancePtr module_context;
-        std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
-        PluginHandle handle;
-        std::string name;
+        enum class ProvidedFunction : std::uint8_t
+        {
+            add_points,
+            animate,
+            place_new_window,
+            max
+        };
+
+        struct ModuleInstance
+        {
+            ModuleInstancePtr module_context;
+            std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
+            PluginHandle handle;
+            std::string name;
+        };
+
+        explicit Self(std::unique_ptr<PluginBridge> bridge);
+        ~Self();
+        void create_host_module();
+
+        std::unique_ptr<PluginBridge> bridge;
+        ConfigurePtr configure_context;
+        StorePtr store_context;
+        LoaderPtr loader_context;
+        ValidtorPtr validator_context;
+        ExecutorPtr executor_context;
+        ModuleInstancePtr wasi_module_instance;
+        ModuleInstancePtr host_module;
+        PluginHandle next_plugin_handle = 1;
+        std::vector<ModuleInstance> loaded_modules;
     };
 
     std::mutex mutex;
-    ConfigurePtr configure_context;
-    StorePtr store_context;
-    LoaderPtr loader_context;
-    ValidtorPtr validator_context;
-    ExecutorPtr executor_context;
-    PluginHandle next_plugin_handle = 1;
-    std::vector<ModuleInstance> loaded_modules;
+    std::unique_ptr<Self> self;
 };
 }
 #else
 #include "miracle/plugin.h"
+#include "plugin_bridge.h"
 #include <cstdint>
 #include <mir/geometry/point.h>
 #include <string>
 namespace miracle
 {
 typedef uint32_t PluginHandle;
+class PluginBridge;
 
 struct PluginLoadResult
 {
@@ -166,7 +207,8 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
-    PluginManager() = default;
+    ~PluginManager() = default;
+    void initialize(std::unique_ptr<PluginBridge>) {};
     PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
@@ -178,6 +220,10 @@ public:
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle,
         miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
+    miracle_placement_t place_new_window(
+        PluginHandle handle,
+        miral::ApplicationInfo const& app_info,
+        miral::WindowSpecification const& spec) { return miracle_placement_t {}; }
 };
 }
 #endif

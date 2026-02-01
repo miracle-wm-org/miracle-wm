@@ -33,6 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_bridge.h"
+#include "plugin_managed_container.h"
 #include "plugin_manager.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
@@ -220,6 +222,7 @@ Policy::Policy(
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller));
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
@@ -511,12 +514,24 @@ auto Policy::place_new_window(
     }
 
     // Place the incoming window according to the following criteria:
-    // 1. If it belongs to a shell application, delegate placement to it
-    // 2. If it meets the criteria of a shell component, call it one
-    // 3. If it is a regular window, allocate it as such on the current workspace
-    auto new_spec = requested_specification;
+    // 1. If it is handled by a plugin, then pass it along to the plugin.
+    // 2. If it belongs to a shell application, delegate placement to it
+    // 3. If it meets the criteria of a shell component, call it one
+    // 4. If it is a regular window, allocate it as such on the current workspace
     AllocationHint hint;
-    if (shell_application_manager->is_registered(app_info.application()))
+    auto new_spec = requested_specification;
+
+    auto const handle = plugin_manager->get_wasm_module("playground");
+    auto const plugin_placement = plugin_manager->place_new_window(handle, app_info, requested_specification);
+    if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
+    {
+        hint.container_type = ContainerType::plugin;
+        new_spec.top_left() = from_point(plugin_placement.freestyle_placement.top_left);
+        new_spec.size() = from_size(plugin_placement.freestyle_placement.size);
+        new_spec.depth_layer() = plugin_placement.freestyle_placement.depth_layer;
+        // TODO: Handle workspace
+    }
+    else if (shell_application_manager->is_registered(app_info.application()))
     {
         if (auto const delegate = shell_application_manager->delegate(app_info.application()))
             delegate->place_window(new_spec);
@@ -568,6 +583,14 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         spec.min_height() = mir::geometry::Height(0);
         break;
     }
+    case ContainerType::plugin:
+        container = std::make_shared<PluginManagedContainer>(
+            0,
+            window_info.window(),
+            window_controller,
+            state,
+            output_manager->focused()->active());
+        break;
     case ContainerType::shell:
     default:
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));

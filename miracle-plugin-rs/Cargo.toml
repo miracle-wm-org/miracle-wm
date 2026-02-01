@@ -1,0 +1,15 @@
+[package]
+name = "miracle-plugin-rs"
+version = "0.1.0"
+edition = "2024"
+description = "Rust bindings for miracle-wm plugin API"
+license = "GPL-3.0-or-later"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+bitflags = "2"
+
+[build-dependencies]
+bindgen = "0.71"

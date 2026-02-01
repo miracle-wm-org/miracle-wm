@@ -31,6 +31,7 @@ enum class MIRACLE_WM_CONFIG_API ContainerType
     parent,
     group,
     stack,
+    plugin,
     max
 };
 
@@ -40,7 +41,8 @@ constexpr std::array<const char*, static_cast<int>(ContainerType::max)> containe
     "shell",
     "parent",
     "group",
-    "stack"
+    "stack",
+    "plugin"
 };
 
 }

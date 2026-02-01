@@ -83,6 +83,8 @@ namespace test
 
         MOCK_METHOD(void, alpha, (float), (override));
         MOCK_METHOD(float, alpha, (), (const, override));
+
+        MOCK_METHOD(std::vector<std::shared_ptr<ParentContainer>>, trees, (), (const, override));
     };
 }
 }

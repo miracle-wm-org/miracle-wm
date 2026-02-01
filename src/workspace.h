@@ -93,6 +93,7 @@ public:
     glm::mat4 transform() const override;
     void alpha(float) override;
     float alpha() const override;
+    std::vector<std::shared_ptr<ParentContainer>> trees() const override;
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
