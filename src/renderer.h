@@ -157,7 +157,13 @@ private:
     mir::geometry::Rectangle viewport;
     glm::mat4 screen_to_gl_coords;
     glm::mat4 display_transform;
-    enum class OutputRotation { normal, left_90, inverted_180, right_270 };
+    enum class OutputRotation
+    {
+        normal,
+        left_90,
+        inverted_180,
+        right_270
+    };
     OutputRotation output_rotation = OutputRotation::normal;
     double x_scale = 1.f;
     double y_scale = 1.f;

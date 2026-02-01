@@ -558,8 +558,7 @@ void Renderer::draw(
         int const vp_h = height_int(viewport.size);
 
         float fb_x, fb_y, fb_w, fb_h;
-        bool const top_row_first =
-            (output_surface->layout() == mir::graphics::gl::OutputSurface::Layout::TopRowFirst);
+        bool const top_row_first = (output_surface->layout() == mir::graphics::gl::OutputSurface::Layout::TopRowFirst);
 
         switch (output_rotation)
         {
@@ -588,6 +587,14 @@ void Renderer::draw(
             fb_y = top_row_first ? rel_x : (vp_w - rel_x - rel_w);
             break;
         }
+
+        // Apply the workspace transform to the scissor position and size.
+        glm::vec4 scissor_pos = data.data.workspace_transform * glm::vec4(fb_x, fb_y, 0, 1);
+        glm::vec4 scissor_size = data.data.workspace_transform * glm::vec4(fb_w, fb_h, 0, 0);
+        fb_x = scissor_pos.x;
+        fb_y = scissor_pos.y;
+        fb_w = scissor_size.x;
+        fb_h = scissor_size.y;
 
         glEnable(GL_SCISSOR_TEST);
         glScissor(
