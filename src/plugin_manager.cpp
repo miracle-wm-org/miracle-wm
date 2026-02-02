@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "plugin_manager"
 #include "plugin_manager.h"
 
+#include "container.h"
 #include "plugin_bridge.h"
 
 #include <cstring>
@@ -871,7 +872,7 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
     return result;
 }
 
-miracle_placement_t PluginManager::place_new_window(
+PluginWindowPlacement PluginManager::place_new_window(
     PluginHandle handle,
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification const& spec)
@@ -894,7 +895,7 @@ miracle_placement_t PluginManager::place_new_window(
     if (target_module == nullptr || !target_module->provided_functions.test(static_cast<size_t>(Self::ProvidedFunction::place_new_window)))
     {
         mir::log_warning("Module with handle %u not found or doesn't provide 'place_new_window' function.", handle);
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
@@ -907,7 +908,7 @@ miracle_placement_t PluginManager::place_new_window(
     if (memory_context == nullptr)
     {
         mir::log_error("Memory not found in module.");
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
@@ -927,7 +928,7 @@ miracle_placement_t PluginManager::place_new_window(
     if (!WasmEdge_ResultOK(r))
     {
         mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
@@ -947,7 +948,7 @@ miracle_placement_t PluginManager::place_new_window(
     if (func_context == nullptr)
     {
         mir::log_error("Function 'place_new_window' not found in module.");
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
@@ -963,7 +964,7 @@ miracle_placement_t PluginManager::place_new_window(
     if (!WasmEdge_ResultOK(r))
     {
         mir::log_error("Failed to invoke 'place_new_window' function: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
@@ -974,12 +975,41 @@ miracle_placement_t PluginManager::place_new_window(
     if (!WasmEdge_ResultOK(r))
     {
         mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_placement_t {
+        return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
     }
 
+    return from_c(result);
+}
+
+PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)
+{
+    PluginWindowPlacement result;
+    result.strategy = static_cast<miracle_window_management_strategy_t>(placement.strategy);
+    switch (result.strategy)
+    {
+    case miracle_window_management_strategy_tiled:
+    {
+        result.tiled.container = self->bridge->resolve_container(placement.tiled_placement.parent_internal);
+        result.tiled.index = placement.tiled_placement.index;
+        result.tiled.scheme = from_layout(placement.tiled_placement.layout_scheme);
+        break;
+    }
+    case miracle_window_management_strategy_freestyle:
+    {
+        result.freestyle.rectangle = geom::Rectangle(
+            from_point(placement.freestyle_placement.top_left),
+            from_size(placement.freestyle_placement.size));
+        result.freestyle.layer = static_cast<MirDepthLayer>(placement.freestyle_placement.depth_layer);
+        result.freestyle.workspace = self->bridge->resolve_workspace(placement.freestyle_placement.workspace_internal);
+        break;
+    }
+    default:
+        break;
+    }
     return result;
 }
 
 #endif
+

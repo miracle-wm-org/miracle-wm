@@ -527,9 +527,9 @@ auto Policy::place_new_window(
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
-        new_spec.top_left() = from_point(plugin_placement.freestyle_placement.top_left);
-        new_spec.size() = from_size(plugin_placement.freestyle_placement.size);
-        new_spec.depth_layer() = plugin_placement.freestyle_placement.depth_layer;
+        new_spec.top_left() = plugin_placement.freestyle.rectangle.top_left;
+        new_spec.size() = plugin_placement.freestyle.rectangle.size;
+        new_spec.depth_layer() = plugin_placement.freestyle.layer;
         // TODO: Handle workspace
     }
     else if (shell_application_manager->is_registered(app_info.application()))
@@ -559,19 +559,21 @@ auto Policy::place_new_window(
         {
             if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
             {
-                auto const tiled_strategy = plugin_placement.tiled_placement;
-                auto const container = static_cast<Container*>(reinterpret_cast<void*>(tiled_strategy.parent.internal));
-                if (container->is_leaf())
+                if (plugin_placement.tiled.container->is_leaf())
                 {
-                    auto const leaf_container = Container::as_leaf(container->shared_from_this());
-                    auto const next_layout = from_layout(tiled_strategy.layout_scheme);
-                    if (next_layout != LayoutScheme::none && leaf_container->set_layout(next_layout))
+                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement.tiled.container);
+                    if (plugin_placement.tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement.tiled.scheme))
                     {
-                        hint.parent = leaf_container->get_parent().lock();
-                        hint.index = tiled_strategy.index;
+                        hint.parent = leaf_container->get_parent().lock().get();
+                        hint.index = plugin_placement.tiled.index;
                     }
                     else
                         mir::log_error("Tiled placement referred to a child container but lacked a layout scheme.");
+                }
+                else
+                {
+                    hint.parent = dynamic_cast<ParentContainer*>(plugin_placement.tiled.container);
+                    hint.index = plugin_placement.tiled.index;
                 }
             }
             hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, hint);

@@ -34,7 +34,7 @@ class ParentContainer;
 struct AllocationHint
 {
     ContainerType container_type = ContainerType::none;
-    std::optional<std::shared_ptr<ParentContainer>> parent;
+    ParentContainer* parent;
     std::optional<size_t> index;
 };
 
