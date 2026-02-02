@@ -110,7 +110,6 @@ pkg_check_modules(MIRAL REQUIRED miral>=5.1)
 pkg_check_modules(MIRRENDERER mirrenderer>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRPLATFORM REQUIRED mirplatform>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRCOMMON REQUIRED mircommon>=${MIR_MINIMUM_VERSION})
-pkg_check_modules(MIRCOMMON_INTERNAL REQUIRED mircommon-internal>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRSERVER REQUIRED mirserver>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRSERVER_INTERNAL REQUIRED mirserver-internal>=${MIR_MINIMUM_VERSION})
 pkg_check_modules(MIRWAYLAND REQUIRED mirwayland>=${MIR_MINIMUM_VERSION})
@@ -243,7 +242,6 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${MIRCOMMON_INCLUDE_DIRS}
         ${MIRRENDERER_INCLUDE_DIRS}
         ${MIRPLATFORM_INCLUDE_DIRS}
-        ${MIRCOMMON_INTERNAL_INCLUDE_DIRS}
         ${MIRSERVER_INTERNAL_INCLUDE_DIRS}
         ${MIRSERVER_INCLUDE_DIRS}
         ${MIRWAYLAND_INCLUDE_DIRS}
