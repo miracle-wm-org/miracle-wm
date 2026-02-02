@@ -156,19 +156,6 @@ TEST_F(CAPIWrapperTest, EaseFunctionOptionsCanBeFound)
     }
 }
 
-TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCount)
-{
-    ASSERT_THAT(miracle_config_get_layout_options_count(), Eq(static_cast<uint>(miracle::WindowLayoutStrategy::max)));
-}
-
-TEST_F(CAPIWrapperTest, ContainerLayoutOptionsCanBeFound)
-{
-    for (uint i = 0; i < miracle_config_get_layout_options_count(); i++)
-    {
-        ASSERT_THAT(miracle_config_get_layout_option(i).name, Ne(nullptr));
-    }
-}
-
 TEST_F(CAPIWrapperTest, CanSetPrimaryButton)
 {
     uint primary_button = mir_pointer_button_tertiary;
@@ -595,8 +582,6 @@ TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
         1, // num
         false, // has_name
         nullptr, // name
-        true, // has_layout_strategy
-        static_cast<int>(miracle::WindowLayoutStrategy::floating)
     };
     miracle_config_add_workspace_config(
         &wrapper->config,
@@ -607,8 +592,6 @@ TEST_F(CAPIWrapperTest, CanAddWorkspaceConfig)
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
     EXPECT_TRUE(ws.has_num);
     EXPECT_EQ(ws.num, 1);
-    EXPECT_TRUE(ws.has_layout_strategy);
-    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
 }
 
 TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
@@ -618,8 +601,6 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
         1, // num
         false, // has_name
         nullptr, // name
-        true, // has_layout_strategy
-        static_cast<int>(miracle::WindowLayoutStrategy::floating)
     };
     miracle_config_add_workspace_config(
         &wrapper->config,
@@ -630,8 +611,6 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
         2, // num
         true, // has_name
         "Other", // name
-        true, // has_layout_strategy
-        static_cast<int>(miracle::WindowLayoutStrategy::floating)
     };
     miracle_config_set_workspace_config(
         &wrapper->config,
@@ -643,8 +622,6 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
     EXPECT_EQ(ws.num, 2);
     EXPECT_TRUE(ws.has_name);
     EXPECT_STREQ(ws.name, "Other");
-    EXPECT_TRUE(ws.has_layout_strategy);
-    EXPECT_EQ(ws.layout_strategy, static_cast<int>(miracle::WindowLayoutStrategy::floating));
 }
 
 TEST_F(CAPIWrapperTest, CanRemoveWorkspaceConfig)
@@ -654,8 +631,6 @@ TEST_F(CAPIWrapperTest, CanRemoveWorkspaceConfig)
         1, // num
         false, // has_name
         nullptr, // name
-        true, // has_layout_strategy
-        static_cast<int>(miracle::WindowLayoutStrategy::floating)
     };
     miracle_config_add_workspace_config(
         &wrapper->config,

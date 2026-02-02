@@ -62,10 +62,6 @@ public:
     void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
 
-    AllocationHint allocate_position(
-        miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification& requested_specification,
-        AllocationHint const& hint) override;
     void delete_container(std::shared_ptr<Container> const& container) override;
     bool move_container(Direction direction, Container&) override;
     bool add_to_root(Container& to_move) override;
@@ -98,6 +94,7 @@ public:
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
     [[nodiscard]] std::shared_ptr<ParentContainer> get_root() const override;
+    ParentContainer* get_layout_container() const override;
 
 private:
     struct MoveResult
@@ -138,9 +135,6 @@ private:
     float alpha_ = 1.f;
 
     void on_animation_start(bool is_hiding);
-
-    /// Retrieves the container that is currently being used for layout
-    std::shared_ptr<ParentContainer> get_layout_container();
 
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.
