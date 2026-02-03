@@ -80,26 +80,9 @@ struct MIRACLE_WM_CONFIG_API BorderConfig
     glm::vec4 color = glm::vec4(0);
 };
 
-/// Describes the default way in which windows should be laid out.
-///
-/// This is useful in order to force a particular workspace to follow some layout
-/// scheme by default.
-enum class WindowLayoutStrategy
-{
-    tiling,
-    floating,
-    max
-};
-
-constexpr std::array<const char*, static_cast<int>(WindowLayoutStrategy::max)> window_layout_strategy_strings = {
-    "tiling",
-    "floating"
-};
-
 struct MIRACLE_WM_CONFIG_API WorkspaceConfig
 {
     std::optional<int> num;
-    std::optional<WindowLayoutStrategy> window_layout_strategy;
     std::optional<std::string> name;
 };
 

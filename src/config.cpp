@@ -694,7 +694,7 @@ WorkspaceConfig FilesystemConfiguration::get_workspace_config(std::optional<int>
             return config;
     }
 
-    return { num, std::nullopt, name };
+    return { num, name };
 }
 
 LayoutScheme FilesystemConfiguration::get_default_layout_scheme() const

@@ -543,6 +543,7 @@ auto Policy::place_new_window(
         auto const is_attached = requested_specification.attached_edges().is_set();
         auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
             || requested_specification.state() == mir_window_state_attached;
+
         if (has_exclusive_rect || is_attached || wrong_leaf_state)
             hint.container_type = ContainerType::shell;
         else
@@ -555,7 +556,11 @@ auto Policy::place_new_window(
         }
 
         if (hint.container_type != ContainerType::shell)
-            hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, {});
+        {
+            auto const parent = output_manager->focused()->active()->get_layout_container();
+            new_spec = parent->place_new_window(requested_specification);
+            hint.parent = parent;
+        }
     }
 
     pending_allocation = hint;
