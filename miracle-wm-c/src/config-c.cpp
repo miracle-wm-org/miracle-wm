@@ -291,19 +291,6 @@ extern "C"
         };
     }
 
-    uint miracle_config_get_layout_options_count()
-    {
-        return static_cast<uint>(miracle::WindowLayoutStrategy::max);
-    }
-
-    miracle_config_option_t miracle_config_get_layout_option(uint i)
-    {
-        return {
-            miracle::window_layout_strategy_strings[i],
-            i
-        };
-    }
-
     uint miracle_config_get_handedness_options_count()
     {
         return static_cast<uint>(mir_pointer_handedness_left + 1);
@@ -996,7 +983,7 @@ extern "C"
 
         auto data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->workspace_configs->size())
-            return { false, -1, false, nullptr, false, -1 };
+            return { false, -1, false, nullptr };
 
         static thread_local std::string name_copy;
         const auto& ws = data->workspace_configs.value[index];
@@ -1011,8 +998,6 @@ extern "C"
             ws.num.value_or(-1),
             ws.name.has_value(),
             name_copy.c_str(),
-            ws.window_layout_strategy.has_value(),
-            static_cast<int>(ws.window_layout_strategy.value_or(miracle::WindowLayoutStrategy::tiling)),
         };
     }
 
@@ -1028,8 +1013,6 @@ extern "C"
             ws.num = workspace_config->num;
         if (workspace_config->has_name)
             ws.name = workspace_config->name;
-        if (workspace_config->has_layout_strategy)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs->push_back(ws);
     }
@@ -1050,8 +1033,6 @@ extern "C"
             ws.num = workspace_config->num;
         if (workspace_config->has_name)
             ws.name = workspace_config->name;
-        if (workspace_config->has_layout_strategy)
-            ws.window_layout_strategy = static_cast<miracle::WindowLayoutStrategy>(workspace_config->layout_strategy);
 
         data->workspace_configs.value[index] = ws;
     }

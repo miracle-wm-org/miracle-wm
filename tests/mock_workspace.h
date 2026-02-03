@@ -35,12 +35,6 @@ namespace test
         MOCK_METHOD(void, set_area, (mir::geometry::Rectangle const&), (override));
         MOCK_METHOD(void, recalculate_area, (), (override));
 
-        MOCK_METHOD(AllocationHint, allocate_position,
-            (miral::ApplicationInfo const& app_info,
-                miral::WindowSpecification& requested_specification,
-                AllocationHint const& hint),
-            (override));
-
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(bool, move_container, (Direction direction, Container&), (override));
         MOCK_METHOD(void, show, (geom::Point const&), (override));
@@ -85,6 +79,7 @@ namespace test
         MOCK_METHOD(float, alpha, (), (const, override));
 
         MOCK_METHOD(std::vector<std::shared_ptr<ParentContainer>>, trees, (), (const, override));
+        MOCK_METHOD(ParentContainer*, get_layout_container, (), (const, override));
     };
 }
 }

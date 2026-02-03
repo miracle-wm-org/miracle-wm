@@ -544,6 +544,7 @@ auto Policy::place_new_window(
         auto const is_attached = requested_specification.attached_edges().is_set();
         auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
             || requested_specification.state() == mir_window_state_attached;
+
         if (has_exclusive_rect || is_attached || wrong_leaf_state)
             hint.container_type = ContainerType::shell;
         else
@@ -557,6 +558,8 @@ auto Policy::place_new_window(
 
         if (hint.container_type != ContainerType::shell)
         {
+            auto parent = output_manager->focused()->active()->get_layout_container();
+            std::optional<size_t> index;
             if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
             {
                 if (plugin_placement.tiled.container->is_leaf())
@@ -564,19 +567,21 @@ auto Policy::place_new_window(
                     auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement.tiled.container);
                     if (plugin_placement.tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement.tiled.scheme))
                     {
-                        hint.parent = leaf_container->get_parent().lock().get();
-                        hint.index = plugin_placement.tiled.index;
+                        parent = leaf_container->get_parent().lock().get();
+                        index = plugin_placement.tiled.index;
                     }
                     else
                         mir::log_error("Tiled placement referred to a child container but lacked a layout scheme.");
                 }
                 else
                 {
-                    hint.parent = dynamic_cast<ParentContainer*>(plugin_placement.tiled.container);
-                    hint.index = plugin_placement.tiled.index;
+                    parent = dynamic_cast<ParentContainer*>(plugin_placement.tiled.container);
+                    index = plugin_placement.tiled.index;
                 }
             }
-            hint = output_manager->focused()->active()->allocate_position(app_info, new_spec, hint);
+
+            new_spec = parent->place_new_window(requested_specification, index);
+            hint.parent = parent;
         }
     }
 

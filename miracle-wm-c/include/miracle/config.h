@@ -213,8 +213,6 @@ extern "C"
 
     uint miracle_config_get_ease_function_options_count();
     miracle_config_option_t miracle_config_get_ease_function_option(uint i);
-    uint miracle_config_get_layout_options_count();
-    miracle_config_option_t miracle_config_get_layout_option(uint i);
     uint miracle_config_get_handedness_options_count();
     miracle_config_option_t miracle_config_get_handedness_option(uint i);
     uint miracle_config_get_acceleration_options_count();
@@ -944,19 +942,6 @@ extern "C"
         /// Either #num or #name must be set for the configuration to be
         /// valid.
         const char* name;
-
-        /// `true` if #layout_strategy is set, otherwise `false`.
-        bool has_layout_strategy;
-
-        /// The layout strategy for windows on this workspace.
-        ///
-        /// This strategy decides how new windows are placed for this workspace.
-        ///
-        /// Callers may use #miracle_config_get_layout_option and #miracle_config_get_layout_options_count
-        /// to list the available layout strategies.
-        ///
-        /// Defaults to "tiling".
-        int layout_strategy;
     } miracle_workspace_config_t;
 
     /// Retrieve the number of workspace configurations.

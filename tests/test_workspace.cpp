@@ -99,14 +99,15 @@ public:
             target_workspace = workspace.get();
         miral::WindowSpecification spec;
         miral::ApplicationInfo app_info;
-        auto const hint = target_workspace->allocate_position(app_info, spec, { ContainerType::regular, parent });
+        auto const layout_parent = target_workspace->get_layout_container();
+        spec = layout_parent->place_new_window(spec);
 
         auto const surface = std::make_shared<test::StubSurface>();
         surfaces.push_back(surface);
 
         miral::Window const window(nullptr, surface);
         miral::WindowInfo const info(window, spec);
-        auto leaf = hint.parent.value()->confirm_window(window);
+        auto leaf = layout_parent->confirm_window(window);
         pairs.push_back({ window, leaf, geom::Rectangle(), mir_window_state_restored, std::nullopt });
 
         state->add(leaf);

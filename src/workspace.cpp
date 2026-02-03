@@ -178,55 +178,6 @@ void Workspace::recalculate_area()
     }
 }
 
-AllocationHint Workspace::allocate_position(
-    miral::ApplicationInfo const& app_info,
-    miral::WindowSpecification& requested_specification,
-    AllocationHint const& hint)
-{
-    // We will figure out which parent to add this window to before placing it.
-    //
-    // The parent is either:
-    // 1. The one provided in the hint
-    // 2. The same parent as the currently selected (or root)
-    // 3. A wholly new parent, in the event that we are initializing a floating window.
-    auto const& workspace_config = config->get_workspace_config(num_, name_);
-    std::shared_ptr<ParentContainer> parent;
-    if (hint.parent)
-        parent = hint.parent.value();
-    else
-    {
-        if (workspace_config.window_layout_strategy)
-        {
-            switch (*workspace_config.window_layout_strategy)
-            {
-
-            case WindowLayoutStrategy::floating:
-            {
-                auto const output_area = get_output()->get_area();
-                geom::Rectangle const floating_area = {
-                    geom::Point {
-                                 as_float(output_area.top_left.x) + as_float(output_area.size.width) * 0.1f,
-                                 as_float(output_area.top_left.y) + as_float(output_area.size.height) * 0.1f },
-                    geom::Size {
-                                 as_float(output_area.size.width) * 0.8f,
-                                 as_float(output_area.size.height) * 0.8f                                    }
-                };
-                parent = create_floating_tree(floating_area);
-                break;
-            }
-            default:
-                parent = get_layout_container();
-                break;
-            }
-        }
-        else
-            parent = get_layout_container();
-    }
-
-    requested_specification = parent->place_new_window(requested_specification, hint.index);
-    return { ContainerType::regular, parent };
-}
-
 void Workspace::delete_container(std::shared_ptr<Container> const& container)
 {
     switch (container->get_type())
@@ -677,19 +628,19 @@ void Workspace::on_animation_end(bool is_hiding)
     }
 }
 
-std::shared_ptr<ParentContainer> Workspace::get_layout_container()
+ParentContainer* Workspace::get_layout_container() const
 {
     if (!state->focused_container())
-        return root();
+        return root().get();
 
     auto parent = state->focused_container()->get_parent().lock();
     if (!parent)
-        return root();
+        return root().get();
 
     if (parent->get_workspace().get() != this)
-        return root();
+        return root().get();
 
-    return parent;
+    return parent.get();
 }
 
 std::shared_ptr<ParentContainer> Workspace::get_root() const

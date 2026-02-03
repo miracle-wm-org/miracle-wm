@@ -90,17 +90,6 @@ std::optional<MirKeyboardAction> from_string_keyboard_action(std::string const& 
     return std::nullopt;
 }
 
-std::optional<miracle::WindowLayoutStrategy> window_layout_strategy_from_string(std::string const& str, ParsingContext& context)
-{
-    for (size_t i = 0; i < miracle::window_layout_strategy_strings.size(); i++)
-    {
-        if (miracle::window_layout_strategy_strings[i] == str)
-            return static_cast<miracle::WindowLayoutStrategy>(i);
-    }
-
-    return std::nullopt;
-}
-
 std::optional<miracle::AnimateableEvent> from_string_animateable_event(std::string const& str, ParsingContext& context)
 {
     for (size_t i = 0; i < miracle::animateable_event_strings.size(); i++)
@@ -791,7 +780,6 @@ void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)
         std::string name;
         auto const has_number = try_parse_value(workspace, "number", num, context, true);
         auto const has_name = try_parse_value(workspace, "name", name, context, true);
-        auto const type = try_parse_string_to_optional_value<std::optional<miracle::WindowLayoutStrategy>>(workspace, "layout", window_layout_strategy_from_string, context);
         if (!has_name && !has_number)
         {
             context.builder << "Workspace configuration must include either a 'name' or a 'number' key";
@@ -800,7 +788,6 @@ void read_workspaces(YAML::Node const& workspaces, ParsingContext& context)
         }
 
         workspace_configs.push_back({ num,
-            type,
             name.empty() ? std::optional<std::string>(std::nullopt) : name });
     }
 
@@ -1461,8 +1448,6 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::BeginMap;
             if (workspace.num)
                 out << YAML::Key << "number" << YAML::Value << workspace.num.value();
-            if (workspace.window_layout_strategy)
-                out << YAML::Key << "layout" << YAML::Value << window_layout_strategy_strings[static_cast<uint32_t>(workspace.window_layout_strategy.value())];
             if (workspace.name)
                 out << YAML::Key << "name" << YAML::Value << workspace.name.value();
             out << YAML::EndMap;

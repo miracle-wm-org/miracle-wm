@@ -35,7 +35,6 @@ struct AllocationHint
 {
     ContainerType container_type = ContainerType::none;
     ParentContainer* parent;
-    std::optional<size_t> index;
 };
 
 class WorkspaceInterface
@@ -45,12 +44,6 @@ public:
 
     virtual void set_area(mir::geometry::Rectangle const&) = 0;
     virtual void recalculate_area() = 0;
-
-    virtual AllocationHint allocate_position(
-        miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification& requested_specification,
-        AllocationHint const& hint)
-        = 0;
 
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual bool move_container(Direction direction, Container&) = 0;
@@ -120,6 +113,10 @@ public:
     ///
     /// \returns a list of trees
     [[nodiscard]] virtual std::vector<std::shared_ptr<ParentContainer>> trees() const = 0;
+
+    /// Returns the container that is implicitly being used as a reference to add
+    /// new containers to this workspace.
+    [[nodiscard]] virtual ParentContainer* get_layout_container() const = 0;
 
     /// Json returned to IPC GET_WORKSPACES command.
     [[nodiscard]] virtual nlohmann::json get_workspaces_json(bool is_output_focused) const = 0;
