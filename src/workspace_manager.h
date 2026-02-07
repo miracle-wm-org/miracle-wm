@@ -113,6 +113,19 @@ public:
     bool set_workspace_num(uint32_t id, std::optional<int> const& num);
     bool set_workspace_name(uint32_t id, std::optional<std::string> const& name);
 
+    /// Request a workspace by optional number and/or name.
+    ///
+    /// If a workspace with the given number or name already exists, it is returned.
+    /// Otherwise, a new workspace is created on the provided output.
+    ///
+    /// \param focus if true, the workspace will be focused after creation/lookup
+    /// \returns the workspace, or nullptr if it could not be created
+    WorkspaceInterface* request_workspace(
+        OutputInterface* output_hint,
+        std::optional<int> num,
+        std::optional<std::string> const& name,
+        bool focus);
+
     /// The number of default workspaces
     static constexpr int NUM_DEFAULT_WORKSPACES = 10;
 

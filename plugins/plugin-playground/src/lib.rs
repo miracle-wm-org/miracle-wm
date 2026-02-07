@@ -5,7 +5,7 @@ use miracle_plugin_rs::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
-    get_output_at,
+    request_workspace,
 };
 
 #[unsafe(no_mangle)]
@@ -58,31 +58,30 @@ pub extern "C" fn place_new_window(
     let window_info =
         unsafe { WindowInfo::from_c_with_name(window_info.as_ref().unwrap(), String::from("")) };
     let mut placement: Placement = Default::default();
-    let first_output = get_output_at(0);
-    if let Some(output) = first_output {
-        let first_workspace = output.workspace(0);
-        if let Some(workspace) = first_workspace {
-            let first_non_floating = workspace.trees().into_iter().find(|t| !t.is_floating);
-            if let Some(tree) = first_non_floating {
-                let window_count = count_windows(&tree);
-                if window_count >= 2 {
-                    if let Some(second_child) = tree.child_at(1) {
-                        let index = match second_child.container_type {
-                            ContainerType::Parent => second_child.num_children,
-                            ContainerType::Window => 1,
-                        };
-                        placement.strategy = WindowManagementStrategy::Tiled;
-                        placement.tiled = TiledPlacement {
-                            parent: Some(second_child),
-                            index,
-                            layout_scheme: LayoutScheme::Vertical,
-                        };
-                    }
+
+    // Request workspace 1 by number (creates it if it doesn't exist) and focus it.
+    let workspace = request_workspace(Some(1), None, true);
+    if let Some(workspace) = workspace {
+        let first_non_floating = workspace.trees().into_iter().find(|t| !t.is_floating);
+        if let Some(tree) = first_non_floating {
+            let window_count = count_windows(&tree);
+            if window_count >= 2 {
+                if let Some(second_child) = tree.child_at(1) {
+                    let index = match second_child.container_type {
+                        ContainerType::Parent => second_child.num_children,
+                        ContainerType::Window => 1,
+                    };
+                    placement.strategy = WindowManagementStrategy::Tiled;
+                    placement.tiled = TiledPlacement {
+                        parent: Some(second_child),
+                        index,
+                        layout_scheme: LayoutScheme::Vertical,
+                    };
                 }
             }
-        } else {
-            placement.strategy = WindowManagementStrategy::Freestyle;
         }
+    } else {
+        placement.strategy = WindowManagementStrategy::Freestyle;
     }
 
     unsafe {
