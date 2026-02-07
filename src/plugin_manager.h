@@ -17,9 +17,38 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef MIRACLEWM_PLUGIN_MANAGER_H
 #define MIRACLEWM_PLUGIN_MANAGER_H
+#include "layout_scheme.h"
+#include "miracle/plugin.h"
+#include <mir/geometry/rectangle.h>
+
+namespace miracle
+{
+class Container;
+class WorkspaceInterface;
+
+struct PluginWindowPlacement
+{
+    struct TiledPlacement
+    {
+        Container* container;
+        uint32_t index;
+        LayoutScheme scheme;
+    };
+
+    struct FreestylePlacement
+    {
+        mir::geometry::Rectangle rectangle;
+        MirDepthLayer layer;
+        WorkspaceInterface* workspace;
+    };
+
+    miracle_window_management_strategy_t strategy = miracle_window_management_strategy_system;
+    TiledPlacement tiled;
+    FreestylePlacement freestyle;
+};
+}
 
 #if FEATURE_PLUGIN_SYSTEM
-#include "miracle/plugin.h"
 #include <bitset>
 #include <memory>
 #include <mir/geometry/point.h>
@@ -105,7 +134,7 @@ public:
     /// \param handle the plugin handle to use
     /// \param window_info the window being placed
     /// \returns the placement
-    miracle_placement_t place_new_window(
+    PluginWindowPlacement place_new_window(
         PluginHandle handle,
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec);
@@ -182,6 +211,8 @@ private:
         std::vector<ModuleInstance> loaded_modules;
     };
 
+    PluginWindowPlacement from_c(miracle_placement_t placement);
+
     std::mutex mutex;
     std::unique_ptr<Self> self;
 };
@@ -220,10 +251,10 @@ public:
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle,
         miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
-    miracle_placement_t place_new_window(
+    PluginWindowPlacement place_new_window(
         PluginHandle handle,
         miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification const& spec) { return miracle_placement_t {}; }
+        miral::WindowSpecification const& spec) { return PluginWindowPlacement {}; }
 };
 }
 #endif

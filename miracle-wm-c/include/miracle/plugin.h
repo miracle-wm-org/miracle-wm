@@ -292,7 +292,7 @@ extern "C"
     /// Describes a tiled placement which is controlled by the plugin system.
     typedef struct
     {
-        /// The parent container that this window should be placed inside.
+        /// The ID of the parent container that this window should be placed inside.
         ///
         /// If the container has #miracle_container_t::type of #miracle_container_type_window, then
         /// the #layout_scheme will be applied to that window to form a new
@@ -301,7 +301,9 @@ extern "C"
         /// If the container has #miracle_container_t::type of #miracle_container_type_parent, then
         /// the #layout_scheme will be ignored and the window will be placed at
         /// the #index.
-        miracle_container_t parent;
+        ///
+        /// If this is 0, then it is assumed to be null.
+        uint64_t parent_internal;
 
         /// The index at which this container will be placed within the parent.
         uint32_t index;
@@ -323,16 +325,14 @@ extern "C"
         /// Plugin authors are encouraged to use #miracle_window_info_t::depth_layer
         /// unless they would like to force the window into a different depth for
         /// whatever reason.
-        MirDepthLayer depth_layer;
+        uint32_t depth_layer;
 
         /// The workspace that this window should be placed on.
         ///
         /// If `0`, the window will always be shown.
         ///
         /// Defaults to the currently selected workspace.
-        ///
-        /// This is a 32-bit WASM linear memory pointer to a miracle_workspace_t.
-        uint32_t workspace;
+        uint64_t workspace_internal;
 
         /// The size of the window.
         ///
@@ -357,7 +357,7 @@ extern "C"
         /// The titled placement strategy.
         ///
         /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
-        miracle_tiled_placement_t titled_placement;
+        miracle_tiled_placement_t tiled_placement;
     } miracle_placement_t;
 #ifdef __cplusplus
 }

@@ -34,7 +34,7 @@ class ParentContainer;
 struct AllocationHint
 {
     ContainerType container_type = ContainerType::none;
-    std::optional<ParentContainer*> parent;
+    ParentContainer* parent;
 };
 
 class WorkspaceInterface

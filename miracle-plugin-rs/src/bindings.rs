@@ -423,8 +423,8 @@ pub type miracle_window_management_strategy_t = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct miracle_tiled_placement_t {
-    #[doc = " The parent container that this window should be placed inside.\n\n If the container has #miracle_container_t::type of #miracle_container_type_window, then\n the #layout_scheme will be applied to that window to form a new\n parent before placing the window at the #index.\n\n If the container has #miracle_container_t::type of #miracle_container_type_parent, then\n the #layout_scheme will be ignored and the window will be placed at\n the #index."]
-    pub parent: miracle_container_t,
+    #[doc = " The ID of the parent container that this window should be placed inside.\n\n If the container has #miracle_container_t::type of #miracle_container_type_window, then\n the #layout_scheme will be applied to that window to form a new\n parent before placing the window at the #index.\n\n If the container has #miracle_container_t::type of #miracle_container_type_parent, then\n the #layout_scheme will be ignored and the window will be placed at\n the #index.\n\n If this is 0, then it is assumed to be null."]
+    pub parent_internal: u64,
     #[doc = " The index at which this container will be placed within the parent."]
     pub index: u32,
     #[doc = " The requested layout scheme of the new parent.\n\n This will only be used if #miracle_container_type_parent has #miracle_container_t::type of #miracle_container_type_parent."]
@@ -441,25 +441,16 @@ impl Default for miracle_tiled_placement_t {
 }
 #[doc = " Describes a freestyle placement which is fully controlled by the plugin."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_freestyle_placement_t {
     #[doc = " The top left position of the window."]
     pub top_left: miracle_point_t,
     #[doc = " The depth layer of the window.\n\n Plugin authors are encouraged to use #miracle_window_info_t::depth_layer\n unless they would like to force the window into a different depth for\n whatever reason."]
-    pub depth_layer: MirDepthLayer,
-    #[doc = " The workspace that this window should be placed on.\n\n If `0`, the window will always be shown.\n\n Defaults to the currently selected workspace.\n\n This is a 32-bit WASM linear memory pointer to a miracle_workspace_t."]
-    pub workspace: u32,
+    pub depth_layer: u32,
+    #[doc = " The workspace that this window should be placed on.\n\n If `0`, the window will always be shown.\n\n Defaults to the currently selected workspace."]
+    pub workspace_internal: u64,
     #[doc = " The size of the window.\n\n This value may not be honored by the window itself."]
     pub size: miracle_size_t,
-}
-impl Default for miracle_freestyle_placement_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -469,7 +460,7 @@ pub struct miracle_placement_t {
     #[doc = " The freestyle placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_freestyle."]
     pub freestyle_placement: miracle_freestyle_placement_t,
     #[doc = " The titled placement strategy.\n\n This is only honored if #strategy is #miracle_window_management_strategy_tiled."]
-    pub titled_placement: miracle_tiled_placement_t,
+    pub tiled_placement: miracle_tiled_placement_t,
 }
 impl Default for miracle_placement_t {
     fn default() -> Self {

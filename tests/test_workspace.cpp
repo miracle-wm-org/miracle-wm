@@ -100,7 +100,7 @@ public:
         miral::WindowSpecification spec;
         miral::ApplicationInfo app_info;
         auto const layout_parent = target_workspace->get_layout_container();
-        spec = layout_parent->place_new_window(spec);
+        spec = layout_parent->place_new_window(spec, std::nullopt);
 
         auto const surface = std::make_shared<test::StubSurface>();
         surfaces.push_back(surface);
