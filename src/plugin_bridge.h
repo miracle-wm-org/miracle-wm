@@ -29,6 +29,7 @@ namespace miracle
 class Container;
 class OutputManager;
 class WindowController;
+class WorkspaceInterface;
 
 template <typename T>
 class PluginBridgeObjectHandle
@@ -93,6 +94,12 @@ public:
     WindowResult get_window(uint64_t container_address);
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
+
+    /// Retrieve the container from its id.
+    Container* resolve_container(uint64_t container_internal);
+
+    /// Retrieve the workspace from its id.
+    WorkspaceInterface* resolve_workspace(uint64_t workspace_internal);
 
 private:
     /// This is the information expected to be on a #miracle_window_info_t.

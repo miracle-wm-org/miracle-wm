@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dying_surface_manager.h"
 #include "feature_flags.h"
 #include "internal_shell_application_spawner.h"
+#include "leaf_container.h"
 #include "magnifier_wrapper.h"
 #include "output_factory.h"
 #include "output_listener.h"
@@ -526,9 +527,9 @@ auto Policy::place_new_window(
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
-        new_spec.top_left() = from_point(plugin_placement.freestyle_placement.top_left);
-        new_spec.size() = from_size(plugin_placement.freestyle_placement.size);
-        new_spec.depth_layer() = plugin_placement.freestyle_placement.depth_layer;
+        new_spec.top_left() = plugin_placement.freestyle.rectangle.top_left;
+        new_spec.size() = plugin_placement.freestyle.rectangle.size;
+        new_spec.depth_layer() = plugin_placement.freestyle.layer;
         // TODO: Handle workspace
     }
     else if (shell_application_manager->is_registered(app_info.application()))
@@ -557,8 +558,33 @@ auto Policy::place_new_window(
 
         if (hint.container_type != ContainerType::shell)
         {
-            auto const parent = output_manager->focused()->active()->get_layout_container();
-            new_spec = parent->place_new_window(requested_specification);
+            auto parent = output_manager->focused()->active()->get_layout_container();
+            std::optional<size_t> index;
+
+            // If the plugin placement is tiled, then we're going to try and either:
+            // 1. Transform the selected leaf into a parent and place it
+            // 2. Place the new window in the selected parent.
+            if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
+            {
+                if (plugin_placement.tiled.container->is_leaf())
+                {
+                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement.tiled.container);
+                    if (plugin_placement.tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement.tiled.scheme))
+                    {
+                        parent = leaf_container->get_parent().lock().get();
+                        index = plugin_placement.tiled.index;
+                    }
+                    else
+                        mir::log_error("Tiled placement referred to a child container but lacked a layout scheme.");
+                }
+                else
+                {
+                    parent = dynamic_cast<ParentContainer*>(plugin_placement.tiled.container);
+                    index = plugin_placement.tiled.index;
+                }
+            }
+
+            new_spec = parent->place_new_window(requested_specification, index);
             hint.parent = parent;
         }
     }
@@ -582,8 +608,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     {
     case ContainerType::regular:
     {
-        assert(pending_allocation.parent.has_value());
-        container = pending_allocation.parent.value()->confirm_window(window_info.window());
+        assert(pending_allocation.parent);
+        container = pending_allocation.parent->confirm_window(window_info.window());
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         break;

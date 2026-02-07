@@ -1454,6 +1454,12 @@ impl Output {
         }
     }
 
+    pub fn workspaces(&self) -> Vec<Workspace> {
+        (0..self.num_workspaces)
+            .filter_map(|i| self.workspace(i))
+            .collect()
+    }
+
     pub fn workspace(&self, index: u32) -> Option<Workspace> {
         if index >= self.num_workspaces {
             return None;
@@ -1491,10 +1497,10 @@ impl Output {
 }
 
 /// Tiled placement configuration.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct TiledPlacement {
     /// The parent container.
-    pub parent: bindings::miracle_container_t,
+    pub parent: Option<Container>,
     /// The index at which to place the container.
     pub index: u32,
     /// The requested layout scheme.
@@ -1504,33 +1510,22 @@ pub struct TiledPlacement {
 impl From<TiledPlacement> for bindings::miracle_tiled_placement_t {
     fn from(value: TiledPlacement) -> Self {
         Self {
-            parent: value.parent,
+            parent_internal: value.parent.map_or(0, |c| c.internal),
             index: value.index,
             layout_scheme: value.layout_scheme.into(),
         }
     }
 }
 
-impl From<bindings::miracle_tiled_placement_t> for TiledPlacement {
-    fn from(value: bindings::miracle_tiled_placement_t) -> Self {
-        Self {
-            parent: value.parent,
-            index: value.index,
-            layout_scheme: LayoutScheme::try_from(value.layout_scheme).unwrap_or_default(),
-        }
-    }
-}
-
 /// Freestyle placement configuration.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FreestylePlacement {
     /// The top left position.
     pub top_left: Point,
     /// The depth layer.
     pub depth_layer: DepthLayer,
-    /// The workspace (0 for always visible).
-    /// This is a 32-bit WASM linear memory pointer.
-    pub workspace: u32,
+    /// The workspace
+    pub workspace: Option<Workspace>,
     /// The size.
     pub size: Size,
 }
@@ -1540,25 +1535,14 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
         Self {
             top_left: value.top_left.into(),
             depth_layer: value.depth_layer.into(),
-            workspace: value.workspace,
-            size: value.size.into(),
-        }
-    }
-}
-
-impl From<bindings::miracle_freestyle_placement_t> for FreestylePlacement {
-    fn from(value: bindings::miracle_freestyle_placement_t) -> Self {
-        Self {
-            top_left: value.top_left.into(),
-            depth_layer: DepthLayer::try_from(value.depth_layer).unwrap_or_default(),
-            workspace: value.workspace,
+            workspace_internal: value.workspace.map_or(0, |w| w.internal),
             size: value.size.into(),
         }
     }
 }
 
 /// Placement configuration.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Placement {
     /// The placement strategy.
     pub strategy: WindowManagementStrategy,
@@ -1582,8 +1566,8 @@ impl Placement {
     /// Set the values of a C placement struct from this Placement.
     pub fn set_c(&self, out: &mut bindings::miracle_placement_t) {
         out.strategy = self.strategy.into();
-        out.freestyle_placement = self.freestyle.into();
-        out.titled_placement = self.tiled.into();
+        out.freestyle_placement = self.freestyle.clone().into();
+        out.tiled_placement = self.tiled.clone().into();
     }
 }
 
@@ -1591,18 +1575,8 @@ impl From<Placement> for bindings::miracle_placement_t {
     fn from(value: Placement) -> Self {
         Self {
             strategy: value.strategy.into(),
-            freestyle_placement: value.freestyle.into(),
-            titled_placement: value.tiled.into(),
-        }
-    }
-}
-
-impl From<bindings::miracle_placement_t> for Placement {
-    fn from(value: bindings::miracle_placement_t) -> Self {
-        Self {
-            strategy: WindowManagementStrategy::try_from(value.strategy).unwrap_or_default(),
-            freestyle: value.freestyle_placement.into(),
-            tiled: value.titled_placement.into(),
+            freestyle_placement: value.freestyle.clone().into(),
+            tiled_placement: value.tiled.clone().into(),
         }
     }
 }
@@ -1615,8 +1589,6 @@ impl From<bindings::miracle_placement_t> for Placement {
 ///
 /// These functions are imported from the WASM host (miracle-wm) at runtime.
 mod ffi {
-    use crate::bindings::{self, miracle_application_info_t};
-
     unsafe extern "C" {
         /// Retrieve the application info for a given window.
         /// Returns the internal ID on success, or -1 if the buffer is too small.

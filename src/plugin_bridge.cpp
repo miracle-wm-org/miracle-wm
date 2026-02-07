@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+// TODO: We need to SAFELY resolve objects from their addresses, but that can come later.
+
 namespace
 {
 miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec)
@@ -250,4 +252,14 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
     {
         std::erase(plugin_window_infos, plugin_window_info);
     });
+}
+
+Container* PluginBridge::resolve_container(uint64_t container_internal)
+{
+    return static_cast<Container*>(reinterpret_cast<void*>(container_internal));
+}
+
+WorkspaceInterface* PluginBridge::resolve_workspace(uint64_t workspace_internal)
+{
+    return static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_internal));
 }
