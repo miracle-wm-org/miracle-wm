@@ -1012,4 +1012,3 @@ PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)
 }
 
 #endif
-

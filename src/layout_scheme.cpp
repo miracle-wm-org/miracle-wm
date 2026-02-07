@@ -61,6 +61,5 @@ miracle::LayoutScheme miracle::from_layout(miracle_layout_scheme scheme)
         return LayoutScheme::tabbing;
     case miracle_layout_scheme_stacking:
         return LayoutScheme::stacking;
-
     }
 }

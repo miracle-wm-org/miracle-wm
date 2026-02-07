@@ -1,5 +1,6 @@
 use miracle_plugin_rs::{
-    DepthLayer, Placement, WindowInfo, WindowManagementStrategy,
+    Container, ContainerType, LayoutScheme, Placement, TiledPlacement, WindowInfo,
+    WindowManagementStrategy,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
@@ -37,6 +38,17 @@ pub extern "C" fn animate(
     }
 }
 
+fn count_windows(container: &Container) -> u32 {
+    match container.container_type {
+        ContainerType::Window => 1,
+        ContainerType::Parent => container
+            .get_children()
+            .iter()
+            .map(|c| count_windows(c))
+            .sum(),
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn place_new_window(
     result: *mut miracle_placement_t,
@@ -45,17 +57,32 @@ pub extern "C" fn place_new_window(
     // TODO: Pass down the name of the window properly.
     let window_info =
         unsafe { WindowInfo::from_c_with_name(window_info.as_ref().unwrap(), String::from("")) };
-    let application = window_info.application();
     let mut placement: Placement = Default::default();
-
-    // Example: Always place gedit on workspace 3.
-    if let Some(application) = application {
-        if application.name == "gedit" {
-            placement.strategy = WindowManagementStrategy::Tiled;
-            
+    let first_output = get_output_at(0);
+    if let Some(output) = first_output {
+        let first_workspace = output.workspace(0);
+        if let Some(workspace) = first_workspace {
+            let first_non_floating = workspace.trees().into_iter().find(|t| !t.is_floating);
+            if let Some(tree) = first_non_floating {
+                let window_count = count_windows(&tree);
+                if window_count >= 2 {
+                    if let Some(second_child) = tree.child_at(1) {
+                        let index = match second_child.container_type {
+                            ContainerType::Parent => second_child.num_children,
+                            ContainerType::Window => 1,
+                        };
+                        placement.strategy = WindowManagementStrategy::Tiled;
+                        placement.tiled = TiledPlacement {
+                            parent: Some(second_child),
+                            index,
+                            layout_scheme: LayoutScheme::Vertical,
+                        };
+                    }
+                }
+            }
+        } else {
+            placement.strategy = WindowManagementStrategy::Freestyle;
         }
-    } else {
-        placement.strategy = WindowManagementStrategy::System;
     }
 
     unsafe {

@@ -560,6 +560,10 @@ auto Policy::place_new_window(
         {
             auto parent = output_manager->focused()->active()->get_layout_container();
             std::optional<size_t> index;
+
+            // If the plugin placement is tiled, then we're going to try and either:
+            // 1. Transform the selected leaf into a parent and place it
+            // 2. Place the new window in the selected parent.
             if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
             {
                 if (plugin_placement.tiled.container->is_leaf())
@@ -604,8 +608,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     {
     case ContainerType::regular:
     {
-        assert(pending_allocation.parent.has_value());
-        container = pending_allocation.parent.value()->confirm_window(window_info.window());
+        assert(pending_allocation.parent);
+        container = pending_allocation.parent->confirm_window(window_info.window());
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         break;

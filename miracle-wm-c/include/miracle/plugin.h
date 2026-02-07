@@ -301,6 +301,8 @@ extern "C"
         /// If the container has #miracle_container_t::type of #miracle_container_type_parent, then
         /// the #layout_scheme will be ignored and the window will be placed at
         /// the #index.
+        ///
+        /// If this is 0, then it is assumed to be null.
         uint64_t parent_internal;
 
         /// The index at which this container will be placed within the parent.
