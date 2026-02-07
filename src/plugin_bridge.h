@@ -30,6 +30,7 @@ class Container;
 class OutputManager;
 class WindowController;
 class WorkspaceInterface;
+class WorkspaceManager;
 
 template <typename T>
 class PluginBridgeObjectHandle
@@ -80,7 +81,8 @@ public:
 
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
-        std::shared_ptr<WindowController> const& window_controller);
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<WorkspaceManager> const& workspace_manager);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -92,6 +94,7 @@ public:
     miracle_container_t tree_at_index(uint64_t workspace_id, uint32_t index);
     miracle_container_t child_at(uint64_t parent_id, uint32_t index);
     WindowResult get_window(uint64_t container_address);
+    WorkspaceResult request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus);
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
 
@@ -111,6 +114,7 @@ private:
 
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<WorkspaceManager> workspace_manager;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
 };
 

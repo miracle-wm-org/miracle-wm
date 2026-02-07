@@ -336,6 +336,71 @@ WasmEdge_Result host_miracle_container_get_window(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_request_workspace(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_request_workspace: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const has_number = WasmEdge_ValueGetI32(params[0]);
+    int32_t const number = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_in_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_in_len = WasmEdge_ValueGetI32(params[3]);
+    int32_t const out_workspace_ptr = WasmEdge_ValueGetI32(params[4]);
+    int32_t const out_name_buf_ptr = WasmEdge_ValueGetI32(params[5]);
+    int32_t const out_name_buf_len = WasmEdge_ValueGetI32(params[6]);
+    int32_t const focus_workspace = WasmEdge_ValueGetI32(params[7]);
+
+    std::optional<int> num;
+    if (has_number)
+        num = number;
+
+    std::optional<std::string> name;
+    if (name_in_ptr != 0 && name_in_len > 0)
+    {
+        uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+        char const* name_str = reinterpret_cast<char const*>(mem_base + name_in_ptr);
+        name = std::string(name_str, name_in_len);
+    }
+
+    auto const workspace = bridge->request_workspace(num, name, focus_workspace != 0);
+    if (!workspace.workspace.is_set)
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* workspace_buf = mem_base + out_workspace_ptr;
+    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + out_name_buf_ptr);
+    char const* workspace_name = workspace.name.value_or("").c_str();
+    size_t const name_len = std::strlen(workspace_name);
+
+    if (name_len + 1 > static_cast<size_t>(out_name_buf_len))
+    {
+        mir::log_error("host_miracle_request_workspace: name buffer too small (%zu > %d)",
+            name_len + 1, out_name_buf_len);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    std::memcpy(name_buf, workspace_name, name_len);
+    name_buf[name_len] = '\0';
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_output_get_workspace(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -518,6 +583,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
         host_miracle_output_get_workspace, bridge.get());
 
+    add_host_function(module, "miracle_request_workspace",
+        create_func_type({ i32, i32, i32, i32, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_request_workspace, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -528,7 +597,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 8);
+    mir::log_info("Host module 'env' registered with %d functions", 9);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& name)

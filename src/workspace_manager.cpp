@@ -367,6 +367,46 @@ bool WorkspaceManager::set_workspace_num(uint32_t id, std::optional<int> const& 
     return true;
 }
 
+WorkspaceInterface* WorkspaceManager::request_workspace(
+    OutputInterface* output_hint,
+    std::optional<int> num,
+    std::optional<std::string> const& name,
+    bool focus)
+{
+    if (num)
+    {
+        if (auto const existing = workspace(*num))
+        {
+            if (focus)
+                focus_existing(existing, false);
+            return existing;
+        }
+    }
+
+    if (name)
+    {
+        if (auto const existing = workspace(*name))
+        {
+            if (focus)
+                focus_existing(existing, false);
+            return existing;
+        }
+    }
+
+    mir::log_info("request_workspace: creating with num=%s, name=%s",
+        num ? std::to_string(*num).c_str() : "none",
+        name ? name->c_str() : "none");
+    uint32_t id = next_id++;
+    output_hint->advise_new_workspace({ .id = id,
+        .num = num,
+        .name = name,
+        .registrar = registry });
+    if (focus)
+        request_focus(id);
+    registry->advise_created(id);
+    return workspace(id);
+}
+
 bool WorkspaceManager::set_workspace_name(uint32_t id, std::optional<std::string> const& name)
 {
     std::shared_ptr<WorkspaceInterface> workspace_to_set;

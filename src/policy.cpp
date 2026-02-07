@@ -223,7 +223,7 @@ Policy::Policy(
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller));
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager));
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);

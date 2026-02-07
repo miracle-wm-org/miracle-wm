@@ -156,6 +156,56 @@ TEST_F(WorkspaceManagerTest, RequestWorkspaceBackAndForthEnabled)
     EXPECT_TRUE(active_workspace->num() == 2);
 }
 
+TEST_F(WorkspaceManagerTest, RequestWorkspaceByNumCreatesAndReturns)
+{
+    create_output();
+
+    auto* ws = workspace_manager.request_workspace(output.get(), 5, std::nullopt, false);
+    ASSERT_NE(ws, nullptr);
+    EXPECT_EQ(ws->num(), 5);
+    EXPECT_EQ(workspaces.size(), 2u); // 1 default + 1 new
+}
+
+TEST_F(WorkspaceManagerTest, RequestWorkspaceByNumReturnsExisting)
+{
+    create_output();
+
+    // Workspace 1 was created by create_output
+    auto* ws = workspace_manager.request_workspace(output.get(), 1, std::nullopt, false);
+    ASSERT_NE(ws, nullptr);
+    EXPECT_EQ(ws->num(), 1);
+    EXPECT_EQ(workspaces.size(), 1u); // no new workspace created
+}
+
+TEST_F(WorkspaceManagerTest, RequestWorkspaceByNumWithFocusChangesActive)
+{
+    create_output();
+
+    workspace_manager.request_workspace(output.get(), 2);
+    EXPECT_EQ(active_workspace->num(), 2);
+
+    // Request workspace 1 with focus=true should switch active
+    auto* ws = workspace_manager.request_workspace(output.get(), 1, std::nullopt, true);
+    ASSERT_NE(ws, nullptr);
+    EXPECT_EQ(active_workspace->num(), 1);
+}
+
+TEST_F(WorkspaceManagerTest, RequestWorkspaceByNumWithoutFocusDoesNotChangeActive)
+{
+    create_output();
+
+    // Active is workspace 1
+    EXPECT_EQ(active_workspace->num(), 1);
+
+    // Create workspace 2 without focus
+    auto* ws = workspace_manager.request_workspace(output.get(), 2, std::nullopt, false);
+    ASSERT_NE(ws, nullptr);
+    EXPECT_EQ(ws->num(), 2);
+
+    // Active should still be workspace 1
+    EXPECT_EQ(active_workspace->num(), 1);
+}
+
 TEST_F(WorkspaceManagerTest, RequestWorkspaceBackAndForthDisabled)
 {
     create_output();

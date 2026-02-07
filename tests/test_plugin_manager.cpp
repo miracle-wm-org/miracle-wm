@@ -35,7 +35,8 @@ public:
         pm.initialize(
             std::make_unique<PluginBridge>(
                 std::make_shared<OutputManager>(std::make_unique<test::MockOutputFactory>()),
-                std::make_shared<test::MockWindowController>()));
+                std::make_shared<test::MockWindowController>(),
+                nullptr));
     }
 
     PluginManager pm;

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_container.h"
 #include "window_controller.h"
 #include "workspace_interface.h"
+#include "workspace_manager.h"
 #include <miral/application_info.h>
 #include <miral/window_info.h>
 
@@ -131,9 +132,11 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
 }
 
 PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<WorkspaceManager> const& workspace_manager) :
     output_manager(output_manager),
-    window_controller(window_controller)
+    window_controller(window_controller),
+    workspace_manager(workspace_manager)
 {
 }
 
@@ -257,6 +260,22 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
 Container* PluginBridge::resolve_container(uint64_t container_internal)
 {
     return static_cast<Container*>(reinterpret_cast<void*>(container_internal));
+}
+
+PluginBridge::WorkspaceResult PluginBridge::request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus)
+{
+    auto* output = output_manager->focused().get();
+    auto* result = workspace_manager->request_workspace(output, num, name, focus);
+    if (!result)
+        return { from_workspace(nullptr), std::nullopt };
+
+    for (auto const& w : result->get_output()->get_workspaces())
+    {
+        if (w.get() == result)
+            return { from_workspace(w), w->name() };
+    }
+
+    return { from_workspace(nullptr), std::nullopt };
 }
 
 WorkspaceInterface* PluginBridge::resolve_workspace(uint64_t workspace_internal)
