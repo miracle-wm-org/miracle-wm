@@ -81,6 +81,12 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
             animating_surface->set_alpha(result.opacity.value());
         }
 
+        if (result.rectangle)
+        {
+            animating_surface->move_to(result.rectangle->top_left);
+            animating_surface->set_clip_area(result.rectangle.value());
+        }
+
         if (result.is_complete)
         {
             compositor_state->render_data_manager()->remove(id);
