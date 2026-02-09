@@ -15,13 +15,11 @@ pub extern "C" fn add_points(a: miracle_point_t, b: miracle_point_t) -> miracle_
     }
 }
 
-/// Ease-out cubic: fast start, gentle deceleration. Natural for elements arriving.
 fn ease_out_cubic(t: f32) -> f32 {
     let inv = 1.0 - t;
     1.0 - inv * inv * inv
 }
 
-/// Ease-in cubic: gentle start, fast exit. Natural for elements departing.
 fn ease_in_cubic(t: f32) -> f32 {
     t * t * t
 }
