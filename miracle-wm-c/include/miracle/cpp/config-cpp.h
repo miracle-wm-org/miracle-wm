@@ -181,9 +181,6 @@ struct MIRACLE_WM_CONFIG_API PluginConfiguration
 {
     std::string path;
     std::string name;
-    std::optional<std::string> add_points_function;
-    std::optional<std::string> animate_function;
-    std::optional<std::string> place_new_window_function;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData

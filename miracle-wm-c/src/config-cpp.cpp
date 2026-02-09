@@ -495,15 +495,6 @@ void read_plugins(YAML::Node const& node, ParsingContext& context)
         miracle::PluginConfiguration plugin_config;
         plugin_config.path = path;
         plugin_config.name = name;
-
-        std::string func_name;
-        if (try_parse_value(plugin_node, "add_points", func_name, context, true))
-            plugin_config.add_points_function = func_name;
-        if (try_parse_value(plugin_node, "animate", func_name, context, true))
-            plugin_config.animate_function = func_name;
-        if (try_parse_value(plugin_node, "place_new_window", func_name, context, true))
-            plugin_config.place_new_window_function = func_name;
-
         plugins.push_back(plugin_config);
     }
     context.result.config.plugins = std::move(plugins);
@@ -899,12 +890,6 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
         case miracle::AnimationType::plugin:
         {
-            if (!animation_node["plugin_name"])
-            {
-                context.builder << "Plugin animation definitions must have a 'plugin_name' key";
-                create_error(animation_node, context);
-                break;
-            }
             std::string plugin_name;
             if (!try_parse_value(animation_node, "plugin_name", plugin_name, context))
             {
@@ -913,7 +898,15 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
                 break;
             }
 
-            definition.data = miracle::PluginAnimationDefinition { plugin_name };
+            std::string function_name;
+            if (!try_parse_value(animation_node, "function_name", function_name, context))
+            {
+                context.builder << "Plugin animation definitions must have a valid 'function_name' key";
+                create_error(animation_node, context);
+                break;
+            }
+
+            definition.data = miracle::PluginAnimationDefinition { plugin_name, function_name };
             success = true;
             break;
         }
@@ -1306,12 +1299,6 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::BeginMap;
             out << YAML::Key << "path" << YAML::Value << plugin.path;
             out << YAML::Key << "name" << YAML::Value << plugin.name;
-            if (plugin.add_points_function)
-                out << YAML::Key << "add_points" << YAML::Value << *plugin.add_points_function;
-            if (plugin.animate_function)
-                out << YAML::Key << "animate" << YAML::Value << *plugin.animate_function;
-            if (plugin.place_new_window_function)
-                out << YAML::Key << "place_new_window" << YAML::Value << *plugin.place_new_window_function;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;
@@ -1528,8 +1515,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                 out << YAML::EndSeq;
                 break;
             case AnimationType::plugin:
-                out << YAML::Key << "plugin_name" << YAML::Value << std::get<PluginAnimationDefinition>(def.data).plugin_name;
+            {
+                auto const& plugin_def = std::get<PluginAnimationDefinition>(def.data);
+                out << YAML::Key << "plugin_name" << YAML::Value << plugin_def.plugin_name;
+                out << YAML::Key << "function_name" << YAML::Value << plugin_def.function_name;
                 break;
+            }
             default:
                 break;
             }

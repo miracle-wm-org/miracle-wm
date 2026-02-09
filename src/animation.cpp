@@ -247,11 +247,11 @@ bool Animation::tick(float dt)
     case AnimationType::plugin:
     {
         // TODO: Do not resolve this every time
-        auto const name = std::get<PluginAnimationDefinition>(definition_.data).plugin_name;
-        auto const handle = plugin_manager->get_wasm_module(name);
+        auto const& plugin_def = std::get<PluginAnimationDefinition>(definition_.data);
+        auto const handle = plugin_manager->get_wasm_module(plugin_def.plugin_name);
         if (handle == 0)
         {
-            mir::log_error("Animation plugin failed to load: %s", name.c_str());
+            mir::log_error("Animation plugin failed to load: %s", plugin_def.plugin_name.c_str());
             on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
             return true;
         }
@@ -269,7 +269,7 @@ bool Animation::tick(float dt)
         frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
         frame_data.opacity_start = data_.opacity_start;
         frame_data.opacity_end = data_.opacity_end;
-        auto const frame_result = plugin_manager->animate_frame(handle, frame_data);
+        auto const frame_result = plugin_manager->animate_frame(handle, plugin_def.function_name, frame_data);
         AnimationFrameResult animation_result;
         animation_result.is_complete = frame_result.completed != 0;
         if (frame_result.has_area != 0)

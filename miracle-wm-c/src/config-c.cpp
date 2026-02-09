@@ -748,56 +748,20 @@ extern "C"
     {
         auto const data = static_cast<const miracle::ConfigData*>(config->_internal);
         if (index >= data->plugins->size())
-            return { nullptr, nullptr, nullptr, nullptr, nullptr };
+            return { nullptr, nullptr };
 
         static thread_local std::string path_copy;
         static thread_local std::string name_copy;
-        static thread_local std::string add_points_copy;
-        static thread_local std::string animate_copy;
-        static thread_local std::string place_new_window_copy;
         auto const& plugin = data->plugins.value[index];
         path_copy = plugin.path;
         name_copy = plugin.name;
-        miracle_plugin_t result;
-        result.path = path_copy.c_str();
-        result.name = name_copy.c_str();
-        if (plugin.add_points_function)
-        {
-            add_points_copy = *plugin.add_points_function;
-            result.add_points_function = add_points_copy.c_str();
-        }
-        else
-            result.add_points_function = nullptr;
-        if (plugin.animate_function)
-        {
-            animate_copy = *plugin.animate_function;
-            result.animate_function = animate_copy.c_str();
-        }
-        else
-            result.animate_function = nullptr;
-        if (plugin.place_new_window_function)
-        {
-            place_new_window_copy = *plugin.place_new_window_function;
-            result.place_new_window_function = place_new_window_copy.c_str();
-        }
-        else
-            result.place_new_window_function = nullptr;
-        return result;
+        return { path_copy.c_str(), name_copy.c_str() };
     }
 
     void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        miracle::PluginConfiguration pc;
-        pc.path = plugin->path;
-        pc.name = plugin->name;
-        if (plugin->add_points_function)
-            pc.add_points_function = plugin->add_points_function;
-        if (plugin->animate_function)
-            pc.animate_function = plugin->animate_function;
-        if (plugin->place_new_window_function)
-            pc.place_new_window_function = plugin->place_new_window_function;
-        data->plugins->push_back(std::move(pc));
+        data->plugins->push_back(miracle::PluginConfiguration { plugin->path, plugin->name });
     }
 
     void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin)
@@ -805,16 +769,7 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->plugins->size())
             return;
-        miracle::PluginConfiguration pc;
-        pc.path = plugin->path;
-        pc.name = plugin->name;
-        if (plugin->add_points_function)
-            pc.add_points_function = plugin->add_points_function;
-        if (plugin->animate_function)
-            pc.animate_function = plugin->animate_function;
-        if (plugin->place_new_window_function)
-            pc.place_new_window_function = plugin->place_new_window_function;
-        data->plugins.value[index] = std::move(pc);
+        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path, plugin->name };
     }
 
     bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index)
@@ -883,10 +838,18 @@ extern "C"
             built_in_animations = 0;
 
         static thread_local std::string plugin_name;
+        static thread_local std::string function_name;
         if (std::holds_alternative<miracle::PluginAnimationDefinition>(def->data))
-            plugin_name = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_name;
+        {
+            auto const& plugin_def = std::get<miracle::PluginAnimationDefinition>(def->data);
+            plugin_name = plugin_def.plugin_name;
+            function_name = plugin_def.function_name;
+        }
         else
+        {
             plugin_name = "";
+            function_name = "";
+        }
 
         return {
             miracle::animateable_event_strings[index],
@@ -895,6 +858,7 @@ extern "C"
             def->duration_seconds,
             built_in_animations,
             plugin_name.c_str(),
+            function_name.c_str(),
             static_cast<void*>(def)
         };
     }
@@ -912,7 +876,7 @@ extern "C"
         switch (def.type)
         {
         case miracle::AnimationType::plugin:
-            def.data = miracle::PluginAnimationDefinition { definition->plugin_name };
+            def.data = miracle::PluginAnimationDefinition { definition->plugin_name, definition->function_name };
             break;
         default:
             break;

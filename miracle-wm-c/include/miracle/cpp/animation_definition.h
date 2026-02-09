@@ -135,6 +135,7 @@ struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
 struct MIRACLE_WM_CONFIG_API PluginAnimationDefinition
 {
     std::string plugin_name;
+    std::string function_name;
 };
 
 enum class AnimationType

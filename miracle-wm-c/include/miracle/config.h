@@ -339,15 +339,6 @@ extern "C"
 
         /// The logical name of the plugin.
         const char* name;
-
-        /// Optional custom name for the add_points function. NULL uses default "add_points".
-        const char* add_points_function;
-
-        /// Optional custom name for the animate function. NULL uses default "animate".
-        const char* animate_function;
-
-        /// Optional custom name for the place_new_window function. NULL uses default "place_new_window".
-        const char* place_new_window_function;
     } miracle_plugin_t;
 
     /// Retrieve the number of plugins configured.
@@ -804,10 +795,15 @@ extern "C"
         /// index. There exists other methods to update each animation and add more as well.
         size_t num_parts;
 
-        /// The path to the plugin that provides this animation.
+        /// The name of the plugin that provides this animation.
         ///
         /// This is only set when #type is set to "plugin".
         const char* plugin_name;
+
+        /// The name of the function to call in the plugin.
+        ///
+        /// This is only set when #type is set to "plugin".
+        const char* function_name;
 
         /// Opaque pointer.
         void* _internal;
