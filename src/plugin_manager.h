@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 #include "layout_scheme.h"
 #include "miracle/plugin.h"
+#include <miracle/cpp/config-cpp.h>
 #include <mir/geometry/rectangle.h>
 
 namespace miracle
@@ -49,6 +50,7 @@ struct PluginWindowPlacement
 }
 
 #if FEATURE_PLUGIN_SYSTEM
+#include <array>
 #include <bitset>
 #include <memory>
 #include <mir/geometry/point.h>
@@ -82,14 +84,13 @@ public:
     ///  for now its not a huge deal.
     void initialize(std::unique_ptr<PluginBridge> bridge);
 
-    /// Load a WebAssembly module from the provided \p path.
+    /// Load a WebAssembly module from the provided plugin configuration.
     ///
     /// Callers may use the #PluginLoadResult::handle to unload the module later.
     ///
-    /// \param path The filesystem path to the WebAssembly module.
-    /// \param name The name of the module.
+    /// \param plugin The plugin configuration, including path, name, and optional function name overrides.
     /// \returns a load result.
-    PluginLoadResult load_wasm_module(std::string const& path, std::string const& name);
+    PluginLoadResult load_wasm_module(PluginConfiguration const& plugin);
 
     /// Get the WebAssembly module associated with \p name.
     ///
@@ -191,9 +192,21 @@ private:
         {
             ModuleInstancePtr module_context;
             std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
+            std::array<std::string, static_cast<uint8_t>(ProvidedFunction::max)> function_names;
             PluginHandle handle;
             std::string name;
         };
+
+        static char const* provided_function_name(ProvidedFunction f)
+        {
+            switch (f)
+            {
+            case ProvidedFunction::add_points: return "add_points";
+            case ProvidedFunction::animate: return "animate";
+            case ProvidedFunction::place_new_window: return "place_new_window";
+            default: return "unknown";
+            }
+        }
 
         explicit Self(std::unique_ptr<PluginBridge> bridge);
         ~Self();
@@ -240,7 +253,7 @@ class PluginManager
 public:
     ~PluginManager() = default;
     void initialize(std::unique_ptr<PluginBridge>) {};
-    PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
+    PluginLoadResult load_wasm_module(PluginConfiguration const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
     }; }

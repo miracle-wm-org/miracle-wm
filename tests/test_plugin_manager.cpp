@@ -45,7 +45,8 @@ public:
 
 TEST_F(PluginManagerTest, LoadInvalidPathFailsAndHasNoHandle)
 {
-    PluginLoadResult const res = pm.load_wasm_module("/definitely/not/a/real/module.wasm", "module");
+    PluginConfiguration const config { .path = "/definitely/not/a/real/module.wasm", .name = "module" };
+    PluginLoadResult const res = pm.load_wasm_module(config);
 
     EXPECT_FALSE(res.success);
     EXPECT_EQ(res.handle, 0);

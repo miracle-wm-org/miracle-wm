@@ -495,6 +495,15 @@ void read_plugins(YAML::Node const& node, ParsingContext& context)
         miracle::PluginConfiguration plugin_config;
         plugin_config.path = path;
         plugin_config.name = name;
+
+        std::string func_name;
+        if (try_parse_value(plugin_node, "add_points", func_name, context, true))
+            plugin_config.add_points_function = func_name;
+        if (try_parse_value(plugin_node, "animate", func_name, context, true))
+            plugin_config.animate_function = func_name;
+        if (try_parse_value(plugin_node, "place_new_window", func_name, context, true))
+            plugin_config.place_new_window_function = func_name;
+
         plugins.push_back(plugin_config);
     }
     context.result.config.plugins = std::move(plugins);
@@ -1297,6 +1306,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::BeginMap;
             out << YAML::Key << "path" << YAML::Value << plugin.path;
             out << YAML::Key << "name" << YAML::Value << plugin.name;
+            if (plugin.add_points_function)
+                out << YAML::Key << "add_points" << YAML::Value << *plugin.add_points_function;
+            if (plugin.animate_function)
+                out << YAML::Key << "animate" << YAML::Value << *plugin.animate_function;
+            if (plugin.place_new_window_function)
+                out << YAML::Key << "place_new_window" << YAML::Value << *plugin.place_new_window_function;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;
@@ -1843,6 +1858,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.includes = concat_vectors(*other.includes, *includes);
     result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
     result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : workspace_back_and_forth;
+    result.plugins = other.plugins.is_set() ? other.plugins : plugins;
     return result;
 }
 

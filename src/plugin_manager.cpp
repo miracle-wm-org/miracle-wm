@@ -600,9 +600,11 @@ void PluginManager::Self::create_host_module()
     mir::log_info("Host module 'env' registered with %d functions", 9);
 }
 
-PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& name)
+PluginLoadResult PluginManager::load_wasm_module(PluginConfiguration const& plugin)
 {
     std::lock_guard lock(mutex);
+    auto const& path = plugin.path;
+    auto const& name = plugin.name;
     auto const erased = std::erase_if(self->loaded_modules, [&name](auto const& module)
     {
         return module.name == name;
@@ -647,32 +649,38 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
         };
     }
 
-    // Now, we can inspect the exported functions.
+    // Determine the function names to look for. If the user specified a
+    // custom name in the configuration, use that; otherwise, use the default.
+    std::array<std::string, static_cast<uint8_t>(Self::ProvidedFunction::max)> function_names_to_find;
+    function_names_to_find[static_cast<uint8_t>(Self::ProvidedFunction::add_points)]
+        = plugin.add_points_function.value_or("add_points");
+    function_names_to_find[static_cast<uint8_t>(Self::ProvidedFunction::animate)]
+        = plugin.animate_function.value_or("animate");
+    function_names_to_find[static_cast<uint8_t>(Self::ProvidedFunction::place_new_window)]
+        = plugin.place_new_window_function.value_or("place_new_window");
+
+    // Inspect the exported functions to see which configured functions are provided.
     constexpr uint32_t BUF_LEN = 256;
-    WasmEdge_String function_names[BUF_LEN];
-    auto const num_functions = WasmEdge_ModuleInstanceListFunction(module_context, function_names, BUF_LEN);
+    WasmEdge_String exported_names[BUF_LEN];
+    auto const num_functions = WasmEdge_ModuleInstanceListFunction(module_context, exported_names, BUF_LEN);
     std::bitset<static_cast<uint8_t>(Self::ProvidedFunction::max)> provided_functions;
     for (uint32_t i = 0; i < num_functions && i < BUF_LEN; i++)
     {
         char buf[BUF_LEN];
-        auto const size = WasmEdge_StringCopy(function_names[i], buf, sizeof(buf));
+        auto const size = WasmEdge_StringCopy(exported_names[i], buf, sizeof(buf));
         if (size == 0)
             continue;
 
-        if (std::string_view { buf, size } == "add_points")
+        std::string_view const exported_name { buf, size };
+        for (uint8_t f = 0; f < static_cast<uint8_t>(Self::ProvidedFunction::max); f++)
         {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::add_points), true);
-            mir::log_info("Module provides 'add_points' function.");
-        }
-        else if (std::string_view { buf, size } == "animate")
-        {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::animate), true);
-            mir::log_info("Module provides 'animate' function.");
-        }
-        else if (std::string_view { buf, size } == "place_new_window")
-        {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::place_new_window), true);
-            mir::log_info("Module provides 'place_new_window' function.");
+            if (exported_name == function_names_to_find[f])
+            {
+                provided_functions.set(f, true);
+                mir::log_info("Module provides '%s' function (mapped to %s).",
+                    function_names_to_find[f].c_str(),
+                    Self::provided_function_name(static_cast<Self::ProvidedFunction>(f)));
+            }
         }
     }
 
@@ -681,6 +689,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
     self->loaded_modules.push_back(Self::ModuleInstance {
         Self::ModuleInstancePtr { module_context },
         provided_functions,
+        function_names_to_find,
         handle,
         name });
 
@@ -772,12 +781,13 @@ mir::geometry::Point PluginManager::add_points(mir::geometry::Point first, mir::
         params[2] = WasmEdge_ValueGenI32(second_ptr);
 
         // Call the function (no return value, result written to memory)
-        auto const func_name = WasmEdge_StringCreateByCString("add_points");
+        auto const& add_points_name = module.function_names[static_cast<uint8_t>(Self::ProvidedFunction::add_points)];
+        auto const func_name = WasmEdge_StringCreateByCString(add_points_name.c_str());
         auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
         WasmEdge_StringDelete(func_name);
         if (func_context == nullptr)
         {
-            mir::log_error("Function 'add_points' not found in module.");
+            mir::log_error("Function '%s' not found in module.", add_points_name.c_str());
             continue;
         }
 
@@ -887,13 +897,14 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
     params[1] = WasmEdge_ValueGenI32(frame_data_ptr);
 
     // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString("animate");
+    auto const& animate_name = target_module->function_names[static_cast<uint8_t>(Self::ProvidedFunction::animate)];
+    auto const func_name = WasmEdge_StringCreateByCString(animate_name.c_str());
     auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
     WasmEdge_StringDelete(func_name);
 
     if (func_context == nullptr)
     {
-        mir::log_error("Function 'animate' not found in module.");
+        mir::log_error("Function '%s' not found in module.", animate_name.c_str());
         return miracle_plugin_animation_frame_result_t {
             .completed = 1,
             .has_area = 0,
@@ -1010,13 +1021,14 @@ PluginWindowPlacement PluginManager::place_new_window(
     params[1] = WasmEdge_ValueGenI32(window_info_ptr);
 
     // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString("place_new_window");
+    auto const& place_name = target_module->function_names[static_cast<uint8_t>(Self::ProvidedFunction::place_new_window)];
+    auto const func_name = WasmEdge_StringCreateByCString(place_name.c_str());
     auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
     WasmEdge_StringDelete(func_name);
 
     if (func_context == nullptr)
     {
-        mir::log_error("Function 'place_new_window' not found in module.");
+        mir::log_error("Function '%s' not found in module.", place_name.c_str());
         return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };

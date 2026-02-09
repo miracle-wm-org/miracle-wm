@@ -339,6 +339,15 @@ extern "C"
 
         /// The logical name of the plugin.
         const char* name;
+
+        /// Optional custom name for the add_points function. NULL uses default "add_points".
+        const char* add_points_function;
+
+        /// Optional custom name for the animate function. NULL uses default "animate".
+        const char* animate_function;
+
+        /// Optional custom name for the place_new_window function. NULL uses default "place_new_window".
+        const char* place_new_window_function;
     } miracle_plugin_t;
 
     /// Retrieve the number of plugins configured.
