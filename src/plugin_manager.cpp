@@ -647,40 +647,10 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
         };
     }
 
-    // Now, we can inspect the exported functions.
-    constexpr uint32_t BUF_LEN = 256;
-    WasmEdge_String function_names[BUF_LEN];
-    auto const num_functions = WasmEdge_ModuleInstanceListFunction(module_context, function_names, BUF_LEN);
-    std::bitset<static_cast<uint8_t>(Self::ProvidedFunction::max)> provided_functions;
-    for (uint32_t i = 0; i < num_functions && i < BUF_LEN; i++)
-    {
-        char buf[BUF_LEN];
-        auto const size = WasmEdge_StringCopy(function_names[i], buf, sizeof(buf));
-        if (size == 0)
-            continue;
-
-        if (std::string_view { buf, size } == "add_points")
-        {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::add_points), true);
-            mir::log_info("Module provides 'add_points' function.");
-        }
-        else if (std::string_view { buf, size } == "animate")
-        {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::animate), true);
-            mir::log_info("Module provides 'animate' function.");
-        }
-        else if (std::string_view { buf, size } == "place_new_window")
-        {
-            provided_functions.set(static_cast<size_t>(Self::ProvidedFunction::place_new_window), true);
-            mir::log_info("Module provides 'place_new_window' function.");
-        }
-    }
-
-    // Finally, we will store the plugin for later.
+    // Store the plugin for later. Function resolution happens at call time.
     auto const handle = self->next_plugin_handle++;
     self->loaded_modules.push_back(Self::ModuleInstance {
         Self::ModuleInstancePtr { module_context },
-        provided_functions,
         handle,
         name });
 
@@ -718,102 +688,109 @@ void PluginManager::unload_all()
     self->loaded_modules.clear();
 }
 
-mir::geometry::Point PluginManager::add_points(mir::geometry::Point first, mir::geometry::Point second)
+mir::geometry::Point PluginManager::add_points(
+    PluginHandle handle,
+    std::string const& function_name,
+    mir::geometry::Point first,
+    mir::geometry::Point second)
 {
     std::lock_guard lock(mutex);
-    for (auto const& module : self->loaded_modules)
+    Self::ModuleInstance* target_module = nullptr;
+    for (auto& module : self->loaded_modules)
     {
-        if (!module.provided_functions.test(static_cast<size_t>(Self::ProvidedFunction::add_points)))
-            continue;
-
-        // Get the memory context from the module instance
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
+        if (module.handle == handle)
         {
-            mir::log_error("Memory not found in module.");
-            continue;
+            target_module = &module;
+            break;
         }
-
-        // Allocate memory for the structs in WASM linear memory
-        // Each Point struct is 16 bytes (2 x f64)
-        // We need: result_ptr, first_ptr, and second_ptr.
-        uint32_t constexpr result_ptr = 0; // Offset 0
-        uint32_t constexpr first_ptr = sizeof(miracle_point_t);
-        uint32_t constexpr second_ptr = 2 * sizeof(miracle_point_t);
-
-        // Write first Point to WASM memory
-        int32_t first_data[2] = { first.x.as_int(), first.y.as_int() };
-        auto r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(first_data), first_ptr, sizeof(first_data));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write first point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        // Write second Point to WASM memory
-        int32_t second_data[2] = { second.x.as_int(), second.y.as_int() };
-        r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(second_data), second_ptr, sizeof(second_data));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write second point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        // Prepare the parameters as i32 pointers (C ABI calling convention)
-        // param[0]: pointer to result location
-        // param[1]: pointer to first Point
-        // param[2]: pointer to second Point
-        WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(result_ptr);
-        params[1] = WasmEdge_ValueGenI32(first_ptr);
-        params[2] = WasmEdge_ValueGenI32(second_ptr);
-
-        // Call the function (no return value, result written to memory)
-        auto const func_name = WasmEdge_StringCreateByCString("add_points");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-        if (func_context == nullptr)
-        {
-            mir::log_error("Function 'add_points' not found in module.");
-            continue;
-        }
-
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'add_points' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        // Read the result from WASM memory
-        int32_t result_data[2];
-        r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(result_data), result_ptr, sizeof(result_data));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        mir::log_info("Successfully added points using 'add_points' function: (%d, %d)", result_data[0], result_data[1]);
-        return mir::geometry::Point { result_data[0], result_data[1] };
     }
 
-    // Fallback: return a default point if no module provides add_points
-    return mir::geometry::Point { 0, 0 };
+    if (target_module == nullptr)
+    {
+        mir::log_warning("Module with handle %u not found.", handle);
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    // Get the memory context from the module instance
+    auto const memory_name = WasmEdge_StringCreateByCString("memory");
+    auto const memory_context = WasmEdge_ModuleInstanceFindMemory(target_module->module_context.get(), memory_name);
+    WasmEdge_StringDelete(memory_name);
+
+    if (memory_context == nullptr)
+    {
+        mir::log_error("Memory not found in module.");
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    // Allocate memory for the structs in WASM linear memory
+    uint32_t constexpr result_ptr = 0;
+    uint32_t constexpr first_ptr = sizeof(miracle_point_t);
+    uint32_t constexpr second_ptr = 2 * sizeof(miracle_point_t);
+
+    // Write first Point to WASM memory
+    int32_t first_data[2] = { first.x.as_int(), first.y.as_int() };
+    auto r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(first_data), first_ptr, sizeof(first_data));
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("Failed to write first point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    // Write second Point to WASM memory
+    int32_t second_data[2] = { second.x.as_int(), second.y.as_int() };
+    r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(second_data), second_ptr, sizeof(second_data));
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("Failed to write second point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    // Prepare the parameters
+    WasmEdge_Value params[3];
+    params[0] = WasmEdge_ValueGenI32(result_ptr);
+    params[1] = WasmEdge_ValueGenI32(first_ptr);
+    params[2] = WasmEdge_ValueGenI32(second_ptr);
+
+    // Call the function
+    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
+    auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
+    WasmEdge_StringDelete(func_name);
+    if (func_context == nullptr)
+    {
+        mir::log_error("Function '%s' not found in module.", function_name.c_str());
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    r = WasmEdge_ExecutorInvoke(
+        self->executor_context.get(),
+        func_context,
+        params,
+        3,
+        nullptr,
+        0);
+
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("Failed to invoke '%s' function: %s", function_name.c_str(), WasmEdge_ResultGetMessage(r));
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    // Read the result from WASM memory
+    int32_t result_data[2];
+    r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(result_data), result_ptr, sizeof(result_data));
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
+        return mir::geometry::Point { 0, 0 };
+    }
+
+    mir::log_info("Successfully called '%s' function: (%d, %d)", function_name.c_str(), result_data[0], result_data[1]);
+    return mir::geometry::Point { result_data[0], result_data[1] };
 }
 
 miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
     PluginHandle handle,
+    std::string const& function_name,
     miracle_plugin_animation_frame_data_t const& frame_data)
 {
     std::lock_guard lock(mutex);
@@ -828,10 +805,9 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
         }
     }
 
-    // If module not found or doesn't provide animate function, return completed
-    if (target_module == nullptr || !target_module->provided_functions.test(static_cast<size_t>(Self::ProvidedFunction::animate)))
+    if (target_module == nullptr)
     {
-        mir::log_warning("Module with handle %u not found or doesn't provide 'animate' function.", handle);
+        mir::log_warning("Module with handle %u not found.", handle);
         return miracle_plugin_animation_frame_result_t {
             .completed = 1,
             .has_area = 0,
@@ -887,13 +863,13 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
     params[1] = WasmEdge_ValueGenI32(frame_data_ptr);
 
     // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString("animate");
+    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
     auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
     WasmEdge_StringDelete(func_name);
 
     if (func_context == nullptr)
     {
-        mir::log_error("Function 'animate' not found in module.");
+        mir::log_error("Function '%s' not found in module.", function_name.c_str());
         return miracle_plugin_animation_frame_result_t {
             .completed = 1,
             .has_area = 0,
@@ -943,6 +919,7 @@ miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
 
 PluginWindowPlacement PluginManager::place_new_window(
     PluginHandle handle,
+    std::string const& function_name,
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification const& spec)
 {
@@ -960,10 +937,9 @@ PluginWindowPlacement PluginManager::place_new_window(
         }
     }
 
-    // If module not found or doesn't provide place_new_window function, return unset placement
-    if (target_module == nullptr || !target_module->provided_functions.test(static_cast<size_t>(Self::ProvidedFunction::place_new_window)))
+    if (target_module == nullptr)
     {
-        mir::log_warning("Module with handle %u not found or doesn't provide 'place_new_window' function.", handle);
+        mir::log_warning("Module with handle %u not found.", handle);
         return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };
@@ -1010,13 +986,13 @@ PluginWindowPlacement PluginManager::place_new_window(
     params[1] = WasmEdge_ValueGenI32(window_info_ptr);
 
     // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString("place_new_window");
+    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
     auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
     WasmEdge_StringDelete(func_name);
 
     if (func_context == nullptr)
     {
-        mir::log_error("Function 'place_new_window' not found in module.");
+        mir::log_error("Function '%s' not found in module.", function_name.c_str());
         return PluginWindowPlacement {
             .strategy = miracle_window_management_strategy_system
         };

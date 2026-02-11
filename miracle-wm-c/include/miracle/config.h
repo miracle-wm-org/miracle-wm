@@ -795,10 +795,15 @@ extern "C"
         /// index. There exists other methods to update each animation and add more as well.
         size_t num_parts;
 
-        /// The path to the plugin that provides this animation.
+        /// The name of the plugin that provides this animation.
         ///
         /// This is only set when #type is set to "plugin".
         const char* plugin_name;
+
+        /// The name of the function to call in the plugin.
+        ///
+        /// This is only set when #type is set to "plugin".
+        const char* function_name;
 
         /// Opaque pointer.
         void* _internal;

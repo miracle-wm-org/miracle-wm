@@ -890,12 +890,6 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
         case miracle::AnimationType::plugin:
         {
-            if (!animation_node["plugin_name"])
-            {
-                context.builder << "Plugin animation definitions must have a 'plugin_name' key";
-                create_error(animation_node, context);
-                break;
-            }
             std::string plugin_name;
             if (!try_parse_value(animation_node, "plugin_name", plugin_name, context))
             {
@@ -904,7 +898,15 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
                 break;
             }
 
-            definition.data = miracle::PluginAnimationDefinition { plugin_name };
+            std::string function_name;
+            if (!try_parse_value(animation_node, "function_name", function_name, context))
+            {
+                context.builder << "Plugin animation definitions must have a valid 'function_name' key";
+                create_error(animation_node, context);
+                break;
+            }
+
+            definition.data = miracle::PluginAnimationDefinition { plugin_name, function_name };
             success = true;
             break;
         }
@@ -1513,8 +1515,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                 out << YAML::EndSeq;
                 break;
             case AnimationType::plugin:
-                out << YAML::Key << "plugin_name" << YAML::Value << std::get<PluginAnimationDefinition>(def.data).plugin_name;
+            {
+                auto const& plugin_def = std::get<PluginAnimationDefinition>(def.data);
+                out << YAML::Key << "plugin_name" << YAML::Value << plugin_def.plugin_name;
+                out << YAML::Key << "function_name" << YAML::Value << plugin_def.function_name;
                 break;
+            }
             default:
                 break;
             }
@@ -1843,6 +1849,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     result.includes = concat_vectors(*other.includes, *includes);
     result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
     result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : workspace_back_and_forth;
+    result.plugins = other.plugins.is_set() ? other.plugins : plugins;
     return result;
 }
 

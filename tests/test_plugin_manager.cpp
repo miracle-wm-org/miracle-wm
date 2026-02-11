@@ -57,7 +57,7 @@ TEST_F(PluginManagerTest, AddPointsReturnsSomePoint)
     mir::geometry::Point const a { 1, 2 };
     mir::geometry::Point const b { 3, 4 };
 
-    auto const sum = pm.add_points(a, b);
+    auto const sum = pm.add_points(0, "add_points", a, b);
     (void)sum;
     SUCCEED();
 }
@@ -65,7 +65,7 @@ TEST_F(PluginManagerTest, AddPointsReturnsSomePoint)
 TEST_F(PluginManagerTest, AnimateFrameUnknownHandleIsGraceful)
 {
     miracle_plugin_animation_frame_data_t frame_data {};
-    auto const result = pm.animate_frame(123456u, frame_data);
+    auto const result = pm.animate_frame(123456u, "animate", frame_data);
     (void)result;
     SUCCEED();
 }

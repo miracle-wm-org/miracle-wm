@@ -838,10 +838,18 @@ extern "C"
             built_in_animations = 0;
 
         static thread_local std::string plugin_name;
+        static thread_local std::string function_name;
         if (std::holds_alternative<miracle::PluginAnimationDefinition>(def->data))
-            plugin_name = std::get<miracle::PluginAnimationDefinition>(def->data).plugin_name;
+        {
+            auto const& plugin_def = std::get<miracle::PluginAnimationDefinition>(def->data);
+            plugin_name = plugin_def.plugin_name;
+            function_name = plugin_def.function_name;
+        }
         else
+        {
             plugin_name = "";
+            function_name = "";
+        }
 
         return {
             miracle::animateable_event_strings[index],
@@ -850,6 +858,7 @@ extern "C"
             def->duration_seconds,
             built_in_animations,
             plugin_name.c_str(),
+            function_name.c_str(),
             static_cast<void*>(def)
         };
     }
@@ -867,7 +876,7 @@ extern "C"
         switch (def.type)
         {
         case miracle::AnimationType::plugin:
-            def.data = miracle::PluginAnimationDefinition { definition->plugin_name };
+            def.data = miracle::PluginAnimationDefinition { definition->plugin_name, definition->function_name };
             break;
         default:
             break;

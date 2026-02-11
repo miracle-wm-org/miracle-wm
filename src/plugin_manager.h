@@ -49,7 +49,6 @@ struct PluginWindowPlacement
 }
 
 #if FEATURE_PLUGIN_SYSTEM
-#include <bitset>
 #include <memory>
 #include <mir/geometry/point.h>
 #include <mutex>
@@ -109,21 +108,29 @@ public:
     ///
     /// This method will call into a WebAssembly function to perform the addition.
     ///
+    /// \param handle The plugin handle to use.
+    /// \param function_name The name of the exported function to call.
     /// \param first The first point to add.
     /// \param second The second point to add.
     /// \returns The sum of the two points.
-    mir::geometry::Point add_points(mir::geometry::Point first, mir::geometry::Point second);
+    mir::geometry::Point add_points(
+        PluginHandle handle,
+        std::string const& function_name,
+        mir::geometry::Point first,
+        mir::geometry::Point second);
 
     /// Animate a frame using the provided plugin handle and frame data.
     ///
     /// If \p handle does not correspond to a loaded plugin, the function will
-    /// return a resulting indicating that the animation is finished.
-    ////
+    /// return a result indicating that the animation is finished.
+    ///
     /// \param handle The plugin handle to use for animation.
+    /// \param function_name The name of the exported function to call.
     /// \param frame_data The frame data to animate.
     /// \returns The result of the animation frame.
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle handle,
+        std::string const& function_name,
         miracle_plugin_animation_frame_data_t const& frame_data);
 
     /// Place a new window using the provided handle and window info.
@@ -131,11 +138,14 @@ public:
     /// If \p handle does not correspond to a loaded plugin, the function
     /// will return a result indicating that the placement was not handled.
     ///
-    /// \param handle the plugin handle to use
-    /// \param window_info the window being placed
+    /// \param handle The plugin handle to use.
+    /// \param function_name The name of the exported function to call.
+    /// \param app_info The application info.
+    /// \param spec The window specification.
     /// \returns the placement
     PluginWindowPlacement place_new_window(
         PluginHandle handle,
+        std::string const& function_name,
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec);
 
@@ -179,18 +189,9 @@ private:
         using FunctionTypePtr = std::unique_ptr<WasmEdge_FunctionTypeContext,
             WasmEdgeDeleter<WasmEdge_FunctionTypeDelete>>;
 
-        enum class ProvidedFunction : std::uint8_t
-        {
-            add_points,
-            animate,
-            place_new_window,
-            max
-        };
-
         struct ModuleInstance
         {
             ModuleInstancePtr module_context;
-            std::bitset<static_cast<uint8_t>(ProvidedFunction::max)> provided_functions;
             PluginHandle handle;
             std::string name;
         };
@@ -247,14 +248,16 @@ public:
     void unload_all() { }
     PluginHandle get_wasm_module(std::string const&) { return 0; }
     bool unload_wasm_module(PluginHandle) { return false; }
-    mir::geometry::Point add_points(mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
+    mir::geometry::Point add_points(PluginHandle, std::string const&, mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
     miracle_plugin_animation_frame_result_t animate_frame(
         PluginHandle,
+        std::string const&,
         miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
     PluginWindowPlacement place_new_window(
-        PluginHandle handle,
-        miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification const& spec) { return PluginWindowPlacement {}; }
+        PluginHandle,
+        std::string const&,
+        miral::ApplicationInfo const&,
+        miral::WindowSpecification const&) { return PluginWindowPlacement {}; }
 };
 }
 #endif

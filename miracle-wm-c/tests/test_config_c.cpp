@@ -542,6 +542,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationPlugin)
     animateable_event.duration_seconds = 0.5f;
     animateable_event.type = static_cast<uint>(miracle::AnimationType::plugin);
     animateable_event.plugin_name = "plugin";
+    animateable_event.function_name = "my_animate";
     miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
     auto result = miracle_config_get_animateable_event(
         &wrapper->config,
@@ -550,6 +551,7 @@ TEST_F(CAPIWrapperTest, CanSetAnimationPlugin)
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
     EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::plugin));
     EXPECT_EQ(std::string(result.plugin_name), "plugin");
+    EXPECT_EQ(std::string(result.function_name), "my_animate");
     EXPECT_EQ(result.num_parts, 0);
     EXPECT_EQ(result.duration_seconds, 0.5f);
 }

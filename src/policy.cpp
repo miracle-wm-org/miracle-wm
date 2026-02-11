@@ -523,7 +523,7 @@ auto Policy::place_new_window(
     auto new_spec = requested_specification;
 
     auto const handle = plugin_manager->get_wasm_module("playground");
-    auto const plugin_placement = plugin_manager->place_new_window(handle, app_info, requested_specification);
+    auto const plugin_placement = plugin_manager->place_new_window(handle, "place_new_window", app_info, requested_specification);
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
