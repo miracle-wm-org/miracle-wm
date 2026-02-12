@@ -78,10 +78,6 @@ PluginManagedContainer::PluginManagedContainer(
 PluginManagedContainer::~PluginManagedContainer()
 {
     compositor_state->render_data_manager()->remove(render_id);
-    if (!workspace_.expired())
-    {
-        workspace_.lock()->remove_other_container(shared_from_this());
-    }
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -91,6 +87,7 @@ geom::Rectangle PluginManagedContainer::get_visible_area() const
 
 void PluginManagedContainer::constrain()
 {
+    window_controller->noclip(window_);
 }
 
 std::weak_ptr<ParentContainer> PluginManagedContainer::get_parent() const
@@ -176,17 +173,21 @@ void PluginManagedContainer::toggle_layout(bool)
 
 void PluginManagedContainer::on_open()
 {
+    window_controller->open(window_);
 }
 
 void PluginManagedContainer::on_focus_gained()
 {
+    compositor_state->render_data_manager()->focus_change(render_id, true);
     is_focused_ = true;
     window_controller->raise(window_);
 }
 
 void PluginManagedContainer::on_focus_lost()
 {
+    compositor_state->render_data_manager()->focus_change(render_id, false);
     is_focused_ = false;
+    window_controller->send_to_back(window_);
 }
 
 void PluginManagedContainer::on_move_to(geom::Point const&)
@@ -323,6 +324,7 @@ bool PluginManagedContainer::move_to(int x, int y, bool)
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_, spec);
+    constrain();
     return true;
 }
 

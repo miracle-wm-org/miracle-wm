@@ -127,14 +127,14 @@ pub extern "C" fn place_new_window(
                 }
             }
         }
-        placement.strategy = WindowManagementStrategy::Freestyle;
-        placement.freestyle.top_left = Point { x: 0, y: 0 };
-        placement.freestyle.size = Size {
-            width: 100,
-            height: 100,
-        };
-        placement.freestyle.depth_layer = miracle_plugin_rs::DepthLayer::AlwaysOnTop;
-        placement.freestyle.workspace = Some(workspace);
+        // placement.strategy = WindowManagementStrategy::Freestyle;
+        // placement.freestyle.top_left = Point { x: 0, y: 0 };
+        // placement.freestyle.size = Size {
+        //     width: 500,
+        //     height: 500,
+        // };
+        // placement.freestyle.depth_layer = miracle_plugin_rs::DepthLayer::AlwaysOnTop;
+        // placement.freestyle.workspace = Some(workspace);
     }
 
     unsafe {

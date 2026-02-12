@@ -125,7 +125,7 @@ Workspace::Workspace(
     output { output },
     id_ { id },
     num_ { num },
-    name_ { name },
+    name_ { std::move(name) },
     window_controller { window_controller },
     state { state },
     registry { registry },
@@ -195,6 +195,11 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
                 std::remove(floating_trees.begin(), floating_trees.end(), parent),
                 floating_trees.end());
         }
+        break;
+    }
+    case ContainerType::plugin:
+    {
+        remove_other_container(container);
         break;
     }
     default:
@@ -543,7 +548,7 @@ void Workspace::transform(glm::mat4 const& transform)
     transform_ = transform;
     for_each_container([transform](auto const& container)
     {
-       container->set_workspace_transform(transform);
+        container->set_workspace_transform(transform);
     });
 }
 
@@ -661,7 +666,7 @@ void Workspace::for_each_container(std::function<void(std::shared_ptr<Container>
     f(root_);
     for (auto const& floating : floating_trees)
         f(floating);
-    for (auto const& other: other_containers)
+    for (auto const& other : other_containers)
     {
         if (auto const lock = other.lock())
             f(lock);
