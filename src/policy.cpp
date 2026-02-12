@@ -623,8 +623,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             0,
             window_info.window(),
             window_controller,
-            state,
-            workspace);
+            state);
+        workspace->add_other_container(container);
     }
     break;
     case ContainerType::shell:

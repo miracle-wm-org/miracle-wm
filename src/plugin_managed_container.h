@@ -44,8 +44,7 @@ public:
         PluginHandle plugin_handle,
         miral::Window const& window,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<CompositorState> const& compositor_state,
-        std::shared_ptr<WorkspaceInterface> const& workspace);
+        std::shared_ptr<CompositorState> const& compositor_state);
     ~PluginManagedContainer() override;
 
     void show() override;
