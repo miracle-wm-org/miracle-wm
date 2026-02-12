@@ -114,14 +114,18 @@ public:
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
 private:
+    void rerender();
+
     PluginHandle plugin_handle;
     miral::Window window_;
-    MirWindowState cached;
+    std::optional<MirWindowState> cached;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
     std::weak_ptr<WorkspaceInterface> workspace_;
+    float alpha_ = 1.f;
     glm::mat4 transform_ = glm::mat4(1.f);
     glm::mat4 workspace_transform_ = glm::mat4(1.f);
+    float workspace_alpha_ = 1.f;
     uint32_t handle_ = 0;
     bool is_focused_ = false;
     RenderDataManagerId render_id = -1;

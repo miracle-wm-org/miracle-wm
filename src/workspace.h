@@ -41,7 +41,7 @@ struct WorkspaceIdentifier
     std::optional<std::string> const name;
 };
 
-class Workspace : public WorkspaceInterface, public std::enable_shared_from_this<Workspace>
+class Workspace : public WorkspaceInterface
 {
 public:
     Workspace(

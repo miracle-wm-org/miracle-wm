@@ -34,10 +34,11 @@ class ParentContainer;
 struct AllocationHint
 {
     ContainerType container_type = ContainerType::none;
-    ParentContainer* parent;
+    ParentContainer* parent = nullptr;
+    WorkspaceInterface* workspace = nullptr;
 };
 
-class WorkspaceInterface
+class WorkspaceInterface : public std::enable_shared_from_this<WorkspaceInterface>
 {
 public:
     virtual ~WorkspaceInterface() = default;

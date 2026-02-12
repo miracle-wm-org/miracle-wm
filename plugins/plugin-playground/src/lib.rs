@@ -4,7 +4,7 @@ use miracle_plugin_rs::{
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
     request_workspace, Container, ContainerType, LayoutScheme, Placement, TiledPlacement,
-    WindowInfo, WindowManagementStrategy,
+    WindowInfo, WindowManagementStrategy, Point
 };
 
 #[unsafe(no_mangle)]
@@ -126,8 +126,9 @@ pub extern "C" fn place_new_window(
                 }
             }
         }
-    } else {
         placement.strategy = WindowManagementStrategy::Freestyle;
+        placement.freestyle.top_left = Point{ x: 0, y: 0 };
+        placement.freestyle.workspace = Some(workspace);
     }
 
     unsafe {

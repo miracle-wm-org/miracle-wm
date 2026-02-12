@@ -146,7 +146,7 @@ std::shared_ptr<ParentContainer> Workspace::root() const
 {
     if (!root_)
     {
-        auto mutable_ws = std::const_pointer_cast<Workspace>(shared_from_this());
+        auto mutable_ws = std::const_pointer_cast<WorkspaceInterface>(shared_from_this());
         root_ = std::make_shared<ParentContainer>(
             shell_application_manager,
             state,
@@ -221,7 +221,7 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
-    std::weak_ptr<Workspace> const that = shared_from_this();
+    std::weak_ptr<Workspace> const that = std::dynamic_pointer_cast<Workspace>(shared_from_this());
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
@@ -277,7 +277,7 @@ void Workspace::hide(geom::Point const& end)
     {
         server_action_queue->enqueue(this, [asr = asr, this]()
         {
-            auto const locked = shared_from_this();
+            auto const locked = std::dynamic_pointer_cast<Workspace>(shared_from_this());
             if (!locked)
                 return;
 
