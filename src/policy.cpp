@@ -527,10 +527,10 @@ auto Policy::place_new_window(
     if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
+        hint.workspace = plugin_placement.freestyle.workspace;
         new_spec.top_left() = plugin_placement.freestyle.rectangle.top_left;
         new_spec.size() = plugin_placement.freestyle.rectangle.size;
         new_spec.depth_layer() = plugin_placement.freestyle.layer;
-        // TODO: Handle workspace
     }
     else if (shell_application_manager->is_registered(app_info.application()))
     {
@@ -615,13 +615,18 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         break;
     }
     case ContainerType::plugin:
+    {
+        auto const workspace = pending_allocation.workspace
+            ? pending_allocation.workspace->shared_from_this()
+            : output_manager->focused()->active();
         container = std::make_shared<PluginManagedContainer>(
             0,
             window_info.window(),
             window_controller,
-            state,
-            output_manager->focused()->active());
-        break;
+            state);
+        workspace->add_other_container(container);
+    }
+    break;
     case ContainerType::shell:
     default:
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));

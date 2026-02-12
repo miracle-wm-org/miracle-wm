@@ -125,7 +125,7 @@ Workspace::Workspace(
     output { output },
     id_ { id },
     num_ { num },
-    name_ { name },
+    name_ { std::move(name) },
     window_controller { window_controller },
     state { state },
     registry { registry },
@@ -146,7 +146,7 @@ std::shared_ptr<ParentContainer> Workspace::root() const
 {
     if (!root_)
     {
-        auto mutable_ws = std::const_pointer_cast<Workspace>(shared_from_this());
+        auto mutable_ws = std::const_pointer_cast<WorkspaceInterface>(shared_from_this());
         root_ = std::make_shared<ParentContainer>(
             shell_application_manager,
             state,
@@ -197,6 +197,11 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
         }
         break;
     }
+    case ContainerType::plugin:
+    {
+        remove_other_container(container);
+        break;
+    }
     default:
         mir::log_error("Unsupported window type: %d", (int)container->get_type());
         return;
@@ -221,7 +226,7 @@ void Workspace::show(geom::Point const& origin)
     }
 
     auto const area = root()->get_logical_area();
-    std::weak_ptr<Workspace> const that = shared_from_this();
+    std::weak_ptr<Workspace> const that = std::dynamic_pointer_cast<Workspace>(shared_from_this());
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
@@ -277,7 +282,7 @@ void Workspace::hide(geom::Point const& end)
     {
         server_action_queue->enqueue(this, [asr = asr, this]()
         {
-            auto const locked = shared_from_this();
+            auto const locked = std::dynamic_pointer_cast<Workspace>(shared_from_this());
             if (!locked)
                 return;
 
@@ -472,7 +477,7 @@ void Workspace::set_output(std::shared_ptr<OutputInterface> const& new_output)
 
 bool Workspace::is_empty() const
 {
-    return root()->num_nodes() == 0 && floating_trees.empty();
+    return root()->num_nodes() == 0 && floating_trees.empty() && other_containers.empty();
 }
 
 void Workspace::graft(std::shared_ptr<Container> const& container)
@@ -541,14 +546,10 @@ void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
 void Workspace::transform(glm::mat4 const& transform)
 {
     transform_ = transform;
-    for (auto const& container : state->containers())
+    for_each_container([transform](auto const& container)
     {
-        if (auto const locked = container.lock())
-        {
-            if (locked->get_workspace().get() == this)
-                locked->set_workspace_transform(transform);
-        }
-    }
+        container->set_workspace_transform(transform);
+    });
 }
 
 glm::mat4 Workspace::transform() const
@@ -559,14 +560,10 @@ glm::mat4 Workspace::transform() const
 void Workspace::alpha(float a)
 {
     alpha_ = a;
-    for (auto const& container : state->containers())
+    for_each_container([a](auto const& container)
     {
-        if (auto const locked = container.lock())
-        {
-            if (locked->get_workspace().get() == this)
-                locked->set_workspace_alpha(a);
-        }
-    }
+        container->set_workspace_alpha(a);
+    });
 }
 
 float Workspace::alpha() const
@@ -591,9 +588,10 @@ void Workspace::on_animation_start(bool is_hiding)
     // a flag that tells miral not to select the last focused container while we
     // are in the process of becoming visible.
     is_showing = true;
-    root()->show();
-    for (auto const& floating : floating_trees)
-        floating->show();
+    for_each_container([](auto const& container)
+    {
+        container->show();
+    });
     is_showing = false;
 
     if (!is_hiding)
@@ -622,9 +620,10 @@ void Workspace::on_animation_end(bool is_hiding)
 {
     if (is_hiding)
     {
-        root()->hide();
-        for (auto const& floating : floating_trees)
-            floating->hide();
+        for_each_container([](auto const& container)
+        {
+            container->hide();
+        });
     }
 }
 
@@ -641,6 +640,37 @@ ParentContainer* Workspace::get_layout_container() const
         return root().get();
 
     return parent.get();
+}
+
+void Workspace::add_other_container(std::shared_ptr<Container> const& container)
+{
+    container->set_workspace(shared_from_this());
+    other_containers.push_back(container);
+    if (is_showing)
+        container->show();
+    else
+        container->hide();
+}
+
+void Workspace::remove_other_container(std::shared_ptr<Container> const& container)
+{
+    container->set_workspace(nullptr);
+    std::erase_if(other_containers, [container](auto const& other)
+    {
+        return other.lock() == container;
+    });
+}
+
+void Workspace::for_each_container(std::function<void(std::shared_ptr<Container> const&)> const& f)
+{
+    f(root_);
+    for (auto const& floating : floating_trees)
+        f(floating);
+    for (auto const& other : other_containers)
+    {
+        if (auto const lock = other.lock())
+            f(lock);
+    }
 }
 
 std::shared_ptr<ParentContainer> Workspace::get_root() const

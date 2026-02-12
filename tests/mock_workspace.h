@@ -80,6 +80,9 @@ namespace test
 
         MOCK_METHOD(std::vector<std::shared_ptr<ParentContainer>>, trees, (), (const, override));
         MOCK_METHOD(ParentContainer*, get_layout_container, (), (const, override));
+
+        MOCK_METHOD(void, add_other_container, (std::shared_ptr<Container> const&), (override));
+        MOCK_METHOD(void, remove_other_container, (std::shared_ptr<Container> const&), (override));
     };
 }
 }

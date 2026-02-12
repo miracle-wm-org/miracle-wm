@@ -34,10 +34,11 @@ class ParentContainer;
 struct AllocationHint
 {
     ContainerType container_type = ContainerType::none;
-    ParentContainer* parent;
+    ParentContainer* parent = nullptr;
+    WorkspaceInterface* workspace = nullptr;
 };
 
-class WorkspaceInterface
+class WorkspaceInterface : public std::enable_shared_from_this<WorkspaceInterface>
 {
 public:
     virtual ~WorkspaceInterface() = default;
@@ -123,6 +124,8 @@ public:
     [[nodiscard]] virtual nlohmann::json to_json(bool is_output_focused) const = 0;
     [[nodiscard]] virtual std::string display_name() const = 0;
     [[nodiscard]] virtual std::shared_ptr<ParentContainer> get_root() const = 0;
+    virtual void add_other_container(std::shared_ptr<Container> const& container) = 0;
+    virtual void remove_other_container(std::shared_ptr<Container> const& container) = 0;
 };
 }
 

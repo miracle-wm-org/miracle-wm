@@ -1,10 +1,11 @@
 use miracle_plugin_rs::{
+    Container, ContainerType, LayoutScheme, Placement, Point, Size, TiledPlacement, WindowInfo,
+    WindowManagementStrategy,
     bindings::{
         miracle_placement_t, miracle_plugin_animation_frame_data_t,
         miracle_plugin_animation_frame_result_t, miracle_point_t, miracle_window_info_t,
     },
-    request_workspace, Container, ContainerType, LayoutScheme, Placement, TiledPlacement,
-    WindowInfo, WindowManagementStrategy,
+    request_workspace,
 };
 
 #[unsafe(no_mangle)]
@@ -126,8 +127,14 @@ pub extern "C" fn place_new_window(
                 }
             }
         }
-    } else {
-        placement.strategy = WindowManagementStrategy::Freestyle;
+        // placement.strategy = WindowManagementStrategy::Freestyle;
+        // placement.freestyle.top_left = Point { x: 0, y: 0 };
+        // placement.freestyle.size = Size {
+        //     width: 500,
+        //     height: 500,
+        // };
+        // placement.freestyle.depth_layer = miracle_plugin_rs::DepthLayer::AlwaysOnTop;
+        // placement.freestyle.workspace = Some(workspace);
     }
 
     unsafe {

@@ -39,12 +39,15 @@ ContainerType PluginManagedContainer::get_type() const
 
 void PluginManagedContainer::show()
 {
-    cached = window_controller->info_for(window_).state();
-    window_controller->change_state(window_, mir_window_state_hidden);
+    auto show_state = cached.value_or(mir_window_state_restored);
+    if (show_state == mir_window_state_hidden)
+        show_state = mir_window_state_restored;
+    window_controller->change_state(window_, show_state);
 }
 
 void PluginManagedContainer::hide()
 {
+    cached = window_controller->info_for(window_).state();
     window_controller->change_state(window_, mir_window_state_hidden);
 }
 
@@ -63,14 +66,12 @@ PluginManagedContainer::PluginManagedContainer(
     PluginHandle plugin_handle,
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<CompositorState> const& compositor_state,
-    std::shared_ptr<WorkspaceInterface> const& workspace) :
+    std::shared_ptr<CompositorState> const& compositor_state) :
     plugin_handle { plugin_handle },
     window_ { window },
-    cached { mir_window_state_restored },
+    cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
-    compositor_state { compositor_state },
-    workspace_ { workspace }
+    compositor_state { compositor_state }
 {
 }
 
@@ -86,6 +87,7 @@ geom::Rectangle PluginManagedContainer::get_visible_area() const
 
 void PluginManagedContainer::constrain()
 {
+    window_controller->noclip(window_);
 }
 
 std::weak_ptr<ParentContainer> PluginManagedContainer::get_parent() const
@@ -171,17 +173,21 @@ void PluginManagedContainer::toggle_layout(bool)
 
 void PluginManagedContainer::on_open()
 {
+    window_controller->open(window_);
 }
 
 void PluginManagedContainer::on_focus_gained()
 {
+    compositor_state->render_data_manager()->focus_change(render_id, true);
     is_focused_ = true;
     window_controller->raise(window_);
 }
 
 void PluginManagedContainer::on_focus_lost()
 {
+    compositor_state->render_data_manager()->focus_change(render_id, false);
     is_focused_ = false;
+    window_controller->send_to_back(window_);
 }
 
 void PluginManagedContainer::on_move_to(geom::Point const&)
@@ -210,7 +216,7 @@ void PluginManagedContainer::set_workspace(std::shared_ptr<WorkspaceInterface> c
 
 std::shared_ptr<OutputInterface> PluginManagedContainer::get_output() const
 {
-    if (auto workspace = workspace_.lock())
+    if (auto const workspace = workspace_.lock())
         return workspace->get_output();
     return nullptr;
 }
@@ -222,7 +228,7 @@ glm::mat4 PluginManagedContainer::get_transform() const
 
 void PluginManagedContainer::set_transform(glm::mat4 transform)
 {
-    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
         surface->set_transformation(transform);
         transform_ = transform;
@@ -232,10 +238,15 @@ void PluginManagedContainer::set_transform(glm::mat4 transform)
 void PluginManagedContainer::set_workspace_transform(glm::mat4 const& transform)
 {
     workspace_transform_ = transform;
+    compositor_state->render_data_manager()->workspace_transform_change(render_id, workspace_transform_);
+    rerender();
 }
 
-void PluginManagedContainer::set_workspace_alpha(float)
+void PluginManagedContainer::set_workspace_alpha(float alpha)
 {
+    workspace_alpha_ = alpha;
+    compositor_state->render_data_manager()->workspace_alpha(render_id, workspace_alpha_);
+    rerender();
 }
 
 glm::mat4 PluginManagedContainer::get_workspace_transform() const
@@ -248,8 +259,9 @@ glm::mat4 PluginManagedContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void PluginManagedContainer::set_alpha(float const)
+void PluginManagedContainer::set_alpha(float const alpha)
 {
+    alpha_ = alpha;
 }
 
 uint32_t PluginManagedContainer::animation_handle() const
@@ -312,6 +324,7 @@ bool PluginManagedContainer::move_to(int x, int y, bool)
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_, spec);
+    constrain();
     return true;
 }
 
@@ -435,4 +448,11 @@ nlohmann::json PluginManagedContainer::to_json(bool) const
         { "window_properties",    nlohmann::json::object()               },
         { "nodes",                std::vector<int>()                     },
     };
+}
+
+void PluginManagedContainer::rerender()
+{
+    // A hack to trigger a rerender on the surface by re-applying its transformation.
+    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+        surface->set_transformation(get_transform());
 }

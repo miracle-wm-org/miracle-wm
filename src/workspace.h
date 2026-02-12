@@ -41,7 +41,7 @@ struct WorkspaceIdentifier
     std::optional<std::string> const name;
 };
 
-class Workspace : public WorkspaceInterface, public std::enable_shared_from_this<Workspace>
+class Workspace : public WorkspaceInterface
 {
 public:
     Workspace(
@@ -95,6 +95,8 @@ public:
     [[nodiscard]] std::string display_name() const override;
     [[nodiscard]] std::shared_ptr<ParentContainer> get_root() const override;
     ParentContainer* get_layout_container() const override;
+    void add_other_container(std::shared_ptr<Container> const& container) override;
+    void remove_other_container(std::shared_ptr<Container> const& container) override;
 
 private:
     struct MoveResult
@@ -110,8 +112,8 @@ private:
         std::shared_ptr<Container> node = nullptr;
     };
 
+    void for_each_container(std::function<void(std::shared_ptr<Container> const&)> const&);
     std::shared_ptr<ParentContainer> root() const;
-
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::weak_ptr<OutputInterface> output;
     uint32_t id_;
@@ -119,6 +121,7 @@ private:
     std::optional<std::string> name_;
     mutable std::shared_ptr<ParentContainer> root_;
     std::vector<std::shared_ptr<ParentContainer>> floating_trees;
+    std::vector<std::weak_ptr<Container>> other_containers;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WorkspaceObserverRegistrar> registry;
