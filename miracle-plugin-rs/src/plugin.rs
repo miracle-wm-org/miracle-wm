@@ -93,6 +93,40 @@ pub trait Plugin {
         (0..count).filter_map(|i| Self::get_output_at(i)).collect()
     }
 
+    /// Get the currently active workspace on the focused output.
+    ///
+    /// Returns `None` if there is no focused output or no active workspace.
+    fn get_active_workspace() -> Option<Workspace> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = miracle_get_active_workspace(
+                workspace.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let workspace = workspace.assume_init();
+            if workspace.is_set == 0 {
+                return None;
+            }
+
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Workspace::from_c_with_name(&workspace, name))
+        }
+    }
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.
