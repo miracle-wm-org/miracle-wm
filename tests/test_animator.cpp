@@ -44,6 +44,7 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
         handle,
         definition,
         AnimationData {
+            AnimateableEvent::window_open,
             mir::geometry::Rectangle(
                 mir::geometry::Point(0, 0),
                 mir::geometry::Size(0, 0)),
@@ -78,6 +79,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
         handle,
         definition,
         AnimationData {
+            AnimateableEvent::window_open,
             mir::geometry::Rectangle(
                 mir::geometry::Point(0, 0),
                 mir::geometry::Size(0, 0)),
@@ -114,6 +116,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
         handle,
         definition,
         AnimationData {
+            AnimateableEvent::window_open,
             mir::geometry::Rectangle(
                 mir::geometry::Point(0, 0),
                 mir::geometry::Size(0, 0)),

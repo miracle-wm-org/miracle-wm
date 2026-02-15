@@ -908,7 +908,6 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
 
         return from_c(result);
     }
-
 }
 
 PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)

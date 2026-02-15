@@ -218,16 +218,11 @@ public:
     void unload_all() { }
     PluginHandle get_wasm_module(std::string const&) { return 0; }
     bool unload_wasm_module(PluginHandle) { return false; }
-    mir::geometry::Point add_points(PluginHandle, std::string const&, mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
-    miracle_plugin_animation_frame_result_t animate_frame(
-        PluginHandle,
-        std::string const&,
-        miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
-    PluginWindowPlacement place_new_window(
-        PluginHandle,
-        std::string const&,
+    std::optional<miracle_plugin_animation_frame_result_t> animate_frame(
+        miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
+    std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
-        miral::WindowSpecification const&) { return PluginWindowPlacement {}; }
+        miral::WindowSpecification const&) { return std::nullopt; }
 };
 }
 #endif
