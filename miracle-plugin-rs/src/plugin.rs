@@ -38,14 +38,16 @@ pub trait Plugin {
         None
     }
 
+    /// Place a new window.
+    ///
+    // If None is returned, the placement is not handled by this plugin.
+    fn place_new_window(info: WindowInfo) -> Option<Placement> {
+        None
+    }
+
     /// Get the number of outputs.
     fn num_outputs() -> u32 {
         unsafe { miracle_num_outputs() }
-    }
-
-    /// 
-    fn place_new_window(info: WindowInfo) -> Option<Placement> {
-        None
     }
 
     /// Get an output by index.
@@ -242,6 +244,41 @@ macro_rules! miracle_plugin {
                 _ => 0
             }
 
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn place_new_window(
+            window_info_ptr: i32,
+            result_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) -> i32 {
+            let c_info = unsafe {
+                &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+
+            match <$plugin_type as $crate::plugin::Plugin>::place_new_window(info) {
+                Some(placement) => {
+                    let c_placement: $crate::bindings::miracle_placement_t = placement.into();
+                    unsafe {
+                        let out = &mut *(result_ptr as *mut $crate::bindings::miracle_placement_t);
+                        *out = c_placement;
+                    }
+                    1
+                }
+                None => 0,
+            }
         }
     };
 }

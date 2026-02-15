@@ -835,12 +835,34 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
             continue;
         }
 
+        // Write window name to WASM memory
+        auto const window_name = spec.name().value_or("");
+        uint32_t const name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
+        uint32_t const name_len = static_cast<uint32_t>(window_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(window_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
         // Prepare the parameters
-        // param[0]: pointer to result location
-        // param[1]: pointer to window_info
-        WasmEdge_Value params[2];
+        // param[0]: pointer to window_info
+        // param[1]: pointer to result location
+        // param[2]: pointer to window name
+        // param[3]: length of window name
+        WasmEdge_Value params[4];
         params[0] = WasmEdge_ValueGenI32(window_info_ptr);
         params[1] = WasmEdge_ValueGenI32(result_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_ptr);
+        params[3] = WasmEdge_ValueGenI32(name_len);
 
         // Call the function
         auto const func_name = WasmEdge_StringCreateByCString("place_new_window");
@@ -858,7 +880,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
             self->executor_context.get(),
             func_context,
             params,
-            2,
+            4,
             returns,
             1);
 
