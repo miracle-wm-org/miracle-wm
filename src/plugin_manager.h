@@ -211,7 +211,7 @@ class PluginManager
 public:
     ~PluginManager() = default;
     void initialize(std::unique_ptr<PluginBridge>) {};
-    PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
+    PluginLoadResult load_wasm_module(std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
     }; }
