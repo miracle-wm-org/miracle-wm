@@ -797,115 +797,96 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     return std::nullopt;
 }
 
-PluginWindowPlacement PluginManager::place_new_window(
-    PluginHandle handle,
-    std::string const& function_name,
+std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification const& spec)
 {
     std::lock_guard lock(mutex);
     auto const bridge_handle = self->bridge->new_window_info(app_info, spec);
     auto const window_info_t = bridge_handle.get();
-    // Find the module with the given handle
-    Self::ModuleInstance* target_module = nullptr;
-    for (auto& module : self->loaded_modules)
+    for (auto const& module : self->loaded_modules)
     {
-        if (module.handle == handle)
+        // Get the memory context from the module instance
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
         {
-            target_module = &module;
-            break;
+            mir::log_error("Memory not found in module.");
+            continue;
         }
+
+        // Allocate memory for the structs in WASM linear memory
+        uint32_t constexpr result_ptr = 0;
+        uint32_t constexpr window_info_ptr = sizeof(miracle_window_info_t);
+
+        // Write window_info to WASM memory
+        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
+        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            window_info_buffer,
+            window_info_ptr,
+            sizeof(window_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        // Prepare the parameters
+        // param[0]: pointer to result location
+        // param[1]: pointer to window_info
+        WasmEdge_Value params[2];
+        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(result_ptr);
+
+        // Call the function
+        auto const func_name = WasmEdge_StringCreateByCString("place_new_window");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+        {
+            mir::log_error("Function 'place_new_window' not found in module.");
+            continue;
+        }
+
+        WasmEdge_Value returns[1];
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            2,
+            returns,
+            1);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'place_new_window' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        auto const placement_result = WasmEdge_ValueGetI32(returns[0]);
+        if (placement_result == 0)
+        {
+            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
+            continue;
+        }
+
+        // Read the result from WASM memory
+        miracle_placement_t result;
+        r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(&result), result_ptr, sizeof(result));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        return from_c(result);
     }
 
-    if (target_module == nullptr)
-    {
-        mir::log_warning("Module with handle %u not found.", handle);
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    // Get the memory context from the module instance
-    auto const memory_name = WasmEdge_StringCreateByCString("memory");
-    auto const memory_context = WasmEdge_ModuleInstanceFindMemory(target_module->module_context.get(), memory_name);
-    WasmEdge_StringDelete(memory_name);
-
-    if (memory_context == nullptr)
-    {
-        mir::log_error("Memory not found in module.");
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    // Allocate memory for the structs in WASM linear memory
-    uint32_t constexpr result_ptr = 0;
-    uint32_t constexpr window_info_ptr = sizeof(miracle_window_info_t);
-
-    // Write window_info to WASM memory
-    uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
-    std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
-    auto r = WasmEdge_MemoryInstanceSetData(
-        memory_context,
-        window_info_buffer,
-        window_info_ptr,
-        sizeof(window_info_buffer));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    // Prepare the parameters
-    // param[0]: pointer to result location
-    // param[1]: pointer to window_info
-    WasmEdge_Value params[2];
-    params[0] = WasmEdge_ValueGenI32(result_ptr);
-    params[1] = WasmEdge_ValueGenI32(window_info_ptr);
-
-    // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
-    auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
-    WasmEdge_StringDelete(func_name);
-
-    if (func_context == nullptr)
-    {
-        mir::log_error("Function '%s' not found in module.", function_name.c_str());
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    r = WasmEdge_ExecutorInvoke(
-        self->executor_context.get(),
-        func_context,
-        params,
-        2,
-        nullptr,
-        0);
-
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to invoke 'place_new_window' function: %s", WasmEdge_ResultGetMessage(r));
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    // Read the result from WASM memory
-    miracle_placement_t result;
-    r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(&result), result_ptr, sizeof(result));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return PluginWindowPlacement {
-            .strategy = miracle_window_management_strategy_system
-        };
-    }
-
-    return from_c(result);
 }
 
 PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)

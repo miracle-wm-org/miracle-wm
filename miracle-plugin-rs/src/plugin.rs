@@ -1,3 +1,6 @@
+use crate::placement::Placement;
+use crate::window::WindowInfo;
+
 use super::animation::{AnimationFrameData, AnimationFrameResult};
 use super::host::*;
 use super::output::*;
@@ -38,6 +41,11 @@ pub trait Plugin {
     /// Get the number of outputs.
     fn num_outputs() -> u32 {
         unsafe { miracle_num_outputs() }
+    }
+
+    /// 
+    fn place_new_window(info: WindowInfo) -> Option<Placement> {
+        None
     }
 
     /// Get an output by index.

@@ -110,19 +110,12 @@ public:
     std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const& frame_data);
 
-    /// Place a new window using the provided handle and window info.
+    /// Try to place a new window using a plugin.
     ///
-    /// If \p handle does not correspond to a loaded plugin, the function
-    /// will return a result indicating that the placement was not handled.
-    ///
-    /// \param handle The plugin handle to use.
-    /// \param function_name The name of the exported function to call.
     /// \param app_info The application info.
     /// \param spec The window specification.
     /// \returns the placement
-    PluginWindowPlacement place_new_window(
-        PluginHandle handle,
-        std::string const& function_name,
+    std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec);
 
