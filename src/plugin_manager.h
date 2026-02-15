@@ -119,6 +119,11 @@ public:
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec);
 
+    /// Notify all plugins that a window has been deleted.
+    ///
+    /// \param window_info The window info for the deleted window.
+    void window_deleted(miral::WindowInfo const& window_info);
+
 private:
     struct Self
     {
@@ -223,6 +228,7 @@ public:
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
         miral::WindowSpecification const&) { return std::nullopt; }
+    void window_deleted(miral::WindowInfo const&) { }
 };
 }
 #endif

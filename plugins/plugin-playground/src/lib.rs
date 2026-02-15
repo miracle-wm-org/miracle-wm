@@ -28,6 +28,10 @@ impl Plugin for PluginPlayground {
         })
     }
 
+    fn window_deleted(&mut self, info: WindowInfo) {
+        self.num_windows -= 1;
+    }
+
     fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
         let progress = (data.runtime_seconds / data.duration_seconds).clamp(0.0, 1.0);
 

@@ -257,6 +257,19 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
     });
 }
 
+PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::existing_window_info(miral::WindowInfo const& window_info)
+{
+    auto const& app_info = window_controller->app_info(window_info.window());
+    auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window_info.window());
+    plugin_window_infos.push_back(plugin_window_info);
+    return PluginBridgeObjectHandle<miracle_window_info_t>(
+        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get())),
+        [this, plugin_window_info = plugin_window_info]
+    {
+        std::erase(plugin_window_infos, plugin_window_info);
+    });
+}
+
 Container* PluginBridge::resolve_container(uint64_t container_internal)
 {
     return static_cast<Container*>(reinterpret_cast<void*>(container_internal));

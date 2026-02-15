@@ -98,6 +98,7 @@ public:
     WorkspaceResult active_workspace();
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
+    PluginBridgeObjectHandle<miracle_window_info_t> existing_window_info(miral::WindowInfo const& window_info);
 
     /// Retrieve the container from its id.
     Container* resolve_container(uint64_t container_internal);

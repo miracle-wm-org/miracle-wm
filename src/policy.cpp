@@ -746,6 +746,8 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         return;
     }
 
+    plugin_manager->window_deleted(window_info);
+
     // Important: We advise closed before the window has been removed so that it
     // still has valid references inside of it which consumers can use (e.g.
     // a valid parent container)
