@@ -829,7 +829,7 @@ extern "C"
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         auto const& def = &data->animation_definitions.value[index];
 
-        auto const built_in_animations = def->data.size();
+        auto const built_in_animations = def->type == miracle::AnimationType::plugin ? 0 : def->data.size();
 
         return {
             miracle::animateable_event_strings[index],

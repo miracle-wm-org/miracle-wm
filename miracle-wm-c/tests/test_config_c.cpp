@@ -541,8 +541,6 @@ TEST_F(CAPIWrapperTest, CanSetAnimationPlugin)
         0);
     animateable_event.duration_seconds = 0.5f;
     animateable_event.type = static_cast<uint>(miracle::AnimationType::plugin);
-    animateable_event.plugin_name = "plugin";
-    animateable_event.function_name = "my_animate";
     miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
     auto result = miracle_config_get_animateable_event(
         &wrapper->config,
@@ -550,8 +548,6 @@ TEST_F(CAPIWrapperTest, CanSetAnimationPlugin)
 
     EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
     EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::plugin));
-    EXPECT_EQ(std::string(result.plugin_name), "plugin");
-    EXPECT_EQ(std::string(result.function_name), "my_animate");
     EXPECT_EQ(result.num_parts, 0);
     EXPECT_EQ(result.duration_seconds, 0.5f);
 }
@@ -622,7 +618,6 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceConfig)
     auto ws = miracle_config_get_workspace_config(&wrapper->config, 0);
     EXPECT_TRUE(ws.has_num);
     EXPECT_EQ(ws.num, 2);
-    EXPECT_TRUE(ws.has_name);
     EXPECT_STREQ(ws.name, "Other");
 }
 
@@ -1162,30 +1157,28 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
 
 TEST_F(CAPIWrapperTest, CanAddPlugins)
 {
-    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm" };
     miracle_config_add_plugin(&wrapper->config, &plugin);
     EXPECT_EQ(miracle_config_get_plugin_count(&wrapper->config), 1);
     auto got = miracle_config_get_plugin(&wrapper->config, 0);
     EXPECT_STREQ(got.path, "/usr/lib/miracle/plugins/libsample.wasm");
-    EXPECT_STREQ(got.name, "sample");
 }
 
 TEST_F(CAPIWrapperTest, CanSetPlugins)
 {
-    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm" };
     miracle_config_add_plugin(&wrapper->config, &plugin);
 
-    plugin = { "/opt/plugins/libother.wasm", "other" };
+    plugin = { "/opt/plugins/libother.wasm" };
     miracle_config_set_plugin(&wrapper->config, 0, &plugin);
 
     auto got = miracle_config_get_plugin(&wrapper->config, 0);
     EXPECT_STREQ(got.path, "/opt/plugins/libother.wasm");
-    EXPECT_STREQ(got.name, "other");
 }
 
 TEST_F(CAPIWrapperTest, CanRemovePlugins)
 {
-    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm" };
     miracle_config_add_plugin(&wrapper->config, &plugin);
     EXPECT_TRUE(miracle_config_remove_plugin(&wrapper->config, 0));
     EXPECT_EQ(miracle_config_get_plugin_count(&wrapper->config), 0);
@@ -1194,9 +1187,9 @@ TEST_F(CAPIWrapperTest, CanRemovePlugins)
 TEST_F(CAPIWrapperTest, PluginsRoundTrip)
 {
     const char* temp_path = "/tmp/miracle_test_plugins.yaml";
-    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm", "sample" };
+    miracle_plugin_t plugin = { "/usr/lib/miracle/plugins/libsample.wasm" };
     miracle_config_add_plugin(&wrapper->config, &plugin);
-    plugin = { "/opt/plugins/libother.wasm", "other" };
+    plugin = { "/opt/plugins/libother.wasm" };
     miracle_config_add_plugin(&wrapper->config, &plugin);
 
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
