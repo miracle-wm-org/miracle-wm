@@ -8,14 +8,18 @@ use miracle_plugin_rs::{
 };
 
 #[derive(Default)]
-struct PluginPlayground;
+struct PluginPlayground {
+    num_windows: i32,
+}
 
 impl Plugin for PluginPlayground {
-    fn place_new_window(info: WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, info: WindowInfo) -> Option<Placement> {
+        let x = self.num_windows * 100;
+        self.num_windows += 1;
         Some(Placement {
             strategy: WindowManagementStrategy::Freestyle,
             freestyle: FreestylePlacement {
-                top_left: Point::new(100, 100),
+                top_left: Point::new(x, 100),
                 depth_layer: DepthLayer::Application,
                 workspace: None,
                 size: Size::new(800, 600),
@@ -24,7 +28,7 @@ impl Plugin for PluginPlayground {
         })
     }
 
-    fn window_open_animation(&self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
         let progress = (data.runtime_seconds / data.duration_seconds).clamp(0.0, 1.0);
 
         let eased = ease_in_cubic(progress);
