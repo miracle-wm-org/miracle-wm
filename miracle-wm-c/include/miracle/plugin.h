@@ -48,8 +48,26 @@ extern "C"
         int32_t h;
     } miracle_size_t;
 
+    typedef enum
+    {
+        miracle_animation_type_window_open,
+
+        miracle_animation_type_window_close,
+
+        miracle_animation_type_window_move,
+
+        miracle_animation_type_workspace_switch,
+
+        miracle_animation_type_window_none
+    } miracle_animation_type;
+
     typedef struct
     {
+        /// Animation type.
+        ///
+        /// This one of #miracle_animation_type.
+        uint32_t type;
+
         /// The runtime of the animation frame in seconds.
         float runtime_seconds;
 

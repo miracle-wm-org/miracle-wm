@@ -180,7 +180,6 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
 struct MIRACLE_WM_CONFIG_API PluginConfiguration
 {
     std::string path;
-    std::string name;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData

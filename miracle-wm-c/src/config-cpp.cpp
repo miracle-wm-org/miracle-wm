@@ -489,12 +489,8 @@ void read_plugins(YAML::Node const& node, ParsingContext& context)
         if (!try_parse_value(plugin_node, "path", path, context))
             return;
 
-        std::string name;
-        if (!try_parse_value(plugin_node, "name", name, context))
-            return;
         miracle::PluginConfiguration plugin_config;
         plugin_config.path = path;
-        plugin_config.name = name;
         plugins.push_back(plugin_config);
     }
     context.result.config.plugins = std::move(plugins);
@@ -890,23 +886,6 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
         case miracle::AnimationType::plugin:
         {
-            std::string plugin_name;
-            if (!try_parse_value(animation_node, "plugin_name", plugin_name, context))
-            {
-                context.builder << "Plugin animation definitions must have a valid 'plugin_name' key";
-                create_error(animation_node, context);
-                break;
-            }
-
-            std::string function_name;
-            if (!try_parse_value(animation_node, "function_name", function_name, context))
-            {
-                context.builder << "Plugin animation definitions must have a valid 'function_name' key";
-                create_error(animation_node, context);
-                break;
-            }
-
-            definition.data = miracle::PluginAnimationDefinition { plugin_name, function_name };
             success = true;
             break;
         }
@@ -1298,7 +1277,6 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         {
             out << YAML::BeginMap;
             out << YAML::Key << "path" << YAML::Value << plugin.path;
-            out << YAML::Key << "name" << YAML::Value << plugin.name;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;
@@ -1493,7 +1471,7 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             {
             case AnimationType::built_in:
                 out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
-                for (auto const& animation : std::get<BuiltInAnimationList>(def.data))
+                for (auto const& animation : def.data)
                 {
                     out << YAML::BeginMap;
                     out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
@@ -1514,13 +1492,6 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
                 }
                 out << YAML::EndSeq;
                 break;
-            case AnimationType::plugin:
-            {
-                auto const& plugin_def = std::get<PluginAnimationDefinition>(def.data);
-                out << YAML::Key << "plugin_name" << YAML::Value << plugin_def.plugin_name;
-                out << YAML::Key << "function_name" << YAML::Value << plugin_def.function_name;
-                break;
-            }
             default:
                 break;
             }

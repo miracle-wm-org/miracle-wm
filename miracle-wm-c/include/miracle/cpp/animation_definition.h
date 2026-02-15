@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "export.h"
 #include <array>
 #include <string>
-#include <variant>
 #include <vector>
 
 namespace miracle
@@ -132,12 +131,6 @@ struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
     float d1 = 2.75f;
 };
 
-struct MIRACLE_WM_CONFIG_API PluginAnimationDefinition
-{
-    std::string plugin_name;
-    std::string function_name;
-};
-
 enum class AnimationType
 {
     built_in,
@@ -165,7 +158,7 @@ struct MIRACLE_WM_CONFIG_API AnimationDefinition
     bool is_default = true;
     float duration_seconds = 1.f;
 
-    std::variant<PluginAnimationDefinition, BuiltInAnimationList> data;
+    BuiltInAnimationList data;
 };
 
 /// Defines an event that can be animated.

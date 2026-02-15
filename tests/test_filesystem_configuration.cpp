@@ -561,7 +561,7 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
 
     FilesystemConfiguration config(registrar, path, true);
     auto const def = config.get_animation_definition(AnimateableEvent::window_open);
-    EXPECT_EQ(std::get<miracle::BuiltInAnimationList>(def.data)[0].type, param.expected);
+    EXPECT_EQ(def.data[0].type, param.expected);
 }
 
 TEST_F(FilesystemConfigurationTest, CanReadSimulatedSecondaryClick)

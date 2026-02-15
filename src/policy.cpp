@@ -154,7 +154,7 @@ public:
 
         policy.plugin_manager->unload_all();
         for (auto const& plugin : config.get_plugins())
-            policy.plugin_manager->load_wasm_module(plugin.path, plugin.name);
+            policy.plugin_manager->load_wasm_module(plugin.path);
 
         has_loaded_once = true;
     }
@@ -522,15 +522,14 @@ auto Policy::place_new_window(
     AllocationHint hint;
     auto new_spec = requested_specification;
 
-    auto const handle = plugin_manager->get_wasm_module("playground");
-    auto const plugin_placement = plugin_manager->place_new_window(handle, "place_new_window", app_info, requested_specification);
-    if (plugin_placement.strategy == miracle_window_management_strategy_freestyle)
+    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification);
+    if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = ContainerType::plugin;
-        hint.workspace = plugin_placement.freestyle.workspace;
-        new_spec.top_left() = plugin_placement.freestyle.rectangle.top_left;
-        new_spec.size() = plugin_placement.freestyle.rectangle.size;
-        new_spec.depth_layer() = plugin_placement.freestyle.layer;
+        hint.workspace = plugin_placement->freestyle.workspace;
+        new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
+        new_spec.size() = plugin_placement->freestyle.rectangle.size;
+        new_spec.depth_layer() = plugin_placement->freestyle.layer;
     }
     else if (shell_application_manager->is_registered(app_info.application()))
     {
@@ -564,23 +563,23 @@ auto Policy::place_new_window(
             // If the plugin placement is tiled, then we're going to try and either:
             // 1. Transform the selected leaf into a parent and place it
             // 2. Place the new window in the selected parent.
-            if (plugin_placement.strategy == miracle_window_management_strategy_tiled)
+            if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_tiled)
             {
-                if (plugin_placement.tiled.container->is_leaf())
+                if (plugin_placement->tiled.container->is_leaf())
                 {
-                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement.tiled.container);
-                    if (plugin_placement.tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement.tiled.scheme))
+                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container);
+                    if (plugin_placement->tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement->tiled.scheme))
                     {
                         parent = leaf_container->get_parent().lock().get();
-                        index = plugin_placement.tiled.index;
+                        index = plugin_placement->tiled.index;
                     }
                     else
                         mir::log_error("Tiled placement referred to a child container but lacked a layout scheme.");
                 }
                 else
                 {
-                    parent = dynamic_cast<ParentContainer*>(plugin_placement.tiled.container);
-                    index = plugin_placement.tiled.index;
+                    parent = dynamic_cast<ParentContainer*>(plugin_placement->tiled.container);
+                    index = plugin_placement->tiled.index;
                 }
             }
 

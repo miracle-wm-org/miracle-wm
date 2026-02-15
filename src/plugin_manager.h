@@ -86,9 +86,8 @@ public:
     /// Callers may use the #PluginLoadResult::handle to unload the module later.
     ///
     /// \param path The filesystem path to the WebAssembly module.
-    /// \param name The name of the module.
     /// \returns a load result.
-    PluginLoadResult load_wasm_module(std::string const& path, std::string const& name);
+    PluginLoadResult load_wasm_module(std::string const& path);
 
     /// Get the WebAssembly module associated with \p name.
     ///
@@ -104,48 +103,19 @@ public:
     /// Unload all loaded WebAssembly modules.
     void unload_all();
 
-    /// Example function that adds two points together.
+    /// Animate a frame via the plugin system.
     ///
-    /// This method will call into a WebAssembly function to perform the addition.
-    ///
-    /// \param handle The plugin handle to use.
-    /// \param function_name The name of the exported function to call.
-    /// \param first The first point to add.
-    /// \param second The second point to add.
-    /// \returns The sum of the two points.
-    mir::geometry::Point add_points(
-        PluginHandle handle,
-        std::string const& function_name,
-        mir::geometry::Point first,
-        mir::geometry::Point second);
-
-    /// Animate a frame using the provided plugin handle and frame data.
-    ///
-    /// If \p handle does not correspond to a loaded plugin, the function will
-    /// return a result indicating that the animation is finished.
-    ///
-    /// \param handle The plugin handle to use for animation.
-    /// \param function_name The name of the exported function to call.
     /// \param frame_data The frame data to animate.
-    /// \returns The result of the animation frame.
-    miracle_plugin_animation_frame_result_t animate_frame(
-        PluginHandle handle,
-        std::string const& function_name,
+    /// \returns The result of the animation frame, or none if none is set.
+    std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const& frame_data);
 
-    /// Place a new window using the provided handle and window info.
+    /// Try to place a new window using a plugin.
     ///
-    /// If \p handle does not correspond to a loaded plugin, the function
-    /// will return a result indicating that the placement was not handled.
-    ///
-    /// \param handle The plugin handle to use.
-    /// \param function_name The name of the exported function to call.
     /// \param app_info The application info.
     /// \param spec The window specification.
     /// \returns the placement
-    PluginWindowPlacement place_new_window(
-        PluginHandle handle,
-        std::string const& function_name,
+    std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& spec);
 
@@ -241,23 +211,18 @@ class PluginManager
 public:
     ~PluginManager() = default;
     void initialize(std::unique_ptr<PluginBridge>) {};
-    PluginLoadResult load_wasm_module(std::string const&, std::string const&) { return PluginLoadResult {
+    PluginLoadResult load_wasm_module(std::string const&) { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
     }; }
     void unload_all() { }
     PluginHandle get_wasm_module(std::string const&) { return 0; }
     bool unload_wasm_module(PluginHandle) { return false; }
-    mir::geometry::Point add_points(PluginHandle, std::string const&, mir::geometry::Point, mir::geometry::Point) { return mir::geometry::Point {}; }
-    miracle_plugin_animation_frame_result_t animate_frame(
-        PluginHandle,
-        std::string const&,
-        miracle_plugin_animation_frame_data_t const&) { return miracle_plugin_animation_frame_result_t {}; }
-    PluginWindowPlacement place_new_window(
-        PluginHandle,
-        std::string const&,
+    std::optional<miracle_plugin_animation_frame_result_t> animate(
+        miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
+    std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
-        miral::WindowSpecification const&) { return PluginWindowPlacement {}; }
+        miral::WindowSpecification const&) { return std::nullopt; }
 };
 }
 #endif

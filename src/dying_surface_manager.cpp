@@ -64,6 +64,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
         AnimationData {
+            AnimateableEvent::window_close,
             container->get_visible_area(),
             geom::Rectangle {},
             1, 0 },

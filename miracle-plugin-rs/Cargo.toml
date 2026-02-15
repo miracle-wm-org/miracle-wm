@@ -10,6 +10,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 bitflags = "2"
+glm = "0.3.0"
 
 [build-dependencies]
 bindgen = "0.71"

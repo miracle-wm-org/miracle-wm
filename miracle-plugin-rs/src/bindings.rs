@@ -265,9 +265,18 @@ pub struct miracle_size_t {
     #[doc = " The height."]
     pub h: i32,
 }
+pub const miracle_animation_type_miracle_animation_type_window_open: miracle_animation_type = 0;
+pub const miracle_animation_type_miracle_animation_type_window_close: miracle_animation_type = 1;
+pub const miracle_animation_type_miracle_animation_type_window_move: miracle_animation_type = 2;
+pub const miracle_animation_type_miracle_animation_type_workspace_switch: miracle_animation_type =
+    3;
+pub const miracle_animation_type_miracle_animation_type_window_none: miracle_animation_type = 4;
+pub type miracle_animation_type = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct miracle_plugin_animation_frame_data_t {
+    #[doc = " Animation type.\n\n This one of #miracle_animation_type."]
+    pub type_: u32,
     #[doc = " The runtime of the animation frame in seconds."]
     pub runtime_seconds: f32,
     #[doc = " The total duration of the animation in seconds."]
