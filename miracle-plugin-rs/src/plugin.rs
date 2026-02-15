@@ -10,21 +10,24 @@ pub trait Plugin {
     /// Handles the window opening animation.
     ///
     /// If None is returned, the animation is not handled by this plugin.
-    fn window_open_animation(&self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
         None
     }
 
     /// Handles the window closing animation.
     ///
     /// If None is returned, the animation is not handled by this plugin.
-    fn window_close_animation(&self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_close_animation(
+        &mut self,
+        data: &AnimationFrameData,
+    ) -> Option<AnimationFrameResult> {
         None
     }
 
     /// Handles the window movement animation.
     ///
     /// If None is returned, the animation is not handled by this plugin.
-    fn window_move_animation(&self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_move_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
         None
     }
 
@@ -32,7 +35,7 @@ pub trait Plugin {
     ///
     /// If None is returned, the animation is not handled by this plugin.
     fn workspace_switch_animation(
-        &self,
+        &mut self,
         data: &AnimationFrameData,
     ) -> Option<AnimationFrameResult> {
         None
@@ -41,7 +44,7 @@ pub trait Plugin {
     /// Place a new window.
     ///
     // If None is returned, the placement is not handled by this plugin.
-    fn place_new_window(info: WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, info: WindowInfo) -> Option<Placement> {
         None
     }
 
@@ -203,7 +206,7 @@ macro_rules! miracle_plugin {
         #[unsafe(no_mangle)]
         pub extern "C" fn animate(data_ptr: i32, result_ptr: i32) -> i32 {
             let plugin = unsafe {
-                match _MIRACLE_PLUGIN.as_ref() {
+                match _MIRACLE_PLUGIN.as_mut() {
                     Some(p) => p,
                     None => return 0,
                 }
@@ -287,6 +290,13 @@ macro_rules! miracle_plugin {
             name_ptr: i32,
             name_len: i32,
         ) -> i32 {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return 0,
+                }
+            };
+
             let c_info = unsafe {
                 &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
             };
@@ -302,7 +312,7 @@ macro_rules! miracle_plugin {
 
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
-            match <$plugin_type as $crate::plugin::Plugin>::place_new_window(info) {
+            match plugin.place_new_window(info) {
                 Some(placement) => {
                     let c_placement: $crate::bindings::miracle_placement_t = placement.into();
                     unsafe {
