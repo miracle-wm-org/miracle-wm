@@ -401,6 +401,54 @@ WasmEdge_Result host_miracle_request_workspace(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_get_active_workspace(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_get_active_workspace: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[0]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[2]);
+
+    auto const workspace = bridge->active_workspace();
+    if (!workspace.workspace.is_set)
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* workspace_buf = mem_base + out_ptr;
+    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+    char const* workspace_name = workspace.name.value_or("").c_str();
+    size_t const name_len = std::strlen(workspace_name);
+
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_get_active_workspace: name buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    std::memcpy(name_buf, workspace_name, name_len);
+    name_buf[name_len] = '\0';
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_output_get_workspace(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -587,6 +635,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i32, i32, i32, i32, i32, i32, i32, i32 }, { i32 }),
         host_miracle_request_workspace, bridge.get());
 
+    add_host_function(module, "miracle_get_active_workspace",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_get_active_workspace, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -597,7 +649,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 9);
+    mir::log_info("Host module 'env' registered with %d functions", 10);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path)

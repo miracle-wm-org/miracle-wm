@@ -95,6 +95,7 @@ public:
     miracle_container_t child_at(uint64_t parent_id, uint32_t index);
     WindowResult get_window(uint64_t container_address);
     WorkspaceResult request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus);
+    WorkspaceResult active_workspace();
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
 

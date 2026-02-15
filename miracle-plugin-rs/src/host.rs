@@ -54,6 +54,9 @@ unsafe extern "C" {
         name_buf_len: i32,
     ) -> i32;
 
+    /// Retrieve the currently active workspace on the focused output.
+    pub fn miracle_get_active_workspace(out_ptr: i32, name_buf: i32, name_buf_len: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.

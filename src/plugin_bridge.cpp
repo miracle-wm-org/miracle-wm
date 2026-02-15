@@ -278,6 +278,19 @@ PluginBridge::WorkspaceResult PluginBridge::request_workspace(std::optional<int>
     return { from_workspace(nullptr), std::nullopt };
 }
 
+PluginBridge::WorkspaceResult PluginBridge::active_workspace()
+{
+    auto const focused = output_manager->focused();
+    if (!focused)
+        return { from_workspace(nullptr), std::nullopt };
+
+    auto const workspace = focused->active();
+    if (!workspace)
+        return { from_workspace(nullptr), std::nullopt };
+
+    return { from_workspace(workspace), workspace->name() };
+}
+
 WorkspaceInterface* PluginBridge::resolve_workspace(uint64_t workspace_internal)
 {
     return static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_internal));
