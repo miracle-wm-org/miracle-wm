@@ -200,7 +200,7 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     EXPECT_THAT(merged.environment_variables.value[1].value, Eq("first"));
     EXPECT_THAT(merged.border_config->size, Eq(8));
     EXPECT_THAT(*merged.animations_enabled, Eq(true));
-    EXPECT_THAT(std::get<miracle::BuiltInAnimationList>(merged.animation_definitions.value[0].data)[0].type, Eq(miracle::BultInAnimationType::fade));
+    EXPECT_THAT(merged.animation_definitions.value[0].data[0].type, Eq(miracle::BultInAnimationType::fade));
     EXPECT_THAT(merged.animation_definitions.value[0].duration_seconds, Eq(5));
     EXPECT_THAT(merged.workspace_configs->size(), Eq(2));
     EXPECT_THAT(merged.workspace_configs.value[0].num, Eq(2));
