@@ -600,15 +600,15 @@ void PluginManager::Self::create_host_module()
     mir::log_info("Host module 'env' registered with %d functions", 9);
 }
 
-PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& name)
+PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
 {
     std::lock_guard lock(mutex);
-    auto const erased = std::erase_if(self->loaded_modules, [&name](auto const& module)
+    auto const erased = std::erase_if(self->loaded_modules, [&path](auto const& module)
     {
-        return module.name == name;
+        return module.name == path;
     });
     if (erased > 0)
-        mir::log_info("Module with name %s was already loaded, unloading previous instance.", name.c_str());
+        mir::log_info("Module with name %s was already loaded, unloading previous instance.", path.c_str());
 
     // First, load the module.
     WasmEdge_ASTModuleContext* ast_module_context = nullptr;
@@ -634,7 +634,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
     }
 
     // Next, let's register the module context into the store by its name.
-    auto const module_name = WasmEdge_StringCreateByCString(name.c_str());
+    auto const module_name = WasmEdge_StringCreateByCString(path.c_str());
     WasmEdge_ModuleInstanceContext* module_context = nullptr;
     r = WasmEdge_ExecutorRegister(self->executor_context.get(), &module_context, self->store_context.get(), ast_module_context, module_name);
     WasmEdge_StringDelete(module_name);
@@ -647,12 +647,29 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
         };
     }
 
+    // Call the module's init function if it exists.
+    auto const init_func_name = WasmEdge_StringCreateByCString("init");
+    auto const init_func_context = WasmEdge_ModuleInstanceFindFunction(module_context, init_func_name);
+    WasmEdge_StringDelete(init_func_name);
+    if (init_func_context != nullptr)
+    {
+        r = WasmEdge_ExecutorInvoke(self->executor_context.get(), init_func_context, nullptr, 0, nullptr, 0);
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'init' function in module %s: %s", path.c_str(), WasmEdge_ResultGetMessage(r));
+            return PluginLoadResult {
+                .success = false,
+                .error = "Failed to invoke 'init' function."
+            };
+        }
+    }
+
     // Store the plugin for later. Function resolution happens at call time.
     auto const handle = self->next_plugin_handle++;
     self->loaded_modules.push_back(Self::ModuleInstance {
         Self::ModuleInstancePtr { module_context },
         handle,
-        name });
+        path });
 
     return PluginLoadResult {
         .success = true,
@@ -688,233 +705,96 @@ void PluginManager::unload_all()
     self->loaded_modules.clear();
 }
 
-mir::geometry::Point PluginManager::add_points(
-    PluginHandle handle,
-    std::string const& function_name,
-    mir::geometry::Point first,
-    mir::geometry::Point second)
-{
-    std::lock_guard lock(mutex);
-    Self::ModuleInstance* target_module = nullptr;
-    for (auto& module : self->loaded_modules)
-    {
-        if (module.handle == handle)
-        {
-            target_module = &module;
-            break;
-        }
-    }
-
-    if (target_module == nullptr)
-    {
-        mir::log_warning("Module with handle %u not found.", handle);
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    // Get the memory context from the module instance
-    auto const memory_name = WasmEdge_StringCreateByCString("memory");
-    auto const memory_context = WasmEdge_ModuleInstanceFindMemory(target_module->module_context.get(), memory_name);
-    WasmEdge_StringDelete(memory_name);
-
-    if (memory_context == nullptr)
-    {
-        mir::log_error("Memory not found in module.");
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    // Allocate memory for the structs in WASM linear memory
-    uint32_t constexpr result_ptr = 0;
-    uint32_t constexpr first_ptr = sizeof(miracle_point_t);
-    uint32_t constexpr second_ptr = 2 * sizeof(miracle_point_t);
-
-    // Write first Point to WASM memory
-    int32_t first_data[2] = { first.x.as_int(), first.y.as_int() };
-    auto r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(first_data), first_ptr, sizeof(first_data));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to write first point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    // Write second Point to WASM memory
-    int32_t second_data[2] = { second.x.as_int(), second.y.as_int() };
-    r = WasmEdge_MemoryInstanceSetData(memory_context, reinterpret_cast<uint8_t*>(second_data), second_ptr, sizeof(second_data));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to write second point to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    // Prepare the parameters
-    WasmEdge_Value params[3];
-    params[0] = WasmEdge_ValueGenI32(result_ptr);
-    params[1] = WasmEdge_ValueGenI32(first_ptr);
-    params[2] = WasmEdge_ValueGenI32(second_ptr);
-
-    // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
-    auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
-    WasmEdge_StringDelete(func_name);
-    if (func_context == nullptr)
-    {
-        mir::log_error("Function '%s' not found in module.", function_name.c_str());
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    r = WasmEdge_ExecutorInvoke(
-        self->executor_context.get(),
-        func_context,
-        params,
-        3,
-        nullptr,
-        0);
-
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to invoke '%s' function: %s", function_name.c_str(), WasmEdge_ResultGetMessage(r));
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    // Read the result from WASM memory
-    int32_t result_data[2];
-    r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(result_data), result_ptr, sizeof(result_data));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return mir::geometry::Point { 0, 0 };
-    }
-
-    mir::log_info("Successfully called '%s' function: (%d, %d)", function_name.c_str(), result_data[0], result_data[1]);
-    return mir::geometry::Point { result_data[0], result_data[1] };
-}
-
-miracle_plugin_animation_frame_result_t PluginManager::animate_frame(
-    PluginHandle handle,
-    std::string const& function_name,
+std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     miracle_plugin_animation_frame_data_t const& frame_data)
 {
     std::lock_guard lock(mutex);
-    // Find the module with the given handle
-    Self::ModuleInstance* target_module = nullptr;
-    for (auto& module : self->loaded_modules)
+    for (auto const& target_module : self->loaded_modules)
     {
-        if (module.handle == handle)
+        // Get the memory context from the module instance
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(target_module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
         {
-            target_module = &module;
-            break;
+            mir::log_error("Memory not found in module.");
+            continue;
         }
+
+        // Allocate memory for the structs in WASM linear memory
+        uint32_t constexpr result_ptr = 0;
+        uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
+
+        // Write frame_data to WASM memory
+        uint8_t frame_data_buffer[sizeof(miracle_plugin_animation_frame_data_t)];
+        std::memcpy(frame_data_buffer, &frame_data, sizeof(frame_data));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            frame_data_buffer,
+            frame_data_ptr,
+            sizeof(frame_data_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write frame_data to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        // Prepare the parameters
+        // param[0]: pointer to frame_data
+        // param[1]: pointer to result location
+        WasmEdge_Value params[2];
+        params[0] = WasmEdge_ValueGenI32(frame_data_ptr);
+        params[1] = WasmEdge_ValueGenI32(result_ptr);
+
+        // Call the function
+        auto const func_name = WasmEdge_StringCreateByCString("animate");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+        {
+            mir::log_error("Function '%s' not found in module.", "window_open_animation");
+            continue;
+        }
+
+        WasmEdge_Value returns[1];
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            2,
+            returns,
+            1);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'animate' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        auto const animate_result = WasmEdge_ValueGetI32(returns[0]);
+        if (animate_result == 0)
+        {
+            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
+            continue;
+        }
+
+        // Read the result from WASM memory
+        miracle_plugin_animation_frame_result_t result;
+        r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(&result), result_ptr, sizeof(result));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        mir::log_info("Successfully animated frame: completed=%d, has_area=%d, has_transform=%d, has_opacity=%d",
+            result.completed, result.has_area, result.has_transform, result.has_opacity);
+        return result;
     }
 
-    if (target_module == nullptr)
-    {
-        mir::log_warning("Module with handle %u not found.", handle);
-        return miracle_plugin_animation_frame_result_t {
-            .completed = 1,
-            .has_area = 0,
-            .has_transform = 0,
-            .has_opacity = 0
-        };
-    }
-
-    // Get the memory context from the module instance
-    auto const memory_name = WasmEdge_StringCreateByCString("memory");
-    auto const memory_context = WasmEdge_ModuleInstanceFindMemory(target_module->module_context.get(), memory_name);
-    WasmEdge_StringDelete(memory_name);
-
-    if (memory_context == nullptr)
-    {
-        mir::log_error("Memory not found in module.");
-        return miracle_plugin_animation_frame_result_t {
-            .completed = 1,
-            .has_area = 0,
-            .has_transform = 0,
-            .has_opacity = 0
-        };
-    }
-
-    // Allocate memory for the structs in WASM linear memory
-    uint32_t constexpr result_ptr = 0;
-    uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
-
-    // Write frame_data to WASM memory
-    uint8_t frame_data_buffer[sizeof(miracle_plugin_animation_frame_data_t)];
-    std::memcpy(frame_data_buffer, &frame_data, sizeof(frame_data));
-    auto r = WasmEdge_MemoryInstanceSetData(
-        memory_context,
-        frame_data_buffer,
-        frame_data_ptr,
-        sizeof(frame_data_buffer));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to write frame_data to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_plugin_animation_frame_result_t {
-            .completed = 1,
-            .has_area = 0,
-            .has_transform = 0,
-            .has_opacity = 0
-        };
-    }
-
-    // Prepare the parameters
-    // param[0]: pointer to result location
-    // param[1]: pointer to frame_data
-    WasmEdge_Value params[2];
-    params[0] = WasmEdge_ValueGenI32(result_ptr);
-    params[1] = WasmEdge_ValueGenI32(frame_data_ptr);
-
-    // Call the function
-    auto const func_name = WasmEdge_StringCreateByCString(function_name.c_str());
-    auto const func_context = WasmEdge_ModuleInstanceFindFunction(target_module->module_context.get(), func_name);
-    WasmEdge_StringDelete(func_name);
-
-    if (func_context == nullptr)
-    {
-        mir::log_error("Function '%s' not found in module.", function_name.c_str());
-        return miracle_plugin_animation_frame_result_t {
-            .completed = 1,
-            .has_area = 0,
-            .has_transform = 0,
-            .has_opacity = 0
-        };
-    }
-
-    r = WasmEdge_ExecutorInvoke(
-        self->executor_context.get(),
-        func_context,
-        params,
-        2,
-        nullptr,
-        0);
-
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to invoke 'animate' function: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_plugin_animation_frame_result_t {
-            .completed = true,
-            .has_area = false,
-            .has_transform = false,
-            .has_opacity = false
-        };
-    }
-
-    // Read the result from WASM memory
-    miracle_plugin_animation_frame_result_t result;
-    r = WasmEdge_MemoryInstanceGetData(memory_context, reinterpret_cast<uint8_t*>(&result), result_ptr, sizeof(result));
-    if (!WasmEdge_ResultOK(r))
-    {
-        mir::log_error("Failed to read result from WASM memory: %s", WasmEdge_ResultGetMessage(r));
-        return miracle_plugin_animation_frame_result_t {
-            .completed = 1,
-            .has_area = 0,
-            .has_transform = 0,
-            .has_opacity = 0
-        };
-    }
-
-    mir::log_info("Successfully animated frame: completed=%d, has_area=%d, has_transform=%d, has_opacity=%d",
-        result.completed, result.has_area, result.has_transform, result.has_opacity);
-
-    return result;
+    return std::nullopt;
 }
 
 PluginWindowPlacement PluginManager::place_new_window(

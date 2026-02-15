@@ -191,6 +191,23 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
         .clip_area_size = to_glm(to.size) * glm::vec2(clip_scale_x, clip_scale_y)
     };
 }
+
+miracle_animation_type from_animateable_event(AnimateableEvent event)
+{
+    switch (event)
+    {
+    case AnimateableEvent::window_open:
+        return miracle_animation_type_window_open;
+    case AnimateableEvent::window_move:
+        return miracle_animation_type_window_move;
+    case AnimateableEvent::window_close:
+        return miracle_animation_type_window_close;
+    case AnimateableEvent::workspace_switch:
+        return miracle_animation_type_workspace_switch;
+    default:
+        return miracle_animation_type_window_none;
+    }
+}
 }
 
 Animation::Animation(
@@ -237,7 +254,7 @@ bool Animation::tick(float dt)
     case AnimationType::built_in:
     {
         AnimationFrameResult result;
-        for (auto const& builtin_def : std::get<BuiltInAnimationList>(definition_.data))
+        for (auto const& builtin_def : definition_.data)
             result = tick_built_in(builtin_def, t).merge(result);
         on_tick(result);
         if (result.is_complete)
@@ -246,17 +263,8 @@ bool Animation::tick(float dt)
     }
     case AnimationType::plugin:
     {
-        // TODO: Do not resolve this every time
-        auto const& plugin_def = std::get<PluginAnimationDefinition>(definition_.data);
-        auto const handle = plugin_manager->get_wasm_module(plugin_def.plugin_name);
-        if (handle == 0)
-        {
-            mir::log_error("Animation plugin failed to load: %s", plugin_def.plugin_name.c_str());
-            on_tick({ true, data_.area_end, glm::mat4(1.f), data_.opacity_end });
-            return true;
-        }
-
         miracle_plugin_animation_frame_data_t frame_data;
+        frame_data.type = from_animateable_event(data_.event);
         frame_data.runtime_seconds = runtime_seconds;
         frame_data.duration_seconds = definition_.duration_seconds;
         frame_data.origin[0] = static_cast<float>(data_.area_start.top_left.x.as_int());
@@ -269,7 +277,15 @@ bool Animation::tick(float dt)
         frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
         frame_data.opacity_start = data_.opacity_start;
         frame_data.opacity_end = data_.opacity_end;
-        auto const frame_result = plugin_manager->animate_frame(handle, plugin_def.function_name, frame_data);
+        auto const maybe_frame_result = plugin_manager->animate(frame_data);
+        if (!maybe_frame_result)
+        {
+            mir::log_warning("Animation is supposed to be using a plugin, but no plugin handled the 'animate' call.");
+            on_tick(finish());
+            return true;
+        }
+
+        auto const frame_result = maybe_frame_result.value();
         AnimationFrameResult animation_result;
         animation_result.is_complete = frame_result.completed != 0;
         if (frame_result.has_area != 0)

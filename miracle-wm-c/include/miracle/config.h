@@ -336,9 +336,6 @@ extern "C"
     {
         /// The path to the plugin shared object or directory.
         const char* path;
-
-        /// The logical name of the plugin.
-        const char* name;
     } miracle_plugin_t;
 
     /// Retrieve the number of plugins configured.
@@ -794,16 +791,6 @@ extern "C"
         /// Use #miracle_animateable_event_get_animation_part to get an animation at a particular
         /// index. There exists other methods to update each animation and add more as well.
         size_t num_parts;
-
-        /// The name of the plugin that provides this animation.
-        ///
-        /// This is only set when #type is set to "plugin".
-        const char* plugin_name;
-
-        /// The name of the function to call in the plugin.
-        ///
-        /// This is only set when #type is set to "plugin".
-        const char* function_name;
 
         /// Opaque pointer.
         void* _internal;

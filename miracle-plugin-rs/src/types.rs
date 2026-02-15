@@ -4,6 +4,7 @@
 //! to and from their C equivalents in the `bindings` module.
 
 use crate::bindings;
+use crate::core::Rect;
 
 /// Plugin version constant.
 pub const PLUGIN_VERSION: u32 = bindings::MIRACLE_PLUGIN_VERSION;
@@ -961,132 +962,6 @@ impl From<bindings::miracle_size_t> for Size {
     }
 }
 
-/// A rectangle defined by a point and size.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Rect {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
-}
-
-impl Rect {
-    pub const fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
-    }
-
-    pub fn from_array(arr: [f32; 4]) -> Self {
-        Self {
-            x: arr[0],
-            y: arr[1],
-            width: arr[2],
-            height: arr[3],
-        }
-    }
-
-    pub fn to_array(self) -> [f32; 4] {
-        [self.x, self.y, self.width, self.height]
-    }
-}
-
-/// Animation frame data provided to the plugin.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct AnimationFrameData {
-    /// The runtime of the animation frame in seconds.
-    pub runtime_seconds: f32,
-    /// The total duration of the animation in seconds.
-    pub duration_seconds: f32,
-    /// The origin area.
-    pub origin: Rect,
-    /// The destination area.
-    pub destination: Rect,
-    /// The opacity at the start of the animation.
-    pub opacity_start: f32,
-    /// The opacity at the end of the animation.
-    pub opacity_end: f32,
-}
-
-impl From<bindings::miracle_plugin_animation_frame_data_t> for AnimationFrameData {
-    fn from(value: bindings::miracle_plugin_animation_frame_data_t) -> Self {
-        Self {
-            runtime_seconds: value.runtime_seconds,
-            duration_seconds: value.duration_seconds,
-            origin: Rect::from_array(value.origin),
-            destination: Rect::from_array(value.destination),
-            opacity_start: value.opacity_start,
-            opacity_end: value.opacity_end,
-        }
-    }
-}
-
-impl From<AnimationFrameData> for bindings::miracle_plugin_animation_frame_data_t {
-    fn from(value: AnimationFrameData) -> Self {
-        Self {
-            runtime_seconds: value.runtime_seconds,
-            duration_seconds: value.duration_seconds,
-            origin: value.origin.to_array(),
-            destination: value.destination.to_array(),
-            opacity_start: value.opacity_start,
-            opacity_end: value.opacity_end,
-        }
-    }
-}
-
-/// Result of an animation frame computation.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct AnimationFrameResult {
-    /// If true, the animation is considered completed.
-    pub completed: bool,
-    /// The area rectangle (if set).
-    pub area: Option<Rect>,
-    /// The 4x4 transform matrix (column-major, if set).
-    pub transform: Option<[f32; 16]>,
-    /// The opacity value (if set).
-    pub opacity: Option<f32>,
-}
-
-impl From<AnimationFrameResult> for bindings::miracle_plugin_animation_frame_result_t {
-    fn from(value: AnimationFrameResult) -> Self {
-        Self {
-            completed: value.completed as i32,
-            has_area: value.area.is_some() as i32,
-            area: value.area.map(|r| r.to_array()).unwrap_or_default(),
-            has_transform: value.transform.is_some() as i32,
-            transform: value.transform.unwrap_or_default(),
-            has_opacity: value.opacity.is_some() as i32,
-            opacity: value.opacity.unwrap_or_default(),
-        }
-    }
-}
-
-impl From<bindings::miracle_plugin_animation_frame_result_t> for AnimationFrameResult {
-    fn from(value: bindings::miracle_plugin_animation_frame_result_t) -> Self {
-        Self {
-            completed: value.completed != 0,
-            area: if value.has_area != 0 {
-                Some(Rect::from_array(value.area))
-            } else {
-                None
-            },
-            transform: if value.has_transform != 0 {
-                Some(value.transform)
-            } else {
-                None
-            },
-            opacity: if value.has_opacity != 0 {
-                Some(value.opacity)
-            } else {
-                None
-            },
-        }
-    }
-}
-
 /// Application information.
 #[derive(Debug, Clone)]
 pub struct ApplicationInfo {
@@ -1726,7 +1601,11 @@ pub fn get_outputs() -> Vec<Output> {
 /// If `focus` is true, the workspace will be focused after creation/lookup.
 ///
 /// Returns `None` if the workspace could not be created.
-pub fn request_workspace(number: Option<u32>, name: Option<&str>, focus: bool) -> Option<Workspace> {
+pub fn request_workspace(
+    number: Option<u32>,
+    name: Option<&str>,
+    focus: bool,
+) -> Option<Workspace> {
     const NAME_BUF_LEN: usize = 256;
     let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
     let mut out_name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];

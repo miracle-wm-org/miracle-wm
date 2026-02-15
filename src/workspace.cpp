@@ -230,7 +230,7 @@ void Workspace::show(geom::Point const& origin)
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        AnimationData(geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
+        AnimationData(AnimateableEvent::workspace_switch, geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
         [that = that](AnimationFrameResult const& asr)
     {
         if (auto const locked = that.lock())
@@ -277,7 +277,7 @@ void Workspace::hide(geom::Point const& end)
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        AnimationData(geom::Rectangle(geom::Point(0, 0), area.size), geom::Rectangle(end, area.size), 1.f, 0.f),
+        AnimationData(AnimateableEvent::workspace_switch, geom::Rectangle(geom::Point(0, 0), area.size), geom::Rectangle(end, area.size), 1.f, 0.f),
         [this](AnimationFrameResult const& asr)
     {
         server_action_queue->enqueue(this, [asr = asr, this]()

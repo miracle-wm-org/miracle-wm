@@ -35,6 +35,7 @@ typedef uint32_t AnimationHandle;
 
 struct AnimationData
 {
+    AnimateableEvent event;
     mir::geometry::Rectangle area_start;
     mir::geometry::Rectangle area_end;
     float opacity_start;

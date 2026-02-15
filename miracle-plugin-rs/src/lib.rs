@@ -19,7 +19,10 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+pub mod animation;
 pub mod bindings;
+pub mod core;
+pub mod plugin;
 pub mod types;
 
 // Re-export commonly used items at the crate root

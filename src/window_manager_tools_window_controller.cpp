@@ -87,7 +87,7 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_open),
-        AnimationData(rect, rect, 0, 1),
+        AnimationData(AnimateableEvent::window_open, rect, rect, 0, 1),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 
@@ -124,7 +124,7 @@ void WindowManagerToolsWindowController::set_rectangle(
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
-        AnimationData(from, to, 1, 1),
+        AnimationData(AnimateableEvent::window_move, from, to, 1, 1),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 
