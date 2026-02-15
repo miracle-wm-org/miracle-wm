@@ -1,4 +1,7 @@
 use super::animation::{AnimationFrameData, AnimationFrameResult};
+use super::host::*;
+use super::output::*;
+use super::workspace::*;
 
 pub trait Plugin {
     /// Handles the window opening animation.
@@ -30,6 +33,114 @@ pub trait Plugin {
         data: &AnimationFrameData,
     ) -> Option<AnimationFrameResult> {
         None
+    }
+
+    /// Get the number of outputs.
+    fn num_outputs() -> u32 {
+        unsafe { miracle_num_outputs() }
+    }
+
+    /// Get an output by index.
+    ///
+    /// Returns `None` if the index is out of bounds or if the call fails.
+    fn get_output_at(index: u32) -> Option<Output> {
+        if index >= Self::num_outputs() {
+            return None;
+        }
+
+        const NAME_BUF_LEN: usize = 256;
+        let mut output = std::mem::MaybeUninit::<crate::bindings::miracle_output_t>::uninit();
+        let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        unsafe {
+            let result = miracle_get_output_at(
+                index,
+                output.as_mut_ptr() as i32,
+                name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let output = output.assume_init();
+
+            // Find the null terminator to get the actual string length
+            let name_len = name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+            Some(Output::from_c_with_name(&output, name))
+        }
+    }
+
+    /// Get all outputs.
+    fn get_outputs() -> Vec<Output> {
+        let count = Self::num_outputs();
+        (0..count).filter_map(|i| Self::get_output_at(i)).collect()
+    }
+
+    /// Request a workspace by optional number and/or name.
+    ///
+    /// If a workspace with the given number or name already exists, it is returned.
+    /// Otherwise, a new workspace is created on the focused output.
+    ///
+    /// If `focus` is true, the workspace will be focused after creation/lookup.
+    ///
+    /// Returns `None` if the workspace could not be created.
+    fn request_workspace(
+        number: Option<u32>,
+        name: Option<&str>,
+        focus: bool,
+    ) -> Option<Workspace> {
+        const NAME_BUF_LEN: usize = 256;
+        let mut workspace = std::mem::MaybeUninit::<crate::bindings::miracle_workspace_t>::uninit();
+        let mut out_name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+        let has_number: i32 = if number.is_some() { 1 } else { 0 };
+        let number_val: i32 = number.unwrap_or(0) as i32;
+
+        let name_ptr: i32 = match name {
+            Some(s) => s.as_ptr() as i32,
+            None => 0,
+        };
+        let name_len: i32 = match name {
+            Some(s) => s.len() as i32,
+            None => 0,
+        };
+
+        unsafe {
+            let result = miracle_request_workspace(
+                has_number,
+                number_val,
+                name_ptr,
+                name_len,
+                workspace.as_mut_ptr() as i32,
+                out_name_buf.as_mut_ptr() as i32,
+                NAME_BUF_LEN as i32,
+                if focus { 1 } else { 0 },
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            let workspace = workspace.assume_init();
+            if workspace.is_set == 0 {
+                return None;
+            }
+
+            let out_name_len = out_name_buf
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(NAME_BUF_LEN);
+            let ws_name = String::from_utf8_lossy(&out_name_buf[..out_name_len]).into_owned();
+
+            Some(Workspace::from_c_with_name(&workspace, ws_name))
+        }
     }
 }
 

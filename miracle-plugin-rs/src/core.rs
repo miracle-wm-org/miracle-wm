@@ -1,3 +1,5 @@
+use super::bindings::{miracle_point_t, miracle_size_t};
+
 /// A rectangle defined by a point and size.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Rect {
@@ -31,3 +33,64 @@ impl Rect {
     }
 }
 
+/// A size with integer dimensions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Size {
+    pub width: i32,
+    pub height: i32,
+}
+
+impl Size {
+    pub const fn new(width: i32, height: i32) -> Self {
+        Self { width, height }
+    }
+}
+
+impl From<Size> for miracle_size_t {
+    fn from(value: Size) -> Self {
+        Self {
+            w: value.width,
+            h: value.height,
+        }
+    }
+}
+
+impl From<miracle_size_t> for Size {
+    fn from(value: miracle_size_t) -> Self {
+        Self {
+            width: value.w,
+            height: value.h,
+        }
+    }
+}
+
+/// A 2D point with integer coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Point {
+    pub const fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
+    }
+}
+
+impl From<Point> for miracle_point_t {
+    fn from(value: Point) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+        }
+    }
+}
+
+impl From<miracle_point_t> for Point {
+    fn from(value: miracle_point_t) -> Self {
+        Self {
+            x: value.x,
+            y: value.y,
+        }
+    }
+}
