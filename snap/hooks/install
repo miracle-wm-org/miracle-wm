@@ -2,3 +2,7 @@
 
 mkdir -p /usr/share/wayland-sessions/
 cp "$SNAP/usr/share/wayland-sessions/miracle-wm-snap.desktop.in" "/usr/share/wayland-sessions/miracle-wm-snap.desktop"
+
+mkdir -p /usr/local/bin/
+cp "$SNAP/usr/bin/miracle-wm-snap-session" "/usr/local/bin/miracle-wm-snap-session"
+chmod +x "/usr/local/bin/miracle-wm-snap-session"

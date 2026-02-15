@@ -1,3 +1,4 @@
 #!/bin/sh
 
-rm /usr/share/wayland-sessions/miracle-wm-snap.desktop
+rm -f /usr/share/wayland-sessions/miracle-wm-snap.desktop
+rm -f /usr/local/bin/miracle-wm-snap-session
