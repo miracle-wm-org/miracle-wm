@@ -218,7 +218,7 @@ public:
     void unload_all() { }
     PluginHandle get_wasm_module(std::string const&) { return 0; }
     bool unload_wasm_module(PluginHandle) { return false; }
-    std::optional<miracle_plugin_animation_frame_result_t> animate_frame(
+    std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
