@@ -57,6 +57,19 @@ unsafe extern "C" {
     /// Retrieve the currently active workspace on the focused output.
     pub fn miracle_get_active_workspace(out_ptr: i32, name_buf: i32, name_buf_len: i32) -> i32;
 
+    /// Retrieve the number of windows managed by the given plugin handle.
+    pub fn miracle_num_managed_windows(plugin_handle: u32) -> u32;
+
+    /// Retrieve a managed window by index.
+    /// Returns 0 on success, non-zero on failure.
+    pub fn miracle_get_managed_window_at(
+        plugin_handle: u32,
+        index: u32,
+        out_ptr: i32,
+        name_buf: i32,
+        name_buf_len: i32,
+    ) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.

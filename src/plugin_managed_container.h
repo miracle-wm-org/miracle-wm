@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
 #include "container.h"
-#include "plugin_manager.h"
 #include "render_data_manager.h"
 
 namespace miracle
@@ -111,11 +110,12 @@ public:
     LayoutScheme get_layout() const override;
     bool matches(const ContainerScope&) const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
+    std::optional<PluginHandle> plugin_handle() const override;
 
 private:
     void rerender();
 
-    PluginHandle plugin_handle;
+    PluginHandle plugin_handle_;
     miral::Window window_;
     std::optional<MirWindowState> cached;
     std::shared_ptr<WindowController> window_controller;

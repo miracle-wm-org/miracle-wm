@@ -571,3 +571,8 @@ std::shared_ptr<Container> Container::root()
 
     return shared_from_this();
 }
+
+std::optional<PluginHandle> Container::plugin_handle() const
+{
+    return std::nullopt;
+}

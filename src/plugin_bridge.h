@@ -20,12 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "miracle/plugin.h"
 #include <functional>
+#include <miral/application_info.h>
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 #include <variant>
 
 namespace miracle
 {
+class CompositorState;
 class Container;
 class OutputManager;
 class WindowController;
@@ -82,7 +84,8 @@ public:
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<WorkspaceManager> const& workspace_manager);
+        std::shared_ptr<WorkspaceManager> const& workspace_manager,
+        std::shared_ptr<CompositorState> const& compositor_state);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -96,6 +99,8 @@ public:
     WindowResult get_window(uint64_t container_address);
     WorkspaceResult request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus);
     WorkspaceResult active_workspace();
+    uint32_t num_managed_windows(uint32_t plugin_handle);
+    WindowResult get_managed_window_at(uint32_t plugin_handle, uint32_t index);
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
     PluginBridgeObjectHandle<miracle_window_info_t> existing_window_info(miral::WindowInfo const& window_info);
@@ -117,6 +122,7 @@ private:
     std::shared_ptr<OutputManager> output_manager;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<WorkspaceManager> workspace_manager;
+    std::shared_ptr<CompositorState> compositor_state;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
 };
 

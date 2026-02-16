@@ -6,6 +6,10 @@ use super::host::*;
 use super::output::*;
 use super::workspace::*;
 
+extern "C" {
+    fn _miracle_get_plugin_handle() -> u32;
+}
+
 pub trait Plugin {
     /// Handles the window opening animation.
     ///
@@ -53,6 +57,48 @@ pub trait Plugin {
     /// The window info is still valid at this point (the window has not yet
     /// been removed from the compositor).
     fn window_deleted(&mut self, info: WindowInfo) {}
+
+    /// Lists the windows that are managed by this plugin.
+    ///
+    /// A window that is managed by this plugin had to have been placed
+    /// via a freestyle placement strategy, otherwise the tiling manager
+    /// or the system is handling it independently.
+    fn managed_windows() -> Vec<WindowInfo> {
+        let handle = unsafe { _miracle_get_plugin_handle() };
+        let count = unsafe { miracle_num_managed_windows(handle) };
+
+        (0..count)
+            .filter_map(|i| {
+                const NAME_BUF_LEN: usize = 256;
+                let mut window_info =
+                    std::mem::MaybeUninit::<crate::bindings::miracle_window_info_t>::uninit();
+                let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
+
+                unsafe {
+                    let result = miracle_get_managed_window_at(
+                        handle,
+                        i,
+                        window_info.as_mut_ptr() as i32,
+                        name_buf.as_mut_ptr() as i32,
+                        NAME_BUF_LEN as i32,
+                    );
+
+                    if result != 0 {
+                        return None;
+                    }
+
+                    let window_info = window_info.assume_init();
+                    let name_len = name_buf
+                        .iter()
+                        .position(|&c| c == 0)
+                        .unwrap_or(NAME_BUF_LEN);
+                    let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
+
+                    Some(WindowInfo::from_c_with_name(&window_info, name))
+                }
+            })
+            .collect()
+    }
 
     /// Get the number of outputs.
     fn num_outputs() -> u32 {
@@ -201,10 +247,17 @@ pub trait Plugin {
 macro_rules! miracle_plugin {
     ($plugin_type:ty) => {
         static mut _MIRACLE_PLUGIN: Option<$plugin_type> = None;
+        static mut _MIRACLE_PLUGIN_HANDLE: u32 = 0;
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn init() {
+        pub extern "C" fn _miracle_get_plugin_handle() -> u32 {
+            unsafe { _MIRACLE_PLUGIN_HANDLE }
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn init(handle: i32) {
             unsafe {
+                _MIRACLE_PLUGIN_HANDLE = handle as u32;
                 _MIRACLE_PLUGIN = Some(<$plugin_type>::default());
             }
         }

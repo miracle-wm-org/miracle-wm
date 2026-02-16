@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_bridge.h"
+#include "compositor_state.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "output_interface.h"
@@ -133,10 +134,12 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
 
 PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<WorkspaceManager> const& workspace_manager) :
+    std::shared_ptr<WorkspaceManager> const& workspace_manager,
+    std::shared_ptr<CompositorState> const& compositor_state) :
     output_manager(output_manager),
     window_controller(window_controller),
-    workspace_manager(workspace_manager)
+    workspace_manager(workspace_manager),
+    compositor_state(compositor_state)
 {
 }
 
@@ -307,4 +310,63 @@ PluginBridge::WorkspaceResult PluginBridge::active_workspace()
 WorkspaceInterface* PluginBridge::resolve_workspace(uint64_t workspace_internal)
 {
     return static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_internal));
+}
+
+uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
+{
+    uint32_t count = 0;
+    auto const lock = compositor_state->lock();
+    for (auto const& weak_container : compositor_state->containers())
+    {
+        auto const container = weak_container.lock();
+        if (!container)
+            continue;
+
+        auto const handle = container->plugin_handle();
+        if (!handle.has_value() || handle.value() != plugin_handle)
+            continue;
+
+        if (!container->window().has_value())
+            continue;
+
+        count++;
+    }
+
+    return count;
+}
+
+PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_handle, uint32_t index)
+{
+    uint32_t count = 0;
+    auto const lock = compositor_state->lock();
+    for (auto const& weak_container : compositor_state->containers())
+    {
+        auto const container = weak_container.lock();
+        if (!container)
+            continue;
+
+        auto const handle = container->plugin_handle();
+        if (!handle.has_value() || handle.value() != plugin_handle)
+            continue;
+
+        auto const window = container->window();
+        if (!window.has_value())
+            continue;
+
+        if (count == index)
+        {
+            miral::WindowInfo const& window_info = window_controller->info_for(window.value());
+            miral::ApplicationInfo const& app_info = window_controller->app_info(window.value());
+            auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window.value());
+            plugin_window_infos.push_back(plugin_window_info);
+            return {
+                from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get())),
+                window_info.name()
+            };
+        }
+
+        count++;
+    }
+
+    return { miracle_window_info_t {}, "" };
 }
