@@ -962,6 +962,83 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     }
 }
 
+void PluginManager::window_deleted(miral::WindowInfo const& window_info)
+{
+    std::lock_guard lock(mutex);
+    auto const bridge_handle = self->bridge->existing_window_info(window_info);
+    auto const window_info_t = bridge_handle.get();
+    for (auto const& module : self->loaded_modules)
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr window_info_ptr = 0;
+
+        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
+        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            window_info_buffer,
+            window_info_ptr,
+            sizeof(window_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        auto const window_name = window_info.name();
+        uint32_t const name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
+        uint32_t const name_len = static_cast<uint32_t>(window_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(window_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        WasmEdge_Value params[3];
+        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(name_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_len);
+
+        auto const func_name = WasmEdge_StringCreateByCString("window_deleted");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            3,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'window_deleted' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
 PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)
 {
     PluginWindowPlacement result;

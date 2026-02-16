@@ -48,6 +48,12 @@ pub trait Plugin {
         None
     }
 
+    /// Called when a window is about to be deleted.
+    ///
+    /// The window info is still valid at this point (the window has not yet
+    /// been removed from the compositor).
+    fn window_deleted(&mut self, info: WindowInfo) {}
+
     /// Get the number of outputs.
     fn num_outputs() -> u32 {
         unsafe { miracle_num_outputs() }
@@ -323,6 +329,37 @@ macro_rules! miracle_plugin {
                 }
                 None => 0,
             }
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn window_deleted(
+            window_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_info = unsafe {
+                &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+
+            plugin.window_deleted(info);
         }
     };
 }
