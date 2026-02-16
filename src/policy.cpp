@@ -527,6 +527,7 @@ auto Policy::place_new_window(
     {
         hint.container_type = ContainerType::plugin;
         hint.workspace = plugin_placement->freestyle.workspace;
+        hint.plugin_handle = plugin_placement->freestyle.handle;
         new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
         new_spec.size() = plugin_placement->freestyle.rectangle.size;
         new_spec.depth_layer() = plugin_placement->freestyle.layer;
@@ -619,7 +620,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             ? pending_allocation.workspace->shared_from_this()
             : output_manager->focused()->active();
         container = std::make_shared<PluginManagedContainer>(
-            0,
+            pending_allocation.plugin_handle,
             window_info.window(),
             window_controller,
             state);

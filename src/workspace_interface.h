@@ -36,6 +36,7 @@ struct AllocationHint
     ContainerType container_type = ContainerType::none;
     ParentContainer* parent = nullptr;
     WorkspaceInterface* workspace = nullptr;
+    PluginHandle plugin_handle = 0;
 };
 
 class WorkspaceInterface : public std::enable_shared_from_this<WorkspaceInterface>

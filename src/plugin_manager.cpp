@@ -958,7 +958,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
             continue;
         }
 
-        return from_c(result);
+        return from_c(result, module.handle);
     }
 }
 
@@ -1039,7 +1039,7 @@ void PluginManager::window_deleted(miral::WindowInfo const& window_info)
     }
 }
 
-PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)
+PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, PluginHandle plugin_handle)
 {
     PluginWindowPlacement result;
     result.strategy = static_cast<miracle_window_management_strategy_t>(placement.strategy);
@@ -1059,6 +1059,7 @@ PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement)
             from_size(placement.freestyle_placement.size));
         result.freestyle.layer = static_cast<MirDepthLayer>(placement.freestyle_placement.depth_layer);
         result.freestyle.workspace = self->bridge->resolve_workspace(placement.freestyle_placement.workspace_internal);
+        result.freestyle.handle = plugin_handle;
         break;
     }
     default:
