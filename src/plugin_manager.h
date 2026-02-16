@@ -26,6 +26,7 @@ namespace miracle
 class Container;
 class WorkspaceInterface;
 
+typedef uint32_t PluginHandle;
 struct PluginWindowPlacement
 {
     struct TiledPlacement
@@ -37,9 +38,17 @@ struct PluginWindowPlacement
 
     struct FreestylePlacement
     {
+        /// The rectangle of the window.
         mir::geometry::Rectangle rectangle;
+
+        /// The layer of the window.
         MirDepthLayer layer;
+
+        /// The workspace of the window.
         WorkspaceInterface* workspace;
+
+        /// The plugin handle that is managing the window.
+        PluginHandle handle;
     };
 
     miracle_window_management_strategy_t strategy = miracle_window_management_strategy_system;
@@ -57,8 +66,6 @@ struct PluginWindowPlacement
 
 namespace miracle
 {
-typedef uint32_t PluginHandle;
-
 class PluginBridge;
 
 struct PluginLoadResult
@@ -187,7 +194,7 @@ private:
         std::vector<ModuleInstance> loaded_modules;
     };
 
-    PluginWindowPlacement from_c(miracle_placement_t placement);
+    PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
     std::mutex mutex;
     std::unique_ptr<Self> self;
