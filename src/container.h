@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "direction.h"
 #include "observer_registrar.h"
+#include "plugin_manager.h"
 #include "scratchpad_state.h"
 
 #include "layout_scheme.h"
@@ -207,6 +208,11 @@ public:
     ///
     /// \returns the root
     virtual std::shared_ptr<Container> root();
+
+    /// Returns the handle of the plugin that created this container, if any.
+    ///
+    /// \returns the plugin handle
+    virtual std::optional<PluginHandle> plugin_handle() const;
 
 protected:
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;

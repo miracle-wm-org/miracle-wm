@@ -498,6 +498,63 @@ WasmEdge_Result host_miracle_output_get_workspace(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_num_managed_windows(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->num_managed_windows(plugin_handle));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_get_managed_window_at(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_get_managed_window_at: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    uint32_t const index = WasmEdge_ValueGetI32(params[1]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const name_buffer_ptr = WasmEdge_ValueGetI32(params[3]);
+    int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[4]);
+
+    auto const window = bridge->get_managed_window_at(plugin_handle, index);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    uint8_t* window_buf = mem_base + out_ptr;
+    std::memcpy(window_buf, &window.window_info, sizeof(window.window_info));
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
+    char const* window_name = window.name.c_str();
+    size_t const name_len = std::strlen(window_name);
+
+    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
+    {
+        mir::log_error("host_miracle_get_managed_window_at: buffer too small (%zu > %d)",
+            name_len + 1, name_buffer_length);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    std::memcpy(name_buf, window_name, name_len);
+    name_buf[name_len] = '\0';
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -639,6 +696,14 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_get_active_workspace, bridge.get());
 
+    add_host_function(module, "miracle_num_managed_windows",
+        create_func_type({ i32 }, { i32 }),
+        host_miracle_num_managed_windows, bridge.get());
+
+    add_host_function(module, "miracle_get_managed_window_at",
+        create_func_type({ i32, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_get_managed_window_at, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -699,13 +764,18 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
         };
     }
 
+    // Assign handle before init so we can pass it to the plugin.
+    auto const handle = self->next_plugin_handle++;
+
     // Call the module's init function if it exists.
     auto const init_func_name = WasmEdge_StringCreateByCString("init");
     auto const init_func_context = WasmEdge_ModuleInstanceFindFunction(module_context, init_func_name);
     WasmEdge_StringDelete(init_func_name);
     if (init_func_context != nullptr)
     {
-        r = WasmEdge_ExecutorInvoke(self->executor_context.get(), init_func_context, nullptr, 0, nullptr, 0);
+        WasmEdge_Value init_params[1];
+        init_params[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(handle));
+        r = WasmEdge_ExecutorInvoke(self->executor_context.get(), init_func_context, init_params, 1, nullptr, 0);
         if (!WasmEdge_ResultOK(r))
         {
             mir::log_error("Failed to invoke 'init' function in module %s: %s", path.c_str(), WasmEdge_ResultGetMessage(r));
@@ -717,7 +787,6 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
     }
 
     // Store the plugin for later. Function resolution happens at call time.
-    auto const handle = self->next_plugin_handle++;
     self->loaded_modules.push_back(Self::ModuleInstance {
         Self::ModuleInstancePtr { module_context },
         handle,

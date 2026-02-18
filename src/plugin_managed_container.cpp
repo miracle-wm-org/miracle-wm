@@ -67,7 +67,7 @@ PluginManagedContainer::PluginManagedContainer(
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state) :
-    plugin_handle { plugin_handle },
+    plugin_handle_ { plugin_handle },
     window_ { window },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
@@ -455,4 +455,9 @@ void PluginManagedContainer::rerender()
     // A hack to trigger a rerender on the surface by re-applying its transformation.
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
         surface->set_transformation(get_transform());
+}
+
+std::optional<PluginHandle> PluginManagedContainer::plugin_handle() const
+{
+    return plugin_handle_;
 }
