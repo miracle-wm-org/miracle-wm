@@ -6,8 +6,8 @@ use super::host::*;
 use super::output::*;
 use super::workspace::*;
 
-extern "C" {
-    fn _miracle_get_plugin_handle() -> u32;
+unsafe extern "C" {
+    fn miracle_get_plugin_handle() -> u32;
 }
 
 pub trait Plugin {
@@ -64,7 +64,7 @@ pub trait Plugin {
     /// via a freestyle placement strategy, otherwise the tiling manager
     /// or the system is handling it independently.
     fn managed_windows() -> Vec<WindowInfo> {
-        let handle = unsafe { _miracle_get_plugin_handle() };
+        let handle = unsafe { miracle_get_plugin_handle() };
         let count = unsafe { miracle_num_managed_windows(handle) };
 
         (0..count)
@@ -250,7 +250,7 @@ macro_rules! miracle_plugin {
         static mut _MIRACLE_PLUGIN_HANDLE: u32 = 0;
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn _miracle_get_plugin_handle() -> u32 {
+        pub extern "C" fn miracle_get_plugin_handle() -> u32 {
             unsafe { _MIRACLE_PLUGIN_HANDLE }
         }
 
