@@ -609,6 +609,7 @@ void LeafContainer::rerender()
     if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
     {
         surface->set_transformation(get_workspace_transform() * get_transform());
+        surface->set_alpha(alpha * workspace_alpha);
     }
 }
 
