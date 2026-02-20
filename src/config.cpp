@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <glib-2.0/glib.h>
-#include <libevdev-1.0/libevdev/libevdev.h>
 #include <mir/log.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 #include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
@@ -377,7 +377,7 @@ MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
 }
 
 CustomKeyCommand const*
-FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const
+FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const
 {
     std::lock_guard lock(mutex);
     // TODO: Copy & paste
@@ -390,7 +390,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, in
         if (command_modifiers != modifiers)
             continue;
 
-        if (scan_code == command.key)
+        if (keysym == command.key)
             return &command;
     }
 
@@ -399,7 +399,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, in
 
 bool FilesystemConfiguration::matches_key_command(
     MirKeyboardAction action,
-    int scan_code,
+    uint32_t keysym,
     unsigned int modifiers,
     std::function<bool(DefaultKeyCommand)> const& f) const
 {
@@ -413,157 +413,157 @@ bool FilesystemConfiguration::matches_key_command(
     constexpr KeyCommand default_key_commands[static_cast<int>(DefaultKeyCommand::MAX)] = {
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_ENTER },
+         XKB_KEY_Return },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_V     },
+         XKB_KEY_v      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_H     },
+         XKB_KEY_h      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_R     },
+         XKB_KEY_r      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_UP    },
+         XKB_KEY_Up     },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_DOWN  },
+         XKB_KEY_Down   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_LEFT  },
+         XKB_KEY_Left   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_RIGHT },
+         XKB_KEY_Right  },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_UP    },
+         XKB_KEY_Up     },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_DOWN  },
+         XKB_KEY_Down   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_LEFT  },
+         XKB_KEY_Left   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_RIGHT },
+         XKB_KEY_Right  },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_UP    },
+         XKB_KEY_Up     },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_DOWN  },
+         XKB_KEY_Down   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_LEFT  },
+         XKB_KEY_Left   },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_RIGHT },
+         XKB_KEY_Right  },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_Q     },
+         XKB_KEY_q      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_E     },
+         XKB_KEY_e      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_F     },
+         XKB_KEY_f      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_1     },
+         XKB_KEY_1      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_2     },
+         XKB_KEY_2      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_3     },
+         XKB_KEY_3      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_4     },
+         XKB_KEY_4      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_5     },
+         XKB_KEY_5      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_6     },
+         XKB_KEY_6      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_7     },
+         XKB_KEY_7      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_8     },
+         XKB_KEY_8      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_9     },
+         XKB_KEY_9      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_0     },
+         XKB_KEY_0      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_1     },
+         XKB_KEY_1      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_2     },
+         XKB_KEY_2      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_3     },
+         XKB_KEY_3      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_4     },
+         XKB_KEY_4      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_5     },
+         XKB_KEY_5      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_6     },
+         XKB_KEY_6      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_7     },
+         XKB_KEY_7      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_8     },
+         XKB_KEY_8      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_9     },
+         XKB_KEY_9      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_0     },
+         XKB_KEY_0      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_SPACE },
+         XKB_KEY_space  },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_P     },
+         XKB_KEY_p      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_W     },
+         XKB_KEY_w      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_S     },
+         XKB_KEY_s      },
         { // MagnifierOn
             mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_EQUAL },
-        { // Magnifier Off
+         XKB_KEY_equal  },
+        { // MagnifierOff
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_ESC   },
-        { // Increase Size
+         XKB_KEY_Escape },
+        { // MagnifierIncreaseSize
             mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_EQUAL },
-        { // Decrease size
+         XKB_KEY_equal  },
+        { // MagnifierDecreaseSize
             mir_keyboard_action_down,
          miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         KEY_MINUS },
-        { // Increase scale
+         XKB_KEY_minus  },
+        { // MagnifierIncreaseScale
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_EQUAL },
-        { // Decrease scale
+         XKB_KEY_equal  },
+        { // MagnifierDecreaseScale
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         KEY_MINUS }
+         XKB_KEY_minus  }
     };
 
     auto const try_run_key_command = [&](MirKeyboardAction in_action, uint in_modifiers, uint in_key, DefaultKeyCommand i)
@@ -575,7 +575,7 @@ bool FilesystemConfiguration::matches_key_command(
         if (command_modifiers != modifiers)
             return false;
 
-        if (scan_code == in_key)
+        if (keysym == in_key)
         {
             if (f(i))
                 return true;

@@ -23,8 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miracle/cpp/config-cpp.h>
 #include <miral/version.h>
 
+#include <cstdint>
 #include <functional>
-#include <linux/input.h>
 #include <memory>
 #include <mir/fd.h>
 #include <mutex>
@@ -55,8 +55,8 @@ public:
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
     [[nodiscard]] virtual std::vector<PluginConfiguration> const& get_plugins() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
-    [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
-    virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
+    [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
+    virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
     [[nodiscard]] virtual Gaps get_inner_gaps() const = 0;
     virtual void override_inner_gaps(Gaps const&) = 0;
     [[nodiscard]] virtual Gaps get_outer_gaps() const = 0;
@@ -105,8 +105,8 @@ public:
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] std::vector<PluginConfiguration> const& get_plugins() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
-    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
-    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
+    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
+    bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
     [[nodiscard]] Gaps get_inner_gaps() const override;
     void override_inner_gaps(Gaps const&) override;
     [[nodiscard]] Gaps get_outer_gaps() const override;
