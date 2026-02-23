@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "layout_scheme.h"
 #include "miracle/plugin.h"
 #include <mir/geometry/rectangle.h>
-
+#include <miral/toolkit_event.h>
 namespace miracle
 {
 class Container;
@@ -131,6 +131,12 @@ public:
     /// \param window_info The window info for the deleted window.
     void window_deleted(miral::WindowInfo const& window_info);
 
+    /// Check if the plugin handles a keyboard event.
+    ///
+    /// \param event the incoming keyboard event
+    /// \returns `true` if the keyboard event was consumed, otherwise `false`
+    bool handle_keyboard_event(MirKeyboardEvent const& event);
+
 private:
     struct Self
     {
@@ -205,6 +211,7 @@ private:
 #include "plugin_bridge.h"
 #include <cstdint>
 #include <mir/geometry/point.h>
+#include <miral/toolkit_event.h>
 #include <string>
 namespace miracle
 {
@@ -236,6 +243,7 @@ public:
         miral::ApplicationInfo const&,
         miral::WindowSpecification const&) { return std::nullopt; }
     void window_deleted(miral::WindowInfo const&) { }
+    bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
 };
 }
 #endif
