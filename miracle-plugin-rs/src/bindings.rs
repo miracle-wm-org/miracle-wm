@@ -480,3 +480,123 @@ impl Default for miracle_placement_t {
         }
     }
 }
+#[doc = " Describes a keyboard event."]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_keyboard_event_t {
+    #[doc = " The keyboard action."]
+    pub action: u32,
+    #[doc = " The keysym."]
+    pub keysym: u32,
+    #[doc = " The raw scan code."]
+    pub scan_code: i32,
+    #[doc = " The modifiers held during the event."]
+    pub modifiers: u32,
+}
+pub const MirEventType_mir_event_type_key: MirEventType = 0;
+pub const MirEventType_mir_event_type_motion: MirEventType = 1;
+pub const MirEventType_mir_event_type_window: MirEventType = 2;
+pub const MirEventType_mir_event_type_resize: MirEventType = 3;
+pub const MirEventType_mir_event_type_prompt_session_state_change: MirEventType = 4;
+pub const MirEventType_mir_event_type_orientation: MirEventType = 5;
+pub const MirEventType_mir_event_type_close_window: MirEventType = 6;
+pub const MirEventType_mir_event_type_input: MirEventType = 7;
+pub const MirEventType_mir_event_type_input_configuration: MirEventType = 8;
+pub const MirEventType_mir_event_type_window_output: MirEventType = 9;
+pub const MirEventType_mir_event_type_input_device_state: MirEventType = 10;
+pub const MirEventType_mir_event_type_window_placement: MirEventType = 11;
+pub type MirEventType = ::std::os::raw::c_uint;
+pub const MirInputEventType_mir_input_event_type_key: MirInputEventType = 0;
+pub const MirInputEventType_mir_input_event_type_touch: MirInputEventType = 1;
+pub const MirInputEventType_mir_input_event_type_pointer: MirInputEventType = 2;
+pub const MirInputEventType_mir_input_event_type_keyboard_resync: MirInputEventType = 3;
+pub const MirInputEventType_mir_input_event_types: MirInputEventType = 4;
+pub type MirInputEventType = ::std::os::raw::c_uint;
+pub const MirInputEventModifier_mir_input_event_modifier_none: MirInputEventModifier = 1;
+pub const MirInputEventModifier_mir_input_event_modifier_alt: MirInputEventModifier = 2;
+pub const MirInputEventModifier_mir_input_event_modifier_alt_left: MirInputEventModifier = 4;
+pub const MirInputEventModifier_mir_input_event_modifier_alt_right: MirInputEventModifier = 8;
+pub const MirInputEventModifier_mir_input_event_modifier_shift: MirInputEventModifier = 16;
+pub const MirInputEventModifier_mir_input_event_modifier_shift_left: MirInputEventModifier = 32;
+pub const MirInputEventModifier_mir_input_event_modifier_shift_right: MirInputEventModifier = 64;
+pub const MirInputEventModifier_mir_input_event_modifier_sym: MirInputEventModifier = 128;
+pub const MirInputEventModifier_mir_input_event_modifier_function: MirInputEventModifier = 256;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl: MirInputEventModifier = 512;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl_left: MirInputEventModifier = 1024;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl_right: MirInputEventModifier = 2048;
+pub const MirInputEventModifier_mir_input_event_modifier_meta: MirInputEventModifier = 4096;
+pub const MirInputEventModifier_mir_input_event_modifier_meta_left: MirInputEventModifier = 8192;
+pub const MirInputEventModifier_mir_input_event_modifier_meta_right: MirInputEventModifier = 16384;
+pub const MirInputEventModifier_mir_input_event_modifier_caps_lock: MirInputEventModifier = 32768;
+pub const MirInputEventModifier_mir_input_event_modifier_num_lock: MirInputEventModifier = 65536;
+pub const MirInputEventModifier_mir_input_event_modifier_scroll_lock: MirInputEventModifier =
+    131072;
+#[doc = " Description of key modifier state."]
+pub type MirInputEventModifier = ::std::os::raw::c_uint;
+pub type MirInputEventModifiers = ::std::os::raw::c_uint;
+pub const MirKeyboardAction_mir_keyboard_action_up: MirKeyboardAction = 0;
+pub const MirKeyboardAction_mir_keyboard_action_down: MirKeyboardAction = 1;
+pub const MirKeyboardAction_mir_keyboard_action_repeat: MirKeyboardAction = 2;
+pub const MirKeyboardAction_mir_keyboard_action_modifiers: MirKeyboardAction = 3;
+pub const MirKeyboardAction_mir_keyboard_actions: MirKeyboardAction = 4;
+#[doc = " Possible actions for changing key state"]
+pub type MirKeyboardAction = ::std::os::raw::c_uint;
+pub const MirTouchAction_mir_touch_action_up: MirTouchAction = 0;
+pub const MirTouchAction_mir_touch_action_down: MirTouchAction = 1;
+pub const MirTouchAction_mir_touch_action_change: MirTouchAction = 2;
+pub const MirTouchAction_mir_touch_actions: MirTouchAction = 3;
+#[doc = " Possible per touch actions for state changing"]
+pub type MirTouchAction = ::std::os::raw::c_uint;
+pub const MirTouchAxis_mir_touch_axis_x: MirTouchAxis = 0;
+pub const MirTouchAxis_mir_touch_axis_y: MirTouchAxis = 1;
+pub const MirTouchAxis_mir_touch_axis_pressure: MirTouchAxis = 2;
+pub const MirTouchAxis_mir_touch_axis_touch_major: MirTouchAxis = 3;
+pub const MirTouchAxis_mir_touch_axis_touch_minor: MirTouchAxis = 4;
+pub const MirTouchAxis_mir_touch_axis_size: MirTouchAxis = 5;
+pub const MirTouchAxis_mir_touch_axes: MirTouchAxis = 6;
+#[doc = " Identifiers for touch axis"]
+pub type MirTouchAxis = ::std::os::raw::c_uint;
+pub const MirTouchTooltype_mir_touch_tooltype_unknown: MirTouchTooltype = 0;
+pub const MirTouchTooltype_mir_touch_tooltype_finger: MirTouchTooltype = 1;
+pub const MirTouchTooltype_mir_touch_tooltype_stylus: MirTouchTooltype = 2;
+pub const MirTouchTooltype_mir_touch_tooltypes: MirTouchTooltype = 3;
+#[doc = " Identifiers for per-touch tool types"]
+pub type MirTouchTooltype = ::std::os::raw::c_uint;
+pub const MirPointerAction_mir_pointer_action_button_up: MirPointerAction = 0;
+pub const MirPointerAction_mir_pointer_action_button_down: MirPointerAction = 1;
+pub const MirPointerAction_mir_pointer_action_enter: MirPointerAction = 2;
+pub const MirPointerAction_mir_pointer_action_leave: MirPointerAction = 3;
+pub const MirPointerAction_mir_pointer_action_motion: MirPointerAction = 4;
+pub const MirPointerAction_mir_pointer_actions: MirPointerAction = 5;
+#[doc = " Possible pointer actions"]
+pub type MirPointerAction = ::std::os::raw::c_uint;
+pub const MirPointerAxis_mir_pointer_axis_x: MirPointerAxis = 0;
+pub const MirPointerAxis_mir_pointer_axis_y: MirPointerAxis = 1;
+pub const MirPointerAxis_mir_pointer_axis_vscroll: MirPointerAxis = 2;
+pub const MirPointerAxis_mir_pointer_axis_hscroll: MirPointerAxis = 3;
+pub const MirPointerAxis_mir_pointer_axis_relative_x: MirPointerAxis = 4;
+pub const MirPointerAxis_mir_pointer_axis_relative_y: MirPointerAxis = 5;
+pub const MirPointerAxis_mir_pointer_axis_vscroll_discrete: MirPointerAxis = 6;
+pub const MirPointerAxis_mir_pointer_axis_hscroll_discrete: MirPointerAxis = 7;
+pub const MirPointerAxis_mir_pointer_axis_vscroll_value120: MirPointerAxis = 8;
+pub const MirPointerAxis_mir_pointer_axis_hscroll_value120: MirPointerAxis = 9;
+pub const MirPointerAxis_mir_pointer_axes: MirPointerAxis = 10;
+#[doc = " Identifiers for pointer axis"]
+pub type MirPointerAxis = ::std::os::raw::c_uint;
+pub const MirPointerButton_mir_pointer_button_primary: MirPointerButton = 1;
+pub const MirPointerButton_mir_pointer_button_secondary: MirPointerButton = 2;
+pub const MirPointerButton_mir_pointer_button_tertiary: MirPointerButton = 4;
+pub const MirPointerButton_mir_pointer_button_back: MirPointerButton = 8;
+pub const MirPointerButton_mir_pointer_button_forward: MirPointerButton = 16;
+pub const MirPointerButton_mir_pointer_button_side: MirPointerButton = 32;
+pub const MirPointerButton_mir_pointer_button_extra: MirPointerButton = 64;
+pub const MirPointerButton_mir_pointer_button_task: MirPointerButton = 128;
+pub type MirPointerButton = ::std::os::raw::c_uint;
+pub type MirPointerButtons = ::std::os::raw::c_uint;
+pub const MirPointerAxisSource_mir_pointer_axis_source_none: MirPointerAxisSource = 0;
+pub const MirPointerAxisSource_mir_pointer_axis_source_wheel: MirPointerAxisSource = 1;
+pub const MirPointerAxisSource_mir_pointer_axis_source_finger: MirPointerAxisSource = 2;
+pub const MirPointerAxisSource_mir_pointer_axis_source_continuous: MirPointerAxisSource = 3;
+pub const MirPointerAxisSource_mir_pointer_axis_source_wheel_tilt: MirPointerAxisSource = 4;
+#[doc = " Identifiers for pointer event source"]
+pub type MirPointerAxisSource = ::std::os::raw::c_uint;

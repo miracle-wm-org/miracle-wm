@@ -19,6 +19,7 @@ fn main() {
 
     let mut builder = bindgen::Builder::default()
         .header(plugin_header.to_str().unwrap())
+        .header("/usr/include/mircore/mir_toolkit/events/enums.h")
         .clang_arg("-I/usr/include/mircore")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .allowlist_type("miracle_.*")

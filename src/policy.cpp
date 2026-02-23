@@ -267,7 +267,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    return config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
+    if (config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;
@@ -406,7 +406,12 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             break;
         }
         return false;
-    });
+    }))
+    {
+        return true;
+    }
+
+    return plugin_manager->handle_keyboard_event(*event);
 }
 
 bool Policy::handle_pointer_event(MirPointerEvent const* event)
