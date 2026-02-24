@@ -29,6 +29,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <miral/version.h>
 #include <xkbcommon/xkbcommon.h>
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
 #include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
