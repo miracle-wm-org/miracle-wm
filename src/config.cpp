@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/runner.h>
 #include <sys/inotify.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
+#include <xkbcommon/xkbcommon.h>
 
 using namespace miracle;
 
@@ -390,7 +391,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, ui
         if (command_modifiers != modifiers)
             continue;
 
-        if (keysym == command.key)
+        if (xkb_keysym_to_lower(keysym) == xkb_keysym_to_lower(command.key))
             return &command;
     }
 
@@ -575,7 +576,7 @@ bool FilesystemConfiguration::matches_key_command(
         if (command_modifiers != modifiers)
             return false;
 
-        if (keysym == in_key)
+        if (xkb_keysym_to_lower(keysym) == xkb_keysym_to_lower(in_key))
         {
             if (f(i))
                 return true;
