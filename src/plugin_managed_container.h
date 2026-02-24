@@ -43,7 +43,9 @@ public:
         PluginHandle plugin_handle,
         miral::Window const& window,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<CompositorState> const& compositor_state);
+        std::shared_ptr<CompositorState> const& compositor_state,
+        glm::mat4 transform = glm::mat4(1.f),
+        float alpha = 1.f);
     ~PluginManagedContainer() override;
 
     void show() override;

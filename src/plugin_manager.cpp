@@ -1276,6 +1276,8 @@ PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, Plugi
         result.freestyle.layer = static_cast<MirDepthLayer>(placement.freestyle_placement.depth_layer);
         result.freestyle.workspace = self->bridge->resolve_workspace(placement.freestyle_placement.workspace_internal);
         result.freestyle.handle = plugin_handle;
+        std::memcpy(&result.freestyle.transform, placement.freestyle_placement.transform, sizeof(float) * 16);
+        result.freestyle.alpha = placement.freestyle_placement.alpha;
         break;
     }
     default:

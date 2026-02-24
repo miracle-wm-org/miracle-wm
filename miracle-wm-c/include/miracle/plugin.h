@@ -356,6 +356,16 @@ extern "C"
         ///
         /// This value may not be honored by the window itself.
         miracle_size_t size;
+
+        /// The 4x4 transform matrix applied to the window (column-major).
+        ///
+        /// Defaults to the identity matrix.
+        float transform[16];
+
+        /// The alpha (opacity) of the window.
+        ///
+        /// Defaults to 1.0 (fully opaque).
+        float alpha;
     } miracle_freestyle_placement_t;
 
     typedef struct

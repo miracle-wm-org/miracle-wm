@@ -37,6 +37,8 @@ struct AllocationHint
     ParentContainer* parent = nullptr;
     WorkspaceInterface* workspace = nullptr;
     PluginHandle plugin_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
+    float alpha = 1.f;
 };
 
 class WorkspaceInterface : public std::enable_shared_from_this<WorkspaceInterface>

@@ -450,7 +450,7 @@ impl Default for miracle_tiled_placement_t {
 }
 #[doc = " Describes a freestyle placement which is fully controlled by the plugin."]
 #[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct miracle_freestyle_placement_t {
     #[doc = " The top left position of the window."]
     pub top_left: miracle_point_t,
@@ -460,6 +460,27 @@ pub struct miracle_freestyle_placement_t {
     pub workspace_internal: u64,
     #[doc = " The size of the window.\n\n This value may not be honored by the window itself."]
     pub size: miracle_size_t,
+    #[doc = " The 4x4 transform matrix applied to the window (column-major).\n\n Defaults to the identity matrix."]
+    pub transform: [f32; 16usize],
+    #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
+    pub alpha: f32,
+}
+impl Default for miracle_freestyle_placement_t {
+    fn default() -> Self {
+        Self {
+            top_left: miracle_point_t::default(),
+            depth_layer: 0,
+            workspace_internal: 0,
+            size: miracle_size_t::default(),
+            transform: [
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ],
+            alpha: 1.0,
+        }
+    }
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

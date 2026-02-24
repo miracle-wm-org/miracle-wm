@@ -66,13 +66,17 @@ PluginManagedContainer::PluginManagedContainer(
     PluginHandle plugin_handle,
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<CompositorState> const& compositor_state) :
+    std::shared_ptr<CompositorState> const& compositor_state,
+    glm::mat4 transform,
+    float alpha) :
     plugin_handle_ { plugin_handle },
     window_ { window },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
     compositor_state { compositor_state }
 {
+    set_transform(transform);
+    set_alpha(alpha);
 }
 
 PluginManagedContainer::~PluginManagedContainer()
@@ -261,7 +265,11 @@ glm::mat4 PluginManagedContainer::get_output_transform() const
 
 void PluginManagedContainer::set_alpha(float const alpha)
 {
+    // TODO: This might need to distinguish between animation alpha and container
+    // alpha.
+    compositor_state->render_data_manager()->alpha_change(render_id, alpha);
     alpha_ = alpha;
+    rerender();
 }
 
 uint32_t PluginManagedContainer::animation_handle() const
