@@ -27,8 +27,6 @@ nlohmann::json modifiers_to_array(unsigned int modifiers)
     nlohmann::json array;
     if (modifiers & mir_input_event_modifier_alt)
         array.push_back("alt");
-    if (modifiers & mir_input_event_modifier_shift)
-        array.push_back("shift");
     if (modifiers & mir_input_event_modifier_sym)
         array.push_back("sym");
     if (modifiers & mir_input_event_modifier_function)

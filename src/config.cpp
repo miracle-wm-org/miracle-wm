@@ -31,7 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/runner.h>
 #include <sys/inotify.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
-#include <xkbcommon/xkbcommon.h>
 
 using namespace miracle;
 
@@ -39,33 +38,6 @@ namespace
 {
 const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
 
-/// Map a keysym to its base (unshifted) equivalent so that keybind
-/// comparisons work regardless of which keysym the compositor reports
-/// when Shift is held.  xkb_keysym_to_lower handles alphabetic keys;
-/// the table below covers the standard number-row shifted symbols.
-xkb_keysym_t to_base_keysym(xkb_keysym_t sym)
-{
-    // Letters: uppercase → lowercase
-    xkb_keysym_t lower = xkb_keysym_to_lower(sym);
-    if (lower != sym)
-        return lower;
-
-    // Number-row shifted symbols (US layout and most other layouts)
-    switch (sym)
-    {
-    case XKB_KEY_exclam:        return XKB_KEY_1;
-    case XKB_KEY_at:            return XKB_KEY_2;
-    case XKB_KEY_numbersign:    return XKB_KEY_3;
-    case XKB_KEY_dollar:        return XKB_KEY_4;
-    case XKB_KEY_percent:       return XKB_KEY_5;
-    case XKB_KEY_asciicircum:   return XKB_KEY_6;
-    case XKB_KEY_ampersand:     return XKB_KEY_7;
-    case XKB_KEY_asterisk:      return XKB_KEY_8;
-    case XKB_KEY_parenleft:     return XKB_KEY_9;
-    case XKB_KEY_parenright:    return XKB_KEY_0;
-    default:                    return sym;
-    }
-}
 }
 
 uint Config::process_modifier(uint modifier) const
@@ -419,7 +391,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, ui
         if (command_modifiers != modifiers)
             continue;
 
-        if (to_base_keysym(keysym) == to_base_keysym(command.key))
+        if (keysym == command.key)
             return &command;
     }
 
@@ -465,18 +437,6 @@ bool FilesystemConfiguration::matches_key_command(
          miracle_input_event_modifier_default,
          XKB_KEY_Right  },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_Up     },
-        { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_Down   },
-        { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_Left   },
-        { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_Right  },
-        { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          XKB_KEY_Up     },
         { mir_keyboard_action_down,
@@ -489,11 +449,23 @@ bool FilesystemConfiguration::matches_key_command(
          miracle_input_event_modifier_default,
          XKB_KEY_Right  },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_q      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_Up     },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_e      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_Down   },
+        { mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         XKB_KEY_Left   },
+        { mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         XKB_KEY_Right  },
+        { mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         XKB_KEY_Q      },
+        { mir_keyboard_action_down,
+         miracle_input_event_modifier_default,
+         XKB_KEY_E      },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          XKB_KEY_f      },
@@ -528,41 +500,41 @@ bool FilesystemConfiguration::matches_key_command(
          miracle_input_event_modifier_default,
          XKB_KEY_0      },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_1      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_exclam      },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_2      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_at          },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_3      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_numbersign  },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_4      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_dollar      },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_5      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_percent     },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_6      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_asciicircum },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_7      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_ampersand   },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_8      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_asterisk    },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_9      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_parenleft   },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_0      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_parenright  },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_space  },
+         miracle_input_event_modifier_default,
+         XKB_KEY_space       },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_p      },
+         miracle_input_event_modifier_default,
+         XKB_KEY_P           },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
          XKB_KEY_w      },
@@ -571,20 +543,20 @@ bool FilesystemConfiguration::matches_key_command(
          XKB_KEY_s      },
         { // MagnifierOn
             mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_equal  },
+         miracle_input_event_modifier_default,
+         XKB_KEY_plus      },
         { // MagnifierOff
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         XKB_KEY_Escape },
+         XKB_KEY_Escape    },
         { // MagnifierIncreaseSize
             mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_equal  },
+         miracle_input_event_modifier_default,
+         XKB_KEY_plus      },
         { // MagnifierDecreaseSize
             mir_keyboard_action_down,
-         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
-         XKB_KEY_minus  },
+         miracle_input_event_modifier_default,
+         XKB_KEY_underscore },
         { // MagnifierIncreaseScale
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
@@ -604,7 +576,7 @@ bool FilesystemConfiguration::matches_key_command(
         if (command_modifiers != modifiers)
             return false;
 
-        if (to_base_keysym(keysym) == to_base_keysym(in_key))
+        if (keysym == in_key)
         {
             if (f(i))
                 return true;
