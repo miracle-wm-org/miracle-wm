@@ -38,6 +38,34 @@ using namespace miracle;
 namespace
 {
 const char* MIRACLE_DEFAULT_CONFIG_DIR = "/usr/share/miracle-wm/default-config";
+
+/// Map a keysym to its base (unshifted) equivalent so that keybind
+/// comparisons work regardless of which keysym the compositor reports
+/// when Shift is held.  xkb_keysym_to_lower handles alphabetic keys;
+/// the table below covers the standard number-row shifted symbols.
+xkb_keysym_t to_base_keysym(xkb_keysym_t sym)
+{
+    // Letters: uppercase → lowercase
+    xkb_keysym_t lower = xkb_keysym_to_lower(sym);
+    if (lower != sym)
+        return lower;
+
+    // Number-row shifted symbols (US layout and most other layouts)
+    switch (sym)
+    {
+    case XKB_KEY_exclam:        return XKB_KEY_1;
+    case XKB_KEY_at:            return XKB_KEY_2;
+    case XKB_KEY_numbersign:    return XKB_KEY_3;
+    case XKB_KEY_dollar:        return XKB_KEY_4;
+    case XKB_KEY_percent:       return XKB_KEY_5;
+    case XKB_KEY_asciicircum:   return XKB_KEY_6;
+    case XKB_KEY_ampersand:     return XKB_KEY_7;
+    case XKB_KEY_asterisk:      return XKB_KEY_8;
+    case XKB_KEY_parenleft:     return XKB_KEY_9;
+    case XKB_KEY_parenright:    return XKB_KEY_0;
+    default:                    return sym;
+    }
+}
 }
 
 uint Config::process_modifier(uint modifier) const
@@ -391,7 +419,7 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, ui
         if (command_modifiers != modifiers)
             continue;
 
-        if (xkb_keysym_to_lower(keysym) == xkb_keysym_to_lower(command.key))
+        if (to_base_keysym(keysym) == to_base_keysym(command.key))
             return &command;
     }
 
@@ -576,7 +604,7 @@ bool FilesystemConfiguration::matches_key_command(
         if (command_modifiers != modifiers)
             return false;
 
-        if (xkb_keysym_to_lower(keysym) == xkb_keysym_to_lower(in_key))
+        if (to_base_keysym(keysym) == to_base_keysym(in_key))
         {
             if (f(i))
                 return true;
