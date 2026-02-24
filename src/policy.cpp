@@ -716,6 +716,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
         if (workspace)
             workspace->advise_focus_gained(container);
         window_observer_registrar->advise_window_focused(*container);
+        plugin_manager->window_focused(window_info);
         break;
     }
     }

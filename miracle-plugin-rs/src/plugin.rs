@@ -59,6 +59,9 @@ pub trait Plugin {
     /// been removed from the compositor).
     fn window_deleted(&mut self, info: WindowInfo) {}
 
+    /// Called when a window gains focus.
+    fn window_focused(&mut self, info: WindowInfo) {}
+
     /// Handle a keyboard event.
     ///
     /// If the plugin returns `false`, the event is propagated to the next
@@ -423,6 +426,37 @@ macro_rules! miracle_plugin {
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
             plugin.window_deleted(info);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn window_focused(
+            window_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_info = unsafe {
+                &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+
+            plugin.window_focused(info);
         }
 
         #[unsafe(no_mangle)]
