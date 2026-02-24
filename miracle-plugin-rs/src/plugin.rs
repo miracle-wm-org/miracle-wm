@@ -1,3 +1,4 @@
+use crate::input::KeyboardEvent;
 use crate::placement::Placement;
 use crate::window::WindowInfo;
 
@@ -57,6 +58,18 @@ pub trait Plugin {
     /// The window info is still valid at this point (the window has not yet
     /// been removed from the compositor).
     fn window_deleted(&mut self, info: WindowInfo) {}
+
+    /// Called when a window gains focus.
+    fn window_focused(&mut self, info: WindowInfo) {}
+
+    /// Handle a keyboard event.
+    ///
+    /// If the plugin returns `false`, the event is propagated to the next
+    /// handler in Miracle. If the plugin returns `true`, then the event is
+    /// consumed by the plugin.
+    fn handle_keyboard_input(&mut self, _event: KeyboardEvent) -> bool {
+        false
+    }
 
     /// Lists the windows that are managed by this plugin.
     ///
@@ -413,6 +426,61 @@ macro_rules! miracle_plugin {
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
             plugin.window_deleted(info);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn window_focused(
+            window_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_info = unsafe {
+                &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+
+            plugin.window_focused(info);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn handle_keyboard_input(event_ptr: i32) -> i32 {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return 0,
+                }
+            };
+
+            let c_event = unsafe {
+                &*(event_ptr as *const $crate::bindings::miracle_keyboard_event_t)
+            };
+
+            let event = $crate::input::KeyboardEvent {
+                action: $crate::input::KeyboardAction::try_from(c_event.action)
+                    .unwrap_or_default(),
+                keysym: c_event.keysym,
+                scan_code: c_event.scan_code,
+                modifiers: $crate::input::InputEventModifiers::from(c_event.modifiers),
+            };
+
+            if plugin.handle_keyboard_input(event) { 1 } else { 0 }
         }
     };
 }

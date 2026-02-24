@@ -1,6 +1,7 @@
 use miracle_plugin_rs::{
     animation::{AnimationFrameData, AnimationFrameResult},
     core::{Point, Size},
+    input::{KeyboardAction, KeyboardEvent},
     miracle_plugin,
     placement::{FreestylePlacement, Placement, WindowManagementStrategy},
     plugin::Plugin,
@@ -32,6 +33,27 @@ impl Plugin for PluginPlayground {
         self.num_windows -= 1;
     }
 
+    fn handle_keyboard_input(&mut self, event: KeyboardEvent) -> bool {
+        const XKB_KEY_UP: u32 = 0xff52;
+        const XKB_KEY_DOWN: u32 = 0xff54;
+
+        if event.action != KeyboardAction::Down {
+            return false;
+        }
+
+        match event.keysym {
+            XKB_KEY_UP => {
+                self.num_windows += 1;
+                true
+            }
+            XKB_KEY_DOWN => {
+                self.num_windows = (self.num_windows - 1).max(0);
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
         let progress = (data.runtime_seconds / data.duration_seconds).clamp(0.0, 1.0);
 
@@ -45,6 +67,8 @@ impl Plugin for PluginPlayground {
             opacity: Some(opacity),
         })
     }
+
+    fn window_focused(&mut self, info: WindowInfo) {}
 }
 
 miracle_plugin!(PluginPlayground);

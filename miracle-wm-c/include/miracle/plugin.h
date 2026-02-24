@@ -377,6 +377,22 @@ extern "C"
         /// This is only honored if #strategy is #miracle_window_management_strategy_tiled.
         miracle_tiled_placement_t tiled_placement;
     } miracle_placement_t;
+
+    /// Describes a keyboard event.
+    typedef struct
+    {
+        /// The keyboard action.
+        uint32_t action;
+
+        /// The keysym.
+        uint32_t keysym;
+
+        /// The raw scan code.
+        int32_t scan_code;
+
+        /// The modifiers held during the event.
+        uint32_t modifiers;
+    } miracle_keyboard_event_t;
 #ifdef __cplusplus
 }
 #endif
