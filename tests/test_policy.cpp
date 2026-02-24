@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
+#include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <filesystem>
