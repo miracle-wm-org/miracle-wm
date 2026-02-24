@@ -25,12 +25,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <glib-2.0/glib.h>
 #include <mir/log.h>
-#include <xkbcommon/xkbcommon-keysyms.h>
 #include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <miral/runner.h>
 #include <sys/inotify.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
 
