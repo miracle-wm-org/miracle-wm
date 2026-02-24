@@ -266,7 +266,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    if (config->matches_key_command(action, keysym, modifiers, [&](DefaultKeyCommand key_command)))
+    if (config->matches_key_command(action, keysym, modifiers, [&](DefaultKeyCommand key_command)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;
