@@ -67,6 +67,8 @@ impl Plugin for PluginPlayground {
             opacity: Some(opacity),
         })
     }
+
+    fn window_focused(&mut self, info: WindowInfo) {}
 }
 
 miracle_plugin!(PluginPlayground);
