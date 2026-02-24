@@ -388,7 +388,10 @@ FilesystemConfiguration::matches_custom_key_command(MirKeyboardAction action, ui
             continue;
 
         auto command_modifiers = process_modifier_internal(command.modifiers);
-        if (command_modifiers != modifiers)
+        auto effective_modifiers = modifiers;
+        if (!(command_modifiers & mir_input_event_modifier_shift))
+            effective_modifiers &= ~static_cast<uint>(mir_input_event_modifier_shift);
+        if (command_modifiers != effective_modifiers)
             continue;
 
         if (keysym == command.key)
@@ -437,16 +440,16 @@ bool FilesystemConfiguration::matches_key_command(
          miracle_input_event_modifier_default,
          XKB_KEY_Right  },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          XKB_KEY_Up     },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          XKB_KEY_Down   },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          XKB_KEY_Left   },
         { mir_keyboard_action_down,
-         miracle_input_event_modifier_default,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
          XKB_KEY_Right  },
         { mir_keyboard_action_down,
          miracle_input_event_modifier_default,
@@ -573,7 +576,10 @@ bool FilesystemConfiguration::matches_key_command(
             return false;
 
         auto const command_modifiers = process_modifier(in_modifiers);
-        if (command_modifiers != modifiers)
+        auto effective_modifiers = modifiers;
+        if (!(command_modifiers & mir_input_event_modifier_shift))
+            effective_modifiers &= ~static_cast<uint>(mir_input_event_modifier_shift);
+        if (command_modifiers != effective_modifiers)
             return false;
 
         if (keysym == in_key)
