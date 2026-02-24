@@ -27,8 +27,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glib-2.0/glib.h>
 #include <glm/fwd.hpp>
 #include <iostream>
-#include <libevdev-1.0/libevdev/libevdev.h>
 #include <miral/version.h>
+#include <xkbcommon/xkbcommon.h>
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
 #include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
@@ -545,10 +548,10 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
         if (!keyboard_action)
             continue;
 
-        auto const code = libevdev_event_code_from_name(EV_KEY, key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
-        if (code < 0)
+        auto const keysym = xkb_keysym_from_name(key.c_str(), XKB_KEYSYM_NO_FLAGS);
+        if (keysym == XKB_KEY_NoSymbol)
         {
-            context.builder << "Unknown keyboard code in configuration: " << key.c_str() << ". See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h";
+            context.builder << "Unknown key name in configuration: " << key.c_str() << ". Please use an XKB keysym name (e.g. 'Return', 'a', 'Up'). See https://xkbcommon.org/doc/current/xkbcommon-keysyms_8h.html";
             create_error(sub_node["key"], context);
             continue;
         }
@@ -559,7 +562,7 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
 
         context.result.config.built_in_key_command_overrides->push_back({ keyboard_action.value(),
             modifiers,
-            static_cast<uint>(code),
+            static_cast<uint>(keysym),
             key_command });
     }
 }
@@ -585,11 +588,10 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
         if (!try_parse_value(sub_node, "key", key, context))
             continue;
 
-        auto const code = libevdev_event_code_from_name(EV_KEY,
-            key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
-        if (code < 0)
+        auto const keysym = xkb_keysym_from_name(key.c_str(), XKB_KEYSYM_NO_FLAGS);
+        if (keysym == XKB_KEY_NoSymbol)
         {
-            context.builder << "Unknown keyboard code in configuration: " << key.c_str() << ". See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h";
+            context.builder << "Unknown key name in configuration: " << key.c_str() << ". Please use an XKB keysym name (e.g. 'Return', 'a', 'Up'). See https://xkbcommon.org/doc/current/xkbcommon-keysyms_8h.html";
             create_error(sub_node["key"], context);
             continue;
         }
@@ -608,7 +610,7 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
 
         context.result.config.custom_key_commands->push_back({ keyboard_action.value(),
             modifiers,
-            static_cast<uint>(code),
+            static_cast<uint>(keysym),
             command });
     }
 }
@@ -1298,10 +1300,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "default_action_overrides" << YAML::Value << YAML::BeginSeq;
         for (auto const& override : *config.built_in_key_command_overrides)
         {
+            char keysym_name[XKB_KEYSYM_NAME_MAX_SIZE];
+            xkb_keysym_get_name(static_cast<xkb_keysym_t>(override.key), keysym_name, sizeof(keysym_name));
             out << YAML::BeginMap;
             out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<uint32_t>(override.default_key_command)];
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(override.key));
+            out << YAML::Key << "key" << YAML::Value << keysym_name;
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1321,10 +1325,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "custom_actions" << YAML::Value << YAML::BeginSeq;
         for (auto const& action : *config.custom_key_commands)
         {
+            char keysym_name[XKB_KEYSYM_NAME_MAX_SIZE];
+            xkb_keysym_get_name(static_cast<xkb_keysym_t>(action.key), keysym_name, sizeof(keysym_name));
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << action.command;
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(action.key));
+            out << YAML::Key << "key" << YAML::Value << keysym_name;
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)

@@ -24,9 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_configuration.h"
 #include "vertical_display_configuration_policy.h"
 
+#include <linux/input-event-codes.h>
 #include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <filesystem>
 #include <gmock/gmock.h>
@@ -256,7 +258,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_1 };
         int const scan_code { KEY_1 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -278,7 +280,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -297,7 +299,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -316,7 +318,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move the window1 to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta | mir_input_event_modifier_shift };
         auto const event = mir::events::make_key_event(

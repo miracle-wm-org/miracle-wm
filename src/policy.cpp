@@ -249,11 +249,10 @@ Policy::~Policy()
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
-    auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
 
-    if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
+    if (auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers))
     {
         BindingEvent const binding_event(
             BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
@@ -267,7 +266,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    if (config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
+    if (config->matches_key_command(action, keysym, modifiers, [&](DefaultKeyCommand key_command)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;

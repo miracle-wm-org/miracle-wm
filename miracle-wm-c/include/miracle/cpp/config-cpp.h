@@ -30,7 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cstdlib>
 #include <glm/glm.hpp>
-#include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
 #include <mir_toolkit/mir_input_device_types.h>
 #include <miral/input_configuration.h>

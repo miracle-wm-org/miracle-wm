@@ -3,7 +3,7 @@ pkg_check_modules(MIRCORE mircore REQUIRED)
 pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
-pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 find_package(GTest REQUIRED)
 
@@ -27,13 +27,14 @@ set_target_properties(miracle-wm-c PROPERTIES
 target_include_directories(miracle-wm-c PUBLIC SYSTEM
     include
     ${MIRCORE_INCLUDE_DIRS}
-    ${MIRAL_INCLUDE_DIRS})
+    ${MIRAL_INCLUDE_DIRS}
+    ${XKBCOMMON_INCLUDE_DIRS})
 
 target_link_libraries(miracle-wm-c
     ${MIRCORE_LDFLAGS}
     ${MIRAL_LDFLAGS}
     PkgConfig::YAML
-    PkgConfig::LIBEVDEV
+    ${XKBCOMMON_LDFLAGS}
     PkgConfig::GLIB)
 
 configure_file(
