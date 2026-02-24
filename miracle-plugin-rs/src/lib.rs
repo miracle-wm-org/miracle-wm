@@ -11,6 +11,7 @@ pub mod bindings;
 pub mod container;
 pub mod core;
 pub mod host;
+pub mod input;
 pub mod output;
 pub mod placement;
 pub mod plugin;

@@ -325,3 +325,9 @@ impl WindowInfo {
         }
     }
 }
+
+impl PartialEq for WindowInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.internal == other.internal
+    }
+}
