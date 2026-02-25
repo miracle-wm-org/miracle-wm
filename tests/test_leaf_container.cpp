@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "container_scope.h"
 #include "leaf_container.h"
