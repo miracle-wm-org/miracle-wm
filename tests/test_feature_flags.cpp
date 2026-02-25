@@ -24,7 +24,6 @@ class FeatureFlagsTest : public testing::Test
 
 TEST_F(FeatureFlagsTest, VerifyFeatureFlags)
 {
-    EXPECT_EQ(miracle::feature::multi_select, static_cast<bool>(FEATURE_MULTI_SELECT));
     EXPECT_EQ(miracle::feature::parent_container_wallpapers, static_cast<bool>(FEATURE_PARENT_CONTAINER_WALLPAPERS));
     EXPECT_EQ(miracle::feature::plugin_system, static_cast<bool>(FEATURE_PLUGIN_SYSTEM));
 }

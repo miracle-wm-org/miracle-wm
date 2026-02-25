@@ -37,10 +37,6 @@ enum class WindowManagerMode
     /// is completed.
     resizing,
 
-    /// While [selecting], only [Container]s selected with the multi-select
-    /// keybind/mousebind can be selected or deselected.
-    selecting,
-
     dragging,
 
     moving,

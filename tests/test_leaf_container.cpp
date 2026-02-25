@@ -248,17 +248,6 @@ TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenParentIsFocused)
     EXPECT_TRUE(leaf_container->is_focused());
 }
 
-TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenGroupIsFocused)
-{
-    auto container_group_container = std::make_shared<ContainerGroupContainer>(
-        state);
-    state->focus_container(container_group_container, true);
-    container_group_container->add(leaf_container);
-    EXPECT_CALL(*parent, is_focused())
-        .WillOnce(testing::Return(false));
-    EXPECT_TRUE(leaf_container->is_focused());
-}
-
 TEST_F(LeafContainerTest, MatchWithAppId)
 {
     ContainerScope scope(ContainerScopeType::app_id, "foo");

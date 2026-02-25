@@ -40,7 +40,6 @@ namespace miracle
 class Config;
 class LeafContainer;
 class ParentContainer;
-class ContainerGroupContainer;
 class WorkspaceInterface;
 class OutputInterface;
 class ContainerScope;
@@ -179,7 +178,6 @@ public:
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
-    static std::shared_ptr<ContainerGroupContainer> as_group(std::shared_ptr<Container> const&);
 
     /// Resizes the provided \p container on the \p edge by the \p x and \p y diffs.
     static void execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations);

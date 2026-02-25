@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "container.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "layout_scheme.h"
 #include "leaf_container.h"
@@ -66,11 +65,6 @@ std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> con
 std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container> const& container)
 {
     return std::dynamic_pointer_cast<ParentContainer>(container);
-}
-
-std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Container> const& container)
-{
-    return std::dynamic_pointer_cast<ContainerGroupContainer>(container);
 }
 
 namespace
