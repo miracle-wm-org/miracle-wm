@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "container_scope.h"
 #include "output_interface.h"
@@ -656,11 +655,7 @@ bool LeafContainer::is_focused() const
     if (parent.lock()->is_focused())
         return true;
 
-    auto const group = Container::as_group(state->focused_container());
-    if (!group)
-        return false;
-
-    return group->contains(shared_from_this());
+    return false;
 }
 
 ContainerType LeafContainer::get_type() const

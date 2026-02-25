@@ -2053,10 +2053,6 @@ nlohmann::json CommandController::mode_to_json() const
         return {
             { "name", "resize" }
         };
-    case WindowManagerMode::selecting:
-        return {
-            { "name", "selecting" }
-        };
     case WindowManagerMode::dragging:
         return {
             { "name", "dragging" }

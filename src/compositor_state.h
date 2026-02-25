@@ -37,10 +37,6 @@ enum class WindowManagerMode
     /// is completed.
     resizing,
 
-    /// While [selecting], only [Container]s selected with the multi-select
-    /// keybind/mousebind can be selected or deselected.
-    selecting,
-
     dragging,
 
     moving,
@@ -49,7 +45,7 @@ enum class WindowManagerMode
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "selecting", "dragging", "moving"
+    "default", "resize", "dragging", "moving"
 };
 
 class CompositorState

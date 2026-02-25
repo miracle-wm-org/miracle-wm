@@ -23,10 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "dying_surface_manager.h"
-#include "feature_flags.h"
 #include "internal_shell_application_spawner.h"
 #include "leaf_container.h"
 #include "magnifier_wrapper.h"
@@ -455,27 +453,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
-        if (feature::multi_select && action == mir_pointer_action_button_down)
-        {
-            if (modifiers == config->get_primary_modifier())
-            {
-                // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
-                if (state->mode() != WindowManagerMode::selecting)
-                {
-                    command_controller->set_mode(WindowManagerMode::selecting);
-                    group_selection = std::make_shared<ContainerGroupContainer>(state);
-                    state->add(group_selection);
-                }
-            }
-            else if (state->mode() == WindowManagerMode::selecting)
-            {
-                // We clicked while we were in selection mode, so let's stop being in selection mode
-                // TODO: Would it be better to check what we clicked in case it's in the group? Then we wouldn't
-                //  exit selection mode in this case.
-                command_controller->set_mode(WindowManagerMode::normal);
-            }
-        }
-
         // Get Container intersection. Depending on the state, do something with that Container
         std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
         switch (state->mode())
@@ -492,12 +469,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
             }
 
             return false;
-        }
-        case WindowManagerMode::selecting:
-        {
-            if (intersected && action == mir_pointer_action_button_down)
-                group_selection->add(intersected);
-            return true;
         }
         default:
             return false;
@@ -683,42 +654,30 @@ Policy::confirm_placement_on_display(
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::advise_focus_gained: container is not provided");
         return;
     }
 
-    switch (state->mode())
+    auto const workspace = container->get_workspace();
+    // If the container has a null workspace, it is always selectable. Otherwise
+    // it needs to be on the active workspace.
+    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
     {
-    case WindowManagerMode::selecting:
-        group_selection->add(container);
-        container->on_focus_gained();
-        break;
-    default:
-    {
-        auto const workspace = container->get_workspace();
-
-        // If the container has a null workspace, it is always selectable. Otherwise
-        // it needs to be on the active workspace.
-        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-        {
-            // TODO: In this scenario, we may want to navigate to the focused workspace.
-            //  This was removed because it breaks workspace animations.
-            mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
-            break;
-        }
-
-        state->focus_container(container);
-        container->on_focus_gained();
-        if (workspace)
-            workspace->advise_focus_gained(container);
-        window_observer_registrar->advise_window_focused(*container);
-        plugin_manager->window_focused(window_info);
-        break;
+        // TODO: In this scenario, we may want to navigate to the focused workspace.
+        //  This was removed because it breaks workspace animations.
+        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+        return;
     }
-    }
+
+    state->focus_container(container);
+    container->on_focus_gained();
+    if (workspace)
+        workspace->advise_focus_gained(container);
+    window_observer_registrar->advise_window_focused(*container);
+    plugin_manager->window_focused(window_info);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
