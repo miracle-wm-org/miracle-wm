@@ -45,7 +45,7 @@ enum class WindowManagerMode
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "selecting", "dragging", "moving"
+    "default", "resize", "dragging", "moving"
 };
 
 class CompositorState
