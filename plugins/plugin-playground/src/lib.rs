@@ -1,3 +1,4 @@
+use glam::Mat4;
 use miracle_plugin_rs::{
     animation::{AnimationFrameData, AnimationFrameResult},
     core::{Point, Size},
@@ -24,6 +25,8 @@ impl Plugin for PluginPlayground {
                 depth_layer: DepthLayer::Application,
                 workspace: None,
                 size: Size::new(800, 600),
+                transform: Mat4::IDENTITY.mul_scalar(0.5),
+                alpha: 0.5,
             },
             ..Default::default()
         })

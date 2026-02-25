@@ -1,4 +1,5 @@
 use super::bindings::{miracle_point_t, miracle_size_t};
+use glam::Mat4;
 
 /// A rectangle defined by a point and size.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -93,4 +94,12 @@ impl From<miracle_point_t> for Point {
             y: value.y,
         }
     }
+}
+
+pub fn mat4_from_f32_array(arr: [f32; 16]) -> Mat4 {
+    Mat4::from_cols_array(&arr)
+}
+
+pub fn mat4_to_f32_array(mat: Mat4) -> [f32; 16] {
+    mat.to_cols_array()
 }

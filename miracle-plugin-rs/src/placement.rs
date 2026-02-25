@@ -3,6 +3,7 @@ use super::container::*;
 use super::core::*;
 use super::window::*;
 use super::workspace::*;
+use glam::Mat4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
@@ -71,7 +72,7 @@ pub struct FreestylePlacement {
     /// The 4x4 transform matrix applied to the window (column-major).
     ///
     /// Defaults to the identity matrix.
-    pub transform: [f32; 16],
+    pub transform: Mat4,
     /// The alpha (opacity) of the window.
     ///
     /// Defaults to 1.0 (fully opaque).
@@ -85,12 +86,7 @@ impl Default for FreestylePlacement {
             depth_layer: DepthLayer::default(),
             workspace: None,
             size: Size::default(),
-            transform: [
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            ],
+            transform: Mat4::IDENTITY,
             alpha: 1.0,
         }
     }
@@ -103,7 +99,7 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
             depth_layer: value.depth_layer.into(),
             workspace_internal: value.workspace.map_or(0, |w| w.internal),
             size: value.size.into(),
-            transform: value.transform,
+            transform: mat4_to_f32_array(value.transform),
             alpha: value.alpha,
         }
     }
