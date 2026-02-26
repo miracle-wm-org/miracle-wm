@@ -22,11 +22,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
-#include "window_container.h"
 #include "math_helpers.h"
 #include "output_interface.h"
 #include "parent_container.h"
 #include "shell_component_container.h"
+#include "window_container.h"
 #include "workspace_observer.h"
 
 #include <cassert>

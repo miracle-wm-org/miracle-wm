@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_MANAGED_CONTAINER
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
-#include "window_container.h"
 #include "render_data_manager.h"
+#include "window_container.h"
 
 namespace miracle
 {
