@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "window_container.h"
 #include "math_helpers.h"
 #include "output_interface.h"
 #include "parent_container.h"
@@ -377,7 +378,8 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
     {
     case MoveResult::traversal_type_insert:
     {
-        container.move_to(*traversal_result.node);
+        if (auto const wc = Container::as_window_container(container.shared_from_this()))
+            wc->move_to(*traversal_result.node);
         break;
     }
     case MoveResult::traversal_type_append:

@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "output_interface.h"
 #include "parent_container.h"
+#include "window_container.h"
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 
@@ -65,6 +66,11 @@ std::shared_ptr<LeafContainer> Container::as_leaf(std::shared_ptr<Container> con
 std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container> const& container)
 {
     return std::dynamic_pointer_cast<ParentContainer>(container);
+}
+
+std::shared_ptr<WindowContainer> Container::as_window_container(std::shared_ptr<Container> const& container)
+{
+    return std::dynamic_pointer_cast<WindowContainer>(container);
 }
 
 namespace

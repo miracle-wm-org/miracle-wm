@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "feature_flags.h"
 #include "geometry_helpers.h"
 #include "output_manager.h"
+#include "window_container.h"
 
 #include <mir/log.h>
 #include <miral/toolkit_event.h>
@@ -117,13 +118,14 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
         if (output_manager->focused() == nullptr)
             return false;
 
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
-        if (!intersected)
+        auto intersected_container = output_manager->focused()->intersect(x, y);
+        if (!intersected_container)
             return false;
 
-        if (!intersected->drag_start())
+        auto intersected = Container::as_window_container(intersected_container);
+        if (!intersected || !intersected->drag_start())
         {
-            mir::log_warning("Cannot drag container of type %d", (int)intersected->get_type());
+            mir::log_warning("Cannot drag container of type %d", (int)intersected_container->get_type());
             return false;
         }
 
@@ -152,7 +154,9 @@ void DragAndDropService::drag_to(
     if (!to->is_leaf() || !dragging->is_leaf())
         return;
 
-    dragging->move_to(*to);
+    auto const window_dragging = Container::as_window_container(dragging);
+    if (window_dragging)
+        window_dragging->move_to(*to);
 }
 
 void DragAndDropService::drag_to(

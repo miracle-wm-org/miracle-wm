@@ -40,6 +40,7 @@ namespace miracle
 class Config;
 class LeafContainer;
 class ParentContainer;
+class WindowContainer;
 class WorkspaceInterface;
 class OutputInterface;
 class ContainerScope;
@@ -98,24 +99,12 @@ public:
     virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
-    virtual void handle_ready() = 0;
-    virtual void handle_modify(miral::WindowSpecification const&) = 0;
-    virtual void handle_request_move(MirInputEvent const* input_event) = 0;
     virtual void handle_raise() = 0;
-    virtual bool resize(Direction direction, int pixels) = 0;
     virtual bool set_size(std::optional<int> const& width, std::optional<int> const& height) = 0;
-    virtual bool toggle_fullscreen() = 0;
     virtual void request_horizontal_layout() = 0;
     virtual void request_vertical_layout() = 0;
     virtual void toggle_layout(bool cycle_thru_all) = 0;
-    virtual void on_open() = 0;
     virtual void on_focus_gained() = 0;
-    virtual void on_focus_lost() = 0;
-    virtual void on_move_to(geom::Point const& top_left) = 0;
-    virtual void on_resize(geom::Size const& size) = 0;
-    virtual mir::geometry::Rectangle confirm_placement(
-        MirWindowState, mir::geometry::Rectangle const&)
-        = 0;
     virtual std::shared_ptr<WorkspaceInterface> get_workspace() const = 0;
     virtual void set_workspace(std::shared_ptr<WorkspaceInterface> const&) = 0;
     virtual std::shared_ptr<OutputInterface> get_output() const = 0;
@@ -141,21 +130,13 @@ public:
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;
-    virtual bool is_fullscreen() const = 0;
     virtual std::optional<miral::Window> window() const = 0;
-    virtual bool select_next(Direction) = 0;
     virtual bool pinned() const = 0;
     virtual bool pinned(bool) = 0;
-    virtual bool move(Direction) = 0;
-    virtual bool move_by(Direction, int pixels) = 0;
-    virtual bool move_to(Container& other) = 0;
     virtual bool move_to(int x, int y, bool with_animations) = 0;
     virtual bool move_by(float dx, float dy) = 0;
     virtual bool toggle_tabbing() = 0;
     virtual bool toggle_stacking() = 0;
-    virtual bool drag_start() = 0;
-    virtual void drag(int x, int y) = 0;
-    virtual bool drag_stop() = 0;
     virtual bool set_layout(LayoutScheme scheme) = 0;
     virtual bool anchored() const = 0;
     virtual void scratchpad_state(ScratchpadState) = 0;
@@ -178,6 +159,7 @@ public:
 
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
+    static std::shared_ptr<WindowContainer> as_window_container(std::shared_ptr<Container> const&);
 
     /// Resizes the provided \p container on the \p edge by the \p x and \p y diffs.
     static void execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations);

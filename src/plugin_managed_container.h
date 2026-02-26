@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_MANAGED_CONTAINER
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
-#include "container.h"
+#include "window_container.h"
 #include "render_data_manager.h"
 
 namespace miracle
@@ -36,7 +36,7 @@ class CompositorState;
 /// Unlike #ShellComponentContainer, a plugin managed container *can* be
 /// associated with a specific workspace. However, it is *not* associated
 /// with a tiling grid, like other containers.
-class PluginManagedContainer : public Container
+class PluginManagedContainer : public WindowContainer
 {
 public:
     PluginManagedContainer(

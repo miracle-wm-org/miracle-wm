@@ -18,14 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MOCK_CONTAINER_H
 #define MIRACLE_WM_MOCK_CONTAINER_H
 
-#include "container.h"
+#include "window_container.h"
 #include <gmock/gmock.h>
 
 namespace miracle
 {
 namespace test
 {
-    class MockContainer : public Container
+    class MockContainer : public WindowContainer
     {
     public:
         MOCK_METHOD(ContainerType, get_type, (), (const, override));

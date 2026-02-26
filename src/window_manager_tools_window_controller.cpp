@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "leaf_container.h"
 #include "policy.h"
+#include "window_container.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 #include <mir/server_action_queue.h>
@@ -176,6 +177,11 @@ std::shared_ptr<Container> WindowManagerToolsWindowController::get_container(mir
         return get_container(info.parent());
 
     return nullptr;
+}
+
+std::shared_ptr<WindowContainer> WindowManagerToolsWindowController::get_window_container(miral::Window const& window)
+{
+    return std::dynamic_pointer_cast<WindowContainer>(get_container(window));
 }
 
 void WindowManagerToolsWindowController::raise(miral::Window const& window)

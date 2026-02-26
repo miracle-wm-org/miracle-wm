@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "render_data_manager.h"
+#include "window_container.h"
 
 #include <algorithm>
 #include <memory>
@@ -54,7 +55,7 @@ public:
     CompositorState();
     mir::geometry::Point cursor_position;
 
-    [[nodiscard]] std::shared_ptr<Container> focused_container() const;
+    [[nodiscard]] std::shared_ptr<WindowContainer> focused_container() const;
 
     /// Focuses the provided container. If [is_anonymous] is true, the container
     /// will be focused even if it does not exist in the list.
@@ -77,7 +78,7 @@ public:
 
 private:
     std::recursive_mutex mutex;
-    std::weak_ptr<Container> focused;
+    std::weak_ptr<WindowContainer> focused;
     std::vector<std::weak_ptr<Container>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::unique_ptr<RenderDataManager> render_data_manager_;

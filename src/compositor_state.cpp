@@ -27,7 +27,7 @@ CompositorState::CompositorState() :
 {
 }
 
-std::shared_ptr<Container> CompositorState::focused_container() const
+std::shared_ptr<WindowContainer> CompositorState::focused_container() const
 {
     if (!focused.expired())
         return focused.lock();
@@ -37,11 +37,16 @@ std::shared_ptr<Container> CompositorState::focused_container() const
 
 void CompositorState::focus_container(std::shared_ptr<Container> const& container, bool is_anonymous)
 {
+    auto window_container = std::dynamic_pointer_cast<WindowContainer>(container);
+
     if (is_anonymous)
     {
-        focused = container;
+        focused = window_container;
         return;
     }
+
+    if (!window_container)
+        return;
 
     auto it = std::find_if(focus_order.begin(), focus_order.end(), [&](auto const& element)
     {
@@ -51,7 +56,7 @@ void CompositorState::focus_container(std::shared_ptr<Container> const& containe
     if (it != focus_order.end())
     {
         std::rotate(focus_order.begin(), it, it + 1);
-        focused = container;
+        focused = window_container;
     }
 }
 

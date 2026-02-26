@@ -82,26 +82,15 @@ public:
     size_t get_min_height() const override;
     std::weak_ptr<ParentContainer> get_parent() const override;
     void set_parent(std::shared_ptr<ParentContainer> const&) override;
-    void handle_ready() override;
-    void handle_modify(miral::WindowSpecification const& specification) override;
-    void handle_request_move(MirInputEvent const* input_event) override;
     void handle_raise() override;
-    bool resize(Direction direction, int pixels) override;
     bool set_size(std::optional<int> const& width, std::optional<int> const& height) override;
-    bool toggle_fullscreen() override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
     void on_focus_gained() override;
-    void on_focus_lost() override;
-    void on_move_to(mir::geometry::Point const& top_left) override;
-    void on_resize(mir::geometry::Size const&) override;
-    mir::geometry::Rectangle
-    confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
     ContainerType get_type() const override;
     void show() override;
     void hide() override;
-    void on_open() override;
     std::shared_ptr<WorkspaceInterface> get_workspace() const override;
     void set_workspace(std::shared_ptr<WorkspaceInterface> const& workspace) override;
     std::shared_ptr<OutputInterface> get_output() const override;
@@ -116,20 +105,12 @@ public:
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
     std::optional<miral::Window> window() const override;
-    bool select_next(Direction) override;
     bool pinned(bool) override;
     bool pinned() const override;
-    bool move(Direction direction) override;
-    bool move_by(Direction direction, int pixels) override;
     bool move_by(float dx, float dy) override;
     bool move_to(int x, int y, bool with_animations) override;
-    bool move_to(Container& other) override;
-    bool is_fullscreen() const override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
-    bool drag_start() override { return false; }
-    void drag(int, int) override { }
-    bool drag_stop() override { return false; }
     bool set_layout(LayoutScheme scheme) override;
     bool set_anchored(bool anchor);
     bool anchored() const override;

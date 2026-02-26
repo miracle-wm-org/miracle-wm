@@ -624,27 +624,10 @@ void ParentContainer::relayout()
     set_logical_area(logical_area);
 }
 
-void ParentContainer::handle_ready()
-{
-}
-
-void ParentContainer::handle_modify(miral::WindowSpecification const& specification)
-{
-}
-
-void ParentContainer::handle_request_move(MirInputEvent const* input_event)
-{
-}
-
 void ParentContainer::handle_raise()
 {
     for (auto const& node : container_list)
         node->handle_raise();
-}
-
-bool ParentContainer::resize(Direction direction, int pixels)
-{
-    return false;
 }
 
 bool ParentContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
@@ -658,11 +641,6 @@ bool ParentContainer::set_size(std::optional<int> const& width, std::optional<in
     set_logical_area(area);
     commit_changes();
     return true;
-}
-
-bool ParentContainer::toggle_fullscreen()
-{
-    return false;
 }
 
 void ParentContainer::request_horizontal_layout()
@@ -720,24 +698,6 @@ void ParentContainer::on_focus_gained()
         raise_children();
 }
 
-void ParentContainer::on_focus_lost()
-{
-}
-
-void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
-{
-}
-
-void ParentContainer::on_resize(geom::Size const& size)
-{
-}
-
-mir::geometry::Rectangle
-ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
-{
-    return rectangle;
-}
-
 ContainerType ParentContainer::get_type() const
 {
     return ContainerType::parent;
@@ -757,10 +717,6 @@ void ParentContainer::hide()
         c->hide();
 
     is_shown = false;
-}
-
-void ParentContainer::on_open()
-{
 }
 
 std::shared_ptr<WorkspaceInterface> ParentContainer::get_workspace() const
@@ -834,11 +790,6 @@ std::optional<miral::Window> ParentContainer::window() const
     return std::nullopt;
 }
 
-bool ParentContainer::select_next(miracle::Direction)
-{
-    return false;
-}
-
 bool ParentContainer::pinned(bool value)
 {
     if (auto sh_parent = parent.lock())
@@ -858,11 +809,6 @@ bool ParentContainer::pinned() const
     return pinned_;
 }
 
-bool ParentContainer::move(Direction direction)
-{
-    return false;
-}
-
 bool ParentContainer::move_by(float dx, float dy)
 {
     if (auto const sh_parent = parent.lock())
@@ -879,11 +825,6 @@ bool ParentContainer::move_by(float dx, float dy)
     return true;
 }
 
-bool ParentContainer::move_by(Direction direction, int pixels)
-{
-    return false;
-}
-
 bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
     if (auto const sh_parent = parent.lock())
@@ -898,16 +839,6 @@ bool ParentContainer::move_to(int x, int y, bool with_animations)
     set_logical_area(area, with_animations);
     commit_changes();
     return true;
-}
-
-bool ParentContainer::move_to(Container& other)
-{
-    return false;
-}
-
-bool ParentContainer::is_fullscreen() const
-{
-    return false;
 }
 
 bool ParentContainer::toggle_tabbing()
@@ -1039,7 +970,7 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "floating_nodes",       std::vector<int>()                                                                                                                                                                                                                                 },
         { "sticky",               false                                                                                                                                                                                                                                              },
         { "type",                 "con"                                                                                                                                                                                                                                              },
-        { "fullscreen_mode",      is_fullscreen() ? 1 : 0                                                                                                                                                                                                                            }, // TODO: Support value 2
+        { "fullscreen_mode",      0                                                                                                                                                                                                                                            }, // TODO: Support value 2
         { "visible",              visible                                                                                                                                                                                                                                            },
         { "shell",                "miracle-wm"                                                                                                                                                                                                                                       }, // TODO
         { "inhibit_idle",         false                                                                                                                                                                                                                                              },
