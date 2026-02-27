@@ -18,7 +18,7 @@ namespace test
         MOCK_METHOD(void, clip, (miral::Window const&, geom::Rectangle const&), (override));
         MOCK_METHOD(void, noclip, (miral::Window const&), (override));
         MOCK_METHOD(void, select_active_window, (miral::Window const&), (override));
-        MOCK_METHOD(std::shared_ptr<Container>, get_container, (miral::Window const&), (override));
+        MOCK_METHOD(std::shared_ptr<WindowContainer>, get_window_container, (miral::Window const&), (override));
         MOCK_METHOD(void, raise, (miral::Window const&), (override));
         MOCK_METHOD(void, send_to_back, (miral::Window const&), (override));
         MOCK_METHOD(void, open, (miral::Window const&), (override));

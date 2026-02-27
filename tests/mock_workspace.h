@@ -45,7 +45,7 @@ namespace test
         MOCK_METHOD(void, transfer_pinned_windows_to, (std::shared_ptr<WorkspaceInterface> const& other), (override));
 
         MOCK_METHOD(bool, for_each_window,
-            (std::function<bool(std::shared_ptr<Container>)> const&), (const, override));
+            (std::function<bool(std::shared_ptr<WindowContainer>)> const&), (const, override));
 
         MOCK_METHOD(void, advise_focus_gained, (std::shared_ptr<Container> const& container), (override));
 

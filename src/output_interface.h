@@ -63,7 +63,7 @@ public:
     virtual std::shared_ptr<Container> intersect(float x, float y) = 0;
     /// Ignores all other windows and checks for intersections within the tiling grid. If
     /// [ignore_selected] is true, then the active window will not be intersected.
-    virtual std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) = 0;
+    virtual std::shared_ptr<WindowContainer> intersect_leaf(float x, float y, bool ignore_selected) = 0;
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual void advise_new_workspace(WorkspaceCreationData const&&) = 0;
     virtual void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) = 0;

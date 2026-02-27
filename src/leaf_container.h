@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_LEAF_NODE_H
 #define MIRACLEWM_LEAF_NODE_H
 
-#include "container.h"
 #include "layout_scheme.h"
 #include "scratchpad_state.h"
+#include "window_container.h"
 #include "window_controller.h"
 
 #include <miral/window.h>
@@ -39,7 +39,7 @@ class CompositorState;
 class OutputManager;
 
 /// A [LeafContainer] always contains a single window.
-class LeafContainer : public Container
+class LeafContainer : public WindowContainer
 {
 public:
     LeafContainer(

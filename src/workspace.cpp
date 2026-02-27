@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_interface.h"
 #include "parent_container.h"
 #include "shell_component_container.h"
+#include "window_container.h"
 #include "workspace_observer.h"
 
 #include <cassert>
@@ -309,7 +310,7 @@ void Workspace::hide(geom::Point const& end)
     on_animation_start(true);
 }
 
-bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> const& f) const
+bool Workspace::for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const& f) const
 {
     auto _for_each_window = [&](std::shared_ptr<Container> const& node)
     {
@@ -321,7 +322,7 @@ bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> 
                 return false;
             }
 
-            auto container = window_controller->get_container(leaf->window().value());
+            auto container = window_controller->get_window_container(leaf->window().value());
             if (container && f(container))
                 return true;
         }
@@ -377,7 +378,8 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
     {
     case MoveResult::traversal_type_insert:
     {
-        container.move_to(*traversal_result.node);
+        if (auto const wc = Container::as_window_container(container.shared_from_this()))
+            wc->move_to(*traversal_result.node);
         break;
     }
     case MoveResult::traversal_type_append:
@@ -603,7 +605,7 @@ void Workspace::on_animation_start(bool is_hiding)
             return;
         }
 
-        for_each_window([&](std::shared_ptr<Container> const& container)
+        for_each_window([&](std::shared_ptr<WindowContainer> const& container)
         {
             if (container->window().has_value())
             {

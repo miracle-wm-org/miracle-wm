@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_manager.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
+#include "window_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -578,13 +579,13 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     }
 
     miral::WindowSpecification spec;
-    std::shared_ptr<Container> container;
+    std::shared_ptr<WindowContainer> container;
     switch (pending_allocation.container_type)
     {
     case ContainerType::regular:
     {
         assert(pending_allocation.parent);
-        container = pending_allocation.parent->confirm_window(window_info.window());
+        container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         break;
@@ -623,7 +624,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_window_ready: container is not provided");
@@ -641,7 +642,7 @@ Policy::confirm_placement_on_display(
     mir::geometry::Rectangle const& new_placement)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_warning("confirm_placement_on_display: window lacks container");
@@ -654,7 +655,7 @@ Policy::confirm_placement_on_display(
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::advise_focus_gained: container is not provided");
@@ -683,7 +684,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_focus_lost: container is not provided");
@@ -691,11 +692,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
     }
 
     if (state->mode() == WindowManagerMode::dragging)
-    {
-        command_controller->set_mode(WindowManagerMode::normal);
-        if (state->focused_container())
-            state->focused_container()->drag_stop();
-    }
+        drag_and_drop_service->stop_drag(*state);
 
     state->unfocus_container(container);
     container->on_focus_lost();
@@ -704,7 +701,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("delete_container: container is not provided");
@@ -735,7 +732,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -748,7 +745,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -785,7 +782,7 @@ void Policy::handle_modify_window(
     const miral::WindowSpecification& modifications)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_modify_window: container is not provided");
@@ -814,7 +811,7 @@ void Policy::handle_modify_window(
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_raise_window: container is not provided");
@@ -832,7 +829,7 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::handle_request_move: window lacks container");
@@ -854,7 +851,7 @@ void Policy::handle_request_resize(
     MirResizeEdge edge)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_request_resize: window lacks container");

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "leaf_container.h"
 #include "policy.h"
+#include "window_container.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 #include <mir/server_action_queue.h>
@@ -63,7 +64,7 @@ WindowManagerToolsWindowController::WindowManagerToolsWindowController(
 
 void WindowManagerToolsWindowController::open(miral::Window const& window)
 {
-    auto container = get_container(window);
+    auto container = get_window_container(window);
     if (!container)
     {
         mir::log_error("Cannot set rectangle of window that lacks container");
@@ -94,7 +95,7 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
 void WindowManagerToolsWindowController::set_rectangle(
     miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to, bool with_animations)
 {
-    auto container = get_container(window);
+    auto container = get_window_container(window);
     if (!container)
     {
         mir::log_error("Cannot set rectangle of window that lacks container");
@@ -163,17 +164,17 @@ void WindowManagerToolsWindowController::select_active_window(miral::Window cons
     tools.select_active_window(window);
 }
 
-std::shared_ptr<Container> WindowManagerToolsWindowController::get_container(miral::Window const& window)
+std::shared_ptr<WindowContainer> WindowManagerToolsWindowController::get_window_container(miral::Window const& window)
 {
     if (window == miral::Window {})
         return nullptr;
 
     auto& info = tools.info_for(window);
     if (info.userdata())
-        return static_pointer_cast<Container>(info.userdata());
+        return static_pointer_cast<WindowContainer>(info.userdata());
 
     if (info.parent())
-        return get_container(info.parent());
+        return get_window_container(info.parent());
 
     return nullptr;
 }

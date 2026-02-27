@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "feature_flags.h"
 #include "geometry_helpers.h"
 #include "output_manager.h"
+#include "window_container.h"
 
 #include <mir/log.h>
 #include <miral/toolkit_event.h>
@@ -46,13 +47,15 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
     if (!config->drag_and_drop().enabled)
         return false;
 
+    auto const window_container = std::dynamic_pointer_cast<WindowContainer>(state.focused_container());
+
     if (state.mode() == WindowManagerMode::dragging)
     {
         if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
         {
             command_controller->set_mode(WindowManagerMode::normal);
-            if (state.focused_container())
-                state.focused_container()->drag_stop();
+            if (window_container)
+                window_container->drag_stop();
             last_intersected.reset();
             return true;
         }
@@ -73,19 +76,19 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
         // Drag the container to the new position
         float const diff_x = x - cursor_start_x;
         float const diff_y = y - cursor_start_y;
-        state.focused_container()->drag(
+        window_container->drag(
             static_cast<int>(container_start_x + diff_x),
             static_cast<int>(container_start_y + diff_y));
 
         if (output_manager->focused()->active()->is_empty())
         {
-            drag_to(state.focused_container(), output_manager->focused()->active().get());
+            drag_to(window_container, output_manager->focused()->active().get());
             return true;
         }
 
         // Get the intersection and try to move ourselves there. We only care if we're intersecting
         // a leaf container, as those would be the only one in the grid.
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect_leaf(x, y, true);
+        std::shared_ptr<WindowContainer> intersected = output_manager->focused()->intersect_leaf(x, y, true);
         if (!intersected)
         {
             last_intersected.reset();
@@ -96,7 +99,7 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
             return true;
 
         last_intersected = intersected;
-        drag_to(state.focused_container(), intersected);
+        drag_to(window_container, intersected);
         return true;
     }
     else if (action == mir_pointer_action_button_down)
@@ -117,13 +120,14 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
         if (output_manager->focused() == nullptr)
             return false;
 
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
-        if (!intersected)
+        auto intersected_container = output_manager->focused()->intersect(x, y);
+        if (!intersected_container)
             return false;
 
-        if (!intersected->drag_start())
+        auto intersected = Container::as_window_container(intersected_container);
+        if (!intersected || !intersected->drag_start())
         {
-            mir::log_warning("Cannot drag container of type %d", (int)intersected->get_type());
+            mir::log_warning("Cannot drag container of type %d", (int)intersected_container->get_type());
             return false;
         }
 
@@ -141,29 +145,30 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
     return false;
 }
 
+void DragAndDropService::stop_drag(CompositorState const& state)
+{
+    command_controller->set_mode(WindowManagerMode::normal);
+    auto const window_container = std::dynamic_pointer_cast<WindowContainer>(state.focused_container());
+    if (window_container)
+        window_container->drag_stop();
+}
+
 void DragAndDropService::drag_to(
-    std::shared_ptr<Container> const& dragging,
-    std::shared_ptr<Container> const& to)
+    std::shared_ptr<WindowContainer> const& dragging,
+    std::shared_ptr<WindowContainer> const& to)
 {
     if (dragging == to)
         return;
 
-    // TODO: Convert dragging to a leaf beforehand
-    if (!to->is_leaf() || !dragging->is_leaf())
-        return;
-
-    dragging->move_to(*to);
+    if (dragging)
+        dragging->move_to(*to);
 }
 
 void DragAndDropService::drag_to(
-    std::shared_ptr<Container> const& dragging,
+    std::shared_ptr<WindowContainer> const& dragging,
     WorkspaceInterface* workspace)
 {
     if (dragging->get_workspace().get() == workspace)
-        return;
-
-    // TODO: Convert dragging to a leaf beforehand
-    if (!dragging->is_leaf())
         return;
 
     workspace->add_to_root(*dragging);

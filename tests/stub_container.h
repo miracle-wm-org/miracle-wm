@@ -18,13 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_STUB_CONTAINER_H
 #define MIRACLE_WM_STUB_CONTAINER_H
 
-#include "container.h"
+#include "window_container.h"
 
 namespace miracle
 {
 namespace test
 {
-    class StubContainer : public Container
+    class StubContainer : public WindowContainer
     {
     public:
         ContainerType get_type() const override
@@ -238,7 +238,17 @@ namespace test
             return false;
         }
 
+        bool move_by(float dx, float dy) override
+        {
+            return false;
+        }
+
         bool move_to(int x, int y, bool with_animations) override
+        {
+            return false;
+        }
+
+        bool move_to(Container& other) override
         {
             return false;
         }
@@ -270,6 +280,20 @@ namespace test
         bool set_layout(LayoutScheme scheme) override
         {
             return false;
+        }
+
+        bool anchored() const override
+        {
+            return true;
+        }
+
+        void scratchpad_state(ScratchpadState) override
+        {
+        }
+
+        ScratchpadState scratchpad_state() const override
+        {
+            return ScratchpadState::none;
         }
 
         LayoutScheme get_layout() const override

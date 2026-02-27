@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "render_data_manager.h"
+#include "window_container.h"
 
 #include <algorithm>
 #include <memory>
@@ -56,15 +57,39 @@ public:
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
 
-    /// Focuses the provided container. If [is_anonymous] is true, the container
-    /// will be focused even if it does not exist in the list.
-    void focus_container(std::shared_ptr<Container> const&, bool is_anonymous = false);
+    /// Focus the provided \p container.
+    ///
+    /// The container does not necessarily need to be a [WindowContainer], but it often is.
+    void focus_container(std::shared_ptr<Container> const& container);
+
+    /// Unfocus the provided \p container
     void unfocus_container(std::shared_ptr<Container> const& container);
-    void add(std::shared_ptr<Container> const& container);
-    void remove(std::shared_ptr<Container> const& container);
-    [[nodiscard]] std::shared_ptr<Container> first_floating() const;
-    [[nodiscard]] std::shared_ptr<Container> first_tiling() const;
-    [[nodiscard]] std::vector<std::weak_ptr<Container>> const& containers() const { return focus_order; }
+
+    /// Adds a new window to the focus list.
+    ///
+    /// \param container the window to add
+    void add(std::shared_ptr<WindowContainer> const& container);
+
+    /// Removes a window from the focus list.
+    ///
+    /// \param container the window to remove
+    void remove(std::shared_ptr<WindowContainer> const& container);
+
+    /// Finds the first floating window, if one exists.
+    ///
+    /// \returns the first floating window, if one exists
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_floating() const;
+
+    /// Finds the first tiling window, if one exists.
+    ///
+    /// \returns the first tiling window, if one exists
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_tiling() const;
+
+    /// Returns the list of windows in their focus order.
+    ///
+    /// \returns list of windows
+    [[nodiscard]] std::vector<std::weak_ptr<WindowContainer>> const& windows() const { return focus_order; }
+
     WindowManagerMode mode() const;
     void mode(WindowManagerMode);
     RenderDataManager* render_data_manager() const;
@@ -78,7 +103,7 @@ public:
 private:
     std::recursive_mutex mutex;
     std::weak_ptr<Container> focused;
-    std::vector<std::weak_ptr<Container>> focus_order;
+    std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::unique_ptr<RenderDataManager> render_data_manager_;
 };

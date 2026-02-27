@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_SHELL_COMPONENT_CONTAINER_H
 #define MIRACLE_WM_SHELL_COMPONENT_CONTAINER_H
 
-#include "container.h"
+#include "window_container.h"
 
 namespace miracle
 {
@@ -33,7 +33,7 @@ class ShellApplicationDelegate;
 /// surfaces. By design. shell components are not bound to any output
 /// or workspace. They simply "exist" in the form that the client expects
 /// them to.
-class ShellComponentContainer : public Container
+class ShellComponentContainer : public WindowContainer
 {
 public:
     ShellComponentContainer(

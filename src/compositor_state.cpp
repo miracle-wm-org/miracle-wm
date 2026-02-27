@@ -35,15 +35,15 @@ std::shared_ptr<Container> CompositorState::focused_container() const
     return nullptr;
 }
 
-void CompositorState::focus_container(std::shared_ptr<Container> const& container, bool is_anonymous)
+void CompositorState::focus_container(std::shared_ptr<Container> const& container)
 {
-    if (is_anonymous)
-    {
-        focused = container;
+    if (!container)
         return;
-    }
 
-    auto it = std::find_if(focus_order.begin(), focus_order.end(), [&](auto const& element)
+    focused = container;
+
+    // If the focused container is a window, bring it to the front of the focus order.
+    auto const it = std::ranges::find_if(focus_order, [&](auto const& element)
     {
         return !element.expired() && element.lock() == container;
     });
@@ -51,7 +51,6 @@ void CompositorState::focus_container(std::shared_ptr<Container> const& containe
     if (it != focus_order.end())
     {
         std::rotate(focus_order.begin(), it, it + 1);
-        focused = container;
     }
 }
 
@@ -64,22 +63,20 @@ void CompositorState::unfocus_container(std::shared_ptr<Container> const& contai
     }
 }
 
-void CompositorState::add(std::shared_ptr<Container> const& container)
+void CompositorState::add(std::shared_ptr<WindowContainer> const& container)
 {
     focus_order.push_back(container);
-    mir::log_debug("add: there are now %zu surfaces in the focus order", focus_order.size());
 }
 
-void CompositorState::remove(std::shared_ptr<Container> const& container)
+void CompositorState::remove(std::shared_ptr<WindowContainer> const& container)
 {
-    focus_order.erase(std::remove_if(focus_order.begin(), focus_order.end(), [&](auto const& element)
+    std::erase_if(focus_order, [&](auto const& element)
     {
         return !element.expired() && element.lock() == container;
-    }));
-    mir::log_debug("remove: there are now %zu surfaces in the focus order", focus_order.size());
+    });
 }
 
-std::shared_ptr<Container> CompositorState::first_floating() const
+std::shared_ptr<WindowContainer> CompositorState::first_floating() const
 {
     for (auto const& container : focus_order)
     {
@@ -90,7 +87,7 @@ std::shared_ptr<Container> CompositorState::first_floating() const
     return nullptr;
 }
 
-std::shared_ptr<Container> CompositorState::first_tiling() const
+std::shared_ptr<WindowContainer> CompositorState::first_tiling() const
 {
     for (auto const& container : focus_order)
     {

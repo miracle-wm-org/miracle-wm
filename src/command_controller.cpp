@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_manager.h"
 #include "parent_container.h"
 #include "scratchpad.h"
+#include "window_container.h"
 #include "workspace_manager.h"
 
 #include <mir/log.h>
@@ -208,7 +209,8 @@ bool CommandController::try_resize(Direction direction, int pixels, std::vector<
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->resize(direction, pixels))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->resize(direction, pixels))
             result = false;
     }
     return result;
@@ -243,7 +245,8 @@ bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vect
             break;
         }
 
-        if (!container->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
             result = false;
     }
     return result;
@@ -291,7 +294,8 @@ bool CommandController::try_move_by_direction(Direction direction, std::vector<C
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move(direction))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move(direction))
             result = false;
     }
     return result;
@@ -310,7 +314,8 @@ bool CommandController::try_move_by_pixels(miracle::Direction direction, int pix
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move_by(direction, pixels))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move_by(direction, pixels))
             result = false;
     }
     return result;
@@ -351,7 +356,8 @@ bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vec
             break;
         }
 
-        if (!container->move_by(direction, static_cast<int>(total_size * ppt)))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move_by(direction, static_cast<int>(total_size * ppt)))
             result = false;
     }
     return result;
@@ -469,7 +475,7 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     else
     {
         window_controller->select_active_window(miral::Window {});
-        state->focus_container(container, true);
+        state->focus_container(container);
     }
 }
 
@@ -500,7 +506,8 @@ bool CommandController::try_select(miracle::Direction direction, std::vector<Con
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->select_next(direction))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->select_next(direction))
             result = false;
     }
     return result;
@@ -552,7 +559,7 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
             continue;
         }
 
-        for (auto const& child : state->containers())
+        for (auto const& child : state->windows())
         {
             if (!child.expired())
             {
@@ -718,7 +725,8 @@ bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const&
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->toggle_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->toggle_fullscreen())
             result = false;
     }
     return result;
@@ -1045,7 +1053,8 @@ bool CommandController::can_move_container() const
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (state->focused_container() && state->focused_container()->is_fullscreen())
+    auto const window_container = Container::as_window_container(state->focused_container());
+    if (window_container && window_container->is_fullscreen())
         return false;
 
     return true;
@@ -1182,7 +1191,8 @@ bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1207,7 +1217,8 @@ bool CommandController::toggle_stacking(std::vector<ContainerScope> const& scope
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1232,7 +1243,8 @@ bool CommandController::set_layout(LayoutScheme scheme, std::vector<ContainerSco
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1257,7 +1269,8 @@ bool CommandController::set_layout_default(std::vector<ContainerScope> const& sc
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1337,7 +1350,7 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
     }
 
     std::vector<std::shared_ptr<Container>> result;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (container.expired())
             continue;
@@ -1561,7 +1574,7 @@ bool CommandController::try_move_to_mark(std::string const& mark, std::vector<Co
 
     // Find the first container matching the mark
     std::shared_ptr<Container> marked_container;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const sh = container.lock())
         {
@@ -1660,7 +1673,7 @@ std::unordered_set<std::string> CommandController::get_all_marks() const
 {
     auto const lock = state->lock();
     std::unordered_set<std::string> marks;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const locked = container.lock())
         {

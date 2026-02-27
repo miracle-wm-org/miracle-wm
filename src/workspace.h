@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_interface.h"
 
 #include <memory>
-#include <miral/window_manager_tools.h>
 
 namespace miracle
 {
@@ -68,7 +67,7 @@ public:
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
     void transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> const& other) override;
-    bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const override;
+    bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
     [[nodiscard]] std::shared_ptr<OutputInterface> get_output() const override;

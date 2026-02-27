@@ -80,7 +80,7 @@ std::shared_ptr<Container> Output::intersect(float x, float y)
     // Intersect a window. If the window is on the currently active workspace
     // or the window is a shell component, then return it.
     auto const window = window_controller->window_at(x, y);
-    if (auto const result = window_controller->get_container(window))
+    if (auto const result = window_controller->get_window_container(window))
     {
         if (result->get_workspace() == active() || result->get_type() == ContainerType::shell)
             return result;
@@ -89,7 +89,7 @@ std::shared_ptr<Container> Output::intersect(float x, float y)
     return nullptr;
 }
 
-std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_selected)
+std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
 {
     if (active_workspace.expired())
     {
@@ -98,8 +98,8 @@ std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_
     }
 
     auto const workspace = active_workspace.lock().get();
-    std::shared_ptr<Container> result = nullptr;
-    workspace->for_each_window([&](std::shared_ptr<Container> const& container)
+    std::shared_ptr<WindowContainer> result = nullptr;
+    workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
         if (ignore_selected && container == state->focused_container())
             return false;
