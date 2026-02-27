@@ -475,7 +475,7 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     else
     {
         window_controller->select_active_window(miral::Window {});
-        state->focus_container(container, true);
+        state->focus_container(container);
     }
 }
 
@@ -559,7 +559,7 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
             continue;
         }
 
-        for (auto const& child : state->containers())
+        for (auto const& child : state->windows())
         {
             if (!child.expired())
             {
@@ -1053,7 +1053,8 @@ bool CommandController::can_move_container() const
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (state->focused_container() && state->focused_container()->is_fullscreen())
+    auto const window_container = Container::as_window_container(state->focused_container());
+    if (window_container && window_container->is_fullscreen())
         return false;
 
     return true;
@@ -1349,7 +1350,7 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
     }
 
     std::vector<std::shared_ptr<Container>> result;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (container.expired())
             continue;
@@ -1573,7 +1574,7 @@ bool CommandController::try_move_to_mark(std::string const& mark, std::vector<Co
 
     // Find the first container matching the mark
     std::shared_ptr<Container> marked_container;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const sh = container.lock())
         {
@@ -1672,7 +1673,7 @@ std::unordered_set<std::string> CommandController::get_all_marks() const
 {
     auto const lock = state->lock();
     std::unordered_set<std::string> marks;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const locked = container.lock())
         {

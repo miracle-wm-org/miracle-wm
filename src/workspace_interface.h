@@ -65,7 +65,7 @@ public:
 
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.
-    virtual bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const = 0;
+    virtual bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const = 0;
 
     /// Creates a new floating tree on this workspace. The tree is empty by default
     /// and must be filled in by subsequent calls, lest it become a zombie tree with

@@ -162,7 +162,7 @@ PluginBridge::WorkspaceResult PluginBridge::workspace_from_window(uint64_t windo
     if (std::holds_alternative<miral::Window>(plugin_window_info->window_info))
     {
         miral::WindowInfo const& miral_window_info = window_controller->info_for(std::get<miral::Window>(plugin_window_info->window_info));
-        if (auto const container = window_controller->get_container(miral_window_info.window()))
+        if (auto const container = window_controller->get_window_container(miral_window_info.window()))
         {
             if (auto const workspace = container->get_workspace())
                 return { from_workspace(workspace), workspace->name() };
@@ -316,7 +316,7 @@ uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
 {
     uint32_t count = 0;
     auto const lock = compositor_state->lock();
-    for (auto const& weak_container : compositor_state->containers())
+    for (auto const& weak_container : compositor_state->windows())
     {
         auto const container = weak_container.lock();
         if (!container)
@@ -339,7 +339,7 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
 {
     uint32_t count = 0;
     auto const lock = compositor_state->lock();
-    for (auto const& weak_container : compositor_state->containers())
+    for (auto const& weak_container : compositor_state->windows())
     {
         auto const container = weak_container.lock();
         if (!container)

@@ -208,7 +208,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     EXPECT_THAT(container->get_logical_area(), Eq(mir::geometry::Rectangle {
                                                    { 800,  0   },
                                                    { 1000, 600 }
@@ -239,7 +239,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     update_outputs(output_configs_from_output_rectangles({}));
 
     update_outputs(output_configs_from_output_rectangles({
@@ -274,7 +274,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window1 = create_window(app, spec);
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move to workspace 2
@@ -312,7 +312,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         publish_event(*event);
     }
 
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move the window1 to workspace 2
@@ -332,7 +332,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     }
 
     // Expect that all containers are on workspace 2
-    for (auto const& container : compositor_state->containers())
+    for (auto const& container : compositor_state->windows())
     {
         EXPECT_THAT(container.lock()->get_workspace()->num(), Eq(2));
     }

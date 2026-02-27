@@ -692,11 +692,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
     }
 
     if (state->mode() == WindowManagerMode::dragging)
-    {
-        command_controller->set_mode(WindowManagerMode::normal);
-        if (state->focused_container())
-            state->focused_container()->drag_stop();
-    }
+        drag_and_drop_service->stop_drag(*state);
 
     state->unfocus_container(container);
     container->on_focus_lost();

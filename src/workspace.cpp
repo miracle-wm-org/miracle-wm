@@ -310,7 +310,7 @@ void Workspace::hide(geom::Point const& end)
     on_animation_start(true);
 }
 
-bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> const& f) const
+bool Workspace::for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const& f) const
 {
     auto _for_each_window = [&](std::shared_ptr<Container> const& node)
     {
@@ -322,7 +322,7 @@ bool Workspace::for_each_window(std::function<bool(std::shared_ptr<Container>)> 
                 return false;
             }
 
-            auto container = window_controller->get_container(leaf->window().value());
+            auto container = window_controller->get_window_container(leaf->window().value());
             if (container && f(container))
                 return true;
         }
@@ -605,7 +605,7 @@ void Workspace::on_animation_start(bool is_hiding)
             return;
         }
 
-        for_each_window([&](std::shared_ptr<Container> const& container)
+        for_each_window([&](std::shared_ptr<WindowContainer> const& container)
         {
             if (container->window().has_value())
             {

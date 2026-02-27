@@ -73,7 +73,7 @@ public:
 
     void select_active_window(miral::Window const&) override { }
 
-    std::shared_ptr<Container> get_container(miral::Window const& window) override
+    std::shared_ptr<Container> get_container(miral::Window const& window)
     {
         for (auto const& p : pairs)
         {

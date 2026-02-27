@@ -48,7 +48,9 @@ class ContainerListener;
 
 ContainerType container_type_from_string(std::string const& str);
 
-/// Aligns with i3's concept of containers. A [Container] may map to
+/// A generic container.
+///
+/// Aligns generally with i3's concept of containers. A [Container] may map to
 /// an individual [miral::Window] or it may not. You can think of a [Container]
 /// as a logical rectangle on a [Workspace] upon which you can perform some
 /// actions. Depending on the type of [Container], particular actions may
@@ -84,7 +86,7 @@ public:
 
     /// Retrieve the visible area of the container.
     ///
-    /// This area may be different than the logical area and be used to clip it.
+    /// This area may be different from the logical area and be used to clip it.
     ///
     /// \returns the visible area
     [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
@@ -94,9 +96,15 @@ public:
     /// TODO: Can we remove this?
     virtual void constrain() = 0;
 
-    /// Retrieve the parent container of this container, if one exists.
+    /// Retrieve the parent container of the container, if one exists.
+    ///
+    /// \returns the parent
     virtual std::weak_ptr<ParentContainer> get_parent() const = 0;
-    virtual void set_parent(std::shared_ptr<ParentContainer> const&) = 0;
+
+    /// Set the parent on the container.
+    ///
+    /// \param parent the parent
+    virtual void set_parent(std::shared_ptr<ParentContainer> const& parent) = 0;
     virtual size_t get_min_height() const = 0;
     virtual size_t get_min_width() const = 0;
     virtual void handle_raise() = 0;

@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 
-class Container;
+class WindowContainer;
 class Config;
 class CompositorState;
 class AbstractCommandController;
@@ -39,6 +39,7 @@ public:
         std::shared_ptr<Config> const& config,
         std::shared_ptr<OutputManager> const& output_manager);
     bool handle_pointer_event(CompositorState& state, float x, float y, MirPointerAction action, unsigned int modifiers, MirPointerButtons buttons);
+    void stop_drag(CompositorState const& state);
 
 private:
     std::shared_ptr<AbstractCommandController> command_controller;
@@ -51,14 +52,14 @@ private:
     float container_start_y = 0;
     float current_x = 0;
     float current_y = 0;
-    std::weak_ptr<Container> last_intersected;
+    std::weak_ptr<WindowContainer> last_intersected;
 
     void drag_to(
-        std::shared_ptr<Container> const& dragging,
-        std::shared_ptr<Container> const& to);
+        std::shared_ptr<WindowContainer> const& dragging,
+        std::shared_ptr<WindowContainer> const& to);
 
     void drag_to(
-        std::shared_ptr<Container> const& dragging,
+        std::shared_ptr<WindowContainer> const& dragging,
         WorkspaceInterface* workspace);
 };
 

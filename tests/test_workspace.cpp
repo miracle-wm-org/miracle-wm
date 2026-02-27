@@ -110,7 +110,7 @@ public:
         auto leaf = layout_parent->confirm_window(window);
         pairs.push_back({ window, leaf, geom::Rectangle(), mir_window_state_restored, std::nullopt });
 
-        state->add(leaf);
+        state->add(std::dynamic_pointer_cast<WindowContainer>(leaf));
         leaf->on_focus_gained();
         state->focus_container(leaf);
         return Container::as_leaf(leaf);

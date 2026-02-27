@@ -44,7 +44,7 @@ public:
     ~Output() override;
 
     std::shared_ptr<Container> intersect(float x, float y) override;
-    std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;
+    std::shared_ptr<WindowContainer> intersect_leaf(float x, float y, bool ignore_selected) override;
     void delete_container(std::shared_ptr<Container> const& container) override;
     void advise_new_workspace(WorkspaceCreationData const&&) override;
     void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) override;

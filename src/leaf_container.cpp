@@ -284,7 +284,9 @@ size_t LeafContainer::get_min_height() const
 
 void LeafContainer::handle_ready()
 {
-    if (state->focused_container() == nullptr || !state->focused_container()->is_fullscreen())
+    auto const focused = state->focused_container();
+    auto const window_focused = std::dynamic_pointer_cast<WindowContainer>(focused);
+    if (!focused || !window_focused || !window_focused->is_fullscreen())
     {
         auto& info = window_controller->info_for(window_);
         if (info.can_be_active())
@@ -646,14 +648,12 @@ void LeafContainer::animation_handle(uint32_t handle)
 
 bool LeafContainer::is_focused() const
 {
-    if (!state->focused_container())
-        return false;
-
     if (state->focused_container().get() == this)
         return true;
 
-    if (parent.lock()->is_focused())
-        return true;
+    if (auto locked_parent = parent.lock())
+        if (locked_parent->is_focused())
+            return true;
 
     return false;
 }

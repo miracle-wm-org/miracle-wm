@@ -112,7 +112,7 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenWindowControllerReturnsNoContainer)
     miral::Window test_window;
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(nullptr));
 
     // Act
@@ -130,7 +130,7 @@ TEST_F(OutputIntersectTest, ReturnsContainerWhenOnActiveWorkspace)
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Setup container to be on active workspace
@@ -155,7 +155,7 @@ TEST_F(OutputIntersectTest, ReturnsShellContainerEvenWhenNotOnActiveWorkspace)
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Setup container to be on different workspace but shell type
@@ -180,7 +180,7 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenContainerNotOnActiveWorkspaceAndNotSh
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Setup container to be on different workspace and not shell
@@ -207,7 +207,7 @@ TEST_F(OutputIntersectTest, HandlesDifferentCoordinates)
 
     EXPECT_CALL(*window_controller, window_at(test_x, test_y))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Get the active workspace and set container to be on it

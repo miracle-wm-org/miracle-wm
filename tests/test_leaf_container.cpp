@@ -241,7 +241,7 @@ TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenStateFocusesThisContainer)
 
 TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenParentIsFocused)
 {
-    state->focus_container(parent, true);
+    state->focus_container(parent);
     EXPECT_CALL(*parent, is_focused())
         .WillOnce(testing::Return(true));
     EXPECT_TRUE(leaf_container->is_focused());

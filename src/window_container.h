@@ -33,12 +33,7 @@ namespace miracle
 class WindowContainer : public Container
 {
 public:
-    ~WindowContainer() = default;
-
-    // -------------------------------------------------------------------------
-    // Window lifecycle / event callbacks
-    // -------------------------------------------------------------------------
-
+    ~WindowContainer() override = default;
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
@@ -49,10 +44,6 @@ public:
     virtual mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&)
         = 0;
-
-    // -------------------------------------------------------------------------
-    // Window-specific operations (stubs / return false in ParentContainer)
-    // -------------------------------------------------------------------------
 
     virtual bool resize(Direction direction, int pixels) = 0;
     virtual bool toggle_fullscreen() = 0;
