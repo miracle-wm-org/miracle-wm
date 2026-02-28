@@ -227,7 +227,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToDifferentParent)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(0, 0));
     ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT / 3.f)));
     ASSERT_EQ(leaf1->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT * (2.f / 3.f))));
-    ASSERT_EQ(workspace->get_root()->num_nodes(), 3);
+    ASSERT_EQ(workspace->get_root()->num_children(), 3);
 }
 
 TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)

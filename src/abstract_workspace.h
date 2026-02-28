@@ -23,21 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <miracle/cpp/gaps.h>
-#include <miral/window_manager_tools.h>
 
 namespace miracle
 {
 class AbstractOutput;
 class Container;
 class ParentContainer;
-
-struct AllocationHint
-{
-    ContainerType container_type = ContainerType::none;
-    ParentContainer* parent = nullptr;
-    AbstractWorkspace* workspace = nullptr;
-    PluginHandle plugin_handle = 0;
-};
 
 class AbstractWorkspace : public std::enable_shared_from_this<AbstractWorkspace>
 {

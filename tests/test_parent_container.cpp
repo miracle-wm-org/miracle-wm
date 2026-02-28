@@ -81,8 +81,8 @@ TEST_F(ParentContainerTest, WhenParentReceivesFocusThenChildrenAreRaised)
     ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }), false);
     std::shared_ptr<test::MockContainer> const child1 = std::make_shared<NiceMock<test::MockContainer>>();
     std::shared_ptr<test::MockContainer> const child2 = std::make_shared<NiceMock<test::MockContainer>>();
-    parent_data.parent->graft_existing(child1, 0);
-    parent_data.parent->graft_existing(child2, 1);
+    parent_data.parent->add_child(child1, 0);
+    parent_data.parent->add_child(child2, 1);
 
     auto const session = std::make_shared<testing::NiceMock<test::MockSession>>();
     auto const surface = std::make_shared<testing::NiceMock<test::MockSurface>>();
@@ -111,9 +111,9 @@ class ParentContainerSwapTest : public ParentContainerTest
 public:
     ParentContainerSwapTest()
     {
-        first_parent_data.parent->graft_existing(container1, 0);
-        second_parent_data.parent->graft_existing(container2, 0);
-        second_parent_data.parent->graft_existing(container3, 1);
+        first_parent_data.parent->add_child(container1, 0);
+        second_parent_data.parent->add_child(container2, 0);
+        second_parent_data.parent->add_child(container3, 1);
     }
 
     ParentContainerData const first_parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));

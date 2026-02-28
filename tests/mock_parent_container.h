@@ -26,7 +26,6 @@ namespace test
         {
         }
 
-        MOCK_METHOD(size_t, num_nodes, (), (const, override));
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, commit_changes, (), (override));
