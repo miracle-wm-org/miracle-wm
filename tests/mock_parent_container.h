@@ -1,7 +1,6 @@
 #ifndef MIRACLE_MOCK_PARENT_CONTAINER_H
 #define MIRACLE_MOCK_PARENT_CONTAINER_H
 
-#include "mock_container.h"
 #include "parent_container.h"
 #include <gmock/gmock.h>
 
@@ -13,19 +12,6 @@ namespace test
     class MockParentContainer : public ParentContainer
     {
     public:
-        MockParentContainer(
-            std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
-            std::shared_ptr<CompositorState> const& state,
-            std::shared_ptr<WindowController> const& window_controller,
-            std::shared_ptr<Config> const& config,
-            geom::Rectangle area,
-            std::shared_ptr<AbstractWorkspace> const& workspace,
-            std::shared_ptr<ParentContainer> const& parent,
-            bool is_anchored) :
-            ParentContainer(shell_application_manager, state, window_controller, config, area, workspace, parent, is_anchored)
-        {
-        }
-
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, commit_changes, (), (override));
@@ -68,6 +54,9 @@ namespace test
         MOCK_METHOD(ScratchpadState, scratchpad_state, (), (const, override));
         MOCK_METHOD(LayoutScheme, get_layout, (), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
+        MOCK_METHOD(std::vector<std::shared_ptr<Container>> const&, children, (), (const, override));
+        MOCK_METHOD(void, add_child, (std::shared_ptr<Container> const&, size_t), (override));
+        MOCK_METHOD(void, remove_child, (std::shared_ptr<Container> const&), (override));
     };
 
 } // namespace test

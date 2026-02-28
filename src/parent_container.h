@@ -50,9 +50,6 @@ public:
         std::shared_ptr<AbstractWorkspace> const& workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
-
-protected:
-    ParentContainer() = default;
     ~ParentContainer() override;
 
     // Container
@@ -126,6 +123,9 @@ protected:
         size_t first_index,
         std::shared_ptr<ParentContainer> const& second_parent,
         size_t second_index);
+
+protected:
+    ParentContainer() = default;
 
 private:
     class ParentContainerBackgroundPositioner : public ShellApplicationDelegate
