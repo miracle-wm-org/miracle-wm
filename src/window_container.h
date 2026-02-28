@@ -18,11 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WINDOW_CONTAINER_H
 #define MIRACLE_WINDOW_CONTAINER_H
 
+#include "animation.h"
 #include "container.h"
+#include "container_effect.h"
+#include "render_data_manager.h"
 
 namespace miracle
 {
-
 /// An intermediate container class for containers that directly hold a window.
 ///
 /// This class extends [Container] with methods that are meaningful only for
@@ -33,12 +35,12 @@ namespace miracle
 class WindowContainer : public Container
 {
 public:
-    ~WindowContainer() override = default;
+    explicit WindowContainer(std::shared_ptr<RenderDataManager> const& rdm);
+    ~WindowContainer() override;
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
     virtual void on_open() = 0;
-    virtual void on_focus_lost() = 0;
     virtual void on_move_to(mir::geometry::Point const& top_left) = 0;
     virtual void on_resize(mir::geometry::Size const& size) = 0;
     virtual mir::geometry::Rectangle confirm_placement(
@@ -58,6 +60,38 @@ public:
     virtual bool drag_stop() = 0;
     virtual void drag(int x, int y) = 0;
 
+    uint32_t animation_handle() const override;
+    void animation_handle(uint32_t) override;
+    void set_workspace_transform(glm::mat4 const& transform) override;
+    void set_workspace_alpha(float a) override;
+    glm::mat4 get_workspace_transform() const override;
+    void set_animation_transform(glm::mat4 transform) override;
+    void set_animation_alpha(float a) override;
+    glm::mat4 get_animation_transform() const override;
+    void on_focus_gained() override;
+    virtual void on_focus_lost();
+
+    /// Associate this container with a \p window.
+    ///
+    /// \param window to associate
+    void associate_to_window(miral::Window const& window);
+
+    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+
+    /// Set the transformation on the window.
+    ///
+    /// This transformation is applied before the animation transform.
+    ///
+    /// \param t
+    virtual void set_window_transform(glm::mat4 const& t);
+
+    /// Set the alpha of the window.
+    ///
+    /// This alpha is blended with both the animation and workspace alpha.
+    ///
+    /// \param alpha
+    virtual void set_window_alpha(float alpha);
+
     /// Retrieve the visible area of the container.
     ///
     /// This area may be different from the logical area and be used to clip it.
@@ -65,6 +99,18 @@ public:
     /// \returns the visible area
     [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
     virtual bool matches(ContainerScope const&) const = 0;
+
+protected:
+    void rerender();
+    miral::Window window_;
+    std::weak_ptr<RenderDataManager> rdm;
+    RenderDataManagerId render_id;
+    AnimationHandle animation_handle_;
+
+private:
+    ContainerEffect workspace_effect;
+    ContainerEffect window_effect;
+    ContainerEffect animation_effect;
 };
 
 } // namespace miracle

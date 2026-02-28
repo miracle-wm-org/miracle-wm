@@ -52,7 +52,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         { .surface = animating_surface.get(),
             .needs_outline = true,
             .is_focused = false,
-            .transform = container->get_transform(),
+            .transform = container->get_animation_transform(),
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
             .output_area = output_area });
 

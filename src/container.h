@@ -103,24 +103,28 @@ public:
     virtual void set_workspace(std::shared_ptr<AbstractWorkspace> const&) = 0;
     virtual std::shared_ptr<AbstractOutput> get_output() const = 0;
 
-    /// Retrieve the current transform of this node.
+    /// Retrieve the animation transform for the container.
     ///
     /// This does NOT include the output and workspace transforms. This is intended
     /// for use by the animation system.
     ///
     /// \returns the transform on the node
-    virtual glm::mat4 get_transform() const = 0;
+    virtual glm::mat4 get_animation_transform() const = 0;
 
-    /// Sets the transform of this node.
+    /// Sets the animation transform on the container.
     ///
     ///\param transform
-    virtual void set_transform(glm::mat4 transform) = 0;
+    virtual void set_animation_transform(glm::mat4 transform) = 0;
 
     virtual void set_workspace_transform(glm::mat4 const& transform) = 0;
     virtual void set_workspace_alpha(float a) = 0;
     virtual glm::mat4 get_workspace_transform() const;
     virtual glm::mat4 get_output_transform() const;
-    virtual void set_alpha(float const alpha) = 0;
+
+    /// Set the animation alpha on the container.
+    ///
+    /// \param alpha
+    virtual void set_animation_alpha(float const alpha) = 0;
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;

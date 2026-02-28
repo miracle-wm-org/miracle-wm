@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_MANAGED_CONTAINER
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
+#include "container_effect.h"
 #include "render_data_manager.h"
 #include "window_container.h"
 
@@ -44,7 +45,6 @@ public:
         miral::Window const& window,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state);
-    ~PluginManagedContainer() override;
 
     void show() override;
     void hide() override;
@@ -68,26 +68,17 @@ public:
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
     void on_open() override;
-    void on_focus_gained() override;
-    void on_focus_lost() override;
     void on_move_to(const geom::Point& top_left) override;
     void on_resize(const geom::Size& size) override;
     mir::geometry::Rectangle confirm_placement(MirWindowState, const mir::geometry::Rectangle&) override;
     std::shared_ptr<AbstractWorkspace> get_workspace() const override;
     void set_workspace(const std::shared_ptr<AbstractWorkspace>&) override;
     std::shared_ptr<AbstractOutput> get_output() const override;
-    glm::mat4 get_transform() const override;
-    void set_transform(glm::mat4 transform) override;
-    void set_workspace_transform(const glm::mat4& transform) override;
-    void set_workspace_alpha(float a) override;
-    glm::mat4 get_workspace_transform() const override;
     glm::mat4 get_output_transform() const override;
-    void set_alpha(const float alpha) override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t) override;
     bool is_focused() const override;
     bool is_fullscreen() const override;
-    std::optional<miral::Window> window() const override;
     bool select_next(Direction) override;
     bool pinned() const override;
     bool pinned(bool) override;
@@ -112,21 +103,14 @@ public:
     std::optional<PluginHandle> plugin_handle() const override;
 
 private:
-    void rerender();
-
     PluginHandle plugin_handle_;
-    miral::Window window_;
     std::optional<MirWindowState> cached;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
     std::weak_ptr<AbstractWorkspace> workspace_;
-    float alpha_ = 1.f;
-    glm::mat4 transform_ = glm::mat4(1.f);
-    glm::mat4 workspace_transform_ = glm::mat4(1.f);
-    float workspace_alpha_ = 1.f;
+
     uint32_t handle_ = 0;
     bool is_focused_ = false;
-    RenderDataManagerId render_id = -1;
 };
 }
 

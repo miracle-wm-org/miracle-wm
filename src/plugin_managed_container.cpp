@@ -62,17 +62,13 @@ PluginManagedContainer::PluginManagedContainer(
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state) :
+    WindowContainer(compositor_state->render_data_manager()),
     plugin_handle_ { plugin_handle },
-    window_ { window },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
     compositor_state { compositor_state }
 {
-}
-
-PluginManagedContainer::~PluginManagedContainer()
-{
-    compositor_state->render_data_manager()->remove(render_id);
+    associate_to_window(window);
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -118,7 +114,7 @@ void PluginManagedContainer::handle_ready()
                     .surface = window_.operator std::shared_ptr<mir::scene::Surface>().get(),
                     .needs_outline = true,
                     .is_focused = is_focused(),
-                    .transform = get_transform(),
+                    .transform = get_animation_transform(),
                     .workspace_transform = workspace_transform(*this),
                     .workspace_alpha = workspace_.expired() ? 1.f : workspace_.lock()->alpha(),
                     .output_area = output ? std::optional(output->get_area()) : std::nullopt }
@@ -171,20 +167,6 @@ void PluginManagedContainer::on_open()
     window_controller->open(window_);
 }
 
-void PluginManagedContainer::on_focus_gained()
-{
-    compositor_state->render_data_manager()->focus_change(render_id, true);
-    is_focused_ = true;
-    window_controller->raise(window_);
-}
-
-void PluginManagedContainer::on_focus_lost()
-{
-    compositor_state->render_data_manager()->focus_change(render_id, false);
-    is_focused_ = false;
-    window_controller->send_to_back(window_);
-}
-
 void PluginManagedContainer::on_move_to(geom::Point const&)
 {
 }
@@ -216,47 +198,9 @@ std::shared_ptr<AbstractOutput> PluginManagedContainer::get_output() const
     return nullptr;
 }
 
-glm::mat4 PluginManagedContainer::get_transform() const
-{
-    return transform_;
-}
-
-void PluginManagedContainer::set_transform(glm::mat4 transform)
-{
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(transform);
-        transform_ = transform;
-    }
-}
-
-void PluginManagedContainer::set_workspace_transform(glm::mat4 const& transform)
-{
-    workspace_transform_ = transform;
-    compositor_state->render_data_manager()->workspace_transform_change(render_id, workspace_transform_);
-    rerender();
-}
-
-void PluginManagedContainer::set_workspace_alpha(float alpha)
-{
-    workspace_alpha_ = alpha;
-    compositor_state->render_data_manager()->workspace_alpha(render_id, workspace_alpha_);
-    rerender();
-}
-
-glm::mat4 PluginManagedContainer::get_workspace_transform() const
-{
-    return workspace_transform_;
-}
-
 glm::mat4 PluginManagedContainer::get_output_transform() const
 {
     return glm::mat4(1.f);
-}
-
-void PluginManagedContainer::set_alpha(float const alpha)
-{
-    alpha_ = alpha;
 }
 
 uint32_t PluginManagedContainer::animation_handle() const
@@ -277,11 +221,6 @@ bool PluginManagedContainer::is_focused() const
 bool PluginManagedContainer::is_fullscreen() const
 {
     return false;
-}
-
-std::optional<miral::Window> PluginManagedContainer::window() const
-{
-    return window_;
 }
 
 bool PluginManagedContainer::select_next(Direction)
@@ -443,13 +382,6 @@ nlohmann::json PluginManagedContainer::to_json(bool) const
         { "window_properties",    nlohmann::json::object()               },
         { "nodes",                std::vector<int>()                     },
     };
-}
-
-void PluginManagedContainer::rerender()
-{
-    // A hack to trigger a rerender on the surface by re-applying its transformation.
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-        surface->set_transformation(get_transform());
 }
 
 std::optional<PluginHandle> PluginManagedContainer::plugin_handle() const

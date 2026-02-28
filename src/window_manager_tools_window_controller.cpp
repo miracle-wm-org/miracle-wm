@@ -234,10 +234,10 @@ void WindowManagerToolsWindowController::process_animation(
             tools.modify_window(window, spec);
 
         if (result.transform)
-            container->set_transform(result.transform.value());
+            container->set_animation_transform(result.transform.value());
 
         if (result.opacity != std::nullopt)
-            container->set_alpha(result.opacity.value());
+            container->set_animation_alpha(result.opacity.value());
 
         if (result.is_complete)
             container->constrain();

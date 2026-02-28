@@ -158,12 +158,12 @@ namespace test
             return nullptr;
         }
 
-        glm::mat4 get_transform() const override
+        glm::mat4 get_animation_transform() const override
         {
             return glm::mat4(1.f);
         }
 
-        void set_transform(glm::mat4 transform) override
+        void set_animation_transform(glm::mat4 transform) override
         {
         }
 
@@ -180,7 +180,7 @@ namespace test
             return Container::get_output_transform();
         }
 
-        void set_alpha(float const alpha) override
+        void set_animation_alpha(float const alpha) override
         {
         }
 
