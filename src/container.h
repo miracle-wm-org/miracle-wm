@@ -28,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/geometry/rectangle.h>
 #include <mir_toolkit/event.h>
-#include <miracle/cpp/container_type.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <nlohmann/json.hpp>
