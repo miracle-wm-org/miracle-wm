@@ -69,9 +69,9 @@ public:
     void on_resize(mir::geometry::Size const&) override;
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override { }
-    std::shared_ptr<OutputInterface> get_output() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override { }
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void set_workspace_transform(glm::mat4 const&) override;
@@ -82,7 +82,6 @@ public:
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
-    ContainerType get_type() const override;
     void on_open() override;
     std::optional<miral::Window> window() const override;
     bool select_next(Direction) override;

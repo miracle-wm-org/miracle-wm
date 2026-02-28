@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "workspace_manager"
 
 #include "workspace_manager.h"
+#include "abstract_output.h"
 #include "config.h"
-#include "output_interface.h"
 #include "output_manager.h"
 #include "vector_helpers.h"
 #include <mir/log.h>
@@ -37,7 +37,7 @@ WorkspaceManager::WorkspaceManager(
 {
 }
 
-bool WorkspaceManager::focus_existing(WorkspaceInterface const* existing, bool back_and_forth)
+bool WorkspaceManager::focus_existing(AbstractWorkspace const* existing, bool back_and_forth)
 {
     mir::log_info("focus_existing: %s focused", existing->display_name().c_str());
     auto const& active_workspace = output_manager->focused()->active();
@@ -60,7 +60,7 @@ bool WorkspaceManager::focus_existing(WorkspaceInterface const* existing, bool b
 }
 
 bool WorkspaceManager::request_workspace(
-    OutputInterface* output_hint,
+    AbstractOutput* output_hint,
     int num,
     bool allow_back_and_forth)
 {
@@ -83,7 +83,7 @@ bool WorkspaceManager::request_workspace(
 }
 
 bool WorkspaceManager::request_workspace(
-    OutputInterface* output_hint,
+    AbstractOutput* output_hint,
     std::string const& name,
     bool allow_back_and_forth)
 {
@@ -104,7 +104,7 @@ bool WorkspaceManager::request_workspace(
     return true;
 }
 
-int WorkspaceManager::request_first_available_workspace(OutputInterface* output)
+int WorkspaceManager::request_first_available_workspace(AbstractOutput* output)
 {
     for (int i = 1; i < NUM_DEFAULT_WORKSPACES; i++)
     {
@@ -124,7 +124,7 @@ int WorkspaceManager::request_first_available_workspace(OutputInterface* output)
     return -1;
 }
 
-bool WorkspaceManager::request_next(OutputInterface* output)
+bool WorkspaceManager::request_next(AbstractOutput* output)
 {
     auto const& active = output->active();
     if (!active)
@@ -146,7 +146,7 @@ bool WorkspaceManager::request_next(OutputInterface* output)
     return false;
 }
 
-bool WorkspaceManager::request_prev(OutputInterface* output)
+bool WorkspaceManager::request_prev(AbstractOutput* output)
 {
     auto const& active = output->active();
     if (!active)
@@ -179,7 +179,7 @@ bool WorkspaceManager::request_back_and_forth()
     return false;
 }
 
-bool WorkspaceManager::request_next_on_output(OutputInterface const& output)
+bool WorkspaceManager::request_next_on_output(AbstractOutput const& output)
 {
     auto const& active = output.active();
     if (!active)
@@ -201,7 +201,7 @@ bool WorkspaceManager::request_next_on_output(OutputInterface const& output)
     return false;
 }
 
-bool WorkspaceManager::request_prev_on_output(OutputInterface const& output)
+bool WorkspaceManager::request_prev_on_output(AbstractOutput const& output)
 {
     auto const& active = output.active();
     if (!active)
@@ -267,7 +267,7 @@ bool WorkspaceManager::request_focus(uint32_t id)
     return true;
 }
 
-WorkspaceInterface* WorkspaceManager::workspace(int num) const
+AbstractWorkspace* WorkspaceManager::workspace(int num) const
 {
     for (auto const& output : output_manager->outputs())
     {
@@ -281,7 +281,7 @@ WorkspaceInterface* WorkspaceManager::workspace(int num) const
     return nullptr;
 }
 
-WorkspaceInterface* WorkspaceManager::workspace(uint32_t id) const
+AbstractWorkspace* WorkspaceManager::workspace(uint32_t id) const
 {
     for (auto const& output : output_manager->outputs())
     {
@@ -295,7 +295,7 @@ WorkspaceInterface* WorkspaceManager::workspace(uint32_t id) const
     return nullptr;
 }
 
-WorkspaceInterface* WorkspaceManager::workspace(std::string const& name) const
+AbstractWorkspace* WorkspaceManager::workspace(std::string const& name) const
 {
     for (auto const& output : output_manager->outputs())
     {
@@ -309,14 +309,14 @@ WorkspaceInterface* WorkspaceManager::workspace(std::string const& name) const
     return nullptr;
 }
 
-std::vector<std::shared_ptr<WorkspaceInterface>> WorkspaceManager::workspaces() const
+std::vector<std::shared_ptr<AbstractWorkspace>> WorkspaceManager::workspaces() const
 {
-    std::vector<std::shared_ptr<WorkspaceInterface>> result;
+    std::vector<std::shared_ptr<AbstractWorkspace>> result;
     for (auto const& output : output_manager->outputs())
     {
         for (auto const& w : output->get_workspaces())
         {
-            insert_sorted(result, w, [](std::shared_ptr<WorkspaceInterface> const& a, std::shared_ptr<WorkspaceInterface> const& b)
+            insert_sorted(result, w, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
             {
                 if (a->num() && b->num())
                     return a->num().value() < b->num().value();
@@ -332,7 +332,7 @@ std::vector<std::shared_ptr<WorkspaceInterface>> WorkspaceManager::workspaces() 
     return result;
 }
 
-void WorkspaceManager::move_workspace_to_output(uint32_t id, OutputInterface* hint)
+void WorkspaceManager::move_workspace_to_output(uint32_t id, AbstractOutput* hint)
 {
     auto const w = workspace(id);
     if (!w)
@@ -346,7 +346,7 @@ void WorkspaceManager::move_workspace_to_output(uint32_t id, OutputInterface* hi
 
 bool WorkspaceManager::set_workspace_num(uint32_t id, std::optional<int> const& num)
 {
-    std::shared_ptr<WorkspaceInterface> workspace_to_set;
+    std::shared_ptr<AbstractWorkspace> workspace_to_set;
     for (auto const& workspace : workspaces())
     {
         if (workspace->id() == id)
@@ -367,8 +367,8 @@ bool WorkspaceManager::set_workspace_num(uint32_t id, std::optional<int> const& 
     return true;
 }
 
-WorkspaceInterface* WorkspaceManager::request_workspace(
-    OutputInterface* output_hint,
+AbstractWorkspace* WorkspaceManager::request_workspace(
+    AbstractOutput* output_hint,
     std::optional<int> num,
     std::optional<std::string> const& name,
     bool focus)
@@ -409,7 +409,7 @@ WorkspaceInterface* WorkspaceManager::request_workspace(
 
 bool WorkspaceManager::set_workspace_name(uint32_t id, std::optional<std::string> const& name)
 {
-    std::shared_ptr<WorkspaceInterface> workspace_to_set;
+    std::shared_ptr<AbstractWorkspace> workspace_to_set;
     for (auto const& workspace : workspaces())
     {
         if (workspace->id() == id)

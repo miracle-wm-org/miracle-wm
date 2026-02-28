@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_COMMAND_CONTROLLER_H
 #define MIRACLE_WM_COMMAND_CONTROLLER_H
 
+#include "abstract_output.h"
 #include "compositor_state.h"
 #include "container_scope.h"
 #include "direction.h"
-#include "output_interface.h"
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -139,7 +139,7 @@ public:
     virtual bool toggle_stacking(std::vector<ContainerScope> const& scope) = 0;
     virtual bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope) = 0;
     virtual bool set_layout_default(std::vector<ContainerScope> const& scope) = 0;
-    virtual void move_cursor_to_output(OutputInterface const&) = 0;
+    virtual void move_cursor_to_output(AbstractOutput const&) = 0;
     virtual bool try_select_next_output() = 0;
     virtual bool try_select_prev_output() = 0;
     virtual bool try_select_output(Direction direction) = 0;
@@ -250,7 +250,7 @@ public:
     bool toggle_stacking(std::vector<ContainerScope> const& scope) override;
     bool set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope) override;
     bool set_layout_default(std::vector<ContainerScope> const& scope) override;
-    void move_cursor_to_output(OutputInterface const&) override;
+    void move_cursor_to_output(AbstractOutput const&) override;
     bool try_select_next_output() override;
     bool try_select_prev_output() override;
     bool try_select_output(Direction direction) override;

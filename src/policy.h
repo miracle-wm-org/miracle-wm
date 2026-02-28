@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "resize_service.h"
 #include "scratchpad.h"
+#include "window_allocation.h"
 #include "window_manager_tools_window_controller.h"
 #include "window_observer.h"
 #include "workspace_manager.h"

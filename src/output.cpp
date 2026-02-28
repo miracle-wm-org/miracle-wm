@@ -67,7 +67,7 @@ Output::Output(
 
 Output::~Output() = default;
 
-std::shared_ptr<WorkspaceInterface> Output::active() const
+std::shared_ptr<AbstractWorkspace> Output::active() const
 {
     if (active_workspace.expired())
         return nullptr;
@@ -75,14 +75,15 @@ std::shared_ptr<WorkspaceInterface> Output::active() const
     return active_workspace.lock();
 }
 
-std::shared_ptr<Container> Output::intersect(float x, float y)
+std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
 {
     // Intersect a window. If the window is on the currently active workspace
     // or the window is a shell component, then return it.
     auto const window = window_controller->window_at(x, y);
     if (auto const result = window_controller->get_window_container(window))
     {
-        if (result->get_workspace() == active() || result->get_type() == ContainerType::shell)
+        auto const workspace = result->get_workspace();
+        if (!workspace || workspace == active())
             return result;
     }
 
@@ -102,9 +103,6 @@ std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool i
     workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
         if (ignore_selected && container == state->focused_container())
-            return false;
-
-        if (container->get_type() != ContainerType::regular)
             return false;
 
         if (container->get_visible_area().contains(geom::Point(x, y)))
@@ -128,9 +126,9 @@ void Output::delete_container(std::shared_ptr<Container> const& container)
     workspace->delete_container(container);
 }
 
-void Output::insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace)
+void Output::insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace)
 {
-    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceInterface> const& a, std::shared_ptr<WorkspaceInterface> const& b)
+    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
     {
         if (a->num() && b->num())
             return a->num().value() < b->num().value();
@@ -174,14 +172,14 @@ void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint3
     }
 }
 
-void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInterface* workspace)
+void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWorkspace* workspace)
 {
     if (workspace->get_output().get() == this)
         return;
 
     // Remove the workspace from its old output. Note that we grab a reference to it
     // so that its reference count doesn't erroneously hit zero.
-    std::shared_ptr<WorkspaceInterface> to_add = nullptr;
+    std::shared_ptr<AbstractWorkspace> to_add = nullptr;
     auto const old_output = workspace->get_output();
     if (!old_output)
     {
@@ -223,8 +221,8 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     mir::log_info("advise_workspace_active: %d", id);
 
     // First, we find where we're coming from and where we're going to.
-    std::shared_ptr<WorkspaceInterface> from = nullptr;
-    std::shared_ptr<WorkspaceInterface> to = nullptr;
+    std::shared_ptr<AbstractWorkspace> from = nullptr;
+    std::shared_ptr<AbstractWorkspace> to = nullptr;
     size_t from_index = 0;
     size_t to_index = 0;
     for (size_t i = 0; i < workspaces.size(); i++)
@@ -326,7 +324,7 @@ void Output::graft(std::shared_ptr<Container> const& container)
     active()->graft(container);
 }
 
-[[nodiscard]] WorkspaceInterface const* Output::workspace(uint32_t id) const
+[[nodiscard]] AbstractWorkspace const* Output::workspace(uint32_t id) const
 {
     for (auto const& workspace : workspaces)
     {

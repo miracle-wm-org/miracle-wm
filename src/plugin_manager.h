@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle
 {
 class Container;
-class WorkspaceInterface;
+class AbstractWorkspace;
 
 typedef uint32_t PluginHandle;
 struct PluginWindowPlacement
@@ -45,7 +45,7 @@ struct PluginWindowPlacement
         MirDepthLayer layer;
 
         /// The workspace of the window.
-        WorkspaceInterface* workspace;
+        AbstractWorkspace* workspace;
 
         /// The plugin handle that is managing the window.
         PluginHandle handle;

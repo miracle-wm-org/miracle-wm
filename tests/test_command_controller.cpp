@@ -41,7 +41,7 @@ public:
     void quit() override { }
 };
 
-std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(std::shared_ptr<OutputInterface> const& output)
+std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(std::shared_ptr<AbstractOutput> const& output)
 {
     auto output_factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
     ON_CALL(*output_factory, create)
@@ -120,7 +120,7 @@ TEST_F(CommandControllerTest, SetInnerGapsSubtractsFromGlobalGaps)
 TEST_F(CommandControllerTest, SetInnerGapsSetsWorkspaceGaps)
 {
     size_t constexpr TEST_GAP = 8;
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     Mock::AllowLeak(workspace.get());
     workspaces.push_back(workspace);
@@ -168,7 +168,7 @@ TEST_F(CommandControllerTest, SetOuterGapsAddsToVerticalGaps)
 TEST_F(CommandControllerTest, SetOuterGapsSetsWorkspaceGaps)
 {
     size_t constexpr TEST_GAP = 8;
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
     Mock::AllowLeak(workspace.get());
     workspaces.push_back(workspace);
@@ -191,7 +191,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     state->add(container);
     state->focus_container(container);
 
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces())
         .WillRepeatedly(ReturnRef(workspaces));
 
@@ -209,7 +209,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 
 TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
 {
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
         .WillRepeatedly(ReturnRef(workspaces));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
@@ -254,7 +254,7 @@ TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)
 {
     // Setup: Add an output to the output manager and mock a workspace such
     // that it is associated with the output
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
         .WillRepeatedly(ReturnRef(workspaces));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
@@ -287,7 +287,7 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
 {
     // Setup: Add an output to the output manager and mock a workspace such
     // that it is associated with the output
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
         .WillRepeatedly(ReturnRef(workspaces));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
@@ -336,8 +336,6 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToResizing)
     state->mode(WindowManagerMode::normal);
 
     auto const container = std::make_shared<NiceMock<test::MockContainer>>();
-    EXPECT_CALL(*container, get_type())
-        .WillOnce(Return(ContainerType::regular));
     state->add(container);
     state->focus_container(container);
 
@@ -350,8 +348,6 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
     state->mode(WindowManagerMode::resizing);
 
     auto const container = std::make_shared<NiceMock<test::MockContainer>>();
-    EXPECT_CALL(*container, get_type())
-        .WillOnce(Return(ContainerType::regular));
     state->add(container);
     state->focus_container(container);
 

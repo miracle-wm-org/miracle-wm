@@ -83,7 +83,7 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
     return true;
 }
 
-void ResizeService::handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge)
+void ResizeService::handle_request_resize(std::shared_ptr<WindowContainer> const& container, MirPointerAction action, MirResizeEdge edge)
 {
     if (action == mir_pointer_action_button_down && !is_resizing)
     {

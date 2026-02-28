@@ -80,7 +80,7 @@ bool MoveService::handle_pointer_event(
         if (output_manager->focused() == nullptr)
             return false;
 
-        std::shared_ptr<Container> const intersected = output_manager->focused()->intersect(x, y);
+        auto const intersected = output_manager->focused()->intersect(x, y);
         if (!intersected)
             return false;
 

@@ -45,7 +45,7 @@ MiralOutputFactory::MiralOutputFactory(
 {
 }
 
-std::shared_ptr<OutputInterface> MiralOutputFactory::create(
+std::shared_ptr<AbstractOutput> MiralOutputFactory::create(
     std::string name, int id, mir::geometry::Rectangle area)
 {
     OutputConfigDetails raw_output_config;

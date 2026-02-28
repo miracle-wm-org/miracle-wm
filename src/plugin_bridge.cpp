@@ -16,14 +16,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_bridge.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "container.h"
 #include "leaf_container.h"
-#include "output_interface.h"
 #include "output_manager.h"
 #include "parent_container.h"
 #include "window_controller.h"
-#include "workspace_interface.h"
 #include "workspace_manager.h"
 #include <miral/application_info.h>
 #include <miral/window_info.h>
@@ -52,7 +52,7 @@ miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, mir
     };
 }
 
-miracle_workspace_t from_workspace(std::shared_ptr<WorkspaceInterface> const& workspace)
+miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     if (workspace == nullptr)
         return { .is_set = false };
@@ -67,7 +67,7 @@ miracle_workspace_t from_workspace(std::shared_ptr<WorkspaceInterface> const& wo
     };
 }
 
-miracle_output_t from_output(std::shared_ptr<OutputInterface> const& output)
+miracle_output_t from_output(std::shared_ptr<AbstractOutput> const& output)
 {
     auto const area = output->get_area();
     return {
@@ -103,7 +103,7 @@ miracle_container_t from_parent(std::shared_ptr<ParentContainer> const& containe
         .type = miracle_container_type_parent,
         .is_floating = !container->anchored(),
         .layout_scheme = static_cast<uint32_t>(from_scheme(container->get_scheme())),
-        .num_child_containers = static_cast<uint32_t>(container->num_nodes()),
+        .num_child_containers = static_cast<uint32_t>(container->num_children()),
         .internal = reinterpret_cast<uint64_t>(container.get())
     };
 }
@@ -192,7 +192,7 @@ PluginBridge::OutputResult PluginBridge::output_at(uint32_t index)
 
 PluginBridge::OutputResult PluginBridge::output_from_workspace(uint64_t workspace_id)
 {
-    auto const workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_id));
+    auto const workspace = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_id));
     return OutputResult {
         from_output(workspace->get_output()),
         workspace->get_output()->name()
@@ -201,20 +201,20 @@ PluginBridge::OutputResult PluginBridge::output_from_workspace(uint64_t workspac
 
 uint32_t PluginBridge::num_workspaces_on_output(uint64_t output_id)
 {
-    auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output_id));
+    auto const miracle_output = static_cast<AbstractOutput*>(reinterpret_cast<void*>(output_id));
     return miracle_output->get_workspaces().size();
 }
 
 PluginBridge::WorkspaceResult PluginBridge::workspace_on_output_at_index(uint64_t output_id, uint32_t index)
 {
-    auto const miracle_output = static_cast<OutputInterface*>(reinterpret_cast<void*>(output_id));
+    auto const miracle_output = static_cast<AbstractOutput*>(reinterpret_cast<void*>(output_id));
     auto const workspace = miracle_output->get_workspaces()[index];
     return { from_workspace(workspace), workspace->name() };
 }
 
 miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t index)
 {
-    auto const miracle_workspace = static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_id));
+    auto const miracle_workspace = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_id));
     auto const trees = miracle_workspace->trees();
     return from_parent(trees[index]);
 }
@@ -223,8 +223,8 @@ miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
     auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent_id));
     auto const child = parent_container->at(index);
-    if (child->get_type() == ContainerType::parent)
-        return from_parent(Container::as_parent(child));
+    if (auto const parent = Container::as_parent(child))
+        return from_parent(parent);
 
     return from_child(Container::as_leaf(child));
 }
@@ -307,9 +307,9 @@ PluginBridge::WorkspaceResult PluginBridge::active_workspace()
     return { from_workspace(workspace), workspace->name() };
 }
 
-WorkspaceInterface* PluginBridge::resolve_workspace(uint64_t workspace_internal)
+AbstractWorkspace* PluginBridge::resolve_workspace(uint64_t workspace_internal)
 {
-    return static_cast<WorkspaceInterface*>(reinterpret_cast<void*>(workspace_internal));
+    return static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_internal));
 }
 
 uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)

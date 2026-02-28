@@ -36,7 +36,7 @@ public:
         std::shared_ptr<OutputManager> const& output_manager);
 
     bool handle_pointer_event(float x, float y, MirPointerAction action);
-    void handle_request_resize(std::shared_ptr<Container> const& container, MirPointerAction action, MirResizeEdge edge);
+    void handle_request_resize(std::shared_ptr<WindowContainer> const& container, MirPointerAction action, MirResizeEdge edge);
 
 private:
     void stop();
@@ -46,7 +46,7 @@ private:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<OutputManager> output_manager;
 
-    std::weak_ptr<Container> resizing_container;
+    std::weak_ptr<WindowContainer> resizing_container;
     MirResizeEdge resize_edge = mir_resize_edge_none;
     bool is_resizing = false;
 };

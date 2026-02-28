@@ -228,7 +228,7 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
     return result;
 }
 
-void IpcCommandExecutor::apply_startup_commands_to(std::shared_ptr<Container> const& container)
+void IpcCommandExecutor::apply_startup_commands_to(std::shared_ptr<WindowContainer> const& container)
 {
     for (auto const& command : *apply_on_startup.lock())
     {

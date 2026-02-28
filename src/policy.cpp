@@ -455,14 +455,14 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
         // Get Container intersection. Depending on the state, do something with that Container
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
         switch (state->mode())
         {
         case WindowManagerMode::normal:
         {
+            auto const intersected = output_manager->focused()->intersect(x, y);
             if (intersected)
             {
-                if (auto window = intersected->window().value())
+                if (auto const window = intersected->window().value())
                 {
                     if (state->focused_container() != intersected && (config->cursor().focus_mode == CursorFocusMode::Hover || action == mir_pointer_action_button_down))
                         window_controller->select_active_window(window);
@@ -501,7 +501,7 @@ auto Policy::place_new_window(
     auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification);
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
-        hint.container_type = ContainerType::plugin;
+        hint.container_type = AllocationType::plugin;
         hint.workspace = plugin_placement->freestyle.workspace;
         hint.plugin_handle = plugin_placement->freestyle.handle;
         new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
@@ -512,7 +512,7 @@ auto Policy::place_new_window(
     {
         if (auto const delegate = shell_application_manager->delegate(app_info.application()))
             delegate->place_window(new_spec);
-        hint.container_type = ContainerType::shell;
+        hint.container_type = AllocationType::shell;
     }
     else
     {
@@ -522,17 +522,17 @@ auto Policy::place_new_window(
             || requested_specification.state() == mir_window_state_attached;
 
         if (has_exclusive_rect || is_attached || wrong_leaf_state)
-            hint.container_type = ContainerType::shell;
+            hint.container_type = AllocationType::shell;
         else
         {
             auto const t = requested_specification.type();
             if (t == mir_window_type_normal || t == mir_window_type_freestyle)
-                hint.container_type = ContainerType::regular;
+                hint.container_type = AllocationType::system;
             else
-                hint.container_type = ContainerType::shell; // This is probably a tooltip or something
+                hint.container_type = AllocationType::shell; // This is probably a tooltip or something
         }
 
-        if (hint.container_type != ContainerType::shell)
+        if (hint.container_type != AllocationType::shell)
         {
             auto parent = output_manager->focused()->active()->get_layout_container();
             std::optional<size_t> index;
@@ -542,9 +542,8 @@ auto Policy::place_new_window(
             // 2. Place the new window in the selected parent.
             if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_tiled)
             {
-                if (plugin_placement->tiled.container->is_leaf())
+                if (auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container))
                 {
-                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container);
                     if (plugin_placement->tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement->tiled.scheme))
                     {
                         parent = leaf_container->get_parent().lock().get();
@@ -582,7 +581,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     std::shared_ptr<WindowContainer> container;
     switch (pending_allocation.container_type)
     {
-    case ContainerType::regular:
+    case AllocationType::system:
     {
         assert(pending_allocation.parent);
         container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
@@ -590,7 +589,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         spec.min_height() = mir::geometry::Height(0);
         break;
     }
-    case ContainerType::plugin:
+    case AllocationType::plugin:
     {
         auto const workspace = pending_allocation.workspace
             ? pending_allocation.workspace->shared_from_this()
@@ -603,7 +602,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         workspace->add_other_container(container);
     }
     break;
-    case ContainerType::shell:
+    case AllocationType::shell:
     default:
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
         break;
@@ -618,7 +617,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
-    pending_allocation.container_type = ContainerType::none;
+    pending_allocation.container_type = AllocationType::none;
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)

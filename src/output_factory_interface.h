@@ -23,13 +23,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class OutputInterface;
+class AbstractOutput;
 
 class OutputFactoryInterface
 {
 public:
     virtual ~OutputFactoryInterface() = default;
-    virtual std::shared_ptr<OutputInterface> create(
+    virtual std::shared_ptr<AbstractOutput> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area)

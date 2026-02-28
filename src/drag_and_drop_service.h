@@ -29,7 +29,7 @@ class Config;
 class CompositorState;
 class AbstractCommandController;
 class OutputManager;
-class WorkspaceInterface;
+class AbstractWorkspace;
 
 class DragAndDropService
 {
@@ -60,7 +60,7 @@ private:
 
     void drag_to(
         std::shared_ptr<WindowContainer> const& dragging,
-        WorkspaceInterface* workspace);
+        AbstractWorkspace* workspace);
 };
 
 } // miracle

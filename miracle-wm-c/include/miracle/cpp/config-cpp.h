@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_CONFIG_H
 
 #include "animation_definition.h"
-#include "container_type.h"
 #include "cursor_focus_mode.h"
 #include "default_key_command.h"
 #include "export.h"

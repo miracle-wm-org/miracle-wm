@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_managed_container.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
-#include "output_interface.h"
 #include "window_controller.h"
-#include "workspace_interface.h"
 #include <mir/scene/surface.h>
 
 using namespace miracle;
@@ -30,11 +30,6 @@ inline glm::mat4 workspace_transform(Container const& container)
 {
     return container.get_output_transform() * container.get_workspace_transform();
 }
-}
-
-ContainerType PluginManagedContainer::get_type() const
-{
-    return ContainerType::plugin;
 }
 
 void PluginManagedContainer::show()
@@ -204,17 +199,17 @@ mir::geometry::Rectangle PluginManagedContainer::confirm_placement(
     return rectangle;
 }
 
-std::shared_ptr<WorkspaceInterface> PluginManagedContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> PluginManagedContainer::get_workspace() const
 {
     return workspace_.lock();
 }
 
-void PluginManagedContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& workspace)
+void PluginManagedContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     workspace_ = workspace;
 }
 
-std::shared_ptr<OutputInterface> PluginManagedContainer::get_output() const
+std::shared_ptr<AbstractOutput> PluginManagedContainer::get_output() const
 {
     if (auto const workspace = workspace_.lock())
         return workspace->get_output();
