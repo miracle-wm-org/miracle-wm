@@ -121,6 +121,8 @@ glm::mat4 miracle::WindowContainer::get_workspace_transform() const
 void miracle::WindowContainer::set_animation_alpha(float a)
 {
     animation_effect.alpha = a;
+    if (auto const rdm_locked = rdm.lock())
+        rdm_locked->alpha_change(render_id, a);
     rerender();
 }
 
