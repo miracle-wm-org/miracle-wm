@@ -455,14 +455,14 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
         // Get Container intersection. Depending on the state, do something with that Container
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
         switch (state->mode())
         {
         case WindowManagerMode::normal:
         {
+            auto const intersected = output_manager->focused()->intersect(x, y);
             if (intersected)
             {
-                if (auto window = intersected->window().value())
+                if (auto const window = intersected->window().value())
                 {
                     if (state->focused_container() != intersected && (config->cursor().focus_mode == CursorFocusMode::Hover || action == mir_pointer_action_button_down))
                         window_controller->select_active_window(window);
@@ -542,9 +542,8 @@ auto Policy::place_new_window(
             // 2. Place the new window in the selected parent.
             if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_tiled)
             {
-                if (plugin_placement->tiled.container->is_leaf())
+                if (auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container))
                 {
-                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container);
                     if (plugin_placement->tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement->tiled.scheme))
                     {
                         parent = leaf_container->get_parent().lock().get();

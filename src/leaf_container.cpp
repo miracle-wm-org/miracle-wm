@@ -18,14 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "leaf_container"
 
 #include "leaf_container.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "container_listener.h"
 #include "container_scope.h"
-#include "output_interface.h"
 #include "parent_container.h"
 #include "window_helpers.h"
-#include "workspace_interface.h"
 
 #include <cmath>
 #include <jpcre2.h>
@@ -45,18 +45,18 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
     // from as a hint. If the node that we want to move to has the same direction as that which we are coming
     // from, a seamless experience would mean that - at times - we select the _LAST_ node in that list, instead
     // of the first one. This makes it feel as though we are moving "across" the screen.
-    if (node->is_leaf())
-        return Container::as_leaf(node);
+    if (auto const leaf = Container::as_leaf(node))
+        return leaf;
 
     bool const is_vertical = is_vertical_direction(direction);
     bool const is_negative = is_negative_direction(direction);
     auto const lane_node = Container::as_parent(node);
-    if ((is_vertical && lane_node->get_direction() == LayoutScheme::vertical)
-        || (!is_vertical && lane_node->get_direction() == LayoutScheme::horizontal))
+    if ((is_vertical && lane_node->get_scheme() == LayoutScheme::vertical)
+        || (!is_vertical && lane_node->get_scheme() == LayoutScheme::horizontal))
     {
         if (is_negative)
         {
-            auto sub_nodes = lane_node->get_sub_nodes();
+            auto sub_nodes = lane_node->children();
             for (auto i = sub_nodes.size() - 1; i != 0; i--)
             {
                 if (auto retval = get_closest_window_to_select_from_node(sub_nodes[i], direction))
@@ -65,7 +65,7 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
         }
     }
 
-    for (auto const& sub_node : lane_node->get_sub_nodes())
+    for (auto const& sub_node : lane_node->children())
     {
         if (auto retval = get_closest_window_to_select_from_node(sub_node, direction))
             return retval;
@@ -95,16 +95,16 @@ std::shared_ptr<ParentContainer> handle_remove_container(std::shared_ptr<Contain
     if (parent == nullptr)
         return nullptr;
 
-    if (parent->num_nodes() == 1 && parent->get_parent().lock())
+    if (parent->num_children() == 1 && parent->get_parent().lock())
     {
         // Remove the entire parent if this parent is now empty
         auto prev_active = parent;
         parent = Container::as_parent(parent->get_parent().lock());
-        parent->remove(prev_active);
+        parent->remove_child(prev_active);
     }
     else
     {
-        parent->remove(container);
+        parent->remove_child(container);
     }
 
     return parent;
@@ -118,7 +118,7 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
     auto to_update = handle_remove_container(node);
     auto target_parent = Container::as_parent(to->get_parent().lock());
     auto const index = target_parent->get_index_of_node(to).value();
-    target_parent->graft_existing(node, static_cast<int>(index + 1));
+    target_parent->add_child(node, index + 1);
     node->set_workspace(target_parent->get_workspace());
 
     return { target_parent, to_update };
@@ -128,8 +128,7 @@ inline bool needs_outline(Container const& container)
 {
     auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
     container.window().value();
-    return (container.get_type() == ContainerType::regular)
-        && (surface == nullptr || !surface->parent());
+    return surface == nullptr || !surface->parent();
 }
 
 inline glm::mat4 workspace_transform(Container const& container)
@@ -139,7 +138,7 @@ inline glm::mat4 workspace_transform(Container const& container)
 }
 
 LeafContainer::LeafContainer(
-    std::shared_ptr<WorkspaceInterface> const& workspace,
+    std::shared_ptr<AbstractWorkspace> const& workspace,
     std::shared_ptr<WindowController> const& window_controller,
     geom::Rectangle area,
     std::shared_ptr<Config> const& config,
@@ -557,24 +556,24 @@ void LeafContainer::toggle_layout(bool cycle_thru_all)
     }
 
     if (cycle_thru_all)
-        handle_layout_scheme(this, get_next_layout(sh_parent->get_direction()));
+        handle_layout_scheme(this, get_next_layout(sh_parent->get_scheme()));
     else
     {
-        if (sh_parent->get_direction() == LayoutScheme::horizontal)
+        if (sh_parent->get_scheme() == LayoutScheme::horizontal)
             handle_layout_scheme(this, LayoutScheme::vertical);
-        else if (sh_parent->get_direction() == LayoutScheme::vertical)
+        else if (sh_parent->get_scheme() == LayoutScheme::vertical)
             handle_layout_scheme(this, LayoutScheme::horizontal);
         else
             mir::log_error("Parent with stack layout scheme cannot be toggled");
     }
 }
 
-std::shared_ptr<WorkspaceInterface> LeafContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> LeafContainer::get_workspace() const
 {
     return workspace.lock();
 }
 
-void LeafContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& in)
+void LeafContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& in)
 {
     workspace = in;
 
@@ -584,7 +583,7 @@ void LeafContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& in)
     set_workspace_transform(in->transform());
 }
 
-std::shared_ptr<OutputInterface> LeafContainer::get_output() const
+std::shared_ptr<AbstractOutput> LeafContainer::get_output() const
 {
     if (workspace.expired())
         return nullptr;
@@ -658,11 +657,6 @@ bool LeafContainer::is_focused() const
     return false;
 }
 
-ContainerType LeafContainer::get_type() const
-{
-    return ContainerType::regular;
-}
-
 bool LeafContainer::select_next(Direction direction)
 {
     if (is_fullscreen())
@@ -702,7 +696,7 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
 
     do
     {
-        auto grandparent_direction = parent->get_direction();
+        auto grandparent_direction = parent->get_scheme();
         auto index = parent->get_index_of_node(current_node).value();
         if ((is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking))
             || (!is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing)))
@@ -714,7 +708,7 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
             }
             else
             {
-                if (index < parent->num_nodes() - 1)
+                if (index < parent->num_children() - 1)
                     return get_closest_window_to_select_from_node(parent->at(index + 1), direction);
             }
         }
@@ -794,7 +788,7 @@ bool LeafContainer::toggle_tabbing()
 {
     if (auto sh_parent = parent.lock())
     {
-        if (sh_parent->get_direction() == LayoutScheme::tabbing)
+        if (sh_parent->get_scheme() == LayoutScheme::tabbing)
             request_horizontal_layout();
         else
             handle_layout_scheme(this, LayoutScheme::tabbing);
@@ -806,7 +800,7 @@ bool LeafContainer::toggle_stacking()
 {
     if (auto sh_parent = parent.lock())
     {
-        if (sh_parent->get_direction() == LayoutScheme::stacking)
+        if (sh_parent->get_scheme() == LayoutScheme::stacking)
             request_horizontal_layout();
         else
             handle_layout_scheme(this, LayoutScheme::stacking);
@@ -891,9 +885,9 @@ void LeafContainer::handle_layout_scheme(Container* container, LayoutScheme sche
     // If the parent already has more than just [container] as a child AND
     // the parent is NOT a tabbing/stacking parent, then we create a new parent for this
     // single [container].
-    if (parent->num_nodes() > 1
-        && parent->get_direction() != LayoutScheme::tabbing
-        && parent->get_direction() != LayoutScheme::stacking)
+    if (parent->num_children() > 1
+        && parent->get_scheme() != LayoutScheme::tabbing
+        && parent->get_scheme() != LayoutScheme::stacking)
         parent = parent->convert_to_parent(container->shared_from_this());
 
     parent->set_layout(scheme);
@@ -905,7 +899,7 @@ LayoutScheme LeafContainer::get_layout() const
     if (!sh_parent)
         return LayoutScheme::none;
 
-    if (sh_parent->num_nodes() == 1)
+    if (sh_parent->num_children() == 1)
         return sh_parent->get_layout();
 
     return LayoutScheme::none;

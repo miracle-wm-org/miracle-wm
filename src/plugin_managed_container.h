@@ -53,7 +53,6 @@ public:
     geom::Rectangle get_visible_area() const override;
     void constrain() override;
     std::weak_ptr<ParentContainer> get_parent() const override;
-    ContainerType get_type() const override;
     void commit_changes() override;
     void set_parent(const std::shared_ptr<ParentContainer>&) override;
     size_t get_min_height() const override;
@@ -74,9 +73,9 @@ public:
     void on_move_to(const geom::Point& top_left) override;
     void on_resize(const geom::Size& size) override;
     mir::geometry::Rectangle confirm_placement(MirWindowState, const mir::geometry::Rectangle&) override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(const std::shared_ptr<WorkspaceInterface>&) override;
-    std::shared_ptr<OutputInterface> get_output() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(const std::shared_ptr<AbstractWorkspace>&) override;
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void set_workspace_transform(const glm::mat4& transform) override;
@@ -120,7 +119,7 @@ private:
     std::optional<MirWindowState> cached;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
-    std::weak_ptr<WorkspaceInterface> workspace_;
+    std::weak_ptr<AbstractWorkspace> workspace_;
     float alpha_ = 1.f;
     glm::mat4 transform_ = glm::mat4(1.f);
     glm::mat4 workspace_transform_ = glm::mat4(1.f);

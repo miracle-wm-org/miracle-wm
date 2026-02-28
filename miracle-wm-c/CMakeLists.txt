@@ -11,8 +11,7 @@ add_library(miracle-wm-c
     SHARED
     src/config-cpp.cpp include/miracle/cpp/config-cpp.h
     include/miracle/cpp/animation_definition.h
-    include/miracle/cpp/container_type.h
-    include/miracle/cpp/default_key_command.h
+        include/miracle/cpp/default_key_command.h
     include/miracle/cpp/cursor_focus_mode.h
     include/miracle/cpp/modifiers.h
     src/config-c.cpp include/miracle/config.h

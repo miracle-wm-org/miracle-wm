@@ -18,15 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_OBSERVER_H
 #define MIRACLEWM_WORKSPACE_OBSERVER_H
 
+#include "abstract_output.h"
 #include "observer_registrar.h"
-#include "output_interface.h"
 #include <memory>
 #include <mir/executor.h>
 
 namespace miracle
 {
 
-class OutputInterface;
+class AbstractOutput;
 
 class WorkspaceObserver
 {

@@ -98,7 +98,7 @@ protected:
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<test::MockWorkspace> workspace;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     std::shared_ptr<test::MockOutput> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     std::shared_ptr<test::MockParentContainer> parent;
     std::shared_ptr<LeafContainer> leaf_container;

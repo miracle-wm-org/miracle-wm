@@ -120,14 +120,10 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
         if (output_manager->focused() == nullptr)
             return false;
 
-        auto intersected_container = output_manager->focused()->intersect(x, y);
-        if (!intersected_container)
-            return false;
-
-        auto intersected = Container::as_window_container(intersected_container);
+        auto const intersected = output_manager->focused()->intersect(x, y);
         if (!intersected || !intersected->drag_start())
         {
-            mir::log_warning("Cannot drag container of type %d", (int)intersected_container->get_type());
+            mir::log_warning("Cannot drag container");
             return false;
         }
 
@@ -166,7 +162,7 @@ void DragAndDropService::drag_to(
 
 void DragAndDropService::drag_to(
     std::shared_ptr<WindowContainer> const& dragging,
-    WorkspaceInterface* workspace)
+    AbstractWorkspace* workspace)
 {
     if (dragging->get_workspace().get() == workspace)
         return;

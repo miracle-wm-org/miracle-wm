@@ -41,25 +41,19 @@ class Config;
 class LeafContainer;
 class ParentContainer;
 class WindowContainer;
-class WorkspaceInterface;
-class OutputInterface;
+class AbstractWorkspace;
+class AbstractOutput;
 class ContainerScope;
 class ContainerListener;
 
-ContainerType container_type_from_string(std::string const& str);
-
 /// A generic container.
 ///
-/// Aligns generally with i3's concept of containers. A [Container] may map to
-/// an individual [miral::Window] or it may not. You can think of a [Container]
-/// as a logical rectangle on a [Workspace] upon which you can perform some
-/// actions. Depending on the type of [Container], particular actions may
-/// result in noops.
+/// Aligns generally with i3's concept of containers. A container is a logical
+/// rectangle on the workspace that may be shown or hidden.
 class Container : public std::enable_shared_from_this<Container>, public ObserverRegistrar<ContainerListener>
 {
 public:
     ~Container() override = default;
-    virtual ContainerType get_type() const = 0;
 
     /// Show the container.
     virtual void show() = 0;
@@ -84,13 +78,6 @@ public:
     /// \param with_animations whether or not to animate the change
     virtual void set_logical_area(geom::Rectangle const& area, bool with_animations) = 0;
 
-    /// Retrieve the visible area of the container.
-    ///
-    /// This area may be different from the logical area and be used to clip it.
-    ///
-    /// \returns the visible area
-    [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
-
     /// Constrain the container to its current visible area.
     ///
     /// TODO: Can we remove this?
@@ -113,9 +100,9 @@ public:
     virtual void request_vertical_layout() = 0;
     virtual void toggle_layout(bool cycle_thru_all) = 0;
     virtual void on_focus_gained() = 0;
-    virtual std::shared_ptr<WorkspaceInterface> get_workspace() const = 0;
-    virtual void set_workspace(std::shared_ptr<WorkspaceInterface> const&) = 0;
-    virtual std::shared_ptr<OutputInterface> get_output() const = 0;
+    virtual std::shared_ptr<AbstractWorkspace> get_workspace() const = 0;
+    virtual void set_workspace(std::shared_ptr<AbstractWorkspace> const&) = 0;
+    virtual std::shared_ptr<AbstractOutput> get_output() const = 0;
 
     /// Retrieve the current transform of this node.
     ///
@@ -158,13 +145,9 @@ public:
     virtual void unmark_all();
     virtual std::vector<std::string> const& get_marks() const;
     virtual LayoutScheme get_layout() const = 0;
-    virtual bool matches(ContainerScope const&) const = 0;
     virtual nlohmann::json to_json(bool is_workspace_visible) const = 0;
 
-    bool is_leaf();
-    bool is_lane();
     [[nodiscard]] float get_percent_of_parent() const;
-
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
     static std::shared_ptr<WindowContainer> as_window_container(std::shared_ptr<Container> const&);

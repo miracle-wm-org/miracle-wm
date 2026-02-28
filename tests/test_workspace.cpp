@@ -50,7 +50,7 @@ const geom::Rectangle OTHER_OUTPUT_SIZE {
     geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT)
 };
 
-std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
 std::vector<miral::Zone> empty_app_zones;
 
 std::shared_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
@@ -93,7 +93,7 @@ public:
 
     std::shared_ptr<LeafContainer> create_leaf(
         std::optional<std::shared_ptr<ParentContainer>> parent = std::nullopt,
-        WorkspaceInterface* target_workspace = nullptr)
+        AbstractWorkspace* target_workspace = nullptr)
     {
         if (target_workspace == nullptr)
             target_workspace = workspace.get();

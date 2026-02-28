@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_PARENT_NODE_H
 #define MIRACLEWM_PARENT_NODE_H
 
-#include "container.h"
+#include "collection_container.h"
 #include "layout_scheme.h"
 #include "mir/geometry/forward.h"
 #include "shell_application_manager.h"
@@ -38,7 +38,7 @@ class CompositorState;
 class OutputManager;
 
 /// A parent container used to define the layout of containers beneath it.
-class ParentContainer : public Container
+class ParentContainer : public CollectionContainer
 {
 public:
     ParentContainer(
@@ -47,36 +47,15 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
         geom::Rectangle area,
-        std::shared_ptr<WorkspaceInterface> const& workspace,
+        std::shared_ptr<AbstractWorkspace> const& workspace,
         std::shared_ptr<ParentContainer> const& parent,
         bool is_anchored);
     ~ParentContainer() override;
-    virtual geom::Rectangle get_area() const;
-    geom::Rectangle get_logical_area() const override;
-    geom::Rectangle get_visible_area() const override;
-    virtual size_t num_nodes() const;
-    miral::WindowSpecification place_new_window(
-        miral::WindowSpecification const& requested_specification,
-        std::optional<size_t> index);
-    std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
-    std::shared_ptr<Container> confirm_window(miral::Window const&);
-    void graft_existing(std::shared_ptr<Container> const& node, int index);
-    std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
-    void set_logical_area(geom::Rectangle const& target_rect, bool with_animations = true) override;
 
-    /// Swaps two containers within this parent. Both containers MUST have this parent as their direct
-    /// ancestor or else nothing happens.
-    void swap_within_container(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
-    void remove(std::shared_ptr<Container> const& node);
+    // Container
+    geom::Rectangle get_logical_area() const override;
+    void set_logical_area(geom::Rectangle const& target_rect, bool with_animations) override;
     void commit_changes() override;
-    std::shared_ptr<Container> at(size_t i) const;
-    std::shared_ptr<LeafContainer> get_nth_window(size_t i) const;
-    std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
-    LayoutScheme get_direction() { return scheme; }
-    std::vector<std::shared_ptr<Container>> const& get_sub_nodes() const;
-    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const* node) const;
-    [[nodiscard]] std::optional<size_t> get_index_of_node(std::shared_ptr<Container> const& node) const;
-    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const&) const;
     void constrain() override;
     size_t get_min_width() const override;
     size_t get_min_height() const override;
@@ -88,12 +67,11 @@ public:
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
     void on_focus_gained() override;
-    ContainerType get_type() const override;
     void show() override;
     void hide() override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(std::shared_ptr<WorkspaceInterface> const& workspace) override;
-    std::shared_ptr<OutputInterface> get_output() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace) override;
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void set_workspace_transform(glm::mat4 const&) override;
@@ -117,9 +95,29 @@ public:
     ScratchpadState scratchpad_state() const override;
     void scratchpad_state(ScratchpadState) override;
     LayoutScheme get_layout() const override;
-    bool matches(ContainerScope const&) const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
+
+    // CollectionContainer
+    void remove_child(std::shared_ptr<Container> const& container) override;
+    void add_child(std::shared_ptr<Container> const& container, size_t index) override;
+    std::vector<std::shared_ptr<Container>> const& children() const override;
+
+    // Parent
+    miral::WindowSpecification place_new_window(
+        miral::WindowSpecification const& requested_specification,
+        std::optional<size_t> index);
+    std::shared_ptr<Container> confirm_window(miral::Window const&);
+    std::shared_ptr<ParentContainer> convert_to_parent(std::shared_ptr<Container> const& container);
+    /// Swaps two containers within this parent. Both containers MUST have this parent as their direct
+    /// ancestor or else nothing happens.
+    void swap_within_container(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
+    std::shared_ptr<LeafContainer> get_nth_window(size_t i) const;
+    std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
     [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
+    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const* node) const;
+    [[nodiscard]] std::optional<size_t> get_index_of_node(std::shared_ptr<Container> const& node) const;
+    [[nodiscard]] std::optional<size_t> get_index_of_node(Container const&) const;
+
     static void swap(
         std::shared_ptr<ParentContainer> const& first_parent,
         size_t first_index,
@@ -147,7 +145,7 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     geom::Rectangle logical_area;
-    std::weak_ptr<WorkspaceInterface> workspace;
+    std::weak_ptr<AbstractWorkspace> workspace;
     LayoutScheme scheme = LayoutScheme::horizontal;
 
     /// Whether this parent container is anchored to the workspace and cannot be moved.
@@ -162,6 +160,7 @@ private:
     std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
 
     geom::Rectangle create_space(std::optional<size_t> index);
+    std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);
     void relayout();
     void raise_children();
     void update_background_client_area();

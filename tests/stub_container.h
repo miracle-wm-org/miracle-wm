@@ -27,11 +27,6 @@ namespace test
     class StubContainer : public WindowContainer
     {
     public:
-        ContainerType get_type() const override
-        {
-            return ContainerType::parent;
-        }
-
         void show() override
         {
         }
@@ -149,16 +144,16 @@ namespace test
             return {};
         }
 
-        std::shared_ptr<WorkspaceInterface> get_workspace() const override
+        std::shared_ptr<AbstractWorkspace> get_workspace() const override
         {
             return nullptr;
         }
 
-        void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override
+        void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override
         {
         }
 
-        std::shared_ptr<OutputInterface> get_output() const override
+        std::shared_ptr<AbstractOutput> get_output() const override
         {
             return nullptr;
         }

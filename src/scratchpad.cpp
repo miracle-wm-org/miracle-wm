@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "scratchpad"
 
 #include "scratchpad.h"
+#include "abstract_output.h"
 #include "container.h"
 #include "geometry_helpers.h"
-#include "output_interface.h"
 #include "output_manager.h"
 #include "scratchpad_state.h"
 
@@ -36,12 +36,6 @@ Scratchpad::Scratchpad(std::shared_ptr<WindowController> const& window_controlle
 
 bool Scratchpad::move_to(std::shared_ptr<Container> const& container)
 {
-    if (container->get_type() != ContainerType::regular)
-    {
-        mir::log_error("try_move_to_scratchpad: cannot move window to scratchpad: %d", static_cast<int>(container->get_type()));
-        return false;
-    }
-
     // Remove it from its current workspace since it is no longer wanted there
     if (auto workspace = container->get_workspace())
         workspace->delete_container(container);

@@ -160,12 +160,12 @@ ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::
     return rectangle;
 }
 
-std::shared_ptr<WorkspaceInterface> ShellComponentContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> ShellComponentContainer::get_workspace() const
 {
     return nullptr;
 }
 
-std::shared_ptr<OutputInterface> ShellComponentContainer::get_output() const
+std::shared_ptr<AbstractOutput> ShellComponentContainer::get_output() const
 {
     return nullptr;
 }
@@ -219,11 +219,6 @@ void ShellComponentContainer::animation_handle(uint32_t handle)
 bool ShellComponentContainer::is_focused() const
 {
     return true;
-}
-
-ContainerType ShellComponentContainer::get_type() const
-{
-    return ContainerType::shell;
 }
 
 void ShellComponentContainer::on_open()

@@ -31,7 +31,7 @@ class CompositorState;
 class Container;
 class OutputManager;
 class WindowController;
-class WorkspaceInterface;
+class AbstractWorkspace;
 class WorkspaceManager;
 
 template <typename T>
@@ -109,7 +109,7 @@ public:
     Container* resolve_container(uint64_t container_internal);
 
     /// Retrieve the workspace from its id.
-    WorkspaceInterface* resolve_workspace(uint64_t workspace_internal);
+    AbstractWorkspace* resolve_workspace(uint64_t workspace_internal);
 
 private:
     /// This is the information expected to be on a #miracle_window_info_t.

@@ -57,6 +57,14 @@ public:
     virtual bool drag_start() = 0;
     virtual bool drag_stop() = 0;
     virtual void drag(int x, int y) = 0;
+
+    /// Retrieve the visible area of the container.
+    ///
+    /// This area may be different from the logical area and be used to clip it.
+    ///
+    /// \returns the visible area
+    [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
+    virtual bool matches(ContainerScope const&) const = 0;
 };
 
 } // namespace miracle

@@ -43,7 +43,7 @@ class LeafContainer : public WindowContainer
 {
 public:
     LeafContainer(
-        std::shared_ptr<WorkspaceInterface> const& workspace,
+        std::shared_ptr<AbstractWorkspace> const& workspace,
         std::shared_ptr<WindowController> const& window_controller,
         geom::Rectangle area,
         std::shared_ptr<Config> const& config,
@@ -83,9 +83,9 @@ public:
     void commit_changes() override;
     void show() override;
     void hide() override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override;
-    std::shared_ptr<OutputInterface> get_output() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override;
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_transform() const override;
     void set_transform(glm::mat4 transform) override;
     void set_workspace_transform(glm::mat4 const&) override;
@@ -94,7 +94,6 @@ public:
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
-    ContainerType get_type() const override;
     bool select_next(Direction) override;
     bool pinned() const override;
     bool pinned(bool) override;
@@ -122,7 +121,7 @@ public:
     static MirDepthLayer get_depth_layer(bool is_fullscreen, bool is_anchored);
 
 private:
-    std::weak_ptr<WorkspaceInterface> workspace;
+    std::weak_ptr<AbstractWorkspace> workspace;
     std::shared_ptr<WindowController> window_controller;
     geom::Rectangle logical_area;
     std::optional<geom::Rectangle> next_logical_area;

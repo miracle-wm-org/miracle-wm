@@ -28,7 +28,6 @@ namespace test
     class MockContainer : public WindowContainer
     {
     public:
-        MOCK_METHOD(ContainerType, get_type, (), (const, override));
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, commit_changes, (), (override));
@@ -56,9 +55,9 @@ namespace test
         MOCK_METHOD(void, on_move_to, (geom::Point const&), (override));
         MOCK_METHOD(void, on_resize, (geom::Size const&), (override));
         MOCK_METHOD(mir::geometry::Rectangle, confirm_placement, (MirWindowState, mir::geometry::Rectangle const&), (override));
-        MOCK_METHOD(std::shared_ptr<WorkspaceInterface>, get_workspace, (), (const, override));
-        MOCK_METHOD(void, set_workspace, (std::shared_ptr<WorkspaceInterface> const&), (override));
-        MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<AbstractWorkspace>, get_workspace, (), (const, override));
+        MOCK_METHOD(void, set_workspace, (std::shared_ptr<AbstractWorkspace> const&), (override));
+        MOCK_METHOD(std::shared_ptr<AbstractOutput>, get_output, (), (const, override));
         MOCK_METHOD(glm::mat4, get_transform, (), (const, override));
         MOCK_METHOD(void, set_transform, (glm::mat4), (override));
         MOCK_METHOD(void, set_workspace_transform, (glm::mat4 const&), (override));

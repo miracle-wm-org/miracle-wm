@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-
+class WindowContainer;
 class AbstractCommandController;
 class Launcher;
 class WindowController;
@@ -72,7 +72,7 @@ public:
     virtual std::vector<IpcValidationResult> process(IpcParseResult const&) = 0;
 
     /// Applies any startup commands to the [container] if any exist.
-    virtual void apply_startup_commands_to(std::shared_ptr<Container> const& container) = 0;
+    virtual void apply_startup_commands_to(std::shared_ptr<WindowContainer> const& container) = 0;
 };
 
 /// Processes all commands coming from i3 IPC. This class is mostly for organizational
@@ -84,7 +84,7 @@ public:
         std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<Launcher> const&);
     std::vector<IpcValidationResult> process(IpcParseResult const&) override;
-    void apply_startup_commands_to(std::shared_ptr<Container> const& container) override;
+    void apply_startup_commands_to(std::shared_ptr<WindowContainer> const& container) override;
 
 private:
     std::shared_ptr<AbstractCommandController> command_controller;
