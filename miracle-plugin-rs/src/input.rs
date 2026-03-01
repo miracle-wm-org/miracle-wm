@@ -429,3 +429,21 @@ pub struct KeyboardEvent {
     /// The modifiers held during this event.
     pub modifiers: InputEventModifiers,
 }
+
+/// A pointer event.
+pub struct PointerEvent {
+    /// The x position of the pointer.
+    pub x: f32,
+
+    /// The y position of the pointer.
+    pub y: f32,
+
+    /// The pointer action.
+    pub action: PointerAction,
+
+    /// The modifiers held during the event.
+    pub modifiers: InputEventModifiers,
+
+    /// The buttons held during the event.
+    pub buttons: PointerButtons,
+}

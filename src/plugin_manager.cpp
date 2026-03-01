@@ -1446,6 +1446,77 @@ bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
     return false;
 }
 
+bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
+{
+    std::lock_guard lock(mutex);
+
+    miracle_pointer_event_t const pointer_event = {
+        .x = miral::toolkit::mir_pointer_event_axis_value(&event, MirPointerAxis::mir_pointer_axis_x),
+        .y = miral::toolkit::mir_pointer_event_axis_value(&event, MirPointerAxis::mir_pointer_axis_y),
+        .action = static_cast<uint32_t>(miral::toolkit::mir_pointer_event_action(&event)),
+        .modifiers = static_cast<uint32_t>(miral::toolkit::mir_pointer_event_modifiers(&event)),
+        .buttons = static_cast<uint32_t>(mir_pointer_event_buttons(&event)),
+    };
+
+    for (auto const& module : self->loaded_modules)
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr event_ptr = 0;
+
+        uint8_t event_buffer[sizeof(miracle_pointer_event_t)];
+        std::memcpy(event_buffer, &pointer_event, sizeof(pointer_event));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            event_buffer,
+            event_ptr,
+            sizeof(event_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write pointer_event to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        WasmEdge_Value params[1];
+        params[0] = WasmEdge_ValueGenI32(event_ptr);
+
+        auto const func_name = WasmEdge_StringCreateByCString("handle_pointer_event");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        WasmEdge_Value returns[1];
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            1,
+            returns,
+            1);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'handle_pointer_event' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        if (WasmEdge_ValueGetI32(returns[0]) != 0)
+            return true;
+    }
+
+    return false;
+}
+
 PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, PluginHandle plugin_handle)
 {
     PluginWindowPlacement result;

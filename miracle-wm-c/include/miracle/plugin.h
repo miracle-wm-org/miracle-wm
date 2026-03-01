@@ -414,6 +414,27 @@ extern "C"
         uint32_t modifiers;
     } miracle_keyboard_event_t;
 
+    /// Describes a pointer event.
+    typedef struct
+    {
+        /// The x position of the pointer.
+        float x;
+
+        /// The y position of the pointer.
+        float y;
+
+        /// The pointer action.
+        ///
+        /// This is one of the MirPointerAction values.
+        uint32_t action;
+
+        /// The modifiers held during the event.
+        uint32_t modifiers;
+
+        /// The buttons held during the event.
+        uint32_t buttons;
+    } miracle_pointer_event_t;
+
     /// Set the state of a plugin-managed window.
     ///
     /// \param window_internal the internal pointer from #miracle_window_info_t::internal

@@ -1,4 +1,4 @@
-use crate::input::KeyboardEvent;
+use crate::input::{KeyboardEvent, PointerEvent};
 use crate::placement::Placement;
 use crate::window::{PluginWindow, WindowInfo};
 
@@ -71,6 +71,15 @@ pub trait Plugin {
     /// handler in Miracle. If the plugin returns `true`, then the event is
     /// consumed by the plugin.
     fn handle_keyboard_input(&mut self, _event: KeyboardEvent) -> bool {
+        false
+    }
+
+    /// Handle a pointer event.
+    ///
+    /// If the plugin returns `false`, the event is propagated to the next
+    /// handler in Miracle. If the plugin returns `true`, then the event is
+    /// consumed by the plugin.
+    fn handle_pointer_event(&mut self, _event: PointerEvent) -> bool {
         false
     }
 
@@ -521,6 +530,31 @@ macro_rules! miracle_plugin {
             };
 
             if plugin.handle_keyboard_input(event) { 1 } else { 0 }
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn handle_pointer_event(event_ptr: i32) -> i32 {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return 0,
+                }
+            };
+
+            let c_event = unsafe {
+                &*(event_ptr as *const $crate::bindings::miracle_pointer_event_t)
+            };
+
+            let event = $crate::input::PointerEvent {
+                x: c_event.x,
+                y: c_event.y,
+                action: $crate::input::PointerAction::try_from(c_event.action)
+                    .unwrap_or_default(),
+                modifiers: $crate::input::InputEventModifiers::from(c_event.modifiers),
+                buttons: $crate::input::PointerButtons::from(c_event.buttons),
+            };
+
+            if plugin.handle_pointer_event(event) { 1 } else { 0 }
         }
     };
 }
