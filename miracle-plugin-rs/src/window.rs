@@ -1,8 +1,9 @@
 use super::application::*;
 use super::bindings;
-use super::core::*;
+use super::core::{self, *};
 use super::host::*;
 use super::workspace::*;
+use glam::Mat4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u32)]
@@ -240,6 +241,10 @@ pub struct WindowInfo {
     pub depth_layer: DepthLayer,
     /// The name of the window.
     pub name: String,
+    /// The 4x4 transform matrix of the window (column-major).
+    pub transform: Mat4,
+    /// The alpha (opacity) of the window.
+    pub alpha: f32,
     /// Internal pointer for C interop.
     internal: u64,
 }
@@ -257,6 +262,8 @@ impl WindowInfo {
             size: value.size.into(),
             depth_layer: DepthLayer::try_from(value.depth_layer).unwrap_or_default(),
             name,
+            transform: core::mat4_from_f32_array(value.transform),
+            alpha: value.alpha,
             internal: value.internal,
         }
     }

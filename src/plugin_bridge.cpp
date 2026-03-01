@@ -23,8 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "window_container.h"
 #include "window_controller.h"
 #include "workspace_manager.h"
+#include <glm/gtc/type_ptr.hpp>
 #include <miral/application_info.h>
 #include <miral/window_info.h>
 
@@ -119,16 +121,26 @@ miracle_container_t from_child(std::shared_ptr<LeafContainer> const& container)
     };
 }
 
-miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t internal)
+miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t internal, miracle::WindowContainer* container = nullptr)
 {
-    return {
+    glm::mat4 transform(1.f);
+    float alpha = 1.f;
+    if (container)
+    {
+        transform = container->get_window_transform();
+        alpha = container->get_window_alpha();
+    }
+    miracle_window_info_t result {
         .window_type = window_info.type(),
         .state = window_info.state(),
         .top_left = from_point(window_info.window().top_left()),
         .size = from_size(window_info.window().size()),
         .depth_layer = window_info.depth_layer(),
-        .internal = internal
+        .internal = internal,
+        .alpha = alpha
     };
+    std::memcpy(result.transform, glm::value_ptr(transform), sizeof(float) * 16);
+    return result;
 }
 }
 
@@ -239,7 +251,7 @@ PluginBridge::WindowResult PluginBridge::get_window(uint64_t container_address)
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window);
     plugin_window_infos.push_back(plugin_window_info);
     return {
-        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get())),
+        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window).get()),
         window_info.name()
     };
 }
@@ -248,12 +260,18 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
 {
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, spec);
     plugin_window_infos.push_back(plugin_window_info);
-    return PluginBridgeObjectHandle<miracle_window_info_t>({ .window_type = spec.type().value_or(mir_window_type_normal),
-                                                               .state = spec.state().value_or(mir_window_state_restored),
-                                                               .top_left = from_point(spec.top_left().value_or(geom::Point())),
-                                                               .size = from_size(spec.size().value_or(geom::Size(800, 600))),
-                                                               .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
-                                                               .internal = reinterpret_cast<uint64_t>(plugin_window_info.get()) },
+    miracle_window_info_t info {
+        .window_type = spec.type().value_or(mir_window_type_normal),
+        .state = spec.state().value_or(mir_window_state_restored),
+        .top_left = from_point(spec.top_left().value_or(geom::Point())),
+        .size = from_size(spec.size().value_or(geom::Size(800, 600))),
+        .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
+        .internal = reinterpret_cast<uint64_t>(plugin_window_info.get()),
+        .alpha = 1.f
+    };
+    glm::mat4 identity(1.f);
+    std::memcpy(info.transform, glm::value_ptr(identity), sizeof(float) * 16);
+    return PluginBridgeObjectHandle<miracle_window_info_t>(std::move(info),
         [this, plugin_window_info = plugin_window_info]
     {
         std::erase(plugin_window_infos, plugin_window_info);
@@ -266,7 +284,7 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::existing_window_in
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window_info.window());
     plugin_window_infos.push_back(plugin_window_info);
     return PluginBridgeObjectHandle<miracle_window_info_t>(
-        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get())),
+        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window_info.window()).get()),
         [this, plugin_window_info = plugin_window_info]
     {
         std::erase(plugin_window_infos, plugin_window_info);
@@ -360,7 +378,7 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
             auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window.value());
             plugin_window_infos.push_back(plugin_window_info);
             return {
-                from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get())),
+                from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window.value()).get()),
                 window_info.name()
             };
         }

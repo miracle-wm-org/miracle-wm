@@ -169,6 +169,16 @@ extern "C"
         ///
         /// Please do not use unless you plan to be very sneaky!
         uint64_t internal;
+
+        /// The 4x4 transform matrix of the window (column-major).
+        ///
+        /// Defaults to the identity matrix.
+        float transform[16];
+
+        /// The alpha (opacity) of the window.
+        ///
+        /// Defaults to 1.0 (fully opaque).
+        float alpha;
     } miracle_window_info_t;
 
     /// The type of the container.

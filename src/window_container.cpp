@@ -93,6 +93,11 @@ glm::mat4 miracle::WindowContainer::get_window_transform() const
     return window_effect.transform;
 }
 
+float miracle::WindowContainer::get_window_alpha() const
+{
+    return window_effect.alpha;
+}
+
 void miracle::WindowContainer::set_window_transform(glm::mat4 const& t)
 {
     window_effect.transform = t;

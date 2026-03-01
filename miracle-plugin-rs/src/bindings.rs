@@ -342,6 +342,10 @@ pub struct miracle_window_info_t {
     pub depth_layer: MirDepthLayer,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
     pub internal: u64,
+    #[doc = " The 4x4 transform matrix of the window (column-major).\n\n Defaults to the identity matrix."]
+    pub transform: [f32; 16usize],
+    #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
+    pub alpha: f32,
 }
 impl Default for miracle_window_info_t {
     fn default() -> Self {
