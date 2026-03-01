@@ -82,6 +82,9 @@ public:
     /// Get the window transform.
     glm::mat4 get_window_transform() const;
 
+    /// Get the window-level alpha (does not include animation or workspace effects).
+    float get_window_alpha() const;
+
     /// Set the transformation on the window.
     ///
     /// This transformation is applied before the animation transform.
