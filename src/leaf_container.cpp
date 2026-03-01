@@ -123,18 +123,6 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
 
     return { target_parent, to_update };
 }
-
-inline bool needs_outline(Container const& container)
-{
-    auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
-    container.window().value();
-    return surface == nullptr || !surface->parent();
-}
-
-inline glm::mat4 workspace_transform(Container const& container)
-{
-    return container.get_output_transform() * container.get_workspace_transform();
-}
 }
 
 LeafContainer::LeafContainer(
@@ -144,6 +132,7 @@ LeafContainer::LeafContainer(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<ParentContainer> const& parent,
     std::shared_ptr<CompositorState> const& state) :
+    WindowContainer(state->render_data_manager()),
     workspace { workspace },
     window_controller { window_controller },
     logical_area { std::move(area) },
@@ -151,26 +140,6 @@ LeafContainer::LeafContainer(
     parent { parent },
     state { state }
 {
-}
-
-LeafContainer::~LeafContainer()
-{
-    state->render_data_manager()->remove(id);
-}
-
-void LeafContainer::associate_to_window(miral::Window const& in_window)
-{
-    window_ = in_window;
-    id = state->render_data_manager()->add({
-        RenderData {
-                    .surface = window()->operator std::shared_ptr<mir::scene::Surface>().get(),
-                    .needs_outline = needs_outline(*this),
-                    .is_focused = is_focused(),
-                    .transform = get_transform(),
-                    .workspace_transform = workspace_transform(*this),
-                    .workspace_alpha = workspace.expired() ? 1.f : workspace.lock()->alpha(),
-                    .output_area = get_output()->get_area() }
-    });
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
@@ -460,18 +429,6 @@ void LeafContainer::on_open()
     window_controller->open(window_);
 }
 
-void LeafContainer::on_focus_gained()
-{
-    if (auto sh_parent = parent.lock())
-        sh_parent->on_focus_gained();
-    state->render_data_manager()->focus_change(id, true);
-}
-
-void LeafContainer::on_focus_lost()
-{
-    state->render_data_manager()->focus_change(id, false);
-}
-
 void LeafContainer::on_move_to(geom::Point const&)
 {
 }
@@ -496,7 +453,7 @@ void LeafContainer::commit_changes()
 
         window_controller->change_state(window_, next_state.value());
 
-        state->render_data_manager()->needs_outline_change(id, next_state != mir_window_state_fullscreen);
+        state->render_data_manager()->needs_outline_change(render_id, next_state != mir_window_state_fullscreen);
         next_state.reset();
         constrain();
     }
@@ -578,7 +535,7 @@ void LeafContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& in)
     workspace = in;
 
     state->render_data_manager()->output_area_change(
-        id,
+        render_id,
         workspace.lock()->get_output()->get_area());
     set_workspace_transform(in->transform());
 }
@@ -589,60 +546,6 @@ std::shared_ptr<AbstractOutput> LeafContainer::get_output() const
         return nullptr;
 
     return workspace.lock()->get_output();
-}
-
-glm::mat4 LeafContainer::get_transform() const
-{
-    return transform;
-}
-
-void LeafContainer::set_transform(glm::mat4 transform_)
-{
-    transform = transform_;
-    state->render_data_manager()->transform_change(id, transform_);
-    rerender();
-}
-
-void LeafContainer::rerender()
-{
-    // A hack to trigger a rerender on the surface by re-applying its transformation.
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(get_workspace_transform() * get_transform());
-        surface->set_alpha(alpha * workspace_alpha);
-    }
-}
-
-void LeafContainer::set_workspace_transform(glm::mat4 const& transform)
-{
-    auto const& rdm = state->render_data_manager();
-    rdm->workspace_transform_change(id, transform);
-    rerender();
-}
-
-void LeafContainer::set_workspace_alpha(float a)
-{
-    auto const& rdm = state->render_data_manager();
-    rdm->workspace_alpha(id, a);
-    workspace_alpha = a;
-    rerender();
-}
-
-void LeafContainer::set_alpha(float const a)
-{
-    state->render_data_manager()->alpha_change(id, a);
-    alpha = a;
-    rerender();
-}
-
-uint32_t LeafContainer::animation_handle() const
-{
-    return animation_handle_;
-}
-
-void LeafContainer::animation_handle(uint32_t handle)
-{
-    animation_handle_ = handle;
 }
 
 bool LeafContainer::is_focused() const

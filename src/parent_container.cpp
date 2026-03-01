@@ -721,12 +721,12 @@ std::shared_ptr<AbstractOutput> ParentContainer::get_output() const
     return get_workspace()->get_output();
 }
 
-glm::mat4 ParentContainer::get_transform() const
+glm::mat4 ParentContainer::get_animation_transform() const
 {
     return glm::mat4(1.f);
 }
 
-void ParentContainer::set_transform(glm::mat4 transform)
+void ParentContainer::set_animation_transform(glm::mat4 transform)
 {
 }
 
@@ -740,7 +740,7 @@ glm::mat4 ParentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ParentContainer::set_alpha(float const alpha)
+void ParentContainer::set_animation_alpha(float const alpha)
 {
 }
 

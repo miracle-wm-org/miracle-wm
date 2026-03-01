@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 CompositorState::CompositorState() :
-    render_data_manager_(std::make_unique<RenderDataManager>())
+    render_data_manager_(std::make_shared<RenderDataManager>())
 {
 }
 
@@ -108,7 +108,7 @@ void CompositorState::mode(WindowManagerMode next)
     mode_ = next;
 }
 
-RenderDataManager* CompositorState::render_data_manager() const
+std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager() const
 {
-    return render_data_manager_.get();
+    return render_data_manager_;
 }
