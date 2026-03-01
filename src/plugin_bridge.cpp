@@ -440,7 +440,11 @@ int32_t PluginBridge::window_set_size(uint64_t window_internal, int32_t width, i
         return -1;
 
     auto const& window = std::get<miral::Window>(info->window_info);
-    geom::Rectangle const old_rect { window.top_left(), window.size() };
+    auto const container = window_controller->get_window_container(window);
+    if (!container)
+        return -1;
+
+    geom::Rectangle const old_rect = container->get_logical_area();
     geom::Rectangle const new_rect {
         window.top_left(), geom::Size { width, height }
     };
