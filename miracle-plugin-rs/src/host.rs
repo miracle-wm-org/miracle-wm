@@ -78,9 +78,9 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_set_workspace(window_internal: i64, workspace_internal: i64) -> i32;
 
-    /// Resize a managed window.
+    /// Set the position and size of a managed window.
     /// Returns 0 on success, -1 on error.
-    pub fn miracle_window_set_size(window_internal: i64, width: i32, height: i32) -> i32;
+    pub fn miracle_window_set_rectangle(window_internal: i64, x: i32, y: i32, width: i32, height: i32) -> i32;
 
     /// Set the 4x4 column-major transform matrix of a managed window.
     /// `transform_ptr` is a WASM linear memory offset pointing to 16 contiguous f32 values.

@@ -582,7 +582,7 @@ WasmEdge_Result host_miracle_window_set_workspace(
     return WasmEdge_Result_Success;
 }
 
-WasmEdge_Result host_miracle_window_set_size(
+WasmEdge_Result host_miracle_window_set_rectangle(
     void* data,
     WasmEdge_CallingFrameContext const*,
     WasmEdge_Value const* params,
@@ -590,9 +590,12 @@ WasmEdge_Result host_miracle_window_set_size(
 {
     auto const bridge = static_cast<PluginBridge*>(data);
     int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
-    int32_t const width = WasmEdge_ValueGetI32(params[1]);
-    int32_t const height = WasmEdge_ValueGetI32(params[2]);
-    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_size(static_cast<uint64_t>(window_internal), width, height));
+    int32_t const x = WasmEdge_ValueGetI32(params[1]);
+    int32_t const y = WasmEdge_ValueGetI32(params[2]);
+    int32_t const width = WasmEdge_ValueGetI32(params[3]);
+    int32_t const height = WasmEdge_ValueGetI32(params[4]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_rectangle(
+        static_cast<uint64_t>(window_internal), x, y, width, height));
     return WasmEdge_Result_Success;
 }
 
@@ -801,9 +804,9 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i64, i64 }, { i32 }),
         host_miracle_window_set_workspace, bridge.get());
 
-    add_host_function(module, "miracle_window_set_size",
-        create_func_type({ i64, i32, i32 }, { i32 }),
-        host_miracle_window_set_size, bridge.get());
+    add_host_function(module, "miracle_window_set_rectangle",
+        create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
+        host_miracle_window_set_rectangle, bridge.get());
 
     add_host_function(module, "miracle_window_set_transform",
         create_func_type({ i64, i32 }, { i32 }),
