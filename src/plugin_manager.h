@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 #include "layout_scheme.h"
 #include "miracle/plugin.h"
+#include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
 #include <miral/toolkit_event.h>
 namespace miracle
@@ -49,6 +50,12 @@ struct PluginWindowPlacement
 
         /// The plugin handle that is managing the window.
         PluginHandle handle;
+
+        /// The initial 4x4 transform applied to the window.
+        glm::mat4 transform = glm::mat4(1.f);
+
+        /// The initial alpha (opacity) of the window.
+        float alpha = 1.f;
     };
 
     miracle_window_management_strategy_t strategy = miracle_window_management_strategy_system;

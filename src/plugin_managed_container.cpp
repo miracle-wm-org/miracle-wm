@@ -61,14 +61,20 @@ PluginManagedContainer::PluginManagedContainer(
     PluginHandle plugin_handle,
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<CompositorState> const& compositor_state) :
+    std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<AbstractWorkspace> const& workspace,
+    glm::mat4 transform,
+    float alpha) :
     WindowContainer(compositor_state->render_data_manager()),
     plugin_handle_ { plugin_handle },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
-    compositor_state { compositor_state }
+    compositor_state { compositor_state },
+    workspace_ { workspace }
 {
     associate_to_window(window);
+    set_window_alpha(alpha);
+    set_window_transform(transform);
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -108,17 +114,6 @@ size_t PluginManagedContainer::get_min_width() const
 void PluginManagedContainer::handle_ready()
 {
     window_controller->select_active_window(window_);
-    auto const output = get_output();
-    render_id = compositor_state->render_data_manager()->add({
-        RenderData {
-                    .surface = window_.operator std::shared_ptr<mir::scene::Surface>().get(),
-                    .needs_outline = true,
-                    .is_focused = is_focused(),
-                    .transform = get_animation_transform(),
-                    .workspace_transform = workspace_transform(*this),
-                    .workspace_alpha = workspace_.expired() ? 1.f : workspace_.lock()->alpha(),
-                    .output_area = output ? std::optional(output->get_area()) : std::nullopt }
-    });
 }
 
 void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)

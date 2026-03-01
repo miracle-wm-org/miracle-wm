@@ -1,16 +1,6 @@
-use std::mem;
-
 use crate::bindings;
-use crate::core::Rect;
-use glm::Mat4;
-
-pub fn mat4_from_f32_array(arr: [f32; 16]) -> Mat4 {
-    unsafe { mem::transmute(arr) }
-}
-
-pub fn mat4_to_f32_array(mat: Mat4) -> [f32; 16] {
-    unsafe { mem::transmute(mat) }
-}
+use crate::core::{Rect, mat4_from_f32_array, mat4_to_f32_array};
+use glam::Mat4;
 
 pub struct AnimationFrameData {
     pub runtime_seconds: f32,

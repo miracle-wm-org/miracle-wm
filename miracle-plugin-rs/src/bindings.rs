@@ -460,6 +460,10 @@ pub struct miracle_freestyle_placement_t {
     pub workspace_internal: u64,
     #[doc = " The size of the window.\n\n This value may not be honored by the window itself."]
     pub size: miracle_size_t,
+    #[doc = " The 4x4 transform matrix applied to the window (column-major).\n\n Defaults to the identity matrix."]
+    pub transform: [f32; 16usize],
+    #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
+    pub alpha: f32,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

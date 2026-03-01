@@ -75,6 +75,7 @@ private:
     struct DrawData
     {
         bool enabled = false;
+        float alpha = 1.f;
         RenderData data;
     };
 

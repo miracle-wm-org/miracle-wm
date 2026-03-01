@@ -39,6 +39,8 @@ struct AllocationHint
     ParentContainer* parent = nullptr;
     AbstractWorkspace* workspace = nullptr;
     PluginHandle plugin_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
+    float alpha = 1.f;
 };
 }
 

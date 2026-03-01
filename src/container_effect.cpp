@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 miracle::ContainerEffect miracle::ContainerEffect::blend(ContainerEffect const& other)
 {
     return ContainerEffect {
-        alpha + other.alpha * (1.f - alpha),
+        alpha * other.alpha,
         transform * other.transform,
     };
 }

@@ -3,6 +3,7 @@ use super::container::*;
 use super::core::*;
 use super::window::*;
 use super::workspace::*;
+use glam::Mat4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
@@ -58,7 +59,7 @@ impl From<TiledPlacement> for bindings::miracle_tiled_placement_t {
 }
 
 /// Freestyle placement configuration.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct FreestylePlacement {
     /// The top left position.
     pub top_left: Point,
@@ -68,6 +69,27 @@ pub struct FreestylePlacement {
     pub workspace: Option<Workspace>,
     /// The size.
     pub size: Size,
+    /// The 4x4 transform matrix applied to the window (column-major).
+    ///
+    /// Defaults to the identity matrix.
+    pub transform: Mat4,
+    /// The alpha (opacity) of the window.
+    ///
+    /// Defaults to 1.0 (fully opaque).
+    pub alpha: f32,
+}
+
+impl Default for FreestylePlacement {
+    fn default() -> Self {
+        Self {
+            top_left: Point::default(),
+            depth_layer: DepthLayer::default(),
+            workspace: None,
+            size: Size::default(),
+            transform: Mat4::IDENTITY,
+            alpha: 1.0,
+        }
+    }
 }
 
 impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
@@ -77,6 +99,8 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
             depth_layer: value.depth_layer.into(),
             workspace_internal: value.workspace.map_or(0, |w| w.internal),
             size: value.size.into(),
+            transform: mat4_to_f32_array(value.transform),
+            alpha: value.alpha,
         }
     }
 }

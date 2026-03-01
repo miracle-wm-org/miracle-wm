@@ -504,6 +504,8 @@ auto Policy::place_new_window(
         hint.container_type = AllocationType::plugin;
         hint.workspace = plugin_placement->freestyle.workspace;
         hint.plugin_handle = plugin_placement->freestyle.handle;
+        hint.transform = plugin_placement->freestyle.transform;
+        hint.alpha = plugin_placement->freestyle.alpha;
         new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
         new_spec.size() = plugin_placement->freestyle.rectangle.size;
         new_spec.depth_layer() = plugin_placement->freestyle.layer;
@@ -598,7 +600,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             pending_allocation.plugin_handle,
             window_info.window(),
             window_controller,
-            state);
+            state,
+            workspace,
+            pending_allocation.transform,
+            pending_allocation.alpha);
         workspace->add_other_container(container);
     }
     break;
@@ -708,6 +713,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     }
 
     plugin_manager->window_deleted(window_info);
+    dying_surface_manager->animate_dying_surface(container);
 
     // Important: We advise closed before the window has been removed so that it
     // still has valid references inside of it which consumers can use (e.g.
@@ -724,7 +730,6 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
     state->remove(container);
 
-    dying_surface_manager->animate_dying_surface(container);
     container->unregister_interest(self.get());
 }
 

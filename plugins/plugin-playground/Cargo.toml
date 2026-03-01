@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 miracle-plugin-rs = { path = "../../miracle-plugin-rs" }
+glam = "0.29"
