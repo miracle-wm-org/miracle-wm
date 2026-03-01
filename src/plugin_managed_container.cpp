@@ -70,7 +70,7 @@ PluginManagedContainer::PluginManagedContainer(
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
     compositor_state { compositor_state },
-    workspace_{ workspace}
+    workspace_ { workspace }
 {
     associate_to_window(window);
     set_window_alpha(alpha);

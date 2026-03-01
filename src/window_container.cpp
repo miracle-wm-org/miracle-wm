@@ -88,9 +88,19 @@ void miracle::WindowContainer::set_workspace_alpha(float a)
     rerender();
 }
 
+glm::mat4 miracle::WindowContainer::get_window_transform() const
+{
+    return window_effect.transform;
+}
+
 void miracle::WindowContainer::set_window_transform(glm::mat4 const& t)
 {
     window_effect.transform = t;
+    if (auto const rdm_locked = rdm.lock())
+    {
+        auto const combined = window_effect.blend(animation_effect);
+        rdm_locked->transform_change(render_id, combined.transform);
+    }
     rerender();
 }
 
@@ -104,7 +114,10 @@ void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
     animation_effect.transform = transform;
     if (auto const rdm_locked = rdm.lock())
-        rdm_locked->transform_change(render_id, transform);
+    {
+        auto const combined = window_effect.blend(animation_effect);
+        rdm_locked->transform_change(render_id, combined.transform);
+    }
     rerender();
 }
 
@@ -122,6 +135,11 @@ void miracle::WindowContainer::set_animation_alpha(float a)
 glm::mat4 miracle::WindowContainer::get_animation_transform() const
 {
     return animation_effect.transform;
+}
+
+float miracle::WindowContainer::get_alpha() const
+{
+    return workspace_effect.alpha * window_effect.alpha * animation_effect.alpha;
 }
 
 void miracle::WindowContainer::on_focus_gained()

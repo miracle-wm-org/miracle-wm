@@ -48,13 +48,17 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
     auto const handle = animator->register_animateable();
+    auto const transform = container->get_window_transform() * container->get_animation_transform();
+    auto const alpha = container->get_alpha();
     auto const id = compositor_state->render_data_manager()->add(
         { .surface = animating_surface.get(),
             .needs_outline = true,
             .is_focused = false,
-            .transform = container->get_animation_transform(),
+            .transform = transform,
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
             .output_area = output_area });
+    surface->set_alpha(alpha);
+    surface->set_transformation(transform);
 
     surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
     animator->append(Animation(
@@ -65,17 +69,19 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
             container->get_visible_area(),
             geom::Rectangle {},
             1, 0 },
-        [compositor_state = compositor_state, animating_surface, id = id](AnimationFrameResult const& result)
+        [compositor_state = compositor_state, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {
         if (result.transform)
         {
-            compositor_state->render_data_manager()->transform_change(id, result.transform.value());
-            animating_surface->set_transformation(result.transform.value());
+            auto const combined = transform * result.transform.value();
+            compositor_state->render_data_manager()->transform_change(id, combined);
+            animating_surface->set_transformation(combined);
         }
 
         if (result.opacity)
         {
-            animating_surface->set_alpha(result.opacity.value());
+            auto const combined = alpha * result.opacity.value();
+            animating_surface->set_alpha(combined);
         }
 
         if (result.rectangle)

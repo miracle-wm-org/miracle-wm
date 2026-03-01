@@ -68,6 +68,7 @@ public:
     void set_animation_transform(glm::mat4 transform) override;
     void set_animation_alpha(float a) override;
     glm::mat4 get_animation_transform() const override;
+    float get_alpha() const;
     void on_focus_gained() override;
     virtual void on_focus_lost();
 
@@ -77,6 +78,9 @@ public:
     void associate_to_window(miral::Window const& window);
 
     [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+
+    /// Get the window transform.
+    glm::mat4 get_window_transform() const;
 
     /// Set the transformation on the window.
     ///

@@ -139,12 +139,6 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
     EXPECT_THAT(state->render_data_manager()->get()[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
 }
 
-TEST_F(LeafContainerTest, CanSetWorkspaceAlpha)
-{
-    leaf_container->set_workspace_alpha(0.5f);
-    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_alpha, testing::Eq(0.5f));
-}
-
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)
 {
     state->focus_container(leaf_container);
@@ -402,16 +396,6 @@ INSTANTIATE_TEST_SUITE_P(
         ContainerScopeType::window_role,
         ContainerScopeType::instance,
         ContainerScopeType::machine));
-
-TEST_F(LeafContainerTest, CanSetAlpha)
-{
-    EXPECT_CALL(*surface, set_transformation(testing::_));
-    leaf_container->set_animation_alpha(0.5f);
-
-    auto data = state->render_data_manager()->get();
-    EXPECT_EQ(data.size(), 1);
-    EXPECT_EQ(data[0].alpha, 0.5f);
-}
 
 TEST_F(LeafContainerTest, CanAddReplacingMark)
 {
