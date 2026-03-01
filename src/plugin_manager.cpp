@@ -555,6 +555,95 @@ WasmEdge_Result host_miracle_get_managed_window_at(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_set_state(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const state = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_state(static_cast<uint64_t>(window_internal), state));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_set_workspace(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int64_t const workspace_internal = WasmEdge_ValueGetI64(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_workspace(
+        static_cast<uint64_t>(window_internal), static_cast<uint64_t>(workspace_internal)));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_set_size(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const width = WasmEdge_ValueGetI32(params[1]);
+    int32_t const height = WasmEdge_ValueGetI32(params[2]);
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_size(static_cast<uint64_t>(window_internal), width, height));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_set_transform(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_window_set_transform: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const transform_ptr = WasmEdge_ValueGetI32(params[1]);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    float const* transform = reinterpret_cast<float const*>(mem_base + transform_ptr);
+
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_transform(static_cast<uint64_t>(window_internal), transform));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_set_alpha(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_window_set_alpha: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const alpha_ptr = WasmEdge_ValueGetI32(params[1]);
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    float const alpha = *reinterpret_cast<float const*>(mem_base + alpha_ptr);
+
+    returns[0] = WasmEdge_ValueGenI32(bridge->window_set_alpha(static_cast<uint64_t>(window_internal), alpha));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -704,6 +793,26 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i32, i32, i32, i32, i32 }, { i32 }),
         host_miracle_get_managed_window_at, bridge.get());
 
+    add_host_function(module, "miracle_window_set_state",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_state, bridge.get());
+
+    add_host_function(module, "miracle_window_set_workspace",
+        create_func_type({ i64, i64 }, { i32 }),
+        host_miracle_window_set_workspace, bridge.get());
+
+    add_host_function(module, "miracle_window_set_size",
+        create_func_type({ i64, i32, i32 }, { i32 }),
+        host_miracle_window_set_size, bridge.get());
+
+    add_host_function(module, "miracle_window_set_transform",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_transform, bridge.get());
+
+    add_host_function(module, "miracle_window_set_alpha",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_alpha, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -714,7 +823,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 10);
+    mir::log_info("Host module 'env' registered with %d functions", 18);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path)

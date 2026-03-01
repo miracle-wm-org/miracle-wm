@@ -388,3 +388,98 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
 
     return { miracle_window_info_t {}, "" };
 }
+
+int32_t PluginBridge::window_set_state(uint64_t window_internal, int32_t state)
+{
+    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
+    if (!std::holds_alternative<miral::Window>(info->window_info))
+        return -1;
+
+    auto const& window = std::get<miral::Window>(info->window_info);
+    window_controller->change_state(window, static_cast<MirWindowState>(state));
+    return 0;
+}
+
+int32_t PluginBridge::window_set_workspace(uint64_t window_internal, uint64_t workspace_internal)
+{
+    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
+    if (!std::holds_alternative<miral::Window>(info->window_info))
+        return -1;
+
+    auto const& window = std::get<miral::Window>(info->window_info);
+    auto const container = window_controller->get_window_container(window);
+    if (!container)
+        return -1;
+
+    auto const new_ws = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_internal));
+    if (!new_ws)
+        return -1;
+
+    if (auto const old_ws = container->get_workspace())
+        old_ws->remove_other_container(container);
+
+    for (auto const& output : output_manager->outputs())
+    {
+        for (auto const& ws : output->get_workspaces())
+        {
+            if (ws.get() == new_ws)
+            {
+                ws->add_other_container(container);
+                return 0;
+            }
+        }
+    }
+
+    return -1;
+}
+
+int32_t PluginBridge::window_set_size(uint64_t window_internal, int32_t width, int32_t height)
+{
+    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
+    if (!std::holds_alternative<miral::Window>(info->window_info))
+        return -1;
+
+    auto const& window = std::get<miral::Window>(info->window_info);
+    auto const container = window_controller->get_window_container(window);
+    if (!container)
+        return -1;
+
+    geom::Rectangle const old_rect = container->get_logical_area();
+    geom::Rectangle const new_rect {
+        window.top_left(), geom::Size { width, height }
+    };
+    window_controller->set_rectangle(window, old_rect, new_rect, true);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_transform(uint64_t window_internal, float const* transform)
+{
+    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
+    if (!std::holds_alternative<miral::Window>(info->window_info))
+        return -1;
+
+    auto const& window = std::get<miral::Window>(info->window_info);
+    auto const container = window_controller->get_window_container(window);
+    if (!container)
+        return -1;
+
+    glm::mat4 mat;
+    std::memcpy(glm::value_ptr(mat), transform, sizeof(float) * 16);
+    container->set_window_transform(mat);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_alpha(uint64_t window_internal, float alpha)
+{
+    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
+    if (!std::holds_alternative<miral::Window>(info->window_info))
+        return -1;
+
+    auto const& window = std::get<miral::Window>(info->window_info);
+    auto const container = window_controller->get_window_container(window);
+    if (!container)
+        return -1;
+
+    container->set_window_alpha(alpha);
+    return 0;
+}

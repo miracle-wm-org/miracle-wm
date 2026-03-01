@@ -70,6 +70,28 @@ unsafe extern "C" {
         name_buf_len: i32,
     ) -> i32;
 
+    /// Set the state of a managed window.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_state(window_internal: i64, state: i32) -> i32;
+
+    /// Move a managed window to a different workspace.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_workspace(window_internal: i64, workspace_internal: i64) -> i32;
+
+    /// Resize a managed window.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_size(window_internal: i64, width: i32, height: i32) -> i32;
+
+    /// Set the 4x4 column-major transform matrix of a managed window.
+    /// `transform_ptr` is a WASM linear memory offset pointing to 16 contiguous f32 values.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_transform(window_internal: i64, transform_ptr: i32) -> i32;
+
+    /// Set the alpha (opacity) of a managed window.
+    /// `alpha_ptr` is a WASM linear memory offset pointing to a single f32 value.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_alpha(window_internal: i64, alpha_ptr: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.

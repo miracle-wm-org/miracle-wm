@@ -413,6 +413,43 @@ extern "C"
         /// The modifiers held during the event.
         uint32_t modifiers;
     } miracle_keyboard_event_t;
+
+    /// Set the state of a plugin-managed window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param state the new window state (a #MirWindowState value)
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_state(int64_t window_internal, int32_t state);
+
+    /// Move a plugin-managed window to a different workspace.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param workspace_internal the internal pointer from #miracle_workspace_t::internal
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_workspace(int64_t window_internal, int64_t workspace_internal);
+
+    /// Resize a plugin-managed window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param width the new width in pixels
+    /// \param height the new height in pixels
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_size(int64_t window_internal, int32_t width, int32_t height);
+
+    /// Set the 4x4 column-major transform matrix of a plugin-managed window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param transform pointer to 16 contiguous floats (column-major matrix)
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_transform(int64_t window_internal, const float* transform);
+
+    /// Set the alpha (opacity) of a plugin-managed window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param alpha pointer to the new alpha value in [0, 1]
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_alpha(int64_t window_internal, const float* alpha);
+
 #ifdef __cplusplus
 }
 #endif

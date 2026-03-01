@@ -338,3 +338,66 @@ impl PartialEq for WindowInfo {
         self.internal == other.internal
     }
 }
+
+/// A handle to a window managed by this plugin, with mutation methods.
+///
+/// Returned by [`crate::plugin::Plugin::managed_windows`]. Wraps [`WindowInfo`] and exposes
+/// all of its read-only fields via [`std::ops::Deref`], while adding setter methods that
+/// call into the compositor host.
+#[derive(Debug, Clone)]
+pub struct PluginWindow {
+    info: WindowInfo,
+}
+
+impl PluginWindow {
+    pub fn from_window_info(info: WindowInfo) -> Self {
+        Self { info }
+    }
+
+    /// Set the state of this window.
+    pub fn set_state(&self, state: WindowState) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_state(self.info.internal as i64, state as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Move this window to a different workspace.
+    pub fn set_workspace(&self, workspace: &Workspace) -> Result<(), ()> {
+        let r = unsafe {
+            miracle_window_set_workspace(self.info.internal as i64, workspace.internal as i64)
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Resize this window.
+    pub fn set_size(&self, size: Size) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_size(self.info.internal as i64, size.width, size.height) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the 4x4 column-major transform matrix of this window.
+    pub fn set_transform(&self, transform: Mat4) -> Result<(), ()> {
+        let arr = transform.to_cols_array();
+        let r = unsafe { miracle_window_set_transform(self.info.internal as i64, arr.as_ptr() as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the alpha (opacity) of this window.
+    pub fn set_alpha(&self, alpha: f32) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+}
+
+impl std::ops::Deref for PluginWindow {
+    type Target = WindowInfo;
+
+    fn deref(&self) -> &Self::Target {
+        &self.info
+    }
+}
+
+impl PartialEq for PluginWindow {
+    fn eq(&self, other: &Self) -> bool {
+        self.info == other.info
+    }
+}
