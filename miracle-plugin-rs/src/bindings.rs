@@ -501,6 +501,21 @@ pub struct miracle_keyboard_event_t {
     #[doc = " The modifiers held during the event."]
     pub modifiers: u32,
 }
+#[doc = " Describes a pointer event."]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_pointer_event_t {
+    #[doc = " The x position of the pointer."]
+    pub x: f32,
+    #[doc = " The y position of the pointer."]
+    pub y: f32,
+    #[doc = " The pointer action."]
+    pub action: u32,
+    #[doc = " The modifiers held during the event."]
+    pub modifiers: u32,
+    #[doc = " The buttons held during the event."]
+    pub buttons: u32,
+}
 pub const MirEventType_mir_event_type_key: MirEventType = 0;
 pub const MirEventType_mir_event_type_motion: MirEventType = 1;
 pub const MirEventType_mir_event_type_window: MirEventType = 2;

@@ -154,6 +154,12 @@ public:
     /// \returns `true` if the keyboard event was consumed, otherwise `false`
     bool handle_keyboard_event(MirKeyboardEvent const& event);
 
+    /// Check if the plugin handles a pointer event.
+    ///
+    /// \param event the incoming pointer event
+    /// \returns `true` if the pointer event was consumed, otherwise `false`
+    bool handle_pointer_event(MirPointerEvent const& event);
+
 private:
     struct Self
     {
@@ -263,6 +269,7 @@ public:
     void window_focused(miral::WindowInfo const&) { }
     void window_unfocused(miral::WindowInfo const&) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
+    bool handle_pointer_event(MirPointerEvent const&) { return false; }
 };
 }
 #endif

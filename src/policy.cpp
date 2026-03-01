@@ -469,14 +469,14 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
                 }
             }
 
-            return false;
+            break;
         }
         default:
-            return false;
+            break;
         }
     }
 
-    return false;
+    return plugin_manager->handle_pointer_event(*event);
 }
 
 auto Policy::place_new_window(
