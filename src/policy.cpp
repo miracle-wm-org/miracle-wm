@@ -23,10 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "dying_surface_manager.h"
-#include "feature_flags.h"
 #include "internal_shell_application_spawner.h"
 #include "leaf_container.h"
 #include "magnifier_wrapper.h"
@@ -39,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_manager.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
+#include "window_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
@@ -249,11 +248,10 @@ Policy::~Policy()
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
-    auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
 
-    if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
+    if (auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers))
     {
         BindingEvent const binding_event(
             BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
@@ -267,7 +265,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    if (config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
+    if (config->matches_key_command(action, keysym, modifiers, [&](DefaultKeyCommand key_command)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;
@@ -456,36 +454,15 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
-        if (feature::multi_select && action == mir_pointer_action_button_down)
-        {
-            if (modifiers == config->get_primary_modifier())
-            {
-                // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
-                if (state->mode() != WindowManagerMode::selecting)
-                {
-                    command_controller->set_mode(WindowManagerMode::selecting);
-                    group_selection = std::make_shared<ContainerGroupContainer>(state);
-                    state->add(group_selection);
-                }
-            }
-            else if (state->mode() == WindowManagerMode::selecting)
-            {
-                // We clicked while we were in selection mode, so let's stop being in selection mode
-                // TODO: Would it be better to check what we clicked in case it's in the group? Then we wouldn't
-                //  exit selection mode in this case.
-                command_controller->set_mode(WindowManagerMode::normal);
-            }
-        }
-
         // Get Container intersection. Depending on the state, do something with that Container
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
         switch (state->mode())
         {
         case WindowManagerMode::normal:
         {
+            auto const intersected = output_manager->focused()->intersect(x, y);
             if (intersected)
             {
-                if (auto window = intersected->window().value())
+                if (auto const window = intersected->window().value())
                 {
                     if (state->focused_container() != intersected && (config->cursor().focus_mode == CursorFocusMode::Hover || action == mir_pointer_action_button_down))
                         window_controller->select_active_window(window);
@@ -493,12 +470,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
             }
 
             return false;
-        }
-        case WindowManagerMode::selecting:
-        {
-            if (intersected && action == mir_pointer_action_button_down)
-                group_selection->add(intersected);
-            return true;
         }
         default:
             return false;
@@ -530,7 +501,7 @@ auto Policy::place_new_window(
     auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification);
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
-        hint.container_type = ContainerType::plugin;
+        hint.container_type = AllocationType::plugin;
         hint.workspace = plugin_placement->freestyle.workspace;
         hint.plugin_handle = plugin_placement->freestyle.handle;
         hint.transform = plugin_placement->freestyle.transform;
@@ -543,7 +514,7 @@ auto Policy::place_new_window(
     {
         if (auto const delegate = shell_application_manager->delegate(app_info.application()))
             delegate->place_window(new_spec);
-        hint.container_type = ContainerType::shell;
+        hint.container_type = AllocationType::shell;
     }
     else
     {
@@ -553,17 +524,17 @@ auto Policy::place_new_window(
             || requested_specification.state() == mir_window_state_attached;
 
         if (has_exclusive_rect || is_attached || wrong_leaf_state)
-            hint.container_type = ContainerType::shell;
+            hint.container_type = AllocationType::shell;
         else
         {
             auto const t = requested_specification.type();
             if (t == mir_window_type_normal || t == mir_window_type_freestyle)
-                hint.container_type = ContainerType::regular;
+                hint.container_type = AllocationType::system;
             else
-                hint.container_type = ContainerType::shell; // This is probably a tooltip or something
+                hint.container_type = AllocationType::shell; // This is probably a tooltip or something
         }
 
-        if (hint.container_type != ContainerType::shell)
+        if (hint.container_type != AllocationType::shell)
         {
             auto parent = output_manager->focused()->active()->get_layout_container();
             std::optional<size_t> index;
@@ -573,9 +544,8 @@ auto Policy::place_new_window(
             // 2. Place the new window in the selected parent.
             if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_tiled)
             {
-                if (plugin_placement->tiled.container->is_leaf())
+                if (auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container))
                 {
-                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container);
                     if (plugin_placement->tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement->tiled.scheme))
                     {
                         parent = leaf_container->get_parent().lock().get();
@@ -610,18 +580,18 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     }
 
     miral::WindowSpecification spec;
-    std::shared_ptr<Container> container;
+    std::shared_ptr<WindowContainer> container;
     switch (pending_allocation.container_type)
     {
-    case ContainerType::regular:
+    case AllocationType::system:
     {
         assert(pending_allocation.parent);
-        container = pending_allocation.parent->confirm_window(window_info.window());
+        container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         break;
     }
-    case ContainerType::plugin:
+    case AllocationType::plugin:
     {
         auto const workspace = pending_allocation.workspace
             ? pending_allocation.workspace->shared_from_this()
@@ -631,12 +601,13 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             window_info.window(),
             window_controller,
             state,
+            workspace,
             pending_allocation.transform,
             pending_allocation.alpha);
         workspace->add_other_container(container);
     }
     break;
-    case ContainerType::shell:
+    case AllocationType::shell:
     default:
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
         break;
@@ -651,13 +622,13 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
-    pending_allocation.container_type = ContainerType::none;
+    pending_allocation.container_type = AllocationType::none;
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_window_ready: container is not provided");
@@ -675,7 +646,7 @@ Policy::confirm_placement_on_display(
     mir::geometry::Rectangle const& new_placement)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_warning("confirm_placement_on_display: window lacks container");
@@ -688,48 +659,36 @@ Policy::confirm_placement_on_display(
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::advise_focus_gained: container is not provided");
         return;
     }
 
-    switch (state->mode())
+    auto const workspace = container->get_workspace();
+    // If the container has a null workspace, it is always selectable. Otherwise
+    // it needs to be on the active workspace.
+    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
     {
-    case WindowManagerMode::selecting:
-        group_selection->add(container);
-        container->on_focus_gained();
-        break;
-    default:
-    {
-        auto const workspace = container->get_workspace();
-
-        // If the container has a null workspace, it is always selectable. Otherwise
-        // it needs to be on the active workspace.
-        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-        {
-            // TODO: In this scenario, we may want to navigate to the focused workspace.
-            //  This was removed because it breaks workspace animations.
-            mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
-            break;
-        }
-
-        state->focus_container(container);
-        container->on_focus_gained();
-        if (workspace)
-            workspace->advise_focus_gained(container);
-        window_observer_registrar->advise_window_focused(*container);
-        plugin_manager->window_focused(window_info);
-        break;
+        // TODO: In this scenario, we may want to navigate to the focused workspace.
+        //  This was removed because it breaks workspace animations.
+        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+        return;
     }
-    }
+
+    state->focus_container(container);
+    container->on_focus_gained();
+    if (workspace)
+        workspace->advise_focus_gained(container);
+    window_observer_registrar->advise_window_focused(*container);
+    plugin_manager->window_focused(window_info);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_focus_lost: container is not provided");
@@ -737,11 +696,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
     }
 
     if (state->mode() == WindowManagerMode::dragging)
-    {
-        command_controller->set_mode(WindowManagerMode::normal);
-        if (state->focused_container())
-            state->focused_container()->drag_stop();
-    }
+        drag_and_drop_service->stop_drag(*state);
 
     state->unfocus_container(container);
     container->on_focus_lost();
@@ -750,7 +705,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("delete_container: container is not provided");
@@ -758,6 +713,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     }
 
     plugin_manager->window_deleted(window_info);
+    dying_surface_manager->animate_dying_surface(container);
 
     // Important: We advise closed before the window has been removed so that it
     // still has valid references inside of it which consumers can use (e.g.
@@ -774,14 +730,13 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 
     state->remove(container);
 
-    dying_surface_manager->animate_dying_surface(container);
     container->unregister_interest(self.get());
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -794,7 +749,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -831,7 +786,7 @@ void Policy::handle_modify_window(
     const miral::WindowSpecification& modifications)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_modify_window: container is not provided");
@@ -860,7 +815,7 @@ void Policy::handle_modify_window(
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_raise_window: container is not provided");
@@ -878,7 +833,7 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
     auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::handle_request_move: window lacks container");
@@ -900,7 +855,7 @@ void Policy::handle_request_resize(
     MirResizeEdge edge)
 {
     auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_request_resize: window lacks container");

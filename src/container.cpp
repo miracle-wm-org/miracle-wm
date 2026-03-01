@@ -19,26 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "container.h"
-#include "container_group_container.h"
+#include "abstract_output.h"
 #include "container_listener.h"
 #include "layout_scheme.h"
 #include "leaf_container.h"
-#include "output_interface.h"
 #include "parent_container.h"
+#include "window_container.h"
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 
 using namespace miracle;
-
-ContainerType miracle::container_type_from_string(std::string const& str)
-{
-    if (str == "tiled")
-        return ContainerType::regular;
-    else if (str == "shell")
-        return ContainerType::shell;
-    else
-        return ContainerType::none;
-}
 
 glm::mat4 Container::get_workspace_transform() const
 {
@@ -68,9 +58,9 @@ std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container>
     return std::dynamic_pointer_cast<ParentContainer>(container);
 }
 
-std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Container> const& container)
+std::shared_ptr<WindowContainer> Container::as_window_container(std::shared_ptr<Container> const& container)
 {
-    return std::dynamic_pointer_cast<ContainerGroupContainer>(container);
+    return std::dynamic_pointer_cast<WindowContainer>(container);
 }
 
 namespace
@@ -343,16 +333,6 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
     }
 }
 
-bool Container::is_leaf()
-{
-    return get_type() == ContainerType::regular;
-}
-
-bool Container::is_lane()
-{
-    return get_type() == ContainerType::parent;
-}
-
 float Container::get_percent_of_parent() const
 {
     float percent = 1.f;
@@ -392,7 +372,7 @@ std::shared_ptr<Container> get_neighbor(
     if (!parent)
         return nullptr;
 
-    if (parent->get_direction() != direction)
+    if (parent->get_scheme() != direction)
         return get_neighbor(parent.get(), direction, std::move(predicate));
 
     auto const maybe_index = parent->get_index_of_node(container);

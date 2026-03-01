@@ -37,8 +37,6 @@ struct RenderData
     bool is_focused = false;
     glm::mat4 transform = glm::mat4(1.f);
     glm::mat4 workspace_transform = glm::mat4(1.f);
-    float alpha = 1.f;
-    float workspace_alpha = 1.f;
     std::optional<mir::geometry::Rectangle> output_area;
 };
 
@@ -50,10 +48,8 @@ public:
     void remove(RenderDataManagerId id);
     void transform_change(RenderDataManagerId id, glm::mat4 const& transform);
     void workspace_transform_change(RenderDataManagerId id, glm::mat4 const& transform);
-    void workspace_alpha(RenderDataManagerId, float alpha);
     void output_area_change(RenderDataManagerId id, mir::geometry::Rectangle const& area);
     void focus_change(RenderDataManagerId id, bool is_focused);
-    void alpha_change(RenderDataManagerId id, float const alpha);
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     std::vector<RenderData> const& get();
 

@@ -18,17 +18,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MOCK_CONTAINER_H
 #define MIRACLE_WM_MOCK_CONTAINER_H
 
-#include "container.h"
+#include "render_data_manager.h"
+#include "window_container.h"
 #include <gmock/gmock.h>
 
 namespace miracle
 {
 namespace test
 {
-    class MockContainer : public Container
+    class MockContainer : public WindowContainer
     {
     public:
-        MOCK_METHOD(ContainerType, get_type, (), (const, override));
+        MockContainer() :
+            WindowContainer(std::make_shared<RenderDataManager>())
+        {
+        }
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, commit_changes, (), (override));
@@ -56,16 +60,16 @@ namespace test
         MOCK_METHOD(void, on_move_to, (geom::Point const&), (override));
         MOCK_METHOD(void, on_resize, (geom::Size const&), (override));
         MOCK_METHOD(mir::geometry::Rectangle, confirm_placement, (MirWindowState, mir::geometry::Rectangle const&), (override));
-        MOCK_METHOD(std::shared_ptr<WorkspaceInterface>, get_workspace, (), (const, override));
-        MOCK_METHOD(void, set_workspace, (std::shared_ptr<WorkspaceInterface> const&), (override));
-        MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
-        MOCK_METHOD(glm::mat4, get_transform, (), (const, override));
-        MOCK_METHOD(void, set_transform, (glm::mat4), (override));
+        MOCK_METHOD(std::shared_ptr<AbstractWorkspace>, get_workspace, (), (const, override));
+        MOCK_METHOD(void, set_workspace, (std::shared_ptr<AbstractWorkspace> const&), (override));
+        MOCK_METHOD(std::shared_ptr<AbstractOutput>, get_output, (), (const, override));
+        MOCK_METHOD(glm::mat4, get_animation_transform, (), (const, override));
+        MOCK_METHOD(void, set_animation_transform, (glm::mat4), (override));
+        MOCK_METHOD(void, set_animation_alpha, (float), (override));
         MOCK_METHOD(void, set_workspace_transform, (glm::mat4 const&), (override));
         MOCK_METHOD(void, set_workspace_alpha, (float), (override));
         MOCK_METHOD(glm::mat4, get_workspace_transform, (), (const, override));
         MOCK_METHOD(glm::mat4, get_output_transform, (), (const, override));
-        MOCK_METHOD(void, set_alpha, (float const), (override));
         MOCK_METHOD(uint32_t, animation_handle, (), (const, override));
         MOCK_METHOD(void, animation_handle, (uint32_t), (override));
         MOCK_METHOD(bool, is_focused, (), (const, override));

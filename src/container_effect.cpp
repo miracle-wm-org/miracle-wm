@@ -15,27 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_MOCK_OUTPUT_FACTORY_H
-#define MIRACLE_WM_MOCK_OUTPUT_FACTORY_H
+#include "container_effect.h"
 
-#include "abstract_output.h"
-#include "output_factory_interface.h"
-#include <gmock/gmock.h>
-
-namespace miracle
+miracle::ContainerEffect miracle::ContainerEffect::blend(ContainerEffect const& other)
 {
-namespace test
-{
-    class MockOutputFactory : public OutputFactoryInterface
-    {
-    public:
-        MOCK_METHOD(
-            std::shared_ptr<AbstractOutput>,
-            create,
-            (std::string name, int id, mir::geometry::Rectangle area),
-            (override));
+    return ContainerEffect {
+        alpha * other.alpha,
+        transform * other.transform,
     };
 }
-}
-
-#endif // MIRACLE_WM_MOCK_OUTPUT_FACTORY_H

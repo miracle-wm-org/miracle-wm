@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_LEAF_NODE_H
 #define MIRACLEWM_LEAF_NODE_H
 
-#include "container.h"
 #include "layout_scheme.h"
 #include "scratchpad_state.h"
+#include "window_container.h"
 #include "window_controller.h"
 
 #include <miral/window.h>
@@ -39,19 +39,17 @@ class CompositorState;
 class OutputManager;
 
 /// A [LeafContainer] always contains a single window.
-class LeafContainer : public Container
+class LeafContainer : public WindowContainer
 {
 public:
     LeafContainer(
-        std::shared_ptr<WorkspaceInterface> const& workspace,
+        std::shared_ptr<AbstractWorkspace> const& workspace,
         std::shared_ptr<WindowController> const& window_controller,
         geom::Rectangle area,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<ParentContainer> const& parent,
         std::shared_ptr<CompositorState> const& state);
-    ~LeafContainer() override;
 
-    void associate_to_window(miral::Window const&);
     [[nodiscard]] geom::Rectangle get_logical_area() const override;
     [[nodiscard]] geom::Rectangle get_visible_area() const override;
     void set_logical_area(geom::Rectangle const& target_rect, bool with_animations = true) override;
@@ -71,30 +69,19 @@ public:
     mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&) override;
     void on_open() override;
-    void on_focus_gained() override;
-    void on_focus_lost() override;
     void on_move_to(geom::Point const&) override;
     void on_resize(geom::Size const&) override { }
     void handle_request_move(MirInputEvent const* input_event) override;
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
-    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
     void commit_changes() override;
     void show() override;
     void hide() override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override;
-    std::shared_ptr<OutputInterface> get_output() const override;
-    glm::mat4 get_transform() const override;
-    void set_transform(glm::mat4 transform) override;
-    void set_workspace_transform(glm::mat4 const&) override;
-    void set_workspace_alpha(float a) override;
-    void set_alpha(float alpha) override;
-    uint32_t animation_handle() const override;
-    void animation_handle(uint32_t uint_32) override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override;
+    std::shared_ptr<AbstractOutput> get_output() const override;
     bool is_focused() const override;
-    ContainerType get_type() const override;
     bool select_next(Direction) override;
     bool pinned() const override;
     bool pinned(bool) override;
@@ -122,33 +109,26 @@ public:
     static MirDepthLayer get_depth_layer(bool is_fullscreen, bool is_anchored);
 
 private:
-    std::weak_ptr<WorkspaceInterface> workspace;
+    std::weak_ptr<AbstractWorkspace> workspace;
     std::shared_ptr<WindowController> window_controller;
     geom::Rectangle logical_area;
     std::optional<geom::Rectangle> next_logical_area;
     bool next_with_animations = true;
     std::shared_ptr<Config> config;
-    miral::Window window_;
-    RenderDataManagerId id = -1;
     std::weak_ptr<ParentContainer> parent;
     std::shared_ptr<CompositorState> state;
 
     std::optional<MirWindowState> before_shown_state;
     std::optional<MirWindowState> next_state;
     std::optional<MirDepthLayer> next_depth_layer;
-    glm::mat4 transform = glm::mat4(1.f);
-    uint32_t animation_handle_ = 0;
     bool is_dragging_ = false;
     geom::Point dragged_position;
-    float alpha = 1.f;
-    float workspace_alpha = 1.f;
 
     // Cache for visible area calculation
     mutable std::optional<geom::Rectangle> cached_visible_area;
     mutable bool visible_area_dirty = true;
 
     /// Trigger a rerender on the surface.
-    void rerender();
     void invalidate_visible_area_cache();
     static void handle_layout_scheme(Container* container, LayoutScheme scheme);
 };

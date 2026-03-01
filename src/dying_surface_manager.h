@@ -31,7 +31,7 @@ namespace shell
 namespace miracle
 {
 class CompositorState;
-class Container;
+class WindowContainer;
 class Config;
 class Animator;
 class PluginManager;
@@ -49,7 +49,7 @@ public:
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<PluginManager> const& plugin_manager);
 
-    void animate_dying_surface(std::shared_ptr<Container> const& container);
+    void animate_dying_surface(std::shared_ptr<WindowContainer> const& container);
 
 private:
     std::shared_ptr<mir::shell::SurfaceStack> surface_stack;

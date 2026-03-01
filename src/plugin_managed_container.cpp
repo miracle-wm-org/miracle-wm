@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_managed_container.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
-#include "output_interface.h"
 #include "window_controller.h"
-#include "workspace_interface.h"
 #include <mir/scene/surface.h>
 
 using namespace miracle;
@@ -30,11 +30,6 @@ inline glm::mat4 workspace_transform(Container const& container)
 {
     return container.get_output_transform() * container.get_workspace_transform();
 }
-}
-
-ContainerType PluginManagedContainer::get_type() const
-{
-    return ContainerType::plugin;
 }
 
 void PluginManagedContainer::show()
@@ -67,21 +62,19 @@ PluginManagedContainer::PluginManagedContainer(
     miral::Window const& window,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<AbstractWorkspace> const& workspace,
     glm::mat4 transform,
     float alpha) :
+    WindowContainer(compositor_state->render_data_manager()),
     plugin_handle_ { plugin_handle },
-    window_ { window },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
-    compositor_state { compositor_state }
+    compositor_state { compositor_state },
+    workspace_{ workspace}
 {
-    set_transform(transform);
-    set_alpha(alpha);
-}
-
-PluginManagedContainer::~PluginManagedContainer()
-{
-    compositor_state->render_data_manager()->remove(render_id);
+    associate_to_window(window);
+    set_window_alpha(alpha);
+    set_window_transform(transform);
 }
 
 geom::Rectangle PluginManagedContainer::get_visible_area() const
@@ -121,17 +114,6 @@ size_t PluginManagedContainer::get_min_width() const
 void PluginManagedContainer::handle_ready()
 {
     window_controller->select_active_window(window_);
-    auto const output = get_output();
-    render_id = compositor_state->render_data_manager()->add({
-        RenderData {
-                    .surface = window_.operator std::shared_ptr<mir::scene::Surface>().get(),
-                    .needs_outline = true,
-                    .is_focused = is_focused(),
-                    .transform = get_transform(),
-                    .workspace_transform = workspace_transform(*this),
-                    .workspace_alpha = workspace_.expired() ? 1.f : workspace_.lock()->alpha(),
-                    .output_area = output ? std::optional(output->get_area()) : std::nullopt }
-    });
 }
 
 void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)
@@ -180,20 +162,6 @@ void PluginManagedContainer::on_open()
     window_controller->open(window_);
 }
 
-void PluginManagedContainer::on_focus_gained()
-{
-    compositor_state->render_data_manager()->focus_change(render_id, true);
-    is_focused_ = true;
-    window_controller->raise(window_);
-}
-
-void PluginManagedContainer::on_focus_lost()
-{
-    compositor_state->render_data_manager()->focus_change(render_id, false);
-    is_focused_ = false;
-    window_controller->send_to_back(window_);
-}
-
 void PluginManagedContainer::on_move_to(geom::Point const&)
 {
 }
@@ -208,68 +176,26 @@ mir::geometry::Rectangle PluginManagedContainer::confirm_placement(
     return rectangle;
 }
 
-std::shared_ptr<WorkspaceInterface> PluginManagedContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> PluginManagedContainer::get_workspace() const
 {
     return workspace_.lock();
 }
 
-void PluginManagedContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& workspace)
+void PluginManagedContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     workspace_ = workspace;
 }
 
-std::shared_ptr<OutputInterface> PluginManagedContainer::get_output() const
+std::shared_ptr<AbstractOutput> PluginManagedContainer::get_output() const
 {
     if (auto const workspace = workspace_.lock())
         return workspace->get_output();
     return nullptr;
 }
 
-glm::mat4 PluginManagedContainer::get_transform() const
-{
-    return transform_;
-}
-
-void PluginManagedContainer::set_transform(glm::mat4 transform)
-{
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(transform);
-        transform_ = transform;
-    }
-}
-
-void PluginManagedContainer::set_workspace_transform(glm::mat4 const& transform)
-{
-    workspace_transform_ = transform;
-    compositor_state->render_data_manager()->workspace_transform_change(render_id, workspace_transform_);
-    rerender();
-}
-
-void PluginManagedContainer::set_workspace_alpha(float alpha)
-{
-    workspace_alpha_ = alpha;
-    compositor_state->render_data_manager()->workspace_alpha(render_id, workspace_alpha_);
-    rerender();
-}
-
-glm::mat4 PluginManagedContainer::get_workspace_transform() const
-{
-    return workspace_transform_;
-}
-
 glm::mat4 PluginManagedContainer::get_output_transform() const
 {
     return glm::mat4(1.f);
-}
-
-void PluginManagedContainer::set_alpha(float const alpha)
-{
-    // TODO: This might need to distinguish between animation alpha and container
-    // alpha.
-    compositor_state->render_data_manager()->alpha_change(render_id, alpha);
-    alpha_ = alpha;
-    rerender();
 }
 
 uint32_t PluginManagedContainer::animation_handle() const
@@ -290,11 +216,6 @@ bool PluginManagedContainer::is_focused() const
 bool PluginManagedContainer::is_fullscreen() const
 {
     return false;
-}
-
-std::optional<miral::Window> PluginManagedContainer::window() const
-{
-    return window_;
 }
 
 bool PluginManagedContainer::select_next(Direction)
@@ -456,13 +377,6 @@ nlohmann::json PluginManagedContainer::to_json(bool) const
         { "window_properties",    nlohmann::json::object()               },
         { "nodes",                std::vector<int>()                     },
     };
-}
-
-void PluginManagedContainer::rerender()
-{
-    // A hack to trigger a rerender on the surface by re-applying its transformation.
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-        surface->set_transformation(get_transform());
 }
 
 std::optional<PluginHandle> PluginManagedContainer::plugin_handle() const

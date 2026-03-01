@@ -18,20 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_STUB_CONTAINER_H
 #define MIRACLE_WM_STUB_CONTAINER_H
 
-#include "container.h"
+#include "window_container.h"
 
 namespace miracle
 {
 namespace test
 {
-    class StubContainer : public Container
+    class StubContainer : public WindowContainer
     {
     public:
-        ContainerType get_type() const override
-        {
-            return ContainerType::parent;
-        }
-
         void show() override
         {
         }
@@ -149,26 +144,26 @@ namespace test
             return {};
         }
 
-        std::shared_ptr<WorkspaceInterface> get_workspace() const override
+        std::shared_ptr<AbstractWorkspace> get_workspace() const override
         {
             return nullptr;
         }
 
-        void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override
+        void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override
         {
         }
 
-        std::shared_ptr<OutputInterface> get_output() const override
+        std::shared_ptr<AbstractOutput> get_output() const override
         {
             return nullptr;
         }
 
-        glm::mat4 get_transform() const override
+        glm::mat4 get_animation_transform() const override
         {
             return glm::mat4(1.f);
         }
 
-        void set_transform(glm::mat4 transform) override
+        void set_animation_transform(glm::mat4 transform) override
         {
         }
 
@@ -185,7 +180,7 @@ namespace test
             return Container::get_output_transform();
         }
 
-        void set_alpha(float const alpha) override
+        void set_animation_alpha(float const alpha) override
         {
         }
 
@@ -238,7 +233,17 @@ namespace test
             return false;
         }
 
+        bool move_by(float dx, float dy) override
+        {
+            return false;
+        }
+
         bool move_to(int x, int y, bool with_animations) override
+        {
+            return false;
+        }
+
+        bool move_to(Container& other) override
         {
             return false;
         }
@@ -270,6 +275,20 @@ namespace test
         bool set_layout(LayoutScheme scheme) override
         {
             return false;
+        }
+
+        bool anchored() const override
+        {
+            return true;
+        }
+
+        void scratchpad_state(ScratchpadState) override
+        {
+        }
+
+        ScratchpadState scratchpad_state() const override
+        {
+            return ScratchpadState::none;
         }
 
         LayoutScheme get_layout() const override

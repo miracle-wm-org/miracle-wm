@@ -17,15 +17,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define MIR_LOG_COMPONENT "parent_container"
 #include "parent_container.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "container.h"
 #include "feature_flags.h"
 #include "leaf_container.h"
-#include "output_interface.h"
 #include "shell_application_manager.h"
 #include "tiling_algorithms.h"
-#include "workspace_interface.h"
 #include <cmath>
 #include <mir/log.h>
 
@@ -78,7 +78,7 @@ ParentContainer::ParentContainer(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Config> const& config,
     geom::Rectangle area,
-    std::shared_ptr<WorkspaceInterface> const& workspace,
+    std::shared_ptr<AbstractWorkspace> const& workspace,
     std::shared_ptr<ParentContainer> const& parent,
     bool is_anchored) :
     shell_application_manager { shell_application_manager },
@@ -101,11 +101,6 @@ ParentContainer::ParentContainer(
 ParentContainer::~ParentContainer()
 {
     try_remove_background_client();
-}
-
-geom::Rectangle ParentContainer::get_area() const
-{
-    return logical_area;
 }
 
 void ParentContainer::try_remove_background_client()
@@ -153,16 +148,6 @@ geom::Rectangle ParentContainer::get_logical_area() const
     }
 
     return logical_area;
-}
-
-geom::Rectangle ParentContainer::get_visible_area() const
-{
-    return get_logical_area();
-}
-
-size_t ParentContainer::num_nodes() const
-{
-    return container_list.size();
 }
 
 geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
@@ -268,7 +253,7 @@ std::shared_ptr<Container> ParentContainer::confirm_window(miral::Window const& 
     return retval;
 }
 
-void ParentContainer::graft_existing(std::shared_ptr<Container> const& node, int index)
+void ParentContainer::add_child(std::shared_ptr<Container> const& node, size_t index)
 {
     auto const rectangle = create_space(index);
     node->set_parent(as_parent(shared_from_this()));
@@ -427,21 +412,13 @@ void ParentContainer::commit_changes()
         node->commit_changes();
 }
 
-std::shared_ptr<Container> ParentContainer::at(size_t i) const
-{
-    if (i >= num_nodes())
-        return nullptr;
-
-    return container_list[i];
-}
-
 std::shared_ptr<LeafContainer> ParentContainer::get_nth_window(size_t i) const
 {
     if (i >= container_list.size())
         return nullptr;
 
-    if (container_list[i]->is_leaf())
-        return as_leaf(container_list[i]);
+    if (auto const leaf = as_leaf(container_list[i]))
+        return leaf;
 
     // The lane is correct, so let's get the first window in that lane.
     return as_parent(container_list[i])->get_nth_window(0);
@@ -455,9 +432,9 @@ std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::s
 
     for (auto const& node : container_list)
     {
-        if (node->is_lane())
+        if (auto const parent = as_parent(node))
         {
-            if (auto retval = as_parent(node)->find_where(func))
+            if (auto retval = parent->find_where(func))
                 return retval;
         }
     }
@@ -465,7 +442,7 @@ std::shared_ptr<Container> ParentContainer::find_where(std::function<bool(std::s
     return nullptr;
 }
 
-std::vector<std::shared_ptr<Container>> const& ParentContainer::get_sub_nodes() const
+std::vector<std::shared_ptr<Container>> const& ParentContainer::children() const
 {
     return container_list;
 }
@@ -495,26 +472,27 @@ void ParentContainer::swap_within_container(std::shared_ptr<Container> const& fi
     constrain();
 }
 
-void ParentContainer::remove(const std::shared_ptr<Container>& node)
+void ParentContainer::remove_child(const std::shared_ptr<Container>& container)
 {
-    container_list.erase(
-        std::remove_if(container_list.begin(), container_list.end(), [&](std::shared_ptr<Container> const& content)
+    std::erase_if(container_list, [&](std::shared_ptr<Container> const& content)
     {
-        return content == node;
-    }),
-        container_list.end());
+        return content == container;
+    });
 
     // If we have one child AND it is a lane, THEN we can absorb all of it's children
-    if (container_list.size() == 1 && container_list[0]->is_lane())
+    if (container_list.size() == 1)
     {
-        auto dying_lane = as_parent(container_list[0]);
-        container_list.clear();
-        for (auto const& sub_node : dying_lane->get_sub_nodes())
+        auto const dying_lane = as_parent(container_list[0]);
+        if (dying_lane)
         {
-            container_list.push_back(sub_node);
-            sub_node->set_parent(as_parent(shared_from_this()));
+            container_list.clear();
+            for (auto const& sub_node : dying_lane->children())
+            {
+                container_list.push_back(sub_node);
+                sub_node->set_parent(as_parent(shared_from_this()));
+            }
+            set_layout(dying_lane->get_scheme());
         }
-        set_layout(dying_lane->get_direction());
     }
 
     relayout();
@@ -621,30 +599,13 @@ void ParentContainer::relayout()
     }
 
     // Note that it is important to use the logical_area here instead of the placement area
-    set_logical_area(logical_area);
-}
-
-void ParentContainer::handle_ready()
-{
-}
-
-void ParentContainer::handle_modify(miral::WindowSpecification const& specification)
-{
-}
-
-void ParentContainer::handle_request_move(MirInputEvent const* input_event)
-{
+    set_logical_area(logical_area, true);
 }
 
 void ParentContainer::handle_raise()
 {
     for (auto const& node : container_list)
         node->handle_raise();
-}
-
-bool ParentContainer::resize(Direction direction, int pixels)
-{
-    return false;
 }
 
 bool ParentContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
@@ -655,14 +616,9 @@ bool ParentContainer::set_size(std::optional<int> const& width, std::optional<in
     auto area = get_logical_area();
     area.size.width = geom::Width { width.value_or(area.size.width.as_int()) };
     area.size.height = geom::Height { height.value_or(area.size.height.as_int()) };
-    set_logical_area(area);
+    set_logical_area(area, true);
     commit_changes();
     return true;
-}
-
-bool ParentContainer::toggle_fullscreen()
-{
-    return false;
 }
 
 void ParentContainer::request_horizontal_layout()
@@ -698,8 +654,8 @@ void ParentContainer::raise_children()
     {
         if (auto const window = container->window())
             window_controller->raise(*window);
-        else if (container->is_lane())
-            as_parent(container)->raise_children();
+        else if (auto const parent = as_parent(container))
+            parent->raise_children();
     }
 }
 
@@ -720,29 +676,6 @@ void ParentContainer::on_focus_gained()
         raise_children();
 }
 
-void ParentContainer::on_focus_lost()
-{
-}
-
-void ParentContainer::on_move_to(mir::geometry::Point const& top_left)
-{
-}
-
-void ParentContainer::on_resize(geom::Size const& size)
-{
-}
-
-mir::geometry::Rectangle
-ParentContainer::confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle)
-{
-    return rectangle;
-}
-
-ContainerType ParentContainer::get_type() const
-{
-    return ContainerType::parent;
-}
-
 void ParentContainer::show()
 {
     for (auto const& c : container_list)
@@ -759,16 +692,12 @@ void ParentContainer::hide()
     is_shown = false;
 }
 
-void ParentContainer::on_open()
-{
-}
-
-std::shared_ptr<WorkspaceInterface> ParentContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> ParentContainer::get_workspace() const
 {
     return workspace.lock();
 }
 
-void ParentContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& next)
+void ParentContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& next)
 {
     workspace = next;
     for (auto const& node : container_list)
@@ -787,17 +716,17 @@ void ParentContainer::set_workspace_alpha(float a)
         node->set_workspace_alpha(a);
 }
 
-std::shared_ptr<OutputInterface> ParentContainer::get_output() const
+std::shared_ptr<AbstractOutput> ParentContainer::get_output() const
 {
     return get_workspace()->get_output();
 }
 
-glm::mat4 ParentContainer::get_transform() const
+glm::mat4 ParentContainer::get_animation_transform() const
 {
     return glm::mat4(1.f);
 }
 
-void ParentContainer::set_transform(glm::mat4 transform)
+void ParentContainer::set_animation_transform(glm::mat4 transform)
 {
 }
 
@@ -811,7 +740,7 @@ glm::mat4 ParentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ParentContainer::set_alpha(float const alpha)
+void ParentContainer::set_animation_alpha(float const alpha)
 {
 }
 
@@ -834,11 +763,6 @@ std::optional<miral::Window> ParentContainer::window() const
     return std::nullopt;
 }
 
-bool ParentContainer::select_next(miracle::Direction)
-{
-    return false;
-}
-
 bool ParentContainer::pinned(bool value)
 {
     if (auto sh_parent = parent.lock())
@@ -858,11 +782,6 @@ bool ParentContainer::pinned() const
     return pinned_;
 }
 
-bool ParentContainer::move(Direction direction)
-{
-    return false;
-}
-
 bool ParentContainer::move_by(float dx, float dy)
 {
     if (auto const sh_parent = parent.lock())
@@ -879,11 +798,6 @@ bool ParentContainer::move_by(float dx, float dy)
     return true;
 }
 
-bool ParentContainer::move_by(Direction direction, int pixels)
-{
-    return false;
-}
-
 bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
     if (auto const sh_parent = parent.lock())
@@ -898,16 +812,6 @@ bool ParentContainer::move_to(int x, int y, bool with_animations)
     set_logical_area(area, with_animations);
     commit_changes();
     return true;
-}
-
-bool ParentContainer::move_to(Container& other)
-{
-    return false;
-}
-
-bool ParentContainer::is_fullscreen() const
-{
-    return false;
 }
 
 bool ParentContainer::toggle_tabbing()
@@ -946,11 +850,6 @@ LayoutScheme ParentContainer::get_layout() const
     return scheme;
 }
 
-bool ParentContainer::matches(ContainerScope const&) const
-{
-    return false;
-}
-
 bool ParentContainer::set_anchored(bool anchor)
 {
     is_anchored = anchor;
@@ -984,7 +883,6 @@ void ParentContainer::scratchpad_state(ScratchpadState next_scratchpad_state)
 
 nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
 {
-    auto const visible_area = get_visible_area();
     auto const logical_area = get_logical_area();
     nlohmann::json containers_json;
     for (auto const& container : container_list)
@@ -1017,10 +915,10 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "orientation",          "none"                                                                                                                                                                                                                                             },
         { "percent",              get_percent_of_parent()                                                                                                                                                                                                                            },
         { "window_rect",          {
-                                                                                                                                                                                                                                                               { "x", visible_area.top_left.x.as_int() - logical_area.top_left.x.as_int() },
-                                                                                                                                                                                                                                                               { "y", visible_area.top_left.y.as_int() - logical_area.top_left.y.as_int() },
-                                                                                                                                                                                                                                                               { "width", visible_area.size.width.as_int() },
-                                                                                                                                                                                                                                                               { "height", visible_area.size.height.as_int() },
+                                                                                                                                                                                                                                                               { "x", 0 },
+                                                                                                                                                                                                                                                               { "y", 0 },
+                                                                                                                                                                                                                                                               { "width", logical_area.size.width.as_int() },
+                                                                                                                                                                                                                                                               { "height", logical_area.size.height.as_int() },
                                                                                                                                                                                                                                                            } },
         { "deco_rect",            {
                            { "x", 0 },
@@ -1039,7 +937,7 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "floating_nodes",       std::vector<int>()                                                                                                                                                                                                                                 },
         { "sticky",               false                                                                                                                                                                                                                                              },
         { "type",                 "con"                                                                                                                                                                                                                                              },
-        { "fullscreen_mode",      is_fullscreen() ? 1 : 0                                                                                                                                                                                                                            }, // TODO: Support value 2
+        { "fullscreen_mode",      0                                                                                                                                                                                                                                                  }, // TODO: Support value 2
         { "visible",              visible                                                                                                                                                                                                                                            },
         { "shell",                "miracle-wm"                                                                                                                                                                                                                                       }, // TODO
         { "inhibit_idle",         false                                                                                                                                                                                                                                              },

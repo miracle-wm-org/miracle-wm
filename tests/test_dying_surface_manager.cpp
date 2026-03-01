@@ -64,8 +64,6 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
     geom::Rectangle constexpr output_area({ 0, 0 }, { 19280, 1080 });
 
     // Pre-conditions for starting the animation
-    EXPECT_CALL(*container, get_type())
-        .WillOnce(testing::Return(ContainerType::regular));
     EXPECT_CALL(*config, are_animations_enabled())
         .WillOnce(testing::Return(true));
     EXPECT_CALL(*container, get_output())
@@ -96,7 +94,7 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
         .WillOnce(testing::Return(glm::mat4(1.f)));
     EXPECT_CALL(*container, get_workspace_transform())
         .WillOnce(testing::Return(glm::mat4(1.f)));
-    EXPECT_CALL(*container, get_transform())
+    EXPECT_CALL(*container, get_animation_transform())
         .WillOnce(testing::Return(glm::mat4(1.f)));
 
     // Expect the surface stack to have been modified as well as the animator

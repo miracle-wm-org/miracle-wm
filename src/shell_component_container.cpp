@@ -29,10 +29,11 @@ ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<ShellApplicationDelegate>&& delegate) :
-    window_ { window_ },
+    WindowContainer(nullptr),
     window_controller { window_controller },
     delegate { std::move(delegate) }
 {
+    associate_to_window(window_);
 }
 
 void ShellComponentContainer::show()
@@ -142,10 +143,6 @@ void ShellComponentContainer::on_focus_gained()
     window_controller->raise(window_);
 }
 
-void ShellComponentContainer::on_focus_lost()
-{
-}
-
 void ShellComponentContainer::on_move_to(mir::geometry::Point const& top_left)
 {
 }
@@ -160,41 +157,14 @@ ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::
     return rectangle;
 }
 
-std::shared_ptr<WorkspaceInterface> ShellComponentContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> ShellComponentContainer::get_workspace() const
 {
     return nullptr;
 }
 
-std::shared_ptr<OutputInterface> ShellComponentContainer::get_output() const
+std::shared_ptr<AbstractOutput> ShellComponentContainer::get_output() const
 {
     return nullptr;
-}
-
-glm::mat4 ShellComponentContainer::get_transform() const
-{
-    return transform_;
-}
-
-void ShellComponentContainer::set_transform(glm::mat4 transform)
-{
-    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(transform);
-        transform_ = transform;
-    }
-}
-
-void ShellComponentContainer::set_workspace_transform(glm::mat4 const&)
-{
-}
-
-void ShellComponentContainer::set_workspace_alpha(float a)
-{
-}
-
-glm::mat4 ShellComponentContainer::get_workspace_transform() const
-{
-    return glm::mat4(1.f);
 }
 
 glm::mat4 ShellComponentContainer::get_output_transform() const
@@ -202,37 +172,13 @@ glm::mat4 ShellComponentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ShellComponentContainer::set_alpha(float const alpha)
-{
-}
-
-uint32_t ShellComponentContainer::animation_handle() const
-{
-    return handle_;
-}
-
-void ShellComponentContainer::animation_handle(uint32_t handle)
-{
-    handle_ = handle;
-}
-
 bool ShellComponentContainer::is_focused() const
 {
     return true;
 }
 
-ContainerType ShellComponentContainer::get_type() const
-{
-    return ContainerType::shell;
-}
-
 void ShellComponentContainer::on_open()
 {
-}
-
-std::optional<miral::Window> ShellComponentContainer::window() const
-{
-    return window_;
 }
 
 bool ShellComponentContainer::select_next(miracle::Direction)

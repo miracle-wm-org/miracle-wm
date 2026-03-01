@@ -23,28 +23,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <miracle/cpp/gaps.h>
-#include <miral/window_manager_tools.h>
 
 namespace miracle
 {
-class OutputInterface;
+class AbstractOutput;
 class Container;
 class ParentContainer;
 
-struct AllocationHint
-{
-    ContainerType container_type = ContainerType::none;
-    ParentContainer* parent = nullptr;
-    WorkspaceInterface* workspace = nullptr;
-    PluginHandle plugin_handle = 0;
-    glm::mat4 transform = glm::mat4(1.f);
-    float alpha = 1.f;
-};
-
-class WorkspaceInterface : public std::enable_shared_from_this<WorkspaceInterface>
+class AbstractWorkspace : public std::enable_shared_from_this<AbstractWorkspace>
 {
 public:
-    virtual ~WorkspaceInterface() = default;
+    virtual ~AbstractWorkspace() = default;
 
     virtual void set_area(mir::geometry::Rectangle const&) = 0;
     virtual void recalculate_area() = 0;
@@ -63,11 +52,11 @@ public:
     /// \param end the position that the workspace will end up at.
     virtual void hide(mir::geometry::Point const& end) = 0;
 
-    virtual void transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> const& other) = 0;
+    virtual void transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other) = 0;
 
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.
-    virtual bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const = 0;
+    virtual bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const = 0;
 
     /// Creates a new floating tree on this workspace. The tree is empty by default
     /// and must be filled in by subsequent calls, lest it become a zombie tree with
@@ -76,9 +65,9 @@ public:
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
-    [[nodiscard]] virtual std::shared_ptr<OutputInterface> get_output() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<AbstractOutput> get_output() const = 0;
 
-    virtual void set_output(std::shared_ptr<OutputInterface> const&) = 0;
+    virtual void set_output(std::shared_ptr<AbstractOutput> const&) = 0;
 
     [[nodiscard]] virtual bool is_empty() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;

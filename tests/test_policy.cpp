@@ -24,9 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "stub_configuration.h"
 #include "vertical_display_configuration_policy.h"
 
+#include <linux/input-event-codes.h>
 #include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <filesystem>
 #include <gmock/gmock.h>
@@ -206,7 +208,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     EXPECT_THAT(container->get_logical_area(), Eq(mir::geometry::Rectangle {
                                                    { 800,  0   },
                                                    { 1000, 600 }
@@ -237,7 +239,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     update_outputs(output_configs_from_output_rectangles({}));
 
     update_outputs(output_configs_from_output_rectangles({
@@ -256,7 +258,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_1 };
         int const scan_code { KEY_1 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -272,13 +274,13 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window1 = create_window(app, spec);
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -297,7 +299,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -310,13 +312,13 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         publish_event(*event);
     }
 
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move the window1 to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta | mir_input_event_modifier_shift };
         auto const event = mir::events::make_key_event(
@@ -330,7 +332,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     }
 
     // Expect that all containers are on workspace 2
-    for (auto const& container : compositor_state->containers())
+    for (auto const& container : compositor_state->windows())
     {
         EXPECT_THAT(container.lock()->get_workspace()->num(), Eq(2));
     }

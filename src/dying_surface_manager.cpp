@@ -16,10 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "dying_surface_manager.h"
+#include "abstract_output.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
-#include "output_interface.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
 
@@ -39,11 +39,8 @@ DyingSurfaceManager::DyingSurfaceManager(
 {
 }
 
-void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const& container)
+void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer> const& container)
 {
-    if (container->get_type() != ContainerType::regular)
-        return;
-
     if (!config->are_animations_enabled())
         return;
 
@@ -55,7 +52,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
         { .surface = animating_surface.get(),
             .needs_outline = true,
             .is_focused = false,
-            .transform = container->get_transform(),
+            .transform = container->get_animation_transform(),
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
             .output_area = output_area });
 
@@ -78,7 +75,6 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<Container> const
 
         if (result.opacity)
         {
-            compositor_state->render_data_manager()->alpha_change(id, result.opacity.value());
             animating_surface->set_alpha(result.opacity.value());
         }
 

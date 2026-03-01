@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "output_manager.h"
+#include "abstract_output.h"
 #include "output_factory_interface.h"
-#include "output_interface.h"
 #include "workspace_manager.h"
 
 using namespace miracle;
@@ -28,7 +28,7 @@ OutputManager::OutputManager(
 {
 }
 
-std::shared_ptr<OutputInterface> OutputManager::create(
+std::shared_ptr<AbstractOutput> OutputManager::create(
     std::string name, int id, mir::geometry::Rectangle area, WorkspaceManager& workspace_manager)
 {
     auto const locked = state.lock();
@@ -104,7 +104,7 @@ bool OutputManager::remove(int id, WorkspaceManager& workspace_manager)
     return false;
 }
 
-std::vector<std::shared_ptr<OutputInterface>> OutputManager::outputs() const
+std::vector<std::shared_ptr<AbstractOutput>> OutputManager::outputs() const
 {
     return state.lock()->outputs_;
 }
@@ -147,12 +147,12 @@ bool OutputManager::unfocus_internal(State& state, int id)
     return true;
 }
 
-std::shared_ptr<OutputInterface> OutputManager::focused()
+std::shared_ptr<AbstractOutput> OutputManager::focused()
 {
     return state.lock()->focused_.lock();
 }
 
-std::shared_ptr<OutputInterface> OutputManager::primary()
+std::shared_ptr<AbstractOutput> OutputManager::primary()
 {
     auto const locked = state.lock();
     for (auto const& output : locked->outputs_)
@@ -164,7 +164,7 @@ std::shared_ptr<OutputInterface> OutputManager::primary()
     return nullptr;
 }
 
-std::shared_ptr<OutputInterface> OutputManager::non_primary()
+std::shared_ptr<AbstractOutput> OutputManager::non_primary()
 {
     auto const locked = state.lock();
     for (auto const& output : locked->outputs_)
@@ -176,7 +176,7 @@ std::shared_ptr<OutputInterface> OutputManager::non_primary()
     return nullptr;
 }
 
-std::shared_ptr<OutputInterface> OutputManager::prev()
+std::shared_ptr<AbstractOutput> OutputManager::prev()
 {
     auto const locked = state.lock();
     for (size_t i = locked->outputs_.size() - 1;; i--)
@@ -194,7 +194,7 @@ std::shared_ptr<OutputInterface> OutputManager::prev()
     return locked->focused_.lock();
 }
 
-std::shared_ptr<OutputInterface> OutputManager::next()
+std::shared_ptr<AbstractOutput> OutputManager::next()
 {
     auto const locked = state.lock();
     for (size_t i = 0; i < locked->outputs_.size(); i++)
@@ -212,7 +212,7 @@ std::shared_ptr<OutputInterface> OutputManager::next()
     return locked->focused_.lock();
 }
 
-std::shared_ptr<OutputInterface> OutputManager::next(Direction direction)
+std::shared_ptr<AbstractOutput> OutputManager::next(Direction direction)
 {
     auto const locked = state.lock();
     auto const active = locked->focused_.lock();
@@ -268,7 +268,7 @@ std::shared_ptr<OutputInterface> OutputManager::next(Direction direction)
     return active;
 }
 
-std::shared_ptr<OutputInterface> OutputManager::next_in_list(std::vector<std::string> const& names)
+std::shared_ptr<AbstractOutput> OutputManager::next_in_list(std::vector<std::string> const& names)
 {
     if (names.empty())
         return focused();

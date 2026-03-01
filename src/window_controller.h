@@ -29,6 +29,7 @@ namespace geom = mir::geometry;
 namespace miracle
 {
 class Container;
+class WindowContainer;
 
 /**
  * The sole interface for making changes to a window. This interface allows
@@ -44,7 +45,7 @@ public:
     virtual void clip(miral::Window const&, geom::Rectangle const&) = 0;
     virtual void noclip(miral::Window const&) = 0;
     virtual void select_active_window(miral::Window const&) = 0;
-    virtual std::shared_ptr<Container> get_container(miral::Window const&) = 0;
+    virtual std::shared_ptr<WindowContainer> get_window_container(miral::Window const&) = 0;
     virtual void raise(miral::Window const&) = 0;
     virtual void send_to_back(miral::Window const&) = 0;
     virtual void open(miral::Window const&) = 0;

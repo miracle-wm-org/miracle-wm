@@ -54,7 +54,7 @@ public:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<test::StubConfiguration> config;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
-    std::shared_ptr<WorkspaceInterface> actual_workspace;
+    std::shared_ptr<AbstractWorkspace> actual_workspace;
 };
 
 class OutputIntersectTest : public OutputTest
@@ -112,7 +112,7 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenWindowControllerReturnsNoContainer)
     miral::Window test_window;
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(nullptr));
 
     // Act
@@ -130,7 +130,7 @@ TEST_F(OutputIntersectTest, ReturnsContainerWhenOnActiveWorkspace)
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Setup container to be on active workspace
@@ -146,7 +146,7 @@ TEST_F(OutputIntersectTest, ReturnsContainerWhenOnActiveWorkspace)
     EXPECT_EQ(result, mock_container);
 }
 
-TEST_F(OutputIntersectTest, ReturnsShellContainerEvenWhenNotOnActiveWorkspace)
+TEST_F(OutputIntersectTest, ReturnsNullWhenContainerOnDifferentWorkspace)
 {
     // Arrange
     miral::Window test_window;
@@ -155,20 +155,18 @@ TEST_F(OutputIntersectTest, ReturnsShellContainerEvenWhenNotOnActiveWorkspace)
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
-    // Setup container to be on different workspace but shell type
+    // Setup container to be on different workspace
     EXPECT_CALL(*mock_container, get_workspace())
         .WillOnce(Return(different_workspace));
-    EXPECT_CALL(*mock_container, get_type())
-        .WillOnce(Return(ContainerType::shell));
 
     // Act
     auto result = output->intersect(100.0f, 100.0f);
 
     // Assert
-    EXPECT_EQ(result, mock_container);
+    EXPECT_EQ(result, nullptr);
 }
 
 TEST_F(OutputIntersectTest, ReturnsNullWhenContainerNotOnActiveWorkspaceAndNotShell)
@@ -180,14 +178,12 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenContainerNotOnActiveWorkspaceAndNotSh
 
     EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
-    // Setup container to be on different workspace and not shell
+    // Setup container to be on different workspace
     EXPECT_CALL(*mock_container, get_workspace())
         .WillOnce(Return(different_workspace));
-    EXPECT_CALL(*mock_container, get_type())
-        .WillOnce(Return(ContainerType::regular));
 
     // Act
     auto result = output->intersect(100.0f, 100.0f);
@@ -207,7 +203,7 @@ TEST_F(OutputIntersectTest, HandlesDifferentCoordinates)
 
     EXPECT_CALL(*window_controller, window_at(test_x, test_y))
         .WillOnce(Return(test_window));
-    EXPECT_CALL(*window_controller, get_container(test_window))
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
         .WillOnce(Return(mock_container));
 
     // Get the active workspace and set container to be on it

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_manager.h"
 #include "parent_container.h"
 #include "scratchpad.h"
+#include "window_container.h"
 #include "workspace_manager.h"
 
 #include <mir/log.h>
@@ -66,7 +67,8 @@ void CommandController::try_toggle_resize_mode()
         return;
     }
 
-    if (state->focused_container()->get_type() != ContainerType::regular)
+    auto const window_container = Container::as_window_container(state->focused_container());
+    if (!window_container)
     {
         set_mode(WindowManagerMode::normal);
         return;
@@ -208,7 +210,8 @@ bool CommandController::try_resize(Direction direction, int pixels, std::vector<
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->resize(direction, pixels))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->resize(direction, pixels))
             result = false;
     }
     return result;
@@ -243,7 +246,8 @@ bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vect
             break;
         }
 
-        if (!container->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
             result = false;
     }
     return result;
@@ -291,7 +295,8 @@ bool CommandController::try_move_by_direction(Direction direction, std::vector<C
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move(direction))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move(direction))
             result = false;
     }
     return result;
@@ -310,7 +315,8 @@ bool CommandController::try_move_by_pixels(miracle::Direction direction, int pix
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->move_by(direction, pixels))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move_by(direction, pixels))
             result = false;
     }
     return result;
@@ -351,7 +357,8 @@ bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vec
             break;
         }
 
-        if (!container->move_by(direction, static_cast<int>(total_size * ppt)))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->move_by(direction, static_cast<int>(total_size * ppt)))
             result = false;
     }
     return result;
@@ -398,8 +405,8 @@ bool CommandController::try_move_to_center_of_active_output(std::vector<Containe
     auto const active = state->focused_container().get();
     auto const area = active_output->get_area();
     using namespace miracle::geometry_helpers::gl;
-    float const x_pos = width(area.size) / 2.f - width(active->get_visible_area().size) / 2.f;
-    float const y_pos = height(area.size) / 2.f - height(active->get_visible_area().size) / 2.f;
+    float const x_pos = width(area.size) / 2.f - width(active->get_logical_area().size) / 2.f;
+    float const y_pos = height(area.size) / 2.f - height(active->get_logical_area().size) / 2.f;
     return try_move_to(x_pos, false, y_pos, false, scope);
 }
 
@@ -420,8 +427,8 @@ bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> 
     }
 
     auto const active = state->focused_container();
-    float const x_pos = max_x / 2.f - width(active->get_visible_area().size) / 2.f;
-    float const y_pos = max_y / 2.f - height(active->get_visible_area().size) / 2.f;
+    float const x_pos = max_x / 2.f - width(active->get_logical_area().size) / 2.f;
+    float const y_pos = max_y / 2.f - height(active->get_logical_area().size) / 2.f;
     return try_move_to(static_cast<int>(x_pos), false, static_cast<int>(y_pos), false, scope);
 }
 
@@ -469,7 +476,7 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
     else
     {
         window_controller->select_active_window(miral::Window {});
-        state->focus_container(container, true);
+        state->focus_container(container);
     }
 }
 
@@ -500,7 +507,8 @@ bool CommandController::try_select(miracle::Direction direction, std::vector<Con
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->select_next(direction))
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->select_next(direction))
             result = false;
     }
     return result;
@@ -545,14 +553,7 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->get_type() != ContainerType::parent)
-        {
-            mir::log_info("CommandController::try_select_child: parent is not selected");
-            result = false;
-            continue;
-        }
-
-        for (auto const& child : state->containers())
+        for (auto const& child : state->windows())
         {
             if (!child.expired())
             {
@@ -585,9 +586,6 @@ bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope
     if (!container)
         return false;
 
-    if (container->get_type() != ContainerType::regular)
-        return false;
-
     if (auto const parent = Container::as_parent(container->get_parent().lock()))
     {
         auto const index = parent->get_index_of_node(container).value();
@@ -608,13 +606,10 @@ bool CommandController::try_select_next(std::vector<ContainerScope> const& scope
     if (!container)
         return false;
 
-    if (container->get_type() != ContainerType::regular)
-        return false;
-
     if (auto const parent = Container::as_parent(container->get_parent().lock()))
     {
         auto const index = parent->get_index_of_node(container).value();
-        if (index != parent->num_nodes() - 1)
+        if (index != parent->num_children() - 1)
         {
             auto node_to_select = parent->get_nth_window(index + 1);
             window_controller->select_active_window(node_to_select->window().value());
@@ -718,7 +713,8 @@ bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const&
     bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->toggle_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (!wc || !wc->toggle_fullscreen())
             result = false;
     }
     return result;
@@ -1045,7 +1041,8 @@ bool CommandController::can_move_container() const
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    if (state->focused_container() && state->focused_container()->is_fullscreen())
+    auto const window_container = Container::as_window_container(state->focused_container());
+    if (window_container && window_container->is_fullscreen())
         return false;
 
     return true;
@@ -1053,16 +1050,14 @@ bool CommandController::can_move_container() const
 
 std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std::shared_ptr<Container> const& container)
 {
-    switch (container->get_type())
-    {
-    case ContainerType::regular:
+    if (auto const wc = Container::as_window_container(container))
     {
         auto focused_output = output_manager->focused();
         if (!focused_output)
             return nullptr;
 
         // Walk up the parent tree to get the root node.
-        auto parent = container->get_parent().lock();
+        auto parent = wc->get_parent().lock();
         if (!parent)
             return nullptr;
 
@@ -1070,13 +1065,13 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
             parent = parent->get_parent().lock();
 
         // Remove the container from whatever workspace it is on.
-        auto const workspace = container->get_workspace();
+        auto const workspace = wc->get_workspace();
         workspace->delete_container(container);
 
         // If the parent is anchored, we move [container] to a new floating tree.
         if (parent->anchored())
         {
-            auto const output = container->get_output();
+            auto const output = wc->get_output();
             auto const output_area = output->get_area();
             geom::Rectangle const new_area = {
                 geom::Point {
@@ -1087,8 +1082,8 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
                              as_float(output_area.size.height) * 0.8f                                    }
             };
             auto new_parent = workspace->create_floating_tree(new_area);
-            new_parent->graft_existing(container, static_cast<int>(new_parent->num_nodes()));
-            container->set_workspace(workspace);
+            new_parent->add_child(wc, new_parent->num_children());
+            wc->set_workspace(workspace);
             new_parent->commit_changes();
             return new_parent;
         }
@@ -1099,10 +1094,8 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
             return container->get_parent().lock();
         }
     }
-    default:
-        mir::log_warning("toggle_floating: has no effect on window of type: %d", (int)container->get_type());
-        return nullptr;
-    }
+
+    return nullptr;
 }
 
 bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope)
@@ -1182,7 +1175,8 @@ bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1207,7 +1201,8 @@ bool CommandController::toggle_stacking(std::vector<ContainerScope> const& scope
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1232,7 +1227,8 @@ bool CommandController::set_layout(LayoutScheme scheme, std::vector<ContainerSco
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1257,7 +1253,8 @@ bool CommandController::set_layout_default(std::vector<ContainerScope> const& sc
     bool result = true;
     for (auto const& container : containers)
     {
-        if (container->is_fullscreen())
+        auto wc = Container::as_window_container(container);
+        if (wc && wc->is_fullscreen())
         {
             result = false;
             continue;
@@ -1269,7 +1266,7 @@ bool CommandController::set_layout_default(std::vector<ContainerScope> const& sc
     return result;
 }
 
-void CommandController::move_cursor_to_output(OutputInterface const& output)
+void CommandController::move_cursor_to_output(AbstractOutput const& output)
 {
     auto const& extents = output.get_area();
     window_controller->move_cursor_to(
@@ -1337,7 +1334,7 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
     }
 
     std::vector<std::shared_ptr<Container>> result;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (container.expired())
             continue;
@@ -1561,7 +1558,7 @@ bool CommandController::try_move_to_mark(std::string const& mark, std::vector<Co
 
     // Find the first container matching the mark
     std::shared_ptr<Container> marked_container;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const sh = container.lock())
         {
@@ -1587,7 +1584,7 @@ bool CommandController::try_move_to_mark(std::string const& mark, std::vector<Co
         // meantime.
         auto const parent = marked_container->get_parent().lock();
         auto const index = parent->get_index_of_node(marked_container);
-        parent->graft_existing(container, static_cast<int>(index.value_or(-1) + 1)); // Insert at the position after!
+        parent->add_child(container, index.value_or(-1) + 1); // Insert at the position after!
     }
 
     auto const parent = marked_container->get_parent().lock();
@@ -1660,7 +1657,7 @@ std::unordered_set<std::string> CommandController::get_all_marks() const
 {
     auto const lock = state->lock();
     std::unordered_set<std::string> marks;
-    for (auto const& container : state->containers())
+    for (auto const& container : state->windows())
     {
         if (auto const locked = container.lock())
         {
@@ -1888,7 +1885,7 @@ bool CommandController::try_move_workspace_to_output(OutputSelection selection)
         return false;
     }
 
-    std::shared_ptr<OutputInterface> output = nullptr;
+    std::shared_ptr<AbstractOutput> output = nullptr;
     switch (selection)
     {
     case OutputSelection::left:
@@ -2052,10 +2049,6 @@ nlohmann::json CommandController::mode_to_json() const
     case WindowManagerMode::resizing:
         return {
             { "name", "resize" }
-        };
-    case WindowManagerMode::selecting:
-        return {
-            { "name", "selecting" }
         };
     case WindowManagerMode::dragging:
         return {

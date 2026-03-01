@@ -1029,6 +1029,8 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
 
         return from_c(result, module.handle);
     }
+
+    return std::nullopt;
 }
 
 void PluginManager::window_deleted(miral::WindowInfo const& window_info)

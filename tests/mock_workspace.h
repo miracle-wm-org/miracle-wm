@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MOCK_WORKSPACE_H
 #define MIRACLE_WM_MOCK_WORKSPACE_H
 
-#include "workspace_interface.h"
+#include "abstract_workspace.h"
 #include <functional>
 #include <gmock/gmock.h>
 #include <memory>
@@ -29,7 +29,7 @@ namespace miracle
 {
 namespace test
 {
-    class MockWorkspace : public WorkspaceInterface
+    class MockWorkspace : public AbstractWorkspace
     {
     public:
         MOCK_METHOD(void, set_area, (mir::geometry::Rectangle const&), (override));
@@ -42,16 +42,16 @@ namespace test
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, create_floating_tree, (mir::geometry::Rectangle const&), (override));
 
-        MOCK_METHOD(void, transfer_pinned_windows_to, (std::shared_ptr<WorkspaceInterface> const& other), (override));
+        MOCK_METHOD(void, transfer_pinned_windows_to, (std::shared_ptr<AbstractWorkspace> const& other), (override));
 
         MOCK_METHOD(bool, for_each_window,
-            (std::function<bool(std::shared_ptr<Container>)> const&), (const, override));
+            (std::function<bool(std::shared_ptr<WindowContainer>)> const&), (const, override));
 
         MOCK_METHOD(void, advise_focus_gained, (std::shared_ptr<Container> const& container), (override));
 
-        MOCK_METHOD(std::shared_ptr<OutputInterface>, get_output, (), (const, override));
+        MOCK_METHOD(std::shared_ptr<AbstractOutput>, get_output, (), (const, override));
 
-        MOCK_METHOD(void, set_output, (std::shared_ptr<OutputInterface> const&), (override));
+        MOCK_METHOD(void, set_output, (std::shared_ptr<AbstractOutput> const&), (override));
 
         MOCK_METHOD(bool, is_empty, (), (const, override));
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const&), (override));

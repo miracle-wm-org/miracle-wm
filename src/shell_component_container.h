@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_SHELL_COMPONENT_CONTAINER_H
 #define MIRACLE_WM_SHELL_COMPONENT_CONTAINER_H
 
-#include "container.h"
+#include "window_container.h"
 
 namespace miracle
 {
@@ -33,7 +33,7 @@ class ShellApplicationDelegate;
 /// surfaces. By design. shell components are not bound to any output
 /// or workspace. They simply "exist" in the form that the client expects
 /// them to.
-class ShellComponentContainer : public Container
+class ShellComponentContainer : public WindowContainer
 {
 public:
     ShellComponentContainer(
@@ -64,27 +64,16 @@ public:
     void request_vertical_layout() override;
     void toggle_layout(bool) override;
     void on_focus_gained() override;
-    void on_focus_lost() override;
     void on_move_to(mir::geometry::Point const& top_left) override;
     void on_resize(mir::geometry::Size const&) override;
     mir::geometry::Rectangle
     confirm_placement(MirWindowState state, mir::geometry::Rectangle const& rectangle) override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(std::shared_ptr<WorkspaceInterface> const&) override { }
-    std::shared_ptr<OutputInterface> get_output() const override;
-    glm::mat4 get_transform() const override;
-    void set_transform(glm::mat4 transform) override;
-    void set_workspace_transform(glm::mat4 const&) override;
-    void set_workspace_alpha(float a) override;
-    glm::mat4 get_workspace_transform() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(std::shared_ptr<AbstractWorkspace> const&) override { }
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_output_transform() const override;
-    void set_alpha(float const alpha) override;
-    uint32_t animation_handle() const override;
-    void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
-    ContainerType get_type() const override;
     void on_open() override;
-    std::optional<miral::Window> window() const override;
     bool select_next(Direction) override;
     bool pinned(bool) override;
     bool pinned() const override;
@@ -108,11 +97,8 @@ public:
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
 private:
-    miral::Window window_;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<ShellApplicationDelegate> delegate;
-    uint32_t handle_ = 0;
-    glm::mat4 transform_ = glm::mat4(1.f);
 };
 
 } // miracle

@@ -26,7 +26,7 @@ impl Plugin for PluginPlayground {
                 workspace: None,
                 size: Size::new(800, 600),
                 transform: Mat4::IDENTITY.mul_scalar(0.5),
-                alpha: 0.5,
+                alpha: 0.1,
             },
             ..Default::default()
         })

@@ -18,15 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_OUTPUT_H
 #define MIRACLE_WM_OUTPUT_H
 
+#include "abstract_output.h"
 #include "display_config.h"
-#include "output_interface.h"
 
 namespace miracle
 {
 class PluginManager;
 class ShellApplicationManager;
 
-class Output final : public OutputInterface, public std::enable_shared_from_this<Output>
+class Output final : public AbstractOutput, public std::enable_shared_from_this<Output>
 {
 public:
     Output(
@@ -43,8 +43,8 @@ public:
         std::shared_ptr<PluginManager> const& plugin_manager);
     ~Output() override;
 
-    std::shared_ptr<Container> intersect(float x, float y) override;
-    std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) override;
+    std::shared_ptr<WindowContainer> intersect(float x, float y) override;
+    std::shared_ptr<WindowContainer> intersect_leaf(float x, float y, bool ignore_selected) override;
     void delete_container(std::shared_ptr<Container> const& container) override;
     void advise_new_workspace(WorkspaceCreationData const&&) override;
     void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) override;
@@ -52,7 +52,7 @@ public:
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;
-    void move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInterface* workspace) override;
+    void move_workspace_to(WorkspaceManager& workspace_manager, AbstractWorkspace* workspace) override;
     bool point_is_in_output(int x, int y) override;
     void update_area(geom::Rectangle const& area) override;
     void graft(std::shared_ptr<Container> const& container) override;
@@ -61,21 +61,21 @@ public:
     void set_defunct() override;
     void unset_defunct() override;
 
-    [[nodiscard]] std::shared_ptr<WorkspaceInterface> active() const override;
-    [[nodiscard]] std::vector<std::shared_ptr<WorkspaceInterface>> const& get_workspaces() const override { return workspaces; }
+    [[nodiscard]] std::shared_ptr<AbstractWorkspace> active() const override;
+    [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> const& get_workspaces() const override { return workspaces; }
     [[nodiscard]] geom::Rectangle const& get_area() const override { return area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const override { return application_zone_list; }
     [[nodiscard]] std::string const& name() const override { return name_; }
     [[nodiscard]] bool is_defunct() const override { return is_defunct_; }
     [[nodiscard]] int id() const override { return id_; }
     [[nodiscard]] glm::mat4 get_transform() const override;
-    [[nodiscard]] WorkspaceInterface const* workspace(uint32_t id) const override;
+    [[nodiscard]] AbstractWorkspace const* workspace(uint32_t id) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override;
     [[nodiscard]] nlohmann::json get_outputs_json(bool is_focused) const override;
     [[nodiscard]] bool is_primary() const override;
 
 private:
-    void insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace);
+    void insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace);
 
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::string name_;
@@ -87,8 +87,8 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::weak_ptr<WorkspaceInterface> active_workspace;
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::weak_ptr<AbstractWorkspace> active_workspace;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     std::shared_ptr<PluginManager> plugin_manager;
 

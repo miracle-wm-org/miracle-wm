@@ -15,34 +15,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H
-#define MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H
+#ifndef MIRACLE_WINDOW_ALLOCATION_H
+#define MIRACLE_WINDOW_ALLOCATION_H
 
-#include "export.h"
-#include <array>
+#include "plugin_manager.h"
 
 namespace miracle
 {
-enum class MIRACLE_WM_CONFIG_API ContainerType
+class ParentContainer;
+class AbstractWorkspace;
+
+enum class AllocationType
 {
-    none,
-    regular,
+    system,
     shell,
-    parent,
-    group,
     plugin,
-    max
+    none
 };
 
-constexpr std::array<const char*, static_cast<int>(ContainerType::max)> container_type_strings = {
-    "none",
-    "regular",
-    "shell",
-    "parent",
-    "group",
-    "plugin"
+struct AllocationHint
+{
+    AllocationType container_type = AllocationType::none;
+    ParentContainer* parent = nullptr;
+    AbstractWorkspace* workspace = nullptr;
+    PluginHandle plugin_handle = 0;
+    glm::mat4 transform = glm::mat4(1.f);
+    float alpha = 1.f;
 };
-
 }
 
-#endif // MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H
+#endif

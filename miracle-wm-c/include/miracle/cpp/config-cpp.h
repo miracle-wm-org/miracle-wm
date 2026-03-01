@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_CONFIG_H
 
 #include "animation_definition.h"
-#include "container_type.h"
 #include "cursor_focus_mode.h"
 #include "default_key_command.h"
 #include "export.h"
@@ -30,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cstdlib>
 #include <glm/glm.hpp>
-#include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
 #include <mir_toolkit/mir_input_device_types.h>
 #include <miral/input_configuration.h>

@@ -38,12 +38,10 @@ TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
     auto window_controller = std::make_shared<test::MockWindowController>();
     auto output_factory = std::make_unique<test::MockOutputFactory>();
     auto output_manager = std::make_shared<OutputManager>(std::move(output_factory));
-    std::shared_ptr<WorkspaceInterface> workspace;
+    std::shared_ptr<AbstractWorkspace> workspace;
     Scratchpad scratchpad(window_controller, output_manager);
 
     auto container = std::make_shared<test::MockContainer>();
-    EXPECT_CALL(*container, get_type())
-        .WillOnce(::testing::Return(ContainerType::regular));
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));
@@ -54,21 +52,6 @@ TEST_F(ScratchpadTest, CanAddLeafContainerToScratchpad)
     EXPECT_TRUE(scratchpad.contains(container));
 }
 
-TEST_F(ScratchpadTest, CannotAddNonLeafContainerToScratchpad)
-{
-    auto window_controller = std::make_shared<test::MockWindowController>();
-    auto output_factory = std::make_unique<test::MockOutputFactory>();
-    auto output_manager = std::make_shared<OutputManager>(std::move(output_factory));
-    Scratchpad scratchpad(window_controller, output_manager);
-
-    auto container = std::make_shared<test::MockContainer>();
-    EXPECT_CALL(*container, get_type())
-        .WillRepeatedly(::testing::Return(ContainerType::parent));
-
-    EXPECT_FALSE(scratchpad.move_to(container));
-    EXPECT_FALSE(scratchpad.contains(container));
-}
-
 TEST_F(ScratchpadTest, CanShowContainer)
 {
     // Setup
@@ -76,13 +59,13 @@ TEST_F(ScratchpadTest, CanShowContainer)
     auto output_factory = std::make_unique<test::MockOutputFactory>();
     auto output = new test::MockOutput();
     EXPECT_CALL(*output_factory, create(testing::_, testing::_, testing::_))
-        .WillOnce(::testing::Return(std::shared_ptr<OutputInterface>(output)));
+        .WillOnce(::testing::Return(std::shared_ptr<AbstractOutput>(output)));
     mir::geometry::Rectangle output_area(
         mir::geometry::Point(0, 0),
         mir::geometry::Size(1920, 1280));
     EXPECT_CALL(*output, get_area())
         .WillOnce(::testing::ReturnRef(output_area));
-    std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     EXPECT_CALL(*output, get_workspaces())
         .WillRepeatedly(::testing::ReturnRef(empty_workspaces));
     EXPECT_CALL(*output, id())
@@ -93,13 +76,11 @@ TEST_F(ScratchpadTest, CanShowContainer)
     auto workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager);
     output_manager->create("Test", 1, mir::geometry::Rectangle {}, *workspace_manager);
     output_manager->focus(1);
-    std::shared_ptr<WorkspaceInterface> workspace;
+    std::shared_ptr<AbstractWorkspace> workspace;
 
     // Add the container
     Scratchpad scratchpad(window_controller, output_manager);
     auto container = std::make_shared<test::MockContainer>();
-    EXPECT_CALL(*container, get_type())
-        .WillOnce(::testing::Return(ContainerType::regular));
     EXPECT_CALL(*container, get_workspace())
         .WillOnce(::testing::Return(nullptr));
     EXPECT_CALL(*container, scratchpad_state(ScratchpadState::fresh));

@@ -55,19 +55,12 @@ endif()
 
 # Feature flags
 option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
-option(FEATURE_MULTI_SELECT "Enable multi-select feature" OFF)
 option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
 
 if(FEATURE_PLUGIN_SYSTEM)
     set(FEATURE_PLUGIN_SYSTEM 1)
 else()
     set(FEATURE_PLUGIN_SYSTEM 0)
-endif()
-
-if(FEATURE_MULTI_SELECT)
-    set(FEATURE_MULTI_SELECT 1)
-else()
-    set(FEATURE_MULTI_SELECT 0)
 endif()
 
 if(FEATURE_PARENT_CONTAINER_WALLPAPERS)
@@ -169,7 +162,6 @@ add_library(miracle-wm-implementation STATIC
         src/program_factory.cpp
         src/mode_observer.cpp
         src/shell_component_container.cpp
-        src/container_group_container.cpp
         src/layout_scheme.cpp
         src/scratchpad.cpp
         src/compositor_state.cpp
@@ -198,6 +190,9 @@ add_library(miracle-wm-implementation STATIC
         src/shell_application_spawner.h
         src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
         src/plugin_managed_container.h src/plugin_managed_container.cpp
+        src/collection_container.h src/collection_container.cpp
+        src/container_effect.h src/container_effect.cpp
+        src/window_container.cpp src/window_container.h
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})

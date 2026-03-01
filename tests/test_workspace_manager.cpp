@@ -31,7 +31,7 @@ using namespace testing;
 
 namespace
 {
-std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(std::shared_ptr<OutputInterface> const& output)
+std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(std::shared_ptr<AbstractOutput> const& output)
 {
     auto output_factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
     ON_CALL(*output_factory, create)
@@ -100,8 +100,8 @@ public:
             workspace_manager);
     }
 
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
-    std::shared_ptr<WorkspaceInterface> active_workspace;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    std::shared_ptr<AbstractWorkspace> active_workspace;
     std::shared_ptr<NiceMock<test::MockOutput>> output = std::make_shared<NiceMock<test::MockOutput>>();
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_registry;
     std::shared_ptr<test::MockConfig> config;

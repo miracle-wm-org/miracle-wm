@@ -62,19 +62,6 @@ void RenderDataManager::workspace_transform_change(RenderDataManagerId id, glm::
     }
 }
 
-void RenderDataManager::workspace_alpha(RenderDataManagerId id, float alpha)
-{
-    std::lock_guard lock(mutex);
-    for (auto& data : render_data)
-    {
-        if (data.id == id)
-        {
-            data.workspace_alpha = alpha;
-            return;
-        }
-    }
-}
-
 void RenderDataManager::output_area_change(RenderDataManagerId id, mir::geometry::Rectangle const& area)
 {
     std::lock_guard lock(mutex);
@@ -96,19 +83,6 @@ void RenderDataManager::focus_change(RenderDataManagerId id, bool is_focused)
         if (data.id == id)
         {
             data.is_focused = is_focused;
-            return;
-        }
-    }
-}
-
-void RenderDataManager::alpha_change(RenderDataManagerId id, float const alpha)
-{
-    std::lock_guard lock(mutex);
-    for (auto& data : render_data)
-    {
-        if (data.id == id)
-        {
-            data.alpha = alpha;
             return;
         }
     }

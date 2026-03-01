@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output.h"
 #include "resize_service.h"
 #include "scratchpad.h"
+#include "window_allocation.h"
 #include "window_manager_tools_window_controller.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -51,7 +52,6 @@ namespace miracle
 
 class ConfigObserverRegistrar;
 class Container;
-class ContainerGroupContainer;
 class AnimatorLoop;
 class OutputManager;
 class DyingSurfaceManager;
@@ -141,7 +141,6 @@ private:
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     std::unique_ptr<AnimatorLoop> animator_loop;
-    std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
