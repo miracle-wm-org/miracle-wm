@@ -447,7 +447,7 @@ int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, 
     geom::Rectangle const old_rect = container->get_logical_area();
     geom::Rectangle const new_rect {
         geom::Point { x,     y      },
-         geom::Size { width, height }
+        geom::Size { width, height }
     };
     window_controller->set_rectangle(window, old_rect, new_rect, true);
     return 0;
