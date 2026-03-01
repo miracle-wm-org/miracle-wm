@@ -700,6 +700,7 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
     state->unfocus_container(container);
     container->on_focus_lost();
+    plugin_manager->window_unfocused(window_info);
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)

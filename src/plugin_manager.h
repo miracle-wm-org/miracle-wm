@@ -143,6 +143,11 @@ public:
     /// \param window_info The window info for the focused window.
     void window_focused(miral::WindowInfo const& window_info);
 
+    /// Notify all plugins that a window has been unfocused.
+    ///
+    /// \param window_info The window info for the unfocused window.
+    void window_unfocused(miral::WindowInfo const& window_info);
+
     /// Check if the plugin handles a keyboard event.
     ///
     /// \param event the incoming keyboard event
@@ -256,6 +261,7 @@ public:
         miral::WindowSpecification const&) { return std::nullopt; }
     void window_deleted(miral::WindowInfo const&) { }
     void window_focused(miral::WindowInfo const&) { }
+    void window_unfocused(miral::WindowInfo const&) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
 };
 }
