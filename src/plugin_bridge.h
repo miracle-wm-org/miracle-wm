@@ -103,7 +103,7 @@ public:
     WindowResult get_managed_window_at(uint32_t plugin_handle, uint32_t index);
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);
-    int32_t window_set_size(uint64_t window_internal, int32_t width, int32_t height);
+    int32_t window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height);
     int32_t window_set_transform(uint64_t window_internal, float const* transform);
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
 

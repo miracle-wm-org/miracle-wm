@@ -433,7 +433,7 @@ int32_t PluginBridge::window_set_workspace(uint64_t window_internal, uint64_t wo
     return -1;
 }
 
-int32_t PluginBridge::window_set_size(uint64_t window_internal, int32_t width, int32_t height)
+int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height)
 {
     auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
     if (!std::holds_alternative<miral::Window>(info->window_info))
@@ -446,7 +446,8 @@ int32_t PluginBridge::window_set_size(uint64_t window_internal, int32_t width, i
 
     geom::Rectangle const old_rect = container->get_logical_area();
     geom::Rectangle const new_rect {
-        window.top_left(), geom::Size { width, height }
+        geom::Point { x,     y      },
+         geom::Size { width, height }
     };
     window_controller->set_rectangle(window, old_rect, new_rect, true);
     return 0;

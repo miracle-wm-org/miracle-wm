@@ -428,13 +428,15 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_set_workspace(int64_t window_internal, int64_t workspace_internal);
 
-    /// Resize a plugin-managed window.
+    /// Set the position and size of a plugin-managed window.
     ///
     /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param x the new x position in pixels
+    /// \param y the new y position in pixels
     /// \param width the new width in pixels
     /// \param height the new height in pixels
     /// \returns 0 on success, -1 on error
-    int32_t miracle_window_set_size(int64_t window_internal, int32_t width, int32_t height);
+    int32_t miracle_window_set_rectangle(int64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height);
 
     /// Set the 4x4 column-major transform matrix of a plugin-managed window.
     ///

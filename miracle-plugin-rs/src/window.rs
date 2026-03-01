@@ -368,9 +368,17 @@ impl PluginWindow {
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
-    /// Resize this window.
-    pub fn set_size(&self, size: Size) -> Result<(), ()> {
-        let r = unsafe { miracle_window_set_size(self.info.internal as i64, size.width, size.height) };
+    /// Set the position and size of this window.
+    pub fn set_rectangle(&self, rect: Rectangle) -> Result<(), ()> {
+        let r = unsafe {
+            miracle_window_set_rectangle(
+                self.info.internal as i64,
+                rect.x,
+                rect.y,
+                rect.width,
+                rect.height,
+            )
+        };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
