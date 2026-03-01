@@ -1,6 +1,6 @@
 use crate::input::KeyboardEvent;
 use crate::placement::Placement;
-use crate::window::WindowInfo;
+use crate::window::{PluginWindow, WindowInfo};
 
 use super::animation::{AnimationFrameData, AnimationFrameResult};
 use super::host::*;
@@ -76,7 +76,11 @@ pub trait Plugin {
     /// A window that is managed by this plugin had to have been placed
     /// via a freestyle placement strategy, otherwise the tiling manager
     /// or the system is handling it independently.
-    fn managed_windows() -> Vec<WindowInfo> {
+    ///
+    /// Each returned [`PluginWindow`] wraps a [`WindowInfo`] (accessible via `Deref`) and
+    /// additionally exposes setter methods for mutating the window's state, workspace,
+    /// size, transform, and alpha.
+    fn managed_windows() -> Vec<PluginWindow> {
         let handle = unsafe { miracle_get_plugin_handle() };
         let count = unsafe { miracle_num_managed_windows(handle) };
 
@@ -107,7 +111,9 @@ pub trait Plugin {
                         .unwrap_or(NAME_BUF_LEN);
                     let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-                    Some(WindowInfo::from_c_with_name(&window_info, name))
+                    Some(PluginWindow::from_window_info(
+                        WindowInfo::from_c_with_name(&window_info, name),
+                    ))
                 }
             })
             .collect()
