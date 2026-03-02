@@ -327,7 +327,7 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::existing_window_in
     uint64_t const stable_id = find_window_id(window_info.window());
     return PluginBridgeObjectHandle<miracle_window_info_t>(
         from_window(window_info, stable_id, window_controller->get_window_container(window_info.window()).get()),
-        [] { });
+        [] {});
 }
 
 Container* PluginBridge::resolve_container(uint64_t container_internal)
