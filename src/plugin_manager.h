@@ -131,7 +131,8 @@ public:
     /// \returns the placement
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const& app_info,
-        miral::WindowSpecification const& spec);
+        miral::WindowSpecification const& spec,
+        uint64_t window_id);
 
     /// Notify all plugins that a window has been deleted.
     ///
@@ -264,7 +265,8 @@ public:
         miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
-        miral::WindowSpecification const&) { return std::nullopt; }
+        miral::WindowSpecification const&,
+        uint64_t) { return std::nullopt; }
     void window_deleted(miral::WindowInfo const&) { }
     void window_focused(miral::WindowInfo const&) { }
     void window_unfocused(miral::WindowInfo const&) { }

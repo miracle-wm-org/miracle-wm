@@ -21,18 +21,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/plugin.h"
 #include <functional>
 #include <miral/application_info.h>
+#include <miral/window.h>
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
+#include <unordered_map>
 #include <variant>
 
 namespace miracle
 {
+class AbstractOutput;
+class AbstractWorkspace;
 class CompositorState;
 class Container;
 class OutputManager;
 class WindowController;
-class AbstractWorkspace;
 class WorkspaceManager;
+
+using WindowIdMap = std::unordered_map<uint64_t, miral::Window>;
+using ApplicationIdMap = std::unordered_map<uint64_t, miral::Application>;
 
 template <typename T>
 class PluginBridgeObjectHandle
@@ -85,7 +91,9 @@ public:
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<WorkspaceManager> const& workspace_manager,
-        std::shared_ptr<CompositorState> const& compositor_state);
+        std::shared_ptr<CompositorState> const& compositor_state,
+        std::shared_ptr<WindowIdMap> const& window_id_map,
+        std::shared_ptr<ApplicationIdMap> const& application_id_map);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -107,7 +115,7 @@ public:
     int32_t window_set_transform(uint64_t window_internal, float const* transform);
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
 
-    PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec);
+    PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec, uint64_t window_id);
     PluginBridgeObjectHandle<miracle_window_info_t> existing_window_info(miral::WindowInfo const& window_info);
 
     /// Retrieve the container from its id.
@@ -117,6 +125,10 @@ public:
     AbstractWorkspace* resolve_workspace(uint64_t workspace_internal);
 
 private:
+    std::shared_ptr<AbstractOutput> resolve_output(uint64_t output_id);
+    std::shared_ptr<AbstractWorkspace> resolve_workspace_shared(uint64_t workspace_id);
+    uint64_t find_window_id(miral::Window const& window) const;
+    uint64_t find_application_id(miral::Application const& app) const;
     /// This is the information expected to be on a #miracle_window_info_t.
     struct PluginWindowInfo
     {
@@ -128,6 +140,8 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<CompositorState> compositor_state;
+    std::shared_ptr<WindowIdMap> window_id_map;
+    std::shared_ptr<ApplicationIdMap> application_id_map;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
 };
 

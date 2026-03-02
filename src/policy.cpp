@@ -222,7 +222,9 @@ Policy::Policy(
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state));
+    window_id_map_ = std::make_shared<WindowIdMap>();
+    application_id_map_ = std::make_shared<ApplicationIdMap>();
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_));
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
@@ -496,9 +498,10 @@ auto Policy::place_new_window(
     // 3. If it meets the criteria of a shell component, call it one
     // 4. If it is a regular window, allocate it as such on the current workspace
     AllocationHint hint;
+    hint.pending_window_id = ++next_window_id_;
     auto new_spec = requested_specification;
 
-    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification);
+    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification, hint.pending_window_id);
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = AllocationType::plugin;
@@ -570,6 +573,24 @@ auto Policy::place_new_window(
     return new_spec;
 }
 
+void Policy::advise_new_app(miral::ApplicationInfo& app_info)
+{
+    (*application_id_map_)[++next_application_id_] = app_info.application();
+}
+
+void Policy::advise_delete_app(miral::ApplicationInfo const& app_info)
+{
+    miral::Application const app = app_info.application();
+    for (auto it = application_id_map_->begin(); it != application_id_map_->end(); ++it)
+    {
+        if (it->second == app)
+        {
+            application_id_map_->erase(it);
+            break;
+        }
+    }
+}
+
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
     auto const lock = state->lock();
@@ -623,6 +644,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
     pending_allocation.container_type = AllocationType::none;
+    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
@@ -732,6 +754,15 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
     state->remove(container);
 
     container->unregister_interest(self.get());
+
+    for (auto it = window_id_map_->begin(); it != window_id_map_->end(); ++it)
+    {
+        if (it->second == window_info.window())
+        {
+            window_id_map_->erase(it);
+            break;
+        }
+    }
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)

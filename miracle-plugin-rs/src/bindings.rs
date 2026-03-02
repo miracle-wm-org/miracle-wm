@@ -509,7 +509,7 @@ pub struct miracle_pointer_event_t {
     pub x: f32,
     #[doc = " The y position of the pointer."]
     pub y: f32,
-    #[doc = " The pointer action."]
+    #[doc = " The pointer action.\n\n This is one of the MirPointerAction values."]
     pub action: u32,
     #[doc = " The modifiers held during the event."]
     pub modifiers: u32,
