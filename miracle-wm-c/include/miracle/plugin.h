@@ -473,6 +473,12 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_set_alpha(int64_t window_internal, const float* alpha);
 
+    /// Request that the compositor give keyboard focus to a plugin-managed window.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_request_focus(int64_t window_internal);
+
 #ifdef __cplusplus
 }
 #endif

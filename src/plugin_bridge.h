@@ -114,6 +114,7 @@ public:
     int32_t window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height);
     int32_t window_set_transform(uint64_t window_internal, float const* transform);
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
+    int32_t window_request_focus(uint64_t window_internal);
 
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec, uint64_t window_id);
     PluginBridgeObjectHandle<miracle_window_info_t> existing_window_info(miral::WindowInfo const& window_info);

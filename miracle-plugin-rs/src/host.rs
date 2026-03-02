@@ -92,6 +92,10 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_set_alpha(window_internal: i64, alpha_ptr: i32) -> i32;
 
+    /// Request keyboard focus on a managed window.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_request_focus(window_internal: i64) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.
