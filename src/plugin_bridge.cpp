@@ -507,3 +507,13 @@ int32_t PluginBridge::window_set_alpha(uint64_t window_internal, float alpha)
     container->set_window_alpha(alpha);
     return 0;
 }
+
+int32_t PluginBridge::window_request_focus(uint64_t window_internal)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    window_controller->select_active_window(it->second);
+    return 0;
+}

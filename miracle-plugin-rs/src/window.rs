@@ -394,6 +394,12 @@ impl PluginWindow {
         let r = unsafe { miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
+
+    /// Request keyboard focus on this window.
+    pub fn request_focus(&self) -> Result<(), ()> {
+        let r = unsafe { miracle_window_request_focus(self.info.internal as i64) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
 }
 
 impl std::ops::Deref for PluginWindow {

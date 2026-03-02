@@ -647,6 +647,19 @@ WasmEdge_Result host_miracle_window_set_alpha(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_request_focus(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_request_focus(static_cast<uint64_t>(window_internal)));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -816,6 +829,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i64, i32 }, { i32 }),
         host_miracle_window_set_alpha, bridge.get());
 
+    add_host_function(module, "miracle_window_request_focus",
+        create_func_type({ i64 }, { i32 }),
+        host_miracle_window_request_focus, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -826,7 +843,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 18);
+    mir::log_info("Host module 'env' registered with %d functions", 19);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path)

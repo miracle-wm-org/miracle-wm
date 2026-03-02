@@ -226,7 +226,8 @@ private:
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
-    std::mutex mutex;
+    // TODO: Fix recursiveness later
+    std::recursive_mutex mutex;
     std::unique_ptr<Self> self;
 };
 }
