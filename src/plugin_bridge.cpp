@@ -32,25 +32,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-// TODO: We need to SAFELY resolve objects from their addresses, but that can come later.
-
 namespace
 {
-miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec)
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec, uint64_t internal)
 {
-    // TODO: Set internal to a unique application ID
     return {
         .application_name = info.name().empty() ? spec.application_id().value_or("").c_str() : info.name().c_str(),
-        .internal = 0
+        .internal = internal
     };
 }
 
-miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowInfo const& window)
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowInfo const& window, uint64_t internal)
 {
-    // TODO: Set internal to a unique application ID
     return {
         .application_name = info.name().empty() ? window.application_id().c_str() : info.name().c_str(),
-        .internal = 0
+        .internal = internal
     };
 }
 
@@ -65,7 +61,7 @@ miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& wor
         .number = static_cast<uint32_t>(workspace->num().value_or(0)),
         .has_name = workspace->name().has_value(),
         .num_trees = static_cast<uint32_t>(workspace->trees().size()),
-        .internal = reinterpret_cast<uint64_t>(workspace.get())
+        .internal = static_cast<uint64_t>(workspace->id())
     };
 }
 
@@ -77,7 +73,7 @@ miracle_output_t from_output(std::shared_ptr<AbstractOutput> const& output)
         .size = from_size(area.size),
         .is_primary = output->is_primary(),
         .num_workspaces = static_cast<uint32_t>(output->get_workspaces().size()),
-        .internal = reinterpret_cast<uint64_t>(output.get())
+        .internal = static_cast<uint64_t>(output->id())
     };
 }
 
@@ -147,44 +143,95 @@ miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t
 PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<WorkspaceManager> const& workspace_manager,
-    std::shared_ptr<CompositorState> const& compositor_state) :
+    std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<WindowIdMap> const& window_id_map,
+    std::shared_ptr<ApplicationIdMap> const& application_id_map) :
     output_manager(output_manager),
     window_controller(window_controller),
     workspace_manager(workspace_manager),
-    compositor_state(compositor_state)
+    compositor_state(compositor_state),
+    window_id_map(window_id_map),
+    application_id_map(application_id_map)
 {
+}
+
+uint64_t PluginBridge::find_window_id(miral::Window const& window) const
+{
+    for (auto const& [id, w] : *window_id_map)
+        if (w == window)
+            return id;
+    return 0;
+}
+
+uint64_t PluginBridge::find_application_id(miral::Application const& app) const
+{
+    for (auto const& [id, a] : *application_id_map)
+        if (a == app)
+            return id;
+    return 0;
+}
+
+std::shared_ptr<AbstractOutput> PluginBridge::resolve_output(uint64_t output_id)
+{
+    for (auto const& output : output_manager->outputs())
+        if (static_cast<uint64_t>(output->id()) == output_id)
+            return output;
+    return nullptr;
+}
+
+std::shared_ptr<AbstractWorkspace> PluginBridge::resolve_workspace_shared(uint64_t workspace_id)
+{
+    for (auto const& output : output_manager->outputs())
+        for (auto const& ws : output->get_workspaces())
+            if (static_cast<uint64_t>(ws->id()) == workspace_id)
+                return ws;
+    return nullptr;
 }
 
 miracle_application_info_t PluginBridge::application_from_window(uint64_t window_id)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
-    if (std::holds_alternative<miral::WindowSpecification>(plugin_window_info->window_info))
+    // Check the stable window map first (post-creation windows).
+    auto it = window_id_map->find(window_id);
+    if (it != window_id_map->end())
     {
-        miral::WindowSpecification spec = std::get<miral::WindowSpecification>(plugin_window_info->window_info);
-        return from_app_info(plugin_window_info->app_info, spec);
+        auto const& window = it->second;
+        uint64_t const app_id = find_application_id(window.application());
+        return from_app_info(window_controller->app_info(window), window_controller->info_for(window), app_id);
     }
 
-    miral::Window window = std::get<miral::Window>(plugin_window_info->window_info);
-    return from_app_info(plugin_window_info->app_info, window_controller->info_for(window));
+    // Fall back to the PluginWindowInfo pointer for pre-creation (WindowSpecification) case.
+    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
+    for (auto const& info : plugin_window_infos)
+    {
+        if (info.get() == plugin_window_info)
+        {
+            miral::WindowSpecification spec = std::get<miral::WindowSpecification>(plugin_window_info->window_info);
+            uint64_t const app_id = find_application_id(plugin_window_info->app_info.application());
+            return from_app_info(plugin_window_info->app_info, spec, app_id);
+        }
+    }
+
+    return {};
 }
 
 PluginBridge::WorkspaceResult PluginBridge::workspace_from_window(uint64_t window_id)
 {
-    auto const plugin_window_info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_id));
-    if (std::holds_alternative<miral::Window>(plugin_window_info->window_info))
+    // Check the stable window map first (post-creation windows).
+    auto it = window_id_map->find(window_id);
+    if (it != window_id_map->end())
     {
-        miral::WindowInfo const& miral_window_info = window_controller->info_for(std::get<miral::Window>(plugin_window_info->window_info));
+        miral::WindowInfo const& miral_window_info = window_controller->info_for(it->second);
         if (auto const container = window_controller->get_window_container(miral_window_info.window()))
         {
             if (auto const workspace = container->get_workspace())
                 return { from_workspace(workspace), workspace->name() };
         }
+        return { from_workspace(nullptr), std::nullopt };
     }
-    else
-    {
-        if (auto const workspace = output_manager->focused()->active())
-            return { from_workspace(workspace), workspace->name() };
-    }
+
+    // Fall back: pre-creation window uses the active workspace.
+    if (auto const workspace = output_manager->focused()->active())
+        return { from_workspace(workspace), workspace->name() };
 
     return { from_workspace(nullptr), std::nullopt };
 }
@@ -204,7 +251,7 @@ PluginBridge::OutputResult PluginBridge::output_at(uint32_t index)
 
 PluginBridge::OutputResult PluginBridge::output_from_workspace(uint64_t workspace_id)
 {
-    auto const workspace = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_id));
+    auto const workspace = resolve_workspace_shared(workspace_id);
     return OutputResult {
         from_output(workspace->get_output()),
         workspace->get_output()->name()
@@ -213,21 +260,21 @@ PluginBridge::OutputResult PluginBridge::output_from_workspace(uint64_t workspac
 
 uint32_t PluginBridge::num_workspaces_on_output(uint64_t output_id)
 {
-    auto const miracle_output = static_cast<AbstractOutput*>(reinterpret_cast<void*>(output_id));
-    return miracle_output->get_workspaces().size();
+    auto const output = resolve_output(output_id);
+    return output->get_workspaces().size();
 }
 
 PluginBridge::WorkspaceResult PluginBridge::workspace_on_output_at_index(uint64_t output_id, uint32_t index)
 {
-    auto const miracle_output = static_cast<AbstractOutput*>(reinterpret_cast<void*>(output_id));
-    auto const workspace = miracle_output->get_workspaces()[index];
+    auto const output = resolve_output(output_id);
+    auto const workspace = output->get_workspaces()[index];
     return { from_workspace(workspace), workspace->name() };
 }
 
 miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t index)
 {
-    auto const miracle_workspace = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_id));
-    auto const trees = miracle_workspace->trees();
+    auto const workspace = resolve_workspace_shared(workspace_id);
+    auto const trees = workspace->trees();
     return from_parent(trees[index]);
 }
 
@@ -247,16 +294,13 @@ PluginBridge::WindowResult PluginBridge::get_window(uint64_t container_address)
     auto const leaf = static_cast<LeafContainer*>(reinterpret_cast<void*>(container_address));
     miral::Window window = leaf->window().value();
     miral::WindowInfo const& window_info = window_controller->info_for(window);
-    miral::ApplicationInfo const& app_info = window_controller->app_info(window);
-    auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window);
-    plugin_window_infos.push_back(plugin_window_info);
     return {
-        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window).get()),
+        from_window(window_info, find_window_id(window), window_controller->get_window_container(window).get()),
         window_info.name()
     };
 }
 
-PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec)
+PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec, uint64_t window_id)
 {
     auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, spec);
     plugin_window_infos.push_back(plugin_window_info);
@@ -266,7 +310,7 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
         .top_left = from_point(spec.top_left().value_or(geom::Point())),
         .size = from_size(spec.size().value_or(geom::Size(800, 600))),
         .depth_layer = spec.depth_layer().value_or(mir_depth_layer_application),
-        .internal = reinterpret_cast<uint64_t>(plugin_window_info.get()),
+        .internal = window_id,
         .alpha = 1.f
     };
     glm::mat4 identity(1.f);
@@ -280,15 +324,12 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::new_window_info(mi
 
 PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::existing_window_info(miral::WindowInfo const& window_info)
 {
-    auto const& app_info = window_controller->app_info(window_info.window());
-    auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window_info.window());
-    plugin_window_infos.push_back(plugin_window_info);
+    uint64_t const stable_id = find_window_id(window_info.window());
     return PluginBridgeObjectHandle<miracle_window_info_t>(
-        from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window_info.window()).get()),
-        [this, plugin_window_info = plugin_window_info]
-    {
-        std::erase(plugin_window_infos, plugin_window_info);
-    });
+        from_window(window_info, stable_id, window_controller->get_window_container(window_info.window()).get()),
+        // clang-format off
+        [] {});
+    // clang-format on
 }
 
 Container* PluginBridge::resolve_container(uint64_t container_internal)
@@ -327,7 +368,7 @@ PluginBridge::WorkspaceResult PluginBridge::active_workspace()
 
 AbstractWorkspace* PluginBridge::resolve_workspace(uint64_t workspace_internal)
 {
-    return static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_internal));
+    return resolve_workspace_shared(workspace_internal).get();
 }
 
 uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
@@ -374,11 +415,8 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
         if (count == index)
         {
             miral::WindowInfo const& window_info = window_controller->info_for(window.value());
-            miral::ApplicationInfo const& app_info = window_controller->app_info(window.value());
-            auto const plugin_window_info = std::make_shared<PluginWindowInfo>(app_info, window.value());
-            plugin_window_infos.push_back(plugin_window_info);
             return {
-                from_window(window_info, reinterpret_cast<uint64_t>(plugin_window_info.get()), window_controller->get_window_container(window.value()).get()),
+                from_window(window_info, find_window_id(window.value()), window_controller->get_window_container(window.value()).get()),
                 window_info.name()
             };
         }
@@ -391,55 +429,42 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
 
 int32_t PluginBridge::window_set_state(uint64_t window_internal, int32_t state)
 {
-    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
-    if (!std::holds_alternative<miral::Window>(info->window_info))
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
         return -1;
 
-    auto const& window = std::get<miral::Window>(info->window_info);
-    window_controller->change_state(window, static_cast<MirWindowState>(state));
+    window_controller->change_state(it->second, static_cast<MirWindowState>(state));
     return 0;
 }
 
 int32_t PluginBridge::window_set_workspace(uint64_t window_internal, uint64_t workspace_internal)
 {
-    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
-    if (!std::holds_alternative<miral::Window>(info->window_info))
+    auto wit = window_id_map->find(window_internal);
+    if (wit == window_id_map->end())
         return -1;
 
-    auto const& window = std::get<miral::Window>(info->window_info);
-    auto const container = window_controller->get_window_container(window);
+    auto const container = window_controller->get_window_container(wit->second);
     if (!container)
         return -1;
 
-    auto const new_ws = static_cast<AbstractWorkspace*>(reinterpret_cast<void*>(workspace_internal));
+    auto const new_ws = resolve_workspace_shared(workspace_internal);
     if (!new_ws)
         return -1;
 
     if (auto const old_ws = container->get_workspace())
         old_ws->remove_other_container(container);
 
-    for (auto const& output : output_manager->outputs())
-    {
-        for (auto const& ws : output->get_workspaces())
-        {
-            if (ws.get() == new_ws)
-            {
-                ws->add_other_container(container);
-                return 0;
-            }
-        }
-    }
-
-    return -1;
+    new_ws->add_other_container(container);
+    return 0;
 }
 
 int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height)
 {
-    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
-    if (!std::holds_alternative<miral::Window>(info->window_info))
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
         return -1;
 
-    auto const& window = std::get<miral::Window>(info->window_info);
+    auto const& window = it->second;
     auto const container = window_controller->get_window_container(window);
     if (!container)
         return -1;
@@ -455,12 +480,11 @@ int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, 
 
 int32_t PluginBridge::window_set_transform(uint64_t window_internal, float const* transform)
 {
-    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
-    if (!std::holds_alternative<miral::Window>(info->window_info))
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
         return -1;
 
-    auto const& window = std::get<miral::Window>(info->window_info);
-    auto const container = window_controller->get_window_container(window);
+    auto const container = window_controller->get_window_container(it->second);
     if (!container)
         return -1;
 
@@ -472,12 +496,11 @@ int32_t PluginBridge::window_set_transform(uint64_t window_internal, float const
 
 int32_t PluginBridge::window_set_alpha(uint64_t window_internal, float alpha)
 {
-    auto const info = static_cast<PluginWindowInfo*>(reinterpret_cast<void*>(window_internal));
-    if (!std::holds_alternative<miral::Window>(info->window_info))
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
         return -1;
 
-    auto const& window = std::get<miral::Window>(info->window_info);
-    auto const container = window_controller->get_window_container(window);
+    auto const container = window_controller->get_window_container(it->second);
     if (!container)
         return -1;
 

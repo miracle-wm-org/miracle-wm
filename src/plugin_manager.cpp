@@ -1032,10 +1032,11 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
 std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     miral::ApplicationInfo const& app_info,
-    miral::WindowSpecification const& spec)
+    miral::WindowSpecification const& spec,
+    uint64_t window_id)
 {
     std::lock_guard lock(mutex);
-    auto const bridge_handle = self->bridge->new_window_info(app_info, spec);
+    auto const bridge_handle = self->bridge->new_window_info(app_info, spec, window_id);
     auto const window_info_t = bridge_handle.get();
     for (auto const& module : self->loaded_modules)
     {

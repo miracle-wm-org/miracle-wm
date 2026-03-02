@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mode_observer.h"
 #include "move_service.h"
 #include "output.h"
+#include "plugin_bridge.h"
 #include "resize_service.h"
 #include "scratchpad.h"
 #include "window_allocation.h"
@@ -82,6 +83,8 @@ public:
     auto place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
+    void advise_new_app(miral::ApplicationInfo& app_info) override;
+    void advise_delete_app(miral::ApplicationInfo const& app_info) override;
     void advise_new_window(miral::WindowInfo const& window_info) override;
     void handle_window_ready(miral::WindowInfo& window_info) override;
     void advise_focus_gained(miral::WindowInfo const& window_info) override;
@@ -148,6 +151,10 @@ private:
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
+    std::shared_ptr<WindowIdMap> window_id_map_;
+    uint64_t next_window_id_ = 0;
+    std::shared_ptr<ApplicationIdMap> application_id_map_;
+    uint64_t next_application_id_ = 0;
 };
 }
 
