@@ -132,7 +132,7 @@ public:
 private:
     bool focus_existing(AbstractWorkspace const*, bool back_and_forth);
 
-    uint32_t next_id = 0;
+    uint32_t next_id = 1;
 
     AbstractWorkspace* workspace(int num) const;
     AbstractWorkspace* workspace(std::string const& name) const;
