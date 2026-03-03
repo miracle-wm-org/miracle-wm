@@ -65,6 +65,17 @@ pub trait Plugin {
     /// Called when a window loses focus.
     fn window_unfocused(&mut self, info: WindowInfo) {}
 
+    /// Called when a workspace is created.
+    fn workspace_created(&mut self, workspace: Workspace) {}
+
+    /// Called when a workspace is removed.
+    fn workspace_removed(&mut self, workspace: Workspace) {}
+
+    /// Called when a workspace gains focus.
+    ///
+    /// `previous_id` is the internal ID of the previously focused workspace, if any.
+    fn workspace_focused(&mut self, previous_id: Option<u64>, current: Workspace) {}
+
     /// Handle a keyboard event.
     ///
     /// If the plugin returns `false`, the event is propagated to the next
@@ -506,6 +517,99 @@ macro_rules! miracle_plugin {
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
             plugin.window_unfocused(info);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn workspace_created(
+            workspace_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_ws = unsafe {
+                &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
+            plugin.workspace_created(ws);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn workspace_removed(
+            workspace_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_ws = unsafe {
+                &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
+            plugin.workspace_removed(ws);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn workspace_focused(
+            workspace_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+            has_previous: i32,
+            previous_id: i64,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_ws = unsafe {
+                &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
+            let prev = if has_previous != 0 { Some(previous_id as u64) } else { None };
+            plugin.workspace_focused(prev, ws);
         }
 
         #[unsafe(no_mangle)]

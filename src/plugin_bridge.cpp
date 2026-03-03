@@ -371,6 +371,14 @@ AbstractWorkspace* PluginBridge::resolve_workspace(uint64_t workspace_internal)
     return resolve_workspace_shared(workspace_internal).get();
 }
 
+PluginBridge::WorkspaceResult PluginBridge::workspace_by_id(uint32_t id)
+{
+    auto const ws = resolve_workspace_shared(static_cast<uint64_t>(id));
+    if (!ws)
+        return { from_workspace(nullptr), std::nullopt };
+    return { from_workspace(ws), ws->name() };
+}
+
 uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
 {
     uint32_t count = 0;

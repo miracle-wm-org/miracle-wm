@@ -1394,6 +1394,242 @@ void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
     }
 }
 
+void PluginManager::workspace_created(uint32_t id)
+{
+    std::lock_guard lock(mutex);
+    auto const result = self->bridge->workspace_by_id(id);
+    auto const& workspace_t = result.workspace;
+    auto const& workspace_name = result.name.value_or("");
+    for (auto const& module : self->loaded_modules)
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr workspace_info_ptr = 0;
+
+        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
+        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            workspace_info_buffer,
+            workspace_info_ptr,
+            sizeof(workspace_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
+        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(workspace_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        WasmEdge_Value params[3];
+        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(name_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_len);
+
+        auto const func_name = WasmEdge_StringCreateByCString("workspace_created");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            3,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'workspace_created' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
+void PluginManager::workspace_removed(uint32_t id)
+{
+    std::lock_guard lock(mutex);
+    auto const result = self->bridge->workspace_by_id(id);
+    auto const& workspace_t = result.workspace;
+    auto const& workspace_name = result.name.value_or("");
+    for (auto const& module : self->loaded_modules)
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr workspace_info_ptr = 0;
+
+        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
+        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            workspace_info_buffer,
+            workspace_info_ptr,
+            sizeof(workspace_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
+        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(workspace_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        WasmEdge_Value params[3];
+        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(name_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_len);
+
+        auto const func_name = WasmEdge_StringCreateByCString("workspace_removed");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            3,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'workspace_removed' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
+void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id)
+{
+    std::lock_guard lock(mutex);
+    auto const result = self->bridge->workspace_by_id(current_id);
+    auto const& workspace_t = result.workspace;
+    auto const& workspace_name = result.name.value_or("");
+    for (auto const& module : self->loaded_modules)
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr workspace_info_ptr = 0;
+
+        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
+        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            workspace_info_buffer,
+            workspace_info_ptr,
+            sizeof(workspace_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
+        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(workspace_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        int32_t const has_previous = previous_id.has_value() ? 1 : 0;
+        int64_t const previous_id_val = static_cast<int64_t>(previous_id.value_or(0));
+
+        WasmEdge_Value params[5];
+        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(name_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_len);
+        params[3] = WasmEdge_ValueGenI32(has_previous);
+        params[4] = WasmEdge_ValueGenI64(previous_id_val);
+
+        auto const func_name = WasmEdge_StringCreateByCString("workspace_focused");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            5,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'workspace_focused' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
 bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
 {
     std::lock_guard lock(mutex);
