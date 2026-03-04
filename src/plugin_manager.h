@@ -103,12 +103,6 @@ public:
     /// \returns a load result.
     PluginLoadResult load_wasm_module(std::string const& path);
 
-    /// Get the WebAssembly module associated with \p name.
-    ///
-    /// \param name The name of the module.
-    /// \returns The plugin handle, or 0 if not found.
-    PluginHandle get_wasm_module(std::string const& name);
-
     /// Attempt to unload the WebAssembly module associated with \p handle.
     ///
     /// \returns `true` if the module was unloaded, `false` otherwise.
@@ -219,7 +213,7 @@ private:
 
         struct ModuleInstance
         {
-            ModuleInstancePtr module_context;
+            std::shared_ptr<WasmEdge_ModuleInstanceContext> module_context;
             PluginHandle handle;
             std::string name;
         };
@@ -227,6 +221,7 @@ private:
         explicit Self(std::unique_ptr<PluginBridge> bridge);
         ~Self();
         void create_host_module();
+        std::vector<ModuleInstance> safe_copy();
 
         std::unique_ptr<PluginBridge> bridge;
         ConfigurePtr configure_context;
@@ -236,14 +231,14 @@ private:
         ExecutorPtr executor_context;
         ModuleInstancePtr wasi_module_instance;
         ModuleInstancePtr host_module;
+
+        std::mutex modules_access_mutex;
         PluginHandle next_plugin_handle = 1;
         std::vector<ModuleInstance> loaded_modules;
     };
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
-    // TODO: Fix recursiveness later
-    std::recursive_mutex mutex;
     std::unique_ptr<Self> self;
 };
 }
