@@ -132,6 +132,7 @@ public:
 private:
     bool focus_existing(AbstractWorkspace const*, bool back_and_forth);
 
+    // Note: `0` is a special workspace number meaning "no workspace" in some contexts.
     uint32_t next_id = 1;
 
     AbstractWorkspace* workspace(int num) const;
