@@ -82,8 +82,14 @@ public:
     {
     }
 
-    void on_workspace_created(uint32_t) override { }
-    void on_workspace_removed(uint32_t) override { }
+    void on_workspace_created(uint32_t id) override
+    {
+        policy.plugin_manager->workspace_created(id);
+    }
+    void on_workspace_removed(uint32_t id) override
+    {
+        policy.plugin_manager->workspace_removed(id);
+    }
     void on_workspace_empty(uint32_t) override { }
     void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
@@ -106,6 +112,7 @@ public:
             if (last_workspace->get_output() != next_workspace->get_output())
                 policy.command_controller->move_cursor_to_output(*next_workspace->get_output());
         }
+        policy.plugin_manager->workspace_focused(old, next);
     }
     void on_workspace_renamed(uint32_t) override { }
 

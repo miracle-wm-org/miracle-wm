@@ -119,7 +119,7 @@ TEST_F(WorkspaceManagerTest, RequestNewWorkspace)
     const auto& first_workspace = workspaces.front();
     EXPECT_TRUE(first_workspace->get_output() == output);
     EXPECT_TRUE(first_workspace->num() == 1);
-    EXPECT_TRUE(first_workspace->id() == 0);
+    EXPECT_TRUE(first_workspace->id() == 1);
 
     EXPECT_TRUE(active_workspace == first_workspace);
 
@@ -130,7 +130,7 @@ TEST_F(WorkspaceManagerTest, RequestNewWorkspace)
     const auto& second_workspace = workspaces.back();
     EXPECT_TRUE(second_workspace->get_output() == output);
     EXPECT_TRUE(second_workspace->num() == 2);
-    EXPECT_TRUE(second_workspace->id() == 1);
+    EXPECT_TRUE(second_workspace->id() == 2);
 
     EXPECT_TRUE(active_workspace == second_workspace);
 }

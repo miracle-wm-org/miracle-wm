@@ -116,6 +116,9 @@ public:
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
     int32_t window_request_focus(uint64_t window_internal);
 
+    /// Look up a workspace by its ID and return its plugin representation.
+    WorkspaceResult workspace_by_id(uint32_t id);
+
     PluginBridgeObjectHandle<miracle_window_info_t> new_window_info(miral::ApplicationInfo const& app_info, miral::WindowSpecification const& spec, uint64_t window_id);
     PluginBridgeObjectHandle<miracle_window_info_t> existing_window_info(miral::WindowInfo const& window_info);
 

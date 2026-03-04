@@ -149,6 +149,22 @@ public:
     /// \param window_info The window info for the unfocused window.
     void window_unfocused(miral::WindowInfo const& window_info);
 
+    /// Notify all plugins that a workspace has been created.
+    ///
+    /// \param id The ID of the created workspace.
+    void workspace_created(uint32_t id);
+
+    /// Notify all plugins that a workspace has been removed.
+    ///
+    /// \param id The ID of the removed workspace.
+    void workspace_removed(uint32_t id);
+
+    /// Notify all plugins that a workspace has gained focus.
+    ///
+    /// \param previous_id The ID of the previously focused workspace, if any.
+    /// \param current_id The ID of the newly focused workspace.
+    void workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id);
+
     /// Check if the plugin handles a keyboard event.
     ///
     /// \param event the incoming keyboard event
@@ -271,6 +287,9 @@ public:
     void window_deleted(miral::WindowInfo const&) { }
     void window_focused(miral::WindowInfo const&) { }
     void window_unfocused(miral::WindowInfo const&) { }
+    void workspace_created(uint32_t) { }
+    void workspace_removed(uint32_t) { }
+    void workspace_focused(std::optional<uint32_t>, uint32_t) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
     bool handle_pointer_event(MirPointerEvent const&) { return false; }
 };
