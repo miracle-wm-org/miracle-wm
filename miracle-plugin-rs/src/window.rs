@@ -369,7 +369,7 @@ impl PluginWindow {
     }
 
     /// Set the position and size of this window.
-    pub fn set_rectangle(&self, rect: Rectangle) -> Result<(), ()> {
+    pub fn set_rectangle(&self, rect: Rectangle, animate: bool) -> Result<(), ()> {
         let r = unsafe {
             miracle_window_set_rectangle(
                 self.info.internal as i64,
@@ -377,6 +377,7 @@ impl PluginWindow {
                 rect.y,
                 rect.width,
                 rect.height,
+                if animate { 1 } else { 0 },
             )
         };
         if r == 0 { Ok(()) } else { Err(()) }

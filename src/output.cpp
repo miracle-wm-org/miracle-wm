@@ -316,7 +316,7 @@ void Output::update_area(geom::Rectangle const& new_area)
 {
     area = new_area;
     for (auto& workspace : workspaces)
-        workspace->set_area(area);
+        workspace->recalculate_area();
 }
 
 void Output::graft(std::shared_ptr<Container> const& container)

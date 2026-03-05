@@ -277,6 +277,12 @@ extern "C"
         ///
         /// Please do not use unless you plan to be very sneaky.
         uint64_t internal;
+
+        /// The position of the workspace area.
+        miracle_point_t position;
+
+        /// The size of the workspace area.
+        miracle_size_t size;
     } miracle_workspace_t;
 
     /// Describes an output.
@@ -456,8 +462,9 @@ extern "C"
     /// \param y the new y position in pixels
     /// \param width the new width in pixels
     /// \param height the new height in pixels
+    /// \param animate non-zero to animate the transition, zero for immediate placement
     /// \returns 0 on success, -1 on error
-    int32_t miracle_window_set_rectangle(int64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height);
+    int32_t miracle_window_set_rectangle(int64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height, int32_t animate);
 
     /// Set the 4x4 column-major transform matrix of a plugin-managed window.
     ///

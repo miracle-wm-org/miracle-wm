@@ -1,5 +1,6 @@
 use super::bindings;
 use super::container::*;
+use super::core::Rectangle;
 use super::host::*;
 use super::output::*;
 
@@ -13,6 +14,8 @@ pub struct Workspace {
     pub num_trees: u32,
     /// Internal pointer for C interop.
     pub internal: u64,
+    /// The current area of the workspace.
+    pub rectangle: Rectangle,
 }
 
 impl Workspace {
@@ -31,6 +34,12 @@ impl Workspace {
             },
             num_trees: value.num_trees,
             internal: value.internal,
+            rectangle: Rectangle {
+                x: value.position.x,
+                y: value.position.y,
+                width: value.size.w,
+                height: value.size.h,
+            },
         }
     }
 

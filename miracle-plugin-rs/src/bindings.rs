@@ -405,6 +405,10 @@ pub struct miracle_workspace_t {
     pub num_trees: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
+    #[doc = " The position of the workspace area."]
+    pub position: miracle_point_t,
+    #[doc = " The size of the workspace area."]
+    pub size: miracle_size_t,
 }
 #[doc = " Describes an output."]
 #[repr(C)]
