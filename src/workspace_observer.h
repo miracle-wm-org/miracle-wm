@@ -37,6 +37,7 @@ public:
     virtual void on_workspace_removed(uint32_t) = 0;
     virtual void on_workspace_focused(std::optional<uint32_t>, uint32_t) = 0;
     virtual void on_workspace_renamed(uint32_t) = 0;
+    virtual void on_workspace_area_changed(uint32_t) = 0;
 };
 
 class NullWorkspaceObserver : public WorkspaceObserver
@@ -47,6 +48,7 @@ public:
     void on_workspace_removed(uint32_t) override { }
     void on_workspace_focused(std::optional<uint32_t>, uint32_t) override { }
     void on_workspace_renamed(uint32_t) override { }
+    void on_workspace_area_changed(uint32_t) override { }
 };
 
 class WorkspaceObserverRegistrar : public ObserverRegistrar<WorkspaceObserver>
@@ -58,6 +60,7 @@ public:
     void advise_removed(uint32_t);
     void advise_focused(std::optional<uint32_t>, uint32_t);
     void advise_renamed(uint32_t);
+    void advise_area_changed(uint32_t);
 };
 
 } // miracle

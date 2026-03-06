@@ -58,7 +58,6 @@ public:
         std::shared_ptr<PluginManager> const& plugin_manager);
     ~Workspace() override;
 
-    void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
 
     void delete_container(std::shared_ptr<Container> const& container) override;
@@ -80,6 +79,7 @@ public:
     [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
     void num(std::optional<int> n) override;
     void name(std::optional<std::string> const&) override;
+    [[nodiscard]] mir::geometry::Rectangle area() const override;
     [[nodiscard]] std::optional<Gaps> outer_gaps() const override;
     void outer_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] std::optional<Gaps> inner_gaps() const override;

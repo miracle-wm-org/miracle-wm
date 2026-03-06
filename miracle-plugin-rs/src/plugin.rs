@@ -76,6 +76,9 @@ pub trait Plugin {
     /// `previous_id` is the internal ID of the previously focused workspace, if any.
     fn workspace_focused(&mut self, previous_id: Option<u64>, current: Workspace) {}
 
+    /// Called when a workspace's area (geometry) changes.
+    fn workspace_area_changed(&mut self, workspace: Workspace) {}
+
     /// Handle a keyboard event.
     ///
     /// If the plugin returns `false`, the event is propagated to the next
@@ -610,6 +613,36 @@ macro_rules! miracle_plugin {
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
             let prev = if has_previous != 0 { Some(previous_id as u64) } else { None };
             plugin.workspace_focused(prev, ws);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn workspace_area_changed(
+            workspace_info_ptr: i32,
+            name_ptr: i32,
+            name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_ws = unsafe {
+                &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)
+            };
+
+            let name = if name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(name_ptr as *const u8, name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
+            plugin.workspace_area_changed(ws);
         }
 
         #[unsafe(no_mangle)]

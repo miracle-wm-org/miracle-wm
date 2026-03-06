@@ -594,8 +594,9 @@ WasmEdge_Result host_miracle_window_set_rectangle(
     int32_t const y = WasmEdge_ValueGetI32(params[2]);
     int32_t const width = WasmEdge_ValueGetI32(params[3]);
     int32_t const height = WasmEdge_ValueGetI32(params[4]);
+    int32_t const animate = WasmEdge_ValueGetI32(params[5]);
     returns[0] = WasmEdge_ValueGenI32(bridge->window_set_rectangle(
-        static_cast<uint64_t>(window_internal), x, y, width, height));
+        static_cast<uint64_t>(window_internal), x, y, width, height, animate != 0));
     return WasmEdge_Result_Success;
 }
 
@@ -818,7 +819,7 @@ void PluginManager::Self::create_host_module()
         host_miracle_window_set_workspace, bridge.get());
 
     add_host_function(module, "miracle_window_set_rectangle",
-        create_func_type({ i64, i32, i32, i32, i32 }, { i32 }),
+        create_func_type({ i64, i32, i32, i32, i32, i32 }, { i32 }),
         host_miracle_window_set_rectangle, bridge.get());
 
     add_host_function(module, "miracle_window_set_transform",
@@ -1612,6 +1613,82 @@ void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint3
         if (!WasmEdge_ResultOK(r))
         {
             mir::log_error("Failed to invoke 'workspace_focused' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
+void PluginManager::workspace_area_changed(uint32_t id)
+{
+    auto const result = self->bridge->workspace_by_id(id);
+    auto const& workspace_t = result.workspace;
+    auto const& workspace_name = result.name.value_or("");
+    for (auto const& module : self->safe_copy())
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr workspace_info_ptr = 0;
+
+        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
+        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            workspace_info_buffer,
+            workspace_info_ptr,
+            sizeof(workspace_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
+        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
+        if (name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(workspace_name.data()),
+                name_ptr,
+                name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        WasmEdge_Value params[3];
+        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(name_ptr);
+        params[2] = WasmEdge_ValueGenI32(name_len);
+
+        auto const func_name = WasmEdge_StringCreateByCString("workspace_area_changed");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            3,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'workspace_area_changed' function: %s", WasmEdge_ResultGetMessage(r));
             continue;
         }
     }

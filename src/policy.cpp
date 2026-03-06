@@ -115,6 +115,10 @@ public:
         policy.plugin_manager->workspace_focused(old, next);
     }
     void on_workspace_renamed(uint32_t) override { }
+    void on_workspace_area_changed(uint32_t id) override
+    {
+        policy.plugin_manager->workspace_area_changed(id);
+    }
 
     void on_container_fullscreen(Container const& container) override
     {

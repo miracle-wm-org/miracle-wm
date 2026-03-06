@@ -159,6 +159,11 @@ public:
     /// \param current_id The ID of the newly focused workspace.
     void workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id);
 
+    /// Notify all plugins that a workspace's area has changed.
+    ///
+    /// \param id The ID of the workspace whose area changed.
+    void workspace_area_changed(uint32_t id);
+
     /// Check if the plugin handles a keyboard event.
     ///
     /// \param event the incoming keyboard event
@@ -285,6 +290,7 @@ public:
     void workspace_created(uint32_t) { }
     void workspace_removed(uint32_t) { }
     void workspace_focused(std::optional<uint32_t>, uint32_t) { }
+    void workspace_area_changed(uint32_t) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
     bool handle_pointer_event(MirPointerEvent const&) { return false; }
 };

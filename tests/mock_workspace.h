@@ -32,7 +32,6 @@ namespace test
     class MockWorkspace : public AbstractWorkspace
     {
     public:
-        MOCK_METHOD(void, set_area, (mir::geometry::Rectangle const&), (override));
         MOCK_METHOD(void, recalculate_area, (), (override));
 
         MOCK_METHOD(void, delete_container, (std::shared_ptr<Container> const& container), (override));
@@ -65,6 +64,8 @@ namespace test
         MOCK_METHOD(void, name, (std::optional<std::string> const&), (override));
         MOCK_METHOD(std::string, display_name, (), (const, override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, get_root, (), (const, override));
+
+        MOCK_METHOD(mir::geometry::Rectangle, area, (), (const, override));
 
         MOCK_METHOD(std::optional<Gaps>, outer_gaps, (), (const, override));
         MOCK_METHOD(void, outer_gaps, (std::optional<Gaps> const&), (override));

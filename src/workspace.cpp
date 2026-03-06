@@ -163,12 +163,11 @@ std::shared_ptr<ParentContainer> Workspace::root() const
     return root_;
 }
 
-void Workspace::set_area(mir::geometry::Rectangle const& area)
+geom::Rectangle Workspace::area() const
 {
-    // TODO: This is wort of weird.
-    root()->set_workspace(shared_from_this());
-    root()->set_logical_area(area, true);
-    root()->commit_changes();
+    if (auto const sh_output = output.lock())
+        return get_output_area(sh_output);
+    return {};
 }
 
 void Workspace::recalculate_area()
@@ -178,6 +177,7 @@ void Workspace::recalculate_area()
         root()->set_logical_area(get_output_area(sh_output), true);
         root()->commit_changes();
     }
+    registry->advise_area_changed(id());
 }
 
 void Workspace::delete_container(std::shared_ptr<Container> const& container)
@@ -465,7 +465,7 @@ std::shared_ptr<AbstractOutput> Workspace::get_output() const
 void Workspace::set_output(std::shared_ptr<AbstractOutput> const& new_output)
 {
     this->output = new_output;
-    set_area(new_output->get_area());
+    recalculate_area();
 }
 
 bool Workspace::is_empty() const

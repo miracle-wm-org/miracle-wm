@@ -35,7 +35,6 @@ class AbstractWorkspace : public std::enable_shared_from_this<AbstractWorkspace>
 public:
     virtual ~AbstractWorkspace() = default;
 
-    virtual void set_area(mir::geometry::Rectangle const&) = 0;
     virtual void recalculate_area() = 0;
 
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
@@ -77,6 +76,9 @@ public:
     virtual void num(std::optional<int> n) = 0;
     [[nodiscard]] virtual std::optional<std::string> const& name() const = 0;
     virtual void name(std::optional<std::string> const&) = 0;
+
+    /// Returns the current area of the workspace.
+    [[nodiscard]] virtual mir::geometry::Rectangle area() const = 0;
 
     [[nodiscard]] virtual std::optional<Gaps> outer_gaps() const = 0;
     virtual void outer_gaps(std::optional<Gaps> const& gaps) = 0;

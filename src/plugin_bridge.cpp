@@ -55,13 +55,16 @@ miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& wor
     if (workspace == nullptr)
         return { .is_set = false };
 
+    auto const rect = workspace->area();
     return {
         .is_set = true,
         .has_number = workspace->num().has_value(),
         .number = static_cast<uint32_t>(workspace->num().value_or(0)),
         .has_name = workspace->name().has_value(),
         .num_trees = static_cast<uint32_t>(workspace->trees().size()),
-        .internal = static_cast<uint64_t>(workspace->id())
+        .internal = static_cast<uint64_t>(workspace->id()),
+        .position = from_point(rect.top_left),
+        .size = from_size(rect.size),
     };
 }
 
@@ -466,7 +469,7 @@ int32_t PluginBridge::window_set_workspace(uint64_t window_internal, uint64_t wo
     return 0;
 }
 
-int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height)
+int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height, bool animate)
 {
     auto it = window_id_map->find(window_internal);
     if (it == window_id_map->end())
@@ -482,7 +485,7 @@ int32_t PluginBridge::window_set_rectangle(uint64_t window_internal, int32_t x, 
         geom::Point { x,     y      },
         geom::Size { width, height }
     };
-    window_controller->set_rectangle(window, old_rect, new_rect, true);
+    window_controller->set_rectangle(window, old_rect, new_rect, animate);
     return 0;
 }
 
