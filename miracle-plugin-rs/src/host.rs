@@ -110,4 +110,10 @@ unsafe extern "C" {
         out_name_buf_len: i32,
         focus: i32,
     ) -> i32;
+
+    /// Retrieve the JSON-encoded userdata configured for this plugin.
+    ///
+    /// Returns the number of bytes written on success (>0), 0 if no userdata is
+    /// configured, or -1 if the provided buffer is too small.
+    pub fn miracle_get_plugin_userdata(handle: u32, buf_ptr: i32, buf_len: i32) -> i32;
 }

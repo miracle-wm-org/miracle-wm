@@ -661,6 +661,42 @@ WasmEdge_Result host_miracle_window_request_focus(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_get_plugin_userdata(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint32_t const handle = static_cast<uint32_t>(WasmEdge_ValueGetI32(params[0]));
+    int32_t const buf_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const buf_len = WasmEdge_ValueGetI32(params[2]);
+
+    auto const* userdata = bridge->get_plugin_userdata(handle);
+    if (!userdata || userdata->empty())
+    {
+        returns[0] = WasmEdge_ValueGenI32(0);
+        return WasmEdge_Result_Success;
+    }
+    if (userdata->size() + 1 > static_cast<size_t>(buf_len))
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_get_plugin_userdata: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    char* buf = reinterpret_cast<char*>(mem_base + buf_ptr);
+    std::memcpy(buf, userdata->data(), userdata->size());
+    buf[userdata->size()] = '\0';
+    returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(userdata->size()));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_ConfigureContext* create_configure_context()
 {
     auto const context = WasmEdge_ConfigureCreate();
@@ -834,6 +870,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i64 }, { i32 }),
         host_miracle_window_request_focus, bridge.get());
 
+    add_host_function(module, "miracle_get_plugin_userdata",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_get_plugin_userdata, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -844,7 +884,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 19);
+    mir::log_info("Host module 'env' registered with %d functions", 20);
 }
 
 std::vector<PluginManager::Self::ModuleInstance> PluginManager::Self::safe_copy()
@@ -853,7 +893,7 @@ std::vector<PluginManager::Self::ModuleInstance> PluginManager::Self::safe_copy(
     return loaded_modules;
 }
 
-PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
+PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& userdata_json)
 {
     std::lock_guard lock(self->modules_access_mutex);
     auto const erased = std::erase_if(self->loaded_modules, [&path](auto const& module)
@@ -902,6 +942,10 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path)
 
     // Assign handle before init so we can pass it to the plugin.
     auto const handle = self->next_plugin_handle++;
+
+    // Store userdata so the plugin can retrieve it via the host function.
+    if (!userdata_json.empty())
+        self->bridge->set_plugin_userdata(handle, userdata_json);
 
     // Call the module's init function if it exists.
     auto const init_func_name = WasmEdge_StringCreateByCString("init");

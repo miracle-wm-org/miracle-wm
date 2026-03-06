@@ -178,6 +178,7 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
 struct MIRACLE_WM_CONFIG_API PluginConfiguration
 {
     std::string path;
+    std::string userdata_json;
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData

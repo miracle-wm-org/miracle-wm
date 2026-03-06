@@ -100,8 +100,9 @@ public:
     /// Callers may use the #PluginLoadResult::handle to unload the module later.
     ///
     /// \param path The filesystem path to the WebAssembly module.
+    /// \param userdata_json Optional JSON-encoded user data to associate with the plugin.
     /// \returns a load result.
-    PluginLoadResult load_wasm_module(std::string const& path);
+    PluginLoadResult load_wasm_module(std::string const& path, std::string const& userdata_json = "");
 
     /// Attempt to unload the WebAssembly module associated with \p handle.
     ///
@@ -271,7 +272,7 @@ class PluginManager
 public:
     ~PluginManager() = default;
     void initialize(std::unique_ptr<PluginBridge>) {};
-    PluginLoadResult load_wasm_module(std::string const&) { return PluginLoadResult {
+    PluginLoadResult load_wasm_module(std::string const&, std::string const& = "") { return PluginLoadResult {
         .success = false,
         .error = "Platform does not support plugins"
     }; }

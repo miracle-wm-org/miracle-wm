@@ -11,6 +11,29 @@ unsafe extern "C" {
     fn miracle_get_plugin_handle() -> u32;
 }
 
+/// Retrieve the raw JSON string of userdata configured for this plugin in the YAML config.
+///
+/// Returns `None` if no userdata was provided. The JSON object contains all keys from
+/// the plugin's config entry except `path`.
+pub fn get_userdata_json() -> Option<String> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    let mut buf = vec![0u8; 4096];
+    loop {
+        let result = unsafe {
+            crate::host::miracle_get_plugin_userdata(handle, buf.as_mut_ptr() as i32, buf.len() as i32)
+        };
+        if result == 0 {
+            return None;
+        } else if result == -1 {
+            buf.resize(buf.len() * 2, 0);
+        } else {
+            return std::str::from_utf8(&buf[..result as usize])
+                .ok()
+                .map(|s| s.to_owned());
+        }
+    }
+}
+
 pub trait Plugin {
     /// Handles the window opening animation.
     ///

@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef XKB_KEYSYM_NAME_MAX_SIZE
 #define XKB_KEYSYM_NAME_MAX_SIZE 64
 #endif
+#include <nlohmann/json.hpp>
 #include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
@@ -476,6 +477,50 @@ void read_includes(YAML::Node const& node, ParsingContext& context)
     context.result.config.includes = std::move(includes);
 }
 
+static nlohmann::json yaml_node_to_json(YAML::Node const& node)
+{
+    if (node.IsScalar())
+    {
+        try
+        {
+            return node.as<int64_t>();
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            return node.as<double>();
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            return node.as<bool>();
+        }
+        catch (...)
+        {
+        }
+        return node.as<std::string>();
+    }
+    if (node.IsSequence())
+    {
+        auto arr = nlohmann::json::array();
+        for (auto const& item : node)
+            arr.push_back(yaml_node_to_json(item));
+        return arr;
+    }
+    if (node.IsMap())
+    {
+        auto obj = nlohmann::json::object();
+        for (auto const& kv : node)
+            obj[kv.first.as<std::string>()] = yaml_node_to_json(kv.second);
+        return obj;
+    }
+    return nullptr;
+}
+
 void read_plugins(YAML::Node const& node, ParsingContext& context)
 {
     if (!node.IsSequence())
@@ -492,8 +537,17 @@ void read_plugins(YAML::Node const& node, ParsingContext& context)
         if (!try_parse_value(plugin_node, "path", path, context))
             return;
 
+        auto userdata = nlohmann::json::object();
+        for (auto const& kv : plugin_node)
+        {
+            auto const key = kv.first.as<std::string>();
+            if (key != "path")
+                userdata[key] = yaml_node_to_json(kv.second);
+        }
+
         miracle::PluginConfiguration plugin_config;
         plugin_config.path = path;
+        plugin_config.userdata_json = userdata.empty() ? "" : userdata.dump();
         plugins.push_back(plugin_config);
     }
     context.result.config.plugins = std::move(plugins);

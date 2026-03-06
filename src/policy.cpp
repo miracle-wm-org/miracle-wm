@@ -164,7 +164,7 @@ public:
 
         policy.plugin_manager->unload_all();
         for (auto const& plugin : config.get_plugins())
-            policy.plugin_manager->load_wasm_module(plugin.path);
+            policy.plugin_manager->load_wasm_module(plugin.path, plugin.userdata_json);
 
         has_loaded_once = true;
     }
