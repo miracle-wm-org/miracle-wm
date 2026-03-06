@@ -34,7 +34,8 @@ target_link_libraries(miracle-wm-c
     ${MIRAL_LDFLAGS}
     PkgConfig::YAML
     ${XKBCOMMON_LDFLAGS}
-    PkgConfig::GLIB)
+    PkgConfig::GLIB
+    nlohmann_json::nlohmann_json)
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/miracle-wm-c.pc.in

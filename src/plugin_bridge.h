@@ -116,6 +116,9 @@ public:
     int32_t window_set_alpha(uint64_t window_internal, float alpha);
     int32_t window_request_focus(uint64_t window_internal);
 
+    void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
+    std::string const* get_plugin_userdata(uint32_t handle) const;
+
     /// Look up a workspace by its ID and return its plugin representation.
     WorkspaceResult workspace_by_id(uint32_t id);
 
@@ -147,6 +150,7 @@ private:
     std::shared_ptr<WindowIdMap> window_id_map;
     std::shared_ptr<ApplicationIdMap> application_id_map;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
+    std::unordered_map<uint32_t, std::string> plugin_userdata_map;
 };
 
 inline miracle_point_t from_point(mir::geometry::Point const& point)

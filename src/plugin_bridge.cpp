@@ -528,3 +528,14 @@ int32_t PluginBridge::window_request_focus(uint64_t window_internal)
     window_controller->select_active_window(it->second);
     return 0;
 }
+
+void PluginBridge::set_plugin_userdata(uint32_t handle, std::string const& userdata_json)
+{
+    plugin_userdata_map[handle] = userdata_json;
+}
+
+std::string const* PluginBridge::get_plugin_userdata(uint32_t handle) const
+{
+    auto const it = plugin_userdata_map.find(handle);
+    return it != plugin_userdata_map.end() ? &it->second : nullptr;
+}

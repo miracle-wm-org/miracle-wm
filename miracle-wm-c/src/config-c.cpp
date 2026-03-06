@@ -759,7 +759,7 @@ extern "C"
     void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->plugins->push_back(miracle::PluginConfiguration { plugin->path });
+        data->plugins->push_back(miracle::PluginConfiguration { plugin->path, "" });
     }
 
     void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin)
@@ -767,7 +767,7 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->plugins->size())
             return;
-        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path };
+        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path, "" };
     }
 
     bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index)

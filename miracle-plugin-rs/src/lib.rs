@@ -17,3 +17,5 @@ pub mod placement;
 pub mod plugin;
 pub mod window;
 pub mod workspace;
+
+pub use plugin::get_userdata_json;
