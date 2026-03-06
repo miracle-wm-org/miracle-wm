@@ -26,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mir/fd.h>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -35,12 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace mir
 {
 class Server;
-class MainLoop;
-}
-
-namespace miral
-{
-struct FdHandle;
 }
 namespace miracle
 {
@@ -142,16 +135,11 @@ public:
 private:
     uint process_modifier_internal(uint modifier) const;
     void _init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app);
-    void _watch(std::shared_ptr<mir::MainLoop> const& main_loop);
-    std::shared_ptr<mir::MainLoop> main_loop;
     std::shared_ptr<ConfigObserverRegistrar> observer_registrar;
     int next_listener_handle = 0;
     std::string default_config_path;
     std::string config_path;
     bool no_config = false;
-    mir::Fd inotify_fd;
-    std::unique_ptr<miral::FdHandle> watch_handle;
-    int file_watch = 0;
     std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
