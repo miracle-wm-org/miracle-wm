@@ -25,11 +25,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <glib-2.0/glib.h>
 #include <mir/log.h>
-#include <mir/main_loop.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <miral/runner.h>
-#include <sys/inotify.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
@@ -65,11 +63,7 @@ FilesystemConfiguration::FilesystemConfiguration(std::shared_ptr<ConfigObserverR
     }
 }
 
-FilesystemConfiguration::~FilesystemConfiguration()
-{
-    if (main_loop)
-        main_loop->unregister_fd_handler(this);
-}
+FilesystemConfiguration::~FilesystemConfiguration() = default;
 
 void FilesystemConfiguration::operator()(mir::Server& server)
 {
@@ -100,7 +94,6 @@ void FilesystemConfiguration::operator()(mir::Server& server)
 
     server.add_pre_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
     {
-        main_loop = server.the_main_loop();
         auto const server_opts = server.get_options();
         no_config = server_opts->get<bool>(no_config_option);
         config_path = server_opts->get<std::string>(config_file_name_option);
@@ -177,11 +170,6 @@ void FilesystemConfiguration::_init(
     }
 
     is_loaded_ = true;
-
-    if (main_loop != nullptr)
-        _watch(main_loop);
-    else
-        mir::log_warning("Cannot watch for configuration changes because main_loop is not set");
 }
 
 namespace
@@ -239,37 +227,6 @@ void FilesystemConfiguration::reload()
     }
 
     observer_registrar->advise_config_changed(*this);
-}
-
-void FilesystemConfiguration::_watch(std::shared_ptr<mir::MainLoop> const& main_loop)
-{
-    if (no_config)
-    {
-        mir::log_info("No configuration was selected, so the configuration will not be watched");
-        return;
-    }
-
-    inotify_fd = mir::Fd { inotify_init() };
-    file_watch = inotify_add_watch(inotify_fd, config_path.c_str(), IN_MODIFY);
-    if (file_watch < 0)
-        mir::fatal_error("Unable to watch the config file");
-
-    main_loop->register_fd_handler({ inotify_fd }, this, [&](int file_fd)
-    {
-        union
-        {
-            inotify_event event;
-            char buffer[sizeof(inotify_event) + NAME_MAX + 1];
-        } inotify_buffer;
-
-        if (read(inotify_fd, &inotify_buffer, sizeof(inotify_buffer)) < static_cast<ssize_t>(sizeof(inotify_event)))
-            return;
-
-        if (inotify_buffer.event.mask & (IN_MODIFY))
-        {
-            reload();
-        }
-    });
 }
 
 uint FilesystemConfiguration::get_primary_modifier() const
@@ -567,7 +524,11 @@ bool FilesystemConfiguration::matches_key_command(
         { // MagnifierDecreaseScale
             mir_keyboard_action_down,
          miracle_input_event_modifier_default,
-         XKB_KEY_minus       }
+         XKB_KEY_minus       },
+        { // ReloadConfig
+            mir_keyboard_action_down,
+         miracle_input_event_modifier_default | mir_input_event_modifier_shift,
+         XKB_KEY_R           }
     };
 
     auto const try_run_key_command = [&](MirKeyboardAction in_action, uint in_modifiers, uint in_key, DefaultKeyCommand i)

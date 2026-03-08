@@ -412,6 +412,8 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
             return true;
         }
+        case DefaultKeyCommand::ReloadConfig:
+            return command_controller->reload_config();
         default:
             mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
             break;

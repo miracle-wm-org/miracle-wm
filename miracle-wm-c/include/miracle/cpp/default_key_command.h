@@ -74,6 +74,7 @@ enum class MIRACLE_WM_CONFIG_API DefaultKeyCommand
     MagnifierDecreaseSize,
     MagnifierIncreaseScale,
     MagnifierDecreaseScale,
+    ReloadConfig,
     MAX
 };
 
@@ -126,7 +127,8 @@ constexpr std::array<const char*, static_cast<int>(DefaultKeyCommand::MAX)> defa
     "magnifier_increase_size",
     "magnifier_decrease_size",
     "magnifier_increase_scale",
-    "magnifier_decrease_scale"
+    "magnifier_decrease_scale",
+    "reload_config"
 };
 
 }

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_DISPLAY_CONFIG_H
 
 #include "mir_version_manager.h"
+#include <mir/fd.h>
 #include <mir/geometry/point.h>
 #include <mir/graphics/display_configuration.h>
 
