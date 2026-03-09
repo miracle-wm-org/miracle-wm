@@ -16,6 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "shell_component_container.h"
+
+#include "compositor_state.h"
+#include "output_manager.h"
 #include "window_controller.h"
 #include <mir/scene/session.h>
 #include <mir/scene/surface.h>
@@ -28,10 +31,13 @@ namespace miracle
 ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<ShellApplicationDelegate>&& delegate) :
-    WindowContainer(nullptr),
+    std::shared_ptr<ShellApplicationDelegate>&& delegate,
+    std::shared_ptr<OutputManager> const& output_manager,
+    std::shared_ptr<CompositorState> const& compositor_state) :
+    WindowContainer(compositor_state->render_data_manager(), window_controller),
     window_controller { window_controller },
-    delegate { std::move(delegate) }
+    delegate { std::move(delegate) },
+    output_manager { output_manager }
 {
     associate_to_window(window_);
 }
@@ -164,7 +170,10 @@ std::shared_ptr<AbstractWorkspace> ShellComponentContainer::get_workspace() cons
 
 std::shared_ptr<AbstractOutput> ShellComponentContainer::get_output() const
 {
-    return nullptr;
+    auto const& info = window_controller->info_for(window_);
+    if (info.has_output_id())
+        return output_manager->from(info.output_id());
+    return output_manager->focused();
 }
 
 glm::mat4 ShellComponentContainer::get_output_transform() const
@@ -175,10 +184,6 @@ glm::mat4 ShellComponentContainer::get_output_transform() const
 bool ShellComponentContainer::is_focused() const
 {
     return true;
-}
-
-void ShellComponentContainer::on_open()
-{
 }
 
 bool ShellComponentContainer::select_next(miracle::Direction)

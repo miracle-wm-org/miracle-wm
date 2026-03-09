@@ -132,7 +132,7 @@ LeafContainer::LeafContainer(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<ParentContainer> const& parent,
     std::shared_ptr<CompositorState> const& state) :
-    WindowContainer(state->render_data_manager()),
+    WindowContainer(state->render_data_manager(), window_controller),
     workspace { workspace },
     window_controller { window_controller },
     logical_area { std::move(area) },
@@ -422,11 +422,6 @@ mir::geometry::Rectangle LeafContainer::confirm_placement(
     MirWindowState state, mir::geometry::Rectangle const& placement)
 {
     return placement;
-}
-
-void LeafContainer::on_open()
-{
-    window_controller->open(window_);
 }
 
 void LeafContainer::on_move_to(geom::Point const&)

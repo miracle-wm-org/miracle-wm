@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
+#include "shell_component_container.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
 
@@ -52,7 +53,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     auto const alpha = container->get_alpha();
     auto const id = compositor_state->render_data_manager()->add(
         { .surface = animating_surface.get(),
-            .needs_outline = true,
+            .needs_outline = !container->is_fullscreen() && !std::dynamic_pointer_cast<ShellComponentContainer>(container),
             .is_focused = false,
             .transform = transform,
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),
