@@ -386,7 +386,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeEastStoppedByMinimumSize)
 // === West Edge Tests ===
 TEST_F(ContainerExecuteResizeTest, ResizeWestWithoutNeighborAndAnchored)
 {
-    ON_CALL(*container, neighbor_east())
+    ON_CALL(*container, neighbor_west())
         .WillByDefault(Return(nullptr));
 
     EXPECT_CALL(*container, set_logical_area(_, _))
@@ -402,7 +402,7 @@ TEST_F(ContainerExecuteResizeTest, ResizeWestWithoutNeighborAndUnanchored)
     auto root = std::make_shared<NiceMock<test::MockContainer>>();
     Mock::AllowLeak(root.get());
 
-    ON_CALL(*container, neighbor_east())
+    ON_CALL(*container, neighbor_west())
         .WillByDefault(Return(nullptr));
     ON_CALL(*container, anchored())
         .WillByDefault(Return(false));
@@ -561,19 +561,469 @@ TEST_F(ContainerExecuteResizeTest, ResizeEastClampedToMinimumWidth)
     Container::execute_resize(container.get(), mir_resize_edge_east, -30, 0, false);
 }
 
-// === Corner/Diagonal Edge Tests ===
-TEST_F(ContainerExecuteResizeTest, ResizeCornerEdgesAreUnsupported)
+// === Diagonal (Corner) Edge Tests ===
+//
+// For all diagonal tests the default container area is (100, 100, 400x300), min 50x50.
+//
+// Neighbor areas:
+//   north: (100, 0, 400x100)    south: (100, 400, 400x100)
+//   east:  (500, 100, 100x300)  west:  (0, 100, 100x300)
+
+// --- Northeast ---
+
+TEST_F(ContainerExecuteResizeTest, ResizeNortheastNoNeighborsAnchored)
 {
-    // Corner resize edges should not trigger any changes (currently unsupported)
-    EXPECT_CALL(*container, set_logical_area(_, _))
-        .Times(0);
-    EXPECT_CALL(*container, commit_changes())
-        .Times(0);
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(true));
+
+    EXPECT_CALL(*container, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*container, commit_changes()).Times(0);
 
     Container::execute_resize(container.get(), mir_resize_edge_northeast, 50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNortheastNoNeighborsUnanchored)
+{
+    // No tiling neighbors → resize the floating root using the combined diagonal edge.
+    // resize_internal(root, northeast, 50, -50):
+    //   set_north: height=300+(-50)=250, y=100+(300-250)=150
+    //   set_east:  width=400+50=450
+    //   → (100, 150, 450x250)
+    auto root = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(root.get());
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(false));
+    ON_CALL(*container, root()).WillByDefault(Return(root));
+    ON_CALL(*root, get_logical_area()).WillByDefault(Return(make_rectangle(100, 100, 400, 300)));
+    ON_CALL(*root, get_min_width()).WillByDefault(Return(50));
+    ON_CALL(*root, get_min_height()).WillByDefault(Return(50));
+
+    EXPECT_CALL(*root, set_logical_area(make_rectangle(100, 150, 450, 250), false)).Times(1);
+    EXPECT_CALL(*root, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northeast, 50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNortheastBothNeighbors)
+{
+    // north at (100, 0, 400x100), east at (500, 100, 150x300).
+    // east uses width=150 so it shrinks to 100 (above minimum 50) and is not clamped.
+    //
+    // North axis (y=-50):
+    //   ry = resize_internal(container, north, 0, -50): height=250, y=150 → (100,150,400x250)
+    //   height_diff = 300-250 = 50
+    //   ny_result = resize_internal(north, south, 0, 50): height=150 → (100,0,400x150). Not clamped.
+    //
+    // East axis (x=50):
+    //   rx = resize_internal(container, east, 50, 0): width=450 → (100,100,450x300)
+    //   width_diff = 400-450 = -50
+    //   nx_result = resize_internal(east, west, -50, 0):
+    //     set_west: new_width=150-50=100, new_x=500+(150-100)=550 → (550,100,100x300). Not clamped.
+    //
+    // Combined container rect: x=100 (rx.x, east unchanged), y=150 (ry.y), w=450, h=250
+    //   → (100, 150, 450x250)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100));
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 150, 300));
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 150, 450, 250), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(make_rectangle(100, 0, 400, 150), false)).Times(1);
+    EXPECT_CALL(*east_neighbor, set_logical_area(make_rectangle(550, 100, 100, 300), false)).Times(1);
+    EXPECT_CALL(*container, commit_changes()).Times(1);
+    EXPECT_CALL(*north_neighbor, commit_changes()).Times(1);
+    EXPECT_CALL(*east_neighbor, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northeast, 50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNortheastNorthNeighborClamped)
+{
+    // North neighbor at minimum height (50). y=260 causes north to expand (container grows north),
+    // which tries to shrink north neighbor below minimum → north axis aborts, east still proceeds.
+    // east uses width=150 so it shrinks to 100 (above minimum 50) and is not clamped.
+    //
+    // North axis (y=260):
+    //   ry: height=300+260=560, y=100+(300-560)=-160
+    //   height_diff = 300-560 = -260
+    //   ny_result: north height=100+(-260)=-160, clamped to 50. y_ok=false.
+    //
+    // East axis (x=50):
+    //   rx: width=450 → not clamped. x_ok=true.
+    //   nx_result: set_west: new_width=150-50=100, new_x=550 → not clamped.
+    //
+    // Combined: north axis skipped → y=100 (original), height=300 (original), width=450
+    //   → (100, 100, 450x300)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100), 50, 50);
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 150, 300));
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 100, 450, 300), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*east_neighbor, set_logical_area(make_rectangle(550, 100, 100, 300), false)).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northeast, 50, 260, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNortheastEastNeighborClamped)
+{
+    // East neighbor at minimum width (50). x=260 tries to expand container east,
+    // which would shrink east neighbor below minimum → east axis aborts, north still proceeds.
+    //
+    // North axis (y=-50): not clamped. y_ok=true.
+    // East axis (x=260):
+    //   rx: width=400+260=660 → width_diff=400-660=-260
+    //   nx_result: east width=100+(-260)=-160, clamped. x_ok=false.
+    //
+    // Combined: east axis skipped → x=100, width=400 (original); north axis applied
+    //   → (100, 150, 400x250)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100));
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 100, 300), 50, 50);
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 150, 400, 250), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(make_rectangle(100, 0, 400, 150), false)).Times(1);
+    EXPECT_CALL(*east_neighbor, set_logical_area(_, _)).Times(0);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northeast, 260, -50, false);
+}
+
+// --- Northwest ---
+
+TEST_F(ContainerExecuteResizeTest, ResizeNorthwestNoNeighborsAnchored)
+{
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(true));
+
+    EXPECT_CALL(*container, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*container, commit_changes()).Times(0);
+
     Container::execute_resize(container.get(), mir_resize_edge_northwest, -50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNorthwestNoNeighborsUnanchored)
+{
+    // resize_internal(root, northwest, -50, -50):
+    //   set_north: height=300+(-50)=250, y=150
+    //   set_west:  width=400+(-50)=350, x=100+(400-350)=150
+    //   → (150, 150, 350x250)
+    auto root = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(root.get());
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(false));
+    ON_CALL(*container, root()).WillByDefault(Return(root));
+    ON_CALL(*root, get_logical_area()).WillByDefault(Return(make_rectangle(100, 100, 400, 300)));
+    ON_CALL(*root, get_min_width()).WillByDefault(Return(50));
+    ON_CALL(*root, get_min_height()).WillByDefault(Return(50));
+
+    EXPECT_CALL(*root, set_logical_area(make_rectangle(150, 150, 350, 250), false)).Times(1);
+    EXPECT_CALL(*root, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northwest, -50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNorthwestBothNeighbors)
+{
+    // north at (100, 0, 400x100), west at (0, 100, 100x300).
+    //
+    // North axis (y=-50): ry=(100,150,400x250), height_diff=50, north→(100,0,400x150). OK.
+    // West axis (x=-50):
+    //   rx = resize_internal(container, west, -50, 0): width=350, x=150 → (150,100,350x300)
+    //   width_diff = 400-350 = 50
+    //   nx_result = resize_internal(west, east, 50, 0): width=150 → (0,100,150x300). OK.
+    //
+    // Combined: x=150(rx), y=150(ry), w=350, h=250 → (150, 150, 350x250)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100));
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(150, 150, 350, 250), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(make_rectangle(100, 0, 400, 150), false)).Times(1);
+    EXPECT_CALL(*west_neighbor, set_logical_area(make_rectangle(0, 100, 150, 300), false)).Times(1);
+    EXPECT_CALL(*container, commit_changes()).Times(1);
+    EXPECT_CALL(*north_neighbor, commit_changes()).Times(1);
+    EXPECT_CALL(*west_neighbor, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northwest, -50, -50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNorthwestNorthNeighborClamped)
+{
+    // y=260 causes north axis to clamp; west proceeds.
+    //
+    // North axis (y=260): height_diff=-260, north clamped. y_ok=false.
+    // West axis (x=-50): rx=(150,100,350x300), width_diff=50, west→(0,100,150x300). OK.
+    //
+    // Combined: y=100 (original), h=300 (original), x=150, w=350 → (150, 100, 350x300)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100), 50, 50);
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(150, 100, 350, 300), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*west_neighbor, set_logical_area(make_rectangle(0, 100, 150, 300), false)).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northwest, -50, 260, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeNorthwestWestNeighborClamped)
+{
+    // x=260 (move left edge left, expanding container west) causes west to shrink below min.
+    // West axis (x=260): rx width=660, width_diff=-260, west clamped. x_ok=false.
+    // North axis (y=-50): OK.
+    //
+    // Combined: x=100 (original), w=400 (original), y=150, h=250 → (100, 150, 400x250)
+    SetupNeighbor(north_neighbor, make_rectangle(100, 0, 400, 100));
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300), 50, 50);
+
+    ON_CALL(*container, neighbor_north()).WillByDefault(Return(north_neighbor));
+    ON_CALL(*north_neighbor, neighbor_south()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 150, 400, 250), false)).Times(1);
+    EXPECT_CALL(*north_neighbor, set_logical_area(make_rectangle(100, 0, 400, 150), false)).Times(1);
+    EXPECT_CALL(*west_neighbor, set_logical_area(_, _)).Times(0);
+
+    Container::execute_resize(container.get(), mir_resize_edge_northwest, 260, -50, false);
+}
+
+// --- Southeast ---
+
+TEST_F(ContainerExecuteResizeTest, ResizeSoutheastNoNeighborsAnchored)
+{
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(true));
+
+    EXPECT_CALL(*container, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*container, commit_changes()).Times(0);
+
     Container::execute_resize(container.get(), mir_resize_edge_southeast, 50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSoutheastNoNeighborsUnanchored)
+{
+    // resize_internal(root, southeast, 50, 50):
+    //   set_south: height=300+50=350 → y unchanged
+    //   set_east:  width=400+50=450
+    //   → (100, 100, 450x350)
+    auto root = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(root.get());
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(false));
+    ON_CALL(*container, root()).WillByDefault(Return(root));
+    ON_CALL(*root, get_logical_area()).WillByDefault(Return(make_rectangle(100, 100, 400, 300)));
+    ON_CALL(*root, get_min_width()).WillByDefault(Return(50));
+    ON_CALL(*root, get_min_height()).WillByDefault(Return(50));
+
+    EXPECT_CALL(*root, set_logical_area(make_rectangle(100, 100, 450, 350), false)).Times(1);
+    EXPECT_CALL(*root, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southeast, 50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSoutheastBothNeighbors)
+{
+    // south at (100, 400, 400x100), east at (500, 100, 100x300).
+    //
+    // South axis (y=50):
+    //   ry = resize_internal(container, south, 0, 50): height=350, y=100 → (100,100,400x350)
+    //   height_diff = 300-350 = -50
+    //   ny_result = resize_internal(south, north, 0, -50): height=50, y=450 → (100,450,400x50). OK.
+    //
+    // East axis (x=50): rx=(100,100,450x300), width_diff=-50, east→(550,100,50x300). OK.
+    //
+    // Combined: x=100(rx), y=100(ry), w=450, h=350 → (100, 100, 450x350)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 100));
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 100, 450, 350), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(make_rectangle(100, 450, 400, 50), false)).Times(1);
+    EXPECT_CALL(*east_neighbor, set_logical_area(make_rectangle(550, 100, 50, 300), false)).Times(1);
+    EXPECT_CALL(*container, commit_changes()).Times(1);
+    EXPECT_CALL(*south_neighbor, commit_changes()).Times(1);
+    EXPECT_CALL(*east_neighbor, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southeast, 50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSoutheastSouthNeighborClamped)
+{
+    // y=100 expands container south, shrinks south neighbor below minimum. y_ok=false.
+    // East (x=50) still proceeds.
+    //
+    // Combined: y=100 (original), h=300 (original), x=100, w=450 → (100, 100, 450x300)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 50), 50, 50);
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 100, 450, 300), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*east_neighbor, set_logical_area(make_rectangle(550, 100, 50, 300), false)).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southeast, 50, 100, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSoutheastEastNeighborClamped)
+{
+    // x=260 shrinks east neighbor below minimum. x_ok=false. South (y=50) still proceeds.
+    //
+    // Combined: x=100 (original), w=400 (original), y=100, h=350 → (100, 100, 400x350)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 100));
+    SetupNeighbor(east_neighbor, make_rectangle(500, 100, 100, 300), 50, 50);
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_east()).WillByDefault(Return(east_neighbor));
+    ON_CALL(*east_neighbor, neighbor_west()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 100, 400, 350), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(make_rectangle(100, 450, 400, 50), false)).Times(1);
+    EXPECT_CALL(*east_neighbor, set_logical_area(_, _)).Times(0);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southeast, 260, 50, false);
+}
+
+// --- Southwest ---
+
+TEST_F(ContainerExecuteResizeTest, ResizeSouthwestNoNeighborsAnchored)
+{
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(true));
+
+    EXPECT_CALL(*container, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*container, commit_changes()).Times(0);
+
     Container::execute_resize(container.get(), mir_resize_edge_southwest, -50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSouthwestNoNeighborsUnanchored)
+{
+    // resize_internal(root, southwest, -50, 50):
+    //   set_south: height=350
+    //   set_west:  width=350, x=150
+    //   → (150, 100, 350x350)
+    auto root = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(root.get());
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(nullptr));
+    ON_CALL(*container, anchored()).WillByDefault(Return(false));
+    ON_CALL(*container, root()).WillByDefault(Return(root));
+    ON_CALL(*root, get_logical_area()).WillByDefault(Return(make_rectangle(100, 100, 400, 300)));
+    ON_CALL(*root, get_min_width()).WillByDefault(Return(50));
+    ON_CALL(*root, get_min_height()).WillByDefault(Return(50));
+
+    EXPECT_CALL(*root, set_logical_area(make_rectangle(150, 100, 350, 350), false)).Times(1);
+    EXPECT_CALL(*root, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southwest, -50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSouthwestBothNeighbors)
+{
+    // south at (100, 400, 400x150), west at (0, 100, 100x300).
+    // south uses height=150 so it shrinks to 100 (above minimum 50) and is not clamped.
+    //
+    // South axis (y=50): ry=(100,100,400x350), height_diff=-50
+    //   ny_result: set_north: new_height=150-50=100, new_y=400+(150-100)=450 → (100,450,400x100). OK.
+    // West axis (x=-50): rx=(150,100,350x300), width_diff=50, west→(0,100,150x300). OK.
+    //
+    // Combined: x=150(rx), y=100(ry), w=350, h=350 → (150, 100, 350x350)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 150));
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(150, 100, 350, 350), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(make_rectangle(100, 450, 400, 100), false)).Times(1);
+    EXPECT_CALL(*west_neighbor, set_logical_area(make_rectangle(0, 100, 150, 300), false)).Times(1);
+    EXPECT_CALL(*container, commit_changes()).Times(1);
+    EXPECT_CALL(*south_neighbor, commit_changes()).Times(1);
+    EXPECT_CALL(*west_neighbor, commit_changes()).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southwest, -50, 50, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSouthwestSouthNeighborClamped)
+{
+    // y=100 tries to shrink south neighbor below min. y_ok=false. West proceeds.
+    //
+    // Combined: y=100 (original), h=300 (original), x=150, w=350 → (150, 100, 350x300)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 50), 50, 50);
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300));
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(150, 100, 350, 300), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(_, _)).Times(0);
+    EXPECT_CALL(*west_neighbor, set_logical_area(make_rectangle(0, 100, 150, 300), false)).Times(1);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southwest, -50, 100, false);
+}
+
+TEST_F(ContainerExecuteResizeTest, ResizeSouthwestWestNeighborClamped)
+{
+    // x=260 tries to shrink west neighbor below min. x_ok=false. South proceeds.
+    //
+    // Combined: x=100 (original), w=400 (original), y=100, h=350 → (100, 100, 400x350)
+    SetupNeighbor(south_neighbor, make_rectangle(100, 400, 400, 100));
+    SetupNeighbor(west_neighbor, make_rectangle(0, 100, 100, 300), 50, 50);
+
+    ON_CALL(*container, neighbor_south()).WillByDefault(Return(south_neighbor));
+    ON_CALL(*south_neighbor, neighbor_north()).WillByDefault(Return(container));
+    ON_CALL(*container, neighbor_west()).WillByDefault(Return(west_neighbor));
+    ON_CALL(*west_neighbor, neighbor_east()).WillByDefault(Return(container));
+
+    EXPECT_CALL(*container, set_logical_area(make_rectangle(100, 100, 400, 350), false)).Times(1);
+    EXPECT_CALL(*south_neighbor, set_logical_area(make_rectangle(100, 450, 400, 50), false)).Times(1);
+    EXPECT_CALL(*west_neighbor, set_logical_area(_, _)).Times(0);
+
+    Container::execute_resize(container.get(), mir_resize_edge_southwest, 260, 50, false);
 }
 
 // === None Edge Test ===
