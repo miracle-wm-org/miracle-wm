@@ -643,7 +643,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     break;
     case AllocationType::shell:
     default:
-        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
+        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()), output_manager, state);
         break;
     }
 

@@ -61,6 +61,7 @@ public:
     std::shared_ptr<AbstractOutput> next();
     std::shared_ptr<AbstractOutput> next(Direction direction);
     std::shared_ptr<AbstractOutput> next_in_list(std::vector<std::string> const& names);
+    std::shared_ptr<AbstractOutput> from(int id);
 
 private:
     std::unique_ptr<OutputFactoryInterface> output_factory;

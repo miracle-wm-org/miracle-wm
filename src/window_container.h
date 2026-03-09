@@ -25,6 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class WindowController;
+
 /// An intermediate container class for containers that directly hold a window.
 ///
 /// This class extends [Container] with methods that are meaningful only for
@@ -35,12 +37,13 @@ namespace miracle
 class WindowContainer : public Container
 {
 public:
-    explicit WindowContainer(std::shared_ptr<RenderDataManager> const& rdm);
+    WindowContainer(std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller);
     ~WindowContainer() override;
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
-    virtual void on_open() = 0;
+    virtual void on_open();
+    virtual bool needs_outline() const;
     virtual void on_move_to(mir::geometry::Point const& top_left) = 0;
     virtual void on_resize(mir::geometry::Size const& size) = 0;
     virtual mir::geometry::Rectangle confirm_placement(
@@ -113,6 +116,7 @@ protected:
     std::weak_ptr<RenderDataManager> rdm;
     RenderDataManagerId render_id;
     AnimationHandle animation_handle_;
+    std::shared_ptr<WindowController> window_controller_;
 
 private:
     ContainerEffect workspace_effect;

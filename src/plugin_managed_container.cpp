@@ -65,7 +65,7 @@ PluginManagedContainer::PluginManagedContainer(
     std::shared_ptr<AbstractWorkspace> const& workspace,
     glm::mat4 transform,
     float alpha) :
-    WindowContainer(compositor_state->render_data_manager()),
+    WindowContainer(compositor_state->render_data_manager(), window_controller),
     plugin_handle_ { plugin_handle },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },
@@ -155,11 +155,6 @@ void PluginManagedContainer::request_vertical_layout()
 
 void PluginManagedContainer::toggle_layout(bool)
 {
-}
-
-void PluginManagedContainer::on_open()
-{
-    window_controller->open(window_);
 }
 
 void PluginManagedContainer::on_move_to(geom::Point const&)

@@ -68,7 +68,6 @@ public:
     bool toggle_fullscreen() override;
     mir::geometry::Rectangle confirm_placement(
         MirWindowState, mir::geometry::Rectangle const&) override;
-    void on_open() override;
     void on_move_to(geom::Point const&) override;
     void on_resize(geom::Size const&) override { }
     void handle_request_move(MirInputEvent const* input_event) override;

@@ -18,19 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_container.h"
 #include "abstract_output.h"
 #include "parent_container.h"
+#include "window_controller.h"
 
-namespace
-{
-inline bool needs_outline(miracle::WindowContainer const& container)
-{
-    auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
-    container.window().value();
-    return surface == nullptr || !surface->parent();
-}
-}
-
-miracle::WindowContainer::WindowContainer(std::shared_ptr<RenderDataManager> const& rdm) :
-    rdm(rdm)
+miracle::WindowContainer::WindowContainer(
+    std::shared_ptr<RenderDataManager> const& rdm,
+    std::shared_ptr<WindowController> const& window_controller) :
+    rdm(rdm),
+    window_controller_(window_controller)
 {
 }
 
@@ -55,7 +49,7 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
         render_id = locked->add({
             RenderData {
                         .surface = window.operator std::shared_ptr<mir::scene::Surface>().get(),
-                        .needs_outline = needs_outline(*this),
+                        .needs_outline = needs_outline(),
                         .is_focused = is_focused(),
                         .transform = get_animation_transform(),
                         .workspace_transform = workspace_transform,
@@ -171,4 +165,16 @@ void miracle::WindowContainer::rerender()
         surface->set_transformation(combined.transform);
         surface->set_alpha(combined.alpha);
     }
+}
+
+bool miracle::WindowContainer::needs_outline() const
+{
+    auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>();
+    return surface == nullptr || !surface->parent();
+}
+
+void miracle::WindowContainer::on_open()
+{
+    if (window_controller_)
+        window_controller_->open(window_);
 }

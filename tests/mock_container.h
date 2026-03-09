@@ -30,7 +30,7 @@ namespace test
     {
     public:
         MockContainer() :
-            WindowContainer(std::make_shared<RenderDataManager>())
+            WindowContainer(std::make_shared<RenderDataManager>(), nullptr)
         {
         }
         MOCK_METHOD(void, show, (), (override));

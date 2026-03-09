@@ -70,7 +70,6 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
-    void on_open() override;
     void on_move_to(const geom::Point& top_left) override;
     void on_resize(const geom::Size& size) override;
     mir::geometry::Rectangle confirm_placement(MirWindowState, const mir::geometry::Rectangle&) override;

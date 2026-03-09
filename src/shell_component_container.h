@@ -24,6 +24,8 @@ namespace miracle
 {
 class WindowController;
 class ShellApplicationDelegate;
+class OutputManager;
+class CompositorState;
 
 /// A container for shell components.
 ///
@@ -39,7 +41,9 @@ public:
     ShellComponentContainer(
         miral::Window const&,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<ShellApplicationDelegate>&& delegate);
+        std::shared_ptr<ShellApplicationDelegate>&& delegate,
+        std::shared_ptr<OutputManager> const& output_manager,
+        std::shared_ptr<CompositorState> const& compositor_state);
 
     std::weak_ptr<ParentContainer> get_parent() const override;
 
@@ -73,7 +77,7 @@ public:
     std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_output_transform() const override;
     bool is_focused() const override;
-    void on_open() override;
+    bool needs_outline() const override { return false; }
     bool select_next(Direction) override;
     bool pinned(bool) override;
     bool pinned() const override;
@@ -99,6 +103,7 @@ public:
 private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<ShellApplicationDelegate> delegate;
+    std::shared_ptr<OutputManager> output_manager;
 };
 
 } // miracle

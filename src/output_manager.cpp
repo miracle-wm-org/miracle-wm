@@ -296,3 +296,15 @@ std::shared_ptr<AbstractOutput> OutputManager::next_in_list(std::vector<std::str
 
     return locked->focused_.lock();
 }
+
+std::shared_ptr<AbstractOutput> OutputManager::from(int id)
+{
+    auto const locked = state.lock();
+    for (auto const& output : locked->outputs_)
+    {
+        if (output->id() == id)
+            return output;
+    }
+
+    return nullptr;
+}
