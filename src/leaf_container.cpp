@@ -448,7 +448,7 @@ void LeafContainer::commit_changes()
 
         window_controller->change_state(window_, next_state.value());
 
-        state->render_data_manager()->needs_outline_change(render_id, next_state != mir_window_state_fullscreen);
+        state->render_data_manager()->needs_outline_change(render_id.value(), next_state != mir_window_state_fullscreen);
         next_state.reset();
         constrain();
     }
@@ -530,7 +530,7 @@ void LeafContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& in)
     workspace = in;
 
     state->render_data_manager()->output_area_change(
-        render_id,
+        render_id.value(),
         workspace.lock()->get_output()->get_area());
     set_workspace_transform(in->transform());
 }
