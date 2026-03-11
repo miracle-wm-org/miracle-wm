@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "container_effect.h"
 #include "render_data_manager.h"
+#include <optional>
 
 namespace miracle
 {
@@ -37,7 +38,7 @@ class WindowController;
 class WindowContainer : public Container
 {
 public:
-    WindowContainer(std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller);
+    WindowContainer(std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller, bool enable_render_data = true);
     ~WindowContainer() override;
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
@@ -81,6 +82,7 @@ public:
     void associate_to_window(miral::Window const& window);
 
     [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+    [[nodiscard]] bool has_render_data() const { return render_id.has_value(); }
 
     /// Get the window transform.
     glm::mat4 get_window_transform() const;
@@ -114,11 +116,12 @@ protected:
     void rerender();
     miral::Window window_;
     std::weak_ptr<RenderDataManager> rdm;
-    RenderDataManagerId render_id;
+    std::optional<RenderDataManagerId> render_id;
     AnimationHandle animation_handle_;
     std::shared_ptr<WindowController> window_controller_;
 
 private:
+    bool enable_render_data_ = true;
     ContainerEffect workspace_effect;
     ContainerEffect window_effect;
     ContainerEffect animation_effect;

@@ -45,6 +45,9 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!config->are_animations_enabled())
         return;
 
+    if (!container->has_render_data())
+        return;
+
     auto const output_area = container->get_output()->get_area();
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
