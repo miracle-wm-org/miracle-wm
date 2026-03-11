@@ -475,7 +475,11 @@ bool Workspace::is_empty() const
 
 void Workspace::graft(std::shared_ptr<Container> const& container)
 {
-    if (auto const parent = Container::as_parent(container))
+    if (container->plugin_handle().has_value())
+    {
+        add_other_container(container);
+    }
+    else if (auto const parent = Container::as_parent(container))
     {
         // When we move a parent to a new workspace, we add it as a floating tree.
         if (!parent)
@@ -640,7 +644,6 @@ void Workspace::add_other_container(std::shared_ptr<Container> const& container)
 
 void Workspace::remove_other_container(std::shared_ptr<Container> const& container)
 {
-    container->set_workspace(nullptr);
     std::erase_if(other_containers, [container](auto const& other)
     {
         return other.lock() == container;

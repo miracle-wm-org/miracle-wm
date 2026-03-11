@@ -140,6 +140,17 @@ public:
         policy.window_observer_registrar->advise_window_marked(container);
     }
 
+    void on_container_workspace_changed(Container const& container) override
+    {
+        if (!container.window().has_value())
+            return;
+        auto const& window_info = policy.tools.info_for(container.window().value());
+        auto const workspace = container.get_workspace();
+        if (!workspace)
+            return;
+        policy.plugin_manager->window_workspace_changed(window_info, workspace->id());
+    }
+
     void on_config_changed(Config const& config) override
     {
         // Note: We need to grab the lock because this notification comes from

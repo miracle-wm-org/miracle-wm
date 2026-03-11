@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "container_scope.h"
 #include "direction.h"
+#include <functional>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -302,6 +303,14 @@ private:
 
     /// Given the provided scope, this method will figure out what containers meet that criteria.
     std::vector<std::shared_ptr<Container>> resolve_scope(std::vector<ContainerScope> const&);
+
+    /// Deletes [container] from its current output, unfocuses it, calls [request]
+    /// to select a new workspace, and grafts the container onto [focused].
+    /// Returns the result of [request].
+    bool move_container_to_workspace(
+        std::shared_ptr<Container> const& container,
+        std::shared_ptr<AbstractOutput> const& focused,
+        std::function<bool()> const& request);
 
     /// Floats the container and returns the new [ParentContainer] of that container.
     std::shared_ptr<ParentContainer> toggle_floating_internal(std::shared_ptr<Container> const& container);

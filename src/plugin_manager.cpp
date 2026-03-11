@@ -1738,6 +1738,120 @@ void PluginManager::workspace_area_changed(uint32_t id)
     }
 }
 
+void PluginManager::window_workspace_changed(miral::WindowInfo const& window_info, uint32_t workspace_id)
+{
+    auto const bridge_window = self->bridge->existing_window_info(window_info);
+    auto const window_info_t = bridge_window.get();
+    auto const workspace_result = self->bridge->workspace_by_id(workspace_id);
+    auto const& workspace_t = workspace_result.workspace;
+    auto const& workspace_name = workspace_result.name.value_or("");
+    auto const& window_name = window_info.name();
+
+    for (auto const& module : self->safe_copy())
+    {
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Memory not found in module.");
+            continue;
+        }
+
+        uint32_t constexpr window_info_ptr = 0;
+
+        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
+        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
+        auto r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            window_info_buffer,
+            window_info_ptr,
+            sizeof(window_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const window_name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
+        uint32_t const window_name_len = static_cast<uint32_t>(window_name.size());
+        if (window_name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(window_name.data()),
+                window_name_ptr,
+                window_name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        uint32_t const workspace_info_ptr = window_name_ptr + window_name_len;
+
+        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
+        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
+        r = WasmEdge_MemoryInstanceSetData(
+            memory_context,
+            workspace_info_buffer,
+            workspace_info_ptr,
+            sizeof(workspace_info_buffer));
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        uint32_t const workspace_name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
+        uint32_t const workspace_name_len = static_cast<uint32_t>(workspace_name.size());
+        if (workspace_name_len > 0)
+        {
+            r = WasmEdge_MemoryInstanceSetData(
+                memory_context,
+                reinterpret_cast<uint8_t const*>(workspace_name.data()),
+                workspace_name_ptr,
+                workspace_name_len);
+            if (!WasmEdge_ResultOK(r))
+            {
+                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+                continue;
+            }
+        }
+
+        WasmEdge_Value params[6];
+        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(window_name_ptr);
+        params[2] = WasmEdge_ValueGenI32(window_name_len);
+        params[3] = WasmEdge_ValueGenI32(workspace_info_ptr);
+        params[4] = WasmEdge_ValueGenI32(workspace_name_ptr);
+        params[5] = WasmEdge_ValueGenI32(workspace_name_len);
+
+        auto const func_name = WasmEdge_StringCreateByCString("window_workspace_changed");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue;
+
+        r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            6,
+            nullptr,
+            0);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'window_workspace_changed' function: %s", WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+    }
+}
+
 bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
 {
     miracle_keyboard_event_t const keyboard_event = {

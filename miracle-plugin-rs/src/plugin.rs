@@ -102,6 +102,12 @@ pub trait Plugin {
     /// Called when a workspace's area (geometry) changes.
     fn workspace_area_changed(&mut self, workspace: Workspace) {}
 
+    /// Called when a window's workspace has changed.
+    ///
+    /// This fires whenever a window is moved to a different workspace,
+    /// whether initiated by the user, a command, or a plugin.
+    fn window_workspace_changed(&mut self, info: WindowInfo, workspace: Workspace) {}
+
     /// Handle a keyboard event.
     ///
     /// If the plugin returns `false`, the event is propagated to the next
@@ -666,6 +672,54 @@ macro_rules! miracle_plugin {
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
             plugin.workspace_area_changed(ws);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn window_workspace_changed(
+            window_info_ptr: i32,
+            window_name_ptr: i32,
+            window_name_len: i32,
+            workspace_info_ptr: i32,
+            workspace_name_ptr: i32,
+            workspace_name_len: i32,
+        ) {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return,
+                }
+            };
+
+            let c_info = unsafe {
+                &*(window_info_ptr as *const $crate::bindings::miracle_window_info_t)
+            };
+
+            let window_name = if window_name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(window_name_ptr as *const u8, window_name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, window_name) };
+
+            let c_ws = unsafe {
+                &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)
+            };
+
+            let workspace_name = if workspace_name_len > 0 {
+                let name_bytes = unsafe {
+                    core::slice::from_raw_parts(workspace_name_ptr as *const u8, workspace_name_len as usize)
+                };
+                String::from_utf8_lossy(name_bytes).into_owned()
+            } else {
+                String::new()
+            };
+
+            let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, workspace_name) };
+            plugin.window_workspace_changed(info, ws);
         }
 
         #[unsafe(no_mangle)]

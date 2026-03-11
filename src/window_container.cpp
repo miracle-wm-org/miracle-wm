@@ -22,16 +22,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 miracle::WindowContainer::WindowContainer(
     std::shared_ptr<RenderDataManager> const& rdm,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    bool enable_render_data) :
     rdm(rdm),
-    window_controller_(window_controller)
+    window_controller_(window_controller),
+    enable_render_data_(enable_render_data)
 {
 }
 
 miracle::WindowContainer::~WindowContainer()
 {
-    if (auto const locked = rdm.lock())
-        locked->remove(render_id);
+    if (render_id.has_value())
+        if (auto const locked = rdm.lock())
+            locked->remove(render_id.value());
 }
 
 void miracle::WindowContainer::associate_to_window(miral::Window const& window)
@@ -44,17 +47,20 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
         workspace_transform = workspace->transform();
     if (output)
         workspace_transform = output->get_transform() * workspace_transform;
-    if (auto const locked = rdm.lock())
+    if (enable_render_data_)
     {
-        render_id = locked->add({
-            RenderData {
-                        .surface = window.operator std::shared_ptr<mir::scene::Surface>().get(),
-                        .needs_outline = needs_outline(),
-                        .is_focused = is_focused(),
-                        .transform = get_animation_transform(),
-                        .workspace_transform = workspace_transform,
-                        .output_area = get_output()->get_area() }
-        });
+        if (auto const locked = rdm.lock())
+        {
+            render_id = locked->add({
+                RenderData {
+                            .surface = window.operator std::shared_ptr<mir::scene::Surface>().get(),
+                            .needs_outline = needs_outline(),
+                            .is_focused = is_focused(),
+                            .transform = get_animation_transform(),
+                            .workspace_transform = workspace_transform,
+                            .output_area = get_output()->get_area() }
+            });
+        }
     }
 }
 
@@ -71,8 +77,9 @@ void miracle::WindowContainer::animation_handle(uint32_t handle)
 void miracle::WindowContainer::set_workspace_transform(glm::mat4 const& transform)
 {
     workspace_effect.transform = transform;
-    if (auto const rdm_locked = rdm.lock())
-        rdm_locked->workspace_transform_change(render_id, transform);
+    if (render_id.has_value())
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->workspace_transform_change(render_id.value(), transform);
     rerender();
 }
 
@@ -95,10 +102,13 @@ float miracle::WindowContainer::get_window_alpha() const
 void miracle::WindowContainer::set_window_transform(glm::mat4 const& t)
 {
     window_effect.transform = t;
-    if (auto const rdm_locked = rdm.lock())
+    if (render_id.has_value())
     {
-        auto const combined = window_effect.blend(animation_effect);
-        rdm_locked->transform_change(render_id, combined.transform);
+        if (auto const rdm_locked = rdm.lock())
+        {
+            auto const combined = window_effect.blend(animation_effect);
+            rdm_locked->transform_change(render_id.value(), combined.transform);
+        }
     }
     rerender();
 }
@@ -112,10 +122,13 @@ void miracle::WindowContainer::set_window_alpha(float alpha)
 void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
     animation_effect.transform = transform;
-    if (auto const rdm_locked = rdm.lock())
+    if (render_id.has_value())
     {
-        auto const combined = window_effect.blend(animation_effect);
-        rdm_locked->transform_change(render_id, combined.transform);
+        if (auto const rdm_locked = rdm.lock())
+        {
+            auto const combined = window_effect.blend(animation_effect);
+            rdm_locked->transform_change(render_id.value(), combined.transform);
+        }
     }
     rerender();
 }
@@ -145,14 +158,16 @@ void miracle::WindowContainer::on_focus_gained()
 {
     if (auto sh_parent = get_parent().lock())
         sh_parent->on_focus_gained();
-    if (auto const rdm_locked = rdm.lock())
-        rdm_locked->focus_change(render_id, true);
+    if (render_id.has_value())
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->focus_change(render_id.value(), true);
 }
 
 void miracle::WindowContainer::on_focus_lost()
 {
-    if (auto const rdm_locked = rdm.lock())
-        rdm_locked->focus_change(render_id, false);
+    if (render_id.has_value())
+        if (auto const rdm_locked = rdm.lock())
+            rdm_locked->focus_change(render_id.value(), false);
 }
 
 void miracle::WindowContainer::rerender()

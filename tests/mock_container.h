@@ -32,6 +32,7 @@ namespace test
         MockContainer() :
             WindowContainer(std::make_shared<RenderDataManager>(), nullptr)
         {
+            render_id = 0;
         }
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));

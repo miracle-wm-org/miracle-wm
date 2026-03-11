@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_output.h"
 #include "abstract_workspace.h"
 #include "compositor_state.h"
+#include "container_listener.h"
 #include "window_controller.h"
 #include <mir/scene/surface.h>
 
@@ -179,6 +180,10 @@ std::shared_ptr<AbstractWorkspace> PluginManagedContainer::get_workspace() const
 void PluginManagedContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     workspace_ = workspace;
+    for_each_observer([this](ContainerListener* observer)
+    {
+        observer->on_container_workspace_changed(*this);
+    });
 }
 
 std::shared_ptr<AbstractOutput> PluginManagedContainer::get_output() const

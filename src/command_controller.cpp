@@ -838,6 +838,21 @@ bool CommandController::prev_workspace_on_output()
     return false;
 }
 
+bool CommandController::move_container_to_workspace(
+    std::shared_ptr<Container> const& container,
+    std::shared_ptr<AbstractOutput> const& focused,
+    std::function<bool()> const& request)
+{
+    container->get_output()->delete_container(container);
+    state->unfocus_container(container);
+    if (request())
+    {
+        focused->graft(container);
+        return true;
+    }
+    return false;
+}
+
 bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool allow_back_and_forth)
 {
     auto const lock = state->lock();
@@ -851,14 +866,21 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
     if (containers.empty())
         return false;
 
+    auto const focused = output_manager->focused();
+    if (!focused)
+    {
+        mir::log_warning("try_move_to_workspace: no focused output");
+        return false;
+    }
+
     for (auto const& container : containers)
     {
         if (container->get_workspace()->num() == number)
             continue;
 
-        container->get_output()->delete_container(container);
-        if (workspace_manager->request_workspace(output_manager->focused().get(), number, allow_back_and_forth))
-            output_manager->focused()->graft(container);
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth); });
     }
 
     return true;
@@ -884,13 +906,11 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
     for (auto const& container : containers)
     {
         if (container->get_workspace()->name() == name)
-            return false;
+            continue;
 
-        container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth))
-            focused->graft(container);
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth); });
     }
 
     return true;
@@ -915,14 +935,12 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
 
     for (auto const& container : containers)
     {
-        if (container->get_workspace() == output_manager->focused()->active())
+        if (container->get_workspace() == focused->active())
             continue;
 
-        container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_next(focused.get()))
-            focused->graft(container);
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_next(focused.get()); });
     }
 
     return true;
@@ -946,13 +964,9 @@ bool CommandController::try_move_to_next_workspace(std::vector<ContainerScope> c
     }
 
     for (auto const& container : containers)
-    {
-        container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_next(focused.get()))
-            focused->graft(container);
-    }
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_next(focused.get()); });
 
     return true;
 }
@@ -975,13 +989,9 @@ bool CommandController::try_move_to_prev_workspace(std::vector<ContainerScope> c
     }
 
     for (auto const& container : containers)
-    {
-        container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_prev(focused.get()))
-            focused->graft(container);
-    }
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_prev(focused.get()); });
 
     return true;
 }
@@ -996,14 +1006,17 @@ bool CommandController::try_move_to_back_and_forth(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
-    for (auto const& container : containers)
+    auto const focused = output_manager->focused();
+    if (!focused)
     {
-        container->get_output()->delete_container(container);
-        state->unfocus_container(container);
-
-        if (workspace_manager->request_back_and_forth())
-            output_manager->focused()->graft(container);
+        mir::log_warning("try_move_to_back_and_forth: no focused output");
+        return false;
     }
+
+    for (auto const& container : containers)
+        move_container_to_workspace(container, focused,
+            [&]
+        { return workspace_manager->request_back_and_forth(); });
 
     return true;
 }
