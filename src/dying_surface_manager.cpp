@@ -48,6 +48,9 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!container->has_render_data())
         return;
 
+    if (!container->can_animate())
+        return;
+
     auto const output_area = container->get_output()->get_area();
     auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
@@ -56,7 +59,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     auto const alpha = container->get_alpha();
     auto const id = compositor_state->render_data_manager()->add(
         { .surface = animating_surface.get(),
-            .needs_outline = !container->is_fullscreen() && !std::dynamic_pointer_cast<ShellComponentContainer>(container),
+            .needs_outline = container->needs_outline(),
             .is_focused = false,
             .transform = transform,
             .workspace_transform = container->get_output_transform() * container->get_workspace_transform(),

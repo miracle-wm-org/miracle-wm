@@ -803,3 +803,46 @@ TEST_F(LeafContainerTest, VisibleAreaCacheInvalidationMechanism)
     EXPECT_EQ(area3.size.width.as_int(), area3_again.size.width.as_int());
     EXPECT_EQ(area3.size.height.as_int(), area3_again.size.height.as_int());
 }
+
+/// When a layout change (e.g. from a drag-to transfer) triggers commit_changes()
+/// while a drag is active, set_rectangle must NOT be called. The window position
+/// is already managed by drag() -> window_controller->modify(), and calling
+/// set_rectangle with a stale 'previous' would cause flickering/snapping.
+TEST_F(LeafContainerTest, CommitChangesDoesNotCallSetRectangleWhileDragging)
+{
+    ON_CALL(*window_controller, get_state(testing::_))
+        .WillByDefault(testing::Return(mir_window_state_restored));
+
+    leaf_container->drag_start();
+    leaf_container->drag(200, 150);
+
+    // Simulate relayout() assigning a new logical area to the dragged container
+    geom::Rectangle new_area {
+        { 400, 0   },
+        { 400, 300 }
+    };
+    leaf_container->set_logical_area(new_area);
+
+    EXPECT_CALL(*window_controller, set_rectangle(testing::_, testing::_, testing::_, testing::_))
+        .Times(0);
+
+    leaf_container->commit_changes();
+}
+
+/// Complement: when not dragging, commit_changes() must call set_rectangle as normal.
+TEST_F(LeafContainerTest, CommitChangesCallsSetRectangleWhenNotDragging)
+{
+    ON_CALL(*window_controller, get_state(testing::_))
+        .WillByDefault(testing::Return(mir_window_state_restored));
+
+    geom::Rectangle new_area {
+        { 400, 0   },
+        { 400, 300 }
+    };
+    leaf_container->set_logical_area(new_area);
+
+    EXPECT_CALL(*window_controller, set_rectangle(testing::_, testing::_, testing::_, testing::_))
+        .Times(1);
+
+    leaf_container->commit_changes();
+}

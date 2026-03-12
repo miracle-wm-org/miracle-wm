@@ -27,9 +27,24 @@ class AbstractWorkspace;
 
 enum class AllocationType
 {
-    system,
+    /// Allow the system to place the window, most likely in the tiling grid.
+    grid,
+
+    /// A shell window. These windows are shell components who are not associated
+    /// with any one workspace, but may be associated with an output. Like freestyle
+    /// windows, their life is determined by the client.
     shell,
+
+    /// A window that will be entirely managed by a plugin.
     plugin,
+
+    /// A freestyle window is one whose entire life is determined by the client.
+    /// These windows remain on the current desktop or the desktop of their
+    /// parent. This is intended for things like child windows, satellite windows,
+    /// etc.
+    freestyle,
+
+    /// Error state.
     none
 };
 

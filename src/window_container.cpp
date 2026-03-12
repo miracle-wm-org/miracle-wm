@@ -119,6 +119,11 @@ void miracle::WindowContainer::set_window_alpha(float alpha)
     rerender();
 }
 
+bool miracle::WindowContainer::can_animate()
+{
+    return true;
+}
+
 void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
     animation_effect.transform = transform;
@@ -184,8 +189,7 @@ void miracle::WindowContainer::rerender()
 
 bool miracle::WindowContainer::needs_outline() const
 {
-    auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>();
-    return surface == nullptr || !surface->parent();
+    return true;
 }
 
 void miracle::WindowContainer::on_open()

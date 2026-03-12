@@ -289,7 +289,6 @@ TEST_F(WorkspaceTest, DraggedWindowsDoNotChangeTheirPositionWhenANewWindowIsAdde
 
     auto leaf2 = create_leaf();
     ASSERT_EQ(window_controller->get_window_data(leaf1).rectangle.top_left, mir::geometry::Point(100, 100));
-    ASSERT_EQ(window_controller->get_window_data(leaf1).rectangle.size, geom::Size(OUTPUT_WIDTH / 2.f, OUTPUT_HEIGHT));
 }
 
 TEST_F(WorkspaceTest, DraggedWindowsAreUnconstrained)

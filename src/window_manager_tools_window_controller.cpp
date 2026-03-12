@@ -71,14 +71,10 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
         return;
     }
 
-    auto const& info = info_for(window);
-    geom::Rectangle rect { window.top_left(), window.size() };
-    if (info.parent())
-    {
-        process_animation({ true, rect, std::nullopt, std::nullopt }, container);
+    if (!container->can_animate())
         return;
-    }
 
+    geom::Rectangle rect { window.top_left(), window.size() };
     if (!config->are_animations_enabled())
     {
         process_animation(AnimationFrameResult { true, rect, std::nullopt, std::nullopt }, container);
@@ -102,13 +98,8 @@ void WindowManagerToolsWindowController::set_rectangle(
         return;
     }
 
-    auto const& info = info_for(window);
-
-    if (info.parent())
-    {
-        process_animation({ true, to, std::nullopt, std::nullopt }, container);
+    if (!container->can_animate())
         return;
-    }
 
     if (!config->are_animations_enabled() || !with_animations)
     {
