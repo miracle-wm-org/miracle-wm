@@ -165,6 +165,12 @@ public:
     /// \param id The ID of the workspace whose area changed.
     void workspace_area_changed(uint32_t id);
 
+    /// Notify all plugins that a window's workspace has changed.
+    ///
+    /// \param window_info The window info for the window that moved.
+    /// \param workspace_id The ID of the new workspace.
+    void window_workspace_changed(miral::WindowInfo const& window_info, uint32_t workspace_id);
+
     /// Check if the plugin handles a keyboard event.
     ///
     /// \param event the incoming keyboard event
@@ -292,6 +298,7 @@ public:
     void workspace_removed(uint32_t) { }
     void workspace_focused(std::optional<uint32_t>, uint32_t) { }
     void workspace_area_changed(uint32_t) { }
+    void window_workspace_changed(miral::WindowInfo const&, uint32_t) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
     bool handle_pointer_event(MirPointerEvent const&) { return false; }
 };

@@ -533,6 +533,10 @@ void LeafContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& in)
         render_id.value(),
         workspace.lock()->get_output()->get_area());
     set_workspace_transform(in->transform());
+    for_each_observer([this](ContainerListener* observer)
+    {
+        observer->on_container_workspace_changed(*this);
+    });
 }
 
 std::shared_ptr<AbstractOutput> LeafContainer::get_output() const
