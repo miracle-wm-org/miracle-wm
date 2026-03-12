@@ -41,6 +41,8 @@ struct AllocationHint
     PluginHandle plugin_handle = 0;
     glm::mat4 transform = glm::mat4(1.f);
     float alpha = 1.f;
+    bool resizable = true;
+    bool movable = true;
     uint64_t pending_window_id = 0;
 };
 }

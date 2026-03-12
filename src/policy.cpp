@@ -533,6 +533,8 @@ auto Policy::place_new_window(
         hint.plugin_handle = plugin_placement->freestyle.handle;
         hint.transform = plugin_placement->freestyle.transform;
         hint.alpha = plugin_placement->freestyle.alpha;
+        hint.resizable = plugin_placement->freestyle.resizable;
+        hint.movable = plugin_placement->freestyle.movable;
         new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
         new_spec.size() = plugin_placement->freestyle.rectangle.size;
         new_spec.depth_layer() = plugin_placement->freestyle.layer;
@@ -648,7 +650,9 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
             state,
             workspace,
             pending_allocation.transform,
-            pending_allocation.alpha);
+            pending_allocation.alpha,
+            pending_allocation.resizable,
+            pending_allocation.movable);
         workspace->add_other_container(container);
     }
     break;

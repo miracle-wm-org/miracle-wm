@@ -382,6 +382,16 @@ extern "C"
         ///
         /// Defaults to 1.0 (fully opaque).
         float alpha;
+
+        /// Whether the window can be resized.
+        ///
+        /// Defaults to true.
+        bool resizable;
+
+        /// Whether the window can be moved.
+        ///
+        /// Defaults to true.
+        bool movable;
     } miracle_freestyle_placement_t;
 
     typedef struct

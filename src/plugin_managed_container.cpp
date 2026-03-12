@@ -65,7 +65,9 @@ PluginManagedContainer::PluginManagedContainer(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<AbstractWorkspace> const& workspace,
     glm::mat4 transform,
-    float alpha) :
+    float alpha,
+    bool resizable,
+    bool movable) :
     WindowContainer(compositor_state->render_data_manager(), window_controller),
     plugin_handle_ { plugin_handle },
     cached { window_controller->info_for(window).state() },
@@ -73,6 +75,8 @@ PluginManagedContainer::PluginManagedContainer(
     compositor_state { compositor_state },
     workspace_ { workspace }
 {
+    resizable_ = resizable;
+    movable_ = movable;
     associate_to_window(window);
     set_window_alpha(alpha);
     set_window_transform(transform);
@@ -124,6 +128,8 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
 
 void PluginManagedContainer::handle_request_move(MirInputEvent const*)
 {
+    if (!movable_)
+        return;
 }
 
 void PluginManagedContainer::handle_raise()
@@ -133,11 +139,15 @@ void PluginManagedContainer::handle_raise()
 
 bool PluginManagedContainer::resize(Direction, int)
 {
+    if (!resizable_)
+        return false;
     return false;
 }
 
 bool PluginManagedContainer::set_size(std::optional<int> const&, std::optional<int> const&)
 {
+    if (!resizable_)
+        return false;
     return false;
 }
 
@@ -250,6 +260,8 @@ bool PluginManagedContainer::move_to(Container&)
 
 bool PluginManagedContainer::move_to(int x, int y, bool)
 {
+    if (!movable_)
+        return false;
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_, spec);
@@ -259,6 +271,8 @@ bool PluginManagedContainer::move_to(int x, int y, bool)
 
 bool PluginManagedContainer::move_by(float, float)
 {
+    if (!movable_)
+        return false;
     return false;
 }
 

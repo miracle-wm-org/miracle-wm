@@ -56,6 +56,12 @@ struct PluginWindowPlacement
 
         /// The initial alpha (opacity) of the window.
         float alpha = 1.f;
+
+        /// Whether the window can be resized.
+        bool resizable = true;
+
+        /// Whether the window can be moved.
+        bool movable = true;
     };
 
     miracle_window_management_strategy_t strategy = miracle_window_management_strategy_system;

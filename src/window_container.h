@@ -115,6 +115,8 @@ public:
 protected:
     void rerender();
     miral::Window window_;
+    bool resizable_ = true;
+    bool movable_ = true;
     std::weak_ptr<RenderDataManager> rdm;
     std::optional<RenderDataManagerId> render_id;
     AnimationHandle animation_handle_;

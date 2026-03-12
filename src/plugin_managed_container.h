@@ -47,7 +47,9 @@ public:
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<AbstractWorkspace> const& workspace,
         glm::mat4 transform = glm::mat4(1.f),
-        float alpha = 1.f);
+        float alpha = 1.f,
+        bool resizable = true,
+        bool movable = true);
 
     void show() override;
     void hide() override;
