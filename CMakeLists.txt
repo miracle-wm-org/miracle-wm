@@ -190,6 +190,7 @@ add_library(miracle-wm-implementation STATIC
         src/shell_application_spawner.h
         src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
         src/plugin_managed_container.h src/plugin_managed_container.cpp
+        src/freestyle_window_container.h src/freestyle_window_container.cpp
         src/collection_container.h src/collection_container.cpp
         src/container_effect.h src/container_effect.cpp
         src/window_container.cpp src/window_container.h

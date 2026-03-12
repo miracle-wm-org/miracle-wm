@@ -112,6 +112,9 @@ public:
     [[nodiscard]] virtual geom::Rectangle get_visible_area() const = 0;
     virtual bool matches(ContainerScope const&) const = 0;
 
+    /// Check if animations are turned on for this type of window.
+    virtual bool can_animate();
+
 protected:
     void rerender();
     miral::Window window_;

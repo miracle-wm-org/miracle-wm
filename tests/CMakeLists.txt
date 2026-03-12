@@ -33,6 +33,7 @@ set(SOURCES
     test_render_data_manager.cpp
     test_output_manager.cpp
     test_output.cpp
+    test_freestyle_window_container.cpp
     test_leaf_container.cpp
     test_scratchpad.cpp
     test_command_controller.cpp

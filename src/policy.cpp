@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "constants.h"
 #include "container_listener.h"
 #include "dying_surface_manager.h"
+#include "freestyle_window_container.h"
 #include "internal_shell_application_spawner.h"
 #include "leaf_container.h"
 #include "magnifier_wrapper.h"
@@ -525,6 +526,9 @@ auto Policy::place_new_window(
     hint.pending_window_id = ++next_window_id_;
     auto new_spec = requested_specification;
 
+    // All windows in Miracle are NOT server side decorated.
+    new_spec.server_side_decorated() = false;
+
     auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification, hint.pending_window_id);
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
@@ -547,21 +551,25 @@ auto Policy::place_new_window(
     {
         auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
         auto const is_attached = requested_specification.attached_edges().is_set();
-        auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
-            || requested_specification.state() == mir_window_state_attached;
-
-        if (has_exclusive_rect || is_attached || wrong_leaf_state)
+        if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
             hint.container_type = AllocationType::shell;
         else
         {
             auto const t = requested_specification.type();
-            if (t == mir_window_type_normal || t == mir_window_type_freestyle)
-                hint.container_type = AllocationType::system;
+            auto const has_parent = !requested_specification.parent().value_or(std::weak_ptr<mir::scene::Surface>()).expired();
+            bool const is_normal_or_freestyle = t == mir_window_type_normal || t == mir_window_type_freestyle;
+
+            // Windows with a parent (popups, dialogs) are freestyle. Normal/freestyle windows without
+            // a parent go into the grid. Everything else is freestyle.
+            if (has_parent)
+                hint.container_type = AllocationType::freestyle;
+            else if (is_normal_or_freestyle)
+                hint.container_type = AllocationType::grid;
             else
-                hint.container_type = AllocationType::shell; // This is probably a tooltip or something
+                hint.container_type = AllocationType::freestyle;
         }
 
-        if (hint.container_type != AllocationType::shell)
+        if (hint.container_type != AllocationType::shell && hint.container_type != AllocationType::freestyle)
         {
             auto parent = output_manager->focused()->active()->get_layout_container();
             std::optional<size_t> index;
@@ -588,31 +596,13 @@ auto Policy::place_new_window(
                 }
             }
 
-            new_spec = parent->place_new_window(requested_specification, index);
+            new_spec = parent->place_new_window(new_spec, index);
             hint.parent = parent;
         }
     }
 
     pending_allocation = hint;
     return new_spec;
-}
-
-void Policy::advise_new_app(miral::ApplicationInfo& app_info)
-{
-    (*application_id_map_)[++next_application_id_] = app_info.application();
-}
-
-void Policy::advise_delete_app(miral::ApplicationInfo const& app_info)
-{
-    miral::Application const app = app_info.application();
-    for (auto it = application_id_map_->begin(); it != application_id_map_->end(); ++it)
-    {
-        if (it->second == app)
-        {
-            application_id_map_->erase(it);
-            break;
-        }
-    }
 }
 
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
@@ -628,7 +618,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     std::shared_ptr<WindowContainer> container;
     switch (pending_allocation.container_type)
     {
-    case AllocationType::system:
+    case AllocationType::grid:
     {
         assert(pending_allocation.parent);
         container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
@@ -652,6 +642,54 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         workspace->add_other_container(container);
     }
     break;
+    case AllocationType::freestyle:
+    {
+        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
+        if (window_info.parent())
+        {
+            if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
+            {
+                if (auto const parent_workspace = parent_container->get_workspace())
+                    workspace = parent_workspace;
+            }
+        }
+
+        auto const& info = window_controller->info_for(window_info.window());
+        bool const has_border = (info.type() == mir_window_type_dialog
+            || info.type() == mir_window_type_satellite
+            || info.type() == mir_window_type_normal
+            || info.type() == mir_window_type_freestyle);
+
+        container = std::make_shared<FreestyleWindowContainer>(
+            window_info.window(),
+            window_controller,
+            state,
+            workspace,
+            config,
+            has_border);
+        workspace->add_other_container(container);
+
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+
+        if (window_info.parent())
+        {
+            auto const& type = info.type();
+            if (type == mir_window_type_normal || type == mir_window_type_freestyle || type == mir_window_type_dialog)
+            {
+                auto const active = workspace->area();
+                auto const size = window_info.window().size();
+                if (size.width.as_int() > 0 && size.height.as_int() > 0)
+                {
+                    spec.top_left() = geom::Point {
+                        active.top_left.x.as_int() + (active.size.width.as_int() - size.width.as_int()) / 2,
+                        active.top_left.y.as_int() + (active.size.height.as_int() - size.height.as_int()) / 2
+                    };
+                }
+            }
+        }
+        break;
+    }
     case AllocationType::shell:
     default:
         container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()), output_manager, state);
@@ -669,6 +707,24 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     container->register_interest(self);
     pending_allocation.container_type = AllocationType::none;
     (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
+}
+
+void Policy::advise_new_app(miral::ApplicationInfo& app_info)
+{
+    (*application_id_map_)[++next_application_id_] = app_info.application();
+}
+
+void Policy::advise_delete_app(miral::ApplicationInfo const& app_info)
+{
+    miral::Application const app = app_info.application();
+    for (auto it = application_id_map_->begin(); it != application_id_map_->end(); ++it)
+    {
+        if (it->second == app)
+        {
+            application_id_map_->erase(it);
+            break;
+        }
+    }
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
