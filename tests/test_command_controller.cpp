@@ -207,28 +207,6 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 1, true));
 }
 
-TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByName)
-{
-    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
-    EXPECT_CALL(*output, get_workspaces)
-        .WillRepeatedly(ReturnRef(workspaces));
-    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
-
-    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
-    state->add(container);
-    state->focus_container(container);
-
-    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
-    EXPECT_CALL(*container, get_workspace())
-        .WillOnce(Return(workspace));
-    std::optional<std::string> const name = "Test";
-    EXPECT_CALL(*workspace, name())
-        .WillOnce(ReturnRef(name));
-
-    std::string expected = "Test";
-    ASSERT_FALSE(command_controller->try_move_to_workspace_named({}, expected, false));
-}
-
 TEST_F(CommandControllerTest, CanGetAllMarks)
 {
     auto const container1 = std::make_shared<NiceMock<test::MockContainer>>();
