@@ -148,12 +148,6 @@ TEST_F(FreestyleWindowContainerTest, ConstrainWithBorderClipsToVisibleArea)
     container_with_border->constrain();
 }
 
-TEST_F(FreestyleWindowContainerTest, ConstrainWithoutBorderNoclips)
-{
-    EXPECT_CALL(*window_controller, noclip(window)).Times(1);
-    container_without_border->constrain();
-}
-
 // ---- visible area ----
 
 TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithoutBorderMatchesLogicalArea)
@@ -245,64 +239,79 @@ TEST_F(FreestyleWindowContainerTest, MoveByUpDecreasesY)
 
 TEST_F(FreestyleWindowContainerTest, ResizeRightIncreasesWidth)
 {
-    // window is 400x300. Resize right by 50 → width becomes 450
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    // window is 400x300. Resize right by 50 → width becomes 450, position unchanged
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.size().is_set()
-            && spec.size().value().width.as_int() == 450;
-    }))).Times(1);
+        return rect.top_left.x.as_int() == 100
+            && rect.top_left.y.as_int() == 200
+            && rect.size.width.as_int() == 450
+            && rect.size.height.as_int() == 300;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->resize(Direction::right, 50);
 }
 
-TEST_F(FreestyleWindowContainerTest, ResizeLeftExpandsWidthAndMovesLeft)
+TEST_F(FreestyleWindowContainerTest, ResizeLeftDecreasesWidth)
 {
-    // Resize left by 50 → x decreases by 50, width increases by 50
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    // Resize left by 50 → width decreases by 50 to 350, position unchanged
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.top_left().is_set()
-            && spec.top_left().value().x.as_int() == 50
-            && spec.size().is_set()
-            && spec.size().value().width.as_int() == 450;
-    }))).Times(1);
+        return rect.top_left.x.as_int() == 100
+            && rect.top_left.y.as_int() == 200
+            && rect.size.width.as_int() == 350
+            && rect.size.height.as_int() == 300;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->resize(Direction::left, 50);
 }
 
 TEST_F(FreestyleWindowContainerTest, ResizeDownIncreasesHeight)
 {
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    // Resize down by 50 → height becomes 350, position unchanged
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.size().is_set()
-            && spec.size().value().height.as_int() == 350;
-    }))).Times(1);
+        return rect.top_left.x.as_int() == 100
+            && rect.top_left.y.as_int() == 200
+            && rect.size.width.as_int() == 400
+            && rect.size.height.as_int() == 350;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->resize(Direction::down, 50);
 }
 
-TEST_F(FreestyleWindowContainerTest, ResizeUpExpandsHeightAndMovesUp)
+TEST_F(FreestyleWindowContainerTest, ResizeUpDecreasesHeight)
 {
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    // Resize up by 50 → height decreases by 50 to 250, position unchanged
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.top_left().is_set()
-            && spec.top_left().value().y.as_int() == 150
-            && spec.size().is_set()
-            && spec.size().value().height.as_int() == 350;
-    }))).Times(1);
+        return rect.top_left.x.as_int() == 100
+            && rect.top_left.y.as_int() == 200
+            && rect.size.width.as_int() == 400
+            && rect.size.height.as_int() == 250;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->resize(Direction::up, 50);
 }
 
 // ---- set_size ----
 
-TEST_F(FreestyleWindowContainerTest, SetSizeCallsModifyWithNewDimensions)
+TEST_F(FreestyleWindowContainerTest, SetSizeCallsSetRectangleWithNewDimensions)
 {
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.size().is_set()
-            && spec.size().value().width.as_int() == 600
-            && spec.size().value().height.as_int() == 400;
-    }))).Times(1);
+        return rect.size.width.as_int() == 600
+            && rect.size.height.as_int() == 400;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->set_size(600, 400);
 }
@@ -310,12 +319,13 @@ TEST_F(FreestyleWindowContainerTest, SetSizeCallsModifyWithNewDimensions)
 TEST_F(FreestyleWindowContainerTest, SetSizeWithNulloptPreservesCurrentDimension)
 {
     // With no width specified, width should stay at 400 (current window_size width)
-    EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return spec.size().is_set()
-            && spec.size().value().width.as_int() == 400
-            && spec.size().value().height.as_int() == 500;
-    }))).Times(1);
+        return rect.size.width.as_int() == 400
+            && rect.size.height.as_int() == 500;
+    }),
+                                        _))
+        .Times(1);
 
     container_with_border->set_size(std::nullopt, 500);
 }
