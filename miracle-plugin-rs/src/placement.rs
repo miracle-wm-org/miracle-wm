@@ -77,6 +77,14 @@ pub struct FreestylePlacement {
     ///
     /// Defaults to 1.0 (fully opaque).
     pub alpha: f32,
+    /// Whether the window can be resized.
+    ///
+    /// Defaults to true.
+    pub resizable: bool,
+    /// Whether the window can be moved.
+    ///
+    /// Defaults to true.
+    pub movable: bool,
 }
 
 impl Default for FreestylePlacement {
@@ -88,6 +96,8 @@ impl Default for FreestylePlacement {
             size: Size::default(),
             transform: Mat4::IDENTITY,
             alpha: 1.0,
+            resizable: true,
+            movable: true,
         }
     }
 }
@@ -101,6 +111,8 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
             size: value.size.into(),
             transform: mat4_to_f32_array(value.transform),
             alpha: value.alpha,
+            resizable: value.resizable as i32,
+            movable: value.movable as i32,
         }
     }
 }

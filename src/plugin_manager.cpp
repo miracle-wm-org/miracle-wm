@@ -2012,6 +2012,8 @@ PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, Plugi
         result.freestyle.handle = plugin_handle;
         std::memcpy(&result.freestyle.transform, placement.freestyle_placement.transform, sizeof(float) * 16);
         result.freestyle.alpha = placement.freestyle_placement.alpha;
+        result.freestyle.resizable = placement.freestyle_placement.resizable;
+        result.freestyle.movable = placement.freestyle_placement.movable;
         break;
     }
     default:

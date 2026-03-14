@@ -27,6 +27,8 @@ impl Plugin for PluginPlayground {
                 size: Size::new(800, 600),
                 transform: Mat4::from_scale(Vec3::new(0.5, 0.5, 0.5)),
                 alpha: 1.0,
+                movable: true,
+                resizable: true
             },
             ..Default::default()
         })
