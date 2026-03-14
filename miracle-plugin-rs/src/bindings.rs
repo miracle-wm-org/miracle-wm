@@ -472,6 +472,10 @@ pub struct miracle_freestyle_placement_t {
     pub transform: [f32; 16usize],
     #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
     pub alpha: f32,
+    #[doc = " Whether the window can be resized.\n\n Defaults to `TRUE`."]
+    pub resizable: i32,
+    #[doc = " Whether the window can be moved.\n\n Defaults to `TRUE`."]
+    pub movable: i32,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

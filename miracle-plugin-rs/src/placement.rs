@@ -111,8 +111,8 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
             size: value.size.into(),
             transform: mat4_to_f32_array(value.transform),
             alpha: value.alpha,
-            resizable: value.resizable,
-            movable: value.movable,
+            resizable: value.resizable as i32,
+            movable: value.movable as i32,
         }
     }
 }

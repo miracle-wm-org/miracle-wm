@@ -385,13 +385,13 @@ extern "C"
 
         /// Whether the window can be resized.
         ///
-        /// Defaults to true.
-        bool resizable;
+        /// Defaults to `TRUE`.
+        int32_t resizable;
 
         /// Whether the window can be moved.
         ///
-        /// Defaults to true.
-        bool movable;
+        /// Defaults to `TRUE`.
+        int32_t movable;
     } miracle_freestyle_placement_t;
 
     typedef struct
