@@ -467,12 +467,9 @@ void LeafContainer::commit_changes()
         logical_area = next_logical_area.value();
         next_logical_area.reset();
         invalidate_visible_area_cache();
-        if (!is_fullscreen())
+        if (!is_fullscreen() && !is_dragging_)
         {
             auto next_visible_area = get_visible_area();
-            if (is_dragging_ && next_visible_area.top_left != dragged_position)
-                next_visible_area.top_left = dragged_position;
-
             window_controller->set_rectangle(window_, previous, next_visible_area, next_with_animations);
             next_with_animations = true;
 

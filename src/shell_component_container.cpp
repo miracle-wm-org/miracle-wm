@@ -229,6 +229,11 @@ bool ShellComponentContainer::is_fullscreen() const
     return false;
 }
 
+bool ShellComponentContainer::can_animate()
+{
+    return false;
+}
+
 nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
 {
     auto const app = window_.application();
