@@ -276,6 +276,9 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
 
+    if (plugin_manager->handle_keyboard_event(*event))
+        return true;
+
     if (auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers))
     {
         BindingEvent const binding_event(
@@ -436,7 +439,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    return plugin_manager->handle_keyboard_event(*event);
+    return false;
 }
 
 bool Policy::handle_pointer_event(MirPointerEvent const* event)
@@ -469,6 +472,9 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
             break;
         }
     }
+
+    if (plugin_manager->handle_pointer_event(*event))
+        return true;
 
     if (resize_service->handle_pointer_event(x, y, action))
         return true;
