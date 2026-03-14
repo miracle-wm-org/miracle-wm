@@ -651,6 +651,20 @@ TEST_F(FilesystemConfigurationTest, CanReadCursor)
     EXPECT_THAT(cursor.scale, testing::Eq(4.f));
 }
 
+TEST_F(FilesystemConfigurationTest, CanReadCursorTheme)
+{
+    YAML::Node cursor_node;
+    cursor_node["theme"] = "Adwaita";
+
+    YAML::Node root;
+    root["cursor"] = cursor_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const cursor = config.cursor();
+    EXPECT_THAT(cursor.theme, testing::Optional(testing::Eq("Adwaita")));
+}
+
 TEST_F(FilesystemConfigurationTest, CanReadSlowKeys)
 {
     YAML::Node slow_keys_node;

@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/cursor_scale.h>
+#include "cursor_theme.h"
 #include <miral/custom_renderer.h>
 #include <miral/decorations.h>
 #include <miral/external_client.h>
@@ -115,20 +116,25 @@ int main(int argc, char const* argv[])
         setenv(env.key.c_str(), env.value.c_str(), 1);
     }
 
+    if (auto const& theme = config->cursor().theme)
+        setenv("XCURSOR_THEME", theme->c_str(), 1);
+
     class InputConfigurationConfigObserver : public miracle::ConfigObserver
     {
     public:
         InputConfigurationConfigObserver(
             InputConfiguration const& input_configuration,
             Keymap const& keymap, HoverClick const& hover_click,
-            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys, StickyKeys const& sticky_keys) :
+            SimulatedSecondaryClick const& simulated_secondary_click, CursorScale const& cursor_scale, SlowKeys const& slow_keys, StickyKeys const& sticky_keys,
+            miracle::CursorTheme const& cursor_theme) :
             input_configuration(input_configuration),
             keymap(keymap),
             hover_click(hover_click),
             simulated_secondary_click(simulated_secondary_click),
             cursor_scale(cursor_scale),
             slow_keys(slow_keys),
-            sticky_keys(sticky_keys)
+            sticky_keys(sticky_keys),
+            cursor_theme(cursor_theme)
         {
         }
 
@@ -201,6 +207,12 @@ int main(int argc, char const* argv[])
                 sticky_keys.enable();
             else
                 sticky_keys.disable();
+
+            if (config.cursor().theme)
+            {
+                cursor_theme.set_cursor_theme(config.cursor().theme.value());
+                setenv("XCURSOR_THEME", config.cursor().theme.value().c_str(), 1);
+            }
         }
 
     private:
@@ -212,14 +224,18 @@ int main(int argc, char const* argv[])
         CursorScale cursor_scale;
         SlowKeys slow_keys;
         StickyKeys sticky_keys;
+        miracle::CursorTheme cursor_theme;
     };
+
+    miracle::CursorTheme cursor_theme("redglass");
+    setenv("XCURSOR_THEME", "redglass", 1);
 
 #if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 5, 0)
     Keymap keymap = Keymap::system_locale1();
 #else
     Keymap keymap;
 #endif
-    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys);
+    auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys, cursor_theme);
     config_observer_registrar->register_interest(input_config_observer);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
@@ -256,6 +272,7 @@ int main(int argc, char const* argv[])
             hover_click,
             simulated_secondary_click,
             cursor_scale,
+            cursor_theme,
             slow_keys,
             sticky_keys,
             Decorations::always_csd(),

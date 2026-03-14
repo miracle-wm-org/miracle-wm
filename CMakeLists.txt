@@ -194,8 +194,14 @@ add_library(miracle-wm-implementation STATIC
         src/collection_container.h src/collection_container.cpp
         src/container_effect.h src/container_effect.cpp
         src/window_container.cpp src/window_container.h
+        src/cursor_theme.cpp src/cursor_theme.h
+        src/xcursor_loader.cpp src/xcursor_loader.h
+        src/xcursor.c src/xcursor.h
 )
 
+set_source_files_properties(src/xcursor.c PROPERTIES
+        SKIP_PRECOMPILE_HEADERS ON
+        COMPILE_OPTIONS "-Wno-sign-conversion;-Wno-conversion")
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
 
 # ----------------------------------------

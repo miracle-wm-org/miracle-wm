@@ -139,6 +139,7 @@ struct MIRACLE_WM_CONFIG_API CursorConfiguration
 {
     float scale = 1.f;
     CursorFocusMode focus_mode = CursorFocusMode::Hover;
+    std::optional<std::string> theme;
 
     bool operator==(const CursorConfiguration&) const = default;
 };
