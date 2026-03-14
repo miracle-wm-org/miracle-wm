@@ -1012,7 +1012,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
         }
 
         // Allocate memory for the structs in WASM linear memory
-        uint32_t constexpr result_ptr = 0;
+        uint32_t constexpr result_ptr = 8;
         uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
 
         // Write frame_data to WASM memory
@@ -1107,7 +1107,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
         }
 
         // Allocate memory for the structs in WASM linear memory
-        uint32_t constexpr result_ptr = 0;
+        uint32_t constexpr result_ptr = 8;
         uint32_t constexpr window_info_ptr = sizeof(miracle_window_info_t);
 
         // Write window_info to WASM memory
@@ -1217,7 +1217,7 @@ void PluginManager::window_deleted(miral::WindowInfo const& window_info)
             continue;
         }
 
-        uint32_t constexpr window_info_ptr = 0;
+        uint32_t constexpr window_info_ptr = 8;
 
         uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
         std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
@@ -1293,7 +1293,7 @@ void PluginManager::window_focused(miral::WindowInfo const& window_info)
             continue;
         }
 
-        uint32_t constexpr window_info_ptr = 0;
+        uint32_t constexpr window_info_ptr = 8;
 
         uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
         std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
@@ -1369,7 +1369,7 @@ void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
             continue;
         }
 
-        uint32_t constexpr window_info_ptr = 0;
+        uint32_t constexpr window_info_ptr = 8;
 
         uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
         std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
@@ -1446,7 +1446,7 @@ void PluginManager::workspace_created(uint32_t id)
             continue;
         }
 
-        uint32_t constexpr workspace_info_ptr = 0;
+        uint32_t constexpr workspace_info_ptr = 8;
 
         uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
         std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
@@ -1522,7 +1522,7 @@ void PluginManager::workspace_removed(uint32_t id)
             continue;
         }
 
-        uint32_t constexpr workspace_info_ptr = 0;
+        uint32_t constexpr workspace_info_ptr = 8;
 
         uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
         std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
@@ -1598,7 +1598,7 @@ void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint3
             continue;
         }
 
-        uint32_t constexpr workspace_info_ptr = 0;
+        uint32_t constexpr workspace_info_ptr = 8;
 
         uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
         std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
@@ -1679,7 +1679,7 @@ void PluginManager::workspace_area_changed(uint32_t id)
             continue;
         }
 
-        uint32_t constexpr workspace_info_ptr = 0;
+        uint32_t constexpr workspace_info_ptr = 8;
 
         uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
         std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
@@ -1759,7 +1759,7 @@ void PluginManager::window_workspace_changed(miral::WindowInfo const& window_inf
             continue;
         }
 
-        uint32_t constexpr window_info_ptr = 0;
+        uint32_t constexpr window_info_ptr = 8;
 
         uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
         std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
@@ -1873,7 +1873,7 @@ bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
             continue;
         }
 
-        uint32_t constexpr event_ptr = 0;
+        uint32_t constexpr event_ptr = 8;
 
         uint8_t event_buffer[sizeof(miracle_keyboard_event_t)];
         std::memcpy(event_buffer, &keyboard_event, sizeof(keyboard_event));
@@ -1942,7 +1942,7 @@ bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
             continue;
         }
 
-        uint32_t constexpr event_ptr = 0;
+        uint32_t constexpr event_ptr = 8;
 
         uint8_t event_buffer[sizeof(miracle_pointer_event_t)];
         std::memcpy(event_buffer, &pointer_event, sizeof(pointer_event));
