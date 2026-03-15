@@ -315,7 +315,53 @@ pub trait Plugin {
             Some(Workspace::from_c_with_name(&workspace, ws_name))
         }
     }
+
+    /// Queue a custom per-frame animation with a callback.
+    ///
+    /// `callback` receives `(animation_id, dt)` every frame and should return `true`
+    /// when the animation is complete (after which the compositor removes it from the queue).
+    /// 
+    /// `dt` is a float in seconds.
+    ///
+    /// Returns the host-generated animation ID on success, or `None` on error.
+    fn queue_custom_animation<F>(callback: F) -> Option<u32>
+    where
+        F: FnMut(u32, f32) -> bool + 'static,
+    {
+        let handle = unsafe { miracle_get_plugin_handle() };
+        let mut animation_id: u32 = 0;
+        let result = unsafe {
+            crate::host::miracle_queue_custom_animation(
+                handle as i32,
+                &mut animation_id as *mut u32 as i32,
+            )
+        };
+        if result == 0 {
+            custom_anim_callbacks().insert(animation_id, Box::new(callback));
+            Some(animation_id)
+        } else {
+            None
+        }
+    }
 }
+
+static mut _CUSTOM_ANIM_CALLBACKS: Option<std::collections::HashMap<u32, Box<dyn FnMut(u32, f32) -> bool>>> = None;
+
+/// Returns the global custom-animation callback registry.
+///
+/// # Safety
+/// Only safe in a single-threaded WASM context (which is always the case for miracle plugins).
+#[doc(hidden)]
+pub fn custom_anim_callbacks() -> &'static mut std::collections::HashMap<u32, Box<dyn FnMut(u32, f32) -> bool>> {
+    unsafe {
+        if (*std::ptr::addr_of!(_CUSTOM_ANIM_CALLBACKS)).is_none() {
+            _CUSTOM_ANIM_CALLBACKS = Some(std::collections::HashMap::new());
+        }
+        (*std::ptr::addr_of_mut!(_CUSTOM_ANIM_CALLBACKS)).as_mut().unwrap()
+    }
+}
+
+
 
 #[macro_export]
 macro_rules! miracle_plugin {
@@ -414,6 +460,24 @@ macro_rules! miracle_plugin {
                 _ => 0
             }
 
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn custom_animate(data_ptr: i32) -> i32 {
+            let raw = unsafe {
+                &*(data_ptr as *const $crate::animation::RawCustomAnimationData)
+            };
+
+            let callbacks = $crate::plugin::custom_anim_callbacks();
+            if let Some(cb) = callbacks.get_mut(&raw.animation_id) {
+                let done = cb(raw.animation_id, raw.dt);
+                if done {
+                    callbacks.remove(&raw.animation_id);
+                }
+                return if done { 1 } else { 0 };
+            }
+
+            0
         }
 
         #[unsafe(no_mangle)]

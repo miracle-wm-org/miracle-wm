@@ -27,13 +27,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unordered_map>
 #include <variant>
 
+namespace mir
+{
+class ServerActionQueue;
+}
+
 namespace miracle
 {
 class AbstractOutput;
 class AbstractWorkspace;
+class Animator;
 class CompositorState;
 class Container;
 class OutputManager;
+class PluginManager;
 class WindowController;
 class WorkspaceManager;
 
@@ -93,7 +100,9 @@ public:
         std::shared_ptr<WorkspaceManager> const& workspace_manager,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<WindowIdMap> const& window_id_map,
-        std::shared_ptr<ApplicationIdMap> const& application_id_map);
+        std::shared_ptr<ApplicationIdMap> const& application_id_map,
+        std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -109,6 +118,10 @@ public:
     WorkspaceResult active_workspace();
     uint32_t num_managed_windows(uint32_t plugin_handle);
     WindowResult get_managed_window_at(uint32_t plugin_handle, uint32_t index);
+    int32_t queue_custom_animation(uint32_t plugin_handle,
+        uint32_t* out_animation_id,
+        PluginManager* manager);
+
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);
     int32_t window_set_rectangle(uint64_t window_internal, int32_t x, int32_t y, int32_t width, int32_t height, bool animate);
@@ -149,6 +162,9 @@ private:
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<WindowIdMap> window_id_map;
     std::shared_ptr<ApplicationIdMap> application_id_map;
+    std::shared_ptr<Animator> animator;
+    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    uint32_t next_animation_id = 1;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
     std::unordered_map<uint32_t, std::string> plugin_userdata_map;
 };

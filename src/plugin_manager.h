@@ -125,6 +125,14 @@ public:
     std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const& frame_data);
 
+    /// Tick a custom animation for the given plugin.
+    ///
+    /// \param plugin_handle The handle of the plugin that owns this animation.
+    /// \param animation_id The host-generated animation ID.
+    /// \param dt The time delta in seconds since the last tick.
+    /// \returns `true` if the animation is complete, `false` to continue.
+    bool custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt);
+
     /// Try to place a new window using a plugin.
     ///
     /// \param app_info The application info.
@@ -188,6 +196,13 @@ public:
     /// \param event the incoming pointer event
     /// \returns `true` if the pointer event was consumed, otherwise `false`
     bool handle_pointer_event(MirPointerEvent const& event);
+
+    /// Data passed to host functions that need both the bridge and the manager.
+    struct HostFunctionData
+    {
+        PluginBridge* bridge = nullptr;
+        PluginManager* manager = nullptr;
+    };
 
 private:
     struct Self
@@ -253,6 +268,7 @@ private:
         std::mutex modules_access_mutex;
         PluginHandle next_plugin_handle = 1;
         std::vector<ModuleInstance> loaded_modules;
+        HostFunctionData host_fn_data;
     };
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
@@ -293,6 +309,7 @@ public:
     bool unload_wasm_module(PluginHandle) { return false; }
     std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
+    bool custom_animate(PluginHandle, uint32_t, float) { return true; }
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
         miral::WindowSpecification const&,

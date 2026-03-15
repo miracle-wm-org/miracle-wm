@@ -57,6 +57,19 @@ void Animator::append(Animation&& animation)
     cv.notify_one();
 }
 
+void Animator::append(CustomAnimation&& animation)
+{
+    std::lock_guard<std::mutex> lock(processing_lock);
+    for (auto& other : active_custom)
+    {
+        if (other.handle() == animation.handle())
+            other.mark_for_removal();
+    }
+    animation.tick(0.f); // Initial tick to set starting values.
+    active_custom.push_back(std::move(animation));
+    cv.notify_one();
+}
+
 void Animator::tick(float dt)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
@@ -74,6 +87,20 @@ void Animator::tick(float dt)
     {
         return animation.is_being_removed();
     });
+
+    for (auto& item : active_custom)
+    {
+        if (item.is_being_removed())
+            continue;
+
+        if (item.tick(dt))
+            item.mark_for_removal();
+    }
+
+    std::erase_if(active_custom, [](CustomAnimation const& animation)
+    {
+        return animation.is_being_removed();
+    });
 }
 
 void Animator::remove_by_animation_handle(AnimationHandle handle)
@@ -84,12 +111,20 @@ void Animator::remove_by_animation_handle(AnimationHandle handle)
         if (animation.handle() == handle)
             animation.mark_for_removal();
     }
+    for (auto& animation : active_custom)
+    {
+        if (animation.handle() == handle)
+            animation.mark_for_removal();
+    }
 }
 
 bool Animator::is_animating(AnimationHandle handle)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
     return std::ranges::any_of(active, [handle](Animation const& animation)
+    {
+        return animation.handle() == handle;
+    }) || std::ranges::any_of(active_custom, [handle](CustomAnimation const& animation)
     {
         return animation.handle() == handle;
     });

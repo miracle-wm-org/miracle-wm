@@ -247,7 +247,7 @@ Policy::Policy(
 {
     window_id_map_ = std::make_shared<WindowIdMap>();
     application_id_map_ = std::make_shared<ApplicationIdMap>();
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_));
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);

@@ -116,4 +116,17 @@ unsafe extern "C" {
     /// Returns the number of bytes written on success (>0), 0 if no userdata is
     /// configured, or -1 if the provided buffer is too small.
     pub fn miracle_get_plugin_userdata(handle: u32, buf_ptr: i32, buf_len: i32) -> i32;
+
+    /// Queue a custom per-frame animation.
+    ///
+    /// The compositor will call the plugin's `custom_animate` WASM export each frame
+    /// until the plugin returns 1 (complete). The plugin is responsible for all visual
+    /// side effects via the existing host functions.
+    ///
+    /// `plugin_handle` should be the value from `miracle_get_plugin_handle()`.
+    /// `out_animation_id_ptr` is a WASM memory offset where the host will write the
+    /// generated unique animation ID as a `uint32_t`.
+    ///
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_queue_custom_animation(plugin_handle: i32, out_animation_id_ptr: i32) -> i32;
 }

@@ -210,6 +210,34 @@ miracle_animation_type from_animateable_event(AnimateableEvent event)
 }
 }
 
+CustomAnimation::CustomAnimation(
+    AnimationHandle handle,
+    std::function<bool(float dt)>&& on_tick) :
+    handle_ { handle },
+    on_tick_ { std::move(on_tick) }
+{
+}
+
+AnimationHandle CustomAnimation::handle() const
+{
+    return handle_;
+}
+
+void CustomAnimation::mark_for_removal()
+{
+    is_being_removed_ = true;
+}
+
+bool CustomAnimation::is_being_removed() const
+{
+    return is_being_removed_;
+}
+
+bool CustomAnimation::tick(float dt)
+{
+    return on_tick_(dt);
+}
+
 Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,

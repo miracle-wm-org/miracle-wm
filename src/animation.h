@@ -68,6 +68,27 @@ struct AnimationFrameResult
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
 
+/// A free-form animation driven by an arbitrary callback.
+///
+/// The callback receives the frame delta in seconds and returns
+/// `true` when the animation is complete.
+class CustomAnimation
+{
+public:
+    CustomAnimation(
+        AnimationHandle handle,
+        std::function<bool(float dt)>&& on_tick);
+    [[nodiscard]] AnimationHandle handle() const;
+    void mark_for_removal();
+    [[nodiscard]] bool is_being_removed() const;
+    bool tick(float dt);
+
+private:
+    AnimationHandle handle_;
+    std::function<bool(float dt)> on_tick_;
+    bool is_being_removed_ = false;
+};
+
 /// An animation managed by the #Animator.
 ///
 /// When an animation is created, it is provided with an
