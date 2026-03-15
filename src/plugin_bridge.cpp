@@ -456,19 +456,16 @@ int32_t PluginBridge::queue_custom_animation(
 
     auto const handle = animator->register_animateable();
 
-    // No-op deleter: manager (owned by Policy) outlives the Animator and any animations within it.
-    std::shared_ptr<PluginManager> pm(manager, [](PluginManager*) { });
-
     auto saq = server_action_queue;
-    auto on_tick = [plugin_handle, animation_id, pm, duration_seconds, saq, compositor_state = compositor_state,
+    auto on_tick = [plugin_handle, animation_id, manager, duration_seconds, saq, compositor_state = compositor_state,
                        elapsed = 0.0f](float dt) mutable -> bool
     {
         elapsed += dt;
-        saq->enqueue(pm.get(), [plugin_handle, animation_id, dt, elapsed, pm, compositor_state = compositor_state]
+        saq->enqueue(manager, [plugin_handle, animation_id, dt, elapsed, manager, compositor_state = compositor_state]
         {
             // TODO: This lock is SUCH a hammer, we need to fix this!
             auto const lock = compositor_state->lock();
-            pm->custom_animate(plugin_handle, animation_id, dt, elapsed);
+            manager->custom_animate(plugin_handle, animation_id, dt, elapsed);
         });
         return elapsed >= duration_seconds;
     };
