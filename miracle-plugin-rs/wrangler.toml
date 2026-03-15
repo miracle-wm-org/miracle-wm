@@ -2,7 +2,7 @@ name = "miracle-plugin-docs"
 compatibility_date = "2026-03-15"
 
 [assets]
-directory = "target/doc"
+directory = "target/doc/miracle_plugin"
 
 [env.production]
 name = "miracle-plugin-docs"
