@@ -6,7 +6,7 @@ description = "Rust bindings for the miracle-wm plugin API"
 license = "GPL-3.0-or-later"
 homepage = "https://github.com/miracle-wm-org/miracle-wm"
 repository = "https://github.com/miracle-wm-org/miracle-wm"
-documentation = "https://docs.miracle-wm.org/miracle_plugin/"
+documentation = "https://docs.miracle-wm.org/"
 
 [package.metadata.docs.rs]
 targets = ["wasm32-unknown-unknown"]
