@@ -825,7 +825,6 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         return;
     }
 
-    plugin_manager->window_deleted(window_info);
     dying_surface_manager->animate_dying_surface(container);
 
     // Important: We advise closed before the window has been removed so that it
@@ -842,6 +841,7 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         state->unfocus_container(container);
 
     state->remove(container);
+    plugin_manager->window_deleted(window_info);
 
     container->unregister_interest(self.get());
 
