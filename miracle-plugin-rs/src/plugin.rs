@@ -20,7 +20,11 @@ pub fn get_userdata_json() -> Option<String> {
     let mut buf = vec![0u8; 4096];
     loop {
         let result = unsafe {
-            crate::host::miracle_get_plugin_userdata(handle, buf.as_mut_ptr() as i32, buf.len() as i32)
+            crate::host::miracle_get_plugin_userdata(
+                handle,
+                buf.as_mut_ptr() as i32,
+                buf.len() as i32,
+            )
         };
         if result == 0 {
             return None;
@@ -38,7 +42,10 @@ pub trait Plugin {
     /// Handles the window opening animation.
     ///
     /// If None is returned, the animation is not handled by this plugin.
-    fn window_open_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_open_animation(
+        &mut self,
+        _data: &AnimationFrameData,
+    ) -> Option<AnimationFrameResult> {
         None
     }
 
@@ -47,7 +54,7 @@ pub trait Plugin {
     /// If None is returned, the animation is not handled by this plugin.
     fn window_close_animation(
         &mut self,
-        data: &AnimationFrameData,
+        _data: &AnimationFrameData,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -55,7 +62,10 @@ pub trait Plugin {
     /// Handles the window movement animation.
     ///
     /// If None is returned, the animation is not handled by this plugin.
-    fn window_move_animation(&mut self, data: &AnimationFrameData) -> Option<AnimationFrameResult> {
+    fn window_move_animation(
+        &mut self,
+        _data: &AnimationFrameData,
+    ) -> Option<AnimationFrameResult> {
         None
     }
 
@@ -64,7 +74,7 @@ pub trait Plugin {
     /// If None is returned, the animation is not handled by this plugin.
     fn workspace_switch_animation(
         &mut self,
-        data: &AnimationFrameData,
+        _data: &AnimationFrameData,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -72,7 +82,7 @@ pub trait Plugin {
     /// Place a new window.
     ///
     // If None is returned, the placement is not handled by this plugin.
-    fn place_new_window(&mut self, info: WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, _info: &WindowInfo) -> Option<Placement> {
         None
     }
 
@@ -80,33 +90,33 @@ pub trait Plugin {
     ///
     /// The window info is still valid at this point (the window has not yet
     /// been removed from the compositor).
-    fn window_deleted(&mut self, info: WindowInfo) {}
+    fn window_deleted(&mut self, _info: &WindowInfo) {}
 
     /// Called when a window gains focus.
-    fn window_focused(&mut self, info: WindowInfo) {}
+    fn window_focused(&mut self, _info: &WindowInfo) {}
 
     /// Called when a window loses focus.
-    fn window_unfocused(&mut self, info: WindowInfo) {}
+    fn window_unfocused(&mut self, _info: &WindowInfo) {}
 
     /// Called when a workspace is created.
-    fn workspace_created(&mut self, workspace: Workspace) {}
+    fn workspace_created(&mut self, _workspace: &Workspace) {}
 
     /// Called when a workspace is removed.
-    fn workspace_removed(&mut self, workspace: Workspace) {}
+    fn workspace_removed(&mut self, _workspace: &Workspace) {}
 
     /// Called when a workspace gains focus.
     ///
     /// `previous_id` is the internal ID of the previously focused workspace, if any.
-    fn workspace_focused(&mut self, previous_id: Option<u64>, current: Workspace) {}
+    fn workspace_focused(&mut self, _previous_id: Option<u64>, _current: &Workspace) {}
 
     /// Called when a workspace's area (geometry) changes.
-    fn workspace_area_changed(&mut self, workspace: Workspace) {}
+    fn workspace_area_changed(&mut self, _workspace: &Workspace) {}
 
     /// Called when a window's workspace has changed.
     ///
     /// This fires whenever a window is moved to a different workspace,
     /// whether initiated by the user, a command, or a plugin.
-    fn window_workspace_changed(&mut self, info: WindowInfo, workspace: Workspace) {}
+    fn window_workspace_changed(&mut self, _info: &WindowInfo, _workspace: &Workspace) {}
 
     /// Handle a keyboard event.
     ///
@@ -347,23 +357,26 @@ pub trait Plugin {
     }
 }
 
-static mut _CUSTOM_ANIM_CALLBACKS: Option<std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)>> = None;
+static mut _CUSTOM_ANIM_CALLBACKS: Option<
+    std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)>,
+> = None;
 
 /// Returns the global custom-animation callback registry.
 ///
 /// # Safety
 /// Only safe in a single-threaded WASM context (which is always the case for miracle plugins).
 #[doc(hidden)]
-pub fn custom_anim_callbacks() -> &'static mut std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)> {
+pub fn custom_anim_callbacks()
+-> &'static mut std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)> {
     unsafe {
         if (*std::ptr::addr_of!(_CUSTOM_ANIM_CALLBACKS)).is_none() {
             _CUSTOM_ANIM_CALLBACKS = Some(std::collections::HashMap::new());
         }
-        (*std::ptr::addr_of_mut!(_CUSTOM_ANIM_CALLBACKS)).as_mut().unwrap()
+        (*std::ptr::addr_of_mut!(_CUSTOM_ANIM_CALLBACKS))
+            .as_mut()
+            .unwrap()
     }
 }
-
-
 
 #[macro_export]
 macro_rules! miracle_plugin {
@@ -514,7 +527,7 @@ macro_rules! miracle_plugin {
 
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
-            match plugin.place_new_window(info) {
+            match plugin.place_new_window(&info) {
                 Some(placement) => {
                     let c_placement: $crate::bindings::miracle_placement_t = placement.into();
                     unsafe {
@@ -555,7 +568,7 @@ macro_rules! miracle_plugin {
 
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
-            plugin.window_deleted(info);
+            plugin.window_deleted(&info);
         }
 
         #[unsafe(no_mangle)]
@@ -586,7 +599,7 @@ macro_rules! miracle_plugin {
 
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
-            plugin.window_focused(info);
+            plugin.window_focused(&info);
         }
 
         #[unsafe(no_mangle)]
@@ -617,7 +630,7 @@ macro_rules! miracle_plugin {
 
             let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
 
-            plugin.window_unfocused(info);
+            plugin.window_unfocused(&info);
         }
 
         #[unsafe(no_mangle)]
@@ -647,7 +660,7 @@ macro_rules! miracle_plugin {
             };
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
-            plugin.workspace_created(ws);
+            plugin.workspace_created(&ws);
         }
 
         #[unsafe(no_mangle)]
@@ -677,7 +690,7 @@ macro_rules! miracle_plugin {
             };
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
-            plugin.workspace_removed(ws);
+            plugin.workspace_removed(&ws);
         }
 
         #[unsafe(no_mangle)]
@@ -710,7 +723,7 @@ macro_rules! miracle_plugin {
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
             let prev = if has_previous != 0 { Some(previous_id as u64) } else { None };
-            plugin.workspace_focused(prev, ws);
+            plugin.workspace_focused(prev, &ws);
         }
 
         #[unsafe(no_mangle)]
@@ -740,7 +753,7 @@ macro_rules! miracle_plugin {
             };
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, name) };
-            plugin.workspace_area_changed(ws);
+            plugin.workspace_area_changed(&ws);
         }
 
         #[unsafe(no_mangle)]
@@ -788,7 +801,7 @@ macro_rules! miracle_plugin {
             };
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, workspace_name) };
-            plugin.window_workspace_changed(info, ws);
+            plugin.window_workspace_changed(&info, &ws);
         }
 
         #[unsafe(no_mangle)]
