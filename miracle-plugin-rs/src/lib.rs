@@ -18,4 +18,7 @@ pub mod plugin;
 pub mod window;
 pub mod workspace;
 
-pub use plugin::get_userdata_json;
+pub use plugin::{
+    get_active_workspace, get_output_at, get_outputs, get_userdata_json, managed_windows,
+    num_outputs, queue_custom_animation, request_workspace,
+};
