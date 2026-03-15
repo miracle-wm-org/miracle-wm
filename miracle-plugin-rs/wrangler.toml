@@ -1,5 +1,8 @@
 name = "miracle-plugin-docs"
-pages_build_output_dir = "target/doc"
+compatibility_date = "2026-03-15"
+
+[assets]
+directory = "target/doc"
 
 [env.production]
 name = "miracle-plugin-docs"
