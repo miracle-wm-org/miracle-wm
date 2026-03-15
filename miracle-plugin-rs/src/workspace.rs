@@ -4,6 +4,11 @@ use super::core::Rectangle;
 use super::host::*;
 use super::output::*;
 
+/// Represents one workspace on an output.
+///
+/// Each workspace hosts a tree of [`crate::container::Container`]s. Use [`Workspace::trees`]
+/// to get the top-level containers, and [`Workspace::output`] to find the display this
+/// workspace is hosted on.
 #[derive(Debug, Clone)]
 pub struct Workspace {
     /// The workspace number (if set).
@@ -18,11 +23,12 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    /// Returns the opaque internal ID used to refer to this workspace across API calls.
     pub fn id(&self) -> u64 {
         self.internal
     }
 
-    /// Create from the C struct.
+    #[doc(hidden)]
     pub unsafe fn from_c_with_name(value: &bindings::miracle_workspace_t, name: String) -> Self {
         Self {
             number: if value.has_number != 0 {

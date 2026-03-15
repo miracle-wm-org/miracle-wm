@@ -5,6 +5,7 @@ use super::host::*;
 use super::workspace::*;
 use glam::Mat4;
 
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u32)]
 pub enum WindowAttrib {
@@ -47,9 +48,13 @@ pub enum WindowType {
     Normal = 0,
     /// AKA "floating"
     Utility = 1,
+    /// A dialog box.
     Dialog = 2,
+    /// A splash or branding surface.
     Gloss = 3,
+    /// A window whose layout is entirely managed by a plugin.
     Freestyle = 4,
+    /// A popup or context menu.
     Menu = 5,
     /// AKA "OSK" or handwriting etc.
     InputMethod = 6,
@@ -57,6 +62,7 @@ pub enum WindowType {
     Satellite = 7,
     /// AKA "tooltip"
     Tip = 8,
+    /// A server-side window decoration surface.
     Decoration = 9,
 }
 
@@ -164,8 +170,10 @@ impl TryFrom<bindings::MirWindowFocusState> for WindowFocusState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum WindowVisibility {
+    /// The window is fully obscured by other surfaces.
     #[default]
     Occluded = 0,
+    /// The window is at least partially visible.
     Exposed = 1,
 }
 
@@ -187,6 +195,7 @@ impl TryFrom<bindings::MirWindowVisibility> for WindowVisibility {
     }
 }
 
+/// Controls the z-ordering layer of a freestyle window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum DepthLayer {
@@ -227,6 +236,10 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
     }
 }
 
+/// A snapshot of a window's state at the time of a plugin callback.
+///
+/// `WindowInfo` is read-only. To mutate a window managed by your plugin,
+/// use [`PluginWindow`] (returned by [`crate::plugin::managed_windows`]).
 #[derive(Debug)]
 pub struct WindowInfo {
     /// The type of this window.
@@ -250,10 +263,7 @@ pub struct WindowInfo {
 }
 
 impl WindowInfo {
-    /// Create from the C struct.
-    ///
-    /// # Safety
-    /// The `title` pointer must be valid and null-terminated.
+    #[doc(hidden)]
     pub unsafe fn from_c_with_name(value: &bindings::miracle_window_info_t, name: String) -> Self {
         Self {
             window_type: WindowType::try_from(value.window_type).unwrap_or_default(),
@@ -358,6 +368,7 @@ pub struct PluginWindow {
 }
 
 impl PluginWindow {
+    #[doc(hidden)]
     pub fn from_window_info(info: WindowInfo) -> Self {
         Self { info }
     }

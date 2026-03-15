@@ -38,6 +38,19 @@ pub fn get_userdata_json() -> Option<String> {
     }
 }
 
+/// The core plugin trait.
+///
+/// Implement this trait to respond to compositor events. All methods have default no-op
+/// implementations, so you only need to override the hooks you care about.
+///
+/// Register your implementation with the [`miracle_plugin!`] macro:
+///
+/// ```rust,ignore
+/// #[derive(Default)]
+/// struct MyPlugin;
+/// impl Plugin for MyPlugin {}
+/// miracle_plugin::miracle_plugin!(MyPlugin);
+/// ```
 pub trait Plugin {
     /// Handles the window opening animation.
     ///
@@ -79,9 +92,10 @@ pub trait Plugin {
         None
     }
 
-    /// Place a new window.
+    /// Dictate the placement of a newly opened window.
     ///
-    // If None is returned, the placement is not handled by this plugin.
+    /// Return a [`Placement`] to override where and how the window is placed.
+    /// Return `None` to let the compositor handle placement normally.
     fn place_new_window(&mut self, _info: &WindowInfo) -> Option<Placement> {
         None
     }
@@ -378,6 +392,20 @@ pub fn custom_anim_callbacks()
     }
 }
 
+/// Registers a type as a miracle-wm plugin.
+///
+/// The type must implement [`Default`] and [`Plugin`]. This macro generates all of the
+/// required WASM export functions (`init`, `animate`, `place_new_window`, etc.) that the
+/// compositor calls at runtime.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// #[derive(Default)]
+/// struct MyPlugin;
+/// impl Plugin for MyPlugin {}
+/// miracle_plugin!(MyPlugin);
+/// ```
 #[macro_export]
 macro_rules! miracle_plugin {
     ($plugin_type:ty) => {

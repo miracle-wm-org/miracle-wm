@@ -1,15 +1,63 @@
-//! The miracle-wm plugin API.
+#![doc(html_root_url = "https://docs.miracle-wm.org/miracle_plugin/")]
+//! # miracle-plugin
 //!
-
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
+//! A Rust SDK for writing [miracle-wm](https://github.com/miracle-wm-org/miracle-wm) plugins.
+//!
+//! Miracle's plugin system runs each plugin as a WebAssembly module. This crate provides
+//! idiomatic Rust types and traits that map to the compositor's C ABI, so you can write
+//! plugins without touching raw FFI.
+//!
+//! ## Quick start
+//!
+//! Add the crate as a dependency and set the crate type to `cdylib`:
+//!
+//! ```toml
+//! # Cargo.toml
+//! [lib]
+//! crate-type = ["cdylib"]
+//!
+//! [dependencies]
+//! miracle-plugin = { path = "..." }
+//! ```
+//!
+//! Implement the [`plugin::Plugin`] trait and register your type with the
+//! [`miracle_plugin!`] macro:
+//!
+//! ```rust,ignore
+//! use miracle_plugin::plugin::Plugin;
+//! use miracle_plugin::window::WindowInfo;
+//! use miracle_plugin::placement::Placement;
+//!
+//! #[derive(Default)]
+//! struct MyPlugin;
+//!
+//! impl Plugin for MyPlugin {}
+//!
+//! miracle_plugin::miracle_plugin!(MyPlugin);
+//! ```
+//!
+//! ## Modules
+//!
+//! | Module | Contents |
+//! |---|---|
+//! | [`plugin`] | [`plugin::Plugin`] trait, [`miracle_plugin!`] macro, helper functions |
+//! | [`window`] | [`window::WindowInfo`], [`window::PluginWindow`], window-state enums |
+//! | [`placement`] | [`placement::Placement`] and placement strategy types |
+//! | [`animation`] | [`animation::AnimationFrameData`], [`animation::AnimationFrameResult`] |
+//! | [`input`] | [`input::KeyboardEvent`], [`input::PointerEvent`], modifier/button flags |
+//! | [`core`] | Geometric primitives: [`core::Rect`], [`core::Point`], [`core::Size`], [`core::Rectangle`] |
+//! | [`container`] | [`container::Container`], [`container::ContainerType`], [`container::LayoutScheme`] |
+//! | [`workspace`] | [`workspace::Workspace`] |
+//! | [`output`] | [`output::Output`] |
+//! | [`application`] | [`application::ApplicationInfo`] |
 
 pub mod animation;
 pub mod application;
+#[doc(hidden)]
 pub mod bindings;
 pub mod container;
 pub mod core;
+#[doc(hidden)]
 pub mod host;
 pub mod input;
 pub mod output;
