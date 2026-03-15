@@ -1,5 +1,3 @@
-use crate::bindings::MirKeyboardAction;
-
 use super::bindings;
 use bitflags::bitflags;
 

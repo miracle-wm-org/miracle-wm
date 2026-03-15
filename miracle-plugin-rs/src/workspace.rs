@@ -12,13 +12,16 @@ pub struct Workspace {
     pub name: Option<String>,
     /// The number of container trees in this workspace.
     pub num_trees: u32,
-    /// Internal pointer for C interop.
-    pub internal: u64,
     /// The current area of the workspace.
     pub rectangle: Rectangle,
+    internal: u64,
 }
 
 impl Workspace {
+    pub fn id(&self) -> u64 {
+        self.internal
+    }
+
     /// Create from the C struct.
     pub unsafe fn from_c_with_name(value: &bindings::miracle_workspace_t, name: String) -> Self {
         Self {

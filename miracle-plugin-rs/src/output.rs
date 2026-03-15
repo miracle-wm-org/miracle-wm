@@ -20,6 +20,10 @@ pub struct Output {
 }
 
 impl Output {
+    pub fn id(&self) -> u64 {
+        self.internal
+    }
+
     /// Create from the C struct and a name string.
     ///
     /// The name is passed separately because the C struct doesn't contain

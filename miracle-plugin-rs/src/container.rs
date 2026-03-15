@@ -72,11 +72,14 @@ pub struct Container {
     pub layout_scheme: LayoutScheme,
     /// The number of child containers.
     pub num_children: u32,
-    /// Internal pointer for C interop.
-    pub internal: u64,
+    internal: u64,
 }
 
 impl Container {
+    pub fn id(&self) -> u64 {
+        self.internal
+    }
+
     /// Get a child container from the parent container by index.
     ///
     /// Returns `None` if the index is out of bounds or if the container

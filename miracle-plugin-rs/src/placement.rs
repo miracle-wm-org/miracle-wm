@@ -51,7 +51,7 @@ pub struct TiledPlacement {
 impl From<TiledPlacement> for bindings::miracle_tiled_placement_t {
     fn from(value: TiledPlacement) -> Self {
         Self {
-            parent_internal: value.parent.map_or(0, |c| c.internal),
+            parent_internal: value.parent.map_or(0, |c| c.id()),
             index: value.index,
             layout_scheme: value.layout_scheme.into(),
         }
@@ -107,7 +107,7 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
         Self {
             top_left: value.top_left.into(),
             depth_layer: value.depth_layer.into(),
-            workspace_internal: value.workspace.map_or(0, |w| w.internal),
+            workspace_internal: value.workspace.map_or(0, |w| w.id()),
             size: value.size.into(),
             transform: mat4_to_f32_array(value.transform),
             alpha: value.alpha,

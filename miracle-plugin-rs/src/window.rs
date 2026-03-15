@@ -227,7 +227,7 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WindowInfo {
     /// The type of this window.
     pub window_type: WindowType,
@@ -266,6 +266,14 @@ impl WindowInfo {
             alpha: value.alpha,
             internal: value.internal,
         }
+    }
+
+    /// Retrieve the ID of this window.
+    ///
+    /// Plugins may elect to keep a reference to this ID so that they can
+    /// match it with [`WindowInfo`] later.
+    pub fn id(&self) -> u64 {
+        self.internal
     }
 
     /// Get the application that owns this window.
@@ -344,7 +352,7 @@ impl PartialEq for WindowInfo {
 /// Returned by [`crate::plugin::Plugin::managed_windows`]. Wraps [`WindowInfo`] and exposes
 /// all of its read-only fields via [`std::ops::Deref`], while adding setter methods that
 /// call into the compositor host.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PluginWindow {
     info: WindowInfo,
 }
@@ -363,7 +371,7 @@ impl PluginWindow {
     /// Move this window to a different workspace.
     pub fn set_workspace(&self, workspace: &Workspace) -> Result<(), ()> {
         let r = unsafe {
-            miracle_window_set_workspace(self.info.internal as i64, workspace.internal as i64)
+            miracle_window_set_workspace(self.info.internal as i64, workspace.id() as i64)
         };
         if r == 0 { Ok(()) } else { Err(()) }
     }
@@ -386,13 +394,16 @@ impl PluginWindow {
     /// Set the 4x4 column-major transform matrix of this window.
     pub fn set_transform(&self, transform: Mat4) -> Result<(), ()> {
         let arr = transform.to_cols_array();
-        let r = unsafe { miracle_window_set_transform(self.info.internal as i64, arr.as_ptr() as i32) };
+        let r =
+            unsafe { miracle_window_set_transform(self.info.internal as i64, arr.as_ptr() as i32) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
     /// Set the alpha (opacity) of this window.
     pub fn set_alpha(&self, alpha: f32) -> Result<(), ()> {
-        let r = unsafe { miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32) };
+        let r = unsafe {
+            miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32)
+        };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 

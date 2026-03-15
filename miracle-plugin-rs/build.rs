@@ -12,9 +12,12 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     if !target.contains("wasm") {
-        panic!(
-            "miracle-plugin-rs only supports wasm targets. Use --target wasm32-unknown-unknown or wasm32-wasip1"
+        // Allow non-wasm builds to succeed silently (e.g. during `cargo publish`)
+        println!(
+            "cargo:warning=miracle-plugin is only functional on wasm targets; skipping build script for target '{}'",
+            target
         );
+        return;
     }
 
     let mut builder = bindgen::Builder::default()
