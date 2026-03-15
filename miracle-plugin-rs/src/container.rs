@@ -2,6 +2,7 @@ use super::bindings;
 use super::host::*;
 use super::window::*;
 
+/// Identifies whether a container is a leaf (holds one window) or a parent (holds multiple children).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum ContainerType {
@@ -30,14 +31,20 @@ impl TryFrom<bindings::miracle_container_type> for ContainerType {
     }
 }
 
+/// Describes how a parent container lays out its children.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum LayoutScheme {
+    /// No layout applied.
     #[default]
     None = 0,
+    /// Children arranged side by side.
     Horizontal = 1,
+    /// Children stacked top to bottom.
     Vertical = 2,
+    /// Children shown as tabs; only the focused child is visible.
     Tabbed = 3,
+    /// Children stacked visually with title bars visible.
     Stacking = 4,
 }
 
@@ -62,6 +69,12 @@ impl TryFrom<bindings::miracle_layout_scheme> for LayoutScheme {
     }
 }
 
+/// A node in the workspace container tree.
+///
+/// Containers are either window leaves ([`ContainerType::Window`]) or parent nodes
+/// ([`ContainerType::Parent`]) that hold other containers. Use [`Container::child_at`]
+/// and [`Container::get_children`] to traverse the tree, and [`Container::window`] to
+/// retrieve window info from a leaf node.
 #[derive(Debug, Clone, Copy)]
 pub struct Container {
     /// The type of the container.
@@ -76,6 +89,7 @@ pub struct Container {
 }
 
 impl Container {
+    /// Returns the opaque internal ID used to refer to this container across API calls.
     pub fn id(&self) -> u64 {
         self.internal
     }

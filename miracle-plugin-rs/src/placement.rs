@@ -5,6 +5,7 @@ use super::window::*;
 use super::workspace::*;
 use glam::Mat4;
 
+/// Determines how the compositor manages the window's position and size.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum WindowManagementStrategy {
@@ -38,6 +39,9 @@ impl TryFrom<bindings::miracle_window_management_strategy_t> for WindowManagemen
     }
 }
 
+/// Placement parameters for a tiled window.
+///
+/// Used when [`Placement::strategy`] is [`WindowManagementStrategy::Tiled`].
 #[derive(Debug, Clone, Default)]
 pub struct TiledPlacement {
     /// The parent container.
@@ -117,7 +121,7 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
     }
 }
 
-/// Placement configuration.
+/// Complete placement specification returned from [`crate::plugin::Plugin::place_new_window`].
 #[derive(Debug, Clone)]
 pub struct Placement {
     /// The placement strategy.
@@ -139,7 +143,7 @@ impl Default for Placement {
 }
 
 impl Placement {
-    /// Set the values of a C placement struct from this Placement.
+    #[doc(hidden)]
     pub fn set_c(&self, out: &mut bindings::miracle_placement_t) {
         out.strategy = self.strategy.into();
         out.freestyle_placement = self.freestyle.clone().into();
