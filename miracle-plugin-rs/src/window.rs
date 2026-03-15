@@ -371,7 +371,7 @@ impl PluginWindow {
     /// Move this window to a different workspace.
     pub fn set_workspace(&self, workspace: &Workspace) -> Result<(), ()> {
         let r = unsafe {
-            miracle_window_set_workspace(self.info.internal as i64, workspace.internal as i64)
+            miracle_window_set_workspace(self.info.internal as i64, workspace.id() as i64)
         };
         if r == 0 { Ok(()) } else { Err(()) }
     }
