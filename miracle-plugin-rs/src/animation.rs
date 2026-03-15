@@ -2,6 +2,16 @@ use crate::bindings;
 use crate::core::{Rect, mat4_from_f32_array, mat4_to_f32_array};
 use glam::Mat4;
 
+/// Raw C-layout struct for the `custom_animate` WASM export's input.
+///
+/// This matches the `CustomAnimationFrameData` struct written by the host.
+#[repr(C)]
+pub struct RawCustomAnimationData {
+    pub animation_id: u32,
+    pub dt: f32,
+    pub elapsed_seconds: f32,
+}
+
 pub struct AnimationFrameData {
     pub runtime_seconds: f32,
     pub duration_seconds: f32,

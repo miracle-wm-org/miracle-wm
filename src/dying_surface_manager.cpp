@@ -100,7 +100,6 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         if (result.is_complete)
         {
             compositor_state->render_data_manager()->remove(id);
-            compositor_state->render_data_manager()->remove(id);
         }
     }, plugin_manager));
 }

@@ -18,15 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_bridge.h"
 #include "abstract_output.h"
 #include "abstract_workspace.h"
+#include "animator.h"
 #include "compositor_state.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_manager.h"
 #include "window_container.h"
 #include "window_controller.h"
 #include "workspace_manager.h"
 #include <glm/gtc/type_ptr.hpp>
+#include <mir/server_action_queue.h>
 #include <miral/application_info.h>
 #include <miral/window_info.h>
 
@@ -148,13 +151,17 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<WorkspaceManager> const& workspace_manager,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<WindowIdMap> const& window_id_map,
-    std::shared_ptr<ApplicationIdMap> const& application_id_map) :
+    std::shared_ptr<ApplicationIdMap> const& application_id_map,
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
     output_manager(output_manager),
     window_controller(window_controller),
     workspace_manager(workspace_manager),
     compositor_state(compositor_state),
     window_id_map(window_id_map),
-    application_id_map(application_id_map)
+    application_id_map(application_id_map),
+    animator(animator),
+    server_action_queue(server_action_queue)
 {
 }
 
@@ -436,6 +443,35 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
     }
 
     return { miracle_window_info_t {}, "" };
+}
+
+int32_t PluginBridge::queue_custom_animation(
+    PluginHandle plugin_handle,
+    uint32_t* out_animation_id,
+    PluginManager* manager,
+    float duration_seconds)
+{
+    uint32_t const animation_id = next_animation_id++;
+    *out_animation_id = animation_id;
+
+    auto const handle = animator->register_animateable();
+
+    auto saq = server_action_queue;
+    auto on_tick = [plugin_handle, animation_id, manager, duration_seconds, saq, compositor_state = compositor_state,
+                       elapsed = 0.0f](float dt) mutable -> bool
+    {
+        elapsed += dt;
+        saq->enqueue(manager, [plugin_handle, animation_id, dt, elapsed, manager, compositor_state = compositor_state]
+        {
+            // TODO: This lock is SUCH a hammer, we need to fix this!
+            auto const lock = compositor_state->lock();
+            manager->custom_animate(plugin_handle, animation_id, dt, elapsed);
+        });
+        return elapsed >= duration_seconds;
+    };
+
+    animator->append(CustomAnimation(handle, std::move(on_tick)));
+    return 0;
 }
 
 int32_t PluginBridge::window_set_state(uint64_t window_internal, int32_t state)

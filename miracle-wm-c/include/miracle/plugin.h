@@ -496,6 +496,19 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_request_focus(int64_t window_internal);
 
+    /// Queue a custom per-frame animation.
+    ///
+    /// The compositor will call the plugin's `custom_animate` WASM export each frame
+    /// for `duration_seconds` seconds, then automatically remove the animation.
+    /// The plugin is responsible for all visual side effects (e.g. calling
+    /// #miracle_window_set_transform) from within that callback.
+    ///
+    /// \param plugin_handle    the handle returned to `init()` — use `miracle_get_plugin_handle()`
+    /// \param out_animation_id pointer to receive the host-generated unique animation ID
+    /// \param duration_seconds how long (in seconds) the animation should run before auto-removal
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_queue_custom_animation(int32_t plugin_handle, int32_t* out_animation_id, float duration_seconds);
+
 #ifdef __cplusplus
 }
 #endif
