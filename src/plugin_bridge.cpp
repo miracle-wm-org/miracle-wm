@@ -16,19 +16,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "plugin_bridge.h"
-#include "animator.h"
-#include "plugin_manager.h"
 #include "abstract_output.h"
 #include "abstract_workspace.h"
+#include "animator.h"
 #include "compositor_state.h"
 #include "container.h"
 #include "leaf_container.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_manager.h"
 #include "window_container.h"
 #include "window_controller.h"
 #include "workspace_manager.h"
 #include <glm/gtc/type_ptr.hpp>
+#include <mir/server_action_queue.h>
 #include <miral/application_info.h>
 #include <miral/window_info.h>
 
@@ -447,7 +448,8 @@ PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_h
 int32_t PluginBridge::queue_custom_animation(
     PluginHandle plugin_handle,
     uint32_t* out_animation_id,
-    PluginManager* manager)
+    PluginManager* manager,
+    float duration_seconds)
 {
     uint32_t const animation_id = next_animation_id++;
     *out_animation_id = animation_id;
@@ -455,11 +457,20 @@ int32_t PluginBridge::queue_custom_animation(
     auto const handle = animator->register_animateable();
 
     // No-op deleter: manager (owned by Policy) outlives the Animator and any animations within it.
-    std::shared_ptr<PluginManager> pm(manager, [](PluginManager*) {});
+    std::shared_ptr<PluginManager> pm(manager, [](PluginManager*) { });
 
-    auto on_tick = [plugin_handle, animation_id, pm](float dt) -> bool
+    auto saq = server_action_queue;
+    auto on_tick = [plugin_handle, animation_id, pm, duration_seconds, saq, compositor_state = compositor_state,
+                       elapsed = 0.0f](float dt) mutable -> bool
     {
-        return pm->custom_animate(plugin_handle, animation_id, dt);
+        elapsed += dt;
+        saq->enqueue(pm.get(), [plugin_handle, animation_id, dt, elapsed, pm, compositor_state = compositor_state]
+        {
+            // TODO: This lock is SUCH a hammer, we need to fix this!
+            auto const lock = compositor_state->lock();
+            pm->custom_animate(plugin_handle, animation_id, dt, elapsed);
+        });
+        return elapsed >= duration_seconds;
     };
 
     animator->append(CustomAnimation(handle, std::move(on_tick)));

@@ -9,6 +9,7 @@ use glam::Mat4;
 pub struct RawCustomAnimationData {
     pub animation_id: u32,
     pub dt: f32,
+    pub elapsed_seconds: f32,
 }
 
 pub struct AnimationFrameData {

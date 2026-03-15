@@ -731,12 +731,27 @@ WasmEdge_Result host_miracle_queue_custom_animation(
 
     int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
     int32_t const out_animation_id_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const duration_seconds_ptr = WasmEdge_ValueGetI32(params[2]);
+
+    float duration_seconds = 0.0f;
+    auto const r2 = WasmEdge_MemoryInstanceGetData(
+        memory,
+        reinterpret_cast<uint8_t*>(&duration_seconds),
+        static_cast<uint32_t>(duration_seconds_ptr),
+        sizeof(float));
+    if (!WasmEdge_ResultOK(r2))
+    {
+        mir::log_error("host_miracle_queue_custom_animation: failed to read duration_seconds");
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
 
     uint32_t animation_id = 0;
     int32_t const result = ctx->bridge->queue_custom_animation(
         static_cast<PluginHandle>(plugin_handle),
         &animation_id,
-        ctx->manager);
+        ctx->manager,
+        duration_seconds);
 
     if (result == 0)
     {
@@ -920,7 +935,7 @@ void PluginManager::Self::create_host_module()
 
     host_fn_data.bridge = bridge.get();
     add_host_function(module, "miracle_queue_custom_animation",
-        create_func_type({ i32, i32 }, { i32 }),
+        create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_queue_custom_animation, &host_fn_data);
 
     // Register the host module with the executor
@@ -1135,7 +1150,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     return std::nullopt;
 }
 
-bool PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt)
+void PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds)
 {
     auto const modules = self->safe_copy();
     for (auto const& target_module : modules)
@@ -1150,15 +1165,19 @@ bool PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animatio
         if (memory_context == nullptr)
         {
             mir::log_error("custom_animate: memory not found in module.");
-            return true;
+            return;
         }
 
         // Reuse the same fixed offsets as animate().
-        uint32_t constexpr result_ptr = 8;
         uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
 
-        struct CustomAnimationFrameData { uint32_t animation_id; float dt; };
-        CustomAnimationFrameData frame_data { animation_id, dt };
+        struct CustomAnimationFrameData
+        {
+            uint32_t animation_id;
+            float dt;
+            float elapsed_seconds;
+        };
+        CustomAnimationFrameData frame_data { animation_id, dt, elapsed_seconds };
         auto r = WasmEdge_MemoryInstanceSetData(
             memory_context,
             reinterpret_cast<uint8_t*>(&frame_data),
@@ -1167,7 +1186,7 @@ bool PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animatio
         if (!WasmEdge_ResultOK(r))
         {
             mir::log_error("custom_animate: failed to write frame data: %s", WasmEdge_ResultGetMessage(r));
-            return true;
+            return;
         }
 
         WasmEdge_Value params[1];
@@ -1180,9 +1199,11 @@ bool PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animatio
         if (func_context == nullptr)
         {
             mir::log_error("custom_animate: 'custom_animate' export not found in plugin.");
-            return true;
+            return;
         }
 
+        // Keep a return slot for ABI compatibility with existing compiled plugins,
+        // but discard the value — the host controls removal via elapsed time.
         WasmEdge_Value returns[1];
         r = WasmEdge_ExecutorInvoke(
             self->executor_context.get(),
@@ -1195,14 +1216,12 @@ bool PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animatio
         if (!WasmEdge_ResultOK(r))
         {
             mir::log_error("custom_animate: invocation failed: %s", WasmEdge_ResultGetMessage(r));
-            return true;
         }
 
-        return WasmEdge_ValueGetI32(returns[0]) != 0;
+        return;
     }
 
     mir::log_warning("custom_animate: no plugin found with handle %u", plugin_handle);
-    return true;
 }
 
 std::optional<PluginWindowPlacement> PluginManager::place_new_window(

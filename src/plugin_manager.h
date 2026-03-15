@@ -130,8 +130,8 @@ public:
     /// \param plugin_handle The handle of the plugin that owns this animation.
     /// \param animation_id The host-generated animation ID.
     /// \param dt The time delta in seconds since the last tick.
-    /// \returns `true` if the animation is complete, `false` to continue.
-    bool custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt);
+    /// \param elapsed_seconds The cumulative elapsed time in seconds since the animation started.
+    void custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds);
 
     /// Try to place a new window using a plugin.
     ///
@@ -309,7 +309,7 @@ public:
     bool unload_wasm_module(PluginHandle) { return false; }
     std::optional<miracle_plugin_animation_frame_result_t> animate(
         miracle_plugin_animation_frame_data_t const&) { return std::nullopt; }
-    bool custom_animate(PluginHandle, uint32_t, float) { return true; }
+    void custom_animate(PluginHandle, uint32_t, float, float) { }
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,
         miral::WindowSpecification const&,

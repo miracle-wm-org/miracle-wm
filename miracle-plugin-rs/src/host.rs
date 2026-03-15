@@ -128,5 +128,5 @@ unsafe extern "C" {
     /// generated unique animation ID as a `uint32_t`.
     ///
     /// Returns 0 on success, -1 on error.
-    pub fn miracle_queue_custom_animation(plugin_handle: i32, out_animation_id_ptr: i32) -> i32;
+    pub fn miracle_queue_custom_animation(plugin_handle: i32, out_animation_id_ptr: i32, duration_seconds_ptr: i32) -> i32;
 }

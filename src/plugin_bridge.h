@@ -120,7 +120,8 @@ public:
     WindowResult get_managed_window_at(uint32_t plugin_handle, uint32_t index);
     int32_t queue_custom_animation(uint32_t plugin_handle,
         uint32_t* out_animation_id,
-        PluginManager* manager);
+        PluginManager* manager,
+        float duration_seconds);
 
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);
