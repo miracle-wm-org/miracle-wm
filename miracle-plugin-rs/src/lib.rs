@@ -17,7 +17,7 @@
 //! crate-type = ["cdylib"]
 //!
 //! [dependencies]
-//! miracle-plugin = { path = "..." }
+//! miracle-plugin = "0.0.1"
 //! ```
 //!
 //! Implement the [`plugin::Plugin`] trait and register your type with the
@@ -31,7 +31,9 @@
 //! #[derive(Default)]
 //! struct MyPlugin;
 //!
-//! impl Plugin for MyPlugin {}
+//! impl Plugin for MyPlugin {
+//!     // Your plugin implementation here.
+//! }
 //!
 //! miracle_plugin::miracle_plugin!(MyPlugin);
 //! ```
