@@ -1,27 +1,30 @@
-/// Configuration types for the plugin `configure()` hook.
-///
-/// Return a [`Configuration`] from your [`Plugin::configure`] implementation
-/// to override compositor configuration values on every config reload. Any field
-/// left as `None` is ignored; the compositor keeps its own value for that field.
-///
-/// The `plugins` and `includes` keys cannot be set by plugins.
-///
-/// # Example
-/// ```rust,ignore
-/// fn configure(&mut self) -> Option<Configuration> {
-///     Some(Configuration {
-///         primary_modifier: Some(Modifier::Meta),
-///         custom_key_actions: Some(vec![CustomKeyAction {
-///             action: BindingAction::Down,
-///             modifiers: vec![Modifier::Primary],
-///             key: Key::new("Return"),
-///             command: "kitty".to_string(),
-///         }]),
-///         inner_gaps: Some(Gaps { x: 5, y: 5 }),
-///         ..Default::default()
-///     })
-/// }
-/// ```
+//! Configuration types for the plugin `configure()` hook.
+//!
+//! Return a [`Configuration`] from your [`crate::plugin::Plugin::configure`] implementation
+//! to override compositor configuration values on every config reload. Any field
+//! left as `None` is ignored; the compositor keeps its own value for that field.
+//!
+//! The `plugins` and `includes` keys cannot be set by plugins.
+//!
+//! # Example
+//! ```rust,ignore
+//! use miracle_plugin::config::{BindingAction, Configuration, CustomKeyAction, Gaps, Key, Modifier};
+//!
+//! fn configure(&mut self) -> Option<Configuration> {
+//!     Some(Configuration {
+//!         primary_modifier: Some(Modifier::Meta),
+//!         custom_key_actions: Some(vec![CustomKeyAction {
+//!             action: BindingAction::Down,
+//!             modifiers: vec![Modifier::Primary],
+//!             key: Key::new("Return"),
+//!             command: "kitty".to_string(),
+//!         }]),
+//!         inner_gaps: Some(Gaps { x: 5, y: 5 }),
+//!         ..Default::default()
+//!     })
+//! }
+//! ```
+
 use serde::Serialize;
 
 // ─── Modifier ────────────────────────────────────────────────────────────────

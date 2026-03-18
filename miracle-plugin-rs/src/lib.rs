@@ -52,6 +52,7 @@
 //! | [`workspace`] | [`workspace::Workspace`] |
 //! | [`output`] | [`output::Output`] |
 //! | [`application`] | [`application::ApplicationInfo`] |
+//! | [`config`] | [`config::Configuration`] and all supporting types ([`config::Modifier`], [`config::Key`], [`config::BindingAction`], …) |
 
 pub mod animation;
 pub mod application;
