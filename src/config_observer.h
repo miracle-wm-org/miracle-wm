@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_CONFIG_OBSERVER_H
 #define MIRACLEWM_CONFIG_OBSERVER_H
 
+#include "miracle/cpp/config-cpp.h"
 #include "observer_registrar.h"
 
 namespace miracle
@@ -29,13 +30,14 @@ class ConfigObserver
 public:
     virtual ~ConfigObserver() = default;
     virtual void on_config_changed(Config const&) = 0;
+    virtual void on_plugins_changed(std::vector<PluginConfiguration> const& plugins);
 };
 
 class ConfigObserverRegistrar : public ObserverRegistrar<ConfigObserver>
 {
 public:
     void advise_config_changed(Config const& config);
-    void advise_first_load(Config const& config);
+    void advise_load_plugins(std::vector<PluginConfiguration> const& plugins);
 };
 }
 

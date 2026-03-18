@@ -24,3 +24,15 @@ void miracle::ConfigObserverRegistrar::advise_config_changed(Config const& confi
         observer->on_config_changed(config);
     });
 }
+
+void miracle::ConfigObserverRegistrar::advise_load_plugins(std::vector<PluginConfiguration> const& plugins)
+{
+    for_each_observer([&](auto const& observer)
+    {
+        observer->on_plugins_changed(plugins);
+    });
+}
+
+void miracle::ConfigObserver::on_plugins_changed(std::vector<PluginConfiguration> const&)
+{
+}

@@ -1,3 +1,4 @@
+use crate::config::Configuration;
 use crate::input::{KeyboardEvent, PointerEvent};
 use crate::placement::Placement;
 use crate::window::{PluginWindow, WindowInfo};
@@ -131,6 +132,19 @@ pub trait Plugin {
     /// This fires whenever a window is moved to a different workspace,
     /// whether initiated by the user, a command, or a plugin.
     fn window_workspace_changed(&mut self, _info: &WindowInfo, _workspace: &Workspace) {}
+
+    /// Called on every config reload. Return a [`Configuration`] with the fields
+    /// this plugin wants to override, or `None` to leave the compositor's config unchanged.
+    ///
+    /// Only fields that are `Some(...)` are applied; `None` fields are ignored.
+    /// The `plugins` key cannot be set by plugins and is intentionally absent from
+    /// [`Configuration`].
+    ///
+    /// Results from all loaded plugins are merged before being applied to the
+    /// file-based configuration (last-loaded plugin wins on field conflicts).
+    fn configure(&mut self) -> Option<Configuration> {
+        None
+    }
 
     /// Handle a keyboard event.
     ///
@@ -830,6 +844,37 @@ macro_rules! miracle_plugin {
 
             let ws = unsafe { $crate::workspace::Workspace::from_c_with_name(c_ws, workspace_name) };
             plugin.window_workspace_changed(&info, &ws);
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn configure(buf_ptr: i32, buf_len: i32) -> i32 {
+            let plugin = unsafe {
+                match _MIRACLE_PLUGIN.as_mut() {
+                    Some(p) => p,
+                    None => return 0,
+                }
+            };
+            match plugin.configure() {
+                None => 0,
+                Some(config_data) => {
+                    let json = match serde_json::to_string(&config_data) {
+                        Ok(s) => s,
+                        Err(_) => return 0,
+                    };
+                    let bytes = json.as_bytes();
+                    if bytes.len() > buf_len as usize {
+                        return -1;
+                    }
+                    unsafe {
+                        let buf = core::slice::from_raw_parts_mut(
+                            buf_ptr as *mut u8,
+                            buf_len as usize,
+                        );
+                        buf[..bytes.len()].copy_from_slice(bytes);
+                    }
+                    bytes.len() as i32
+                }
+            }
         }
 
         #[unsafe(no_mangle)]

@@ -154,22 +154,8 @@ void FilesystemConfiguration::_init(
         }
     }
 
-    reload();
-
-    // If the user specified an --systemd-session-configure <APP_NAME>, let's add that to the list
-    if (systemd_app)
-    {
-        options.startup_apps.value.insert(options.startup_apps.value.begin(), systemd_app.value());
-    }
-
-    // If the user specified an --exec <APP_NAME>, let's add that to the list
-    if (exec_app)
-    {
-        mir::log_info("Miracle will die when the application specified with --exec dies");
-        options.startup_apps.value.push_back(exec_app.value());
-    }
-
-    is_loaded_ = true;
+    cached_systemd_app_ = systemd_app;
+    cached_exec_app_ = exec_app;
 }
 
 namespace
@@ -215,6 +201,17 @@ void FilesystemConfiguration::reload()
         mir::log_info("Configuration is loading...");
         options = load_config_recursive(config_path);
 
+        // The plugins are loaded immediately so that they have an opportunity to define the configuration
+        // before we call `advise_config_changed`.
+        observer_registrar->advise_load_plugins(*options.plugins);
+
+        // Let plugins override configuration values.
+        if (plugin_configure_hook_)
+        {
+            auto const plugin_config = plugin_configure_hook_();
+            options = options.merge_with_plugin_config(plugin_config);
+        }
+
         // TODO: This might be a hack, I do not know yet.
         //  At any rate, we want users to be confident that their paths will be saved
         //  with the path that they wrote down, so we don't do the tilde resolution
@@ -224,9 +221,23 @@ void FilesystemConfiguration::reload()
         //  in the long term. We will see!
         if (options.output_filter->shader_path)
             options.output_filter->shader_path = expand_tilde_getenv(options.output_filter->shader_path.value());
+
+        if (cached_systemd_app_)
+            options.startup_apps.value.insert(options.startup_apps.value.begin(), cached_systemd_app_.value());
+        if (cached_exec_app_)
+        {
+            mir::log_info("Miracle will die when the application specified with --exec dies");
+            options.startup_apps.value.push_back(cached_exec_app_.value());
+        }
     }
 
     observer_registrar->advise_config_changed(*this);
+}
+
+void FilesystemConfiguration::set_plugin_configure_hook(std::function<PluginConfigData()>&& hook)
+{
+    std::lock_guard lock(mutex);
+    plugin_configure_hook_ = std::move(hook);
 }
 
 uint FilesystemConfiguration::get_primary_modifier() const
@@ -321,11 +332,6 @@ MagnifierConfiguration FilesystemConfiguration::magnifier() const
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
-}
-
-std::vector<PluginConfiguration> const& FilesystemConfiguration::get_plugins() const
-{
-    return *options.plugins;
 }
 
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const

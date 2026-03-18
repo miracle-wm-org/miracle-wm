@@ -57,6 +57,7 @@ pub mod animation;
 pub mod application;
 #[doc(hidden)]
 pub mod bindings;
+pub mod config;
 pub mod container;
 pub mod core;
 #[doc(hidden)]

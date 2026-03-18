@@ -2127,6 +2127,114 @@ bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
     return false;
 }
 
+miracle::PluginConfigData PluginManager::configure()
+{
+    // Accumulate config overrides from all loaded plugins into a single ConfigData,
+    // then return it as PluginConfigData. The plugins and includes fields are never set.
+    ConfigData accumulated;
+    constexpr uint32_t BUF_SIZE = 65536;
+    constexpr uint32_t buf_ptr = 8;
+
+    for (auto const& module : self->safe_copy())
+    {
+        auto const func_name = WasmEdge_StringCreateByCString("configure");
+        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
+        WasmEdge_StringDelete(func_name);
+
+        if (func_context == nullptr)
+            continue; // configure() is optional — skip plugins that don't implement it
+
+        auto const memory_name = WasmEdge_StringCreateByCString("memory");
+        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
+        WasmEdge_StringDelete(memory_name);
+
+        if (memory_context == nullptr)
+        {
+            mir::log_error("Plugin '%s': memory not found, skipping configure()", module.name.c_str());
+            continue;
+        }
+
+        WasmEdge_Value params[2];
+        params[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(buf_ptr));
+        params[1] = WasmEdge_ValueGenI32(static_cast<int32_t>(BUF_SIZE));
+
+        WasmEdge_Value returns[1];
+        auto r = WasmEdge_ExecutorInvoke(
+            self->executor_context.get(),
+            func_context,
+            params,
+            2,
+            returns,
+            1);
+
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("Failed to invoke 'configure' on plugin '%s': %s",
+                module.name.c_str(), WasmEdge_ResultGetMessage(r));
+            continue;
+        }
+
+        int32_t const bytes_written = WasmEdge_ValueGetI32(returns[0]);
+        if (bytes_written == 0)
+            continue; // plugin returned no overrides
+
+        if (bytes_written < 0)
+        {
+            mir::log_error("Plugin '%s' configure() buffer too small (returned %d)", module.name.c_str(), bytes_written);
+            continue;
+        }
+
+        if (static_cast<uint32_t>(bytes_written) > BUF_SIZE)
+        {
+            mir::log_error("Plugin '%s' configure() reported %d bytes but buffer is only %u",
+                module.name.c_str(), bytes_written, BUF_SIZE);
+            continue;
+        }
+
+        uint8_t* const mem_base = WasmEdge_MemoryInstanceGetPointer(memory_context, 0, 0);
+        std::string const json(reinterpret_cast<char const*>(mem_base + buf_ptr),
+            static_cast<size_t>(bytes_written));
+
+        auto [plugin_config, errors] = miracle::load_plugin_config_from_string(json);
+        for (auto const& e : errors)
+            mir::log_warning("Plugin '%s' configure() parse error: %s", module.name.c_str(), e.message.c_str());
+
+        accumulated = accumulated.merge_with_plugin_config(plugin_config);
+    }
+
+    // Copy shared fields from accumulated into PluginConfigData (excludes plugins/includes).
+    PluginConfigData result;
+    result.primary_modifier = accumulated.primary_modifier;
+    result.primary_button = accumulated.primary_button;
+    result.custom_key_commands = accumulated.custom_key_commands;
+    result.built_in_key_command_overrides = accumulated.built_in_key_command_overrides;
+    result.inner_gaps = accumulated.inner_gaps;
+    result.outer_gaps = accumulated.outer_gaps;
+    result.startup_apps = accumulated.startup_apps;
+    result.terminal = accumulated.terminal;
+    result.resize_jump = accumulated.resize_jump;
+    result.environment_variables = accumulated.environment_variables;
+    result.border_config = accumulated.border_config;
+    result.animations_enabled = accumulated.animations_enabled;
+    result.animation_definitions = accumulated.animation_definitions;
+    result.workspace_configs = accumulated.workspace_configs;
+    result.move_modifier = accumulated.move_modifier;
+    result.drag_and_drop = accumulated.drag_and_drop;
+    result.mouse_configuration = accumulated.mouse_configuration;
+    result.keyboard_configuration = accumulated.keyboard_configuration;
+    result.keymap = accumulated.keymap;
+    result.hover_click = accumulated.hover_click;
+    result.simulated_secondary_click = accumulated.simulated_secondary_click;
+    result.output_filter = accumulated.output_filter;
+    result.cursor = accumulated.cursor;
+    result.slow_keys = accumulated.slow_keys;
+    result.sticky_keys = accumulated.sticky_keys;
+    result.touchpad = accumulated.touchpad;
+    result.magnifier = accumulated.magnifier;
+    result.workspace_back_and_forth = accumulated.workspace_back_and_forth;
+    return result;
+}
+
 PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, PluginHandle plugin_handle)
 {
     PluginWindowPlacement result;
