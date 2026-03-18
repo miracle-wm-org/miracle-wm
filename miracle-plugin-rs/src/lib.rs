@@ -52,11 +52,13 @@
 //! | [`workspace`] | [`workspace::Workspace`] |
 //! | [`output`] | [`output::Output`] |
 //! | [`application`] | [`application::ApplicationInfo`] |
+//! | [`config`] | [`config::Configuration`] and all supporting types ([`config::Modifier`], [`config::Key`], [`config::BindingAction`], …) |
 
 pub mod animation;
 pub mod application;
 #[doc(hidden)]
 pub mod bindings;
+pub mod config;
 pub mod container;
 pub mod core;
 #[doc(hidden)]
@@ -68,6 +70,7 @@ pub mod plugin;
 pub mod window;
 pub mod workspace;
 
+pub use config::{BindingAction, Key, Modifier};
 pub use plugin::{
     get_active_workspace, get_output_at, get_outputs, get_userdata_json, managed_windows,
     num_outputs, queue_custom_animation, request_workspace,

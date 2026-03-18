@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/plugin.h"
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
+#include <miracle/cpp/config-cpp.h>
 #include <miral/toolkit_event.h>
 namespace miracle
 {
@@ -197,6 +198,11 @@ public:
     /// \returns `true` if the pointer event was consumed, otherwise `false`
     bool handle_pointer_event(MirPointerEvent const& event);
 
+    /// Call the configure() export on every loaded plugin and merge all of their
+    /// results into a single PluginConfigData. Plugins that do not export configure()
+    /// are silently skipped. The plugins and includes fields are never set.
+    PluginConfigData configure();
+
     /// Data passed to host functions that need both the bridge and the manager.
     struct HostFunctionData
     {
@@ -324,6 +330,7 @@ public:
     void window_workspace_changed(miral::WindowInfo const&, uint32_t) { }
     bool handle_keyboard_event(MirKeyboardEvent const&) { return false; }
     bool handle_pointer_event(MirPointerEvent const&) { return false; }
+    PluginConfigData configure() { return PluginConfigData {}; }
 };
 }
 #endif

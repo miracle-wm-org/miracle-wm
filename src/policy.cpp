@@ -165,6 +165,9 @@ public:
 
         if (!has_loaded_once)
         {
+            for (auto const& app : policy.config->get_startup_apps())
+                policy.launcher->launch(app);
+
             if (config.magnifier().enabled)
                 policy.magnifier->enable();
             else
@@ -173,12 +176,15 @@ public:
 
         policy.magnifier->set_scale(config.magnifier().scale);
         policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
-
-        policy.plugin_manager->unload_all();
-        for (auto const& plugin : config.get_plugins())
-            policy.plugin_manager->load_wasm_module(plugin.path, plugin.userdata_json);
-
         has_loaded_once = true;
+    }
+
+    void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
+    {
+        auto const lock = policy.state->lock();
+        policy.plugin_manager->unload_all();
+        for (auto const& plugin : plugins)
+            policy.plugin_manager->load_wasm_module(plugin.path, plugin.userdata_json);
     }
 
     Policy& policy;
@@ -248,6 +254,10 @@ Policy::Policy(
     window_id_map_ = std::make_shared<WindowIdMap>();
     application_id_map_ = std::make_shared<ApplicationIdMap>();
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
+    config->set_plugin_configure_hook([pm = plugin_manager]()
+    {
+        return pm->configure();
+    });
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
@@ -1028,14 +1038,6 @@ void Policy::advise_end()
     if (is_starting_ && output_manager->focused())
     {
         is_starting_ = false;
-        for (auto const& app : config->get_startup_apps())
-        {
-            launcher->launch(app);
-        }
-
-        // TODO: This is very weird, but it seems like mouse and keyboard
-        //  configuration events will not be piped through until things are
-        //  up and running, so I guess we're going to do it here!
-        config_observer_registrar->advise_config_changed(*config);
+        config->reload();
     }
 }
