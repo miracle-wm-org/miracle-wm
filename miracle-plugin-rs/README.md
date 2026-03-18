@@ -42,20 +42,16 @@ impl Plugin for MyVeryCoolMiraclePlugin {
             return None;
         }
 
-        Some(Placement {
-            strategy: WindowManagementStrategy::Freestyle,
-            freestyle: FreestylePlacement {
-                top_left: Point::new(100, 100),
-                depth_layer: DepthLayer::Application,
-                workspace: None,
-                size: Size::new(500, 500),
-                transform: Mat4::IDENTITY,
-                alpha: 1.0,
-                movable: false,
-                resizable: false
-            },
-            ..Default::default()
-        })
+        Some(Placement::Freestyle(FreestylePlacement {
+            top_left: Point::new(100, 100),
+            depth_layer: DepthLayer::Application,
+            workspace: None,
+            size: Size::new(500, 500),
+            transform: Mat4::IDENTITY,
+            alpha: 1.0,
+            movable: false,
+            resizable: false
+        }))
     }
     
     // And many more hooks...!

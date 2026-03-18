@@ -88,24 +88,24 @@ impl Modifier {
     /// Returns the string representation expected by the compositor.
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Alt         => "alt",
-            Self::AltLeft     => "alt_left",
-            Self::AltRight    => "alt_right",
-            Self::Shift       => "shift",
-            Self::ShiftLeft   => "shift_left",
-            Self::ShiftRight  => "shift_right",
-            Self::Sym         => "sym",
-            Self::Function    => "function",
-            Self::Ctrl        => "ctrl",
-            Self::CtrlLeft    => "ctrl_left",
-            Self::CtrlRight   => "ctrl_right",
-            Self::Meta        => "meta",
-            Self::MetaLeft    => "meta_left",
-            Self::MetaRight   => "meta_right",
-            Self::CapsLock    => "caps_lock",
-            Self::NumLock     => "num_lock",
-            Self::ScrollLock  => "scroll_lock",
-            Self::Primary     => "primary",
+            Self::Alt => "alt",
+            Self::AltLeft => "alt_left",
+            Self::AltRight => "alt_right",
+            Self::Shift => "shift",
+            Self::ShiftLeft => "shift_left",
+            Self::ShiftRight => "shift_right",
+            Self::Sym => "sym",
+            Self::Function => "function",
+            Self::Ctrl => "ctrl",
+            Self::CtrlLeft => "ctrl_left",
+            Self::CtrlRight => "ctrl_right",
+            Self::Meta => "meta",
+            Self::MetaLeft => "meta_left",
+            Self::MetaRight => "meta_right",
+            Self::CapsLock => "caps_lock",
+            Self::NumLock => "num_lock",
+            Self::ScrollLock => "scroll_lock",
+            Self::Primary => "primary",
         }
     }
 }
@@ -138,8 +138,8 @@ impl BindingAction {
     /// Returns the string representation expected by the compositor.
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Down   => "down",
-            Self::Up     => "up",
+            Self::Down => "down",
+            Self::Up => "up",
             Self::Repeat => "repeat",
         }
     }
@@ -406,7 +406,10 @@ pub struct DragAndDropConfiguration {
 
 impl Default for DragAndDropConfiguration {
     fn default() -> Self {
-        Self { enabled: true, modifiers: Vec::new() }
+        Self {
+            enabled: true,
+            modifiers: Vec::new(),
+        }
     }
 }
 

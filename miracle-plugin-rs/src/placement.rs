@@ -5,43 +5,9 @@ use super::window::*;
 use super::workspace::*;
 use glam::Mat4;
 
-/// Determines how the compositor manages the window's position and size.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[repr(u32)]
-pub enum WindowManagementStrategy {
-    /// Use the system default management strategy.
-    #[default]
-    System = 0,
-    /// Window will be placed in the tiling grid.
-    Tiled = 1,
-    /// Window behavior is entirely determined by the plugin.
-    Freestyle = 2,
-}
-
-impl From<WindowManagementStrategy> for bindings::miracle_window_management_strategy_t {
-    fn from(value: WindowManagementStrategy) -> Self {
-        value as bindings::miracle_window_management_strategy_t
-    }
-}
-
-impl TryFrom<bindings::miracle_window_management_strategy_t> for WindowManagementStrategy {
-    type Error = ();
-
-    fn try_from(
-        value: bindings::miracle_window_management_strategy_t,
-    ) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::System),
-            1 => Ok(Self::Tiled),
-            2 => Ok(Self::Freestyle),
-            _ => Err(()),
-        }
-    }
-}
-
 /// Placement parameters for a tiled window.
 ///
-/// Used when [`Placement::strategy`] is [`WindowManagementStrategy::Tiled`].
+/// Used with [`Placement::Tiled`].
 #[derive(Debug, Clone, Default)]
 pub struct TiledPlacement {
     /// The parent container.
@@ -123,40 +89,26 @@ impl From<FreestylePlacement> for bindings::miracle_freestyle_placement_t {
 
 /// Complete placement specification returned from [`crate::plugin::Plugin::place_new_window`].
 #[derive(Debug, Clone)]
-pub struct Placement {
-    /// The placement strategy.
-    pub strategy: WindowManagementStrategy,
-    /// Freestyle placement (used if strategy is Freestyle).
-    pub freestyle: FreestylePlacement,
-    /// Tiled placement (used if strategy is Tiled).
-    pub tiled: TiledPlacement,
-}
-
-impl Default for Placement {
-    fn default() -> Self {
-        Self {
-            strategy: WindowManagementStrategy::default(),
-            freestyle: FreestylePlacement::default(),
-            tiled: TiledPlacement::default(),
-        }
-    }
-}
-
-impl Placement {
-    #[doc(hidden)]
-    pub fn set_c(&self, out: &mut bindings::miracle_placement_t) {
-        out.strategy = self.strategy.into();
-        out.freestyle_placement = self.freestyle.clone().into();
-        out.tiled_placement = self.tiled.clone().into();
-    }
+pub enum Placement {
+    /// Window will be placed in the tiling grid.
+    Tiled(TiledPlacement),
+    /// Window behavior is entirely determined by the plugin.
+    Freestyle(FreestylePlacement),
 }
 
 impl From<Placement> for bindings::miracle_placement_t {
     fn from(value: Placement) -> Self {
-        Self {
-            strategy: value.strategy.into(),
-            freestyle_placement: value.freestyle.clone().into(),
-            tiled_placement: value.tiled.clone().into(),
+        match value {
+            Placement::Tiled(tiled) => Self {
+                strategy: bindings::miracle_window_management_strategy_t_miracle_window_management_strategy_tiled,
+                freestyle_placement: Default::default(),
+                tiled_placement: tiled.into(),
+            },
+            Placement::Freestyle(freestyle) => Self {
+                strategy: bindings::miracle_window_management_strategy_t_miracle_window_management_strategy_freestyle,
+                freestyle_placement: freestyle.into(),
+                tiled_placement: Default::default(),
+            },
         }
     }
 }
