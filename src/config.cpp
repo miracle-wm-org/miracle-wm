@@ -60,6 +60,7 @@ FilesystemConfiguration::FilesystemConfiguration(std::shared_ptr<ConfigObserverR
                       "It is assumed that you are running this inside of a test");
         config_path = default_config_path;
         _init(std::nullopt, std::nullopt);
+        reload();
     }
 }
 
