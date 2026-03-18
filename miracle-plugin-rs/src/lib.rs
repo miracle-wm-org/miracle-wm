@@ -44,7 +44,7 @@
 //! |---|---|
 //! | [`plugin`] | [`plugin::Plugin`] trait, [`miracle_plugin!`] macro, helper functions |
 //! | [`window`] | [`window::WindowInfo`], [`window::PluginWindow`], window-state enums |
-//! | [`placement`] | [`placement::Placement`] and placement strategy types |
+//! | [`placement`] | [`placement::Placement`] |
 //! | [`animation`] | [`animation::AnimationFrameData`], [`animation::AnimationFrameResult`] |
 //! | [`input`] | [`input::KeyboardEvent`], [`input::PointerEvent`], modifier/button flags |
 //! | [`core`] | Geometric primitives: [`core::Rect`], [`core::Point`], [`core::Size`], [`core::Rectangle`] |

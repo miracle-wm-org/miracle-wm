@@ -5,40 +5,6 @@ use super::window::*;
 use super::workspace::*;
 use glam::Mat4;
 
-/// Determines how the compositor manages the window's position and size.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[repr(u32)]
-pub enum WindowManagementStrategy {
-    /// Use the system default management strategy.
-    #[default]
-    System = 0,
-    /// Window will be placed in the tiling grid.
-    Tiled = 1,
-    /// Window behavior is entirely determined by the plugin.
-    Freestyle = 2,
-}
-
-impl From<WindowManagementStrategy> for bindings::miracle_window_management_strategy_t {
-    fn from(value: WindowManagementStrategy) -> Self {
-        value as bindings::miracle_window_management_strategy_t
-    }
-}
-
-impl TryFrom<bindings::miracle_window_management_strategy_t> for WindowManagementStrategy {
-    type Error = ();
-
-    fn try_from(
-        value: bindings::miracle_window_management_strategy_t,
-    ) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::System),
-            1 => Ok(Self::Tiled),
-            2 => Ok(Self::Freestyle),
-            _ => Err(()),
-        }
-    }
-}
-
 /// Placement parameters for a tiled window.
 ///
 /// Used with [`Placement::Tiled`].
