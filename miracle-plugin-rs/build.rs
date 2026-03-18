@@ -4,7 +4,7 @@ use std::path::PathBuf;
 fn main() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let manifest_path = PathBuf::from(&manifest_dir);
-    let plugin_header = manifest_path.join("../miracle-wm-c/include/miracle/plugin.h");
+    let plugin_header = manifest_path.join("plugin.h");
     let bindings_file = manifest_path.join("src/bindings.rs");
 
     println!("cargo:rerun-if-changed={}", plugin_header.display());

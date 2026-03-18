@@ -11,11 +11,11 @@ add_library(miracle-wm-c
     SHARED
     src/config-cpp.cpp include/miracle/cpp/config-cpp.h
     include/miracle/cpp/animation_definition.h
-        include/miracle/cpp/default_key_command.h
+    include/miracle/cpp/default_key_command.h
     include/miracle/cpp/cursor_focus_mode.h
     include/miracle/cpp/modifiers.h
     src/config-c.cpp include/miracle/config.h
-    include/miracle/plugin.h)
+    ../miracle-plugin-rs/plugin.h)
 
 set_target_properties(miracle-wm-c PROPERTIES
     CXX_STANDARD 20

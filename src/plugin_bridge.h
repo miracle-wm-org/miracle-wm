@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_BRIDGE_H
 #define MIRACLE_PLUGIN_BRIDGE_H
 
-#include "miracle/plugin.h"
+#include "../miracle-plugin-rs/plugin.h"
 #include <functional>
 #include <miral/application_info.h>
 #include <miral/window.h>

@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_NODE_COMMON_H
 #define MIRACLEWM_NODE_COMMON_H
 
-#include "miracle/plugin.h"
+#include "../miracle-plugin-rs/plugin.h"
 
 namespace miracle
 {
