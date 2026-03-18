@@ -10,13 +10,313 @@
 /// ```rust,ignore
 /// fn configure(&mut self) -> Option<Configuration> {
 ///     Some(Configuration {
+///         primary_modifier: Some(Modifier::Meta),
+///         custom_key_actions: Some(vec![CustomKeyAction {
+///             action: BindingAction::Down,
+///             modifiers: vec![Modifier::Primary],
+///             key: Key::new("Return"),
+///             command: "kitty".to_string(),
+///         }]),
 ///         inner_gaps: Some(Gaps { x: 5, y: 5 }),
-///         animations_enabled: Some(false),
 ///         ..Default::default()
 ///     })
 /// }
 /// ```
 use serde::Serialize;
+
+// ─── Modifier ────────────────────────────────────────────────────────────────
+
+/// A keyboard modifier key for use in configuration bindings.
+///
+/// These names correspond exactly to the lowercase strings accepted by
+/// miracle-wm's configuration parser. [`Modifier::Primary`] is a special
+/// sentinel meaning "use whatever the user has configured as their primary
+/// modifier key" — it is the recommended value for plugins that want to
+/// integrate naturally with the user's keybinding preferences.
+///
+/// # Relationship to `input::InputEventModifiers`
+/// At runtime, `Modifier::Meta` corresponds to `InputEventModifiers::META`,
+/// `Modifier::Shift` to `InputEventModifiers::SHIFT`, etc. Config uses a
+/// simple enum because the set of recognised modifiers is fixed and small.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Modifier {
+    /// Either Alt key. Serializes as `"alt"`.
+    Alt,
+    /// Left Alt key. Serializes as `"alt_left"`.
+    AltLeft,
+    /// Right Alt key. Serializes as `"alt_right"`.
+    AltRight,
+    /// Either Shift key. Serializes as `"shift"`.
+    Shift,
+    /// Left Shift key. Serializes as `"shift_left"`.
+    ShiftLeft,
+    /// Right Shift key. Serializes as `"shift_right"`.
+    ShiftRight,
+    /// Sym key. Serializes as `"sym"`.
+    Sym,
+    /// Function key. Serializes as `"function"`.
+    Function,
+    /// Either Ctrl key. Serializes as `"ctrl"`.
+    Ctrl,
+    /// Left Ctrl key. Serializes as `"ctrl_left"`.
+    CtrlLeft,
+    /// Right Ctrl key. Serializes as `"ctrl_right"`.
+    CtrlRight,
+    /// Either Meta/Super/Windows key. Serializes as `"meta"`.
+    /// This is the most common choice for compositor bindings.
+    Meta,
+    /// Left Meta key. Serializes as `"meta_left"`.
+    MetaLeft,
+    /// Right Meta key. Serializes as `"meta_right"`.
+    MetaRight,
+    /// Caps Lock. Serializes as `"caps_lock"`.
+    CapsLock,
+    /// Num Lock. Serializes as `"num_lock"`.
+    NumLock,
+    /// Scroll Lock. Serializes as `"scroll_lock"`.
+    ScrollLock,
+    /// Sentinel: "use the user's configured primary modifier key".
+    /// Serializes as `"primary"`. Recommended for plugins that should
+    /// respect the user's own modifier preference.
+    Primary,
+}
+
+impl Modifier {
+    /// Returns the string representation expected by the compositor.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Alt         => "alt",
+            Self::AltLeft     => "alt_left",
+            Self::AltRight    => "alt_right",
+            Self::Shift       => "shift",
+            Self::ShiftLeft   => "shift_left",
+            Self::ShiftRight  => "shift_right",
+            Self::Sym         => "sym",
+            Self::Function    => "function",
+            Self::Ctrl        => "ctrl",
+            Self::CtrlLeft    => "ctrl_left",
+            Self::CtrlRight   => "ctrl_right",
+            Self::Meta        => "meta",
+            Self::MetaLeft    => "meta_left",
+            Self::MetaRight   => "meta_right",
+            Self::CapsLock    => "caps_lock",
+            Self::NumLock     => "num_lock",
+            Self::ScrollLock  => "scroll_lock",
+            Self::Primary     => "primary",
+        }
+    }
+}
+
+impl Serialize for Modifier {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+// ─── BindingAction ───────────────────────────────────────────────────────────
+
+/// The keyboard event phase that triggers a key binding.
+///
+/// Named `BindingAction` (rather than `KeyboardAction`) to avoid confusion
+/// with [`crate::input::KeyboardAction`], which carries additional runtime
+/// variants that have no meaning in a configuration context.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum BindingAction {
+    /// Key was pressed. This is the most common trigger for bindings.
+    #[default]
+    Down,
+    /// Key was released.
+    Up,
+    /// Key is being held and auto-repeating.
+    Repeat,
+}
+
+impl BindingAction {
+    /// Returns the string representation expected by the compositor.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Down   => "down",
+            Self::Up     => "up",
+            Self::Repeat => "repeat",
+        }
+    }
+}
+
+impl Serialize for BindingAction {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(self.as_str())
+    }
+}
+
+// ─── Key ─────────────────────────────────────────────────────────────────────
+
+/// An XKB keysym name for use in configuration bindings.
+///
+/// Examples: `Key::new("Return")`, `Key::new("a")`, `Key::new("Up")`,
+/// `Key::new("F5")`.
+///
+/// The compositor validates the name using `xkb_keysym_from_name`. A full
+/// list of valid names is available at:
+/// <https://xkbcommon.org/doc/current/xkbcommon-keysyms_8h.html>
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct Key(pub String);
+
+impl Key {
+    /// Create a key from an XKB keysym name.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
+}
+
+impl<S: Into<String>> From<S> for Key {
+    fn from(s: S) -> Self {
+        Self(s.into())
+    }
+}
+
+impl Serialize for Key {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.0)
+    }
+}
+
+// ─── Handedness ──────────────────────────────────────────────────────────────
+
+/// Mouse button handedness.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Handedness {
+    #[default]
+    Right,
+    Left,
+}
+
+// ─── PointerAcceleration ─────────────────────────────────────────────────────
+
+/// Pointer acceleration profile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PointerAcceleration {
+    Adaptive,
+    #[default]
+    None,
+}
+
+// ─── CursorFocusMode ─────────────────────────────────────────────────────────
+
+/// Whether focus follows the pointer or requires a click.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CursorFocusMode {
+    #[default]
+    Hover,
+    Click,
+}
+
+// ─── TouchpadClickMode ───────────────────────────────────────────────────────
+
+/// Touchpad click emulation mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TouchpadClickMode {
+    #[default]
+    None,
+    AreaToClick,
+    FingerCount,
+}
+
+// ─── TouchpadScrollMode ──────────────────────────────────────────────────────
+
+/// Touchpad scroll method.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TouchpadScrollMode {
+    #[default]
+    None,
+    TwoFingerScroll,
+    EdgeScroll,
+    ButtonDownScroll,
+}
+
+// ─── AnimationPartType ───────────────────────────────────────────────────────
+
+/// Built-in animation visual effect for one phase of an animation sequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnimationPartType {
+    #[default]
+    Disabled,
+    Slide,
+    Grow,
+    Shrink,
+    Fade,
+}
+
+// ─── EasingFunction ──────────────────────────────────────────────────────────
+
+/// Easing function for animation timing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EasingFunction {
+    #[default]
+    Linear,
+    EaseInSine,
+    EaseOutSine,
+    EaseInOutSine,
+    EaseInQuad,
+    EaseOutQuad,
+    EaseInOutQuad,
+    EaseInCubic,
+    EaseOutCubic,
+    EaseInOutCubic,
+    EaseInQuart,
+    EaseOutQuart,
+    EaseInOutQuart,
+    EaseInQuint,
+    EaseOutQuint,
+    EaseInOutQuint,
+    EaseInExpo,
+    EaseOutExpo,
+    EaseInOutExpo,
+    EaseInCirc,
+    EaseOutCirc,
+    EaseInOutCirc,
+    EaseInBack,
+    EaseOutBack,
+    EaseInOutBack,
+    EaseInElastic,
+    EaseOutElastic,
+    EaseInOutElastic,
+    EaseInBounce,
+    EaseOutBounce,
+    EaseInOutBounce,
+}
+
+// ─── AnimationEvent ──────────────────────────────────────────────────────────
+
+/// The compositor event that an animation definition applies to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnimationEvent {
+    #[default]
+    WindowOpen,
+    WindowMove,
+    WindowClose,
+    WorkspaceSwitch,
+}
+
+// ─── AnimationKind ───────────────────────────────────────────────────────────
+
+/// Whether an animation is driven by a built-in effect or a plugin callback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AnimationKind {
+    #[default]
+    BuiltIn,
+    Plugin,
+}
+
+// ─── Config structs ──────────────────────────────────────────────────────────
 
 /// Gaps configuration. Both `x` (left/right) and `y` (top/bottom) are in pixels.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -26,29 +326,29 @@ pub struct Gaps {
 }
 
 /// A custom key binding that runs a shell command.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CustomKeyAction {
-    /// The keyboard action that triggers this binding (e.g. `"down"`, `"up"`, `"repeat"`).
-    pub action: String,
-    /// Modifier flags as a string (e.g. `"Mod4"`, `"Mod4+Shift"`).
-    pub modifiers: String,
-    /// The XKB keysym name (e.g. `"Return"`, `"a"`, `"Up"`).
-    pub key: String,
+    /// The keyboard event phase that triggers this binding.
+    pub action: BindingAction,
+    /// The modifier keys required for this binding.
+    pub modifiers: Vec<Modifier>,
+    /// The XKB keysym name (e.g. `Key::new("Return")`, `Key::new("a")`).
+    pub key: Key,
     /// The shell command to execute.
     pub command: String,
 }
 
 /// Override the key binding for a built-in compositor action.
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BuiltInKeyCommandOverride {
     /// Name of the built-in action (e.g. `"terminal"`, `"close_window"`).
     pub name: String,
-    /// The keyboard action that triggers this binding.
-    pub action: String,
-    /// Modifier flags as a string.
-    pub modifiers: String,
+    /// The keyboard event phase that triggers this binding.
+    pub action: BindingAction,
+    /// The modifier keys required for this binding.
+    pub modifiers: Vec<Modifier>,
     /// The XKB keysym name.
-    pub key: String,
+    pub key: Key,
 }
 
 /// An application to start on compositor launch.
@@ -96,24 +396,25 @@ pub struct WorkspaceConfig {
 #[derive(Debug, Clone, Serialize)]
 pub struct DragAndDropConfiguration {
     pub enabled: bool,
-    /// Modifier string (e.g. `"Mod4+Shift"`).
-    pub modifiers: String,
+    /// The modifier keys required to initiate a drag-and-drop operation.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub modifiers: Vec<Modifier>,
 }
 
 impl Default for DragAndDropConfiguration {
     fn default() -> Self {
-        Self { enabled: true, modifiers: String::new() }
+        Self { enabled: true, modifiers: Vec::new() }
     }
 }
 
 /// A single built-in animation (one phase of an easing sequence).
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct BuiltInAnimationPart {
-    /// Built-in animation type: `"slide"`, `"grow"`, `"shrink"`, `"fade"`, `"disabled"`.
+    /// The visual effect for this animation phase.
     #[serde(rename = "type")]
-    pub type_: String,
-    /// Easing function name (e.g. `"ease_in_out_cubic"`).
-    pub function: String,
+    pub type_: AnimationPartType,
+    /// The easing function that controls timing.
+    pub function: EasingFunction,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub c1: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -131,16 +432,15 @@ pub struct BuiltInAnimationPart {
 /// An animation definition for one animatable event.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct AnimationDefinition {
-    /// The compositor event to animate: `"window_open"`, `"window_move"`,
-    /// `"window_close"`, `"workspace_switch"`.
-    pub event: String,
-    /// Animation kind: `"built_in"` or `"plugin"`.
+    /// The compositor event to animate.
+    pub event: AnimationEvent,
+    /// Whether to use a built-in animation effect or a plugin callback.
     #[serde(rename = "type")]
-    pub type_: String,
+    pub type_: AnimationKind,
     /// Duration in seconds.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<f32>,
-    /// The list of animation phases (required when `type_` is `"built_in"`).
+    /// The list of animation phases (required when `type_` is `BuiltIn`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub parts: Vec<BuiltInAnimationPart>,
 }
@@ -148,12 +448,12 @@ pub struct AnimationDefinition {
 /// Mouse pointer configuration.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct MouseConfiguration {
-    /// Swap left and right buttons: `"right_handed"` or `"left_handed"`.
+    /// Swap left and right buttons.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub handedness: Option<String>,
-    /// Pointer acceleration profile: `"none"` or `"adaptive"`.
+    pub handedness: Option<Handedness>,
+    /// Pointer acceleration profile.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub acceleration: Option<String>,
+    pub acceleration: Option<PointerAcceleration>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acceleration_bias: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,9 +519,9 @@ pub struct OutputFilterConfiguration {
 pub struct CursorConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<f32>,
-    /// `"hover"` or `"click"`.
+    /// Whether focus follows hover or requires a click.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub focus_mode: Option<String>,
+    pub focus_mode: Option<CursorFocusMode>,
 }
 
 /// Slow keys (accessibility) configuration.
@@ -258,12 +558,12 @@ pub struct TouchpadConfiguration {
     pub tap_to_click: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub middle_mouse_button_emulation: Option<bool>,
-    /// `"none"`, `"button_areas"`, `"click_finger"`.
+    /// Touchpad click emulation mode.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub click_mode: Option<String>,
-    /// `"none"`, `"two_finger"`, `"edge"`, `"button"`.
+    pub click_mode: Option<TouchpadClickMode>,
+    /// Touchpad scroll method.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub scroll_mode: Option<String>,
+    pub scroll_mode: Option<TouchpadScrollMode>,
 }
 
 /// Screen magnifier configuration.
@@ -292,9 +592,9 @@ pub struct MagnifierConfiguration {
 /// by plugins and are intentionally absent from this struct.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct Configuration {
-    /// The primary modifier key (e.g. `"Mod4"` for Super/Windows key).
+    /// The primary modifier key (e.g. `Modifier::Meta` for the Super/Windows key).
     #[serde(skip_serializing_if = "Option::is_none", rename = "action_key")]
-    pub primary_modifier: Option<String>,
+    pub primary_modifier: Option<Modifier>,
 
     /// Custom key bindings that run shell commands.
     #[serde(skip_serializing_if = "Option::is_none", rename = "custom_actions")]
@@ -344,9 +644,10 @@ pub struct Configuration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_animations: Option<bool>,
 
-    /// The modifier key used for window move operations (e.g. `"Mod4"`).
+    /// The modifier keys used for window move operations.
+    /// Use `vec![Modifier::Primary]` to follow the user's primary modifier.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub move_modifier: Option<String>,
+    pub move_modifier: Option<Vec<Modifier>>,
 
     /// Drag-and-drop behaviour.
     #[serde(skip_serializing_if = "Option::is_none")]
