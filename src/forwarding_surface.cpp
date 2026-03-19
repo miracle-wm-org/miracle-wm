@@ -244,6 +244,13 @@ void ForwardingSurface::set_transformation(const glm::mat4& t)
     surface_->set_transformation(t);
 }
 
+#ifdef MIR_COMPILING_AGAINST_DEV
+float ForwardingSurface::alpha() const
+{
+    return surface_->alpha();
+}
+#endif
+
 void ForwardingSurface::set_alpha(float alpha)
 {
     surface_->set_alpha(alpha);
