@@ -244,6 +244,11 @@ void ForwardingSurface::set_transformation(const glm::mat4& t)
     surface_->set_transformation(t);
 }
 
+float ForwardingSurface::alpha() const
+{
+    return surface_->alpha();
+}
+
 void ForwardingSurface::set_alpha(float alpha)
 {
     surface_->set_alpha(alpha);
