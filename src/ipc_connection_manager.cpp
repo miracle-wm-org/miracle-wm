@@ -539,7 +539,7 @@ void IpcConnectionManager::disconnect_internal(IpcClient* client)
 {
     main_loop->unregister_fd_handler(client);
     if (fd_is_valid(client->client_fd))
-        shutdown(client->client_fd, SHUT_RDWR);
+        shutdown(client->client_fd, SHUT_WR);
     mir::log_info("Disconnected client: %d", (int)client->client_fd);
 }
 
