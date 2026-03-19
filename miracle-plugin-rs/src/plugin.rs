@@ -1,12 +1,11 @@
+use crate::animation::{AnimationFrameData, AnimationFrameResult};
 use crate::config::Configuration;
+use crate::host::*;
 use crate::input::{KeyboardEvent, PointerEvent};
+use crate::output::*;
 use crate::placement::Placement;
 use crate::window::{PluginWindow, WindowInfo};
-
-use super::animation::{AnimationFrameData, AnimationFrameResult};
-use super::host::*;
-use super::output::*;
-use super::workspace::*;
+use crate::workspace::*;
 
 unsafe extern "C" {
     fn miracle_get_plugin_handle() -> u32;
@@ -451,7 +450,7 @@ macro_rules! miracle_plugin {
             let c_data = unsafe {
                 &*(data_ptr as *const $crate::bindings::miracle_plugin_animation_frame_data_t)
             };
-            let data: AnimationFrameData = (*c_data).into();
+            let data: $crate::animation::AnimationFrameData = (*c_data).into();
 
             match c_data.type_ {
                 $crate::bindings::miracle_animation_type_miracle_animation_type_window_open => {
@@ -854,27 +853,7 @@ macro_rules! miracle_plugin {
                     None => return 0,
                 }
             };
-            match plugin.configure() {
-                None => 0,
-                Some(config_data) => {
-                    let json = match serde_json::to_string(&config_data) {
-                        Ok(s) => s,
-                        Err(_) => return 0,
-                    };
-                    let bytes = json.as_bytes();
-                    if bytes.len() > buf_len as usize {
-                        return -1;
-                    }
-                    unsafe {
-                        let buf = core::slice::from_raw_parts_mut(
-                            buf_ptr as *mut u8,
-                            buf_len as usize,
-                        );
-                        buf[..bytes.len()].copy_from_slice(bytes);
-                    }
-                    bytes.len() as i32
-                }
-            }
+            $crate::__private::run_configure(plugin, buf_ptr, buf_len)
         }
 
         #[unsafe(no_mangle)]
