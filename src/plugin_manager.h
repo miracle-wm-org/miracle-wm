@@ -283,7 +283,7 @@ private:
 };
 }
 #else
-#include "miracle/plugin.h"
+#include "../miracle-plugin-rs/plugin.h"
 #include "plugin_bridge.h"
 #include <cstdint>
 #include <mir/geometry/point.h>
