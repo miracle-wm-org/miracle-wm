@@ -840,14 +840,13 @@ bool CommandController::prev_workspace_on_output()
 
 bool CommandController::move_container_to_workspace(
     std::shared_ptr<Container> const& container,
-    std::shared_ptr<AbstractOutput> const& focused,
-    std::function<bool()> const& request)
+    std::function<std::shared_ptr<AbstractOutput>()> const& request)
 {
     container->get_output()->delete_container(container);
     state->unfocus_container(container);
-    if (request())
+    if (auto const target = request())
     {
-        focused->graft(container);
+        target->graft(container);
         return true;
     }
     return false;
@@ -878,9 +877,16 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
         if (container->get_workspace()->num() == number)
             continue;
 
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            if (!workspace_manager->request_workspace(focused.get(), number, allow_back_and_forth))
+                return nullptr;
+            for (auto const& output : output_manager->outputs())
+                for (auto const& ws : output->get_workspaces())
+                    if (ws->num() == number)
+                        return output;
+            return nullptr;
+        });
     }
 
     return true;
@@ -908,9 +914,16 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
         if (container->get_workspace()->name() == name)
             continue;
 
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            if (!workspace_manager->request_workspace(focused.get(), name, allow_back_and_forth))
+                return nullptr;
+            for (auto const& output : output_manager->outputs())
+                for (auto const& ws : output->get_workspaces())
+                    if (ws->name() == name)
+                        return output;
+            return nullptr;
+        });
     }
 
     return true;
@@ -938,9 +951,10 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
         if (container->get_workspace() == focused->active())
             continue;
 
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_next(focused.get()); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            return workspace_manager->request_next(focused.get()) ? focused : nullptr;
+        });
     }
 
     return true;
@@ -964,9 +978,10 @@ bool CommandController::try_move_to_next_workspace(std::vector<ContainerScope> c
     }
 
     for (auto const& container : containers)
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_next(focused.get()); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            return workspace_manager->request_next(focused.get()) ? focused : nullptr;
+        });
 
     return true;
 }
@@ -989,9 +1004,10 @@ bool CommandController::try_move_to_prev_workspace(std::vector<ContainerScope> c
     }
 
     for (auto const& container : containers)
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_prev(focused.get()); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            return workspace_manager->request_prev(focused.get()) ? focused : nullptr;
+        });
 
     return true;
 }
@@ -1014,9 +1030,10 @@ bool CommandController::try_move_to_back_and_forth(std::vector<ContainerScope> c
     }
 
     for (auto const& container : containers)
-        move_container_to_workspace(container, focused,
-            [&]
-        { return workspace_manager->request_back_and_forth(); });
+        move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
+        {
+            return workspace_manager->request_back_and_forth() ? focused : nullptr;
+        });
 
     return true;
 }
