@@ -127,10 +127,10 @@ void AutoRestartingLauncher::reap()
 
             if (cmd.restart_on_death)
             {
-                if (status != 127)
+                if (status == 127)
                 {
                     mir::log_error(
-                        "Process exited with status 127, meaning it could not be found. %s will not be restarted",
+                        "Process could not be found and will not be restarted: %s",
                         cmd.command.c_str());
                 }
                 else

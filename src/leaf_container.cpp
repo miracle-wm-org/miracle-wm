@@ -191,8 +191,8 @@ geom::Rectangle LeafContainer::get_visible_area() const
         if (auto const workspace_gaps = sh_workspace->inner_gaps())
             gaps = *workspace_gaps;
     }
-    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
-    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
     auto const neighbors = get_neighbors();
     int x = logical_area.top_left.x.as_int();
     int y = logical_area.top_left.y.as_int();
