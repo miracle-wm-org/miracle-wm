@@ -76,7 +76,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
             container->get_visible_area(),
             geom::Rectangle {},
             1, 0 },
-        [compositor_state = compositor_state, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
+        [compositor_state = compositor_state, surface_stack = surface_stack, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {
         if (result.transform)
         {
@@ -100,6 +100,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         if (result.is_complete)
         {
             compositor_state->render_data_manager()->remove(id);
+            surface_stack->remove_surface(animating_surface);
         }
     }, plugin_manager));
 }
