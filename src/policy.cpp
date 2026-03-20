@@ -43,6 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <iostream>
+#include <map>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
@@ -182,13 +183,39 @@ public:
     void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
     {
         auto const lock = policy.state->lock();
-        policy.plugin_manager->unload_all();
-        for (auto const& plugin : plugins)
-            policy.plugin_manager->load_wasm_module(plugin.path, plugin.userdata_json);
+
+        std::map<std::string, std::string> new_plugin_map;
+        for (auto const& p : plugins)
+            new_plugin_map[p.path] = p.userdata_json;
+
+        for (auto it = loaded_plugins.begin(); it != loaded_plugins.end();)
+        {
+            auto const& [path, handle_and_data] = *it;
+            auto const& [handle, userdata_json] = handle_and_data;
+            auto found = new_plugin_map.find(path);
+            if (found == new_plugin_map.end() || found->second != userdata_json)
+            {
+                policy.plugin_manager->unload_wasm_module(handle);
+                it = loaded_plugins.erase(it);
+            }
+            else
+                ++it;
+        }
+
+        for (auto const& p : plugins)
+        {
+            if (loaded_plugins.count(p.path) == 0)
+            {
+                auto result = policy.plugin_manager->load_wasm_module(p.path, p.userdata_json);
+                if (result.success)
+                    loaded_plugins[p.path] = { result.handle, p.userdata_json };
+            }
+        }
     }
 
     Policy& policy;
     bool has_loaded_once = false;
+    std::map<std::string, std::pair<PluginHandle, std::string>> loaded_plugins;
 };
 
 Policy::Policy(
