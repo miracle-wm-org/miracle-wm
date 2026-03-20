@@ -305,12 +305,11 @@ private:
     std::vector<std::shared_ptr<Container>> resolve_scope(std::vector<ContainerScope> const&);
 
     /// Deletes [container] from its current output, unfocuses it, calls [request]
-    /// to select a new workspace, and grafts the container onto [focused].
-    /// Returns the result of [request].
+    /// to select a new workspace, and grafts the container onto the output returned
+    /// by [request]. Returns true if [request] returns a non-null output.
     bool move_container_to_workspace(
         std::shared_ptr<Container> const& container,
-        std::shared_ptr<AbstractOutput> const& focused,
-        std::function<bool()> const& request);
+        std::function<std::shared_ptr<AbstractOutput>()> const& request);
 
     /// Floats the container and returns the new [ParentContainer] of that container.
     std::shared_ptr<ParentContainer> toggle_floating_internal(std::shared_ptr<Container> const& container);
