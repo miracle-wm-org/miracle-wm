@@ -61,6 +61,87 @@ extern "C"
         miracle_animation_type_window_none
     } miracle_animation_type;
 
+    /// Describes the properties of a window.
+    ///
+    /// Plugin authors may use this information to decide on the placement of a window.
+    ///
+    /// Use #miracle_plugin_get_application to get the application from which this window
+    /// originated.
+    ///
+    /// Use #miracle_plugin_get_workspace to get the workspace of the window.
+    typedef struct
+    {
+        /// The type of this window.
+        MirWindowType window_type;
+
+        /// The state of the window.
+        MirWindowState state;
+
+        /// The position of the window.
+        ///
+        /// If the window has not yet been placed, this will be arbitrary.
+        miracle_point_t top_left;
+
+        /// The size of the window.
+        miracle_size_t size;
+
+        /// The depth layer of the window.
+        MirDepthLayer depth_layer;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky!
+        uint64_t internal;
+
+        /// The 4x4 transform matrix of the window (column-major).
+        ///
+        /// Defaults to the identity matrix.
+        float transform[16];
+
+        /// The alpha (opacity) of the window.
+        ///
+        /// Defaults to 1.0 (fully opaque).
+        float alpha;
+    } miracle_window_info_t;
+
+    /// Describes a workspace.
+    typedef struct
+    {
+        /// If `TRUE`, the workspace is valid.
+        ///
+        /// This may be `FALSE` for shell components that are not tethered to a particular
+        /// workspace.
+        int32_t is_set;
+
+        /// If `TRUE`, #number is set.
+        int32_t has_number;
+
+        /// The number of the workspace.
+        ///
+        /// Only valid if #has_number is `TRUE`.
+        uint32_t number;
+
+        /// If `TRUE`, #name is set.
+        int32_t has_name;
+
+        /// The number of container trees in this workspace.
+        ///
+        /// Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.
+        /// Each tree is represented by a #miracle_container_t which is the root of the tree.
+        uint32_t num_trees;
+
+        /// Pointer to internal data.
+        ///
+        /// Please do not use unless you plan to be very sneaky.
+        uint64_t internal;
+
+        /// The position of the workspace area.
+        miracle_point_t position;
+
+        /// The size of the workspace area.
+        miracle_size_t size;
+    } miracle_workspace_t;
+
     typedef struct
     {
         /// Animation type.
@@ -85,6 +166,37 @@ extern "C"
 
         /// The opacity end of the animation.
         float opacity_end;
+
+        /// If `TRUE`, #window_info and #window_name are valid.
+        ///
+        /// Set for window events (open, close, move). Not set for workspace events.
+        int32_t has_window_info;
+
+        /// Info about the window being animated.
+        ///
+        /// Only valid when #has_window_info is `TRUE`. The `internal` field is the
+        /// stable window ID, usable for host calls such as #miracle_window_set_state.
+        miracle_window_info_t window_info;
+
+        /// Null-terminated window title (up to 255 characters).
+        ///
+        /// Only valid when #has_window_info is `TRUE`.
+        char window_name[256];
+
+        /// If `TRUE`, #workspace and #workspace_name are valid.
+        int32_t has_workspace;
+
+        /// Info about the workspace of the animated object.
+        ///
+        /// Only valid when #has_workspace is `TRUE`. The `internal` field is the
+        /// stable workspace ID, usable for host calls such as
+        /// #miracle_plugin_get_workspace_tree.
+        miracle_workspace_t workspace;
+
+        /// Null-terminated workspace name (up to 255 characters).
+        ///
+        /// Only valid when #has_workspace is `TRUE` and the workspace has a name.
+        char workspace_name[256];
     } miracle_plugin_animation_frame_data_t;
 
     typedef struct
@@ -137,49 +249,6 @@ extern "C"
         /// Internal data.
         uint64_t internal;
     } miracle_application_info_t;
-
-    /// Describes the properties of a window.
-    ///
-    /// Plugin authors may use this information to decide on the placement of a window.
-    ///
-    /// Use #miracle_plugin_get_application to get the application from which this window
-    /// originated.
-    ///
-    /// Use #miracle_plugin_get_workspace to get the workspace of the window.
-    typedef struct
-    {
-        /// The type of this window.
-        MirWindowType window_type;
-
-        /// The state of the window.
-        MirWindowState state;
-
-        /// The position of the window.
-        ///
-        /// If the window has not yet been placed, this will be arbitrary.
-        miracle_point_t top_left;
-
-        /// The size of the window.
-        miracle_size_t size;
-
-        /// The depth layer of the window.
-        MirDepthLayer depth_layer;
-
-        /// Pointer to internal data.
-        ///
-        /// Please do not use unless you plan to be very sneaky!
-        uint64_t internal;
-
-        /// The 4x4 transform matrix of the window (column-major).
-        ///
-        /// Defaults to the identity matrix.
-        float transform[16];
-
-        /// The alpha (opacity) of the window.
-        ///
-        /// Defaults to 1.0 (fully opaque).
-        float alpha;
-    } miracle_window_info_t;
 
     /// The type of the container.
     typedef enum miracle_container_type
@@ -246,44 +315,6 @@ extern "C"
         /// Please do not use unless you plan to be very sneaky!
         uint64_t internal;
     } miracle_container_t;
-
-    /// Describes a workspace.
-    typedef struct
-    {
-        /// If `TRUE`, the workspace is valid.
-        ///
-        /// This may be `FALSE` for shell components that are not tethered to a particular
-        /// workspace.
-        int32_t is_set;
-
-        /// If `TRUE`, #number is set.
-        int32_t has_number;
-
-        /// The number of the workspace.
-        ///
-        /// Only valid if #has_number is `TRUE`.
-        uint32_t number;
-
-        /// If `TRUE`, #name is set.
-        int32_t has_name;
-
-        /// The number of container trees in this workspace.
-        ///
-        /// Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.
-        /// Each tree is represented by a #miracle_container_t which is the root of the tree.
-        uint32_t num_trees;
-
-        /// Pointer to internal data.
-        ///
-        /// Please do not use unless you plan to be very sneaky.
-        uint64_t internal;
-
-        /// The position of the workspace area.
-        miracle_point_t position;
-
-        /// The size of the workspace area.
-        miracle_size_t size;
-    } miracle_workspace_t;
 
     /// Describes an output.
     typedef struct

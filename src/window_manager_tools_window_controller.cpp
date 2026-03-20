@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "plugin_bridge.h"
 #include "policy.h"
 #include "window_container.h"
 #include "window_helpers.h"
@@ -52,13 +53,15 @@ WindowManagerToolsWindowController::WindowManagerToolsWindowController(
     std::shared_ptr<PluginManager> const& plugin_manager,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<CompositorState> const& state,
-    std::shared_ptr<Config> const& config) :
+    std::shared_ptr<Config> const& config,
+    std::shared_ptr<WindowIdMap> const& window_id_map) :
     tools { tools },
     animator { animator },
     plugin_manager { plugin_manager },
     server_action_queue { server_action_queue },
     state { state },
-    config { config }
+    config { config },
+    window_id_map { window_id_map }
 {
 }
 
@@ -81,10 +84,21 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
         return;
     }
 
+    miral::WindowInfo const& win_info = tools.info_for(window);
+    uint64_t win_id = 0;
+    for (auto const& [id, w] : *window_id_map)
+        if (w == window)
+        {
+            win_id = id;
+            break;
+        }
+    AnimationData anim_data { AnimateableEvent::window_open, rect, rect, 0, 1 };
+    anim_data.window_info = from_window(win_info, win_id, container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_open),
-        AnimationData(AnimateableEvent::window_open, rect, rect, 0, 1),
+        std::move(anim_data),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 
@@ -113,10 +127,21 @@ void WindowManagerToolsWindowController::set_rectangle(
         return;
     }
 
+    miral::WindowInfo const& win_info = tools.info_for(window);
+    uint64_t win_id = 0;
+    for (auto const& [id, w] : *window_id_map)
+        if (w == window)
+        {
+            win_id = id;
+            break;
+        }
+    AnimationData anim_data { AnimateableEvent::window_move, from, to, 1, 1 };
+    anim_data.window_info = from_window(win_info, win_id, container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
-        AnimationData(AnimateableEvent::window_move, from, to, 1, 1),
+        std::move(anim_data),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 

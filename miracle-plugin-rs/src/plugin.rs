@@ -58,6 +58,7 @@ pub trait Plugin {
     fn window_open_animation(
         &mut self,
         _data: &AnimationFrameData,
+        _window: &WindowInfo,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -68,6 +69,7 @@ pub trait Plugin {
     fn window_close_animation(
         &mut self,
         _data: &AnimationFrameData,
+        _window: &WindowInfo,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -78,6 +80,7 @@ pub trait Plugin {
     fn window_move_animation(
         &mut self,
         _data: &AnimationFrameData,
+        _window: &WindowInfo,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -88,6 +91,7 @@ pub trait Plugin {
     fn workspace_switch_animation(
         &mut self,
         _data: &AnimationFrameData,
+        _workspace: &Workspace,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -452,64 +456,60 @@ macro_rules! miracle_plugin {
             };
             let data: $crate::animation::AnimationFrameData = (*c_data).into();
 
+            let extract_window = || {
+                let bytes = unsafe {
+                    core::slice::from_raw_parts(c_data.window_name.as_ptr() as *const u8, 256)
+                };
+                let len = bytes.iter().position(|&b| b == 0).unwrap_or(256);
+                let name = String::from_utf8_lossy(&bytes[..len]).into_owned();
+                unsafe { $crate::window::WindowInfo::from_c_with_name(&c_data.window_info, name) }
+            };
+
+            let extract_workspace = || {
+                let bytes = unsafe {
+                    core::slice::from_raw_parts(c_data.workspace_name.as_ptr() as *const u8, 256)
+                };
+                let len = bytes.iter().position(|&b| b == 0).unwrap_or(256);
+                let name = String::from_utf8_lossy(&bytes[..len]).into_owned();
+                unsafe { $crate::workspace::Workspace::from_c_with_name(&c_data.workspace, name) }
+            };
+
+            let write_result = |result: $crate::animation::AnimationFrameResult| {
+                let c_result: $crate::bindings::miracle_plugin_animation_frame_result_t =
+                    result.into();
+                unsafe {
+                    let out = &mut *(result_ptr
+                        as *mut $crate::bindings::miracle_plugin_animation_frame_result_t);
+                    *out = c_result;
+                }
+            };
+
             match c_data.type_ {
                 $crate::bindings::miracle_animation_type_miracle_animation_type_window_open => {
-                    match plugin.window_open_animation(&data) {
-                        Some(result) => {
-                            let c_result: $crate::bindings::miracle_plugin_animation_frame_result_t =
-                                result.into();
-                            unsafe {
-                                let out = &mut *(result_ptr
-                                    as *mut $crate::bindings::miracle_plugin_animation_frame_result_t);
-                                *out = c_result;
-                            }
-                            return 1;
-                        }
+                    let window = extract_window();
+                    match plugin.window_open_animation(&data, &window) {
+                        Some(result) => { write_result(result); 1 }
                         None => 0,
                     }
                 },
                 $crate::bindings::miracle_animation_type_miracle_animation_type_window_close => {
-                    match plugin.window_close_animation(&data) {
-                        Some(result) => {
-                            let c_result: $crate::bindings::miracle_plugin_animation_frame_result_t =
-                                result.into();
-                            unsafe {
-                                let out = &mut *(result_ptr
-                                    as *mut $crate::bindings::miracle_plugin_animation_frame_result_t);
-                                *out = c_result;
-                            }
-                            return 1;
-                        }
+                    let window = extract_window();
+                    match plugin.window_close_animation(&data, &window) {
+                        Some(result) => { write_result(result); 1 }
                         None => 0,
                     }
                 },
                 $crate::bindings::miracle_animation_type_miracle_animation_type_window_move => {
-                    match plugin.window_move_animation(&data) {
-                        Some(result) => {
-                            let c_result: $crate::bindings::miracle_plugin_animation_frame_result_t =
-                                result.into();
-                            unsafe {
-                                let out = &mut *(result_ptr
-                                    as *mut $crate::bindings::miracle_plugin_animation_frame_result_t);
-                                *out = c_result;
-                            }
-                            return 1;
-                        }
+                    let window = extract_window();
+                    match plugin.window_move_animation(&data, &window) {
+                        Some(result) => { write_result(result); 1 }
                         None => 0,
                     }
                 },
                 $crate::bindings::miracle_animation_type_miracle_animation_type_workspace_switch => {
-                    match plugin.workspace_switch_animation(&data) {
-                        Some(result) => {
-                            let c_result: $crate::bindings::miracle_plugin_animation_frame_result_t =
-                                result.into();
-                            unsafe {
-                                let out = &mut *(result_ptr
-                                    as *mut $crate::bindings::miracle_plugin_animation_frame_result_t);
-                                *out = c_result;
-                            }
-                            return 1;
-                        }
+                    let workspace = extract_workspace();
+                    match plugin.workspace_switch_animation(&data, &workspace) {
+                        Some(result) => { write_result(result); 1 }
                         None => 0,
                     }
                 },

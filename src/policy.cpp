@@ -208,8 +208,10 @@ Policy::Policy(
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
     plugin_manager(std::make_shared<PluginManager>()),
+    window_id_map_(std::make_shared<WindowIdMap>()),
+    application_id_map_(std::make_shared<ApplicationIdMap>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, plugin_manager, server.the_main_loop(), state, config)),
+        tools, animator, plugin_manager, server.the_main_loop(), state, config, window_id_map_)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
@@ -247,12 +249,12 @@ Policy::Policy(
         state,
         config,
         animator,
-        plugin_manager)),
+        plugin_manager,
+        window_controller,
+        window_id_map_)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    window_id_map_ = std::make_shared<WindowIdMap>();
-    application_id_map_ = std::make_shared<ApplicationIdMap>();
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
     config->set_plugin_configure_hook([pm = plugin_manager]()
     {

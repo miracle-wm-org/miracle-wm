@@ -41,11 +41,24 @@ class CompositorState;
 class Container;
 class OutputManager;
 class PluginManager;
+class WindowContainer;
 class WindowController;
 class WorkspaceManager;
 
 using WindowIdMap = std::unordered_map<uint64_t, miral::Window>;
 using ApplicationIdMap = std::unordered_map<uint64_t, miral::Application>;
+
+/// Convert an AbstractWorkspace to its C plugin representation.
+miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& workspace);
+
+/// Convert a miral::WindowInfo to its C plugin representation.
+///
+/// Pass \p internal as 0 for read-only animation context where no stable ID is available.
+/// Pass \p container if you want transform and alpha to be copied from the container.
+miracle_window_info_t from_window(
+    miral::WindowInfo const& window_info,
+    uint64_t internal,
+    WindowContainer* container = nullptr);
 
 template <typename T>
 class PluginBridgeObjectHandle

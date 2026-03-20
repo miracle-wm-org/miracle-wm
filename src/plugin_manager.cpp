@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "plugin_manager"
 #include "plugin_manager.h"
 
+#include "animation.h"
 #include "container.h"
 #include "plugin_bridge.h"
 
@@ -29,6 +30,23 @@ using namespace miracle;
 #if FEATURE_PLUGIN_SYSTEM
 namespace
 {
+miracle_animation_type from_animateable_event(AnimateableEvent event)
+{
+    switch (event)
+    {
+    case AnimateableEvent::window_open:
+        return miracle_animation_type_window_open;
+    case AnimateableEvent::window_move:
+        return miracle_animation_type_window_move;
+    case AnimateableEvent::window_close:
+        return miracle_animation_type_window_close;
+    case AnimateableEvent::workspace_switch:
+        return miracle_animation_type_workspace_switch;
+    default:
+        return miracle_animation_type_window_none;
+    }
+}
+
 // Helper to get memory instance from calling frame
 WasmEdge_MemoryInstanceContext* get_memory_from_frame(
     WasmEdge_CallingFrameContext const* frame)
@@ -1059,8 +1077,63 @@ void PluginManager::unload_all()
 }
 
 std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
-    miracle_plugin_animation_frame_data_t const& frame_data)
+    AnimationData const& data, float runtime_seconds, float duration_seconds)
 {
+    miracle_plugin_animation_frame_data_t frame_data;
+    frame_data.type = from_animateable_event(data.event);
+    frame_data.runtime_seconds = runtime_seconds;
+    frame_data.duration_seconds = duration_seconds;
+    frame_data.origin[0] = static_cast<float>(data.area_start.top_left.x.as_int());
+    frame_data.origin[1] = static_cast<float>(data.area_start.top_left.y.as_int());
+    frame_data.origin[2] = static_cast<float>(data.area_start.size.width.as_value());
+    frame_data.origin[3] = static_cast<float>(data.area_start.size.height.as_value());
+    frame_data.destination[0] = static_cast<float>(data.area_end.top_left.x.as_int());
+    frame_data.destination[1] = static_cast<float>(data.area_end.top_left.y.as_int());
+    frame_data.destination[2] = static_cast<float>(data.area_end.size.width.as_value());
+    frame_data.destination[3] = static_cast<float>(data.area_end.size.height.as_value());
+    frame_data.opacity_start = data.opacity_start;
+    frame_data.opacity_end = data.opacity_end;
+    if (data.window_info.has_value())
+    {
+        frame_data.has_window_info = 1;
+        frame_data.window_info = data.window_info.value();
+        if (data.window_name.has_value())
+        {
+            auto const& n = data.window_name.value();
+            std::strncpy(frame_data.window_name, n.c_str(), sizeof(frame_data.window_name) - 1);
+            frame_data.window_name[sizeof(frame_data.window_name) - 1] = '\0';
+        }
+        else
+        {
+            frame_data.window_name[0] = '\0';
+        }
+    }
+    else
+    {
+        frame_data.has_window_info = 0;
+        frame_data.window_name[0] = '\0';
+    }
+    if (data.workspace.has_value())
+    {
+        frame_data.has_workspace = 1;
+        frame_data.workspace = data.workspace.value();
+        if (data.workspace_name.has_value())
+        {
+            auto const& n = data.workspace_name.value();
+            std::strncpy(frame_data.workspace_name, n.c_str(), sizeof(frame_data.workspace_name) - 1);
+            frame_data.workspace_name[sizeof(frame_data.workspace_name) - 1] = '\0';
+        }
+        else
+        {
+            frame_data.workspace_name[0] = '\0';
+        }
+    }
+    else
+    {
+        frame_data.has_workspace = 0;
+        frame_data.workspace_name[0] = '\0';
+    }
+
     auto const modules = self->safe_copy();
     for (auto const& target_module : modules)
     {

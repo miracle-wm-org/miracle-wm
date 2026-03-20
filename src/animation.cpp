@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animation.h"
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
+#include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 
@@ -192,22 +193,6 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
     };
 }
 
-miracle_animation_type from_animateable_event(AnimateableEvent event)
-{
-    switch (event)
-    {
-    case AnimateableEvent::window_open:
-        return miracle_animation_type_window_open;
-    case AnimateableEvent::window_move:
-        return miracle_animation_type_window_move;
-    case AnimateableEvent::window_close:
-        return miracle_animation_type_window_close;
-    case AnimateableEvent::workspace_switch:
-        return miracle_animation_type_workspace_switch;
-    default:
-        return miracle_animation_type_window_none;
-    }
-}
 }
 
 CustomAnimation::CustomAnimation(
@@ -291,21 +276,7 @@ bool Animation::tick(float dt)
     }
     case AnimationType::plugin:
     {
-        miracle_plugin_animation_frame_data_t frame_data;
-        frame_data.type = from_animateable_event(data_.event);
-        frame_data.runtime_seconds = runtime_seconds;
-        frame_data.duration_seconds = definition_.duration_seconds;
-        frame_data.origin[0] = static_cast<float>(data_.area_start.top_left.x.as_int());
-        frame_data.origin[1] = static_cast<float>(data_.area_start.top_left.y.as_int());
-        frame_data.origin[2] = static_cast<float>(data_.area_start.size.width.as_value());
-        frame_data.origin[3] = static_cast<float>(data_.area_start.size.height.as_value());
-        frame_data.destination[0] = static_cast<float>(data_.area_end.top_left.x.as_int());
-        frame_data.destination[1] = static_cast<float>(data_.area_end.top_left.y.as_int());
-        frame_data.destination[2] = static_cast<float>(data_.area_end.size.width.as_value());
-        frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
-        frame_data.opacity_start = data_.opacity_start;
-        frame_data.opacity_end = data_.opacity_end;
-        auto const maybe_frame_result = plugin_manager->animate(frame_data);
+        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds, definition_.duration_seconds);
         if (!maybe_frame_result)
         {
             mir::log_warning("Animation is supposed to be using a plugin, but no plugin handled the 'animate' call.");
