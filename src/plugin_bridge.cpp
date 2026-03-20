@@ -305,6 +305,19 @@ miracle_container_t PluginBridge::container_from_window(uint64_t window_id)
     return from_child(std::static_pointer_cast<LeafContainer>(container));
 }
 
+miracle_container_t PluginBridge::parent_from_container(uint64_t container_id)
+{
+    auto const container = resolve_container(container_id);
+    if (!container)
+        return {};
+
+    auto const parent = container->get_parent().lock();
+    if (!parent)
+        return {};
+
+    return from_parent(parent);
+}
+
 miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
     auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent_id));

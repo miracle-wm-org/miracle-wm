@@ -133,6 +133,27 @@ impl Container {
             .collect()
     }
 
+    /// Get the parent container of this container.
+    ///
+    /// Returns `None` if the container is a root (has no parent).
+    pub fn parent(&self) -> Option<Container> {
+        let mut parent =
+            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+
+        unsafe {
+            let result = miracle_container_get_parent(
+                self.internal as i64,
+                parent.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            Some(Container::from(parent.assume_init()))
+        }
+    }
+
     /// Get the window info from a window container.
     ///
     /// Returns `None` if the container is not of type `Window`.
