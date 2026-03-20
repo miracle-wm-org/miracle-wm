@@ -126,6 +126,7 @@ public:
     WorkspaceResult workspace_on_output_at_index(uint64_t output_id, uint32_t index);
     miracle_container_t tree_at_index(uint64_t workspace_id, uint32_t index);
     miracle_container_t child_at(uint64_t parent_id, uint32_t index);
+    miracle_container_t container_from_window(uint64_t window_id);
     WindowResult get_window(uint64_t container_address);
     WorkspaceResult request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus);
     WorkspaceResult active_workspace();

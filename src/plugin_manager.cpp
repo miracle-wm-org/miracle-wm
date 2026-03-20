@@ -307,6 +307,37 @@ WasmEdge_Result host_miracle_container_get_child_at(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_info_get_container(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_window_info_get_container: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const window_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+
+    auto const container = bridge->container_from_window(window_address);
+    if (container.internal == 0)
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::memcpy(mem_base + out_ptr, &container, sizeof(container));
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_container_get_window(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -886,6 +917,10 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_window_info_get_workspace",
         create_func_type({ i64, i32, i32, i32 }, { i32 }),
         host_miracle_window_info_get_workspace, bridge.get());
+
+    add_host_function(module, "miracle_window_info_get_container",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_info_get_container, bridge.get());
 
     add_host_function(module, "miracle_workspace_get_output",
         create_func_type({ i64, i32, i32, i32 }, { i32 }),

@@ -292,6 +292,19 @@ miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t 
     return from_parent(trees[index]);
 }
 
+miracle_container_t PluginBridge::container_from_window(uint64_t window_id)
+{
+    auto it = window_id_map->find(window_id);
+    if (it == window_id_map->end())
+        return {};
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return {};
+
+    return from_child(std::static_pointer_cast<LeafContainer>(container));
+}
+
 miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
     auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent_id));

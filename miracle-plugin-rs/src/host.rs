@@ -7,6 +7,13 @@ unsafe extern "C" {
         name_buf_len: i32,
     ) -> i64;
 
+    /// Retrieve the container that holds a given window.
+    /// Returns 0 on success, -1 if no container exists for the window.
+    pub fn miracle_window_info_get_container(
+        window_info_internal: i64,
+        out_ptr: i32,
+    ) -> i32;
+
     /// Retrieve the workspace that a window is on.
     pub fn miracle_window_info_get_workspace(
         window_info_internal: i64,
