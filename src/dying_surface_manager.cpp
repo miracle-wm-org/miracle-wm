@@ -56,8 +56,12 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!container->can_animate())
         return;
 
+    auto const win = container->window();
+    if (!win)
+        return;
+
     auto const output_area = container->get_output()->get_area();
-    auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
+    auto surface = win->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
     auto const handle = animator->register_animateable();
     auto const transform = container->get_window_transform() * container->get_animation_transform();
@@ -79,7 +83,6 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         geom::Rectangle {},
         1, 0
     };
-    if (auto const win = container->window())
     {
         miral::WindowInfo const& win_info = window_controller->info_for(win.value());
         uint64_t win_id = 0;
