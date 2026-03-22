@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_surface_stack.h"
 #include "mock_window_controller.h"
 #include "plugin_bridge.h"
+#include <miral/window_info.h>
 
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -102,6 +103,10 @@ TEST_F(DyingSurfaceManagerTest, RemovesSurfaceFromStackWhenAnimationCompletes)
     EXPECT_CALL(*container, get_animation_transform())
         .WillOnce(testing::Return(glm::mat4(1.f)));
 
+    miral::WindowInfo window_info;
+    EXPECT_CALL(*window_controller, info_for(testing::_))
+        .WillOnce(testing::ReturnRef(window_info));
+
     EXPECT_CALL(*surface_stack, add_surface(testing::_, mir::input::InputReceptionMode::normal))
         .Times(1);
     EXPECT_CALL(*surface_stack, remove_surface(testing::_))
@@ -151,6 +156,10 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
         .WillOnce(testing::Return(glm::mat4(1.f)));
     EXPECT_CALL(*container, get_animation_transform())
         .WillOnce(testing::Return(glm::mat4(1.f)));
+
+    miral::WindowInfo window_info;
+    EXPECT_CALL(*window_controller, info_for(testing::_))
+        .WillOnce(testing::ReturnRef(window_info));
 
     // Expect the surface stack to have been modified as well as the animator
     EXPECT_CALL(*surface_stack, add_surface(testing::_, mir::input::InputReceptionMode::normal))
