@@ -332,3 +332,97 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
     command_controller->try_toggle_resize_mode();
     EXPECT_THAT(state->mode(), Eq(WindowManagerMode::normal));
 }
+
+// Fixture with two outputs to test cross-output workspace transfers
+class TwoOutputCommandControllerTest : public Test
+{
+public:
+    TwoOutputCommandControllerTest()
+    {
+        Mock::AllowLeak(output1.get());
+        Mock::AllowLeak(output2.get());
+        Mock::AllowLeak(workspace1.get());
+        Mock::AllowLeak(workspace2.get());
+
+        ON_CALL(*output1, id()).WillByDefault(Return(1));
+        ON_CALL(*output2, id()).WillByDefault(Return(2));
+
+        // workspace1 belongs to output1, num=1, id=1
+        ON_CALL(*workspace1, id()).WillByDefault(Return(1u));
+        ON_CALL(*workspace1, num()).WillByDefault(Return(std::optional<int>(1)));
+        ON_CALL(*workspace1, get_output()).WillByDefault(Return(std::static_pointer_cast<AbstractOutput>(output1)));
+
+        // workspace2 belongs to output2, num=2, id=100 (avoids conflict with auto-created workspace ids)
+        ON_CALL(*workspace2, id()).WillByDefault(Return(100u));
+        ON_CALL(*workspace2, num()).WillByDefault(Return(std::optional<int>(2)));
+        ON_CALL(*workspace2, get_output()).WillByDefault(Return(std::static_pointer_cast<AbstractOutput>(output2)));
+
+        workspaces1.push_back(workspace1);
+        workspaces2.push_back(workspace2);
+        ON_CALL(*output1, get_workspaces()).WillByDefault(ReturnRef(workspaces1));
+        ON_CALL(*output2, get_workspaces()).WillByDefault(ReturnRef(workspaces2));
+        ON_CALL(*output1, active()).WillByDefault(Return(workspace1));
+        ON_CALL(*output2, active()).WillByDefault(Return(workspace2));
+        ON_CALL(*output1, advise_workspace_active(_, _)).WillByDefault(Return(true));
+        ON_CALL(*output2, advise_workspace_active(_, _)).WillByDefault(Return(true));
+
+        auto factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
+        EXPECT_CALL(*factory, create)
+            .WillOnce(Return(output1))
+            .WillOnce(Return(output2));
+
+        output_manager = std::make_shared<OutputManager>(std::move(factory));
+        config = std::make_shared<NiceMock<test::MockConfig>>();
+        window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
+        workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
+        workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager);
+        scratchpad = std::make_shared<Scratchpad>(window_controller, output_manager);
+        command_controller = std::make_shared<CommandController>(
+            config,
+            state,
+            window_controller,
+            workspace_manager,
+            mode_observer_registrar,
+            std::make_unique<StubCommandControllerInterface>(),
+            scratchpad,
+            output_manager);
+
+        output_manager->create("output1", 1, geom::Rectangle({ 0, 0 }, { 1280, 720 }), *workspace_manager);
+        output_manager->create("output2", 2, geom::Rectangle({ 1280, 0 }, { 1280, 720 }), *workspace_manager);
+        output_manager->focus(1);
+    }
+
+    std::shared_ptr<NiceMock<test::MockOutput>> output1 = std::make_shared<NiceMock<test::MockOutput>>();
+    std::shared_ptr<NiceMock<test::MockOutput>> output2 = std::make_shared<NiceMock<test::MockOutput>>();
+    std::shared_ptr<NiceMock<test::MockWorkspace>> workspace1 = std::make_shared<NiceMock<test::MockWorkspace>>();
+    std::shared_ptr<NiceMock<test::MockWorkspace>> workspace2 = std::make_shared<NiceMock<test::MockWorkspace>>();
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces1;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces2;
+    std::shared_ptr<OutputManager> output_manager;
+    std::shared_ptr<test::MockConfig> config;
+    std::shared_ptr<test::MockWindowController> window_controller;
+    std::shared_ptr<WorkspaceObserverRegistrar> workspace_registry;
+    std::shared_ptr<WorkspaceManager> workspace_manager;
+    std::shared_ptr<Scratchpad> scratchpad;
+    std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar = std::make_shared<ModeObserverRegistrar>();
+    std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
+    std::shared_ptr<CommandController> command_controller;
+};
+
+TEST_F(TwoOutputCommandControllerTest, MoveContainerToWorkspaceOnDifferentOutput)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(container.get());
+    state->add(container);
+    state->focus_container(container);
+
+    ON_CALL(*container, get_output()).WillByDefault(Return(std::static_pointer_cast<AbstractOutput>(output1)));
+    ON_CALL(*container, get_workspace()).WillByDefault(Return(workspace1));
+
+    // Container must be removed from output1 and grafted onto output2
+    auto const base_container = std::static_pointer_cast<Container>(container);
+    EXPECT_CALL(*output1, delete_container(base_container));
+    EXPECT_CALL(*output2, graft(base_container));
+
+    ASSERT_TRUE(command_controller->try_move_to_workspace({}, 2, false));
+}
