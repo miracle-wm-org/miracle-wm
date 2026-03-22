@@ -112,8 +112,8 @@ TEST_F(DyingSurfaceManagerTest, RemovesSurfaceFromStackWhenAnimationCompletes)
     EXPECT_CALL(*surface_stack, remove_surface(testing::_))
         .Times(1);
 
-    animator->tick(0.f);
     dying_surface_manager.animate_dying_surface(container);
+    animator->tick(0.f);
 }
 
 TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
