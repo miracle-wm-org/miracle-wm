@@ -61,7 +61,7 @@ public:
     /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
 
-    [[nodiscard]] bool has_animations() const { return !active.empty() || !active_custom.empty(); }
+    [[nodiscard]] bool has_animations() const { return !active.empty() || !active_custom.empty() || !pending_active.empty() || !pending_active_custom.empty(); }
     [[nodiscard]] bool is_animating(AnimationHandle handle);
     std::condition_variable& get_cv() { return cv; }
     std::mutex& get_lock() { return processing_lock; }
@@ -69,7 +69,9 @@ public:
 private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::vector<Animation> active;
+    std::vector<Animation> pending_active;
     std::vector<CustomAnimation> active_custom;
+    std::vector<CustomAnimation> pending_active_custom;
     std::thread run_thread;
     std::condition_variable cv;
     std::mutex processing_lock;

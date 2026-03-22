@@ -47,32 +47,50 @@ AnimationHandle Animator::register_animateable()
 void Animator::append(Animation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto& other : active)
-    {
-        if (other.handle() == animation.handle())
-            other.mark_for_removal();
-    }
-    animation.tick(0.f); // Initial tick to set starting values.
-    active.push_back(std::move(animation));
+    pending_active.push_back(std::move(animation));
     cv.notify_one();
 }
 
 void Animator::append(CustomAnimation&& animation)
 {
     std::lock_guard<std::mutex> lock(processing_lock);
-    for (auto& other : active_custom)
-    {
-        if (other.handle() == animation.handle())
-            other.mark_for_removal();
-    }
-    animation.tick(0.f); // Initial tick to set starting values.
-    active_custom.push_back(std::move(animation));
+    pending_active_custom.push_back(std::move(animation));
     cv.notify_one();
 }
 
 void Animator::tick(float dt)
 {
-    std::lock_guard<std::mutex> lock(processing_lock);
+    {
+        // Add the pending animations to the active list. We should NOT
+        // be holding the lock while the animation is going, in the event
+        // that the animation itself calls back into the system.
+        std::lock_guard<std::mutex> lock(processing_lock);
+        for (auto const& pending : pending_active)
+        {
+            for (auto& other : active)
+            {
+                if (other.handle() == pending.handle())
+                    other.mark_for_removal();
+            }
+        }
+
+        for (auto const& pending : pending_active)
+            active.push_back(pending);
+        pending_active.clear();
+
+        for (auto const& pending : pending_active_custom)
+        {
+            for (auto& other : active_custom)
+            {
+                if (other.handle() == pending.handle())
+                    other.mark_for_removal();
+            }
+        }
+
+        for (auto const& pending : pending_active_custom)
+            active_custom.push_back(pending);
+        pending_active_custom.clear();
+    }
 
     for (auto& item : active)
     {
