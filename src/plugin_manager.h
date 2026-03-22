@@ -86,6 +86,7 @@ struct AnimationData;
 namespace miracle
 {
 class PluginBridge;
+class CompositorState;
 
 struct PluginLoadResult
 {
@@ -97,6 +98,7 @@ struct PluginLoadResult
 class PluginManager
 {
 public:
+    explicit PluginManager(std::shared_ptr<CompositorState> const& state);
     ~PluginManager();
 
     /// Initialize the plugin bridge.
@@ -287,6 +289,7 @@ private:
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
     std::unique_ptr<Self> self;
+    std::shared_ptr<CompositorState> state;
 };
 }
 #else

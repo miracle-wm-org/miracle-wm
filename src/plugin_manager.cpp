@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_manager.h"
 
 #include "animation.h"
+#include "compositor_state.h"
 #include "container.h"
 #include "plugin_bridge.h"
 
@@ -868,6 +869,11 @@ void add_host_function(
 }
 }
 
+PluginManager::PluginManager(std::shared_ptr<CompositorState> const& state) :
+    state(state)
+{
+}
+
 PluginManager::Self::Self(std::unique_ptr<PluginBridge> bridge) :
     bridge(std::move(bridge)),
     configure_context(create_configure_context()),
@@ -1153,6 +1159,11 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     if (modules.empty())
         return std::nullopt;
 
+    // This is the ONLY plugin method who needs to lock the state. The reason for this
+    // is that this plugin gets called from the animation thread. As a result, plugin
+    // authors CANNOT safely make calls on the data if it changes. Hence, we need to grab
+    // the state lock before making any queries.
+    auto const lock = state->lock();
     miracle_plugin_animation_frame_data_t frame_data;
     frame_data.type = from_animateable_event(data.event);
     frame_data.runtime_seconds = runtime_seconds;
@@ -1274,10 +1285,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         auto const animate_result = WasmEdge_ValueGetI32(returns[0]);
         if (animate_result == 0)
-        {
-            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
             continue;
-        }
 
         // Read the result from WASM memory
         miracle_plugin_animation_frame_result_t result;

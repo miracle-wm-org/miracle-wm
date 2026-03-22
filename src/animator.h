@@ -61,6 +61,7 @@ public:
     /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
 
+    // TODO: This may be thread safe, bu
     [[nodiscard]] bool has_animations() const { return !active.empty() || !active_custom.empty() || !pending_active.empty() || !pending_active_custom.empty(); }
     [[nodiscard]] bool is_animating(AnimationHandle handle);
     std::condition_variable& get_cv() { return cv; }
