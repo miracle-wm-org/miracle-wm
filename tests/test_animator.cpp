@@ -91,6 +91,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
         return false;
     },
         std::shared_ptr<PluginManager>()));
+    animator.tick(0.f);
     EXPECT_THAT(opacity, testing::Eq(0.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.75f));
@@ -128,6 +129,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
         opacity = asr.opacity.value();
     },
         std::shared_ptr<PluginManager>()));
+    animator.tick(0.f);
     EXPECT_THAT(opacity, testing::Eq(1.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.25f));

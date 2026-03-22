@@ -112,8 +112,7 @@ TEST_F(DyingSurfaceManagerTest, RemovesSurfaceFromStackWhenAnimationCompletes)
     EXPECT_CALL(*surface_stack, remove_surface(testing::_))
         .Times(1);
 
-    // With duration_seconds=0, the animation completes on the initial tick inside
-    // Animator::append, so remove_surface is called during animate_dying_surface itself.
+    animator->tick(0.f);
     dying_surface_manager.animate_dying_surface(container);
 }
 
