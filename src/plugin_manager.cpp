@@ -1149,6 +1149,10 @@ void PluginManager::unload_all()
 std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     AnimationData const& data, float runtime_seconds, float duration_seconds)
 {
+    auto const modules = self->safe_copy();
+    if (modules.empty())
+        return std::nullopt;
+
     miracle_plugin_animation_frame_data_t frame_data;
     frame_data.type = from_animateable_event(data.event);
     frame_data.runtime_seconds = runtime_seconds;
@@ -1204,7 +1208,6 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
         frame_data.workspace_name[0] = '\0';
     }
 
-    auto const modules = self->safe_copy();
     for (auto const& target_module : modules)
     {
         // Get the memory context from the module instance
@@ -1220,7 +1223,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         // Allocate memory for the structs in WASM linear memory
         uint32_t constexpr result_ptr = 8;
-        uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
+        uint32_t constexpr frame_data_ptr = (sizeof(miracle_plugin_animation_frame_result_t) + 7u) & ~7u;
 
         // Write frame_data to WASM memory
         uint8_t frame_data_buffer[sizeof(miracle_plugin_animation_frame_data_t)];
@@ -1250,7 +1253,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         if (func_context == nullptr)
         {
-            mir::log_error("Function '%s' not found in module.", "window_open_animation");
+            mir::log_error("Function '%s' not found in module.", "animate");
             continue;
         }
 
@@ -1463,7 +1466,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
         auto const placement_result = WasmEdge_ValueGetI32(returns[0]);
         if (placement_result == 0)
         {
-            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
+            mir::log_info("Plugin did not handle 'place_new_window' call (returned 0).");
             continue;
         }
 

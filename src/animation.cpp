@@ -262,59 +262,47 @@ bool Animation::tick(float dt)
         return true;
     }
 
-    switch (definition_.type)
-    {
-    case AnimationType::built_in:
-    {
-        AnimationFrameResult result;
-        for (auto const& builtin_def : definition_.data)
-            result = tick_built_in(builtin_def, t).merge(result);
-        on_tick(result);
-        if (result.is_complete)
-            on_tick(finish());
-        return result.is_complete;
-    }
-    case AnimationType::plugin:
+    if (plugin_manager)
     {
         auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds, definition_.duration_seconds);
-        if (!maybe_frame_result)
+        if (maybe_frame_result)
         {
-            mir::log_warning("Animation is supposed to be using a plugin, but no plugin handled the 'animate' call.");
-            on_tick(finish());
-            return true;
+            auto const frame_result = maybe_frame_result.value();
+            AnimationFrameResult animation_result;
+            animation_result.is_complete = frame_result.completed != 0;
+            if (frame_result.has_area != 0)
+            {
+                animation_result.rectangle = geom::Rectangle {
+                    geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
+                    geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
+                };
+            }
+            if (frame_result.has_transform != 0)
+            {
+                glm::mat4 transform;
+                std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
+                animation_result.transform = transform;
+            }
+            else
+                animation_result.transform = glm::mat4(1.f);
+            if (frame_result.has_opacity != 0)
+            {
+                animation_result.opacity = frame_result.opacity;
+            }
+            on_tick(animation_result);
+            if (animation_result.is_complete)
+                on_tick(finish());
+            return animation_result.is_complete;
         }
+    }
 
-        auto const frame_result = maybe_frame_result.value();
-        AnimationFrameResult animation_result;
-        animation_result.is_complete = frame_result.completed != 0;
-        if (frame_result.has_area != 0)
-        {
-            animation_result.rectangle = geom::Rectangle {
-                geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
-                geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
-            };
-        }
-        if (frame_result.has_transform != 0)
-        {
-            glm::mat4 transform;
-            std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
-            animation_result.transform = transform;
-        }
-        else
-            animation_result.transform = glm::mat4(1.f);
-        if (frame_result.has_opacity != 0)
-        {
-            animation_result.opacity = frame_result.opacity;
-        }
-        on_tick(animation_result);
-        if (animation_result.is_complete)
-            on_tick(finish());
-        return animation_result.is_complete;
-    }
-    default:
+    AnimationFrameResult result;
+    for (auto const& builtin_def : definition_.data)
+        result = tick_built_in(builtin_def, t).merge(result);
+    on_tick(result);
+    if (result.is_complete)
         on_tick(finish());
-        return true;
-    }
+    return result.is_complete;
 }
 
 AnimationFrameResult Animation::finish() const

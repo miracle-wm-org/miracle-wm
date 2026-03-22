@@ -748,6 +748,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
+    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);
@@ -755,7 +756,6 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
     pending_allocation.container_type = AllocationType::none;
-    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)

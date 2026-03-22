@@ -62,7 +62,6 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     first_animations.push_back(
         miracle::BuiltInAnimationDefinition { .type = miracle::BultInAnimationType::fade });
     first.animation_definitions.value[0] = miracle::AnimationDefinition {
-        .type = miracle::AnimationType::built_in,
         .duration_seconds = 5,
         .data = first_animations
     };
@@ -134,7 +133,6 @@ TEST_F(KeymapConfigurationTest, CanMergeMiracleConfig)
     second_animations.push_back(
         miracle::BuiltInAnimationDefinition { .type = miracle::BultInAnimationType::grow });
     second.animation_definitions.value[0] = miracle::AnimationDefinition {
-        .type = miracle::AnimationType::built_in,
         .duration_seconds = 8,
         .data = second_animations
     };

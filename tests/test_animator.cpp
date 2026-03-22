@@ -31,7 +31,6 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
@@ -66,7 +65,6 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
@@ -103,7 +101,6 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
