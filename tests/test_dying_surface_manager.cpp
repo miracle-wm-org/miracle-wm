@@ -26,6 +26,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_surface_stack.h"
+#include "mock_window_controller.h"
+#include "plugin_bridge.h"
 
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -41,12 +43,16 @@ public:
         compositor_state(std::make_shared<CompositorState>()),
         config(std::make_shared<test::MockConfig>()),
         animator(std::make_shared<Animator>()),
+        window_controller(std::make_shared<test::MockWindowController>()),
+        window_id_map(std::make_shared<WindowIdMap>()),
         dying_surface_manager(
             surface_stack,
             compositor_state,
             config,
             animator,
-            std::make_shared<PluginManager>())
+            std::make_shared<PluginManager>(),
+            window_controller,
+            window_id_map)
     {
     }
 
@@ -54,6 +60,8 @@ public:
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<Animator> animator;
+    std::shared_ptr<test::MockWindowController> window_controller;
+    std::shared_ptr<WindowIdMap> window_id_map;
     DyingSurfaceManager dying_surface_manager;
 };
 
