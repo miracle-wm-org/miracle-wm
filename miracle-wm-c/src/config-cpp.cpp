@@ -46,29 +46,25 @@ class BadConversion;
 namespace
 {
 const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.2f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.25f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.3f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.25f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
@@ -111,17 +107,6 @@ std::optional<miracle::EaseFunction> from_string_ease_function(std::string const
     {
         if (miracle::ease_function_strings[i] == str)
             return static_cast<miracle::EaseFunction>(i);
-    }
-
-    return std::nullopt;
-}
-
-std::optional<miracle::AnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
-{
-    for (size_t i = 0; i < miracle::animation_type_strings.size(); i++)
-    {
-        if (miracle::animation_type_strings[i] == str)
-            return static_cast<miracle::AnimationType>(i);
     }
 
     return std::nullopt;
@@ -902,62 +887,28 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
 
         auto const event_as_int = static_cast<size_t>(event.value());
-        auto const type = try_parse_string_to_optional_value<std::optional<miracle::AnimationType>>(
-            animation_node,
-            "type",
-            from_string_animation_type,
-            context);
-        if (!type)
+
+        miracle::AnimationDefinition definition;
+        miracle::BuiltInAnimationList animations;
+        if (!animation_node["parts"].IsSequence())
         {
-            context.builder << "Animation definition is missing or has invalid 'type' key";
+            context.builder << "Animation definition must have a 'parts' key with a list of built-in animations";
             create_error(animation_node, context);
             continue;
         }
 
-        miracle::AnimationDefinition definition;
-        definition.type = type.value();
-        bool success = false;
-        switch (type.value())
+        for (auto const built_in_animation_node : animation_node["parts"])
         {
-        case miracle::AnimationType::built_in:
-        {
-            miracle::BuiltInAnimationList animations;
-            if (!animation_node["parts"].IsSequence())
-            {
-                context.builder << "Built-in animation definitions must have an 'animation_list' key with a list of animations";
-                create_error(animation_node, context);
-                break;
-            }
-
-            for (auto const built_in_animation_node : animation_node["parts"])
-            {
-                miracle::BuiltInAnimationDefinition animation_def;
-                if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
-                    animations.push_back(animation_def);
-            }
-
-            definition.data = animations;
-            success = true;
-            break;
-        }
-        case miracle::AnimationType::plugin:
-        {
-            success = true;
-            break;
-        }
-        default:
-            context.builder << "Unsupported animation type in definition";
-            create_error(animation_node, context);
-            break;
+            miracle::BuiltInAnimationDefinition animation_def;
+            if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
+                animations.push_back(animation_def);
         }
 
-        if (success)
-        {
-            definition.is_default = false;
-            // Parse the optional 'duration' value
-            try_parse_value(animation_node, "duration", definition.duration_seconds, context, true);
-            context.result.config.animation_definitions.value[event_as_int] = definition;
-        }
+        definition.data = animations;
+        definition.is_default = false;
+        // Parse the optional 'duration' value
+        try_parse_value(animation_node, "duration", definition.duration_seconds, context, true);
+        context.result.config.animation_definitions.value[event_as_int] = definition;
     }
 }
 
@@ -1653,36 +1604,27 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
             if (def.duration_seconds != 0.f)
                 out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
-            out << YAML::Key << "type" << YAML::Value << animation_type_strings[static_cast<uint32_t>(def.type)];
-
-            switch (def.type)
+            out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
+            for (auto const& animation : def.data)
             {
-            case AnimationType::built_in:
-                out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
-                for (auto const& animation : def.data)
-                {
-                    out << YAML::BeginMap;
-                    out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
-                    out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
-                    if (animation.c1 != 0.f)
-                        out << YAML::Key << "c1" << YAML::Value << animation.c1;
-                    if (animation.c2 != 0.f)
-                        out << YAML::Key << "c2" << YAML::Value << animation.c2;
-                    if (animation.c3 != 0.f)
-                        out << YAML::Key << "c3" << YAML::Value << animation.c3;
-                    if (animation.c4 != 0.f)
-                        out << YAML::Key << "c4" << YAML::Value << animation.c4;
-                    if (animation.n1 != 0.f)
-                        out << YAML::Key << "n1" << YAML::Value << animation.n1;
-                    if (animation.d1 != 0.f)
-                        out << YAML::Key << "d1" << YAML::Value << animation.d1;
-                    out << YAML::EndMap;
-                }
-                out << YAML::EndSeq;
-                break;
-            default:
-                break;
+                out << YAML::BeginMap;
+                out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
+                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
+                if (animation.c1 != 0.f)
+                    out << YAML::Key << "c1" << YAML::Value << animation.c1;
+                if (animation.c2 != 0.f)
+                    out << YAML::Key << "c2" << YAML::Value << animation.c2;
+                if (animation.c3 != 0.f)
+                    out << YAML::Key << "c3" << YAML::Value << animation.c3;
+                if (animation.c4 != 0.f)
+                    out << YAML::Key << "c4" << YAML::Value << animation.c4;
+                if (animation.n1 != 0.f)
+                    out << YAML::Key << "n1" << YAML::Value << animation.n1;
+                if (animation.d1 != 0.f)
+                    out << YAML::Key << "d1" << YAML::Value << animation.d1;
+                out << YAML::EndMap;
             }
+            out << YAML::EndSeq;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;

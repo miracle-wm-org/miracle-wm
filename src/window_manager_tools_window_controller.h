@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_WINDOW_MANAGER_TOOLS_TILING_INTERFACE_H
 
 #include "animator.h"
+#include "plugin_bridge.h"
 #include "window_controller.h"
 #include <miral/window_manager_tools.h>
 
@@ -37,7 +38,8 @@ public:
         std::shared_ptr<PluginManager> const& plugin_manager,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<CompositorState> const& state,
-        std::shared_ptr<Config> const& config);
+        std::shared_ptr<Config> const& config,
+        std::shared_ptr<WindowIdMap> const& window_id_map);
     void open(miral::Window const&) override;
     void set_rectangle(miral::Window const&, geom::Rectangle const&, geom::Rectangle const&, bool with_animations = true) override;
     MirWindowState get_state(miral::Window const&) override;
@@ -66,6 +68,7 @@ private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
+    std::shared_ptr<WindowIdMap> window_id_map;
 };
 }
 

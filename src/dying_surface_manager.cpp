@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
+#include "plugin_bridge.h"
 #include "shell_component_container.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
@@ -31,12 +32,16 @@ DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<PluginManager> const& plugin_manager) :
+    std::shared_ptr<PluginManager> const& plugin_manager,
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<WindowIdMap> const& window_id_map) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
     animator(animator),
-    plugin_manager(plugin_manager)
+    plugin_manager(plugin_manager),
+    window_controller(window_controller),
+    window_id_map(window_id_map)
 {
 }
 
@@ -51,8 +56,12 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!container->can_animate())
         return;
 
+    auto const win = container->window();
+    if (!win)
+        return;
+
     auto const output_area = container->get_output()->get_area();
-    auto surface = container->window()->operator std::shared_ptr<mir::scene::Surface>();
+    auto surface = win->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
     auto const handle = animator->register_animateable();
     auto const transform = container->get_window_transform() * container->get_animation_transform();
@@ -68,14 +77,28 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     surface->set_transformation(transform);
 
     surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
+    AnimationData anim_data {
+        AnimateableEvent::window_close,
+        container->get_visible_area(),
+        geom::Rectangle {},
+        1, 0
+    };
+    {
+        miral::WindowInfo const& win_info = window_controller->info_for(win.value());
+        uint64_t win_id = 0;
+        for (auto const& [id, w] : *window_id_map)
+            if (w == win.value())
+            {
+                win_id = id;
+                break;
+            }
+        anim_data.window_info = from_window(win_info, win_id, container.get());
+        anim_data.window_name = win_info.name();
+    }
     animator->append(Animation(
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
-        AnimationData {
-            AnimateableEvent::window_close,
-            container->get_visible_area(),
-            geom::Rectangle {},
-            1, 0 },
+        std::move(anim_data),
         [compositor_state = compositor_state, surface_stack = surface_stack, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {
         if (result.transform)

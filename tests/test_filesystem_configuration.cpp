@@ -549,7 +549,6 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
 
     YAML::Node animation;
     animation["duration"] = 1000;
-    animation["type"] = "built_in";
     animation["event"] = "window_open";
     animation["parts"] = list;
 

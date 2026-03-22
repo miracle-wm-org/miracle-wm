@@ -35,24 +35,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-namespace
+namespace miracle
 {
-miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec, uint64_t internal)
-{
-    return {
-        .application_name = info.name().empty() ? spec.application_id().value_or("").c_str() : info.name().c_str(),
-        .internal = internal
-    };
-}
-
-miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowInfo const& window, uint64_t internal)
-{
-    return {
-        .application_name = info.name().empty() ? window.application_id().c_str() : info.name().c_str(),
-        .internal = internal
-    };
-}
-
 miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
     if (workspace == nullptr)
@@ -68,6 +52,47 @@ miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& wor
         .internal = static_cast<uint64_t>(workspace->id()),
         .position = from_point(rect.top_left),
         .size = from_size(rect.size),
+    };
+}
+
+miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t internal, WindowContainer* container)
+{
+    glm::mat4 transform(1.f);
+    float alpha = 1.f;
+    if (container)
+    {
+        transform = container->get_window_transform();
+        alpha = container->get_window_alpha();
+    }
+    miracle_window_info_t result {
+        .window_type = window_info.type(),
+        .state = window_info.state(),
+        .top_left = from_point(window_info.window().top_left()),
+        .size = from_size(window_info.window().size()),
+        .depth_layer = window_info.depth_layer(),
+        .internal = internal,
+        .alpha = alpha
+    };
+    std::memcpy(result.transform, glm::value_ptr(transform), sizeof(float) * 16);
+    return result;
+}
+}
+
+namespace
+{
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowSpecification const& spec, uint64_t internal)
+{
+    return {
+        .application_name = info.name().empty() ? spec.application_id().value_or("").c_str() : info.name().c_str(),
+        .internal = internal
+    };
+}
+
+miracle_application_info_t from_app_info(miral::ApplicationInfo const& info, miral::WindowInfo const& window, uint64_t internal)
+{
+    return {
+        .application_name = info.name().empty() ? window.application_id().c_str() : info.name().c_str(),
+        .internal = internal
     };
 }
 
@@ -123,27 +148,6 @@ miracle_container_t from_child(std::shared_ptr<LeafContainer> const& container)
     };
 }
 
-miracle_window_info_t from_window(miral::WindowInfo const& window_info, uint64_t internal, miracle::WindowContainer* container = nullptr)
-{
-    glm::mat4 transform(1.f);
-    float alpha = 1.f;
-    if (container)
-    {
-        transform = container->get_window_transform();
-        alpha = container->get_window_alpha();
-    }
-    miracle_window_info_t result {
-        .window_type = window_info.type(),
-        .state = window_info.state(),
-        .top_left = from_point(window_info.window().top_left()),
-        .size = from_size(window_info.window().size()),
-        .depth_layer = window_info.depth_layer(),
-        .internal = internal,
-        .alpha = alpha
-    };
-    std::memcpy(result.transform, glm::value_ptr(transform), sizeof(float) * 16);
-    return result;
-}
 }
 
 PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
@@ -286,6 +290,32 @@ miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t 
     auto const workspace = resolve_workspace_shared(workspace_id);
     auto const trees = workspace->trees();
     return from_parent(trees[index]);
+}
+
+miracle_container_t PluginBridge::container_from_window(uint64_t window_id)
+{
+    auto it = window_id_map->find(window_id);
+    if (it == window_id_map->end())
+        return {};
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return {};
+
+    return from_child(std::static_pointer_cast<LeafContainer>(container));
+}
+
+miracle_container_t PluginBridge::parent_from_container(uint64_t container_id)
+{
+    auto const container = resolve_container(container_id);
+    if (!container)
+        return {};
+
+    auto const parent = container->get_parent().lock();
+    if (!parent)
+        return {};
+
+    return from_parent(parent);
 }
 
 miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)

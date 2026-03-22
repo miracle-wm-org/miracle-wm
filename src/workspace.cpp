@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "leaf_container.h"
 #include "math_helpers.h"
 #include "parent_container.h"
+#include "plugin_bridge.h"
 #include "shell_component_container.h"
 #include "window_container.h"
 #include "workspace_observer.h"
@@ -219,10 +220,17 @@ void Workspace::show(geom::Point const& origin)
 
     auto const area = root()->get_logical_area();
     std::weak_ptr<Workspace> const that = std::dynamic_pointer_cast<Workspace>(shared_from_this());
+    AnimationData show_anim_data(AnimateableEvent::workspace_switch,
+        geom::Rectangle(origin, area.size),
+        geom::Rectangle(geom::Point(0, 0), area.size),
+        0.f, 1.f);
+    show_anim_data.workspace = from_workspace(std::dynamic_pointer_cast<AbstractWorkspace>(shared_from_this()));
+    if (name().has_value())
+        show_anim_data.workspace_name = name().value();
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        AnimationData(AnimateableEvent::workspace_switch, geom::Rectangle(origin, area.size), geom::Rectangle(geom::Point(0, 0), area.size), 0.f, 1.f),
+        std::move(show_anim_data),
         [that = that](AnimationFrameResult const& asr)
     {
         if (auto const locked = that.lock())
@@ -266,10 +274,17 @@ void Workspace::hide(geom::Point const& end)
     }
 
     auto const area = root()->get_logical_area();
+    AnimationData hide_anim_data(AnimateableEvent::workspace_switch,
+        geom::Rectangle(geom::Point(0, 0), area.size),
+        geom::Rectangle(end, area.size),
+        1.f, 0.f);
+    hide_anim_data.workspace = from_workspace(std::dynamic_pointer_cast<AbstractWorkspace>(shared_from_this()));
+    if (name().has_value())
+        hide_anim_data.workspace_name = name().value();
     animator->append(Animation(
         animation_handle,
         config->get_animation_definition(AnimateableEvent::workspace_switch),
-        AnimationData(AnimateableEvent::workspace_switch, geom::Rectangle(geom::Point(0, 0), area.size), geom::Rectangle(end, area.size), 1.f, 0.f),
+        std::move(hide_anim_data),
         [this](AnimationFrameResult const& asr)
     {
         server_action_queue->enqueue(this, [asr = asr, this]()

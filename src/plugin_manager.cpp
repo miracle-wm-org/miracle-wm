@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "plugin_manager"
 #include "plugin_manager.h"
 
+#include "animation.h"
+#include "compositor_state.h"
 #include "container.h"
 #include "plugin_bridge.h"
 
@@ -29,6 +31,23 @@ using namespace miracle;
 #if FEATURE_PLUGIN_SYSTEM
 namespace
 {
+miracle_animation_type from_animateable_event(AnimateableEvent event)
+{
+    switch (event)
+    {
+    case AnimateableEvent::window_open:
+        return miracle_animation_type_window_open;
+    case AnimateableEvent::window_move:
+        return miracle_animation_type_window_move;
+    case AnimateableEvent::window_close:
+        return miracle_animation_type_window_close;
+    case AnimateableEvent::workspace_switch:
+        return miracle_animation_type_workspace_switch;
+    default:
+        return miracle_animation_type_window_none;
+    }
+}
+
 // Helper to get memory instance from calling frame
 WasmEdge_MemoryInstanceContext* get_memory_from_frame(
     WasmEdge_CallingFrameContext const* frame)
@@ -285,6 +304,68 @@ WasmEdge_Result host_miracle_container_get_child_at(
     std::memcpy(container_buf, &container, sizeof(container));
 
     // Return success
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_window_info_get_container(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_window_info_get_container: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const window_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+
+    auto const container = bridge->container_from_window(window_address);
+    if (container.internal == 0)
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::memcpy(mem_base + out_ptr, &container, sizeof(container));
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_container_get_parent(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto* memory = get_memory_from_frame(frame);
+    if (!memory)
+    {
+        mir::log_error("host_miracle_container_get_parent: memory not found");
+        return WasmEdge_Result_Fail;
+    }
+
+    auto const bridge = static_cast<PluginBridge*>(data);
+    uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
+
+    auto const parent = bridge->parent_from_container(container_address);
+    if (parent.internal == 0)
+    {
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::memcpy(mem_base + out_ptr, &parent, sizeof(parent));
+
     returns[0] = WasmEdge_ValueGenI32(0);
     return WasmEdge_Result_Success;
 }
@@ -869,6 +950,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i64, i32, i32, i32 }, { i32 }),
         host_miracle_window_info_get_workspace, bridge.get());
 
+    add_host_function(module, "miracle_window_info_get_container",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_info_get_container, bridge.get());
+
     add_host_function(module, "miracle_workspace_get_output",
         create_func_type({ i64, i32, i32, i32 }, { i32 }),
         host_miracle_workspace_get_output, bridge.get());
@@ -880,6 +965,10 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_container_get_child_at",
         create_func_type({ i64, i32, i32 }, { i32 }),
         host_miracle_container_get_child_at, bridge.get());
+
+    add_host_function(module, "miracle_container_get_parent",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_container_get_parent, bridge.get());
 
     add_host_function(module, "miracle_container_get_window",
         create_func_type({ i64, i32, i32, i32 }, { i32 }),
@@ -1059,9 +1148,67 @@ void PluginManager::unload_all()
 }
 
 std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
-    miracle_plugin_animation_frame_data_t const& frame_data)
+    AnimationData const& data, float runtime_seconds, float duration_seconds)
 {
     auto const modules = self->safe_copy();
+    if (modules.empty())
+        return std::nullopt;
+
+    miracle_plugin_animation_frame_data_t frame_data;
+    frame_data.type = from_animateable_event(data.event);
+    frame_data.runtime_seconds = runtime_seconds;
+    frame_data.duration_seconds = duration_seconds;
+    frame_data.origin[0] = static_cast<float>(data.area_start.top_left.x.as_int());
+    frame_data.origin[1] = static_cast<float>(data.area_start.top_left.y.as_int());
+    frame_data.origin[2] = static_cast<float>(data.area_start.size.width.as_value());
+    frame_data.origin[3] = static_cast<float>(data.area_start.size.height.as_value());
+    frame_data.destination[0] = static_cast<float>(data.area_end.top_left.x.as_int());
+    frame_data.destination[1] = static_cast<float>(data.area_end.top_left.y.as_int());
+    frame_data.destination[2] = static_cast<float>(data.area_end.size.width.as_value());
+    frame_data.destination[3] = static_cast<float>(data.area_end.size.height.as_value());
+    frame_data.opacity_start = data.opacity_start;
+    frame_data.opacity_end = data.opacity_end;
+    if (data.window_info.has_value())
+    {
+        frame_data.has_window_info = 1;
+        frame_data.window_info = data.window_info.value();
+        if (data.window_name.has_value())
+        {
+            auto const& n = data.window_name.value();
+            std::strncpy(frame_data.window_name, n.c_str(), sizeof(frame_data.window_name) - 1);
+            frame_data.window_name[sizeof(frame_data.window_name) - 1] = '\0';
+        }
+        else
+        {
+            frame_data.window_name[0] = '\0';
+        }
+    }
+    else
+    {
+        frame_data.has_window_info = 0;
+        frame_data.window_name[0] = '\0';
+    }
+    if (data.workspace.has_value())
+    {
+        frame_data.has_workspace = 1;
+        frame_data.workspace = data.workspace.value();
+        if (data.workspace_name.has_value())
+        {
+            auto const& n = data.workspace_name.value();
+            std::strncpy(frame_data.workspace_name, n.c_str(), sizeof(frame_data.workspace_name) - 1);
+            frame_data.workspace_name[sizeof(frame_data.workspace_name) - 1] = '\0';
+        }
+        else
+        {
+            frame_data.workspace_name[0] = '\0';
+        }
+    }
+    else
+    {
+        frame_data.has_workspace = 0;
+        frame_data.workspace_name[0] = '\0';
+    }
+
     for (auto const& target_module : modules)
     {
         // Get the memory context from the module instance
@@ -1077,7 +1224,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         // Allocate memory for the structs in WASM linear memory
         uint32_t constexpr result_ptr = 8;
-        uint32_t constexpr frame_data_ptr = sizeof(miracle_plugin_animation_frame_result_t);
+        uint32_t constexpr frame_data_ptr = (sizeof(miracle_plugin_animation_frame_result_t) + 7u) & ~7u;
 
         // Write frame_data to WASM memory
         uint8_t frame_data_buffer[sizeof(miracle_plugin_animation_frame_data_t)];
@@ -1107,7 +1254,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         if (func_context == nullptr)
         {
-            mir::log_error("Function '%s' not found in module.", "window_open_animation");
+            mir::log_error("Function '%s' not found in module.", "animate");
             continue;
         }
 
@@ -1128,10 +1275,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
         auto const animate_result = WasmEdge_ValueGetI32(returns[0]);
         if (animate_result == 0)
-        {
-            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
             continue;
-        }
 
         // Read the result from WASM memory
         miracle_plugin_animation_frame_result_t result;
@@ -1320,7 +1464,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
         auto const placement_result = WasmEdge_ValueGetI32(returns[0]);
         if (placement_result == 0)
         {
-            mir::log_info("Plugin did not handle 'animate' call (returned 0).");
+            mir::log_info("Plugin did not handle 'place_new_window' call (returned 0).");
             continue;
         }
 

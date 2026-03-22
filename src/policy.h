@@ -127,6 +127,8 @@ private:
     std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
+    std::shared_ptr<WindowIdMap> window_id_map_;
+    std::shared_ptr<ApplicationIdMap> application_id_map_;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
@@ -151,9 +153,7 @@ private:
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
-    std::shared_ptr<WindowIdMap> window_id_map_;
     uint64_t next_window_id_ = 0;
-    std::shared_ptr<ApplicationIdMap> application_id_map_;
     uint64_t next_application_id_ = 0;
 };
 }

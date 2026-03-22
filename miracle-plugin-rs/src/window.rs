@@ -1,5 +1,6 @@
 use super::application::*;
 use super::bindings;
+use super::container::*;
 use super::core::{self, *};
 use super::host::*;
 use super::workspace::*;
@@ -313,6 +314,25 @@ impl WindowInfo {
                 name,
                 internal: internal as u64,
             })
+        }
+    }
+
+    /// Get the container that holds this window.
+    pub fn container(&self) -> Option<Container> {
+        let mut container =
+            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+
+        unsafe {
+            let result = miracle_window_info_get_container(
+                self.internal as i64,
+                container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            Some(Container::from(container.assume_init()))
         }
     }
 

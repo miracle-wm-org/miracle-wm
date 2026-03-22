@@ -31,7 +31,6 @@ TEST_F(AnimatorTest, CanStepLinearSlideAnimation)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
@@ -66,7 +65,6 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
@@ -93,6 +91,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeIn)
         return false;
     },
         std::shared_ptr<PluginManager>()));
+    animator.tick(0.f);
     EXPECT_THAT(opacity, testing::Eq(0.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.75f));
@@ -103,7 +102,6 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
     Animator animator;
     auto const handle = animator.register_animateable();
     AnimationDefinition const definition {
-        AnimationType::built_in,
         false,
         1.f,
         BuiltInAnimationList { BuiltInAnimationDefinition {
@@ -131,6 +129,7 @@ TEST_F(AnimatorTest, CanUpdateOpacityFadeOut)
         opacity = asr.opacity.value();
     },
         std::shared_ptr<PluginManager>()));
+    animator.tick(0.f);
     EXPECT_THAT(opacity, testing::Eq(1.f));
     animator.tick(0.75f);
     EXPECT_THAT(opacity, testing::Eq(0.25f));

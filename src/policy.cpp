@@ -43,6 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <iostream>
+#include <map>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
@@ -182,13 +183,39 @@ public:
     void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
     {
         auto const lock = policy.state->lock();
-        policy.plugin_manager->unload_all();
-        for (auto const& plugin : plugins)
-            policy.plugin_manager->load_wasm_module(plugin.path, plugin.userdata_json);
+
+        std::map<std::string, std::string> new_plugin_map;
+        for (auto const& p : plugins)
+            new_plugin_map[p.path] = p.userdata_json;
+
+        for (auto it = loaded_plugins.begin(); it != loaded_plugins.end();)
+        {
+            auto const& [path, handle_and_data] = *it;
+            auto const& [handle, userdata_json] = handle_and_data;
+            auto found = new_plugin_map.find(path);
+            if (found == new_plugin_map.end() || found->second != userdata_json)
+            {
+                policy.plugin_manager->unload_wasm_module(handle);
+                it = loaded_plugins.erase(it);
+            }
+            else
+                ++it;
+        }
+
+        for (auto const& p : plugins)
+        {
+            if (loaded_plugins.count(p.path) == 0)
+            {
+                auto result = policy.plugin_manager->load_wasm_module(p.path, p.userdata_json);
+                if (result.success)
+                    loaded_plugins[p.path] = { result.handle, p.userdata_json };
+            }
+        }
     }
 
     Policy& policy;
     bool has_loaded_once = false;
+    std::map<std::string, std::pair<PluginHandle, std::string>> loaded_plugins;
 };
 
 Policy::Policy(
@@ -208,8 +235,10 @@ Policy::Policy(
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
     plugin_manager(std::make_shared<PluginManager>()),
+    window_id_map_(std::make_shared<WindowIdMap>()),
+    application_id_map_(std::make_shared<ApplicationIdMap>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, plugin_manager, server.the_main_loop(), state, config)),
+        tools, animator, plugin_manager, server.the_main_loop(), state, config, window_id_map_)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
@@ -247,12 +276,12 @@ Policy::Policy(
         state,
         config,
         animator,
-        plugin_manager)),
+        plugin_manager,
+        window_controller,
+        window_id_map_)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    window_id_map_ = std::make_shared<WindowIdMap>();
-    application_id_map_ = std::make_shared<ApplicationIdMap>();
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
     config->set_plugin_configure_hook([pm = plugin_manager]()
     {
@@ -719,6 +748,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
+    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);
@@ -726,7 +756,6 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
     pending_allocation.container_type = AllocationType::none;
-    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)

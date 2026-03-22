@@ -177,23 +177,6 @@ extern "C"
     uint miracle_config_get_built_in_key_command_options_count();
     miracle_config_option_t miracle_config_get_built_in_key_command_option(uint i);
 
-    /// Retrieve the number of builtanimation type options.
-    ///
-    /// Each built-in animation type option may be retrieved with
-    /// #miracle_config_get_animation_type_option.
-    ///
-    /// \returns the number of animation type options
-    uint miracle_config_get_animation_type_options_count();
-
-    /// Retrieve an animation type option at a particular index.
-    ///
-    /// Providing an index greater than #miracle_config_get_animation_type_options_count
-    /// results in undefined behavior.
-    ///
-    /// \param i the provided index
-    /// \returns the option at the provided index
-    miracle_config_option_t miracle_config_get_animation_type_option(uint i);
-
     /// Retrieve the number of built-in animation type options.
     ///
     /// Each built-in animation type option may be retrieved with
@@ -771,18 +754,10 @@ extern "C"
         /// If `true`, this event has not been altered from its default yet.
         bool is_default;
 
-        /// The type of the animation.
-        ///
-        /// Use #miracle_config_get_animation_type_options_count to get the available
-        /// animation types.
-        uint type;
-
         /// The duration of the animation in seconds.
         float duration_seconds;
 
         /// The number of animations that are run concurrently when this event happens.
-        ///
-        /// This is only set when #type is set to "built_in".
         ///
         /// Each animateable event is built from a number of animations
         /// that run concurrent to each other. This enables the user to
@@ -801,7 +776,7 @@ extern "C"
     {
         /// The animation type.
         ///
-        /// Use #miracle_config_get_animation_type_option to get the available
+        /// Use #miracle_config_get_built_in_animation_type_option to get the available
         /// animation types.
         uint type;
 
