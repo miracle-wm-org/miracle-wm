@@ -234,7 +234,7 @@ Policy::Policy(
     output_listener { output_listener },
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
-    plugin_manager(std::make_shared<PluginManager>(state)),
+    plugin_manager(std::make_shared<PluginManager>()),
     window_id_map_(std::make_shared<WindowIdMap>()),
     application_id_map_(std::make_shared<ApplicationIdMap>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
