@@ -104,7 +104,7 @@ TEST_F(DyingSurfaceManagerTest, RemovesSurfaceFromStackWhenAnimationCompletes)
         .WillOnce(testing::Return(glm::mat4(1.f)));
 
     miral::WindowInfo window_info;
-    EXPECT_CALL(*window_controller, info_for(testing::_))
+    EXPECT_CALL(*window_controller, info_for(testing::A<miral::Window const&>()))
         .WillOnce(testing::ReturnRef(window_info));
 
     EXPECT_CALL(*surface_stack, add_surface(testing::_, mir::input::InputReceptionMode::normal))
@@ -158,7 +158,7 @@ TEST_F(DyingSurfaceManagerTest, CanAnimateValidSurface)
         .WillOnce(testing::Return(glm::mat4(1.f)));
 
     miral::WindowInfo window_info;
-    EXPECT_CALL(*window_controller, info_for(testing::_))
+    EXPECT_CALL(*window_controller, info_for(testing::A<miral::Window const&>()))
         .WillOnce(testing::ReturnRef(window_info));
 
     // Expect the surface stack to have been modified as well as the animator
