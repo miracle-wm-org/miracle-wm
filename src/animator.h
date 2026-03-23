@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_ANIMATOR_H
 
 #include "animation.h"
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -61,18 +62,38 @@ public:
     /// Remove an animation by its handle.
     void remove_by_animation_handle(AnimationHandle handle);
 
-    // TODO: This may be thread safe, bu
-    [[nodiscard]] bool has_animations() const { return !active.empty() || !active_custom.empty() || !pending_active.empty() || !pending_active_custom.empty(); }
+    /// Returns true if there are any animations queued or running.
+    ///
+    /// This is lock-free and safe to call from any thread.
+    [[nodiscard]] bool has_animations() const { return animation_count.load(std::memory_order_acquire) > 0; }
+
+    /// Returns true if an animation with the given handle is pending.
+    ///
+    /// Note: this only detects animations that are still in the pending queue.
+    /// An animation that has already been promoted to the active list (i.e. is
+    /// currently ticking) will not be detected here. Use this only for
+    /// informational / early-out purposes.
     [[nodiscard]] bool is_animating(AnimationHandle handle);
     std::condition_variable& get_cv() { return cv; }
     std::mutex& get_lock() { return processing_lock; }
 
 private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+
+    // AnimatorLoop-thread-only: never accessed under processing_lock.
     std::vector<Animation> active;
-    std::vector<Animation> pending_active;
     std::vector<CustomAnimation> active_custom;
+
+    // Shared, always accessed under processing_lock.
+    std::vector<Animation> pending_active;
     std::vector<CustomAnimation> pending_active_custom;
+    std::vector<AnimationHandle> pending_remove;
+
+    // Count of all animations (pending + active). Incremented in append(),
+    // decremented in tick() as animations are erased. Atomic so has_animations()
+    // is safe to call from any thread without holding processing_lock.
+    std::atomic<int> animation_count { 0 };
+
     std::thread run_thread;
     std::condition_variable cv;
     std::mutex processing_lock;

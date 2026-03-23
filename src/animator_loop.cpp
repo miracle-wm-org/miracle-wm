@@ -64,14 +64,14 @@ void ThreadedAnimatorLoop::run()
         auto frame_start = clock::now();
         {
             std::unique_lock lock(animator->get_lock());
-            if (!animator->has_animations())
+            animator->get_cv().wait(lock, [&]
             {
-                animator->get_cv().wait(lock);
-                frame_start = clock::now();
+                return animator->has_animations() || !running;
+            });
+            frame_start = clock::now();
 
-                if (!running)
-                    return;
-            }
+            if (!running)
+                return;
         }
 
         animator->tick(dt);
