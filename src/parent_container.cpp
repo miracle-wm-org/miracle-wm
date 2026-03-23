@@ -81,6 +81,7 @@ ParentContainer::ParentContainer(
     std::shared_ptr<AbstractWorkspace> const& workspace,
     std::shared_ptr<ParentContainer> const& parent,
     bool is_anchored) :
+    CollectionContainer(state->next_container_id()),
     shell_application_manager { shell_application_manager },
     state { state },
     window_controller { window_controller },

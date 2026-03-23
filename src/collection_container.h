@@ -62,6 +62,12 @@ public:
     /// \param i the index
     /// \returns container, or nullptr if none exist
     std::shared_ptr<Container> at(size_t i) const;
+
+protected:
+    explicit CollectionContainer(uint64_t id) :
+        Container(id)
+    {
+    }
 };
 }
 

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_container.h"
 
 #include <algorithm>
+#include <atomic>
 #include <memory>
 #include <mir/geometry/point.h>
 #include <vector>
@@ -100,12 +101,16 @@ public:
     /// Uniquely lock the provided mutex.
     std::unique_lock<std::recursive_mutex> unique_lock() { return std::unique_lock(mutex); }
 
+    /// Returns the next unique container ID, then increments the counter.
+    uint64_t next_container_id();
+
 private:
     std::recursive_mutex mutex;
     std::weak_ptr<Container> focused;
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::shared_ptr<RenderDataManager> render_data_manager_;
+    std::atomic<uint64_t> next_container_id_ { 1 };
 };
 }
 

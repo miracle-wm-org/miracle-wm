@@ -27,6 +27,11 @@ namespace test
     class StubContainer : public WindowContainer
     {
     public:
+        StubContainer() :
+            WindowContainer(0, nullptr, nullptr, false)
+        {
+        }
+
         void show() override
         {
         }

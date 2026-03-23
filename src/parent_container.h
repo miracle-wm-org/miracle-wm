@@ -52,6 +52,14 @@ public:
         bool is_anchored);
     ~ParentContainer() override;
 
+protected:
+    /// For use by test mocks only — not for production construction.
+    ParentContainer() :
+        CollectionContainer(0)
+    {
+    }
+
+public:
     // Container
     geom::Rectangle get_logical_area() const override;
     void set_logical_area(geom::Rectangle const& target_rect, bool with_animations) override;
@@ -123,9 +131,6 @@ public:
         size_t first_index,
         std::shared_ptr<ParentContainer> const& second_parent,
         size_t second_index);
-
-protected:
-    ParentContainer() = default;
 
 private:
     class ParentContainerBackgroundPositioner : public ShellApplicationDelegate

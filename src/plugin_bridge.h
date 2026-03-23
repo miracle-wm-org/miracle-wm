@@ -163,6 +163,8 @@ public:
 private:
     std::shared_ptr<AbstractOutput> resolve_output(uint64_t output_id);
     std::shared_ptr<AbstractWorkspace> resolve_workspace_shared(uint64_t workspace_id);
+    /// Walk the container tree and return the container with the given \p id, or nullptr.
+    std::shared_ptr<Container> find_container_by_id(uint64_t id);
     uint64_t find_window_id(miral::Window const& window) const;
     uint64_t find_application_id(miral::Application const& app) const;
     /// This is the information expected to be on a #miracle_window_info_t.

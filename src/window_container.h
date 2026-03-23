@@ -38,7 +38,7 @@ class WindowController;
 class WindowContainer : public Container
 {
 public:
-    WindowContainer(std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller, bool enable_render_data = true);
+    WindowContainer(uint64_t id, std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller, bool enable_render_data = true);
     ~WindowContainer() override;
     virtual void handle_ready() = 0;
     virtual void handle_modify(miral::WindowSpecification const&) = 0;
