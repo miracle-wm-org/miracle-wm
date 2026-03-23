@@ -1040,15 +1040,9 @@ void PluginManager::Self::create_host_module()
     mir::log_info("Host module 'env' registered with %d functions", 21);
 }
 
-std::vector<PluginManager::Self::ModuleInstance> PluginManager::Self::safe_copy()
-{
-    std::lock_guard lock(modules_access_mutex);
-    return loaded_modules;
-}
-
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& userdata_json)
 {
-    std::lock_guard lock(self->modules_access_mutex);
+    std::lock_guard lock(mutex_);
     auto const erased = std::erase_if(self->loaded_modules, [&path](auto const& module)
     {
         return module.name == path;
@@ -1133,7 +1127,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
 
 bool PluginManager::unload_wasm_module(PluginHandle handle)
 {
-    std::lock_guard lock(self->modules_access_mutex);
+    std::lock_guard lock(mutex_);
     auto const erased = std::erase_if(self->loaded_modules, [handle](auto const& module)
     {
         return module.handle == handle;
@@ -1143,15 +1137,15 @@ bool PluginManager::unload_wasm_module(PluginHandle handle)
 
 void PluginManager::unload_all()
 {
-    std::lock_guard lock(self->modules_access_mutex);
+    std::lock_guard lock(mutex_);
     self->loaded_modules.clear();
 }
 
 std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     AnimationData const& data, float runtime_seconds, float duration_seconds)
 {
-    auto const modules = self->safe_copy();
-    if (modules.empty())
+    std::lock_guard lock(mutex_);
+    if (self->loaded_modules.empty())
         return std::nullopt;
 
     miracle_plugin_animation_frame_data_t frame_data;
@@ -1209,7 +1203,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
         frame_data.workspace_name[0] = '\0';
     }
 
-    for (auto const& target_module : modules)
+    for (auto const& target_module : self->loaded_modules)
     {
         // Get the memory context from the module instance
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
@@ -1294,8 +1288,8 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
 
 void PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds)
 {
-    auto const modules = self->safe_copy();
-    for (auto const& target_module : modules)
+    std::lock_guard lock(mutex_);
+    for (auto const& target_module : self->loaded_modules)
     {
         if (target_module.handle != plugin_handle)
             continue;
@@ -1371,9 +1365,10 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     miral::WindowSpecification const& spec,
     uint64_t window_id)
 {
+    std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->new_window_info(app_info, spec, window_id);
     auto const window_info_t = bridge_handle.get();
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         // Get the memory context from the module instance
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
@@ -1483,9 +1478,10 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
 
 void PluginManager::window_deleted(miral::WindowInfo const& window_info)
 {
+    std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->existing_window_info(window_info);
     auto const window_info_t = bridge_handle.get();
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1559,9 +1555,10 @@ void PluginManager::window_deleted(miral::WindowInfo const& window_info)
 
 void PluginManager::window_focused(miral::WindowInfo const& window_info)
 {
+    std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->existing_window_info(window_info);
     auto const window_info_t = bridge_handle.get();
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1635,9 +1632,10 @@ void PluginManager::window_focused(miral::WindowInfo const& window_info)
 
 void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
 {
+    std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->existing_window_info(window_info);
     auto const window_info_t = bridge_handle.get();
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1711,10 +1709,11 @@ void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
 
 void PluginManager::workspace_created(uint32_t id)
 {
+    std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(id);
     auto const& workspace_t = result.workspace;
     auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1787,10 +1786,11 @@ void PluginManager::workspace_created(uint32_t id)
 
 void PluginManager::workspace_removed(uint32_t id)
 {
+    std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(id);
     auto const& workspace_t = result.workspace;
     auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1863,10 +1863,11 @@ void PluginManager::workspace_removed(uint32_t id)
 
 void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id)
 {
+    std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(current_id);
     auto const& workspace_t = result.workspace;
     auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -1944,10 +1945,11 @@ void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint3
 
 void PluginManager::workspace_area_changed(uint32_t id)
 {
+    std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(id);
     auto const& workspace_t = result.workspace;
     auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -2020,6 +2022,7 @@ void PluginManager::workspace_area_changed(uint32_t id)
 
 void PluginManager::window_workspace_changed(miral::WindowInfo const& window_info, uint32_t workspace_id)
 {
+    std::lock_guard lock(mutex_);
     auto const bridge_window = self->bridge->existing_window_info(window_info);
     auto const window_info_t = bridge_window.get();
     auto const workspace_result = self->bridge->workspace_by_id(workspace_id);
@@ -2027,7 +2030,7 @@ void PluginManager::window_workspace_changed(miral::WindowInfo const& window_inf
     auto const& workspace_name = workspace_result.name.value_or("");
     auto const& window_name = window_info.name();
 
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -2134,6 +2137,7 @@ void PluginManager::window_workspace_changed(miral::WindowInfo const& window_inf
 
 bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
 {
+    std::lock_guard lock(mutex_);
     miracle_keyboard_event_t const keyboard_event = {
         .action = static_cast<uint32_t>(miral::toolkit::mir_keyboard_event_action(&event)),
         .keysym = miral::toolkit::mir_keyboard_event_keysym(&event),
@@ -2141,7 +2145,7 @@ bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
         .modifiers = static_cast<uint32_t>(miral::toolkit::mir_keyboard_event_modifiers(&event)),
     };
 
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -2202,6 +2206,7 @@ bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
 
 bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
 {
+    std::lock_guard lock(mutex_);
     miracle_pointer_event_t const pointer_event = {
         .x = miral::toolkit::mir_pointer_event_axis_value(&event, MirPointerAxis::mir_pointer_axis_x),
         .y = miral::toolkit::mir_pointer_event_axis_value(&event, MirPointerAxis::mir_pointer_axis_y),
@@ -2210,7 +2215,7 @@ bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
         .buttons = static_cast<uint32_t>(mir_pointer_event_buttons(&event)),
     };
 
-    for (auto const& module : self->safe_copy())
+    for (auto const& module : self->loaded_modules)
     {
         auto const memory_name = WasmEdge_StringCreateByCString("memory");
         auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
@@ -2277,7 +2282,8 @@ miracle::PluginConfigData PluginManager::configure()
     constexpr uint32_t BUF_SIZE = 65536;
     constexpr uint32_t buf_ptr = 8;
 
-    for (auto const& module : self->safe_copy())
+    std::lock_guard lock(mutex_);
+    for (auto const& module : self->loaded_modules)
     {
         auto const func_name = WasmEdge_StringCreateByCString("configure");
         auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);

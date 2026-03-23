@@ -267,7 +267,6 @@ private:
         explicit Self(std::unique_ptr<PluginBridge> bridge);
         ~Self();
         void create_host_module();
-        std::vector<ModuleInstance> safe_copy();
 
         std::unique_ptr<PluginBridge> bridge;
         ConfigurePtr configure_context;
@@ -278,7 +277,6 @@ private:
         ModuleInstancePtr wasi_module_instance;
         ModuleInstancePtr host_module;
 
-        std::mutex modules_access_mutex;
         PluginHandle next_plugin_handle = 1;
         std::vector<ModuleInstance> loaded_modules;
         HostFunctionData host_fn_data;
@@ -286,6 +284,7 @@ private:
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
+    std::mutex mutex_;
     std::unique_ptr<Self> self;
 };
 }
