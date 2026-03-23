@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cstring>
 #include <mir/log.h>
+#include <miral/toolkit_event.h>
 
 using namespace miracle;
 
