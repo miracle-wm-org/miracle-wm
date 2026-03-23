@@ -53,6 +53,7 @@ public:
 private:
     void toggle(ScratchpadItem& item);
 
+    std::mutex mutex_;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<OutputManager> output_manager;
     std::vector<ScratchpadItem> items;

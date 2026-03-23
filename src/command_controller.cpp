@@ -57,7 +57,6 @@ CommandController::CommandController(
 
 void CommandController::try_toggle_resize_mode()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::resizing)
         return;
 
@@ -82,7 +81,6 @@ void CommandController::try_toggle_resize_mode()
 
 bool CommandController::try_request_vertical(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -95,11 +93,10 @@ bool CommandController::try_request_vertical(std::vector<ContainerScope> const& 
 
 bool CommandController::try_toggle_layout(bool cycle_thru_all, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -114,7 +111,6 @@ bool CommandController::try_cycle_through_request_types(
     std::vector<LayoutRequestType> const& request_types,
     std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -188,7 +184,6 @@ bool CommandController::try_cycle_through_request_types(
 
 bool CommandController::try_request_horizontal(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -202,8 +197,7 @@ bool CommandController::try_request_horizontal(std::vector<ContainerScope> const
 
 bool CommandController::try_resize(Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -219,7 +213,6 @@ bool CommandController::try_resize(Direction direction, int pixels, std::vector<
 
 bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
@@ -246,7 +239,7 @@ bool CommandController::try_resize_ppt(Direction direction, float ppt, std::vect
             break;
         }
 
-        auto wc = Container::as_window_container(container);
+        auto const wc = Container::as_window_container(container);
         if (!wc || !wc->resize(direction, static_cast<int>(ppt * static_cast<float>(total_size))))
             result = false;
     }
@@ -261,7 +254,6 @@ bool CommandController::try_set_size(
     std::vector<ContainerScope> const& scope)
 {
     // TODO: Account for ppt here
-    auto const lock = state->lock();
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
@@ -284,7 +276,6 @@ bool CommandController::try_set_size(
 
 bool CommandController::try_move_by_direction(Direction direction, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -304,7 +295,6 @@ bool CommandController::try_move_by_direction(Direction direction, std::vector<C
 
 bool CommandController::try_move_by_pixels(miracle::Direction direction, int pixels, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -324,7 +314,6 @@ bool CommandController::try_move_by_pixels(miracle::Direction direction, int pix
 
 bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -366,7 +355,6 @@ bool CommandController::try_move_by_ppt(Direction direction, float ppt, std::vec
 
 bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_ppt, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -400,7 +388,6 @@ bool CommandController::try_move_to(float x, bool is_x_ppt, float y, bool is_y_p
 
 bool CommandController::try_move_to_center_of_active_output(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto const& active_output = output_manager->focused();
     auto const active = state->focused_container().get();
     auto const area = active_output->get_area();
@@ -412,7 +399,6 @@ bool CommandController::try_move_to_center_of_active_output(std::vector<Containe
 
 bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     using namespace miracle::geometry_helpers::gl;
     float max_x = 0, max_y = 0;
     for (auto const& output : output_manager->outputs())
@@ -434,7 +420,6 @@ bool CommandController::try_move_to_absolute_center(std::vector<ContainerScope> 
 
 bool CommandController::try_move_to_cursor(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto const& position = state->cursor_position;
     return try_move_to(static_cast<float>(position.x.as_int()), false, static_cast<float>(position.y.as_int()), false, scope);
 }
@@ -470,7 +455,6 @@ bool CommandController::try_swap(std::vector<ContainerScope> const& scope, Conta
 
 void CommandController::select_container(std::shared_ptr<Container> const& container)
 {
-    auto const lock = state->lock();
     if (container->window())
         window_controller->select_active_window(container->window().value());
     else
@@ -482,11 +466,10 @@ void CommandController::select_container(std::shared_ptr<Container> const& conta
 
 bool CommandController::try_select(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -496,11 +479,10 @@ bool CommandController::try_select(std::vector<ContainerScope> const& scope)
 
 bool CommandController::try_select(miracle::Direction direction, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -516,7 +498,6 @@ bool CommandController::try_select(miracle::Direction direction, std::vector<Con
 
 bool CommandController::try_select_parent(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -542,7 +523,6 @@ bool CommandController::try_select_parent(std::vector<ContainerScope> const& sco
 
 bool CommandController::try_select_child(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -581,7 +561,6 @@ bool CommandController::try_select_child(std::vector<ContainerScope> const& scop
 
 bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto const container = state->focused_container();
     if (!container)
         return false;
@@ -601,7 +580,6 @@ bool CommandController::try_select_prev(std::vector<ContainerScope> const& scope
 
 bool CommandController::try_select_next(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto const container = state->focused_container();
     if (!container)
         return false;
@@ -621,7 +599,6 @@ bool CommandController::try_select_next(std::vector<ContainerScope> const& scope
 
 bool CommandController::try_select_floating(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -639,7 +616,6 @@ bool CommandController::try_select_floating(std::vector<ContainerScope> const& s
 
 bool CommandController::try_select_tiling(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -657,7 +633,6 @@ bool CommandController::try_select_tiling(std::vector<ContainerScope> const& sco
 
 bool CommandController::try_select_toggle(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -678,7 +653,6 @@ bool CommandController::try_select_toggle(std::vector<ContainerScope> const& sco
 
 bool CommandController::try_close_window(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     auto containers = resolve_scope(scope);
     if (containers.empty())
         return false;
@@ -702,7 +676,6 @@ bool CommandController::quit()
 
 bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -722,7 +695,6 @@ bool CommandController::try_toggle_fullscreen(std::vector<ContainerScope> const&
 
 bool CommandController::select_workspace(int number, bool allow_back_and_forth)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -740,7 +712,6 @@ bool CommandController::select_workspace(int number, bool allow_back_and_forth)
 
 bool CommandController::select_workspace(std::string const& name, bool allow_back_and_forth)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -756,7 +727,6 @@ bool CommandController::select_workspace(std::string const& name, bool allow_bac
 
 bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -772,7 +742,6 @@ bool CommandController::select_workspace_with_scope(std::vector<ContainerScope> 
 
 bool CommandController::next_workspace()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -789,7 +758,6 @@ bool CommandController::next_workspace()
 
 bool CommandController::prev_workspace()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -806,7 +774,6 @@ bool CommandController::prev_workspace()
 
 bool CommandController::back_and_forth_workspace()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -816,7 +783,6 @@ bool CommandController::back_and_forth_workspace()
 
 bool CommandController::next_workspace_on_output()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -828,7 +794,6 @@ bool CommandController::next_workspace_on_output()
 
 bool CommandController::prev_workspace_on_output()
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -854,7 +819,6 @@ bool CommandController::move_container_to_workspace(
 
 bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const& scope, int number, bool allow_back_and_forth)
 {
-    auto const lock = state->lock();
     if (!can_move_container())
         return false;
 
@@ -894,7 +858,6 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
 
 bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> const& scope, std::string const& name, bool allow_back_and_forth)
 {
-    auto const lock = state->lock();
     if (!can_move_container())
         return false;
 
@@ -931,7 +894,6 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
 
 bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_move_container())
         return false;
 
@@ -962,7 +924,6 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
 
 bool CommandController::try_move_to_next_workspace(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_move_container())
         return false;
 
@@ -988,7 +949,7 @@ bool CommandController::try_move_to_next_workspace(std::vector<ContainerScope> c
 
 bool CommandController::try_move_to_prev_workspace(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
 
@@ -1014,7 +975,7 @@ bool CommandController::try_move_to_prev_workspace(std::vector<ContainerScope> c
 
 bool CommandController::try_move_to_back_and_forth(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
 
@@ -1040,7 +1001,7 @@ bool CommandController::try_move_to_back_and_forth(std::vector<ContainerScope> c
 
 bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
 
@@ -1060,14 +1021,12 @@ bool CommandController::try_move_to_scratchpad(std::vector<ContainerScope> const
 
 bool CommandController::show_scratchpad()
 {
-    auto const lock = state->lock();
     // TODO: Only show the window that meets the criteria
     return scratchpad_->toggle_show_all();
 }
 
 bool CommandController::can_move_container() const
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -1130,11 +1089,10 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
 
 bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
@@ -1156,7 +1114,6 @@ bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope
 
 bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -1175,7 +1132,6 @@ bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> c
 
 bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
@@ -1194,7 +1150,6 @@ bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> c
 
 bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_set_layout())
         return false;
 
@@ -1220,7 +1175,6 @@ bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)
 
 bool CommandController::toggle_stacking(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_set_layout())
         return false;
 
@@ -1246,7 +1200,6 @@ bool CommandController::toggle_stacking(std::vector<ContainerScope> const& scope
 
 bool CommandController::set_layout(LayoutScheme scheme, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_set_layout())
         return false;
 
@@ -1272,7 +1225,6 @@ bool CommandController::set_layout(LayoutScheme scheme, std::vector<ContainerSco
 
 bool CommandController::set_layout_default(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
     if (!can_set_layout())
         return false;
 
@@ -1307,7 +1259,6 @@ void CommandController::move_cursor_to_output(AbstractOutput const& output)
 
 bool CommandController::try_select_next_output()
 {
-    auto const lock = state->lock();
     auto const next = output_manager->next();
     if (!next)
         return false;
@@ -1318,7 +1269,6 @@ bool CommandController::try_select_next_output()
 
 bool CommandController::try_select_prev_output()
 {
-    auto const lock = state->lock();
     auto const prev = output_manager->prev();
     if (prev != output_manager->focused())
     {
@@ -1331,7 +1281,6 @@ bool CommandController::try_select_prev_output()
 
 bool CommandController::try_select_output(Direction direction)
 {
-    auto const lock = state->lock();
     auto const next = output_manager->next(direction);
     if (next != output_manager->focused())
     {
@@ -1390,7 +1339,7 @@ std::vector<std::shared_ptr<Container>> CommandController::resolve_scope(std::ve
 
 bool CommandController::try_select_output(std::vector<std::string> const& names)
 {
-    auto const lock = state->lock();
+
     if (!output_manager->focused())
         return false;
 
@@ -1402,7 +1351,7 @@ bool CommandController::try_select_output(std::vector<std::string> const& names)
 
 bool CommandController::try_move_to_output_by_direction(Direction direction, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!output_manager->focused())
         return false;
 
@@ -1433,7 +1382,7 @@ bool CommandController::try_move_to_output_by_direction(Direction direction, std
 
 bool CommandController::try_move_to_current_output(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!output_manager->focused())
         return false;
 
@@ -1466,7 +1415,7 @@ bool CommandController::try_move_to_current_output(std::vector<ContainerScope> c
 
 bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (output_manager->outputs().empty())
         return false;
 
@@ -1499,7 +1448,7 @@ bool CommandController::try_move_to_primary_output(std::vector<ContainerScope> c
 
 bool CommandController::try_move_to_nonprimary_output(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     auto const nonprimary = output_manager->non_primary();
     if (!nonprimary)
         return false;
@@ -1526,7 +1475,7 @@ bool CommandController::try_move_to_nonprimary_output(std::vector<ContainerScope
 
 bool CommandController::try_move_to_next_output(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
     auto const containers = resolve_scope(scope);
@@ -1551,7 +1500,7 @@ bool CommandController::try_move_to_next_output(std::vector<ContainerScope> cons
 
 bool CommandController::try_move_to_output_by_name_list(std::vector<std::string> const& names, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
 
@@ -1578,7 +1527,7 @@ bool CommandController::try_move_to_output_by_name_list(std::vector<std::string>
 
 bool CommandController::try_move_to_mark(std::string const& mark, std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     if (!can_move_container())
         return false;
 
@@ -1633,7 +1582,7 @@ bool CommandController::can_set_layout() const
 
 bool CommandController::reload_config()
 {
-    auto const lock = state->lock();
+
     config->reload();
     return true;
 }
@@ -1650,7 +1599,7 @@ void CommandController::mark(
     bool add,
     bool toggle)
 {
-    auto const lock = state->lock();
+
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return;
@@ -1663,7 +1612,7 @@ void CommandController::unmark(
     std::vector<ContainerScope> const& scope,
     std::string const& mark)
 {
-    auto const lock = state->lock();
+
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return;
@@ -1674,7 +1623,7 @@ void CommandController::unmark(
 
 void CommandController::unmark_all(std::vector<ContainerScope> const& scope)
 {
-    auto const lock = state->lock();
+
     auto const containers = resolve_scope(scope);
     if (containers.empty())
         return;
@@ -1685,7 +1634,7 @@ void CommandController::unmark_all(std::vector<ContainerScope> const& scope)
 
 std::unordered_set<std::string> CommandController::get_all_marks() const
 {
-    auto const lock = state->lock();
+
     std::unordered_set<std::string> marks;
     for (auto const& container : state->windows())
     {
@@ -1701,7 +1650,7 @@ std::unordered_set<std::string> CommandController::get_all_marks() const
 
 bool CommandController::rename_selected_workspace(WorkspaceIdentifier const& new_identifier)
 {
-    auto const lock = state->lock();
+
     auto const selected_workspace = output_manager->focused()->active();
     if (!selected_workspace)
     {
@@ -1719,7 +1668,7 @@ bool CommandController::rename_existing_workspace(
     WorkspaceIdentifier const& existing_identifier,
     WorkspaceIdentifier const& new_identifier)
 {
-    auto const lock = state->lock();
+
     auto const selected_workspace = output_manager->focused()->active();
     for (auto const& workspace : workspace_manager->workspaces())
     {
@@ -1741,7 +1690,6 @@ bool CommandController::rename_existing_workspace(
 
 bool CommandController::set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only)
 {
-    auto lock = state->unique_lock();
     auto const gaps_opt = [&]() -> std::optional<Gaps>
     {
         if (current_workspace_only)
@@ -1782,7 +1730,6 @@ bool CommandController::set_inner_gaps(uint32_t px, GapsChangeType type, bool cu
         break;
     }
 
-    lock.unlock();
     if (current_workspace_only)
         output_manager->focused()->active()->inner_gaps(next_inner_gaps);
     else
@@ -1796,7 +1743,6 @@ bool CommandController::set_outer_gaps(
     GapsChangeType type,
     bool current_workspace_only)
 {
-    auto lock = state->unique_lock();
     auto const gaps_opt = [&]() -> std::optional<Gaps>
     {
         if (current_workspace_only)
@@ -1890,8 +1836,6 @@ bool CommandController::set_outer_gaps(
         break;
     }
 
-    lock.unlock();
-
     if (current_workspace_only)
         output_manager->focused()->active()->outer_gaps(next_outer_gaps);
     else
@@ -1901,7 +1845,7 @@ bool CommandController::set_outer_gaps(
 
 bool CommandController::try_move_workspace_to_output(OutputSelection selection)
 {
-    auto const lock = state->lock();
+
     if (!output_manager->focused())
     {
         mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused output");
@@ -1956,7 +1900,7 @@ bool CommandController::try_move_workspace_to_output(OutputSelection selection)
 
 bool CommandController::try_move_workspace_to_outputs_by_name(std::vector<std::string> const& outputs)
 {
-    auto const lock = state->lock();
+
     if (!output_manager->focused())
     {
         mir::log_warning("CommandController::try_move_workspace_to_output: cannot find focused output");
@@ -1983,7 +1927,7 @@ bool CommandController::try_move_workspace_to_outputs_by_name(std::vector<std::s
 
 nlohmann::json CommandController::to_json() const
 {
-    auto const lock = state->lock();
+
     geom::Point top_left { INT_MAX, INT_MAX };
     geom::Point bottom_right { 0, 0 };
     nlohmann::json outputs_json = nlohmann::json::array();
@@ -2031,7 +1975,7 @@ nlohmann::json CommandController::to_json() const
 
 nlohmann::json CommandController::outputs_json() const
 {
-    auto const lock = state->lock();
+
     nlohmann::json j = nlohmann::json::array();
     for (auto const& output : output_manager->outputs())
     {
@@ -2045,7 +1989,7 @@ nlohmann::json CommandController::outputs_json() const
 
 nlohmann::json CommandController::workspaces_json() const
 {
-    auto const lock = state->lock();
+
     nlohmann::json j = nlohmann::json::array();
     auto const focused = output_manager->focused();
 
@@ -2061,7 +2005,7 @@ nlohmann::json CommandController::workspaces_json() const
 
 nlohmann::json CommandController::workspace_to_json(uint32_t id) const
 {
-    auto const lock = state->lock();
+
     auto const workspace = workspace_manager->workspace(id);
     auto const focused = output_manager->focused();
     return workspace->to_json(focused ? focused == workspace->get_output() : false);
@@ -2069,7 +2013,7 @@ nlohmann::json CommandController::workspace_to_json(uint32_t id) const
 
 nlohmann::json CommandController::mode_to_json() const
 {
-    auto const lock = state->lock();
+
     switch (state->mode())
     {
     case WindowManagerMode::normal:

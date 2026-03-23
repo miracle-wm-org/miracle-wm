@@ -209,7 +209,6 @@ void WindowManagerToolsWindowController::process_animation(
     AnimationFrameResult const& result,
     std::shared_ptr<Container> const& container)
 {
-    auto const lock = state->lock();
     // TODO (hack): we really need to refactor the entire animation system. The issue
     //  here is that our current system relies on us enqueuing animation processing
     //  onto the main loop for animations. However, this may cause a situation where

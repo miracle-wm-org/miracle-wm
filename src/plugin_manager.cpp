@@ -1286,8 +1286,6 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
             continue;
         }
 
-        mir::log_info("Successfully animated frame: completed=%d, has_area=%d, has_transform=%d, has_opacity=%d",
-            result.completed, result.has_area, result.has_transform, result.has_opacity);
         return result;
     }
 

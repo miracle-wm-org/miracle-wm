@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "render_data_manager.h"
 #include "window_container.h"
 
-#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <mir/geometry/point.h>
@@ -79,33 +78,27 @@ public:
     /// Finds the first floating window, if one exists.
     ///
     /// \returns the first floating window, if one exists
-    [[nodiscard]] std::shared_ptr<WindowContainer> first_floating() const;
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_floating();
 
     /// Finds the first tiling window, if one exists.
     ///
     /// \returns the first tiling window, if one exists
-    [[nodiscard]] std::shared_ptr<WindowContainer> first_tiling() const;
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_tiling();
 
     /// Returns the list of windows in their focus order.
     ///
     /// \returns list of windows
-    [[nodiscard]] std::vector<std::weak_ptr<WindowContainer>> const& windows() const { return focus_order; }
+    [[nodiscard]] std::vector<std::weak_ptr<WindowContainer>> windows() const { return focus_order; }
 
-    WindowManagerMode mode() const;
+    WindowManagerMode mode();
     void mode(WindowManagerMode);
     std::shared_ptr<RenderDataManager> const& render_data_manager() const;
-
-    /// Lock the provided mutex.
-    std::lock_guard<std::recursive_mutex> lock() { return std::lock_guard(mutex); }
-
-    /// Uniquely lock the provided mutex.
-    std::unique_lock<std::recursive_mutex> unique_lock() { return std::unique_lock(mutex); }
 
     /// Returns the next unique container ID, then increments the counter.
     uint64_t next_container_id();
 
 private:
-    std::recursive_mutex mutex;
+    mutable std::mutex mutex;
     std::weak_ptr<Container> focused;
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;

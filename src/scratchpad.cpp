@@ -36,6 +36,7 @@ Scratchpad::Scratchpad(std::shared_ptr<WindowController> const& window_controlle
 
 bool Scratchpad::move_to(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex_);
     // Remove it from its current workspace since it is no longer wanted there
     if (auto workspace = container->get_workspace())
         workspace->delete_container(container);
@@ -50,6 +51,7 @@ bool Scratchpad::move_to(std::shared_ptr<Container> const& container)
 
 bool Scratchpad::remove(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex_);
     return items.erase(std::remove_if(items.begin(), items.end(), [&](auto const& item)
     {
         return item.container == container;
@@ -83,6 +85,7 @@ void Scratchpad::toggle(ScratchpadItem& other)
 
 bool Scratchpad::toggle_show(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex_);
     for (auto& other : items)
     {
         if (other.container == container)
@@ -97,6 +100,7 @@ bool Scratchpad::toggle_show(std::shared_ptr<Container> const& container)
 
 bool Scratchpad::toggle_show_all()
 {
+    std::lock_guard lock(mutex_);
     for (auto& item : items)
         toggle(item);
 
@@ -105,6 +109,7 @@ bool Scratchpad::toggle_show_all()
 
 bool Scratchpad::contains(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex_);
     for (auto const& other : items)
     {
         if (other.container == container)
@@ -116,6 +121,7 @@ bool Scratchpad::contains(std::shared_ptr<Container> const& container)
 
 bool Scratchpad::is_showing(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex_);
     for (auto const& other : items)
     {
         if (other.container == container)

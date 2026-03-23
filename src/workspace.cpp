@@ -124,11 +124,11 @@ Workspace::Workspace(
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<mir::ServerActionQueue> const& action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
-    shell_application_manager { shell_application_manager },
+    shell_application_manager {
+        shell_application_manager
+},
     output { output },
     id_ { id },
-    num_ { num },
-    name_ { std::move(name) },
     window_controller { window_controller },
     state { state },
     registry { registry },
@@ -136,7 +136,11 @@ Workspace::Workspace(
     animator { animator },
     server_action_queue { action_queue },
     plugin_manager { plugin_manager },
-    animation_handle { animator->register_animateable() }
+    animation_handle { animator->register_animateable() },
+    sync { State {
+        num,
+        std::move(name),
+    } }
 {
 }
 
@@ -206,8 +210,9 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 
 void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 {
-    if (!is_showing)
-        last_selected_container = container;
+    auto const lock = sync.lock();
+    if (!lock->is_showing)
+        lock->last_selected_container = container;
 }
 
 void Workspace::show(geom::Point const& origin)
@@ -518,39 +523,39 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 
 void Workspace::num(std::optional<int> n)
 {
-    num_ = n;
+    sync.lock()->num_ = n;
 }
 
 void Workspace::name(std::optional<std::string> const& name)
 {
-    name_ = name;
+    sync.lock()->name_ = name;
 }
 
 std::optional<Gaps> Workspace::outer_gaps() const
 {
-    return workspace_outer_gaps;
+    return sync.lock()->workspace_outer_gaps;
 }
 
 void Workspace::outer_gaps(std::optional<Gaps> const& gaps)
 {
-    workspace_outer_gaps = gaps;
+    sync.lock()->workspace_outer_gaps = gaps;
     recalculate_area();
 }
 
 std::optional<Gaps> Workspace::inner_gaps() const
 {
-    return workspace_inner_gaps;
+    return sync.lock()->workspace_inner_gaps;
 }
 
 void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
 {
-    workspace_inner_gaps = gaps;
+    sync.lock()->workspace_inner_gaps = gaps;
     recalculate_area();
 }
 
 void Workspace::transform(glm::mat4 const& transform)
 {
-    transform_ = transform;
+    sync.lock()->transform_ = transform;
     for_each_container([transform](auto const& container)
     {
         container->set_workspace_transform(transform);
@@ -559,12 +564,12 @@ void Workspace::transform(glm::mat4 const& transform)
 
 glm::mat4 Workspace::transform() const
 {
-    return transform_;
+    return sync.lock()->transform_;
 }
 
 void Workspace::alpha(float a)
 {
-    alpha_ = a;
+    sync.lock()->alpha_ = a;
     for_each_container([a](auto const& container)
     {
         container->set_workspace_alpha(a);
@@ -573,7 +578,7 @@ void Workspace::alpha(float a)
 
 float Workspace::alpha() const
 {
-    return alpha_;
+    return sync.lock()->alpha_;
 }
 
 std::vector<std::shared_ptr<ParentContainer>> Workspace::trees() const
@@ -592,16 +597,16 @@ void Workspace::on_animation_start(bool is_hiding)
     // select our [last_selected_container] instead. To work around this, we set
     // a flag that tells miral not to select the last focused container while we
     // are in the process of becoming visible.
-    is_showing = true;
+    sync.lock()->is_showing = true;
     for_each_container([](auto const& container)
     {
         container->show();
     });
-    is_showing = false;
+    sync.lock()->is_showing = false;
 
     if (!is_hiding)
     {
-        if (auto const sh_last_selected = last_selected_container.lock())
+        if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
         {
             if (sh_last_selected->window().has_value())
                 window_controller->select_active_window(sh_last_selected->window().value());
@@ -651,7 +656,7 @@ void Workspace::add_other_container(std::shared_ptr<Container> const& container)
 {
     container->set_workspace(shared_from_this());
     other_containers.push_back(container);
-    if (is_showing)
+    if (sync.lock()->is_showing)
         container->show();
     else
         container->hide();
@@ -685,12 +690,13 @@ std::shared_ptr<ParentContainer> Workspace::get_root() const
 std::string Workspace::display_name() const
 {
     std::stringstream ss;
-    if (num_ && name_)
-        ss << num_.value() << ":" << name_.value();
-    else if (name_)
-        return name_.value();
-    else if (num_)
-        return std::to_string(num_.value());
+    auto const lock = sync.lock();
+    if (lock->num_ && lock->name_)
+        ss << lock->num_.value() << ":" << lock->name_.value();
+    else if (lock->name_)
+        return lock->name_.value();
+    else if (lock->num_)
+        return std::to_string(lock->num_.value());
     else
         ss << "Unknown #" << id_;
 
@@ -708,11 +714,11 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
     auto const area = root()->get_logical_area();
     auto const workspace_name = display_name();
     auto const output_name = sh_output ? sh_output->name() : "N/A";
-
+    auto const lock = sync.lock();
     return {
         {
          "num",
-         num_ ? num_.value() : -1,
+         lock->num_ ? lock->num_.value() : -1,
          },
         { "name", workspace_name },
         { "visible", is_active_on_output },
@@ -746,10 +752,11 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
     for (auto const& container : root()->children())
         nodes.push_back(container->to_json(is_active_on_output));
 
+    auto const num_ = sync.lock()->num_;
     return {
         {
          "num",
-         num_ ? num_.value() : -1,
+         num_ != std::nullopt ? num_.value() : -1,
          },
         { "id", reinterpret_cast<std::uintptr_t>(this) },
         { "type", "workspace" },

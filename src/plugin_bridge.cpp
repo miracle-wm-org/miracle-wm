@@ -355,6 +355,9 @@ miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
         return {};
 
     auto const child = parent_container->at(index);
+    if (!child)
+        return {};
+
     if (auto const parent = Container::as_parent(child))
         return from_parent(parent);
 
@@ -530,8 +533,6 @@ int32_t PluginBridge::queue_custom_animation(
         elapsed += dt;
         saq->enqueue(manager, [plugin_handle, animation_id, dt, elapsed, manager, compositor_state = compositor_state]
         {
-            // TODO: This lock is SUCH a hammer, we need to fix this!
-            auto const lock = compositor_state->lock();
             manager->custom_animate(plugin_handle, animation_id, dt, elapsed);
         });
         return elapsed >= duration_seconds;
