@@ -20,9 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
-#include <cstdint>
 #include "render_data_manager.h"
 #include "synchronized_recursive.h"
+#include <cstdint>
 #include <optional>
 
 namespace miracle
