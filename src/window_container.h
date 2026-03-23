@@ -18,9 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WINDOW_CONTAINER_H
 #define MIRACLE_WINDOW_CONTAINER_H
 
-#include "animation.h"
 #include "container.h"
 #include "container_effect.h"
+#include <cstdint>
 #include "render_data_manager.h"
 #include "synchronized_recursive.h"
 #include <optional>
@@ -123,7 +123,7 @@ protected:
         bool resizable_ = true;
         bool movable_ = true;
         std::optional<RenderDataManagerId> render_id;
-        AnimationHandle animation_handle_;
+        uint32_t animation_handle_;
         ContainerEffect workspace_effect;
         ContainerEffect window_effect;
         ContainerEffect animation_effect;
