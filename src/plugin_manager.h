@@ -19,16 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 #include "../miracle-plugin-rs/plugin.h"
 #include "layout_scheme.h"
+#include "plugin_handle.h"
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
 #include <miracle/cpp/config-cpp.h>
-#include <miral/toolkit_event.h>
 namespace miracle
 {
 class Container;
 class AbstractWorkspace;
 
-typedef uint32_t PluginHandle;
 struct PluginWindowPlacement
 {
     struct TiledPlacement

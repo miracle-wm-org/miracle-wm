@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_container.h"
 #include "abstract_output.h"
 #include "parent_container.h"
+#include "render_data_manager.h"
 #include "window_controller.h"
 
 miracle::WindowContainer::WindowContainer(

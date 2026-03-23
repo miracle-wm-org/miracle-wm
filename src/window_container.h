@@ -20,14 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
-#include "render_data_manager.h"
 #include "synchronized_recursive.h"
-#include <cstdint>
 #include <optional>
 
 namespace miracle
 {
 class WindowController;
+class RenderDataManager;
 
 /// An intermediate container class for containers that directly hold a window.
 ///
@@ -122,7 +121,7 @@ protected:
         miral::Window window_;
         bool resizable_ = true;
         bool movable_ = true;
-        std::optional<RenderDataManagerId> render_id;
+        std::optional<uint32_t> render_id;
         uint32_t animation_handle_;
         ContainerEffect workspace_effect;
         ContainerEffect window_effect;
