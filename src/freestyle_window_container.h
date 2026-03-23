@@ -104,6 +104,7 @@ private:
     std::shared_ptr<Config> config;
     bool has_border_;
 
+    geom::Rectangle logical_area_;
     std::optional<MirWindowState> cached_state;
     uint32_t handle_ = 0;
     bool is_focused_ = false;

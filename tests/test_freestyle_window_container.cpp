@@ -172,10 +172,11 @@ TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithBorderIsReducedByBorderSi
 
 TEST_F(FreestyleWindowContainerTest, MoveToCallsModifyWithCorrectTopLeft)
 {
+    // move_to takes logical top_left; Mir is given the visible top_left (logical + border_size)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
         return spec.top_left().is_set()
-            && spec.top_left().value() == geom::Point { 50, 75 };
+            && spec.top_left().value() == geom::Point { 50 + border_size, 75 + border_size };
     }))).Times(1);
 
     container_with_border->move_to(50, 75, false);
@@ -305,10 +306,11 @@ TEST_F(FreestyleWindowContainerTest, ResizeUpDecreasesHeight)
 
 TEST_F(FreestyleWindowContainerTest, SetSizeCallsSetRectangleWithNewDimensions)
 {
+    // set_size takes logical dimensions; set_rectangle receives the visible area (logical - 2*border)
     EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
-        return rect.size.width.as_int() == 600
-            && rect.size.height.as_int() == 400;
+        return rect.size.width.as_int() == 600 - 2 * border_size
+            && rect.size.height.as_int() == 400 - 2 * border_size;
     }),
                                         _))
         .Times(1);
@@ -318,11 +320,12 @@ TEST_F(FreestyleWindowContainerTest, SetSizeCallsSetRectangleWithNewDimensions)
 
 TEST_F(FreestyleWindowContainerTest, SetSizeWithNulloptPreservesCurrentDimension)
 {
-    // With no width specified, width should stay at 400 (current window_size width)
+    // Width not specified: logical width stays at window_size.width + 2*border = 400 + 8 = 408,
+    // visible width = 400. New logical height = 500, visible height = 500 - 2*border = 492.
     EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& rect)
     {
         return rect.size.width.as_int() == 400
-            && rect.size.height.as_int() == 500;
+            && rect.size.height.as_int() == 500 - 2 * border_size;
     }),
                                         _))
         .Times(1);

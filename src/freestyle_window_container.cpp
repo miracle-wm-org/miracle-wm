@@ -42,6 +42,17 @@ FreestyleWindowContainer::FreestyleWindowContainer(
     has_border_ { has_border }
 {
     associate_to_window(window);
+    int const border_size = has_border_ ? config->get_border_config().size : 0;
+    logical_area_ = geom::Rectangle {
+        geom::Point {
+            window_.top_left().x.as_int() - border_size,
+            window_.top_left().y.as_int() - border_size
+        },
+        geom::Size {
+            window_.size().width.as_int() + 2 * border_size,
+            window_.size().height.as_int() + 2 * border_size
+        }
+    };
 }
 
 void FreestyleWindowContainer::show()
@@ -60,12 +71,14 @@ void FreestyleWindowContainer::hide()
 
 geom::Rectangle FreestyleWindowContainer::get_logical_area() const
 {
-    return geom::Rectangle(window_.top_left(), window_.size());
+    return logical_area_;
 }
 
 void FreestyleWindowContainer::set_logical_area(geom::Rectangle const& area, bool with_animations)
 {
-    window_controller->set_rectangle(window_, get_visible_area(), area, with_animations);
+    auto const old_visible = get_visible_area();
+    logical_area_ = area;
+    window_controller->set_rectangle(window_, old_visible, get_visible_area(), with_animations);
 }
 
 geom::Rectangle FreestyleWindowContainer::get_visible_area() const
@@ -204,6 +217,17 @@ void FreestyleWindowContainer::on_resize(geom::Size const&)
 mir::geometry::Rectangle FreestyleWindowContainer::confirm_placement(
     MirWindowState, mir::geometry::Rectangle const& rectangle)
 {
+    int const border_size = has_border_ ? config->get_border_config().size : 0;
+    logical_area_ = geom::Rectangle {
+        geom::Point {
+            rectangle.top_left.x.as_int() - border_size,
+            rectangle.top_left.y.as_int() - border_size
+        },
+        geom::Size {
+            rectangle.size.width.as_int() + 2 * border_size,
+            rectangle.size.height.as_int() + 2 * border_size
+        }
+    };
     return rectangle;
 }
 
@@ -299,8 +323,10 @@ bool FreestyleWindowContainer::move_to(Container&)
 
 bool FreestyleWindowContainer::move_to(int x, int y, bool)
 {
+    int const border_size = has_border_ ? config->get_border_config().size : 0;
+    logical_area_.top_left = geom::Point { x, y };
     miral::WindowSpecification spec;
-    spec.top_left() = { x, y };
+    spec.top_left() = geom::Point { x + border_size, y + border_size };
     window_controller->modify(window_, spec);
     constrain();
     return true;
@@ -334,8 +360,10 @@ void FreestyleWindowContainer::drag(int x, int y)
 {
     if (!is_dragging_)
         return;
+    int const border_size = has_border_ ? config->get_border_config().size : 0;
+    logical_area_.top_left = geom::Point { x - border_size, y - border_size };
     miral::WindowSpecification spec;
-    spec.top_left() = { x, y };
+    spec.top_left() = geom::Point { x, y };
     dragged_position = { x, y };
     window_controller->modify(window_, spec);
 }
