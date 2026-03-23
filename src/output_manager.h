@@ -71,8 +71,6 @@ private:
         std::weak_ptr<AbstractOutput> focused_;
     };
 
-    // TODO (mattkae): Once things have settled down, remove the need for
-    //  a recursive mutex!
     SynchronisedRecursive<State> state;
 
     bool focus_internal(State& view, int id);

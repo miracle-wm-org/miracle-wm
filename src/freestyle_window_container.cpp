@@ -37,35 +37,38 @@ FreestyleWindowContainer::FreestyleWindowContainer(
     WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller),
     window_controller { window_controller },
     compositor_state { compositor_state },
-    workspace_ { workspace },
     config { config },
-    has_border_ { has_border }
+    has_border_ { has_border },
+    sync { State { .workspace_ = workspace } }
 {
     associate_to_window(window);
 }
 
 void FreestyleWindowContainer::show()
 {
-    auto show_state = cached_state.value_or(mir_window_state_restored);
+    auto const w = window_sync.lock()->window_;
+    auto show_state = sync.lock()->cached_state.value_or(mir_window_state_restored);
     if (show_state == mir_window_state_hidden)
         show_state = mir_window_state_restored;
-    window_controller->change_state(window_, show_state);
+    window_controller->change_state(w, show_state);
 }
 
 void FreestyleWindowContainer::hide()
 {
-    cached_state = window_controller->info_for(window_).state();
-    window_controller->change_state(window_, mir_window_state_hidden);
+    auto const w = window_sync.lock()->window_;
+    sync.lock()->cached_state = window_controller->info_for(w).state();
+    window_controller->change_state(w, mir_window_state_hidden);
 }
 
 geom::Rectangle FreestyleWindowContainer::get_logical_area() const
 {
-    return geom::Rectangle(window_.top_left(), window_.size());
+    auto const w = window_sync.lock()->window_;
+    return geom::Rectangle(w.top_left(), w.size());
 }
 
 void FreestyleWindowContainer::set_logical_area(geom::Rectangle const& area, bool with_animations)
 {
-    window_controller->set_rectangle(window_, get_visible_area(), area, with_animations);
+    window_controller->set_rectangle(window_sync.lock()->window_, get_visible_area(), area, with_animations);
 }
 
 geom::Rectangle FreestyleWindowContainer::get_visible_area() const
@@ -87,10 +90,11 @@ geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 
 void FreestyleWindowContainer::constrain()
 {
-    if (is_fullscreen() || is_dragging_)
-        window_controller->noclip(window_);
+    auto const w = window_sync.lock()->window_;
+    if (is_fullscreen() || sync.lock()->is_dragging_)
+        window_controller->noclip(w);
     else
-        window_controller->clip(window_, get_visible_area());
+        window_controller->clip(w, get_visible_area());
 }
 
 std::weak_ptr<ParentContainer> FreestyleWindowContainer::get_parent() const
@@ -118,12 +122,12 @@ size_t FreestyleWindowContainer::get_min_width() const
 
 void FreestyleWindowContainer::handle_ready()
 {
-    window_controller->select_active_window(window_);
+    window_controller->select_active_window(window_sync.lock()->window_);
 }
 
 void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& specification)
 {
-    window_controller->modify(window_, specification);
+    window_controller->modify(window_sync.lock()->window_, specification);
 }
 
 void FreestyleWindowContainer::handle_request_move(MirInputEvent const*)
@@ -132,7 +136,7 @@ void FreestyleWindowContainer::handle_request_move(MirInputEvent const*)
 
 void FreestyleWindowContainer::handle_raise()
 {
-    window_controller->select_active_window(window_);
+    window_controller->select_active_window(window_sync.lock()->window_);
 }
 
 bool FreestyleWindowContainer::resize(Direction direction, int pixels)
@@ -209,12 +213,12 @@ mir::geometry::Rectangle FreestyleWindowContainer::confirm_placement(
 
 std::shared_ptr<AbstractWorkspace> FreestyleWindowContainer::get_workspace() const
 {
-    return workspace_.lock();
+    return sync.lock()->workspace_.lock();
 }
 
 void FreestyleWindowContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& workspace)
 {
-    workspace_ = workspace;
+    sync.lock()->workspace_ = workspace;
     for_each_observer([this](ContainerListener* observer)
     {
         observer->on_container_workspace_changed(*this);
@@ -223,7 +227,7 @@ void FreestyleWindowContainer::set_workspace(std::shared_ptr<AbstractWorkspace> 
 
 std::shared_ptr<AbstractOutput> FreestyleWindowContainer::get_output() const
 {
-    if (auto const workspace = workspace_.lock())
+    if (auto const workspace = sync.lock()->workspace_.lock())
         return workspace->get_output();
     return nullptr;
 }
@@ -235,17 +239,17 @@ glm::mat4 FreestyleWindowContainer::get_output_transform() const
 
 uint32_t FreestyleWindowContainer::animation_handle() const
 {
-    return handle_;
+    return sync.lock()->handle_;
 }
 
 void FreestyleWindowContainer::animation_handle(uint32_t handle)
 {
-    handle_ = handle;
+    sync.lock()->handle_ = handle;
 }
 
 bool FreestyleWindowContainer::is_focused() const
 {
-    return is_focused_;
+    return sync.lock()->is_focused_;
 }
 
 bool FreestyleWindowContainer::is_fullscreen() const
@@ -301,7 +305,7 @@ bool FreestyleWindowContainer::move_to(int x, int y, bool)
 {
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
-    window_controller->modify(window_, spec);
+    window_controller->modify(window_sync.lock()->window_, spec);
     constrain();
     return true;
 }
@@ -323,28 +327,30 @@ bool FreestyleWindowContainer::toggle_stacking()
 
 bool FreestyleWindowContainer::drag_start()
 {
-    if (is_dragging_)
+    if (sync.lock()->is_dragging_)
         return false;
-    is_dragging_ = true;
+    sync.lock()->is_dragging_ = true;
     constrain();
     return true;
 }
 
 void FreestyleWindowContainer::drag(int x, int y)
 {
-    if (!is_dragging_)
+    auto s = sync.lock();
+    if (!s->is_dragging_)
         return;
+    s->dragged_position = { x, y };
+    s.drop();
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
-    dragged_position = { x, y };
-    window_controller->modify(window_, spec);
+    window_controller->modify(window_sync.lock()->window_, spec);
 }
 
 bool FreestyleWindowContainer::drag_stop()
 {
-    if (!is_dragging_)
+    if (!sync.lock()->is_dragging_)
         return false;
-    is_dragging_ = false;
+    sync.lock()->is_dragging_ = false;
     for_each_observer([this](ContainerListener* observer)
     {
         observer->on_container_moved(*this);
@@ -389,14 +395,15 @@ bool FreestyleWindowContainer::matches(ContainerScope const&) const
 
 bool FreestyleWindowContainer::can_animate()
 {
-    auto const& info = window_controller->info_for(window_);
+    auto const& info = window_controller->info_for(window_sync.lock()->window_);
     return info.type() == mir_window_type_dialog || info.type() == mir_window_type_freestyle || info.type() == mir_window_type_normal || info.type() == mir_window_type_satellite;
 }
 
 nlohmann::json FreestyleWindowContainer::to_json(bool) const
 {
-    auto const app = window_.application();
-    auto const& win_info = window_controller->info_for(window_);
+    auto const w = window_sync.lock()->window_;
+    auto const app = w.application();
+    auto const& win_info = window_controller->info_for(w);
     auto const visible_area = get_visible_area();
     auto const logical_area = get_logical_area();
     int const border_width = has_border_ ? config->get_border_config().size : 0;

@@ -46,6 +46,7 @@ private:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<OutputManager> output_manager;
 
+    std::mutex mutex_;
     std::weak_ptr<WindowContainer> resizing_container;
     MirResizeEdge resize_edge = mir_resize_edge_none;
     bool is_resizing = false;

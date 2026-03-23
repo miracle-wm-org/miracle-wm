@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "abstract_output.h"
 #include "display_config.h"
+#include "synchronized_recursive.h"
 
 namespace miracle
 {
@@ -63,11 +64,11 @@ public:
 
     [[nodiscard]] std::shared_ptr<AbstractWorkspace> active() const override;
     [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> const& get_workspaces() const override { return workspaces; }
-    [[nodiscard]] geom::Rectangle const& get_area() const override { return area; }
+    [[nodiscard]] geom::Rectangle const& get_area() const override { return sync.lock()->area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const override { return application_zone_list; }
-    [[nodiscard]] std::string const& name() const override { return name_; }
-    [[nodiscard]] bool is_defunct() const override { return is_defunct_; }
-    [[nodiscard]] int id() const override { return id_; }
+    [[nodiscard]] std::string const& name() const override { return sync.lock()->name_; }
+    [[nodiscard]] bool is_defunct() const override { return sync.lock()->is_defunct_; }
+    [[nodiscard]] int id() const override { return sync.lock()->id_; }
     [[nodiscard]] glm::mat4 get_transform() const override;
     [[nodiscard]] AbstractWorkspace const* workspace(uint32_t id) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override;
@@ -78,10 +79,7 @@ private:
     void insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace);
 
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
-    std::string name_;
-    int id_;
-    geom::Rectangle area;
-    OutputConfigDetails output_config;
+    OutputConfigDetails const output_config;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
@@ -92,10 +90,19 @@ private:
     std::vector<miral::Zone> application_zone_list;
     std::shared_ptr<PluginManager> plugin_manager;
 
-    /// The transform applied to the entire output..
-    glm::mat4 transform = glm::mat4(1.f);
+    struct State
+    {
+        int id_;
+        std::string name_;
+        geom::Rectangle area;
 
-    bool is_defunct_ = false;
+        /// The transform applied to the entire output.
+        glm::mat4 transform = glm::mat4(1.f);
+
+        bool is_defunct_ = false;
+    };
+
+    SynchronisedRecursive<State> sync;
 };
 }
 

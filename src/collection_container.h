@@ -34,8 +34,8 @@ public:
 
     /// Return the list of children associated with this container.
     ///
-    /// \returns reference to list of children
-    virtual std::vector<std::shared_ptr<Container>> const& children() const = 0;
+    /// \returns copy of list of children
+    virtual std::vector<std::shared_ptr<Container>> children() const = 0;
 
     /// Add a child to the container.
     ///

@@ -19,15 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_CONTAINER_H
 
 #include "direction.h"
-#include "observer_registrar.h"
-#include "plugin_manager.h"
-#include "scratchpad_state.h"
-
 #include "layout_scheme.h"
+#include "observer_registrar.h"
+#include "plugin_handle.h"
+#include "scratchpad_state.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <mir/geometry/rectangle.h>
-#include <mir_toolkit/event.h>
 #include <miral/window.h>
 #include <miral/window_manager_tools.h>
 #include <nlohmann/json.hpp>

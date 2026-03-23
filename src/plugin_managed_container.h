@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container_effect.h"
 #include "render_data_manager.h"
+#include "synchronized_recursive.h"
 #include "window_container.h"
 
 namespace miracle
@@ -107,14 +108,18 @@ public:
     std::optional<PluginHandle> plugin_handle() const override;
 
 private:
+    struct State
+    {
+        std::optional<MirWindowState> cached;
+        std::weak_ptr<AbstractWorkspace> workspace_;
+        uint32_t handle_ = 0;
+        bool is_focused_ = false;
+    };
+
     PluginHandle plugin_handle_;
-    std::optional<MirWindowState> cached;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
-    std::weak_ptr<AbstractWorkspace> workspace_;
-
-    uint32_t handle_ = 0;
-    bool is_focused_ = false;
+    SynchronisedRecursive<State> sync;
 };
 }
 

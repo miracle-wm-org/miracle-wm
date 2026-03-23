@@ -19,16 +19,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLEWM_PLUGIN_MANAGER_H
 #include "../miracle-plugin-rs/plugin.h"
 #include "layout_scheme.h"
+#include "plugin_handle.h"
 #include <glm/glm.hpp>
 #include <mir/geometry/rectangle.h>
 #include <miracle/cpp/config-cpp.h>
-#include <miral/toolkit_event.h>
 namespace miracle
 {
 class Container;
 class AbstractWorkspace;
 
-typedef uint32_t PluginHandle;
 struct PluginWindowPlacement
 {
     struct TiledPlacement
@@ -267,7 +266,6 @@ private:
         explicit Self(std::unique_ptr<PluginBridge> bridge);
         ~Self();
         void create_host_module();
-        std::vector<ModuleInstance> safe_copy();
 
         std::unique_ptr<PluginBridge> bridge;
         ConfigurePtr configure_context;
@@ -278,7 +276,6 @@ private:
         ModuleInstancePtr wasi_module_instance;
         ModuleInstancePtr host_module;
 
-        std::mutex modules_access_mutex;
         PluginHandle next_plugin_handle = 1;
         std::vector<ModuleInstance> loaded_modules;
         HostFunctionData host_fn_data;
@@ -286,6 +283,7 @@ private:
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
+    std::mutex mutex_;
     std::unique_ptr<Self> self;
 };
 }

@@ -39,6 +39,7 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<OutputManager> output_manager;
 
+    std::mutex mutex_;
     float cursor_x = 0;
     float cursor_y = 0;
     int start_x = 0;

@@ -18,15 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WINDOW_CONTAINER_H
 #define MIRACLE_WINDOW_CONTAINER_H
 
-#include "animation.h"
 #include "container.h"
 #include "container_effect.h"
-#include "render_data_manager.h"
+#include "synchronized_recursive.h"
 #include <optional>
 
 namespace miracle
 {
 class WindowController;
+class RenderDataManager;
 
 /// An intermediate container class for containers that directly hold a window.
 ///
@@ -81,8 +81,8 @@ public:
     /// \param window to associate
     void associate_to_window(miral::Window const& window);
 
-    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
-    [[nodiscard]] bool has_render_data() const { return render_id.has_value(); }
+    [[nodiscard]] std::optional<miral::Window> window() const override { return window_sync.lock()->window_; }
+    [[nodiscard]] bool has_render_data() const { return window_sync.lock()->render_id.has_value(); }
 
     /// Get the window transform.
     glm::mat4 get_window_transform() const;
@@ -116,20 +116,25 @@ public:
     virtual bool can_animate();
 
 protected:
+    struct State
+    {
+        miral::Window window_;
+        bool resizable_ = true;
+        bool movable_ = true;
+        std::optional<uint32_t> render_id;
+        uint32_t animation_handle_;
+        ContainerEffect workspace_effect;
+        ContainerEffect window_effect;
+        ContainerEffect animation_effect;
+    };
+
     void rerender();
-    miral::Window window_;
-    bool resizable_ = true;
-    bool movable_ = true;
     std::weak_ptr<RenderDataManager> rdm;
-    std::optional<RenderDataManagerId> render_id;
-    AnimationHandle animation_handle_;
     std::shared_ptr<WindowController> window_controller_;
+    SynchronisedRecursive<State> window_sync;
 
 private:
     bool enable_render_data_ = true;
-    ContainerEffect workspace_effect;
-    ContainerEffect window_effect;
-    ContainerEffect animation_effect;
 };
 
 } // namespace miracle

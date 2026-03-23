@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "layout_scheme.h"
 #include "mir/geometry/forward.h"
 #include "shell_application_manager.h"
+#include "synchronized_recursive.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
 #include <miral/window_specification.h>
@@ -108,7 +109,7 @@ public:
     // CollectionContainer
     void remove_child(std::shared_ptr<Container> const& container) override;
     void add_child(std::shared_ptr<Container> const& container, size_t index) override;
-    std::vector<std::shared_ptr<Container>> const& children() const override;
+    std::vector<std::shared_ptr<Container>> children() const override;
 
     // Parent
     miral::WindowSpecification place_new_window(
@@ -121,7 +122,7 @@ public:
     void swap_within_container(std::shared_ptr<Container> const& first, std::shared_ptr<Container> const& second);
     std::shared_ptr<LeafContainer> get_nth_window(size_t i) const;
     std::shared_ptr<Container> find_where(std::function<bool(std::shared_ptr<Container> const&)> func) const;
-    [[nodiscard]] LayoutScheme get_scheme() const { return scheme; }
+    [[nodiscard]] LayoutScheme get_scheme() const { return sync.lock()->scheme; }
     [[nodiscard]] std::optional<size_t> get_index_of_node(Container const* node) const;
     [[nodiscard]] std::optional<size_t> get_index_of_node(std::shared_ptr<Container> const& node) const;
     [[nodiscard]] std::optional<size_t> get_index_of_node(Container const&) const;
@@ -146,26 +147,29 @@ private:
         std::weak_ptr<Container> container;
     };
 
-    std::vector<std::shared_ptr<Container>> container_list;
-    std::weak_ptr<ParentContainer> parent;
+    struct State
+    {
+        std::vector<std::shared_ptr<Container>> container_list;
+        std::weak_ptr<ParentContainer> parent;
+        geom::Rectangle logical_area;
+        std::weak_ptr<AbstractWorkspace> workspace;
+        LayoutScheme scheme = LayoutScheme::horizontal;
+        /// Whether this parent container is anchored to the workspace and cannot be moved.
+        /// This will only be `true` for the root container of a workspace.
+        bool is_anchored = false;
+        bool pinned_ = false;
+        ScratchpadState scratchpad_state_ = ScratchpadState::none;
+        bool is_shown = false;
+        std::shared_ptr<LeafContainer> pending_node;
+        std::optional<ShellApplicationId> shell_application_id;
+        std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
+    };
+
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
-    geom::Rectangle logical_area;
-    std::weak_ptr<AbstractWorkspace> workspace;
-    LayoutScheme scheme = LayoutScheme::horizontal;
-
-    /// Whether this parent container is anchored to the workspace and cannot be moved.
-    /// This will only be `true` for the root container of a workspace.
-    bool is_anchored = false;
-    bool pinned_ = false;
-    ScratchpadState scratchpad_state_ = ScratchpadState::none;
-    bool is_shown = false;
-    std::shared_ptr<LeafContainer> pending_node;
-
-    std::optional<ShellApplicationId> shell_application_id;
-    std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
+    SynchronisedRecursive<State> sync;
 
     geom::Rectangle create_space(std::optional<size_t> index);
     std::shared_ptr<LeafContainer> create_space_for_window(std::optional<size_t> index);

@@ -347,8 +347,17 @@ miracle_container_t PluginBridge::parent_from_container(uint64_t container_id)
 miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
     auto const found = find_container_by_id(parent_id);
+    if (!found)
+        return {};
+
     auto const parent_container = Container::as_parent(found);
+    if (!parent_container)
+        return {};
+
     auto const child = parent_container->at(index);
+    if (!child)
+        return {};
+
     if (auto const parent = Container::as_parent(child))
         return from_parent(parent);
 
@@ -358,7 +367,13 @@ miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 PluginBridge::WindowResult PluginBridge::get_window(uint64_t container_address)
 {
     auto const found = find_container_by_id(container_address);
+    if (!found)
+        return {};
+
     auto const leaf = Container::as_leaf(found).get();
+    if (!leaf)
+        return {};
+
     miral::Window window = leaf->window().value();
     miral::WindowInfo const& window_info = window_controller->info_for(window);
     return {
@@ -449,7 +464,6 @@ PluginBridge::WorkspaceResult PluginBridge::workspace_by_id(uint32_t id)
 uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
 {
     uint32_t count = 0;
-    auto const lock = compositor_state->lock();
     for (auto const& weak_container : compositor_state->windows())
     {
         auto const container = weak_container.lock();
@@ -472,7 +486,6 @@ uint32_t PluginBridge::num_managed_windows(uint32_t plugin_handle)
 PluginBridge::WindowResult PluginBridge::get_managed_window_at(uint32_t plugin_handle, uint32_t index)
 {
     uint32_t count = 0;
-    auto const lock = compositor_state->lock();
     for (auto const& weak_container : compositor_state->windows())
     {
         auto const container = weak_container.lock();
@@ -520,8 +533,6 @@ int32_t PluginBridge::queue_custom_animation(
         elapsed += dt;
         saq->enqueue(manager, [plugin_handle, animation_id, dt, elapsed, manager, compositor_state = compositor_state]
         {
-            // TODO: This lock is SUCH a hammer, we need to fix this!
-            auto const lock = compositor_state->lock();
             manager->custom_animate(plugin_handle, animation_id, dt, elapsed);
         });
         return elapsed >= duration_seconds;

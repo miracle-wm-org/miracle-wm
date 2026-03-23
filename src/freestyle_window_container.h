@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_FREESTYLE_WINDOW_CONTAINER_H
 #define MIRACLE_FREESTYLE_WINDOW_CONTAINER_H
 
+#include "synchronized_recursive.h"
 #include "window_container.h"
 
 namespace miracle
@@ -98,17 +99,21 @@ public:
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
 private:
+    struct State
+    {
+        std::weak_ptr<AbstractWorkspace> workspace_;
+        std::optional<MirWindowState> cached_state;
+        uint32_t handle_ = 0;
+        bool is_focused_ = false;
+        bool is_dragging_ = false;
+        geom::Point dragged_position;
+    };
+
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
-    std::weak_ptr<AbstractWorkspace> workspace_;
     std::shared_ptr<Config> config;
     bool has_border_;
-
-    std::optional<MirWindowState> cached_state;
-    uint32_t handle_ = 0;
-    bool is_focused_ = false;
-    bool is_dragging_ = false;
-    geom::Point dragged_position;
+    SynchronisedRecursive<State> sync;
 };
 }
 

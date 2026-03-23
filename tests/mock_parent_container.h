@@ -51,7 +51,7 @@ namespace test
         MOCK_METHOD(ScratchpadState, scratchpad_state, (), (const, override));
         MOCK_METHOD(LayoutScheme, get_layout, (), (const, override));
         MOCK_METHOD(nlohmann::json, to_json, (bool), (const, override));
-        MOCK_METHOD(std::vector<std::shared_ptr<Container>> const&, children, (), (const, override));
+        MOCK_METHOD(std::vector<std::shared_ptr<Container>>, children, (), (const, override));
         MOCK_METHOD(void, add_child, (std::shared_ptr<Container> const&, size_t), (override));
         MOCK_METHOD(void, remove_child, (std::shared_ptr<Container> const&), (override));
     };

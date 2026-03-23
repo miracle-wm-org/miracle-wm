@@ -52,16 +52,18 @@ Output::Output(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
     shell_application_manager { shell_application_manager },
-    name_ { std::move(name) },
-    id_ { id },
-    area { area },
     output_config { output_config },
     state { state },
     config { config },
     window_controller { window_controller },
     animator { animator },
     server_action_queue { server_action_queue },
-    plugin_manager { plugin_manager }
+    plugin_manager { plugin_manager },
+    sync(State {
+        id,
+        std::move(name),
+        area,
+    })
 {
 }
 
@@ -204,7 +206,7 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWork
     }
 
     // Next, move the workspace to this output and remove it focus it
-    mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
+    mir::log_info("Moving workspace %d to output %d", workspace->id(), sync.lock()->id_);
     insert_workspace_sorted(to_add);
     to_add->set_output(shared_from_this());
     workspace_manager.request_focus(to_add->id());
@@ -258,6 +260,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // It is very important that [active_workspace] be modified before notifications are sent out.
     active_workspace = to;
 
+    auto const area = sync.lock()->area;
     from->transfer_pinned_windows_to(to);
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
@@ -273,6 +276,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
 void Output::advise_application_zone_create(miral::Zone const& application_zone)
 {
+    auto const area = sync.lock()->area;
     if (application_zone.extents().contains(area))
     {
         application_zone_list.push_back(application_zone);
@@ -309,13 +313,14 @@ void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 
 bool Output::point_is_in_output(int x, int y)
 {
+    auto const area = sync.lock()->area;
     return area.contains(geom::Point(x, y));
 }
 
 void Output::update_area(geom::Rectangle const& new_area)
 {
-    area = new_area;
-    for (auto& workspace : workspaces)
+    sync.lock()->area = new_area;
+    for (auto const& workspace : workspaces)
         workspace->recalculate_area();
 }
 
@@ -337,32 +342,34 @@ void Output::graft(std::shared_ptr<Container> const& container)
 
 glm::mat4 Output::get_transform() const
 {
+    auto const transform = sync.lock()->transform;
     return transform;
 }
 
 void Output::set_transform(glm::mat4 const& in)
 {
-    transform = in;
+    sync.lock()->transform = in;
 }
 
 void Output::set_info(int next_id, std::string next_name)
 {
-    id_ = next_id;
-    name_ = std::move(next_name);
+    sync.lock()->id_ = next_id;
+    sync.lock()->name_ = std::move(next_name);
 }
 
 void Output::set_defunct()
 {
-    is_defunct_ = true;
+    sync.lock()->is_defunct_ = true;
 }
 
 void Output::unset_defunct()
 {
-    is_defunct_ = false;
+    sync.lock()->is_defunct_ = false;
 }
 
 nlohmann::json Output::to_json(bool is_focused) const
 {
+    auto const lock = sync.lock();
     auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& workspace : workspaces)
@@ -412,7 +419,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
-        { "name",                 name_                                         },
+        { "name",                 lock->name_                                   },
         { "active",               active                                        },
         { "dpms",                 output_config.power_mode == mir_power_mode_on },
         { "scale",                output_config.scale                           },
@@ -449,10 +456,10 @@ nlohmann::json Output::to_json(bool is_focused) const
                           { "height", 0 },
                       }                                    },
         { "rect",                 {
-                      { "x", area.top_left.x.as_int() },
-                      { "y", area.top_left.y.as_int() },
-                      { "width", area.size.width.as_int() },
-                      { "height", area.size.height.as_int() },
+                      { "x", lock->area.top_left.x.as_int() },
+                      { "y", lock->area.top_left.y.as_int() },
+                      { "width", lock->area.size.width.as_int() },
+                      { "height", lock->area.size.height.as_int() },
                   }                                            },
         { "nodes",                nodes                                         },
         { "modes",                modes_node                                    },
@@ -462,6 +469,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
 nlohmann::json Output::get_outputs_json(bool) const
 {
+    auto const lock = sync.lock();
     auto active_workspace = active();
     nlohmann::json workspace;
 
@@ -516,7 +524,7 @@ nlohmann::json Output::get_outputs_json(bool) const
     auto const serial = output_config.display_info.serial.value_or("0x00000000");
 
     return {
-        { "name",             name_                                         },
+        { "name",             lock->name_                                   },
         { "make",             make                                          },
         { "model",            model                                         },
         { "serial",           serial                                        },
@@ -528,10 +536,10 @@ nlohmann::json Output::get_outputs_json(bool) const
         { "subpixel_hinting", subpixel_hinting                              },
         workspace,
         { "rect",             {
-                      { "x", area.top_left.x.as_int() },
-                      { "y", area.top_left.y.as_int() },
-                      { "width", area.size.width.as_int() },
-                      { "height", area.size.height.as_int() },
+                      { "x", lock->area.top_left.x.as_int() },
+                      { "y", lock->area.top_left.y.as_int() },
+                      { "width", lock->area.size.width.as_int() },
+                      { "height", lock->area.size.height.as_int() },
                   }                                        },
         { "modes",            modes_node                                    },
         { "current_mode",     current_mode_node                             },

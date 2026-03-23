@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_PLUGIN_BRIDGE_H
 
 #include "../miracle-plugin-rs/plugin.h"
+#include "compositor_state.h"
 #include <functional>
 #include <miral/application_info.h>
 #include <miral/window.h>

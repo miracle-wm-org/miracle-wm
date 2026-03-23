@@ -29,6 +29,7 @@ CompositorState::CompositorState() :
 
 std::shared_ptr<Container> CompositorState::focused_container() const
 {
+    std::lock_guard lock(mutex);
     if (!focused.expired())
         return focused.lock();
 
@@ -40,6 +41,7 @@ void CompositorState::focus_container(std::shared_ptr<Container> const& containe
     if (!container)
         return;
 
+    std::lock_guard lock(mutex);
     focused = container;
 
     // If the focused container is a window, bring it to the front of the focus order.
@@ -56,6 +58,7 @@ void CompositorState::focus_container(std::shared_ptr<Container> const& containe
 
 void CompositorState::unfocus_container(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex);
     if (!focused.expired())
     {
         if (focused.lock() == container)
@@ -65,19 +68,22 @@ void CompositorState::unfocus_container(std::shared_ptr<Container> const& contai
 
 void CompositorState::add(std::shared_ptr<WindowContainer> const& container)
 {
+    std::lock_guard lock(mutex);
     focus_order.push_back(container);
 }
 
 void CompositorState::remove(std::shared_ptr<WindowContainer> const& container)
 {
+    std::lock_guard lock(mutex);
     std::erase_if(focus_order, [&](auto const& element)
     {
         return !element.expired() && element.lock() == container;
     });
 }
 
-std::shared_ptr<WindowContainer> CompositorState::first_floating() const
+std::shared_ptr<WindowContainer> CompositorState::first_floating()
 {
+    std::lock_guard lock(mutex);
     for (auto const& container : focus_order)
     {
         if (!container.expired() && !container.lock()->anchored())
@@ -87,8 +93,9 @@ std::shared_ptr<WindowContainer> CompositorState::first_floating() const
     return nullptr;
 }
 
-std::shared_ptr<WindowContainer> CompositorState::first_tiling() const
+std::shared_ptr<WindowContainer> CompositorState::first_tiling()
 {
+    std::lock_guard lock(mutex);
     for (auto const& container : focus_order)
     {
         if (!container.expired() && container.lock()->anchored())
@@ -98,13 +105,15 @@ std::shared_ptr<WindowContainer> CompositorState::first_tiling() const
     return nullptr;
 }
 
-WindowManagerMode CompositorState::mode() const
+WindowManagerMode CompositorState::mode()
 {
+    std::lock_guard lock(mutex);
     return mode_;
 }
 
 void CompositorState::mode(WindowManagerMode next)
 {
+    std::lock_guard lock(mutex);
     mode_ = next;
 }
 
