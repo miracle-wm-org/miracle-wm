@@ -32,7 +32,7 @@ namespace test
         MockContainer() :
             WindowContainer(0, std::make_shared<RenderDataManager>(), nullptr)
         {
-            render_id = 0;
+            window_sync.lock()->render_id = 0;
         }
         MOCK_METHOD(void, show, (), (override));
         MOCK_METHOD(void, hide, (), (override));

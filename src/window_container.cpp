@@ -34,14 +34,15 @@ miracle::WindowContainer::WindowContainer(
 
 miracle::WindowContainer::~WindowContainer()
 {
-    if (render_id.has_value())
+    auto const state = window_sync.lock();
+    if (state->render_id.has_value())
         if (auto const locked = rdm.lock())
-            locked->remove(render_id.value());
+            locked->remove(state->render_id.value());
 }
 
 void miracle::WindowContainer::associate_to_window(miral::Window const& window)
 {
-    window_ = window;
+    window_sync.lock()->window_ = window;
     auto const workspace = get_workspace();
     auto const output = get_output();
     glm::mat4 workspace_transform(1.f);
@@ -53,7 +54,7 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
     {
         if (auto const locked = rdm.lock())
         {
-            render_id = locked->add({
+            window_sync.lock()->render_id = locked->add({
                 RenderData {
                             .surface = window.operator std::shared_ptr<mir::scene::Surface>().get(),
                             .needs_outline = needs_outline(),
@@ -68,48 +69,50 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
 
 uint32_t miracle::WindowContainer::animation_handle() const
 {
-    return animation_handle_;
+    return window_sync.lock()->animation_handle_;
 }
 
 void miracle::WindowContainer::animation_handle(uint32_t handle)
 {
-    animation_handle_ = handle;
+    window_sync.lock()->animation_handle_ = handle;
 }
 
 void miracle::WindowContainer::set_workspace_transform(glm::mat4 const& transform)
 {
-    workspace_effect.transform = transform;
-    if (render_id.has_value())
+    auto state = window_sync.lock();
+    state->workspace_effect.transform = transform;
+    if (state->render_id.has_value())
         if (auto const rdm_locked = rdm.lock())
-            rdm_locked->workspace_transform_change(render_id.value(), transform);
+            rdm_locked->workspace_transform_change(state->render_id.value(), transform);
     rerender();
 }
 
 void miracle::WindowContainer::set_workspace_alpha(float a)
 {
-    workspace_effect.alpha = a;
+    window_sync.lock()->workspace_effect.alpha = a;
     rerender();
 }
 
 glm::mat4 miracle::WindowContainer::get_window_transform() const
 {
-    return window_effect.transform;
+    return window_sync.lock()->window_effect.transform;
 }
 
 float miracle::WindowContainer::get_window_alpha() const
 {
-    return window_effect.alpha;
+    return window_sync.lock()->window_effect.alpha;
 }
 
 void miracle::WindowContainer::set_window_transform(glm::mat4 const& t)
 {
-    window_effect.transform = t;
-    if (render_id.has_value())
+    auto state = window_sync.lock();
+    state->window_effect.transform = t;
+    if (state->render_id.has_value())
     {
         if (auto const rdm_locked = rdm.lock())
         {
-            auto const combined = window_effect.blend(animation_effect);
-            rdm_locked->transform_change(render_id.value(), combined.transform);
+            auto const combined = state->window_effect.blend(state->animation_effect);
+            rdm_locked->transform_change(state->render_id.value(), combined.transform);
         }
     }
     rerender();
@@ -117,7 +120,7 @@ void miracle::WindowContainer::set_window_transform(glm::mat4 const& t)
 
 void miracle::WindowContainer::set_window_alpha(float alpha)
 {
-    window_effect.alpha = alpha;
+    window_sync.lock()->window_effect.alpha = alpha;
     rerender();
 }
 
@@ -128,13 +131,14 @@ bool miracle::WindowContainer::can_animate()
 
 void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
-    animation_effect.transform = transform;
-    if (render_id.has_value())
+    auto state = window_sync.lock();
+    state->animation_effect.transform = transform;
+    if (state->render_id.has_value())
     {
         if (auto const rdm_locked = rdm.lock())
         {
-            auto const combined = window_effect.blend(animation_effect);
-            rdm_locked->transform_change(render_id.value(), combined.transform);
+            auto const combined = state->window_effect.blend(state->animation_effect);
+            rdm_locked->transform_change(state->render_id.value(), combined.transform);
         }
     }
     rerender();
@@ -142,48 +146,52 @@ void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 
 glm::mat4 miracle::WindowContainer::get_workspace_transform() const
 {
-    return workspace_effect.transform;
+    return window_sync.lock()->workspace_effect.transform;
 }
 
 void miracle::WindowContainer::set_animation_alpha(float a)
 {
-    animation_effect.alpha = a;
+    window_sync.lock()->animation_effect.alpha = a;
     rerender();
 }
 
 glm::mat4 miracle::WindowContainer::get_animation_transform() const
 {
-    return animation_effect.transform;
+    return window_sync.lock()->animation_effect.transform;
 }
 
 float miracle::WindowContainer::get_alpha() const
 {
-    return workspace_effect.alpha * window_effect.alpha * animation_effect.alpha;
+    auto const state = window_sync.lock();
+    return state->workspace_effect.alpha * state->window_effect.alpha * state->animation_effect.alpha;
 }
 
 void miracle::WindowContainer::on_focus_gained()
 {
     if (auto sh_parent = get_parent().lock())
         sh_parent->on_focus_gained();
-    if (render_id.has_value())
+    auto const state = window_sync.lock();
+    if (state->render_id.has_value())
         if (auto const rdm_locked = rdm.lock())
-            rdm_locked->focus_change(render_id.value(), true);
+            rdm_locked->focus_change(state->render_id.value(), true);
 }
 
 void miracle::WindowContainer::on_focus_lost()
 {
-    if (render_id.has_value())
+    auto const state = window_sync.lock();
+    if (state->render_id.has_value())
         if (auto const rdm_locked = rdm.lock())
-            rdm_locked->focus_change(render_id.value(), false);
+            rdm_locked->focus_change(state->render_id.value(), false);
 }
 
 void miracle::WindowContainer::rerender()
 {
     // A hack to trigger a rerender on the surface by re-applying its transformation.
-    auto const window_ = window().value();
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
+    auto const w = window().value();
+    if (auto const surface = w.operator std::shared_ptr<mir::scene::Surface>())
     {
-        auto const combined = workspace_effect.blend(window_effect.blend(animation_effect));
+        auto const state = window_sync.lock();
+        auto const combined = state->workspace_effect.blend(state->window_effect.blend(state->animation_effect));
         surface->set_transformation(combined.transform);
         surface->set_alpha(combined.alpha);
     }
@@ -197,5 +205,5 @@ bool miracle::WindowContainer::needs_outline() const
 void miracle::WindowContainer::on_open()
 {
     if (window_controller_)
-        window_controller_->open(window_);
+        window_controller_->open(window_sync.lock()->window_);
 }
