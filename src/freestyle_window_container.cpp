@@ -34,7 +34,7 @@ FreestyleWindowContainer::FreestyleWindowContainer(
     std::shared_ptr<AbstractWorkspace> const& workspace,
     std::shared_ptr<Config> const& config,
     bool has_border) :
-    WindowContainer(compositor_state->render_data_manager(), window_controller),
+    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller),
     window_controller { window_controller },
     compositor_state { compositor_state },
     workspace_ { workspace },

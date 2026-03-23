@@ -68,7 +68,7 @@ PluginManagedContainer::PluginManagedContainer(
     float alpha,
     bool resizable,
     bool movable) :
-    WindowContainer(compositor_state->render_data_manager(), window_controller),
+    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller),
     plugin_handle_ { plugin_handle },
     cached { window_controller->info_for(window).state() },
     window_controller { window_controller },

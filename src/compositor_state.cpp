@@ -112,3 +112,8 @@ std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager()
 {
     return render_data_manager_;
 }
+
+uint64_t CompositorState::next_container_id()
+{
+    return next_container_id_++;
+}

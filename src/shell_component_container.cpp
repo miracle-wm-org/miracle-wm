@@ -34,7 +34,7 @@ ShellComponentContainer::ShellComponentContainer(
     std::shared_ptr<ShellApplicationDelegate>&& delegate,
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<CompositorState> const& compositor_state) :
-    WindowContainer(compositor_state->render_data_manager(), window_controller, false),
+    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller, false),
     window_controller { window_controller },
     delegate { std::move(delegate) },
     output_manager { output_manager }

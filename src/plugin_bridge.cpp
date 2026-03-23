@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_output.h"
 #include "abstract_workspace.h"
 #include "animator.h"
+#include "collection_container.h"
 #include "compositor_state.h"
 #include "container.h"
 #include "leaf_container.h"
@@ -133,7 +134,7 @@ miracle_container_t from_parent(std::shared_ptr<ParentContainer> const& containe
         .is_floating = !container->anchored(),
         .layout_scheme = static_cast<uint32_t>(from_scheme(container->get_scheme())),
         .num_child_containers = static_cast<uint32_t>(container->num_children()),
-        .internal = reinterpret_cast<uint64_t>(container.get())
+        .internal = container->id()
     };
 }
 
@@ -144,8 +145,23 @@ miracle_container_t from_child(std::shared_ptr<LeafContainer> const& container)
         .is_floating = 0,
         .layout_scheme = miracle_layout_scheme_none,
         .num_child_containers = 0,
-        .internal = reinterpret_cast<uint64_t>(container.get())
+        .internal = container->id()
     };
+}
+
+std::shared_ptr<miracle::Container> find_in_tree(std::shared_ptr<miracle::Container> const& node, uint64_t id)
+{
+    if (node->id() == id)
+        return node;
+    if (auto const collection = std::dynamic_pointer_cast<miracle::CollectionContainer>(node))
+    {
+        for (auto const& child : collection->children())
+        {
+            if (auto found = find_in_tree(child, id))
+                return found;
+        }
+    }
+    return nullptr;
 }
 
 }
@@ -199,6 +215,16 @@ std::shared_ptr<AbstractWorkspace> PluginBridge::resolve_workspace_shared(uint64
         for (auto const& ws : output->get_workspaces())
             if (static_cast<uint64_t>(ws->id()) == workspace_id)
                 return ws;
+    return nullptr;
+}
+
+std::shared_ptr<Container> PluginBridge::find_container_by_id(uint64_t id)
+{
+    for (auto const& output : output_manager->outputs())
+        for (auto const& workspace : output->get_workspaces())
+            for (auto const& tree : workspace->trees())
+                if (auto found = find_in_tree(tree, id))
+                    return found;
     return nullptr;
 }
 
@@ -320,7 +346,8 @@ miracle_container_t PluginBridge::parent_from_container(uint64_t container_id)
 
 miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 {
-    auto const parent_container = static_cast<ParentContainer*>(reinterpret_cast<void*>(parent_id));
+    auto const found = find_container_by_id(parent_id);
+    auto const parent_container = Container::as_parent(found);
     auto const child = parent_container->at(index);
     if (auto const parent = Container::as_parent(child))
         return from_parent(parent);
@@ -330,8 +357,8 @@ miracle_container_t PluginBridge::child_at(uint64_t parent_id, uint32_t index)
 
 PluginBridge::WindowResult PluginBridge::get_window(uint64_t container_address)
 {
-    // TODO: Expect this to be of type window
-    auto const leaf = static_cast<LeafContainer*>(reinterpret_cast<void*>(container_address));
+    auto const found = find_container_by_id(container_address);
+    auto const leaf = Container::as_leaf(found).get();
     miral::Window window = leaf->window().value();
     miral::WindowInfo const& window_info = window_controller->info_for(window);
     return {
@@ -374,7 +401,7 @@ PluginBridgeObjectHandle<miracle_window_info_t> PluginBridge::existing_window_in
 
 Container* PluginBridge::resolve_container(uint64_t container_internal)
 {
-    return static_cast<Container*>(reinterpret_cast<void*>(container_internal));
+    return find_container_by_id(container_internal).get();
 }
 
 PluginBridge::WorkspaceResult PluginBridge::request_workspace(std::optional<int> num, std::optional<std::string> name, bool focus)

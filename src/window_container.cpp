@@ -21,9 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 
 miracle::WindowContainer::WindowContainer(
+    uint64_t id,
     std::shared_ptr<RenderDataManager> const& rdm,
     std::shared_ptr<WindowController> const& window_controller,
     bool enable_render_data) :
+    Container(id),
     rdm(rdm),
     window_controller_(window_controller),
     enable_render_data_(enable_render_data)

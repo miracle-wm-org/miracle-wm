@@ -132,7 +132,7 @@ LeafContainer::LeafContainer(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<ParentContainer> const& parent,
     std::shared_ptr<CompositorState> const& state) :
-    WindowContainer(state->render_data_manager(), window_controller),
+    WindowContainer(state->next_container_id(), state->render_data_manager(), window_controller),
     workspace { workspace },
     window_controller { window_controller },
     logical_area { std::move(area) },

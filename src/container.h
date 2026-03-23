@@ -150,6 +150,9 @@ public:
     virtual LayoutScheme get_layout() const = 0;
     virtual nlohmann::json to_json(bool is_workspace_visible) const = 0;
 
+    /// Returns the unique ID assigned to this container at construction time.
+    [[nodiscard]] uint64_t id() const { return id_; }
+
     [[nodiscard]] float get_percent_of_parent() const;
     static std::shared_ptr<LeafContainer> as_leaf(std::shared_ptr<Container> const&);
     static std::shared_ptr<ParentContainer> as_parent(std::shared_ptr<Container> const&);
@@ -189,8 +192,17 @@ public:
     virtual std::optional<PluginHandle> plugin_handle() const;
 
 protected:
+    Container() = default;
+    explicit Container(uint64_t id) noexcept :
+        id_(id)
+    {
+    }
+
     [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
     std::vector<std::string> marks;
+
+private:
+    uint64_t id_ = 0;
 };
 
 }
