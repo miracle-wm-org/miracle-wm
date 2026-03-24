@@ -842,12 +842,18 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     if (workspace)
         workspace->advise_focus_gained(container);
     window_observer_registrar->advise_window_focused(*container);
-    plugin_manager->window_focused(window_info);
+
+    // Warning: This must be enqueued because the plugin itself could have
+    // triggered the focus, leading to a reentry on the plugin.
+    main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
+    {
+        plugin_manager->window_focused(window_info);
+    });
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
-    auto container = window_controller->get_window_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_focus_lost: container is not provided");
@@ -859,7 +865,13 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
     state->unfocus_container(container);
     container->on_focus_lost();
-    plugin_manager->window_unfocused(window_info);
+
+    // Warning: This must be enqueued because the plugin itself could have
+    // triggered the focus, leading to a reentry on the plugin.
+    main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
+    {
+        plugin_manager->window_unfocused(window_info);
+    });
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
