@@ -204,6 +204,8 @@ void FilesystemConfiguration::reload()
 
         // The plugins are loaded immediately so that they have an opportunity to define the configuration
         // before we call `advise_config_changed`.
+        for (auto& plugin : *options.plugins)
+            plugin.path = expand_tilde_getenv(plugin.path);
         observer_registrar->advise_load_plugins(*options.plugins);
 
         // Let plugins override configuration values.

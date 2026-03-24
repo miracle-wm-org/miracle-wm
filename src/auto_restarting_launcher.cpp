@@ -67,7 +67,8 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
             result.push_back("Restart=on-failure");
         }
 
-        auto const split_command = miral::ExternalClientLauncher::split_command(cmd.command);
+        auto split_command = miral::ExternalClientLauncher::split_command(cmd.command);
+        split_command[0] = expand_tilde_getenv(split_command[0]);
         for (auto const& part : split_command)
             result.push_back(part);
 
