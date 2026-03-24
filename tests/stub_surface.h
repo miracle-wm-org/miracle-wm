@@ -151,6 +151,13 @@ public:
     {
     }
 
+#ifdef MIR_COMPILING_AGAINST_DEV
+    float alpha() const override
+    {
+        return 1.f;
+    }
+#endif
+
     void set_orientation(MirOrientation orientation) override
     {
     }

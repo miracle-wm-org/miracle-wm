@@ -23,10 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miracle/cpp/config-cpp.h>
 #include <miral/version.h>
 
+#include <cstdint>
 #include <functional>
-#include <linux/input.h>
 #include <memory>
-#include <mir/fd.h>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -35,12 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace mir
 {
 class Server;
-class MainLoop;
-}
-
-namespace miral
-{
-struct FdHandle;
 }
 namespace miracle
 {
@@ -53,10 +46,9 @@ public:
     virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
-    [[nodiscard]] virtual std::vector<PluginConfiguration> const& get_plugins() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
-    [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const = 0;
-    virtual bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
+    [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
+    virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
     [[nodiscard]] virtual Gaps get_inner_gaps() const = 0;
     virtual void override_inner_gaps(Gaps const&) = 0;
     [[nodiscard]] virtual Gaps get_outer_gaps() const = 0;
@@ -89,6 +81,11 @@ public:
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
     [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
     [[nodiscard]] virtual bool get_workspace_back_and_forth() const = 0;
+
+    /// Register a hook that is called during reload() to allow plugins to
+    /// override configuration values. The hook is called after the file config
+    /// is loaded and before config-change observers are notified.
+    virtual void set_plugin_configure_hook(std::function<PluginConfigData()>&& hook) { }
 };
 
 class FilesystemConfiguration : public Config
@@ -103,10 +100,9 @@ public:
     void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
-    [[nodiscard]] std::vector<PluginConfiguration> const& get_plugins() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
-    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers) const override;
-    bool matches_key_command(MirKeyboardAction action, int scan_code, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
+    [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
+    bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
     [[nodiscard]] Gaps get_inner_gaps() const override;
     void override_inner_gaps(Gaps const&) override;
     [[nodiscard]] Gaps get_outer_gaps() const override;
@@ -138,23 +134,22 @@ public:
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
     [[nodiscard]] TouchpadConfiguration touchpad() const override;
     [[nodiscard]] bool get_workspace_back_and_forth() const override;
+    void set_plugin_configure_hook(std::function<PluginConfigData()>&& hook) override;
 
 private:
     uint process_modifier_internal(uint modifier) const;
     void _init(std::optional<StartupApp> const& systemd_app, std::optional<StartupApp> const& exec_app);
-    void _watch(std::shared_ptr<mir::MainLoop> const& main_loop);
-    std::shared_ptr<mir::MainLoop> main_loop;
     std::shared_ptr<ConfigObserverRegistrar> observer_registrar;
     int next_listener_handle = 0;
     std::string default_config_path;
     std::string config_path;
     bool no_config = false;
-    mir::Fd inotify_fd;
-    std::unique_ptr<miral::FdHandle> watch_handle;
-    int file_watch = 0;
     std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
+    std::optional<StartupApp> cached_systemd_app_;
+    std::optional<StartupApp> cached_exec_app_;
+    std::function<PluginConfigData()> plugin_configure_hook_;
 };
 }
 

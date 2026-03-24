@@ -252,19 +252,6 @@ extern "C"
         };
     }
 
-    uint miracle_config_get_animation_type_options_count()
-    {
-        return static_cast<uint>(miracle::AnimationType::max);
-    }
-
-    miracle_config_option_t miracle_config_get_animation_type_option(uint i)
-    {
-        return {
-            miracle::animation_type_strings[i],
-            i
-        };
-    }
-
     uint miracle_config_get_built_in_animation_type_options_count()
     {
         return static_cast<uint>(miracle::BultInAnimationType::max);
@@ -759,7 +746,7 @@ extern "C"
     void miracle_config_add_plugin(miracle_config_data_t* config, miracle_plugin_t* plugin)
     {
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
-        data->plugins->push_back(miracle::PluginConfiguration { plugin->path });
+        data->plugins->push_back(miracle::PluginConfiguration { plugin->path, "" });
     }
 
     void miracle_config_set_plugin(miracle_config_data_t* config, size_t index, miracle_plugin_t* plugin)
@@ -767,7 +754,7 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         if (index >= data->plugins->size())
             return;
-        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path };
+        data->plugins.value[index] = miracle::PluginConfiguration { plugin->path, "" };
     }
 
     bool miracle_config_remove_plugin(miracle_config_data_t* config, size_t index)
@@ -829,14 +816,11 @@ extern "C"
         auto const data = static_cast<miracle::ConfigData*>(config->_internal);
         auto const& def = &data->animation_definitions.value[index];
 
-        auto const built_in_animations = def->type == miracle::AnimationType::plugin ? 0 : def->data.size();
-
         return {
             miracle::animateable_event_strings[index],
             def->is_default,
-            static_cast<uint>(def->type),
             def->duration_seconds,
-            built_in_animations,
+            def->data.size(),
             static_cast<void*>(def)
         };
     }
@@ -849,7 +833,6 @@ extern "C"
         auto data = static_cast<miracle::ConfigData*>(config->_internal);
         auto& def = data->animation_definitions.value[index];
         def.is_default = false;
-        def.type = static_cast<miracle::AnimationType>(definition->type);
         def.duration_seconds = definition->duration_seconds;
     }
 
@@ -886,12 +869,6 @@ extern "C"
         miracle_built_in_animation_t animation)
     {
         auto const def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
-        if (def->type != miracle::AnimationType::built_in)
-        {
-            def->type = miracle::AnimationType::built_in;
-            def->data = miracle::BuiltInAnimationList {};
-        }
-
         def->is_default = false;
         def->data.push_back(miracle::BuiltInAnimationDefinition {
             static_cast<miracle::BultInAnimationType>(animation.type),
@@ -911,12 +888,6 @@ extern "C"
         miracle_built_in_animation_t animation)
     {
         auto const def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
-        if (def->type != miracle::AnimationType::built_in)
-        {
-            def->type = miracle::AnimationType::built_in;
-            def->data = miracle::BuiltInAnimationList {};
-        }
-
         def->is_default = false;
         auto& animation_def = def->data[index];
         animation_def.type = static_cast<miracle::BultInAnimationType>(animation.type);
@@ -935,12 +906,6 @@ extern "C"
         size_t index)
     {
         auto def = static_cast<miracle::AnimationDefinition*>(animateable_event->_internal);
-        if (def->type != miracle::AnimationType::built_in)
-        {
-            def->type = miracle::AnimationType::built_in;
-            def->data = miracle::BuiltInAnimationList {};
-        }
-
         def->is_default = false;
 
         if (index >= def->data.size())

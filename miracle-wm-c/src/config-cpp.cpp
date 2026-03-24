@@ -27,8 +27,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glib-2.0/glib.h>
 #include <glm/fwd.hpp>
 #include <iostream>
-#include <libevdev-1.0/libevdev/libevdev.h>
 #include <miral/version.h>
+#include <xkbcommon/xkbcommon.h>
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
+#include <nlohmann/json.hpp>
 #include <yaml-cpp/emittermanip.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
@@ -42,29 +46,25 @@ class BadConversion;
 namespace
 {
 const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::AnimateableEvent::max)> default_animation_definitions({
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.2f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.25f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.3f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::fade,
             miracle::EaseFunction::linear,
         } } },
-    { miracle::AnimationType::built_in,
-     true,
+    { true,
      0.25f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
@@ -107,17 +107,6 @@ std::optional<miracle::EaseFunction> from_string_ease_function(std::string const
     {
         if (miracle::ease_function_strings[i] == str)
             return static_cast<miracle::EaseFunction>(i);
-    }
-
-    return std::nullopt;
-}
-
-std::optional<miracle::AnimationType> from_string_animation_type(std::string const& str, ParsingContext& context)
-{
-    for (size_t i = 0; i < miracle::animation_type_strings.size(); i++)
-    {
-        if (miracle::animation_type_strings[i] == str)
-            return static_cast<miracle::AnimationType>(i);
     }
 
     return std::nullopt;
@@ -473,6 +462,50 @@ void read_includes(YAML::Node const& node, ParsingContext& context)
     context.result.config.includes = std::move(includes);
 }
 
+static nlohmann::json yaml_node_to_json(YAML::Node const& node)
+{
+    if (node.IsScalar())
+    {
+        try
+        {
+            return node.as<int64_t>();
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            return node.as<double>();
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            return node.as<bool>();
+        }
+        catch (...)
+        {
+        }
+        return node.as<std::string>();
+    }
+    if (node.IsSequence())
+    {
+        auto arr = nlohmann::json::array();
+        for (auto const& item : node)
+            arr.push_back(yaml_node_to_json(item));
+        return arr;
+    }
+    if (node.IsMap())
+    {
+        auto obj = nlohmann::json::object();
+        for (auto const& kv : node)
+            obj[kv.first.as<std::string>()] = yaml_node_to_json(kv.second);
+        return obj;
+    }
+    return nullptr;
+}
+
 void read_plugins(YAML::Node const& node, ParsingContext& context)
 {
     if (!node.IsSequence())
@@ -489,8 +522,17 @@ void read_plugins(YAML::Node const& node, ParsingContext& context)
         if (!try_parse_value(plugin_node, "path", path, context))
             return;
 
+        auto userdata = nlohmann::json::object();
+        for (auto const& kv : plugin_node)
+        {
+            auto const key = kv.first.as<std::string>();
+            if (key != "path")
+                userdata[key] = yaml_node_to_json(kv.second);
+        }
+
         miracle::PluginConfiguration plugin_config;
         plugin_config.path = path;
+        plugin_config.userdata_json = userdata.empty() ? "" : userdata.dump();
         plugins.push_back(plugin_config);
     }
     context.result.config.plugins = std::move(plugins);
@@ -545,10 +587,10 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
         if (!keyboard_action)
             continue;
 
-        auto const code = libevdev_event_code_from_name(EV_KEY, key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
-        if (code < 0)
+        auto const keysym = xkb_keysym_from_name(key.c_str(), XKB_KEYSYM_NO_FLAGS);
+        if (keysym == XKB_KEY_NoSymbol)
         {
-            context.builder << "Unknown keyboard code in configuration: " << key.c_str() << ". See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h";
+            context.builder << "Unknown key name in configuration: " << key.c_str() << ". Please use an XKB keysym name (e.g. 'Return', 'a', 'Up'). See https://xkbcommon.org/doc/current/xkbcommon-keysyms_8h.html";
             create_error(sub_node["key"], context);
             continue;
         }
@@ -559,7 +601,7 @@ void read_default_action_overrides(YAML::Node const& default_action_overrides, P
 
         context.result.config.built_in_key_command_overrides->push_back({ keyboard_action.value(),
             modifiers,
-            static_cast<uint>(code),
+            static_cast<uint>(keysym),
             key_command });
     }
 }
@@ -585,11 +627,10 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
         if (!try_parse_value(sub_node, "key", key, context))
             continue;
 
-        auto const code = libevdev_event_code_from_name(EV_KEY,
-            key.c_str()); // https://stackoverflow.com/questions/32059363/is-there-a-way-to-get-the-evdev-keycode-from-a-string
-        if (code < 0)
+        auto const keysym = xkb_keysym_from_name(key.c_str(), XKB_KEYSYM_NO_FLAGS);
+        if (keysym == XKB_KEY_NoSymbol)
         {
-            context.builder << "Unknown keyboard code in configuration: " << key.c_str() << ". See the linux kernel for allowed codes: https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h";
+            context.builder << "Unknown key name in configuration: " << key.c_str() << ". Please use an XKB keysym name (e.g. 'Return', 'a', 'Up'). See https://xkbcommon.org/doc/current/xkbcommon-keysyms_8h.html";
             create_error(sub_node["key"], context);
             continue;
         }
@@ -608,7 +649,7 @@ void read_custom_actions(YAML::Node const& custom_actions, ParsingContext& conte
 
         context.result.config.custom_key_commands->push_back({ keyboard_action.value(),
             modifiers,
-            static_cast<uint>(code),
+            static_cast<uint>(keysym),
             command });
     }
 }
@@ -846,62 +887,28 @@ void read_animation_definitions(YAML::Node const& animation_node_list, ParsingCo
         }
 
         auto const event_as_int = static_cast<size_t>(event.value());
-        auto const type = try_parse_string_to_optional_value<std::optional<miracle::AnimationType>>(
-            animation_node,
-            "type",
-            from_string_animation_type,
-            context);
-        if (!type)
+
+        miracle::AnimationDefinition definition;
+        miracle::BuiltInAnimationList animations;
+        if (!animation_node["parts"].IsSequence())
         {
-            context.builder << "Animation definition is missing or has invalid 'type' key";
+            context.builder << "Animation definition must have a 'parts' key with a list of built-in animations";
             create_error(animation_node, context);
             continue;
         }
 
-        miracle::AnimationDefinition definition;
-        definition.type = type.value();
-        bool success = false;
-        switch (type.value())
+        for (auto const built_in_animation_node : animation_node["parts"])
         {
-        case miracle::AnimationType::built_in:
-        {
-            miracle::BuiltInAnimationList animations;
-            if (!animation_node["parts"].IsSequence())
-            {
-                context.builder << "Built-in animation definitions must have an 'animation_list' key with a list of animations";
-                create_error(animation_node, context);
-                break;
-            }
-
-            for (auto const built_in_animation_node : animation_node["parts"])
-            {
-                miracle::BuiltInAnimationDefinition animation_def;
-                if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
-                    animations.push_back(animation_def);
-            }
-
-            definition.data = animations;
-            success = true;
-            break;
-        }
-        case miracle::AnimationType::plugin:
-        {
-            success = true;
-            break;
-        }
-        default:
-            context.builder << "Unsupported animation type in definition";
-            create_error(animation_node, context);
-            break;
+            miracle::BuiltInAnimationDefinition animation_def;
+            if (try_read_built_in_animation_definition(built_in_animation_node, context, animation_def))
+                animations.push_back(animation_def);
         }
 
-        if (success)
-        {
-            definition.is_default = false;
-            // Parse the optional 'duration' value
-            try_parse_value(animation_node, "duration", definition.duration_seconds, context, true);
-            context.result.config.animation_definitions.value[event_as_int] = definition;
-        }
+        definition.data = animations;
+        definition.is_default = false;
+        // Parse the optional 'duration' value
+        try_parse_value(animation_node, "duration", definition.duration_seconds, context, true);
+        context.result.config.animation_definitions.value[event_as_int] = definition;
     }
 }
 
@@ -1253,6 +1260,134 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
     return context.result;
 }
 
+miracle::PluginConfigLoadResult miracle::load_plugin_config_from_string(std::string const& json)
+{
+    // Reuse the same ParsingContext and per-field reader functions as load_config().
+    // We parse into a ConfigData then copy the shared fields into a PluginConfigData.
+    // The 'plugins' and 'includes' keys are intentionally omitted.
+    ParsingContext context;
+    context.path = "<plugin configure>";
+
+    try
+    {
+        YAML::Node config = YAML::Load(json);
+        if (config["action_key"])
+            read_action_key(config["action_key"], context);
+        if (config["default_action_overrides"])
+            read_default_action_overrides(config["default_action_overrides"], context);
+        if (config["custom_actions"])
+            read_custom_actions(config["custom_actions"], context);
+        if (config["inner_gaps"])
+            read_inner_gaps(config["inner_gaps"], context);
+        if (config["outer_gaps"])
+            read_outer_gaps(config["outer_gaps"], context);
+        if (config["startup_apps"])
+            read_startup_apps(config["startup_apps"], context);
+        if (config["terminal"])
+            read_terminal(config["terminal"], context);
+        if (config["resize_jump"])
+            read_resize_jump(config["resize_jump"], context);
+        if (config["environment_variables"])
+            read_environment_variables(config["environment_variables"], context);
+        if (config["border"])
+            read_border(config["border"], context);
+        if (config["workspaces"])
+            read_workspaces(config["workspaces"], context);
+        if (config["animations"])
+            read_animation_definitions(config["animations"], context);
+        if (config["enable_animations"])
+            read_enable_animations(config["enable_animations"], context);
+        if (config["move_modifier"])
+            read_move_modifier(config["move_modifier"], context);
+        if (config["drag_and_drop"])
+            read_drag_and_drop(config["drag_and_drop"], context);
+        if (config["mouse"])
+            read_mouse(config["mouse"], context);
+        if (config["touchpad"])
+            read_touchpad(config["touchpad"], context);
+        if (config["keyboard"])
+            read_keyboard(config["keyboard"], context);
+        if (config["hover_click"])
+            read_hover_click(config["hover_click"], context);
+        if (config["simulated_secondary_click"])
+            read_simulated_secondary_click(config["simulated_secondary_click"], context);
+        if (config["output_filter"])
+            read_output_filter(config["output_filter"], context);
+        if (config["cursor"])
+            read_cursor(config["cursor"], context);
+        if (config["slow_keys"])
+            read_slow_keys(config["slow_keys"], context);
+        if (config["sticky_keys"])
+            read_sticky_keys(config["sticky_keys"], context);
+        if (config["magnifier"])
+            read_magnifier(config["magnifier"], context);
+        if (config["workspace_back_and_forth"])
+            read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
+    }
+    catch (YAML::Exception const& e)
+    {
+        context.builder << "Encountered exception during plugin configure parse: " << e.what();
+        context.result.errors.push_back({ e.mark.line,
+            e.mark.column,
+            ErrorLevel::error,
+            context.path,
+            context.builder.str() });
+    }
+    catch (std::exception const& e)
+    {
+        context.builder << "Encountered exception during plugin configure parse: " << e.what();
+        context.result.errors.push_back({ 0,
+            0,
+            ErrorLevel::error,
+            context.path,
+            context.builder.str() });
+    }
+    catch (...)
+    {
+        context.builder << "Encountered an unknown exception during plugin configure parse";
+        context.result.errors.push_back({ 0,
+            0,
+            ErrorLevel::error,
+            context.path,
+            context.builder.str() });
+    }
+
+    // Copy the 27 shared fields from ConfigData into PluginConfigData.
+    // plugins and includes are intentionally excluded.
+    auto const& src = context.result.config;
+    PluginConfigData plugin_config;
+    plugin_config.primary_modifier = src.primary_modifier;
+    plugin_config.primary_button = src.primary_button;
+    plugin_config.custom_key_commands = src.custom_key_commands;
+    plugin_config.built_in_key_command_overrides = src.built_in_key_command_overrides;
+    plugin_config.inner_gaps = src.inner_gaps;
+    plugin_config.outer_gaps = src.outer_gaps;
+    plugin_config.startup_apps = src.startup_apps;
+    plugin_config.terminal = src.terminal;
+    plugin_config.resize_jump = src.resize_jump;
+    plugin_config.environment_variables = src.environment_variables;
+    plugin_config.border_config = src.border_config;
+    plugin_config.animations_enabled = src.animations_enabled;
+    plugin_config.animation_definitions = src.animation_definitions;
+    plugin_config.workspace_configs = src.workspace_configs;
+    plugin_config.move_modifier = src.move_modifier;
+    plugin_config.drag_and_drop = src.drag_and_drop;
+    plugin_config.mouse_configuration = src.mouse_configuration;
+    plugin_config.keyboard_configuration = src.keyboard_configuration;
+    plugin_config.keymap = src.keymap;
+    plugin_config.hover_click = src.hover_click;
+    plugin_config.simulated_secondary_click = src.simulated_secondary_click;
+    plugin_config.output_filter = src.output_filter;
+    plugin_config.cursor = src.cursor;
+    plugin_config.slow_keys = src.slow_keys;
+    plugin_config.sticky_keys = src.sticky_keys;
+    plugin_config.touchpad = src.touchpad;
+    plugin_config.magnifier = src.magnifier;
+    plugin_config.workspace_back_and_forth = src.workspace_back_and_forth;
+
+    return { plugin_config, context.result.errors };
+}
+
 miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigData const& config)
 {
     ConfigSaveResult result(true, {});
@@ -1298,10 +1433,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "default_action_overrides" << YAML::Value << YAML::BeginSeq;
         for (auto const& override : *config.built_in_key_command_overrides)
         {
+            char keysym_name[XKB_KEYSYM_NAME_MAX_SIZE];
+            xkb_keysym_get_name(static_cast<xkb_keysym_t>(override.key), keysym_name, sizeof(keysym_name));
             out << YAML::BeginMap;
             out << YAML::Key << "name" << YAML::Value << default_key_command_strings[static_cast<uint32_t>(override.default_key_command)];
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[override.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(override.key));
+            out << YAML::Key << "key" << YAML::Value << keysym_name;
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1321,10 +1458,12 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "custom_actions" << YAML::Value << YAML::BeginSeq;
         for (auto const& action : *config.custom_key_commands)
         {
+            char keysym_name[XKB_KEYSYM_NAME_MAX_SIZE];
+            xkb_keysym_get_name(static_cast<xkb_keysym_t>(action.key), keysym_name, sizeof(keysym_name));
             out << YAML::BeginMap;
             out << YAML::Key << "command" << YAML::Value << action.command;
             out << YAML::Key << "action" << YAML::Value << mir_keyboard_actions_strings[action.action].first;
-            out << YAML::Key << "key" << YAML::Value << libevdev_event_code_get_name(EV_KEY, static_cast<uint32_t>(action.key));
+            out << YAML::Key << "key" << YAML::Value << keysym_name;
 
             out << YAML::Key << "modifiers" << YAML::Value << YAML::BeginSeq;
             for (auto const& [name, value] : mir_input_event_modifier_opts)
@@ -1465,36 +1604,27 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
             out << YAML::Key << "event" << YAML::Value << animateable_event_strings[i];
             if (def.duration_seconds != 0.f)
                 out << YAML::Key << "duration" << YAML::Value << def.duration_seconds;
-            out << YAML::Key << "type" << YAML::Value << animation_type_strings[static_cast<uint32_t>(def.type)];
-
-            switch (def.type)
+            out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
+            for (auto const& animation : def.data)
             {
-            case AnimationType::built_in:
-                out << YAML::Key << "parts" << YAML::Value << YAML::BeginSeq;
-                for (auto const& animation : def.data)
-                {
-                    out << YAML::BeginMap;
-                    out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
-                    out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
-                    if (animation.c1 != 0.f)
-                        out << YAML::Key << "c1" << YAML::Value << animation.c1;
-                    if (animation.c2 != 0.f)
-                        out << YAML::Key << "c2" << YAML::Value << animation.c2;
-                    if (animation.c3 != 0.f)
-                        out << YAML::Key << "c3" << YAML::Value << animation.c3;
-                    if (animation.c4 != 0.f)
-                        out << YAML::Key << "c4" << YAML::Value << animation.c4;
-                    if (animation.n1 != 0.f)
-                        out << YAML::Key << "n1" << YAML::Value << animation.n1;
-                    if (animation.d1 != 0.f)
-                        out << YAML::Key << "d1" << YAML::Value << animation.d1;
-                    out << YAML::EndMap;
-                }
-                out << YAML::EndSeq;
-                break;
-            default:
-                break;
+                out << YAML::BeginMap;
+                out << YAML::Key << "type" << YAML::Value << built_in_animation_type_strings[static_cast<uint32_t>(animation.type)];
+                out << YAML::Key << "function" << YAML::Value << ease_function_strings[static_cast<uint32_t>(animation.function)];
+                if (animation.c1 != 0.f)
+                    out << YAML::Key << "c1" << YAML::Value << animation.c1;
+                if (animation.c2 != 0.f)
+                    out << YAML::Key << "c2" << YAML::Value << animation.c2;
+                if (animation.c3 != 0.f)
+                    out << YAML::Key << "c3" << YAML::Value << animation.c3;
+                if (animation.c4 != 0.f)
+                    out << YAML::Key << "c4" << YAML::Value << animation.c4;
+                if (animation.n1 != 0.f)
+                    out << YAML::Key << "n1" << YAML::Value << animation.n1;
+                if (animation.d1 != 0.f)
+                    out << YAML::Key << "d1" << YAML::Value << animation.d1;
+                out << YAML::EndMap;
             }
+            out << YAML::EndSeq;
             out << YAML::EndMap;
         }
         out << YAML::EndSeq;
@@ -1784,43 +1914,62 @@ std::array<T, U> merge_arrays(
 }
 }
 
+/// Shared field merge logic for ConfigData and PluginConfigData.
+/// Merges all fields that exist in both structs (i.e. every field except
+/// plugins and includes). [other] takes priority over [base] when set.
+template <typename Other>
+static miracle::ConfigData merge_config_fields(miracle::ConfigData& base, Other& other)
+{
+    miracle::ConfigData result;
+    result.primary_modifier = other.primary_modifier.is_set() ? other.primary_modifier : base.primary_modifier;
+    result.primary_button = other.primary_button.is_set() ? other.primary_button : base.primary_button;
+    result.custom_key_commands = concat_vectors(*other.custom_key_commands, *base.custom_key_commands);
+    result.built_in_key_command_overrides = concat_vectors(*other.built_in_key_command_overrides, *base.built_in_key_command_overrides);
+    result.inner_gaps = other.inner_gaps.is_set() ? other.inner_gaps : base.inner_gaps;
+    result.outer_gaps = other.outer_gaps.is_set() ? other.outer_gaps : base.outer_gaps;
+    result.startup_apps = concat_vectors(*other.startup_apps, *base.startup_apps);
+    result.terminal = other.terminal.is_set() ? other.terminal : base.terminal;
+    result.resize_jump = other.resize_jump.is_set() ? other.resize_jump : base.resize_jump;
+    result.environment_variables = concat_vectors(*other.environment_variables, *base.environment_variables);
+    result.border_config = other.border_config.is_set() ? other.border_config : base.border_config;
+    result.animations_enabled = other.animations_enabled.is_set() ? other.animations_enabled : base.animations_enabled;
+    result.animation_definitions = other.animation_definitions.is_set() ? other.animation_definitions : base.animation_definitions;
+    result.workspace_configs = concat_vectors(*other.workspace_configs, *base.workspace_configs);
+    result.move_modifier = other.move_modifier.is_set() ? other.move_modifier : base.move_modifier;
+    result.drag_and_drop = other.drag_and_drop.is_set() ? other.drag_and_drop : base.drag_and_drop;
+    result.mouse_configuration->merge(*other.mouse_configuration);
+    result.mouse_configuration->merge(*base.mouse_configuration);
+    result.keyboard_configuration->merge(*other.keyboard_configuration);
+    result.keyboard_configuration->merge(*base.keyboard_configuration);
+    result.touchpad = other.touchpad.is_set() ? other.touchpad : base.touchpad;
+    result.keymap = other.keymap.is_set() ? other.keymap : base.keymap;
+    result.hover_click = other.hover_click.is_set() ? other.hover_click : base.hover_click;
+    result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : base.simulated_secondary_click;
+    result.output_filter = other.output_filter.is_set() ? other.output_filter : base.output_filter;
+    result.cursor = other.cursor.is_set() ? other.cursor : base.cursor;
+    result.slow_keys = other.slow_keys.is_set() ? other.slow_keys : base.slow_keys;
+    result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : base.sticky_keys;
+    result.magnifier = other.magnifier.is_set() ? other.magnifier : base.magnifier;
+    result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : base.workspace_back_and_forth;
+    return result;
+}
+
 miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
 {
     // This method merges two configurations. [other] will be given priority over [this]
     // if it is set.
-    ConfigData result;
-    result.primary_modifier = other.primary_modifier.is_set() ? other.primary_modifier : primary_modifier;
-    result.primary_button = other.primary_button.is_set() ? other.primary_button : primary_button;
-    result.custom_key_commands = concat_vectors(*other.custom_key_commands, *custom_key_commands);
-    result.built_in_key_command_overrides = concat_vectors(*other.built_in_key_command_overrides, *built_in_key_command_overrides);
-    result.inner_gaps = other.inner_gaps.is_set() ? other.inner_gaps : inner_gaps;
-    result.outer_gaps = other.outer_gaps.is_set() ? other.outer_gaps : outer_gaps;
-    result.startup_apps = concat_vectors(*other.startup_apps, *startup_apps);
-    result.terminal = other.terminal.is_set() ? other.terminal : terminal;
-    result.resize_jump = other.resize_jump.is_set() ? other.resize_jump : resize_jump;
-    result.environment_variables = concat_vectors(*other.environment_variables, *environment_variables);
-    result.border_config = other.border_config.is_set() ? other.border_config : border_config;
-    result.animations_enabled = other.animations_enabled.is_set() ? other.animations_enabled : animations_enabled;
-    result.animation_definitions = other.animation_definitions.is_set() ? other.animation_definitions : animation_definitions;
-    result.workspace_configs = concat_vectors(*other.workspace_configs, *workspace_configs);
-    result.move_modifier = other.move_modifier.is_set() ? other.move_modifier : move_modifier;
-    result.drag_and_drop = other.drag_and_drop.is_set() ? other.drag_and_drop : drag_and_drop;
-    result.mouse_configuration->merge(*other.mouse_configuration);
-    result.mouse_configuration->merge(*mouse_configuration);
-    result.keyboard_configuration->merge(*other.keyboard_configuration);
-    result.keyboard_configuration->merge(*keyboard_configuration);
-    result.touchpad = other.touchpad.is_set() ? other.touchpad : touchpad;
-    result.keymap = other.keymap.is_set() ? other.keymap : keymap;
-    result.hover_click = other.hover_click.is_set() ? other.hover_click : hover_click;
-    result.simulated_secondary_click = other.simulated_secondary_click.is_set() ? other.simulated_secondary_click : simulated_secondary_click;
-    result.output_filter = other.output_filter.is_set() ? other.output_filter : output_filter;
-    result.cursor = other.cursor.is_set() ? other.cursor : cursor;
-    result.slow_keys = other.slow_keys.is_set() ? other.slow_keys : slow_keys;
-    result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : sticky_keys;
-    result.includes = concat_vectors(*other.includes, *includes);
-    result.magnifier = other.magnifier.is_set() ? other.magnifier : magnifier;
-    result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : workspace_back_and_forth;
+    auto result = merge_config_fields(*this, other);
     result.plugins = other.plugins.is_set() ? other.plugins : plugins;
+    result.includes = concat_vectors(*other.includes, *includes);
+    return result;
+}
+
+miracle::ConfigData miracle::ConfigData::merge_with_plugin_config(miracle::PluginConfigData const& other)
+{
+    // Plugins cannot override plugins or includes; those are always preserved from this.
+    auto result = merge_config_fields(*this, const_cast<miracle::PluginConfigData&>(other));
+    result.plugins = plugins;
+    result.includes = includes;
     return result;
 }
 

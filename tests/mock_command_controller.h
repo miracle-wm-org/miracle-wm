@@ -79,7 +79,7 @@ namespace test
         MOCK_METHOD(bool, toggle_stacking, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, set_layout, (LayoutScheme, std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, set_layout_default, (std::vector<ContainerScope> const&), (override));
-        MOCK_METHOD(void, move_cursor_to_output, (OutputInterface const&), (override));
+        MOCK_METHOD(void, move_cursor_to_output, (AbstractOutput const&), (override));
         MOCK_METHOD(bool, try_select_next_output, (), (override));
         MOCK_METHOD(bool, try_select_prev_output, (), (override));
         MOCK_METHOD(bool, try_select_output, (Direction), (override));

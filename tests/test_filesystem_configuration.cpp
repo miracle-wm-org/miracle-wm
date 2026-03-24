@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miracle/cpp/animation_definition.h>
 #include <miral/runner.h>
 #include <vector>
+#include <xkbcommon/xkbcommon-keysyms.h>
 #include <yaml-cpp/node/node.h>
 
 using namespace miracle;
@@ -112,14 +113,14 @@ TEST_F(FilesystemConfigurationTest, CanOverrideDefaultAction)
     action_override_node["name"] = "terminal";
     action_override_node["action"] = "down";
     action_override_node["modifiers"].push_back("primary");
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_X,
+        XKB_KEY_x,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
     {
@@ -135,14 +136,14 @@ TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidN
     action_override_node["name"].push_back("terminal");
     action_override_node["action"] = "down";
     action_override_node["modifiers"].push_back("primary");
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_ENTER,
+        XKB_KEY_Return,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
     {
@@ -158,14 +159,14 @@ TEST_F(FilesystemConfigurationTest, WhenEntryInDefaultActionOverridesHasInvalidM
     action_override_node["name"] = "terminal";
     action_override_node["action"] = "down";
     action_override_node["modifiers"] = "primary";
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["default_action_overrides"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     config.matches_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_ENTER,
+        XKB_KEY_Return,
         mir_input_event_modifier_meta,
         [&](DefaultKeyCommand command)
     {
@@ -181,17 +182,17 @@ TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
     action_override_node["command"] = "echo Hi";
     action_override_node["action"] = "down";
     action_override_node["modifiers"].push_back("primary");
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_X,
+        XKB_KEY_x,
         mir_input_event_modifier_meta);
     EXPECT_EQ(custom_action->command, "echo Hi");
-    EXPECT_EQ(custom_action->key, KEY_X);
+    EXPECT_EQ(custom_action->key, XKB_KEY_x);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
 }
 
@@ -203,14 +204,14 @@ TEST_F(FilesystemConfigurationTest, CustomActionsInSnapIncludeUnsnapCommand)
     action_override_node["command"] = "echo Hi";
     action_override_node["action"] = "down";
     action_override_node["modifiers"].push_back("primary");
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_X,
+        XKB_KEY_x,
         mir_input_event_modifier_meta);
     EXPECT_EQ(custom_action->command, "echo Hi");
     unsetenv("SNAP");
@@ -223,14 +224,14 @@ TEST_F(FilesystemConfigurationTest, CustomActionWithInvalidCommandIsNotAdded)
     action_override_node["command"].push_back("echo Hi");
     action_override_node["action"] = "down";
     action_override_node["modifiers"].push_back("primary");
-    action_override_node["key"] = "KEY_X";
+    action_override_node["key"] = "x";
     node["custom_actions"].push_back(action_override_node);
     write_yaml_node(node);
 
     FilesystemConfiguration config(registrar, path, true);
     auto custom_action = config.matches_custom_key_command(
         MirKeyboardAction::mir_keyboard_action_down,
-        KEY_X,
+        XKB_KEY_x,
         mir_input_event_modifier_meta);
     EXPECT_EQ(custom_action, nullptr);
 }
@@ -548,7 +549,6 @@ TEST_P(FilesystemConfigurationTestAnimationTypes, CanReadAnimationTypeInAnimatio
 
     YAML::Node animation;
     animation["duration"] = 1000;
-    animation["type"] = "built_in";
     animation["event"] = "window_open";
     animation["parts"] = list;
 

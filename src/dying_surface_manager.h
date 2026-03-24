@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef DYING_SURFACE_MANAGER_H
 #define DYING_SURFACE_MANAGER_H
 
+#include "plugin_bridge.h"
 #include <memory>
 
 namespace mir
@@ -31,7 +32,8 @@ namespace shell
 namespace miracle
 {
 class CompositorState;
-class Container;
+class WindowContainer;
+class WindowController;
 class Config;
 class Animator;
 class PluginManager;
@@ -47,9 +49,11 @@ public:
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
         std::shared_ptr<Animator> const& animator,
-        std::shared_ptr<PluginManager> const& plugin_manager);
+        std::shared_ptr<PluginManager> const& plugin_manager,
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<WindowIdMap> const& window_id_map);
 
-    void animate_dying_surface(std::shared_ptr<Container> const& container);
+    void animate_dying_surface(std::shared_ptr<WindowContainer> const& container);
 
 private:
     std::shared_ptr<mir::shell::SurfaceStack> surface_stack;
@@ -57,6 +61,8 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
+    std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<WindowIdMap> window_id_map;
 };
 
 } // miracle

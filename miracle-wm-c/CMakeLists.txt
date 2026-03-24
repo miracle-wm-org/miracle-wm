@@ -3,7 +3,7 @@ pkg_check_modules(MIRCORE mircore REQUIRED)
 pkg_check_modules(MIRSERVER mirserver REQUIRED)
 pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
-pkg_check_modules(LIBEVDEV REQUIRED IMPORTED_TARGET libevdev)
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
 find_package(GTest REQUIRED)
 
@@ -11,12 +11,11 @@ add_library(miracle-wm-c
     SHARED
     src/config-cpp.cpp include/miracle/cpp/config-cpp.h
     include/miracle/cpp/animation_definition.h
-    include/miracle/cpp/container_type.h
     include/miracle/cpp/default_key_command.h
     include/miracle/cpp/cursor_focus_mode.h
     include/miracle/cpp/modifiers.h
     src/config-c.cpp include/miracle/config.h
-    include/miracle/plugin.h)
+    ../miracle-plugin-rs/plugin.h)
 
 set_target_properties(miracle-wm-c PROPERTIES
     CXX_STANDARD 20
@@ -27,14 +26,16 @@ set_target_properties(miracle-wm-c PROPERTIES
 target_include_directories(miracle-wm-c PUBLIC SYSTEM
     include
     ${MIRCORE_INCLUDE_DIRS}
-    ${MIRAL_INCLUDE_DIRS})
+    ${MIRAL_INCLUDE_DIRS}
+    ${XKBCOMMON_INCLUDE_DIRS})
 
 target_link_libraries(miracle-wm-c
     ${MIRCORE_LDFLAGS}
     ${MIRAL_LDFLAGS}
     PkgConfig::YAML
-    PkgConfig::LIBEVDEV
-    PkgConfig::GLIB)
+    ${XKBCOMMON_LDFLAGS}
+    PkgConfig::GLIB
+    nlohmann_json::nlohmann_json)
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/miracle-wm-c.pc.in

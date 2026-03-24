@@ -1,16 +1,28 @@
 [package]
-name = "miracle-plugin-rs"
-version = "0.1.0"
+name = "miracle-plugin"
+version = "0.0.5"
 edition = "2024"
-description = "Rust bindings for miracle-wm plugin API"
+description = "Rust bindings for the miracle-wm plugin API"
 license = "GPL-3.0-or-later"
+homepage = "https://github.com/miracle-wm-org/miracle-wm"
+repository = "https://github.com/miracle-wm-org/miracle-wm"
+documentation = "https://docs.miracle-wm.org/"
+
+[package.metadata.docs.rs]
+targets = ["wasm32-unknown-unknown"]
 
 [lib]
 crate-type = ["rlib"]
 
+[features]
+default = ["configure"]
+configure = ["dep:serde_json"]
+
 [dependencies]
 bitflags = "2"
-glm = "0.3.0"
+glam = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", optional = true }
 
 [build-dependencies]
 bindgen = "0.71"

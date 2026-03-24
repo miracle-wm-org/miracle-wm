@@ -33,6 +33,7 @@ set(SOURCES
     test_render_data_manager.cpp
     test_output_manager.cpp
     test_output.cpp
+    test_freestyle_window_container.cpp
     test_leaf_container.cpp
     test_scratchpad.cpp
     test_command_controller.cpp
@@ -43,6 +44,7 @@ set(SOURCES
     test_ipc_message_handler.cpp
     test_ipc_command_executor.cpp
     test_workspace_manager.cpp
+    test_compositor_state.cpp
     stub_configuration.h
     stub_surface.h
     stub_window_controller.h
@@ -80,7 +82,6 @@ target_link_libraries(miracle-wm-tests
 target_compile_definitions(miracle-wm-tests PRIVATE
     COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
     FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM}
-    FEATURE_MULTI_SELECT=${FEATURE_MULTI_SELECT}
     FEATURE_PARENT_CONTAINER_WALLPAPERS=${FEATURE_PARENT_CONTAINER_WALLPAPERS}
 )
 

@@ -22,7 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "leaf_container.h"
+#include "plugin_bridge.h"
 #include "policy.h"
+#include "window_container.h"
 #include "window_helpers.h"
 #include <mir/log.h>
 #include <mir/server_action_queue.h>
@@ -51,63 +53,67 @@ WindowManagerToolsWindowController::WindowManagerToolsWindowController(
     std::shared_ptr<PluginManager> const& plugin_manager,
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<CompositorState> const& state,
-    std::shared_ptr<Config> const& config) :
+    std::shared_ptr<Config> const& config,
+    std::shared_ptr<WindowIdMap> const& window_id_map) :
     tools { tools },
     animator { animator },
     plugin_manager { plugin_manager },
     server_action_queue { server_action_queue },
     state { state },
-    config { config }
+    config { config },
+    window_id_map { window_id_map }
 {
 }
 
 void WindowManagerToolsWindowController::open(miral::Window const& window)
 {
-    auto container = get_container(window);
+    auto container = get_window_container(window);
     if (!container)
     {
         mir::log_error("Cannot set rectangle of window that lacks container");
         return;
     }
 
-    auto const& info = info_for(window);
-    geom::Rectangle rect { window.top_left(), window.size() };
-    if (info.parent())
-    {
-        process_animation({ true, rect, std::nullopt, std::nullopt }, container);
+    if (!container->can_animate())
         return;
-    }
 
+    geom::Rectangle rect { window.top_left(), window.size() };
     if (!config->are_animations_enabled())
     {
         process_animation(AnimationFrameResult { true, rect, std::nullopt, std::nullopt }, container);
         return;
     }
 
+    miral::WindowInfo const& win_info = tools.info_for(window);
+    uint64_t win_id = 0;
+    for (auto const& [id, w] : *window_id_map)
+        if (w == window)
+        {
+            win_id = id;
+            break;
+        }
+    AnimationData anim_data { AnimateableEvent::window_open, rect, rect, 0, 1 };
+    anim_data.window_info = from_window(win_info, win_id, container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_open),
-        AnimationData(AnimateableEvent::window_open, rect, rect, 0, 1),
+        std::move(anim_data),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 
 void WindowManagerToolsWindowController::set_rectangle(
     miral::Window const& window, geom::Rectangle const& from, geom::Rectangle const& to, bool with_animations)
 {
-    auto container = get_container(window);
+    auto container = get_window_container(window);
     if (!container)
     {
         mir::log_error("Cannot set rectangle of window that lacks container");
         return;
     }
 
-    auto const& info = info_for(window);
-
-    if (info.parent())
-    {
-        process_animation({ true, to, std::nullopt, std::nullopt }, container);
+    if (!container->can_animate())
         return;
-    }
 
     if (!config->are_animations_enabled() || !with_animations)
     {
@@ -121,10 +127,21 @@ void WindowManagerToolsWindowController::set_rectangle(
         return;
     }
 
+    miral::WindowInfo const& win_info = tools.info_for(window);
+    uint64_t win_id = 0;
+    for (auto const& [id, w] : *window_id_map)
+        if (w == window)
+        {
+            win_id = id;
+            break;
+        }
+    AnimationData anim_data { AnimateableEvent::window_move, from, to, 1, 1 };
+    anim_data.window_info = from_window(win_info, win_id, container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         container->animation_handle(),
         config->get_animation_definition(AnimateableEvent::window_move),
-        AnimationData(AnimateableEvent::window_move, from, to, 1, 1),
+        std::move(anim_data),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }
 
@@ -163,17 +180,17 @@ void WindowManagerToolsWindowController::select_active_window(miral::Window cons
     tools.select_active_window(window);
 }
 
-std::shared_ptr<Container> WindowManagerToolsWindowController::get_container(miral::Window const& window)
+std::shared_ptr<WindowContainer> WindowManagerToolsWindowController::get_window_container(miral::Window const& window)
 {
     if (window == miral::Window {})
         return nullptr;
 
     auto& info = tools.info_for(window);
     if (info.userdata())
-        return static_pointer_cast<Container>(info.userdata());
+        return static_pointer_cast<WindowContainer>(info.userdata());
 
     if (info.parent())
-        return get_container(info.parent());
+        return get_window_container(info.parent());
 
     return nullptr;
 }
@@ -192,60 +209,64 @@ void WindowManagerToolsWindowController::process_animation(
     AnimationFrameResult const& result,
     std::shared_ptr<Container> const& container)
 {
-    auto const lock = state->lock();
-    // TODO (hack): we really need to refactor the entire animation system. The issue
-    //  here is that our current system relies on us enqueuing animation processing
-    //  onto the main loop for animations. However, this may cause a situation where
-    //  a window is deleted, but we still have an animation pending to it. When we
-    //  try to modify that windows, things blow up on us. The solution here is temporary
-    //  but the real solution is to refactor how we're doing animations so that it is
-    //  less generic and makes more sense. The "hack" is the try/catch block
-    try
+    // Note: We MUST invoke this under the lock, because the window could theoretically get
+    // removed while it is ani
+    invoke_under_lock([&]
     {
-        bool needs_modify = false;
-        miral::WindowSpecification spec;
-        auto const& rectangle = result.rectangle;
-
-        if (rectangle)
+        // TODO (hack): we really need to refactor the entire animation system. The issue
+        //  here is that our current system relies on us enqueuing animation processing
+        //  onto the main loop for animations. However, this may cause a situation where
+        //  a window is deleted, but we still have an animation pending to it. When we
+        //  try to modify that windows, things blow up on us. The solution here is temporary
+        //  but the real solution is to refactor how we're doing animations so that it is
+        //  less generic and makes more sense. The "hack" is the try/catch block
+        try
         {
-            spec.top_left() = rectangle->top_left;
-            // TODO: Remove once a real fix is added upstream
-            // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
-            // Workaround for: https://github.com/canonical/mir/issues/4222
-            auto const& info = tools.info_for(container->window().value());
-            spec.size() = geom::Size {
-                geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
-                geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
-            };
+            bool needs_modify = false;
+            miral::WindowSpecification spec;
+            auto const& rectangle = result.rectangle;
 
-            needs_modify = true;
+            if (rectangle)
+            {
+                spec.top_left() = rectangle->top_left;
+                // TODO: Remove once a real fix is added upstream
+                // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
+                // Workaround for: https://github.com/canonical/mir/issues/4222
+                auto const& info = tools.info_for(container->window().value());
+                spec.size() = geom::Size {
+                    geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
+                    geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
+                };
+
+                needs_modify = true;
+            }
+
+            if (!container->window())
+                return;
+
+            auto const window = container->window().value();
+            if (!window)
+                return;
+
+            // TODO: Modify window can throw an exception, which we are catching
+            if (needs_modify)
+                tools.modify_window(window, spec);
+
+            if (result.transform)
+                container->set_animation_transform(result.transform.value());
+
+            if (result.opacity != std::nullopt)
+                container->set_animation_alpha(result.opacity.value());
+
+            if (result.is_complete)
+                container->constrain();
+            else if (rectangle)
+                clip(window, rectangle.value());
         }
-
-        if (!container->window())
-            return;
-
-        auto const window = container->window().value();
-        if (!window)
-            return;
-
-        // TODO: Modify window can throw an exception, which we are catching
-        if (needs_modify)
-            tools.modify_window(window, spec);
-
-        if (result.transform)
-            container->set_transform(result.transform.value());
-
-        if (result.opacity != std::nullopt)
-            container->set_alpha(result.opacity.value());
-
-        if (result.is_complete)
-            container->constrain();
-        else if (rectangle)
-            clip(window, rectangle.value());
-    }
-    catch (std::out_of_range const&)
-    {
-    }
+        catch (std::out_of_range const&)
+        {
+        }
+    });
 }
 
 void WindowManagerToolsWindowController::set_user_data(

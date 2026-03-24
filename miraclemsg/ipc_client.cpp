@@ -103,7 +103,8 @@ int ipc_open_socket(const char* socket_path)
     int l = sizeof(struct sockaddr_un);
     if (connect(socketfd, (struct sockaddr*)&addr, l) == -1)
     {
-        std::cout << "Unable to connect to " << socket_path << std::endl;
+        std::cerr << "Unable to connect to " << socket_path << std::endl;
+        std::abort();
     }
     return socketfd;
 }
@@ -128,8 +129,7 @@ struct ipc_response* ipc_recv_response(int socketfd)
         ssize_t received = recv(socketfd, data + total, IPC_HEADER_SIZE - total, 0);
         if (received <= 0)
         {
-            std::cerr << "Unable to receive IPC response" << std::endl;
-            std::abort();
+            return NULL;
         }
         total += received;
     }
@@ -154,10 +154,10 @@ struct ipc_response* ipc_recv_response(int socketfd)
     while (total < response->size)
     {
         ssize_t received = recv(socketfd, payload + total, response->size - total, 0);
-        if (received < 0)
+        if (received <= 0)
         {
-            std::cerr << "Unable to receive IPC response" << std::endl;
-            std::abort();
+            free(payload);
+            goto error_2;
         }
         total += received;
     }
@@ -168,7 +168,6 @@ struct ipc_response* ipc_recv_response(int socketfd)
 error_2:
     free(response);
 error_1:
-    std::cerr << "Unable to allocate memory for IPC response" << std::endl;
     return NULL;
 }
 

@@ -53,17 +53,24 @@ struct WorkspaceCreationData
 /// individual windows and grids of windows.
 ///
 /// See also:
-///  - [miracle::Output] the default implementation of this inteface
-///  - [miracle::OutptuManager] maintains the list of outputs
-class OutputInterface
+///  - [miracle::Output] the default implementation of this interface
+///  - [miracle::OutputManager] maintains the list of outputs
+class AbstractOutput
 {
 public:
-    virtual ~OutputInterface() = default;
+    virtual ~AbstractOutput() = default;
 
-    virtual std::shared_ptr<Container> intersect(float x, float y) = 0;
+    /// Intersects a window and returns the container associated with it.
+    ///
+    /// \param x
+    /// \param y
+    /// \returns the container at the point, if any
+    virtual std::shared_ptr<WindowContainer> intersect(float x, float y) = 0;
+
     /// Ignores all other windows and checks for intersections within the tiling grid. If
     /// [ignore_selected] is true, then the active window will not be intersected.
-    virtual std::shared_ptr<Container> intersect_leaf(float x, float y, bool ignore_selected) = 0;
+    virtual std::shared_ptr<WindowContainer> intersect_leaf(float x, float y, bool ignore_selected) = 0;
+
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual void advise_new_workspace(WorkspaceCreationData const&&) = 0;
     virtual void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) = 0;
@@ -71,7 +78,7 @@ public:
     virtual void advise_application_zone_create(miral::Zone const& application_zone) = 0;
     virtual void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) = 0;
     virtual void advise_application_zone_delete(miral::Zone const& application_zone) = 0;
-    virtual void move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInterface* workspace) = 0;
+    virtual void move_workspace_to(WorkspaceManager& workspace_manager, AbstractWorkspace* workspace) = 0;
     virtual bool point_is_in_output(int x, int y) = 0;
     virtual void update_area(geom::Rectangle const& area) = 0;
 
@@ -89,8 +96,8 @@ public:
     virtual void unset_defunct() = 0;
 
     // Getters
-    [[nodiscard]] virtual std::shared_ptr<WorkspaceInterface> active() const = 0;
-    [[nodiscard]] virtual std::vector<std::shared_ptr<WorkspaceInterface>> const& get_workspaces() const = 0;
+    [[nodiscard]] virtual std::shared_ptr<AbstractWorkspace> active() const = 0;
+    [[nodiscard]] virtual std::vector<std::shared_ptr<AbstractWorkspace>> const& get_workspaces() const = 0;
     [[nodiscard]] virtual geom::Rectangle const& get_area() const = 0;
     [[nodiscard]] virtual std::vector<miral::Zone> const& get_app_zones() const = 0;
     [[nodiscard]] virtual int id() const = 0;
@@ -106,7 +113,7 @@ public:
     ///
     /// \returns the transformation
     [[nodiscard]] virtual glm::mat4 get_transform() const = 0;
-    [[nodiscard]] virtual WorkspaceInterface const* workspace(uint32_t id) const = 0;
+    [[nodiscard]] virtual AbstractWorkspace const* workspace(uint32_t id) const = 0;
     [[nodiscard]] virtual nlohmann::json to_json(bool is_focused) const = 0;
     [[nodiscard]] virtual bool is_primary() const = 0;
 

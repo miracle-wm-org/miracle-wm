@@ -56,6 +56,7 @@ public:
     void on_workspace_removed(uint32_t id) override;
     void on_workspace_focused(std::optional<uint32_t>, uint32_t) override;
     void on_workspace_renamed(uint32_t) override;
+    void on_workspace_area_changed(uint32_t) override { }
     void on_config_changed(Config const&) override;
     void on_mode_changed(WindowManagerMode mode) override;
     void on_shutdown();

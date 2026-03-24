@@ -131,30 +131,14 @@ struct MIRACLE_WM_CONFIG_API BuiltInAnimationDefinition
     float d1 = 2.75f;
 };
 
-enum class AnimationType
-{
-    built_in,
-    plugin,
-    max
-};
-
-constexpr std::array<const char*, static_cast<int>(AnimationType::max)> animation_type_strings = {
-    "built_in",
-    "plugin",
-};
-
 typedef std::vector<BuiltInAnimationDefinition> BuiltInAnimationList;
 
 /// Defines an animation fed to miracle's animation system.
 ///
-/// Animations come in a number of varieties as defined by #AnimationType.
-///
-/// While miracle offers some built-in animations, there are plans to
-/// allow users to write their own animations in the future via a plugin
-/// system.
+/// If a plugin handles the animation event, its result is used.
+/// Otherwise, the built-in animation defined by #data is used.
 struct MIRACLE_WM_CONFIG_API AnimationDefinition
 {
-    AnimationType type = AnimationType::max;
     bool is_default = true;
     float duration_seconds = 1.f;
 

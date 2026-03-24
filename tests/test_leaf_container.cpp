@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "container_scope.h"
 #include "leaf_container.h"
@@ -29,11 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
 #include "mock_session.h"
-#include "mock_shell_application_spawner.h"
 #include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
-#include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
 #include <gtest/gtest.h>
@@ -54,17 +51,7 @@ class LeafContainerTest : public ::testing::Test
 public:
     LeafContainerTest() :
         workspace(std::make_shared<testing::NiceMock<test::MockWorkspace>>()),
-        shell_application_manager(std::make_shared<ShellApplicationManager>(
-            std::make_unique<testing::NiceMock<test::MockShellApplicationSpawner>>())),
-        parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>(
-            shell_application_manager,
-            state,
-            window_controller,
-            config,
-            parent_area,
-            workspace,
-            nullptr,
-            true)),
+        parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>()),
         leaf_container(std::make_shared<LeafContainer>(
             workspace,
             window_controller,
@@ -98,8 +85,7 @@ protected:
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<test::MockWorkspace> workspace;
-    std::shared_ptr<ShellApplicationManager> shell_application_manager;
-    std::vector<std::shared_ptr<WorkspaceInterface>> workspaces;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     std::shared_ptr<test::MockOutput> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
     std::shared_ptr<test::MockParentContainer> parent;
     std::shared_ptr<LeafContainer> leaf_container;
@@ -151,12 +137,6 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace);
     EXPECT_THAT(state->render_data_manager()->get()[0].output_area, testing::Eq(parent_area));
     EXPECT_THAT(state->render_data_manager()->get()[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
-}
-
-TEST_F(LeafContainerTest, CanSetWorkspaceAlpha)
-{
-    leaf_container->set_workspace_alpha(0.5f);
-    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_alpha, testing::Eq(0.5f));
 }
 
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)
@@ -242,20 +222,9 @@ TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenStateFocusesThisContainer)
 
 TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenParentIsFocused)
 {
-    state->focus_container(parent, true);
+    state->focus_container(parent);
     EXPECT_CALL(*parent, is_focused())
         .WillOnce(testing::Return(true));
-    EXPECT_TRUE(leaf_container->is_focused());
-}
-
-TEST_F(LeafContainerTest, LeafContainerIsFocusedWhenGroupIsFocused)
-{
-    auto container_group_container = std::make_shared<ContainerGroupContainer>(
-        state);
-    state->focus_container(container_group_container, true);
-    container_group_container->add(leaf_container);
-    EXPECT_CALL(*parent, is_focused())
-        .WillOnce(testing::Return(false));
     EXPECT_TRUE(leaf_container->is_focused());
 }
 
@@ -427,16 +396,6 @@ INSTANTIATE_TEST_SUITE_P(
         ContainerScopeType::window_role,
         ContainerScopeType::instance,
         ContainerScopeType::machine));
-
-TEST_F(LeafContainerTest, CanSetAlpha)
-{
-    EXPECT_CALL(*surface, set_transformation(testing::_));
-    leaf_container->set_alpha(0.5f);
-
-    auto data = state->render_data_manager()->get();
-    EXPECT_EQ(data.size(), 1);
-    EXPECT_EQ(data[0].alpha, 0.5f);
-}
 
 TEST_F(LeafContainerTest, CanAddReplacingMark)
 {
@@ -843,4 +802,47 @@ TEST_F(LeafContainerTest, VisibleAreaCacheInvalidationMechanism)
     EXPECT_EQ(area3.top_left.y.as_int(), area3_again.top_left.y.as_int());
     EXPECT_EQ(area3.size.width.as_int(), area3_again.size.width.as_int());
     EXPECT_EQ(area3.size.height.as_int(), area3_again.size.height.as_int());
+}
+
+/// When a layout change (e.g. from a drag-to transfer) triggers commit_changes()
+/// while a drag is active, set_rectangle must NOT be called. The window position
+/// is already managed by drag() -> window_controller->modify(), and calling
+/// set_rectangle with a stale 'previous' would cause flickering/snapping.
+TEST_F(LeafContainerTest, CommitChangesDoesNotCallSetRectangleWhileDragging)
+{
+    ON_CALL(*window_controller, get_state(testing::_))
+        .WillByDefault(testing::Return(mir_window_state_restored));
+
+    leaf_container->drag_start();
+    leaf_container->drag(200, 150);
+
+    // Simulate relayout() assigning a new logical area to the dragged container
+    geom::Rectangle new_area {
+        { 400, 0   },
+        { 400, 300 }
+    };
+    leaf_container->set_logical_area(new_area);
+
+    EXPECT_CALL(*window_controller, set_rectangle(testing::_, testing::_, testing::_, testing::_))
+        .Times(0);
+
+    leaf_container->commit_changes();
+}
+
+/// Complement: when not dragging, commit_changes() must call set_rectangle as normal.
+TEST_F(LeafContainerTest, CommitChangesCallsSetRectangleWhenNotDragging)
+{
+    ON_CALL(*window_controller, get_state(testing::_))
+        .WillByDefault(testing::Return(mir_window_state_restored));
+
+    geom::Rectangle new_area {
+        { 400, 0   },
+        { 400, 300 }
+    };
+    leaf_container->set_logical_area(new_area);
+
+    EXPECT_CALL(*window_controller, set_rectangle(testing::_, testing::_, testing::_, testing::_))
+        .Times(1);
+
+    leaf_container->commit_changes();
 }

@@ -48,6 +48,5 @@ jobs:
               echo 'WORKDIR /miracle-wm'
               echo 'RUN rustup target add wasm32-unknown-unknown'
               echo 'RUN cargo build --manifest-path miracle-plugin-rs/Cargo.toml --target wasm32-unknown-unknown'
-              echo 'RUN cargo build --manifest-path plugins/plugin-playground/Cargo.toml --target wasm32-unknown-unknown'
           } > podmanfile
           podman build --tag fedoralatestmiraclewm -f ./podmanfile

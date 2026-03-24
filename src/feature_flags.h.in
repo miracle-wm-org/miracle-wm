@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle::feature
 {
-constexpr bool multi_select = @FEATURE_MULTI_SELECT@;
 constexpr bool parent_container_wallpapers = @FEATURE_PARENT_CONTAINER_WALLPAPERS@;
 constexpr bool plugin_system = @FEATURE_PLUGIN_SYSTEM@;
 }

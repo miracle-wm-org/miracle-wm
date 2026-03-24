@@ -64,6 +64,9 @@ public:
     std::vector<mir::geometry::Rectangle> get_input_region() const override;
     void resize(const mir::geometry::Size& window_size) override;
     void set_transformation(const glm::mat4& t) override;
+#ifdef MIR_COMPILING_AGAINST_DEV
+    float alpha() const override;
+#endif
     void set_alpha(float alpha) override;
     void set_orientation(MirOrientation orientation) override;
     void set_cursor_image(const std::shared_ptr<mir::graphics::CursorImage>& image) override;

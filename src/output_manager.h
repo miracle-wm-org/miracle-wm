@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
-class OutputInterface;
+class AbstractOutput;
 class WorkspaceManager;
 
 /// Manages the collection of outputs that exist in the compositor.
@@ -44,34 +44,33 @@ public:
     explicit OutputManager(
         std::unique_ptr<OutputFactoryInterface> output_factory);
 
-    std::shared_ptr<OutputInterface> create(
+    std::shared_ptr<AbstractOutput> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area,
         WorkspaceManager& workspace_manager);
     void update(int id, mir::geometry::Rectangle area);
     bool remove(int id, WorkspaceManager& workspace_manager);
-    [[nodiscard]] std::vector<std::shared_ptr<OutputInterface>> outputs() const;
+    [[nodiscard]] std::vector<std::shared_ptr<AbstractOutput>> outputs() const;
     bool focus(int id);
     bool unfocus(int id);
-    std::shared_ptr<OutputInterface> focused();
-    std::shared_ptr<OutputInterface> primary();
-    std::shared_ptr<OutputInterface> non_primary();
-    std::shared_ptr<OutputInterface> prev();
-    std::shared_ptr<OutputInterface> next();
-    std::shared_ptr<OutputInterface> next(Direction direction);
-    std::shared_ptr<OutputInterface> next_in_list(std::vector<std::string> const& names);
+    std::shared_ptr<AbstractOutput> focused();
+    std::shared_ptr<AbstractOutput> primary();
+    std::shared_ptr<AbstractOutput> non_primary();
+    std::shared_ptr<AbstractOutput> prev();
+    std::shared_ptr<AbstractOutput> next();
+    std::shared_ptr<AbstractOutput> next(Direction direction);
+    std::shared_ptr<AbstractOutput> next_in_list(std::vector<std::string> const& names);
+    std::shared_ptr<AbstractOutput> from(int id);
 
 private:
     std::unique_ptr<OutputFactoryInterface> output_factory;
     struct State
     {
-        std::vector<std::shared_ptr<OutputInterface>> outputs_;
-        std::weak_ptr<OutputInterface> focused_;
+        std::vector<std::shared_ptr<AbstractOutput>> outputs_;
+        std::weak_ptr<AbstractOutput> focused_;
     };
 
-    // TODO (mattkae): Once things have settled down, remove the need for
-    //  a recursive mutex!
     SynchronisedRecursive<State> state;
 
     bool focus_internal(State& view, int id);

@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_CONFIG_H
 
 #include "animation_definition.h"
-#include "container_type.h"
 #include "cursor_focus_mode.h"
 #include "default_key_command.h"
 #include "export.h"
@@ -30,7 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cstdlib>
 #include <glm/glm.hpp>
-#include <linux/input-event-codes.h>
 #include <mir_toolkit/events/enums.h>
 #include <mir_toolkit/mir_input_device_types.h>
 #include <miral/input_configuration.h>
@@ -180,7 +178,11 @@ struct MIRACLE_WM_CONFIG_API TouchpadConfiguration
 struct MIRACLE_WM_CONFIG_API PluginConfiguration
 {
     std::string path;
+    std::string userdata_json;
 };
+
+// Forward declaration so ConfigData::merge_with_plugin_config can reference PluginConfigData.
+struct PluginConfigData;
 
 struct MIRACLE_WM_CONFIG_API ConfigData
 {
@@ -219,7 +221,44 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<std::vector<std::string>> includes;
 
     ConfigData merge_with(ConfigData& other);
+    ConfigData merge_with_plugin_config(PluginConfigData const& other);
     static AnimationDefinition get_default_animation_definition(AnimateableEvent event);
+};
+
+/// A subset of ConfigData that plugins may return from their configure() hook.
+///
+/// Every field is optional (uses WithDefaultFlag). Plugins cannot set the
+/// 'plugins' or 'includes' fields — those are excluded entirely from this struct.
+struct MIRACLE_WM_CONFIG_API PluginConfigData
+{
+    miracle::WithDefaultFlag<uint> primary_modifier;
+    miracle::WithDefaultFlag<uint> primary_button;
+    miracle::WithDefaultFlag<std::vector<CustomKeyCommand>> custom_key_commands;
+    miracle::WithDefaultFlag<std::vector<BuiltInKeyCommandOverride>> built_in_key_command_overrides;
+    miracle::WithDefaultFlag<Gaps> inner_gaps;
+    miracle::WithDefaultFlag<Gaps> outer_gaps;
+    miracle::WithDefaultFlag<std::vector<StartupApp>> startup_apps;
+    miracle::WithDefaultFlag<std::optional<std::string>> terminal;
+    miracle::WithDefaultFlag<int> resize_jump;
+    miracle::WithDefaultFlag<std::vector<EnvironmentVariable>> environment_variables;
+    miracle::WithDefaultFlag<BorderConfig> border_config;
+    miracle::WithDefaultFlag<bool> animations_enabled;
+    miracle::WithDefaultFlag<std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)>> animation_definitions;
+    miracle::WithDefaultFlag<std::vector<WorkspaceConfig>> workspace_configs;
+    miracle::WithDefaultFlag<uint> move_modifier;
+    miracle::WithDefaultFlag<DragAndDropConfiguration> drag_and_drop;
+    miracle::WithDefaultFlag<miral::InputConfiguration::Mouse> mouse_configuration;
+    miracle::WithDefaultFlag<miral::InputConfiguration::Keyboard> keyboard_configuration;
+    miracle::WithDefaultFlag<std::optional<KeymapConfiguration>> keymap;
+    miracle::WithDefaultFlag<HoverClickConfiguration> hover_click;
+    miracle::WithDefaultFlag<SimulatedSecondaryClickConfiguration> simulated_secondary_click;
+    miracle::WithDefaultFlag<OutputFilterConfiguration> output_filter;
+    miracle::WithDefaultFlag<CursorConfiguration> cursor;
+    miracle::WithDefaultFlag<SlowKeysConfiguration> slow_keys;
+    miracle::WithDefaultFlag<StickyKeysConfiguration> sticky_keys;
+    miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
+    miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
+    miracle::WithDefaultFlag<bool> workspace_back_and_forth;
 };
 
 enum class ErrorLevel
@@ -249,10 +288,22 @@ struct MIRACLE_WM_CONFIG_API ConfigSaveResult
     std::vector<Error> errors;
 };
 
+struct MIRACLE_WM_CONFIG_API PluginConfigLoadResult
+{
+    PluginConfigData config;
+    std::vector<Error> errors;
+};
+
 /// Loads the configuration from the provided [path] and returns the loaded
 /// configuration along with any errors that were found.
 /// \returns Configuration alongside found errors
 MIRACLE_WM_CONFIG_API ConfigLoadResult load_config(std::string const& path);
+
+/// Parse a JSON (or YAML) string into a PluginConfigData.
+///
+/// Uses the same per-field readers as load_config(). The 'plugins' and
+/// 'includes' keys are silently ignored even if present in the input.
+MIRACLE_WM_CONFIG_API PluginConfigLoadResult load_plugin_config_from_string(std::string const& json);
 
 /// Save the configuration to the provided [path] and returns information about
 /// the success of the save

@@ -18,8 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_MOCK_OUTPUT_FACTORY_H
 #define MIRACLE_WM_MOCK_OUTPUT_FACTORY_H
 
+#include "abstract_output.h"
 #include "output_factory_interface.h"
-#include "output_interface.h"
 #include <gmock/gmock.h>
 
 namespace miracle
@@ -30,7 +30,7 @@ namespace test
     {
     public:
         MOCK_METHOD(
-            std::shared_ptr<OutputInterface>,
+            std::shared_ptr<AbstractOutput>,
             create,
             (std::string name, int id, mir::geometry::Rectangle area),
             (override));

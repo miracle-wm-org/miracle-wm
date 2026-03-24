@@ -48,7 +48,7 @@ public:
         std::shared_ptr<DisplayConfig> const& display_config,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
-    std::shared_ptr<OutputInterface> create(
+    std::shared_ptr<AbstractOutput> create(
         std::string name,
         int id,
         mir::geometry::Rectangle area) override;

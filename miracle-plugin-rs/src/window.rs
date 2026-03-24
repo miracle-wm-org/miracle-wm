@@ -1,9 +1,12 @@
 use super::application::*;
 use super::bindings;
-use super::core::*;
+use super::container::*;
+use super::core::{self, *};
 use super::host::*;
 use super::workspace::*;
+use glam::Mat4;
 
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u32)]
 pub enum WindowAttrib {
@@ -46,9 +49,13 @@ pub enum WindowType {
     Normal = 0,
     /// AKA "floating"
     Utility = 1,
+    /// A dialog box.
     Dialog = 2,
+    /// A splash or branding surface.
     Gloss = 3,
+    /// A window whose layout is entirely managed by a plugin.
     Freestyle = 4,
+    /// A popup or context menu.
     Menu = 5,
     /// AKA "OSK" or handwriting etc.
     InputMethod = 6,
@@ -56,6 +63,7 @@ pub enum WindowType {
     Satellite = 7,
     /// AKA "tooltip"
     Tip = 8,
+    /// A server-side window decoration surface.
     Decoration = 9,
 }
 
@@ -163,8 +171,10 @@ impl TryFrom<bindings::MirWindowFocusState> for WindowFocusState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum WindowVisibility {
+    /// The window is fully obscured by other surfaces.
     #[default]
     Occluded = 0,
+    /// The window is at least partially visible.
     Exposed = 1,
 }
 
@@ -186,6 +196,7 @@ impl TryFrom<bindings::MirWindowVisibility> for WindowVisibility {
     }
 }
 
+/// Controls the z-ordering layer of a freestyle window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[repr(u32)]
 pub enum DepthLayer {
@@ -226,7 +237,11 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
     }
 }
 
-#[derive(Debug, Clone)]
+/// A snapshot of a window's state at the time of a plugin callback.
+///
+/// `WindowInfo` is read-only. To mutate a window managed by your plugin,
+/// use [`PluginWindow`] (returned by [`crate::plugin::managed_windows`]).
+#[derive(Debug)]
 pub struct WindowInfo {
     /// The type of this window.
     pub window_type: WindowType,
@@ -240,15 +255,16 @@ pub struct WindowInfo {
     pub depth_layer: DepthLayer,
     /// The name of the window.
     pub name: String,
+    /// The 4x4 transform matrix of the window (column-major).
+    pub transform: Mat4,
+    /// The alpha (opacity) of the window.
+    pub alpha: f32,
     /// Internal pointer for C interop.
     internal: u64,
 }
 
 impl WindowInfo {
-    /// Create from the C struct.
-    ///
-    /// # Safety
-    /// The `title` pointer must be valid and null-terminated.
+    #[doc(hidden)]
     pub unsafe fn from_c_with_name(value: &bindings::miracle_window_info_t, name: String) -> Self {
         Self {
             window_type: WindowType::try_from(value.window_type).unwrap_or_default(),
@@ -257,8 +273,18 @@ impl WindowInfo {
             size: value.size.into(),
             depth_layer: DepthLayer::try_from(value.depth_layer).unwrap_or_default(),
             name,
+            transform: core::mat4_from_f32_array(value.transform),
+            alpha: value.alpha,
             internal: value.internal,
         }
+    }
+
+    /// Retrieve the ID of this window.
+    ///
+    /// Plugins may elect to keep a reference to this ID so that they can
+    /// match it with [`WindowInfo`] later.
+    pub fn id(&self) -> u64 {
+        self.internal
     }
 
     /// Get the application that owns this window.
@@ -288,6 +314,25 @@ impl WindowInfo {
                 name,
                 internal: internal as u64,
             })
+        }
+    }
+
+    /// Get the container that holds this window.
+    pub fn container(&self) -> Option<Container> {
+        let mut container =
+            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+
+        unsafe {
+            let result = miracle_window_info_get_container(
+                self.internal as i64,
+                container.as_mut_ptr() as i32,
+            );
+
+            if result != 0 {
+                return None;
+            }
+
+            Some(Container::from(container.assume_init()))
         }
     }
 
@@ -323,5 +368,93 @@ impl WindowInfo {
 
             Some(Workspace::from_c_with_name(&workspace, name))
         }
+    }
+}
+
+impl PartialEq for WindowInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.internal == other.internal
+    }
+}
+
+/// A handle to a window managed by this plugin, with mutation methods.
+///
+/// Returned by [`crate::plugin::Plugin::managed_windows`]. Wraps [`WindowInfo`] and exposes
+/// all of its read-only fields via [`std::ops::Deref`], while adding setter methods that
+/// call into the compositor host.
+#[derive(Debug)]
+pub struct PluginWindow {
+    info: WindowInfo,
+}
+
+impl PluginWindow {
+    #[doc(hidden)]
+    pub fn from_window_info(info: WindowInfo) -> Self {
+        Self { info }
+    }
+
+    /// Set the state of this window.
+    pub fn set_state(&self, state: WindowState) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_state(self.info.internal as i64, state as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Move this window to a different workspace.
+    pub fn set_workspace(&self, workspace: &Workspace) -> Result<(), ()> {
+        let r = unsafe {
+            miracle_window_set_workspace(self.info.internal as i64, workspace.id() as i64)
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the position and size of this window.
+    pub fn set_rectangle(&self, rect: Rectangle, animate: bool) -> Result<(), ()> {
+        let r = unsafe {
+            miracle_window_set_rectangle(
+                self.info.internal as i64,
+                rect.x,
+                rect.y,
+                rect.width,
+                rect.height,
+                if animate { 1 } else { 0 },
+            )
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the 4x4 column-major transform matrix of this window.
+    pub fn set_transform(&self, transform: Mat4) -> Result<(), ()> {
+        let arr = transform.to_cols_array();
+        let r =
+            unsafe { miracle_window_set_transform(self.info.internal as i64, arr.as_ptr() as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Set the alpha (opacity) of this window.
+    pub fn set_alpha(&self, alpha: f32) -> Result<(), ()> {
+        let r = unsafe {
+            miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32)
+        };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+
+    /// Request keyboard focus on this window.
+    pub fn request_focus(&self) -> Result<(), ()> {
+        let r = unsafe { miracle_window_request_focus(self.info.internal as i64) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
+}
+
+impl std::ops::Deref for PluginWindow {
+    type Target = WindowInfo;
+
+    fn deref(&self) -> &Self::Target {
+        &self.info
+    }
+}
+
+impl PartialEq for PluginWindow {
+    fn eq(&self, other: &Self) -> bool {
+        self.info == other.info
     }
 }

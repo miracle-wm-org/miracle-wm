@@ -1,23 +1,28 @@
-use std::mem;
-
 use crate::bindings;
-use crate::core::Rect;
-use glm::Mat4;
+use crate::core::{Rect, mat4_from_f32_array, mat4_to_f32_array};
+use glam::Mat4;
 
-pub fn mat4_from_f32_array(arr: [f32; 16]) -> Mat4 {
-    unsafe { mem::transmute(arr) }
+#[doc(hidden)]
+#[repr(C)]
+pub struct RawCustomAnimationData {
+    pub animation_id: u32,
+    pub dt: f32,
+    pub elapsed_seconds: f32,
 }
 
-pub fn mat4_to_f32_array(mat: Mat4) -> [f32; 16] {
-    unsafe { mem::transmute(mat) }
-}
-
+/// Data passed to animation hook methods describing the current frame.
 pub struct AnimationFrameData {
+    /// Elapsed time since the animation started, in seconds.
     pub runtime_seconds: f32,
+    /// Total requested duration of the animation, in seconds.
     pub duration_seconds: f32,
+    /// The starting rectangle of the window (position and size at animation start).
     pub origin: Rect,
+    /// The target rectangle of the window (position and size at animation end).
     pub destination: Rect,
+    /// The starting opacity of the window.
     pub opacity_start: f32,
+    /// The target opacity of the window.
     pub opacity_end: f32,
 }
 
@@ -34,10 +39,15 @@ impl From<bindings::miracle_plugin_animation_frame_data_t> for AnimationFrameDat
     }
 }
 
+/// Returned from animation hooks to describe the frame's visual state.
 pub struct AnimationFrameResult {
+    /// Set to `true` to signal that the animation is finished.
     pub completed: bool,
+    /// Override the window's rectangle for this frame. `None` leaves it unchanged.
     pub area: Option<Rect>,
+    /// Override the window's transform matrix for this frame. `None` leaves it unchanged.
     pub transform: Option<Mat4>,
+    /// Override the window's opacity for this frame. `None` leaves it unchanged.
     pub opacity: Option<f32>,
 }
 

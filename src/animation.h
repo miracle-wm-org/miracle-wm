@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/geometry/rectangle.h>
 #include <miracle/cpp/animation_definition.h>
 #include <optional>
+#include <string>
 
 namespace miracle
 {
@@ -40,6 +41,13 @@ struct AnimationData
     mir::geometry::Rectangle area_end;
     float opacity_start;
     float opacity_end;
+    /// Optional window being animated (set for window_open, window_move, window_close).
+    /// The `internal` field is the stable window ID, usable for host calls.
+    std::optional<miracle_window_info_t> window_info = {};
+    std::optional<std::string> window_name = {};
+    /// Optional workspace of the animated object (set for workspace_switch events).
+    std::optional<miracle_workspace_t> workspace = {};
+    std::optional<std::string> workspace_name = {};
 };
 
 /// Data provided when the animation ticks.
@@ -66,6 +74,27 @@ struct AnimationFrameResult
     std::optional<float> opacity;
 
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
+};
+
+/// A free-form animation driven by an arbitrary callback.
+///
+/// The callback receives the frame delta in seconds and returns
+/// `true` when the animation is complete.
+class CustomAnimation
+{
+public:
+    CustomAnimation(
+        AnimationHandle handle,
+        std::function<bool(float dt)>&& on_tick);
+    [[nodiscard]] AnimationHandle handle() const;
+    void mark_for_removal();
+    [[nodiscard]] bool is_being_removed() const;
+    bool tick(float dt);
+
+private:
+    AnimationHandle handle_;
+    std::function<bool(float dt)> on_tick_;
+    bool is_being_removed_ = false;
 };
 
 /// An animation managed by the #Animator.

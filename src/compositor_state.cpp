@@ -23,27 +23,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 CompositorState::CompositorState() :
-    render_data_manager_(std::make_unique<RenderDataManager>())
+    render_data_manager_(std::make_shared<RenderDataManager>())
 {
 }
 
 std::shared_ptr<Container> CompositorState::focused_container() const
 {
+    std::lock_guard lock(mutex);
     if (!focused.expired())
         return focused.lock();
 
     return nullptr;
 }
 
-void CompositorState::focus_container(std::shared_ptr<Container> const& container, bool is_anonymous)
+void CompositorState::focus_container(std::shared_ptr<Container> const& container)
 {
-    if (is_anonymous)
-    {
-        focused = container;
+    if (!container)
         return;
-    }
 
-    auto it = std::find_if(focus_order.begin(), focus_order.end(), [&](auto const& element)
+    std::lock_guard lock(mutex);
+    focused = container;
+
+    // If the focused container is a window, bring it to the front of the focus order.
+    auto const it = std::ranges::find_if(focus_order, [&](auto const& element)
     {
         return !element.expired() && element.lock() == container;
     });
@@ -51,12 +53,12 @@ void CompositorState::focus_container(std::shared_ptr<Container> const& containe
     if (it != focus_order.end())
     {
         std::rotate(focus_order.begin(), it, it + 1);
-        focused = container;
     }
 }
 
 void CompositorState::unfocus_container(std::shared_ptr<Container> const& container)
 {
+    std::lock_guard lock(mutex);
     if (!focused.expired())
     {
         if (focused.lock() == container)
@@ -64,23 +66,24 @@ void CompositorState::unfocus_container(std::shared_ptr<Container> const& contai
     }
 }
 
-void CompositorState::add(std::shared_ptr<Container> const& container)
+void CompositorState::add(std::shared_ptr<WindowContainer> const& container)
 {
+    std::lock_guard lock(mutex);
     focus_order.push_back(container);
-    mir::log_debug("add: there are now %zu surfaces in the focus order", focus_order.size());
 }
 
-void CompositorState::remove(std::shared_ptr<Container> const& container)
+void CompositorState::remove(std::shared_ptr<WindowContainer> const& container)
 {
-    focus_order.erase(std::remove_if(focus_order.begin(), focus_order.end(), [&](auto const& element)
+    std::lock_guard lock(mutex);
+    std::erase_if(focus_order, [&](auto const& element)
     {
         return !element.expired() && element.lock() == container;
-    }));
-    mir::log_debug("remove: there are now %zu surfaces in the focus order", focus_order.size());
+    });
 }
 
-std::shared_ptr<Container> CompositorState::first_floating() const
+std::shared_ptr<WindowContainer> CompositorState::first_floating()
 {
+    std::lock_guard lock(mutex);
     for (auto const& container : focus_order)
     {
         if (!container.expired() && !container.lock()->anchored())
@@ -90,8 +93,9 @@ std::shared_ptr<Container> CompositorState::first_floating() const
     return nullptr;
 }
 
-std::shared_ptr<Container> CompositorState::first_tiling() const
+std::shared_ptr<WindowContainer> CompositorState::first_tiling()
 {
+    std::lock_guard lock(mutex);
     for (auto const& container : focus_order)
     {
         if (!container.expired() && container.lock()->anchored())
@@ -101,17 +105,24 @@ std::shared_ptr<Container> CompositorState::first_tiling() const
     return nullptr;
 }
 
-WindowManagerMode CompositorState::mode() const
+WindowManagerMode CompositorState::mode()
 {
+    std::lock_guard lock(mutex);
     return mode_;
 }
 
 void CompositorState::mode(WindowManagerMode next)
 {
+    std::lock_guard lock(mutex);
     mode_ = next;
 }
 
-RenderDataManager* CompositorState::render_data_manager() const
+std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager() const
 {
-    return render_data_manager_.get();
+    return render_data_manager_;
+}
+
+uint64_t CompositorState::next_container_id()
+{
+    return next_container_id_++;
 }

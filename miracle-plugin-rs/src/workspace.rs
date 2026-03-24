@@ -1,8 +1,14 @@
 use super::bindings;
 use super::container::*;
+use super::core::Rectangle;
 use super::host::*;
 use super::output::*;
 
+/// Represents one workspace on an output.
+///
+/// Each workspace hosts a tree of [`crate::container::Container`]s. Use [`Workspace::trees`]
+/// to get the top-level containers, and [`Workspace::output`] to find the display this
+/// workspace is hosted on.
 #[derive(Debug, Clone)]
 pub struct Workspace {
     /// The workspace number (if set).
@@ -11,12 +17,18 @@ pub struct Workspace {
     pub name: Option<String>,
     /// The number of container trees in this workspace.
     pub num_trees: u32,
-    /// Internal pointer for C interop.
-    pub internal: u64,
+    /// The current area of the workspace.
+    pub rectangle: Rectangle,
+    internal: u64,
 }
 
 impl Workspace {
-    /// Create from the C struct.
+    /// Returns the opaque internal ID used to refer to this workspace across API calls.
+    pub fn id(&self) -> u64 {
+        self.internal
+    }
+
+    #[doc(hidden)]
     pub unsafe fn from_c_with_name(value: &bindings::miracle_workspace_t, name: String) -> Self {
         Self {
             number: if value.has_number != 0 {
@@ -31,6 +43,12 @@ impl Workspace {
             },
             num_trees: value.num_trees,
             internal: value.internal,
+            rectangle: Rectangle {
+                x: value.position.x,
+                y: value.position.y,
+                width: value.size.w,
+                height: value.size.h,
+            },
         }
     }
 

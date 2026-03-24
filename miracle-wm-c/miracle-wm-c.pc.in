@@ -6,6 +6,6 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 Name: miracle-wm-config
 Description: Configuration library for the Miracle WM
 Version: @PROJECT_VERSION@
-Requires: mircore glib-2.0 yaml-cpp libevdev
+Requires: mircore glib-2.0 yaml-cpp xkbcommon
 Libs: -L${libdir} -lmiracle-wm-c
 Cflags: -I${includedir}

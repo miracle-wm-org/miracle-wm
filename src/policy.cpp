@@ -23,10 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "dying_surface_manager.h"
-#include "feature_flags.h"
+#include "freestyle_window_container.h"
 #include "internal_shell_application_spawner.h"
 #include "leaf_container.h"
 #include "magnifier_wrapper.h"
@@ -39,10 +38,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_manager.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
+#include "window_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
 
 #include <iostream>
+#include <map>
 #include <mir/geometry/rectangle.h>
 #include <mir/log.h>
 #include <mir/server.h>
@@ -78,13 +79,26 @@ class Policy::Self : public virtual WorkspaceObserver,
                      public virtual ConfigObserver
 {
 public:
-    explicit Self(Policy& policy) :
-        policy { policy }
+    explicit Self(Policy& policy, std::shared_ptr<mir::ServerActionQueue> const& queue) :
+        policy { policy },
+        queue { queue }
     {
     }
 
-    void on_workspace_created(uint32_t) override { }
-    void on_workspace_removed(uint32_t) override { }
+    void on_workspace_created(uint32_t id) override
+    {
+        queue->enqueue(this, [id = id, pm = policy.plugin_manager]
+        {
+            pm->workspace_created(id);
+        });
+    }
+    void on_workspace_removed(uint32_t id) override
+    {
+        queue->enqueue(this, [id = id, pm = policy.plugin_manager]
+        {
+            pm->workspace_removed(id);
+        });
+    }
     void on_workspace_empty(uint32_t) override { }
     void on_workspace_focused(std::optional<uint32_t> old, uint32_t next) override
     {
@@ -107,8 +121,20 @@ public:
             if (last_workspace->get_output() != next_workspace->get_output())
                 policy.command_controller->move_cursor_to_output(*next_workspace->get_output());
         }
+
+        queue->enqueue(this, [old = old, next = next, pm = policy.plugin_manager]
+        {
+            pm->workspace_focused(old, next);
+        });
     }
     void on_workspace_renamed(uint32_t) override { }
+    void on_workspace_area_changed(uint32_t id) override
+    {
+        queue->enqueue(this, [id = id, pm = policy.plugin_manager]
+        {
+            pm->workspace_area_changed(id);
+        });
+    }
 
     void on_container_fullscreen(Container const& container) override
     {
@@ -130,11 +156,24 @@ public:
         policy.window_observer_registrar->advise_window_marked(container);
     }
 
+    void on_container_workspace_changed(Container const& container) override
+    {
+        if (!container.window().has_value())
+            return;
+        auto const& window_info = policy.tools.info_for(container.window().value());
+        auto const workspace = container.get_workspace();
+        if (!workspace)
+            return;
+        queue->enqueue(this, [window_info, workspace, pm = policy.plugin_manager]
+        {
+            pm->window_workspace_changed(window_info, workspace->id());
+        });
+    }
+
     void on_config_changed(Config const& config) override
     {
         // Note: We need to grab the lock because this notification comes from
         // a different thread.
-        auto const lock = policy.state->lock();
         for (auto const& output : policy.output_manager->outputs())
         {
             for (auto const& workspace : output->get_workspaces())
@@ -143,6 +182,9 @@ public:
 
         if (!has_loaded_once)
         {
+            for (auto const& app : policy.config->get_startup_apps())
+                policy.launcher->launch(app);
+
             if (config.magnifier().enabled)
                 policy.magnifier->enable();
             else
@@ -151,16 +193,44 @@ public:
 
         policy.magnifier->set_scale(config.magnifier().scale);
         policy.magnifier->set_size(config.magnifier().width, config.magnifier().height);
-
-        policy.plugin_manager->unload_all();
-        for (auto const& plugin : config.get_plugins())
-            policy.plugin_manager->load_wasm_module(plugin.path);
-
         has_loaded_once = true;
     }
 
+    void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
+    {
+        std::map<std::string, std::string> new_plugin_map;
+        for (auto const& p : plugins)
+            new_plugin_map[p.path] = p.userdata_json;
+
+        for (auto it = loaded_plugins.begin(); it != loaded_plugins.end();)
+        {
+            auto const& [path, handle_and_data] = *it;
+            auto const& [handle, userdata_json] = handle_and_data;
+            auto const found = new_plugin_map.find(path);
+            if (found == new_plugin_map.end() || found->second != userdata_json)
+            {
+                policy.plugin_manager->unload_wasm_module(handle);
+                it = loaded_plugins.erase(it);
+            }
+            else
+                ++it;
+        }
+
+        for (auto const& p : plugins)
+        {
+            if (loaded_plugins.count(p.path) == 0)
+            {
+                auto result = policy.plugin_manager->load_wasm_module(p.path, p.userdata_json);
+                if (result.success)
+                    loaded_plugins[p.path] = { result.handle, p.userdata_json };
+            }
+        }
+    }
+
     Policy& policy;
+    std::shared_ptr<mir::ServerActionQueue> queue;
     bool has_loaded_once = false;
+    std::map<std::string, std::pair<PluginHandle, std::string>> loaded_plugins;
 };
 
 Policy::Policy(
@@ -180,8 +250,10 @@ Policy::Policy(
     config_observer_registrar { config_observer_registrar },
     animator(std::make_shared<Animator>()),
     plugin_manager(std::make_shared<PluginManager>()),
+    window_id_map_(std::make_shared<WindowIdMap>()),
+    application_id_map_(std::make_shared<ApplicationIdMap>()),
     window_controller(std::make_shared<WindowManagerToolsWindowController>(
-        tools, animator, plugin_manager, server.the_main_loop(), state, config)),
+        tools, animator, plugin_manager, server.the_main_loop(), state, config, window_id_map_)),
     launcher { std::make_shared<AutoRestartingLauncher>(server, external_client_launcher) },
     workspace_observer_registrar(std::make_shared<WorkspaceObserverRegistrar>()),
     mode_observer_registrar(std::make_shared<ModeObserverRegistrar>()),
@@ -197,7 +269,7 @@ Policy::Policy(
             server.the_main_loop(),
             plugin_manager))),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
-    self(std::make_shared<Self>(*this)),
+    self(std::make_shared<Self>(*this, server.the_main_loop())),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
     command_controller(std::make_shared<CommandController>(
         config, state, window_controller,
@@ -219,11 +291,17 @@ Policy::Policy(
         state,
         config,
         animator,
-        plugin_manager)),
+        plugin_manager,
+        window_controller,
+        window_id_map_)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager));
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
+    config->set_plugin_configure_hook([pm = plugin_manager]()
+    {
+        return pm->configure();
+    });
     workspace_observer_registrar->register_interest(ipc_connection_manager);
     workspace_observer_registrar->register_interest(self);
     mode_observer_registrar->register_interest(ipc_connection_manager);
@@ -249,11 +327,13 @@ Policy::~Policy()
 bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
-    auto const scan_code = miral::toolkit::mir_keyboard_event_scan_code(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
 
-    if (auto const custom_key_command = config->matches_custom_key_command(action, scan_code, modifiers))
+    if (plugin_manager->handle_keyboard_event(*event))
+        return true;
+
+    if (auto const custom_key_command = config->matches_custom_key_command(action, keysym, modifiers))
     {
         BindingEvent const binding_event(
             BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
@@ -267,7 +347,7 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         return true;
     }
 
-    return config->matches_key_command(action, scan_code, modifiers, [&](DefaultKeyCommand key_command)
+    if (config->matches_key_command(action, keysym, modifiers, [&](DefaultKeyCommand key_command)
     {
         if (key_command == DefaultKeyCommand::MAX)
             return false;
@@ -401,17 +481,23 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
             magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
             return true;
         }
+        case DefaultKeyCommand::ReloadConfig:
+            return command_controller->reload_config();
         default:
             mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
             break;
         }
         return false;
-    });
+    }))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 bool Policy::handle_pointer_event(MirPointerEvent const* event)
 {
-    auto const lock = state->lock();
     auto x = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_x);
     auto y = miral::toolkit::mir_pointer_event_axis_value(event, MirPointerAxis::mir_pointer_axis_y);
     auto const action = miral::toolkit::mir_pointer_event_action(event);
@@ -440,6 +526,9 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         }
     }
 
+    if (plugin_manager->handle_pointer_event(*event))
+        return true;
+
     if (resize_service->handle_pointer_event(x, y, action))
         return true;
 
@@ -451,63 +540,35 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
     {
-        if (feature::multi_select && action == mir_pointer_action_button_down)
-        {
-            if (modifiers == config->get_primary_modifier())
-            {
-                // We clicked while holding the modifier, so we're probably in the middle of a multi-selection.
-                if (state->mode() != WindowManagerMode::selecting)
-                {
-                    command_controller->set_mode(WindowManagerMode::selecting);
-                    group_selection = std::make_shared<ContainerGroupContainer>(state);
-                    state->add(group_selection);
-                }
-            }
-            else if (state->mode() == WindowManagerMode::selecting)
-            {
-                // We clicked while we were in selection mode, so let's stop being in selection mode
-                // TODO: Would it be better to check what we clicked in case it's in the group? Then we wouldn't
-                //  exit selection mode in this case.
-                command_controller->set_mode(WindowManagerMode::normal);
-            }
-        }
-
         // Get Container intersection. Depending on the state, do something with that Container
-        std::shared_ptr<Container> intersected = output_manager->focused()->intersect(x, y);
         switch (state->mode())
         {
         case WindowManagerMode::normal:
         {
+            auto const intersected = output_manager->focused()->intersect(x, y);
             if (intersected)
             {
-                if (auto window = intersected->window().value())
+                if (auto const window = intersected->window().value())
                 {
                     if (state->focused_container() != intersected && (config->cursor().focus_mode == CursorFocusMode::Hover || action == mir_pointer_action_button_down))
                         window_controller->select_active_window(window);
                 }
             }
 
-            return false;
-        }
-        case WindowManagerMode::selecting:
-        {
-            if (intersected && action == mir_pointer_action_button_down)
-                group_selection->add(intersected);
-            return true;
+            break;
         }
         default:
-            return false;
+            break;
         }
     }
 
-    return false;
+    return plugin_manager->handle_pointer_event(*event);
 }
 
 auto Policy::place_new_window(
     const miral::ApplicationInfo& app_info,
     const miral::WindowSpecification& requested_specification) -> miral::WindowSpecification
 {
-    auto const lock = state->lock();
     if (!output_manager->focused())
     {
         mir::log_warning("place_new_window: no output available");
@@ -520,13 +581,22 @@ auto Policy::place_new_window(
     // 3. If it meets the criteria of a shell component, call it one
     // 4. If it is a regular window, allocate it as such on the current workspace
     AllocationHint hint;
+    hint.pending_window_id = ++next_window_id_;
     auto new_spec = requested_specification;
 
-    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification);
+    // All windows in Miracle are NOT server side decorated.
+    new_spec.server_side_decorated() = false;
+
+    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification, hint.pending_window_id);
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
-        hint.container_type = ContainerType::plugin;
+        hint.container_type = AllocationType::plugin;
         hint.workspace = plugin_placement->freestyle.workspace;
+        hint.plugin_handle = plugin_placement->freestyle.handle;
+        hint.transform = plugin_placement->freestyle.transform;
+        hint.alpha = plugin_placement->freestyle.alpha;
+        hint.resizable = plugin_placement->freestyle.resizable;
+        hint.movable = plugin_placement->freestyle.movable;
         new_spec.top_left() = plugin_placement->freestyle.rectangle.top_left;
         new_spec.size() = plugin_placement->freestyle.rectangle.size;
         new_spec.depth_layer() = plugin_placement->freestyle.layer;
@@ -535,27 +605,31 @@ auto Policy::place_new_window(
     {
         if (auto const delegate = shell_application_manager->delegate(app_info.application()))
             delegate->place_window(new_spec);
-        hint.container_type = ContainerType::shell;
+        hint.container_type = AllocationType::shell;
     }
     else
     {
         auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
         auto const is_attached = requested_specification.attached_edges().is_set();
-        auto const wrong_leaf_state = requested_specification.state() == mir_window_state_hidden
-            || requested_specification.state() == mir_window_state_attached;
-
-        if (has_exclusive_rect || is_attached || wrong_leaf_state)
-            hint.container_type = ContainerType::shell;
+        if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
+            hint.container_type = AllocationType::shell;
         else
         {
             auto const t = requested_specification.type();
-            if (t == mir_window_type_normal || t == mir_window_type_freestyle)
-                hint.container_type = ContainerType::regular;
+            auto const has_parent = !requested_specification.parent().value_or(std::weak_ptr<mir::scene::Surface>()).expired();
+            bool const is_normal_or_freestyle = t == mir_window_type_normal || t == mir_window_type_freestyle;
+
+            // Windows with a parent (popups, dialogs) are freestyle. Normal/freestyle windows without
+            // a parent go into the grid. Everything else is freestyle.
+            if (has_parent)
+                hint.container_type = AllocationType::freestyle;
+            else if (is_normal_or_freestyle)
+                hint.container_type = AllocationType::grid;
             else
-                hint.container_type = ContainerType::shell; // This is probably a tooltip or something
+                hint.container_type = AllocationType::freestyle;
         }
 
-        if (hint.container_type != ContainerType::shell)
+        if (hint.container_type != AllocationType::shell && hint.container_type != AllocationType::freestyle)
         {
             auto parent = output_manager->focused()->active()->get_layout_container();
             std::optional<size_t> index;
@@ -565,9 +639,8 @@ auto Policy::place_new_window(
             // 2. Place the new window in the selected parent.
             if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_tiled)
             {
-                if (plugin_placement->tiled.container->is_leaf())
+                if (auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container))
                 {
-                    auto const leaf_container = dynamic_cast<LeafContainer*>(plugin_placement->tiled.container);
                     if (plugin_placement->tiled.scheme != LayoutScheme::none && leaf_container->set_layout(plugin_placement->tiled.scheme))
                     {
                         parent = leaf_container->get_parent().lock().get();
@@ -583,7 +656,7 @@ auto Policy::place_new_window(
                 }
             }
 
-            new_spec = parent->place_new_window(requested_specification, index);
+            new_spec = parent->place_new_window(new_spec, index);
             hint.parent = parent;
         }
     }
@@ -594,7 +667,6 @@ auto Policy::place_new_window(
 
 void Policy::advise_new_window(miral::WindowInfo const& window_info)
 {
-    auto const lock = state->lock();
     if (!output_manager->focused())
     {
         mir::log_error("Policy::advise_new_window: no focused output");
@@ -602,52 +674,123 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     }
 
     miral::WindowSpecification spec;
-    std::shared_ptr<Container> container;
+    std::shared_ptr<WindowContainer> container;
     switch (pending_allocation.container_type)
     {
-    case ContainerType::regular:
+    case AllocationType::grid:
     {
         assert(pending_allocation.parent);
-        container = pending_allocation.parent->confirm_window(window_info.window());
+        container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
         break;
     }
-    case ContainerType::plugin:
+    case AllocationType::plugin:
     {
         auto const workspace = pending_allocation.workspace
             ? pending_allocation.workspace->shared_from_this()
             : output_manager->focused()->active();
         container = std::make_shared<PluginManagedContainer>(
-            0,
+            pending_allocation.plugin_handle,
             window_info.window(),
             window_controller,
-            state);
+            state,
+            workspace,
+            pending_allocation.transform,
+            pending_allocation.alpha,
+            pending_allocation.resizable,
+            pending_allocation.movable);
         workspace->add_other_container(container);
     }
     break;
-    case ContainerType::shell:
+    case AllocationType::freestyle:
+    {
+        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
+        if (window_info.parent())
+        {
+            if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
+            {
+                if (auto const parent_workspace = parent_container->get_workspace())
+                    workspace = parent_workspace;
+            }
+        }
+
+        auto const& info = window_controller->info_for(window_info.window());
+        bool const has_border = (info.type() == mir_window_type_dialog
+            || info.type() == mir_window_type_satellite
+            || info.type() == mir_window_type_normal
+            || info.type() == mir_window_type_freestyle);
+
+        container = std::make_shared<FreestyleWindowContainer>(
+            window_info.window(),
+            window_controller,
+            state,
+            workspace,
+            config,
+            has_border);
+        workspace->add_other_container(container);
+
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+
+        if (window_info.parent())
+        {
+            auto const& type = info.type();
+            if (type == mir_window_type_normal || type == mir_window_type_freestyle || type == mir_window_type_dialog)
+            {
+                auto const active = workspace->area();
+                auto const size = window_info.window().size();
+                if (size.width.as_int() > 0 && size.height.as_int() > 0)
+                {
+                    spec.top_left() = geom::Point {
+                        active.top_left.x.as_int() + (active.size.width.as_int() - size.width.as_int()) / 2,
+                        active.top_left.y.as_int() + (active.size.height.as_int() - size.height.as_int()) / 2
+                    };
+                }
+            }
+        }
+        break;
+    }
+    case AllocationType::shell:
     default:
-        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()));
+        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()), output_manager, state);
         break;
     }
 
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
+    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);
 
     window_observer_registrar->advise_created(*container);
     container->register_interest(self);
-    pending_allocation.container_type = ContainerType::none;
+    pending_allocation.container_type = AllocationType::none;
+}
+
+void Policy::advise_new_app(miral::ApplicationInfo& app_info)
+{
+    (*application_id_map_)[++next_application_id_] = app_info.application();
+}
+
+void Policy::advise_delete_app(miral::ApplicationInfo const& app_info)
+{
+    miral::Application const app = app_info.application();
+    for (auto it = application_id_map_->begin(); it != application_id_map_->end(); ++it)
+    {
+        if (it->second == app)
+        {
+            application_id_map_->erase(it);
+            break;
+        }
+    }
 }
 
 void Policy::handle_window_ready(miral::WindowInfo& window_info)
 {
-    auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_window_ready: container is not provided");
@@ -664,8 +807,7 @@ Policy::confirm_placement_on_display(
     MirWindowState new_state,
     mir::geometry::Rectangle const& new_placement)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_warning("confirm_placement_on_display: window lacks container");
@@ -677,48 +819,35 @@ Policy::confirm_placement_on_display(
 
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::advise_focus_gained: container is not provided");
         return;
     }
 
-    switch (state->mode())
+    auto const workspace = container->get_workspace();
+    // If the container has a null workspace, it is always selectable. Otherwise
+    // it needs to be on the active workspace.
+    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
     {
-    case WindowManagerMode::selecting:
-        group_selection->add(container);
-        container->on_focus_gained();
-        break;
-    default:
-    {
-        auto const workspace = container->get_workspace();
-
-        // If the container has a null workspace, it is always selectable. Otherwise
-        // it needs to be on the active workspace.
-        if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-        {
-            // TODO: In this scenario, we may want to navigate to the focused workspace.
-            //  This was removed because it breaks workspace animations.
-            mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
-            break;
-        }
-
-        state->focus_container(container);
-        container->on_focus_gained();
-        if (workspace)
-            workspace->advise_focus_gained(container);
-        window_observer_registrar->advise_window_focused(*container);
-        break;
+        // TODO: In this scenario, we may want to navigate to the focused workspace.
+        //  This was removed because it breaks workspace animations.
+        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+        return;
     }
-    }
+
+    state->focus_container(container);
+    container->on_focus_gained();
+    if (workspace)
+        workspace->advise_focus_gained(container);
+    window_observer_registrar->advise_window_focused(*container);
+    plugin_manager->window_focused(window_info);
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_focus_lost: container is not provided");
@@ -726,25 +855,23 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
     }
 
     if (state->mode() == WindowManagerMode::dragging)
-    {
-        command_controller->set_mode(WindowManagerMode::normal);
-        if (state->focused_container())
-            state->focused_container()->drag_stop();
-    }
+        drag_and_drop_service->stop_drag(*state);
 
     state->unfocus_container(container);
     container->on_focus_lost();
+    plugin_manager->window_unfocused(window_info);
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
-    auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("delete_container: container is not provided");
         return;
     }
+
+    dying_surface_manager->animate_dying_surface(container);
 
     // Important: We advise closed before the window has been removed so that it
     // still has valid references inside of it which consumers can use (e.g.
@@ -760,15 +887,21 @@ void Policy::advise_delete_window(const miral::WindowInfo& window_info)
         state->unfocus_container(container);
 
     state->remove(container);
-
-    dying_surface_manager->animate_dying_surface(container);
     container->unregister_interest(self.get());
+    plugin_manager->window_deleted(window_info);
+    for (auto it = window_id_map_->begin(); it != window_id_map_->end(); ++it)
+    {
+        if (it->second == window_info.window())
+        {
+            window_id_map_->erase(it);
+            break;
+        }
+    }
 }
 
 void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point top_left)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -780,8 +913,7 @@ void Policy::advise_move_to(miral::WindowInfo const& window_info, geom::Point to
 
 void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size const& new_size)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_move_to: container is not provided: %s", window_info.application_id().c_str());
@@ -794,21 +926,18 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 void Policy::advise_output_create(miral::Output const& output)
 {
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
-    auto const lock = state->lock();
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
 }
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
-    auto const lock = state->lock();
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
-    auto const lock = state->lock();
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
 }
@@ -817,8 +946,7 @@ void Policy::handle_modify_window(
     miral::WindowInfo& window_info,
     const miral::WindowSpecification& modifications)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_modify_window: container is not provided");
@@ -846,8 +974,7 @@ void Policy::handle_modify_window(
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_raise_window: container is not provided");
@@ -864,8 +991,7 @@ bool Policy::handle_touch_event(const MirTouchEvent* event)
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
 {
-    auto const lock = state->lock();
-    auto const container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("Policy::handle_request_move: window lacks container");
@@ -886,8 +1012,7 @@ void Policy::handle_request_resize(
     const MirInputEvent* input_event,
     MirResizeEdge edge)
 {
-    auto const lock = state->lock();
-    auto container = window_controller->get_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("handle_request_resize: window lacks container");
@@ -908,7 +1033,6 @@ mir::geometry::Rectangle Policy::confirm_inherited_move(
 
 void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_create(application_zone);
@@ -917,7 +1041,6 @@ void Policy::advise_application_zone_create(miral::Zone const& application_zone)
 
 void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original)
 {
-    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_update(updated, original);
@@ -926,7 +1049,6 @@ void Policy::advise_application_zone_update(miral::Zone const& updated, miral::Z
 
 void Policy::advise_application_zone_delete(miral::Zone const& application_zone)
 {
-    auto const lock = state->lock();
     for (auto const& output : output_manager->outputs())
     {
         output->advise_application_zone_delete(application_zone);
@@ -938,14 +1060,6 @@ void Policy::advise_end()
     if (is_starting_ && output_manager->focused())
     {
         is_starting_ = false;
-        for (auto const& app : config->get_startup_apps())
-        {
-            launcher->launch(app);
-        }
-
-        // TODO: This is very weird, but it seems like mouse and keyboard
-        //  configuration events will not be piped through until things are
-        //  up and running, so I guess we're going to do it here!
-        config_observer_registrar->advise_config_changed(*config);
+        config->reload();
     }
 }

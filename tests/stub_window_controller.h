@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_STUB_WINDOW_CONTROLLER_H
 
 #include "compositor_state.h"
+#include "window_container.h"
 #include "window_controller.h"
 #include <miral/window.h>
 #include <miral/window_management_options.h>
@@ -72,7 +73,7 @@ public:
 
     void select_active_window(miral::Window const&) override { }
 
-    std::shared_ptr<Container> get_container(miral::Window const& window) override
+    std::shared_ptr<Container> get_container(miral::Window const& window)
     {
         for (auto const& p : pairs)
         {
@@ -80,6 +81,11 @@ public:
                 return p.container;
         }
         return nullptr;
+    }
+
+    std::shared_ptr<WindowContainer> get_window_container(miral::Window const& window) override
+    {
+        return std::dynamic_pointer_cast<WindowContainer>(get_container(window));
     }
 
     void raise(miral::Window const&) override { }

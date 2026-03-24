@@ -19,26 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "container.h"
-#include "container_group_container.h"
+#include "abstract_output.h"
 #include "container_listener.h"
 #include "layout_scheme.h"
 #include "leaf_container.h"
-#include "output_interface.h"
 #include "parent_container.h"
+#include "window_container.h"
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 
 using namespace miracle;
-
-ContainerType miracle::container_type_from_string(std::string const& str)
-{
-    if (str == "tiled")
-        return ContainerType::regular;
-    else if (str == "shell")
-        return ContainerType::shell;
-    else
-        return ContainerType::none;
-}
 
 glm::mat4 Container::get_workspace_transform() const
 {
@@ -68,9 +58,9 @@ std::shared_ptr<ParentContainer> Container::as_parent(std::shared_ptr<Container>
     return std::dynamic_pointer_cast<ParentContainer>(container);
 }
 
-std::shared_ptr<ContainerGroupContainer> Container::as_group(std::shared_ptr<Container> const& container)
+std::shared_ptr<WindowContainer> Container::as_window_container(std::shared_ptr<Container> const& container)
 {
-    return std::dynamic_pointer_cast<ContainerGroupContainer>(container);
+    return std::dynamic_pointer_cast<WindowContainer>(container);
 }
 
 namespace
@@ -169,188 +159,184 @@ ResizeResult resize_internal(Container* container, MirResizeEdge edge, int x_dif
         clamped
     };
 }
-}
 
-void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations)
+// Returns the neighbor of 'c' in the given cardinal edge direction.
+std::shared_ptr<Container> neighbor_in_direction(Container* c, MirResizeEdge edge)
 {
     switch (edge)
     {
     case mir_resize_edge_north:
-    {
-        // A note on this algorithm, which applies to all cases:
-        //
-        // When we resize a container, we find the container adjacent to this one which
-        // we want to take size from or give size to. The trick here is that we then use
-        // this adjacent container to resolve the container that contains [container],
-        // which may indeed differ from [container] itself. This is why we resolve the
-        // neighbor's neighbor immediately after resolving the neighbor.
-        //
-        // If the neighbor will be clamped when it is resized, we do not bother going
-        // through with the resize.
-        //
-        // If the container is in an unanchored floating grid and lacks a neighrbor,
-        // let's resize the whole grid.
-        auto const north = container->neighbor_north();
-        if (!north)
-        {
-            if (!container->anchored())
-            {
-                auto const root = container->root();
-                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
-                root->set_logical_area(root_rect.rect, with_animations);
-                root->commit_changes();
-                return;
-            }
-
-            mir::log_info("Cannot resize container from south without north neighbor");
-            return;
-        }
-
-        auto const south = north->neighbor_south();
-        auto const current_rectangle = south->get_logical_area();
-        auto const next_rectangle = resize_internal(south.get(), edge, static_cast<int>(x), static_cast<int>(y));
-        auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
-
-        auto const north_rectangle = resize_internal(north.get(), mir_resize_edge_south, 0, height_diff);
-        if (north_rectangle.clamped)
-        {
-            mir::log_info("North rectangle is as small as it can get, not resizing");
-            return;
-        }
-
-        south->set_logical_area(next_rectangle.rect, with_animations);
-        north->set_logical_area(north_rectangle.rect, with_animations);
-        south->commit_changes();
-        north->commit_changes();
-        break;
-    }
+        return c->neighbor_north();
     case mir_resize_edge_south:
-    {
-        auto const south = container->neighbor_south();
-        if (!south)
-        {
-            if (!container->anchored())
-            {
-                auto const root = container->root();
-                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
-                root->set_logical_area(root_rect.rect, with_animations);
-                root->commit_changes();
-                return;
-            }
-
-            mir::log_info("Cannot resize container from south without south neighbor");
-            return;
-        }
-
-        auto const north = south->neighbor_north();
-        auto const current_rectangle = north->get_logical_area();
-        auto const next_rectangle = resize_internal(north.get(), edge, static_cast<int>(x), static_cast<int>(y));
-        auto const height_diff = current_rectangle.size.height.as_int() - next_rectangle.rect.size.height.as_int();
-
-        auto const south_rectangle = resize_internal(south.get(), mir_resize_edge_north, 0, height_diff);
-        if (south_rectangle.clamped)
-        {
-            mir::log_info("South rectangle is as small as it can get, not resizing");
-            return;
-        }
-
-        north->set_logical_area(next_rectangle.rect, with_animations);
-        south->set_logical_area(south_rectangle.rect, with_animations);
-        north->commit_changes();
-        south->commit_changes();
-        break;
-    }
+        return c->neighbor_south();
     case mir_resize_edge_east:
-    {
-        auto const east = container->neighbor_east();
-        if (!east)
-        {
-            if (!container->anchored())
-            {
-                auto const root = container->root();
-                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
-                root->set_logical_area(root_rect.rect, with_animations);
-                root->commit_changes();
-                return;
-            }
-
-            mir::log_info("Cannot resize container from east without east neighbor");
-            return;
-        }
-
-        auto const west = east->neighbor_west();
-        auto const current_rectangle = west->get_logical_area();
-        auto const next_rectangle = resize_internal(west.get(), edge, static_cast<int>(x), static_cast<int>(y));
-        auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
-
-        auto const east_rectangle = resize_internal(east.get(), mir_resize_edge_west, width_diff, 0);
-        if (east_rectangle.clamped)
-        {
-            mir::log_info("East rectangle is as small as it can get, not resizing");
-            return;
-        }
-
-        west->set_logical_area(next_rectangle.rect, with_animations);
-        east->set_logical_area(east_rectangle.rect, with_animations);
-        west->commit_changes();
-        east->commit_changes();
-        break;
-    }
+        return c->neighbor_east();
     case mir_resize_edge_west:
+        return c->neighbor_west();
+    default:
+        return nullptr;
+    }
+}
+
+// Returns the edge directly opposite to the given cardinal edge.
+MirResizeEdge opposite_resize_edge(MirResizeEdge edge)
+{
+    switch (edge)
     {
-        auto const west = container->neighbor_west();
-        if (!west)
+    case mir_resize_edge_north:
+        return mir_resize_edge_south;
+    case mir_resize_edge_south:
+        return mir_resize_edge_north;
+    case mir_resize_edge_east:
+        return mir_resize_edge_west;
+    case mir_resize_edge_west:
+        return mir_resize_edge_east;
+    default:
+        return edge;
+    }
+}
+}
+
+void Container::execute_resize(Container* container, MirResizeEdge edge, float x, float y, bool with_animations)
+{
+    int const xi = static_cast<int>(x);
+    int const yi = static_cast<int>(y);
+
+    // A note on this algorithm:
+    //
+    // When we resize a container, we find the container adjacent to this one which
+    // we want to take size from or give size to. The trick here is that we then use
+    // this adjacent container to resolve the container that contains [container],
+    // which may indeed differ from [container] itself. This is why we resolve the
+    // neighbor's neighbor immediately after resolving the neighbor.
+    //
+    // If the neighbor will be clamped when it is resized, we do not bother going
+    // through with the resize.
+    //
+    // If the container is in an unanchored floating grid and lacks a neighbor,
+    // let's resize the whole grid.
+    auto const execute_cardinal = [&](MirResizeEdge cardinal)
+    {
+        auto const neighbor = neighbor_in_direction(container, cardinal);
+        if (!neighbor)
         {
             if (!container->anchored())
             {
                 auto const root = container->root();
-                auto const root_rect = resize_internal(root.get(), edge, static_cast<int>(x), static_cast<int>(y));
+                auto const root_rect = resize_internal(root.get(), cardinal, xi, yi);
                 root->set_logical_area(root_rect.rect, with_animations);
                 root->commit_changes();
-                return;
             }
-
-            mir::log_info("Cannot resize container from west without west neighbor");
             return;
         }
 
-        auto const east = west->neighbor_east();
-        auto const current_rectangle = east->get_logical_area();
-        auto const next_rectangle = resize_internal(east.get(), edge, static_cast<int>(x), static_cast<int>(y));
-        auto const width_diff = current_rectangle.size.width.as_int() - next_rectangle.rect.size.width.as_int();
+        auto const actual = neighbor_in_direction(neighbor.get(), opposite_resize_edge(cardinal));
+        auto const current_rect = actual->get_logical_area();
+        auto const next_rect = resize_internal(actual.get(), cardinal, xi, yi);
 
-        auto const west_rectangle = resize_internal(west.get(), mir_resize_edge_east, width_diff, 0);
-        if (west_rectangle.clamped)
+        int const width_diff = current_rect.size.width.as_int() - next_rect.rect.size.width.as_int();
+        int const height_diff = current_rect.size.height.as_int() - next_rect.rect.size.height.as_int();
+
+        auto const neighbor_rect = resize_internal(neighbor.get(), opposite_resize_edge(cardinal), width_diff, height_diff);
+        if (neighbor_rect.clamped)
+            return;
+
+        actual->set_logical_area(next_rect.rect, with_animations);
+        neighbor->set_logical_area(neighbor_rect.rect, with_animations);
+        actual->commit_changes();
+        neighbor->commit_changes();
+    };
+
+    // Handles a diagonal resize by combining two cardinal axes into a single
+    // set_logical_area call on the actual container, avoiding two independent animations.
+    // axis_y must be north or south; axis_x must be east or west.
+    auto const execute_diagonal = [&](MirResizeEdge axis_y, MirResizeEdge axis_x)
+    {
+        auto const ny = neighbor_in_direction(container, axis_y);
+        auto const nx = neighbor_in_direction(container, axis_x);
+
+        if (!ny && !nx)
         {
-            mir::log_info("West rectangle is as small as it can get, not resizing");
+            if (!container->anchored())
+            {
+                auto const root = container->root();
+                auto const root_rect = resize_internal(root.get(), edge, xi, yi);
+                root->set_logical_area(root_rect.rect, with_animations);
+                root->commit_changes();
+            }
             return;
         }
 
-        east->set_logical_area(next_rectangle.rect, with_animations);
-        west->set_logical_area(west_rectangle.rect, with_animations);
-        east->commit_changes();
-        west->commit_changes();
+        // Resolve the actual container from the neighbor's reverse lookup.
+        // In a normal tiling layout both lookups yield the same container.
+        auto const actual = ny ? neighbor_in_direction(ny.get(), opposite_resize_edge(axis_y))
+                               : neighbor_in_direction(nx.get(), opposite_resize_edge(axis_x));
+        auto const current_rect = actual->get_logical_area();
+
+        // Compute per-axis results independently from the same base rectangle.
+        auto const ry = ny ? resize_internal(actual.get(), axis_y, 0, yi) : ResizeResult { current_rect, false };
+        auto const rx = nx ? resize_internal(actual.get(), axis_x, xi, 0) : ResizeResult { current_rect, false };
+
+        int const height_diff = current_rect.size.height.as_int() - ry.rect.size.height.as_int();
+        int const width_diff = current_rect.size.width.as_int() - rx.rect.size.width.as_int();
+
+        auto const ny_result = ny ? resize_internal(ny.get(), opposite_resize_edge(axis_y), 0, height_diff) : ResizeResult {};
+        auto const nx_result = nx ? resize_internal(nx.get(), opposite_resize_edge(axis_x), width_diff, 0) : ResizeResult {};
+
+        bool const y_ok = !ny || !ny_result.clamped;
+        bool const x_ok = !nx || !nx_result.clamped;
+
+        if (!y_ok && !x_ok)
+            return;
+
+        // Combine both axes into a single rectangle update to avoid double animations.
+        geom::Rectangle const combined {
+            geom::Point {
+                         x_ok ? rx.rect.top_left.x : current_rect.top_left.x,
+                         y_ok ? ry.rect.top_left.y : current_rect.top_left.y   },
+            geom::Size {
+                         x_ok ? rx.rect.size.width : current_rect.size.width,
+                         y_ok ? ry.rect.size.height : current_rect.size.height }
+        };
+
+        actual->set_logical_area(combined, with_animations);
+        actual->commit_changes();
+
+        if (y_ok && ny)
+        {
+            ny->set_logical_area(ny_result.rect, with_animations);
+            ny->commit_changes();
+        }
+        if (x_ok && nx)
+        {
+            nx->set_logical_area(nx_result.rect, with_animations);
+            nx->commit_changes();
+        }
+    };
+
+    switch (edge)
+    {
+    case mir_resize_edge_north:
+    case mir_resize_edge_south:
+    case mir_resize_edge_east:
+    case mir_resize_edge_west:
+        execute_cardinal(edge);
         break;
-    }
     case mir_resize_edge_northeast:
+        execute_diagonal(mir_resize_edge_north, mir_resize_edge_east);
+        break;
     case mir_resize_edge_northwest:
+        execute_diagonal(mir_resize_edge_north, mir_resize_edge_west);
+        break;
     case mir_resize_edge_southeast:
+        execute_diagonal(mir_resize_edge_south, mir_resize_edge_east);
+        break;
     case mir_resize_edge_southwest:
-        mir::log_warning("Resize edge is currently unsupported");
+        execute_diagonal(mir_resize_edge_south, mir_resize_edge_west);
         break;
     default:
         break;
     }
-}
-
-bool Container::is_leaf()
-{
-    return get_type() == ContainerType::regular;
-}
-
-bool Container::is_lane()
-{
-    return get_type() == ContainerType::parent;
 }
 
 float Container::get_percent_of_parent() const
@@ -392,7 +378,7 @@ std::shared_ptr<Container> get_neighbor(
     if (!parent)
         return nullptr;
 
-    if (parent->get_direction() != direction)
+    if (parent->get_scheme() != direction)
         return get_neighbor(parent.get(), direction, std::move(predicate));
 
     auto const maybe_index = parent->get_index_of_node(container);
@@ -570,4 +556,9 @@ std::shared_ptr<Container> Container::root()
         return sh->root();
 
     return shared_from_this();
+}
+
+std::optional<PluginHandle> Container::plugin_handle() const
+{
+    return std::nullopt;
 }

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animation.h"
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
+#include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 
@@ -192,22 +193,34 @@ inline SlideResult slide(float p, geom::Rectangle const& from, geom::Rectangle c
     };
 }
 
-miracle_animation_type from_animateable_event(AnimateableEvent event)
-{
-    switch (event)
-    {
-    case AnimateableEvent::window_open:
-        return miracle_animation_type_window_open;
-    case AnimateableEvent::window_move:
-        return miracle_animation_type_window_move;
-    case AnimateableEvent::window_close:
-        return miracle_animation_type_window_close;
-    case AnimateableEvent::workspace_switch:
-        return miracle_animation_type_workspace_switch;
-    default:
-        return miracle_animation_type_window_none;
-    }
 }
+
+CustomAnimation::CustomAnimation(
+    AnimationHandle handle,
+    std::function<bool(float dt)>&& on_tick) :
+    handle_ { handle },
+    on_tick_ { std::move(on_tick) }
+{
+}
+
+AnimationHandle CustomAnimation::handle() const
+{
+    return handle_;
+}
+
+void CustomAnimation::mark_for_removal()
+{
+    is_being_removed_ = true;
+}
+
+bool CustomAnimation::is_being_removed() const
+{
+    return is_being_removed_;
+}
+
+bool CustomAnimation::tick(float dt)
+{
+    return on_tick_(dt);
 }
 
 Animation::Animation(
@@ -249,73 +262,47 @@ bool Animation::tick(float dt)
         return true;
     }
 
-    switch (definition_.type)
+    if (plugin_manager)
     {
-    case AnimationType::built_in:
-    {
-        AnimationFrameResult result;
-        for (auto const& builtin_def : definition_.data)
-            result = tick_built_in(builtin_def, t).merge(result);
-        on_tick(result);
-        if (result.is_complete)
-            on_tick(finish());
-        return result.is_complete;
-    }
-    case AnimationType::plugin:
-    {
-        miracle_plugin_animation_frame_data_t frame_data;
-        frame_data.type = from_animateable_event(data_.event);
-        frame_data.runtime_seconds = runtime_seconds;
-        frame_data.duration_seconds = definition_.duration_seconds;
-        frame_data.origin[0] = static_cast<float>(data_.area_start.top_left.x.as_int());
-        frame_data.origin[1] = static_cast<float>(data_.area_start.top_left.y.as_int());
-        frame_data.origin[2] = static_cast<float>(data_.area_start.size.width.as_value());
-        frame_data.origin[3] = static_cast<float>(data_.area_start.size.height.as_value());
-        frame_data.destination[0] = static_cast<float>(data_.area_end.top_left.x.as_int());
-        frame_data.destination[1] = static_cast<float>(data_.area_end.top_left.y.as_int());
-        frame_data.destination[2] = static_cast<float>(data_.area_end.size.width.as_value());
-        frame_data.destination[3] = static_cast<float>(data_.area_end.size.height.as_value());
-        frame_data.opacity_start = data_.opacity_start;
-        frame_data.opacity_end = data_.opacity_end;
-        auto const maybe_frame_result = plugin_manager->animate(frame_data);
-        if (!maybe_frame_result)
+        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds, definition_.duration_seconds);
+        if (maybe_frame_result)
         {
-            mir::log_warning("Animation is supposed to be using a plugin, but no plugin handled the 'animate' call.");
-            on_tick(finish());
-            return true;
+            auto const frame_result = maybe_frame_result.value();
+            AnimationFrameResult animation_result;
+            animation_result.is_complete = frame_result.completed != 0;
+            if (frame_result.has_area != 0)
+            {
+                animation_result.rectangle = geom::Rectangle {
+                    geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
+                    geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
+                };
+            }
+            if (frame_result.has_transform != 0)
+            {
+                glm::mat4 transform;
+                std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
+                animation_result.transform = transform;
+            }
+            else
+                animation_result.transform = glm::mat4(1.f);
+            if (frame_result.has_opacity != 0)
+            {
+                animation_result.opacity = frame_result.opacity;
+            }
+            on_tick(animation_result);
+            if (animation_result.is_complete)
+                on_tick(finish());
+            return animation_result.is_complete;
         }
+    }
 
-        auto const frame_result = maybe_frame_result.value();
-        AnimationFrameResult animation_result;
-        animation_result.is_complete = frame_result.completed != 0;
-        if (frame_result.has_area != 0)
-        {
-            animation_result.rectangle = geom::Rectangle {
-                geom::Point { static_cast<int>(frame_result.area[0]), static_cast<int>(frame_result.area[1]) },
-                geom::Size { frame_result.area[2],                   frame_result.area[3]                   }
-            };
-        }
-        if (frame_result.has_transform != 0)
-        {
-            glm::mat4 transform;
-            std::memcpy(&transform, frame_result.transform, sizeof(glm::mat4));
-            animation_result.transform = transform;
-        }
-        else
-            animation_result.transform = glm::mat4(1.f);
-        if (frame_result.has_opacity != 0)
-        {
-            animation_result.opacity = frame_result.opacity;
-        }
-        on_tick(animation_result);
-        if (animation_result.is_complete)
-            on_tick(finish());
-        return animation_result.is_complete;
-    }
-    default:
+    AnimationFrameResult result;
+    for (auto const& builtin_def : definition_.data)
+        result = tick_built_in(builtin_def, t).merge(result);
+    on_tick(result);
+    if (result.is_complete)
         on_tick(finish());
-        return true;
-    }
+    return result.is_complete;
 }
 
 AnimationFrameResult Animation::finish() const

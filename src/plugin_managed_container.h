@@ -18,9 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_PLUGIN_MANAGED_CONTAINER
 #define MIRACLE_PLUGIN_MANAGED_CONTAINER
 
-#include "container.h"
-#include "plugin_manager.h"
+#include "container_effect.h"
 #include "render_data_manager.h"
+#include "synchronized_recursive.h"
+#include "window_container.h"
 
 namespace miracle
 {
@@ -37,15 +38,19 @@ class CompositorState;
 /// Unlike #ShellComponentContainer, a plugin managed container *can* be
 /// associated with a specific workspace. However, it is *not* associated
 /// with a tiling grid, like other containers.
-class PluginManagedContainer : public Container
+class PluginManagedContainer : public WindowContainer
 {
 public:
     PluginManagedContainer(
         PluginHandle plugin_handle,
         miral::Window const& window,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<CompositorState> const& compositor_state);
-    ~PluginManagedContainer() override;
+        std::shared_ptr<CompositorState> const& compositor_state,
+        std::shared_ptr<AbstractWorkspace> const& workspace,
+        glm::mat4 transform = glm::mat4(1.f),
+        float alpha = 1.f,
+        bool resizable = true,
+        bool movable = true);
 
     void show() override;
     void hide() override;
@@ -54,7 +59,6 @@ public:
     geom::Rectangle get_visible_area() const override;
     void constrain() override;
     std::weak_ptr<ParentContainer> get_parent() const override;
-    ContainerType get_type() const override;
     void commit_changes() override;
     void set_parent(const std::shared_ptr<ParentContainer>&) override;
     size_t get_min_height() const override;
@@ -69,27 +73,17 @@ public:
     void request_horizontal_layout() override;
     void request_vertical_layout() override;
     void toggle_layout(bool cycle_thru_all) override;
-    void on_open() override;
-    void on_focus_gained() override;
-    void on_focus_lost() override;
     void on_move_to(const geom::Point& top_left) override;
     void on_resize(const geom::Size& size) override;
     mir::geometry::Rectangle confirm_placement(MirWindowState, const mir::geometry::Rectangle&) override;
-    std::shared_ptr<WorkspaceInterface> get_workspace() const override;
-    void set_workspace(const std::shared_ptr<WorkspaceInterface>&) override;
-    std::shared_ptr<OutputInterface> get_output() const override;
-    glm::mat4 get_transform() const override;
-    void set_transform(glm::mat4 transform) override;
-    void set_workspace_transform(const glm::mat4& transform) override;
-    void set_workspace_alpha(float a) override;
-    glm::mat4 get_workspace_transform() const override;
+    std::shared_ptr<AbstractWorkspace> get_workspace() const override;
+    void set_workspace(const std::shared_ptr<AbstractWorkspace>&) override;
+    std::shared_ptr<AbstractOutput> get_output() const override;
     glm::mat4 get_output_transform() const override;
-    void set_alpha(const float alpha) override;
     uint32_t animation_handle() const override;
     void animation_handle(uint32_t) override;
     bool is_focused() const override;
     bool is_fullscreen() const override;
-    std::optional<miral::Window> window() const override;
     bool select_next(Direction) override;
     bool pinned() const override;
     bool pinned(bool) override;
@@ -111,23 +105,21 @@ public:
     LayoutScheme get_layout() const override;
     bool matches(const ContainerScope&) const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
+    std::optional<PluginHandle> plugin_handle() const override;
 
 private:
-    void rerender();
+    struct State
+    {
+        std::optional<MirWindowState> cached;
+        std::weak_ptr<AbstractWorkspace> workspace_;
+        uint32_t handle_ = 0;
+        bool is_focused_ = false;
+    };
 
-    PluginHandle plugin_handle;
-    miral::Window window_;
-    std::optional<MirWindowState> cached;
+    PluginHandle plugin_handle_;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
-    std::weak_ptr<WorkspaceInterface> workspace_;
-    float alpha_ = 1.f;
-    glm::mat4 transform_ = glm::mat4(1.f);
-    glm::mat4 workspace_transform_ = glm::mat4(1.f);
-    float workspace_alpha_ = 1.f;
-    uint32_t handle_ = 0;
-    bool is_focused_ = false;
-    RenderDataManagerId render_id = -1;
+    SynchronisedRecursive<State> sync;
 };
 }
 

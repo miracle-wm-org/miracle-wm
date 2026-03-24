@@ -50,7 +50,7 @@ const geom::Rectangle OTHER_OUTPUT_SIZE {
     geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT)
 };
 
-std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
 std::vector<miral::Zone> empty_app_zones;
 
 std::shared_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
@@ -93,7 +93,7 @@ public:
 
     std::shared_ptr<LeafContainer> create_leaf(
         std::optional<std::shared_ptr<ParentContainer>> parent = std::nullopt,
-        WorkspaceInterface* target_workspace = nullptr)
+        AbstractWorkspace* target_workspace = nullptr)
     {
         if (target_workspace == nullptr)
             target_workspace = workspace.get();
@@ -110,7 +110,7 @@ public:
         auto leaf = layout_parent->confirm_window(window);
         pairs.push_back({ window, leaf, geom::Rectangle(), mir_window_state_restored, std::nullopt });
 
-        state->add(leaf);
+        state->add(std::dynamic_pointer_cast<WindowContainer>(leaf));
         leaf->on_focus_gained();
         state->focus_container(leaf);
         return Container::as_leaf(leaf);
@@ -227,7 +227,7 @@ TEST_F(WorkspaceTest, CanMoveContainerToDifferentParent)
     ASSERT_EQ(leaf2->get_logical_area().top_left, geom::Point(0, 0));
     ASSERT_EQ(leaf3->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT / 3.f)));
     ASSERT_EQ(leaf1->get_logical_area().top_left, geom::Point(0, ceilf(OUTPUT_HEIGHT * (2.f / 3.f))));
-    ASSERT_EQ(workspace->get_root()->num_nodes(), 3);
+    ASSERT_EQ(workspace->get_root()->num_children(), 3);
 }
 
 TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
@@ -289,7 +289,6 @@ TEST_F(WorkspaceTest, DraggedWindowsDoNotChangeTheirPositionWhenANewWindowIsAdde
 
     auto leaf2 = create_leaf();
     ASSERT_EQ(window_controller->get_window_data(leaf1).rectangle.top_left, mir::geometry::Point(100, 100));
-    ASSERT_EQ(window_controller->get_window_data(leaf1).rectangle.size, geom::Size(OUTPUT_WIDTH / 2.f, OUTPUT_HEIGHT));
 }
 
 TEST_F(WorkspaceTest, DraggedWindowsAreUnconstrained)

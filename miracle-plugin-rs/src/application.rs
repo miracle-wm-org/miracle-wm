@@ -1,6 +1,7 @@
 use super::bindings;
 use std::ffi::CStr;
 
+/// Identifies the application that owns a window.
 #[derive(Debug, Clone)]
 pub struct ApplicationInfo {
     /// The name of the application.
@@ -11,10 +12,7 @@ pub struct ApplicationInfo {
 }
 
 impl ApplicationInfo {
-    /// Create from the C struct.
-    ///
-    /// # Safety
-    /// The `application_name` pointer must be valid and null-terminated.
+    #[doc(hidden)]
     pub unsafe fn from_c(value: &bindings::miracle_application_info_t) -> Self {
         let name = if value.application_name.is_null() {
             String::new()

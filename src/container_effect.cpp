@@ -15,34 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H
-#define MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H
+#include "container_effect.h"
 
-#include "export.h"
-#include <array>
-
-namespace miracle
+miracle::ContainerEffect miracle::ContainerEffect::blend(ContainerEffect const& other)
 {
-enum class MIRACLE_WM_CONFIG_API ContainerType
-{
-    none,
-    regular,
-    shell,
-    parent,
-    group,
-    plugin,
-    max
-};
-
-constexpr std::array<const char*, static_cast<int>(ContainerType::max)> container_type_strings = {
-    "none",
-    "regular",
-    "shell",
-    "parent",
-    "group",
-    "plugin"
-};
-
+    return ContainerEffect {
+        alpha * other.alpha,
+        transform * other.transform,
+    };
 }
-
-#endif // MIRACLE_WM_CONFIG_ANIMATION_CONTAINER_TYPE_H

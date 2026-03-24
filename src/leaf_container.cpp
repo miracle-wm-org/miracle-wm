@@ -18,15 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "leaf_container"
 
 #include "leaf_container.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "config.h"
-#include "container_group_container.h"
 #include "container_listener.h"
 #include "container_scope.h"
-#include "output_interface.h"
 #include "parent_container.h"
 #include "window_helpers.h"
-#include "workspace_interface.h"
 
 #include <cmath>
 #include <jpcre2.h>
@@ -46,18 +45,18 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
     // from as a hint. If the node that we want to move to has the same direction as that which we are coming
     // from, a seamless experience would mean that - at times - we select the _LAST_ node in that list, instead
     // of the first one. This makes it feel as though we are moving "across" the screen.
-    if (node->is_leaf())
-        return Container::as_leaf(node);
+    if (auto const leaf = Container::as_leaf(node))
+        return leaf;
 
     bool const is_vertical = is_vertical_direction(direction);
     bool const is_negative = is_negative_direction(direction);
     auto const lane_node = Container::as_parent(node);
-    if ((is_vertical && lane_node->get_direction() == LayoutScheme::vertical)
-        || (!is_vertical && lane_node->get_direction() == LayoutScheme::horizontal))
+    if ((is_vertical && lane_node->get_scheme() == LayoutScheme::vertical)
+        || (!is_vertical && lane_node->get_scheme() == LayoutScheme::horizontal))
     {
         if (is_negative)
         {
-            auto sub_nodes = lane_node->get_sub_nodes();
+            auto sub_nodes = lane_node->children();
             for (auto i = sub_nodes.size() - 1; i != 0; i--)
             {
                 if (auto retval = get_closest_window_to_select_from_node(sub_nodes[i], direction))
@@ -66,7 +65,7 @@ std::shared_ptr<LeafContainer> get_closest_window_to_select_from_node(
         }
     }
 
-    for (auto const& sub_node : lane_node->get_sub_nodes())
+    for (auto const& sub_node : lane_node->children())
     {
         if (auto retval = get_closest_window_to_select_from_node(sub_node, direction))
             return retval;
@@ -96,16 +95,16 @@ std::shared_ptr<ParentContainer> handle_remove_container(std::shared_ptr<Contain
     if (parent == nullptr)
         return nullptr;
 
-    if (parent->num_nodes() == 1 && parent->get_parent().lock())
+    if (parent->num_children() == 1 && parent->get_parent().lock())
     {
         // Remove the entire parent if this parent is now empty
         auto prev_active = parent;
         parent = Container::as_parent(parent->get_parent().lock());
-        parent->remove(prev_active);
+        parent->remove_child(prev_active);
     }
     else
     {
-        parent->remove(container);
+        parent->remove_child(container);
     }
 
     return parent;
@@ -119,92 +118,66 @@ std::tuple<std::shared_ptr<ParentContainer>, std::shared_ptr<ParentContainer>> t
     auto to_update = handle_remove_container(node);
     auto target_parent = Container::as_parent(to->get_parent().lock());
     auto const index = target_parent->get_index_of_node(to).value();
-    target_parent->graft_existing(node, static_cast<int>(index + 1));
+    target_parent->add_child(node, index + 1);
     node->set_workspace(target_parent->get_workspace());
 
     return { target_parent, to_update };
 }
-
-inline bool needs_outline(Container const& container)
-{
-    auto const surface = container.window().value().operator std::shared_ptr<mir::scene::Surface>();
-    container.window().value();
-    return (container.get_type() == ContainerType::regular)
-        && (surface == nullptr || !surface->parent());
-}
-
-inline glm::mat4 workspace_transform(Container const& container)
-{
-    return container.get_output_transform() * container.get_workspace_transform();
-}
 }
 
 LeafContainer::LeafContainer(
-    std::shared_ptr<WorkspaceInterface> const& workspace,
+    std::shared_ptr<AbstractWorkspace> const& workspace,
     std::shared_ptr<WindowController> const& window_controller,
     geom::Rectangle area,
     std::shared_ptr<Config> const& config,
     std::shared_ptr<ParentContainer> const& parent,
     std::shared_ptr<CompositorState> const& state) :
-    workspace { workspace },
-    window_controller { window_controller },
-    logical_area { std::move(area) },
+    WindowContainer(state->next_container_id(), state->render_data_manager(), window_controller),
+    window_controller {
+        window_controller
+},
     config { config },
-    parent { parent },
-    state { state }
+    state { state },
+    sync { State {
+        .workspace = workspace,
+        .logical_area = std::move(area),
+        .parent = parent,
+    } }
 {
-}
-
-LeafContainer::~LeafContainer()
-{
-    state->render_data_manager()->remove(id);
-}
-
-void LeafContainer::associate_to_window(miral::Window const& in_window)
-{
-    window_ = in_window;
-    id = state->render_data_manager()->add({
-        RenderData {
-                    .surface = window()->operator std::shared_ptr<mir::scene::Surface>().get(),
-                    .needs_outline = needs_outline(*this),
-                    .is_focused = is_focused(),
-                    .transform = get_transform(),
-                    .workspace_transform = workspace_transform(*this),
-                    .workspace_alpha = workspace.expired() ? 1.f : workspace.lock()->alpha(),
-                    .output_area = get_output()->get_area() }
-    });
 }
 
 geom::Rectangle LeafContainer::get_logical_area() const
 {
-    return next_logical_area ? next_logical_area.value() : logical_area;
+    auto const s = sync.lock();
+    return s->next_logical_area ? s->next_logical_area.value() : s->logical_area;
 }
 
 void LeafContainer::set_logical_area(geom::Rectangle const& target_rect, bool with_animations)
 {
-    next_logical_area = target_rect;
-    next_with_animations = with_animations;
+    auto s = sync.lock();
+    s->next_logical_area = target_rect;
+    s->next_with_animations = with_animations;
 }
 
 std::weak_ptr<ParentContainer> LeafContainer::get_parent() const
 {
-    return parent;
+    return sync.lock()->parent;
 }
 
 void LeafContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent)
 {
-    parent = in_parent;
+    sync.lock()->parent = in_parent;
 
     miral::WindowSpecification spec;
     spec.depth_layer() = get_depth_layer(
         is_fullscreen(),
         in_parent->anchored());
-    window_controller->modify(window_, spec);
+    window_controller->modify(window_sync.lock()->window_, spec);
 }
 
-void LeafContainer::set_state(MirWindowState state)
+void LeafContainer::set_state(MirWindowState in_state)
 {
-    next_state = state;
+    sync.lock()->next_state = in_state;
 }
 
 geom::Rectangle LeafContainer::get_visible_area() const
@@ -219,14 +192,15 @@ geom::Rectangle LeafContainer::get_visible_area() const
     //  for different gaps on all sides. That is a bit too much trouble to implement
     //  for now though.
     auto gaps = config->get_inner_gaps();
-    if (auto const sh_workspace = workspace.lock())
+    if (auto const sh_workspace = sync.lock()->workspace.lock())
     {
         if (auto const workspace_gaps = sh_workspace->inner_gaps())
             gaps = *workspace_gaps;
     }
-    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
-    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
     auto const neighbors = get_neighbors();
+    auto const logical_area = sync.lock()->logical_area;
     int x = logical_area.top_left.x.as_int();
     int y = logical_area.top_left.y.as_int();
     int width = logical_area.size.width.as_int();
@@ -267,10 +241,11 @@ geom::Rectangle LeafContainer::get_visible_area() const
 
 void LeafContainer::constrain()
 {
-    if (is_fullscreen() || is_dragging_)
-        window_controller->noclip(window_);
+    auto const w = window_sync.lock()->window_;
+    if (is_fullscreen() || sync.lock()->is_dragging_)
+        window_controller->noclip(w);
     else
-        window_controller->clip(window_, get_visible_area());
+        window_controller->clip(w, get_visible_area());
 }
 
 size_t LeafContainer::get_min_width() const
@@ -285,11 +260,14 @@ size_t LeafContainer::get_min_height() const
 
 void LeafContainer::handle_ready()
 {
-    if (state->focused_container() == nullptr || !state->focused_container()->is_fullscreen())
+    auto const focused = state->focused_container();
+    auto const window_focused = std::dynamic_pointer_cast<WindowContainer>(focused);
+    auto const w = window_sync.lock()->window_;
+    if (!focused || !window_focused || !window_focused->is_fullscreen())
     {
-        auto& info = window_controller->info_for(window_);
+        auto& info = window_controller->info_for(w);
         if (info.can_be_active())
-            window_controller->select_active_window(window_);
+            window_controller->select_active_window(w);
     }
 }
 
@@ -297,9 +275,10 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 {
     /// Note: This request comes from the client, so we may accept or ignore whatever
     /// it is that we find here.
+    auto const w = window_sync.lock()->window_;
     auto mods = modifications;
     auto visible_area = get_visible_area();
-    auto state = window_controller->get_state(window_);
+    auto cur_state = window_controller->get_state(w);
     if (mods.state().is_set())
     {
         // We will not respect any request for a maximized window. Only fullscreen is valid.
@@ -316,10 +295,10 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             break;
         }
 
-        state = mods.state().value();
+        cur_state = mods.state().value();
         mods.depth_layer() = get_depth_layer(
             mods.state().value() == mir_window_state_fullscreen,
-            parent.lock()->anchored());
+            sync.lock()->parent.lock()->anchored());
 
         if (mods.state().value() == mir_window_state_restored)
         {
@@ -328,8 +307,8 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             mods.size() = visible_area.size;
         }
 
-        if (state == mir_window_state_fullscreen
-            || window_controller->get_state(window_) == mir_window_state_fullscreen)
+        if (cur_state == mir_window_state_fullscreen
+            || window_controller->get_state(w) == mir_window_state_fullscreen)
         {
             for_each_observer([this](ContainerListener* observer)
             {
@@ -337,13 +316,13 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             });
         }
 
-        if (state == mir_window_state_fullscreen)
-            window_controller->noclip(window_);
+        if (cur_state == mir_window_state_fullscreen)
+            window_controller->noclip(w);
         else
-            window_controller->clip(window_, visible_area);
+            window_controller->clip(w, visible_area);
     }
 
-    if (state == mir_window_state_restored)
+    if (cur_state == mir_window_state_restored)
     {
         if (mods.size().is_set() && mods.size().value() != visible_area.size)
             mods.size().consume();
@@ -351,7 +330,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             mods.top_left().consume();
     }
 
-    window_controller->modify(window_, mods);
+    window_controller->modify(w, mods);
 }
 
 void LeafContainer::handle_raise()
@@ -415,36 +394,44 @@ bool LeafContainer::set_size(std::optional<int> const& width, std::optional<int>
 
 void LeafContainer::show()
 {
-    next_state = before_shown_state;
-    before_shown_state.reset();
+    {
+        auto s = sync.lock();
+        s->next_state = s->before_shown_state;
+        s->before_shown_state.reset();
+    }
     commit_changes();
-    window_controller->raise(window_);
+    window_controller->raise(window_sync.lock()->window_);
 }
 
 void LeafContainer::hide()
 {
-    before_shown_state = window_controller->get_state(window_);
-    next_state = mir_window_state_hidden;
+    auto const w = window_sync.lock()->window_;
+    auto s = sync.lock();
+    s->before_shown_state = window_controller->get_state(w);
+    s->next_state = mir_window_state_hidden;
+    s.drop();
     commit_changes();
-    window_controller->send_to_back(window_);
+    window_controller->send_to_back(w);
 }
 
 bool LeafContainer::toggle_fullscreen()
 {
-    if (is_fullscreen())
     {
-        next_state = mir_window_state_restored;
-        next_logical_area = get_logical_area();
-    }
-    else
-    {
-        next_state = mir_window_state_fullscreen;
-    }
+        auto s = sync.lock();
+        if (is_fullscreen())
+        {
+            s->next_state = mir_window_state_restored;
+            s->next_logical_area = get_logical_area();
+        }
+        else
+        {
+            s->next_state = mir_window_state_fullscreen;
+        }
 
-    next_depth_layer = get_depth_layer(
-        next_state == mir_window_state_fullscreen,
-        parent.lock()->anchored());
-
+        s->next_depth_layer = get_depth_layer(
+            s->next_state == mir_window_state_fullscreen,
+            s->parent.lock()->anchored());
+    }
     commit_changes();
     return true;
 }
@@ -455,79 +442,78 @@ mir::geometry::Rectangle LeafContainer::confirm_placement(
     return placement;
 }
 
-void LeafContainer::on_open()
-{
-    window_controller->open(window_);
-}
-
-void LeafContainer::on_focus_gained()
-{
-    if (auto sh_parent = parent.lock())
-        sh_parent->on_focus_gained();
-    state->render_data_manager()->focus_change(id, true);
-}
-
-void LeafContainer::on_focus_lost()
-{
-    state->render_data_manager()->focus_change(id, false);
-}
-
 void LeafContainer::on_move_to(geom::Point const&)
 {
 }
 
 bool LeafContainer::is_fullscreen() const
 {
-    return window_controller->get_state(window_) == mir_window_state_fullscreen;
+    return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_fullscreen;
 }
 
 void LeafContainer::commit_changes()
 {
-    if (next_state)
+    auto wstate = window_sync.lock();
+    auto const w = wstate->window_;
+    auto const render_id = wstate->render_id;
+    wstate.drop();
+
     {
-        if (next_state.value() == mir_window_state_fullscreen
-            || window_controller->get_state(window_) == mir_window_state_fullscreen)
+        auto s = sync.lock();
+        if (s->next_state)
         {
-            for_each_observer([this](ContainerListener* observer)
+            if (s->next_state.value() == mir_window_state_fullscreen
+                || window_controller->get_state(w) == mir_window_state_fullscreen)
             {
-                observer->on_container_fullscreen(*this);
-            });
+                for_each_observer([this](ContainerListener* observer)
+                {
+                    observer->on_container_fullscreen(*this);
+                });
+            }
+
+            window_controller->change_state(w, s->next_state.value());
+
+            state->render_data_manager()->needs_outline_change(render_id.value(), s->next_state != mir_window_state_fullscreen);
+            s->next_state.reset();
+            s.drop();
+            constrain();
+            return;
         }
-
-        window_controller->change_state(window_, next_state.value());
-
-        state->render_data_manager()->needs_outline_change(id, next_state != mir_window_state_fullscreen);
-        next_state.reset();
-        constrain();
     }
 
-    if (next_depth_layer)
     {
-        miral::WindowSpecification spec;
-        spec.depth_layer() = next_depth_layer.value();
-        window_controller->modify(window_, spec);
-        next_depth_layer.reset();
-    }
-
-    if (next_logical_area)
-    {
-        auto previous = get_visible_area();
-        logical_area = next_logical_area.value();
-        next_logical_area.reset();
-        invalidate_visible_area_cache();
-        if (!is_fullscreen())
+        auto s = sync.lock();
+        if (s->next_depth_layer)
         {
-            auto next_visible_area = get_visible_area();
-            if (is_dragging_ && next_visible_area.top_left != dragged_position)
-                next_visible_area.top_left = dragged_position;
+            miral::WindowSpecification spec;
+            spec.depth_layer() = s->next_depth_layer.value();
+            window_controller->modify(w, spec);
+            s->next_depth_layer.reset();
+        }
+    }
 
-            window_controller->set_rectangle(window_, previous, next_visible_area, next_with_animations);
-            next_with_animations = true;
-
-            for_each_observer([this](ContainerListener* observer)
+    {
+        auto s = sync.lock();
+        if (s->next_logical_area)
+        {
+            auto previous = get_visible_area();
+            s->logical_area = s->next_logical_area.value();
+            s->next_logical_area.reset();
+            bool const animate = s->next_with_animations;
+            bool const dragging = s->is_dragging_;
+            s.drop();
+            invalidate_visible_area_cache();
+            if (!is_fullscreen() && !dragging)
             {
-                observer->on_container_moved(*this);
-            });
+                auto next_visible_area = get_visible_area();
+                window_controller->set_rectangle(w, previous, next_visible_area, animate);
+                sync.lock()->next_with_animations = true;
+
+                for_each_observer([this](ContainerListener* observer)
+                {
+                    observer->on_container_moved(*this);
+                });
+            }
         }
     }
 }
@@ -548,7 +534,7 @@ void LeafContainer::request_vertical_layout()
 
 void LeafContainer::toggle_layout(bool cycle_thru_all)
 {
-    auto sh_parent = parent.lock();
+    auto sh_parent = sync.lock()->parent.lock();
     if (!sh_parent)
     {
         mir::log_error("toggle_layout: unable to get parent container");
@@ -556,134 +542,55 @@ void LeafContainer::toggle_layout(bool cycle_thru_all)
     }
 
     if (cycle_thru_all)
-        handle_layout_scheme(this, get_next_layout(sh_parent->get_direction()));
+        handle_layout_scheme(this, get_next_layout(sh_parent->get_scheme()));
     else
     {
-        if (sh_parent->get_direction() == LayoutScheme::horizontal)
+        if (sh_parent->get_scheme() == LayoutScheme::horizontal)
             handle_layout_scheme(this, LayoutScheme::vertical);
-        else if (sh_parent->get_direction() == LayoutScheme::vertical)
+        else if (sh_parent->get_scheme() == LayoutScheme::vertical)
             handle_layout_scheme(this, LayoutScheme::horizontal);
         else
             mir::log_error("Parent with stack layout scheme cannot be toggled");
     }
 }
 
-std::shared_ptr<WorkspaceInterface> LeafContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> LeafContainer::get_workspace() const
 {
-    return workspace.lock();
+    return sync.lock()->workspace.lock();
 }
 
-void LeafContainer::set_workspace(std::shared_ptr<WorkspaceInterface> const& in)
+void LeafContainer::set_workspace(std::shared_ptr<AbstractWorkspace> const& in)
 {
-    workspace = in;
+    sync.lock()->workspace = in;
 
     state->render_data_manager()->output_area_change(
-        id,
-        workspace.lock()->get_output()->get_area());
+        window_sync.lock()->render_id.value(), // RenderDataManagerId copied before lock releases
+        in->get_output()->get_area());
     set_workspace_transform(in->transform());
+    for_each_observer([this](ContainerListener* observer)
+    {
+        observer->on_container_workspace_changed(*this);
+    });
 }
 
-std::shared_ptr<OutputInterface> LeafContainer::get_output() const
+std::shared_ptr<AbstractOutput> LeafContainer::get_output() const
 {
-    if (workspace.expired())
+    auto const s = sync.lock();
+    if (s->workspace.expired())
         return nullptr;
-
-    return workspace.lock()->get_output();
-}
-
-glm::mat4 LeafContainer::get_transform() const
-{
-    return transform;
-}
-
-void LeafContainer::set_transform(glm::mat4 transform_)
-{
-    transform = transform_;
-    state->render_data_manager()->transform_change(id, transform_);
-    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(get_transform());
-    }
-}
-
-void LeafContainer::rerender()
-{
-    // A hack to trigger a rerender on the surface by re-applying its transformation.
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-        surface->set_transformation(get_transform());
-}
-
-void LeafContainer::set_workspace_transform(glm::mat4 const& transform)
-{
-    auto const& rdm = state->render_data_manager();
-    rdm->workspace_transform_change(id, transform);
-    rerender();
-}
-
-void LeafContainer::set_workspace_alpha(float a)
-{
-    auto const& rdm = state->render_data_manager();
-    rdm->workspace_alpha(id, a);
-    workspace_alpha = a;
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_alpha(alpha * workspace_alpha);
-        surface->set_transformation(get_transform());
-    }
-}
-
-void LeafContainer::set_alpha(float const a)
-{
-    // We want the alpha on the surface to be maintained to whatever the client
-    // set it, so we set a separate alpha in the render data manager instead
-    // of the surface alpha. In the Renderer, we then multiply these two values
-    // to get the final value.
-    //
-    // Unfortunately, this will not cause a rerender, which is why we also
-    // set the transformation to the current transformation. This will cause
-    // the Surface to be marked as dirty and get rerendered.
-    //
-    // This is unfortunate.
-    state->render_data_manager()->alpha_change(id, a);
-    alpha = a;
-    if (auto const surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_alpha(alpha * workspace_alpha);
-        surface->set_transformation(get_transform());
-    }
-}
-
-uint32_t LeafContainer::animation_handle() const
-{
-    return animation_handle_;
-}
-
-void LeafContainer::animation_handle(uint32_t handle)
-{
-    animation_handle_ = handle;
+    return s->workspace.lock()->get_output();
 }
 
 bool LeafContainer::is_focused() const
 {
-    if (!state->focused_container())
-        return false;
-
     if (state->focused_container().get() == this)
         return true;
 
-    if (parent.lock()->is_focused())
-        return true;
+    if (auto locked_parent = sync.lock()->parent.lock())
+        if (locked_parent->is_focused())
+            return true;
 
-    auto const group = Container::as_group(state->focused_container());
-    if (!group)
-        return false;
-
-    return group->contains(shared_from_this());
-}
-
-ContainerType LeafContainer::get_type() const
-{
-    return ContainerType::regular;
+    return false;
 }
 
 bool LeafContainer::select_next(Direction direction)
@@ -725,7 +632,7 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
 
     do
     {
-        auto grandparent_direction = parent->get_direction();
+        auto grandparent_direction = parent->get_scheme();
         auto index = parent->get_index_of_node(current_node).value();
         if ((is_vertical && (grandparent_direction == LayoutScheme::vertical || grandparent_direction == LayoutScheme::stacking))
             || (!is_vertical && (grandparent_direction == LayoutScheme::horizontal || grandparent_direction == LayoutScheme::tabbing)))
@@ -737,7 +644,7 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
             }
             else
             {
-                if (index < parent->num_nodes() - 1)
+                if (index < parent->num_children() - 1)
                     return get_closest_window_to_select_from_node(parent->at(index + 1), direction);
             }
         }
@@ -751,21 +658,21 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
 
 bool LeafContainer::pinned(bool value)
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
         return sh_parent->pinned(value);
     return false;
 }
 
 bool LeafContainer::pinned() const
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
         return sh_parent->pinned();
     return false;
 }
 
 bool LeafContainer::move(Direction direction)
 {
-    return workspace.lock()->move_container(direction, *this);
+    return sync.lock()->workspace.lock()->move_container(direction, *this);
 }
 
 bool LeafContainer::move_by(Direction, int)
@@ -775,7 +682,7 @@ bool LeafContainer::move_by(Direction, int)
 
 bool LeafContainer::move_by(float dx, float dy)
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
         return sh_parent->move_by(dx, dy);
     return false;
 }
@@ -808,16 +715,16 @@ bool LeafContainer::move_to(Container& target)
 
 bool LeafContainer::move_to(int x, int y, bool with_animations)
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
         return sh_parent->move_to(x, y, with_animations);
     return false;
 }
 
 bool LeafContainer::toggle_tabbing()
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
     {
-        if (sh_parent->get_direction() == LayoutScheme::tabbing)
+        if (sh_parent->get_scheme() == LayoutScheme::tabbing)
             request_horizontal_layout();
         else
             handle_layout_scheme(this, LayoutScheme::tabbing);
@@ -827,9 +734,9 @@ bool LeafContainer::toggle_tabbing()
 
 bool LeafContainer::toggle_stacking()
 {
-    if (auto sh_parent = parent.lock())
+    if (auto sh_parent = sync.lock()->parent.lock())
     {
-        if (sh_parent->get_direction() == LayoutScheme::stacking)
+        if (sh_parent->get_scheme() == LayoutScheme::stacking)
             request_horizontal_layout();
         else
             handle_layout_scheme(this, LayoutScheme::stacking);
@@ -839,36 +746,42 @@ bool LeafContainer::toggle_stacking()
 
 bool LeafContainer::drag_start()
 {
-    if (is_dragging_)
+    if (sync.lock()->is_dragging_)
         mir::log_error("Attempting to start a drag when we are already dragging");
 
-    is_dragging_ = true;
+    sync.lock()->is_dragging_ = true;
     constrain();
     return true;
 }
 
 void LeafContainer::drag(int x, int y)
 {
-    if (!is_dragging_)
+    auto s = sync.lock();
+    if (!s->is_dragging_)
         return;
 
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
-    dragged_position = { x, y };
-    window_controller->modify(window_, spec);
+    s->dragged_position = { x, y };
+    s.drop();
+    window_controller->modify(window_sync.lock()->window_, spec);
 }
 
 bool LeafContainer::drag_stop()
 {
-    if (!is_dragging_)
+    auto const w = window_sync.lock()->window_;
+    auto s = sync.lock();
+    if (!s->is_dragging_)
         mir::log_error("Attempting to stop a drag when we are not dragging");
 
-    is_dragging_ = false;
+    s->is_dragging_ = false;
+    auto const dragged_pos = s->dragged_position;
+    s.drop();
 
     miral::WindowSpecification spec;
     auto visible_area = get_visible_area();
-    geom::Rectangle previous = { dragged_position, visible_area.size };
-    window_controller->set_rectangle(window_, previous, visible_area);
+    geom::Rectangle previous = { dragged_pos, visible_area.size };
+    window_controller->set_rectangle(w, previous, visible_area);
     for_each_observer([&](ContainerListener* observer)
     {
         observer->on_container_moved(*this);
@@ -885,21 +798,24 @@ bool LeafContainer::set_layout(LayoutScheme scheme)
 
 bool LeafContainer::anchored() const
 {
-    return !parent.expired() && parent.lock()->anchored();
+    auto const s = sync.lock();
+    return !s->parent.expired() && s->parent.lock()->anchored();
 }
 
 ScratchpadState LeafContainer::scratchpad_state() const
 {
-    if (!parent.expired())
-        return parent.lock()->scratchpad_state();
+    auto const s = sync.lock();
+    if (!s->parent.expired())
+        return s->parent.lock()->scratchpad_state();
 
     return ScratchpadState::none;
 }
 
 void LeafContainer::scratchpad_state(ScratchpadState next_scratchpad_state)
 {
-    if (!parent.expired())
-        return parent.lock()->scratchpad_state(next_scratchpad_state);
+    auto const s = sync.lock();
+    if (!s->parent.expired())
+        return s->parent.lock()->scratchpad_state(next_scratchpad_state);
 }
 
 void LeafContainer::handle_layout_scheme(Container* container, LayoutScheme scheme)
@@ -914,9 +830,9 @@ void LeafContainer::handle_layout_scheme(Container* container, LayoutScheme sche
     // If the parent already has more than just [container] as a child AND
     // the parent is NOT a tabbing/stacking parent, then we create a new parent for this
     // single [container].
-    if (parent->num_nodes() > 1
-        && parent->get_direction() != LayoutScheme::tabbing
-        && parent->get_direction() != LayoutScheme::stacking)
+    if (parent->num_children() > 1
+        && parent->get_scheme() != LayoutScheme::tabbing
+        && parent->get_scheme() != LayoutScheme::stacking)
         parent = parent->convert_to_parent(container->shared_from_this());
 
     parent->set_layout(scheme);
@@ -924,11 +840,11 @@ void LeafContainer::handle_layout_scheme(Container* container, LayoutScheme sche
 
 LayoutScheme LeafContainer::get_layout() const
 {
-    auto sh_parent = parent.lock().get();
+    auto sh_parent = sync.lock()->parent.lock().get();
     if (!sh_parent)
         return LayoutScheme::none;
 
-    if (sh_parent->num_nodes() == 1)
+    if (sh_parent->num_children() == 1)
         return sh_parent->get_layout();
 
     return LayoutScheme::none;
@@ -937,6 +853,7 @@ LayoutScheme LeafContainer::get_layout() const
 bool LeafContainer::matches(ContainerScope const& scope) const
 {
     typedef jpcre2::select<char> jp;
+    auto const w = window_sync.lock()->window_;
 
     switch (scope.type)
     {
@@ -944,14 +861,14 @@ bool LeafContainer::matches(ContainerScope const& scope) const
         return true;
     case ContainerScopeType::app_id:
     {
-        auto const& info = window_controller->info_for(window_);
+        auto const& info = window_controller->info_for(w);
         jp::Regex re;
         re.setPattern(scope.value).compile();
         return re.match(info.application_id());
     }
     case ContainerScopeType::window_type:
     {
-        auto const& info = window_controller->info_for(window_);
+        auto const& info = window_controller->info_for(w);
         if (scope.value == "normal")
             return info.type() == mir_window_type_normal;
         else if (scope.value == "dialog")
@@ -984,10 +901,10 @@ bool LeafContainer::matches(ContainerScope const& scope) const
                 return false;
             }
 
-            if (auto const window = state->focused_container()->window())
+            if (auto const focused_window = state->focused_container()->window())
             {
-                auto const& info = window_controller->info_for(window_);
-                auto const& focused_info = window_controller->info_for(window.value());
+                auto const& info = window_controller->info_for(w);
+                auto const& focused_info = window_controller->info_for(focused_window.value());
                 return focused_info.name() == info.name();
             }
             else
@@ -997,7 +914,7 @@ bool LeafContainer::matches(ContainerScope const& scope) const
             }
         }
 
-        auto const& info = window_controller->info_for(window_);
+        auto const& info = window_controller->info_for(w);
         jp::Regex re;
         re.setPattern(scope.value).compile();
         return re.match(info.name());
@@ -1020,7 +937,7 @@ bool LeafContainer::matches(ContainerScope const& scope) const
             return false;
         }
 
-        auto const& app = window_controller->app_info(window_);
+        auto const& app = window_controller->app_info(w);
         return app.application()->process_id() == int_num;
     }
     case ContainerScopeType::workspace:
@@ -1033,12 +950,14 @@ bool LeafContainer::matches(ContainerScope const& scope) const
                 return false;
             }
 
-            return workspace.lock() == state->focused_container()->get_workspace();
+            auto const s = sync.lock();
+            return s->workspace.lock() == state->focused_container()->get_workspace();
         }
 
+        auto const s = sync.lock();
         jp::Regex re;
         re.setPattern(scope.value).compile();
-        return !workspace.expired() && re.match(workspace.lock()->display_name());
+        return !s->workspace.expired() && re.match(s->workspace.lock()->display_name());
     }
     case ContainerScopeType::con_id:
     {
@@ -1123,10 +1042,13 @@ void LeafContainer::invalidate_visible_area_cache()
 
 nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
 {
-    auto const app = window_.application();
-    auto const& win_info = window_controller->info_for(window_);
+    auto const w = window_sync.lock()->window_;
+    auto const app = w.application();
+    auto const& win_info = window_controller->info_for(w);
     auto visible_area = get_visible_area();
-    auto locked_parent = parent.lock();
+    auto const s = sync.lock();
+    auto locked_parent = s->parent.lock();
+    auto const logical_area = s->logical_area;
     bool visible = true;
 
     if (!is_workspace_visible)

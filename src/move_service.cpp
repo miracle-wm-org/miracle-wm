@@ -43,6 +43,7 @@ bool MoveService::handle_pointer_event(
     unsigned int modifiers,
     MirPointerButtons buttons)
 {
+    std::lock_guard lock { mutex_ };
     if (state.mode() == WindowManagerMode::moving)
     {
         if (action == mir_pointer_action_button_up && (config->get_primary_button() & buttons) == 0)
@@ -80,7 +81,7 @@ bool MoveService::handle_pointer_event(
         if (output_manager->focused() == nullptr)
             return false;
 
-        std::shared_ptr<Container> const intersected = output_manager->focused()->intersect(x, y);
+        auto const intersected = output_manager->focused()->intersect(x, y);
         if (!intersected)
             return false;
 

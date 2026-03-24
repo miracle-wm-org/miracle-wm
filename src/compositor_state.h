@@ -20,8 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "render_data_manager.h"
+#include "window_container.h"
 
-#include <algorithm>
+#include <atomic>
 #include <memory>
 #include <mir/geometry/point.h>
 #include <vector>
@@ -37,10 +38,6 @@ enum class WindowManagerMode
     /// is completed.
     resizing,
 
-    /// While [selecting], only [Container]s selected with the multi-select
-    /// keybind/mousebind can be selected or deselected.
-    selecting,
-
     dragging,
 
     moving,
@@ -49,7 +46,7 @@ enum class WindowManagerMode
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "selecting", "dragging", "moving"
+    "default", "resize", "dragging", "moving"
 };
 
 class CompositorState
@@ -60,31 +57,53 @@ public:
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
 
-    /// Focuses the provided container. If [is_anonymous] is true, the container
-    /// will be focused even if it does not exist in the list.
-    void focus_container(std::shared_ptr<Container> const&, bool is_anonymous = false);
+    /// Focus the provided \p container.
+    ///
+    /// The container does not necessarily need to be a [WindowContainer], but it often is.
+    void focus_container(std::shared_ptr<Container> const& container);
+
+    /// Unfocus the provided \p container
     void unfocus_container(std::shared_ptr<Container> const& container);
-    void add(std::shared_ptr<Container> const& container);
-    void remove(std::shared_ptr<Container> const& container);
-    [[nodiscard]] std::shared_ptr<Container> first_floating() const;
-    [[nodiscard]] std::shared_ptr<Container> first_tiling() const;
-    [[nodiscard]] std::vector<std::weak_ptr<Container>> const& containers() const { return focus_order; }
-    WindowManagerMode mode() const;
+
+    /// Adds a new window to the focus list.
+    ///
+    /// \param container the window to add
+    void add(std::shared_ptr<WindowContainer> const& container);
+
+    /// Removes a window from the focus list.
+    ///
+    /// \param container the window to remove
+    void remove(std::shared_ptr<WindowContainer> const& container);
+
+    /// Finds the first floating window, if one exists.
+    ///
+    /// \returns the first floating window, if one exists
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_floating();
+
+    /// Finds the first tiling window, if one exists.
+    ///
+    /// \returns the first tiling window, if one exists
+    [[nodiscard]] std::shared_ptr<WindowContainer> first_tiling();
+
+    /// Returns the list of windows in their focus order.
+    ///
+    /// \returns list of windows
+    [[nodiscard]] std::vector<std::weak_ptr<WindowContainer>> windows() const { return focus_order; }
+
+    WindowManagerMode mode();
     void mode(WindowManagerMode);
-    RenderDataManager* render_data_manager() const;
+    std::shared_ptr<RenderDataManager> const& render_data_manager() const;
 
-    /// Lock the provided mutex.
-    std::lock_guard<std::recursive_mutex> lock() { return std::lock_guard(mutex); }
-
-    /// Uniquely lock the provided mutex.
-    std::unique_lock<std::recursive_mutex> unique_lock() { return std::unique_lock(mutex); }
+    /// Returns the next unique container ID, then increments the counter.
+    uint64_t next_container_id();
 
 private:
-    std::recursive_mutex mutex;
+    mutable std::mutex mutex;
     std::weak_ptr<Container> focused;
-    std::vector<std::weak_ptr<Container>> focus_order;
+    std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
-    std::unique_ptr<RenderDataManager> render_data_manager_;
+    std::shared_ptr<RenderDataManager> render_data_manager_;
+    std::atomic<uint64_t> next_container_id_ { 1 };
 };
 }
 

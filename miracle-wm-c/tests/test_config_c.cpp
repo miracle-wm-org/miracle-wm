@@ -534,24 +534,6 @@ TEST_F(CAPIWrapperTest, CanSetAnimationDefinitions)
     EXPECT_FALSE(result.is_default);
 }
 
-TEST_F(CAPIWrapperTest, CanSetAnimationPlugin)
-{
-    auto animateable_event = miracle_config_get_animateable_event(
-        &wrapper->config,
-        0);
-    animateable_event.duration_seconds = 0.5f;
-    animateable_event.type = static_cast<uint>(miracle::AnimationType::plugin);
-    miracle_config_set_animateable_event(&wrapper->config, 0, &animateable_event);
-    auto result = miracle_config_get_animateable_event(
-        &wrapper->config,
-        0);
-
-    EXPECT_FLOAT_EQ(result.duration_seconds, 0.5f);
-    EXPECT_EQ(result.type, static_cast<uint>(miracle::AnimationType::plugin));
-    EXPECT_EQ(result.num_parts, 0);
-    EXPECT_EQ(result.duration_seconds, 0.5f);
-}
-
 TEST_F(CAPIWrapperTest, CanResetAnimationDefinitions)
 {
     auto animateable_event = miracle_config_get_animateable_event(

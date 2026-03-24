@@ -460,7 +460,7 @@ Renderer::DrawData Renderer::get_draw_data(
     std::vector<RenderData> const& data) const
 {
     DrawData result = {
-        true, RenderData { .surface = nullptr, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .alpha = renderable.alpha(), .output_area = viewport }
+        true, renderable.alpha(), RenderData { .surface = nullptr, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
     };
     if (auto const surface = renderable.surface_if_any())
     {
@@ -608,7 +608,7 @@ void Renderer::draw(
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
-    float const alpha = renderable.alpha() * data.data.alpha * data.data.workspace_alpha;
+    float const alpha = data.alpha;
     auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
 
     glUseProgram(prog->id);
@@ -762,7 +762,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     // Next, we set model-specific transforms
     using namespace miracle::geometry_helpers;
-    float const alpha = data.data.alpha * data.data.workspace_alpha;
+    float const alpha = data.alpha;
     glm::mat4 border_transform = glm::scale(
         glm::translate(
             glm::mat4(1.0),

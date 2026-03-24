@@ -52,22 +52,24 @@ Output::Output(
     std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
     shell_application_manager { shell_application_manager },
-    name_ { std::move(name) },
-    id_ { id },
-    area { area },
     output_config { output_config },
     state { state },
     config { config },
     window_controller { window_controller },
     animator { animator },
     server_action_queue { server_action_queue },
-    plugin_manager { plugin_manager }
+    plugin_manager { plugin_manager },
+    sync(State {
+        id,
+        std::move(name),
+        area,
+    })
 {
 }
 
 Output::~Output() = default;
 
-std::shared_ptr<WorkspaceInterface> Output::active() const
+std::shared_ptr<AbstractWorkspace> Output::active() const
 {
     if (active_workspace.expired())
         return nullptr;
@@ -75,21 +77,22 @@ std::shared_ptr<WorkspaceInterface> Output::active() const
     return active_workspace.lock();
 }
 
-std::shared_ptr<Container> Output::intersect(float x, float y)
+std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
 {
     // Intersect a window. If the window is on the currently active workspace
     // or the window is a shell component, then return it.
     auto const window = window_controller->window_at(x, y);
-    if (auto const result = window_controller->get_container(window))
+    if (auto const result = window_controller->get_window_container(window))
     {
-        if (result->get_workspace() == active() || result->get_type() == ContainerType::shell)
+        auto const workspace = result->get_workspace();
+        if (!workspace || workspace == active())
             return result;
     }
 
     return nullptr;
 }
 
-std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_selected)
+std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
 {
     if (active_workspace.expired())
     {
@@ -98,13 +101,10 @@ std::shared_ptr<Container> Output::intersect_leaf(float x, float y, bool ignore_
     }
 
     auto const workspace = active_workspace.lock().get();
-    std::shared_ptr<Container> result = nullptr;
-    workspace->for_each_window([&](std::shared_ptr<Container> const& container)
+    std::shared_ptr<WindowContainer> result = nullptr;
+    workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
         if (ignore_selected && container == state->focused_container())
-            return false;
-
-        if (container->get_type() != ContainerType::regular)
             return false;
 
         if (container->get_visible_area().contains(geom::Point(x, y)))
@@ -128,9 +128,9 @@ void Output::delete_container(std::shared_ptr<Container> const& container)
     workspace->delete_container(container);
 }
 
-void Output::insert_workspace_sorted(std::shared_ptr<WorkspaceInterface> const& new_workspace)
+void Output::insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace)
 {
-    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<WorkspaceInterface> const& a, std::shared_ptr<WorkspaceInterface> const& b)
+    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
     {
         if (a->num() && b->num())
             return a->num().value() < b->num().value();
@@ -174,14 +174,14 @@ void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint3
     }
 }
 
-void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInterface* workspace)
+void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWorkspace* workspace)
 {
     if (workspace->get_output().get() == this)
         return;
 
     // Remove the workspace from its old output. Note that we grab a reference to it
     // so that its reference count doesn't erroneously hit zero.
-    std::shared_ptr<WorkspaceInterface> to_add = nullptr;
+    std::shared_ptr<AbstractWorkspace> to_add = nullptr;
     auto const old_output = workspace->get_output();
     if (!old_output)
     {
@@ -206,7 +206,7 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, WorkspaceInt
     }
 
     // Next, move the workspace to this output and remove it focus it
-    mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
+    mir::log_info("Moving workspace %d to output %d", workspace->id(), sync.lock()->id_);
     insert_workspace_sorted(to_add);
     to_add->set_output(shared_from_this());
     workspace_manager.request_focus(to_add->id());
@@ -223,8 +223,8 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     mir::log_info("advise_workspace_active: %d", id);
 
     // First, we find where we're coming from and where we're going to.
-    std::shared_ptr<WorkspaceInterface> from = nullptr;
-    std::shared_ptr<WorkspaceInterface> to = nullptr;
+    std::shared_ptr<AbstractWorkspace> from = nullptr;
+    std::shared_ptr<AbstractWorkspace> to = nullptr;
     size_t from_index = 0;
     size_t to_index = 0;
     for (size_t i = 0; i < workspaces.size(); i++)
@@ -260,6 +260,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // It is very important that [active_workspace] be modified before notifications are sent out.
     active_workspace = to;
 
+    auto const area = sync.lock()->area;
     from->transfer_pinned_windows_to(to);
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
@@ -275,6 +276,7 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
 void Output::advise_application_zone_create(miral::Zone const& application_zone)
 {
+    auto const area = sync.lock()->area;
     if (application_zone.extents().contains(area))
     {
         application_zone_list.push_back(application_zone);
@@ -311,14 +313,15 @@ void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 
 bool Output::point_is_in_output(int x, int y)
 {
+    auto const area = sync.lock()->area;
     return area.contains(geom::Point(x, y));
 }
 
 void Output::update_area(geom::Rectangle const& new_area)
 {
-    area = new_area;
-    for (auto& workspace : workspaces)
-        workspace->set_area(area);
+    sync.lock()->area = new_area;
+    for (auto const& workspace : workspaces)
+        workspace->recalculate_area();
 }
 
 void Output::graft(std::shared_ptr<Container> const& container)
@@ -326,7 +329,7 @@ void Output::graft(std::shared_ptr<Container> const& container)
     active()->graft(container);
 }
 
-[[nodiscard]] WorkspaceInterface const* Output::workspace(uint32_t id) const
+[[nodiscard]] AbstractWorkspace const* Output::workspace(uint32_t id) const
 {
     for (auto const& workspace : workspaces)
     {
@@ -339,32 +342,34 @@ void Output::graft(std::shared_ptr<Container> const& container)
 
 glm::mat4 Output::get_transform() const
 {
+    auto const transform = sync.lock()->transform;
     return transform;
 }
 
 void Output::set_transform(glm::mat4 const& in)
 {
-    transform = in;
+    sync.lock()->transform = in;
 }
 
 void Output::set_info(int next_id, std::string next_name)
 {
-    id_ = next_id;
-    name_ = std::move(next_name);
+    sync.lock()->id_ = next_id;
+    sync.lock()->name_ = std::move(next_name);
 }
 
 void Output::set_defunct()
 {
-    is_defunct_ = true;
+    sync.lock()->is_defunct_ = true;
 }
 
 void Output::unset_defunct()
 {
-    is_defunct_ = false;
+    sync.lock()->is_defunct_ = false;
 }
 
 nlohmann::json Output::to_json(bool is_focused) const
 {
+    auto const lock = sync.lock();
     auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& workspace : workspaces)
@@ -414,7 +419,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
-        { "name",                 name_                                         },
+        { "name",                 lock->name_                                   },
         { "active",               active                                        },
         { "dpms",                 output_config.power_mode == mir_power_mode_on },
         { "scale",                output_config.scale                           },
@@ -451,10 +456,10 @@ nlohmann::json Output::to_json(bool is_focused) const
                           { "height", 0 },
                       }                                    },
         { "rect",                 {
-                      { "x", area.top_left.x.as_int() },
-                      { "y", area.top_left.y.as_int() },
-                      { "width", area.size.width.as_int() },
-                      { "height", area.size.height.as_int() },
+                      { "x", lock->area.top_left.x.as_int() },
+                      { "y", lock->area.top_left.y.as_int() },
+                      { "width", lock->area.size.width.as_int() },
+                      { "height", lock->area.size.height.as_int() },
                   }                                            },
         { "nodes",                nodes                                         },
         { "modes",                modes_node                                    },
@@ -464,6 +469,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
 nlohmann::json Output::get_outputs_json(bool) const
 {
+    auto const lock = sync.lock();
     auto active_workspace = active();
     nlohmann::json workspace;
 
@@ -518,7 +524,7 @@ nlohmann::json Output::get_outputs_json(bool) const
     auto const serial = output_config.display_info.serial.value_or("0x00000000");
 
     return {
-        { "name",             name_                                         },
+        { "name",             lock->name_                                   },
         { "make",             make                                          },
         { "model",            model                                         },
         { "serial",           serial                                        },
@@ -530,10 +536,10 @@ nlohmann::json Output::get_outputs_json(bool) const
         { "subpixel_hinting", subpixel_hinting                              },
         workspace,
         { "rect",             {
-                      { "x", area.top_left.x.as_int() },
-                      { "y", area.top_left.y.as_int() },
-                      { "width", area.size.width.as_int() },
-                      { "height", area.size.height.as_int() },
+                      { "x", lock->area.top_left.x.as_int() },
+                      { "y", lock->area.top_left.y.as_int() },
+                      { "width", lock->area.size.width.as_int() },
+                      { "height", lock->area.size.height.as_int() },
                   }                                        },
         { "modes",            modes_node                                    },
         { "current_mode",     current_mode_node                             },

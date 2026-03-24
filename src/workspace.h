@@ -18,11 +18,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_WORKSPACE_CONTENT_H
 #define MIRACLEWM_WORKSPACE_CONTENT_H
 
+#include "abstract_workspace.h"
 #include "animator.h"
-#include "workspace_interface.h"
 
 #include <memory>
-#include <miral/window_manager_tools.h>
+#include <mir/synchronised.h>
 
 namespace miracle
 {
@@ -41,12 +41,12 @@ struct WorkspaceIdentifier
     std::optional<std::string> const name;
 };
 
-class Workspace : public WorkspaceInterface
+class Workspace : public AbstractWorkspace
 {
 public:
     Workspace(
         std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
-        std::shared_ptr<OutputInterface> const& output,
+        std::shared_ptr<AbstractOutput> const& output,
         uint32_t id,
         std::optional<int> num,
         std::optional<std::string> name,
@@ -59,7 +59,6 @@ public:
         std::shared_ptr<PluginManager> const& plugin_manager);
     ~Workspace() override;
 
-    void set_area(mir::geometry::Rectangle const&) override;
     void recalculate_area() override;
 
     void delete_container(std::shared_ptr<Container> const& container) override;
@@ -67,20 +66,21 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
-    void transfer_pinned_windows_to(std::shared_ptr<WorkspaceInterface> const& other) override;
-    bool for_each_window(std::function<bool(std::shared_ptr<Container>)> const&) const override;
+    void transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other) override;
+    bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
-    [[nodiscard]] std::shared_ptr<OutputInterface> get_output() const override;
-    void set_output(std::shared_ptr<OutputInterface> const&) override;
+    [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
+    void set_output(std::shared_ptr<AbstractOutput> const&) override;
     [[nodiscard]] bool is_empty() const override;
     void graft(std::shared_ptr<Container> const&) override;
     void on_animation_end(bool is_hiding);
     [[nodiscard]] uint32_t id() const override { return id_; }
-    [[nodiscard]] std::optional<int> num() const override { return num_; }
-    [[nodiscard]] std::optional<std::string> const& name() const override { return name_; }
+    [[nodiscard]] std::optional<int> num() const override { return sync.lock()->num_; }
+    [[nodiscard]] std::optional<std::string> const& name() const override { return sync.lock()->name_; }
     void num(std::optional<int> n) override;
     void name(std::optional<std::string> const&) override;
+    [[nodiscard]] mir::geometry::Rectangle area() const override;
     [[nodiscard]] std::optional<Gaps> outer_gaps() const override;
     void outer_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] std::optional<Gaps> inner_gaps() const override;
@@ -115,10 +115,8 @@ private:
     void for_each_container(std::function<void(std::shared_ptr<Container> const&)> const&);
     std::shared_ptr<ParentContainer> root() const;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
-    std::weak_ptr<OutputInterface> output;
+    std::weak_ptr<AbstractOutput> output;
     uint32_t id_;
-    std::optional<int> num_;
-    std::optional<std::string> name_;
     mutable std::shared_ptr<ParentContainer> root_;
     std::vector<std::shared_ptr<ParentContainer>> floating_trees;
     std::vector<std::weak_ptr<Container>> other_containers;
@@ -130,12 +128,20 @@ private:
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<PluginManager> plugin_manager;
     AnimationHandle animation_handle;
-    bool is_showing = false;
-    std::weak_ptr<Container> last_selected_container;
-    std::optional<Gaps> workspace_outer_gaps;
-    std::optional<Gaps> workspace_inner_gaps;
-    glm::mat4 transform_ = glm::mat4(1.f);
-    float alpha_ = 1.f;
+
+    struct State
+    {
+        std::optional<int> num_;
+        std::optional<std::string> name_;
+        bool is_showing = false;
+        std::weak_ptr<Container> last_selected_container;
+        std::optional<Gaps> workspace_outer_gaps;
+        std::optional<Gaps> workspace_inner_gaps;
+        glm::mat4 transform_ = glm::mat4(1.f);
+        float alpha_ = 1.f;
+    };
+
+    mir::Synchronised<State> sync;
 
     void on_animation_start(bool is_hiding);
 

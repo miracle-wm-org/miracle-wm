@@ -16,6 +16,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "shell_component_container.h"
+
+#include "compositor_state.h"
+#include "output_manager.h"
 #include "window_controller.h"
 #include <mir/scene/session.h>
 #include <mir/scene/surface.h>
@@ -28,11 +31,15 @@ namespace miracle
 ShellComponentContainer::ShellComponentContainer(
     miral::Window const& window_,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<ShellApplicationDelegate>&& delegate) :
-    window_ { window_ },
+    std::shared_ptr<ShellApplicationDelegate>&& delegate,
+    std::shared_ptr<OutputManager> const& output_manager,
+    std::shared_ptr<CompositorState> const& compositor_state) :
+    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller, false),
     window_controller { window_controller },
-    delegate { std::move(delegate) }
+    delegate { std::move(delegate) },
+    output_manager { output_manager }
 {
+    associate_to_window(window_);
 }
 
 void ShellComponentContainer::show()
@@ -49,6 +56,7 @@ void ShellComponentContainer::commit_changes()
 
 mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 {
+    auto const window_ = window_sync.lock()->window_;
     return {
         window_.top_left(),
         window_.size()
@@ -57,6 +65,7 @@ mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 
 void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const& rectangle, bool with_animations)
 {
+    auto const window_ = window_sync.lock()->window_;
     window_controller->set_rectangle(window_, get_visible_area(), rectangle, with_animations);
 }
 
@@ -90,6 +99,7 @@ size_t ShellComponentContainer::get_min_width() const
 
 void ShellComponentContainer::handle_ready()
 {
+    auto const window_ = window_sync.lock()->window_;
     if (delegate)
         delegate->handle_ready(shared_from_this());
     else
@@ -98,6 +108,7 @@ void ShellComponentContainer::handle_ready()
 
 void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)
 {
+    auto const window_ = window_sync.lock()->window_;
     window_controller->modify(window_, specification);
 }
 
@@ -107,6 +118,7 @@ void ShellComponentContainer::handle_request_move(MirInputEvent const* input_eve
 
 void ShellComponentContainer::handle_raise()
 {
+    auto const window_ = window_sync.lock()->window_;
     window_controller->select_active_window(window_);
 }
 
@@ -139,11 +151,8 @@ void ShellComponentContainer::toggle_layout(bool)
 
 void ShellComponentContainer::on_focus_gained()
 {
+    auto const window_ = window_sync.lock()->window_;
     window_controller->raise(window_);
-}
-
-void ShellComponentContainer::on_focus_lost()
-{
 }
 
 void ShellComponentContainer::on_move_to(mir::geometry::Point const& top_left)
@@ -160,41 +169,18 @@ ShellComponentContainer::confirm_placement(MirWindowState state, mir::geometry::
     return rectangle;
 }
 
-std::shared_ptr<WorkspaceInterface> ShellComponentContainer::get_workspace() const
+std::shared_ptr<AbstractWorkspace> ShellComponentContainer::get_workspace() const
 {
     return nullptr;
 }
 
-std::shared_ptr<OutputInterface> ShellComponentContainer::get_output() const
+std::shared_ptr<AbstractOutput> ShellComponentContainer::get_output() const
 {
-    return nullptr;
-}
-
-glm::mat4 ShellComponentContainer::get_transform() const
-{
-    return transform_;
-}
-
-void ShellComponentContainer::set_transform(glm::mat4 transform)
-{
-    if (auto surface = window_.operator std::shared_ptr<mir::scene::Surface>())
-    {
-        surface->set_transformation(transform);
-        transform_ = transform;
-    }
-}
-
-void ShellComponentContainer::set_workspace_transform(glm::mat4 const&)
-{
-}
-
-void ShellComponentContainer::set_workspace_alpha(float a)
-{
-}
-
-glm::mat4 ShellComponentContainer::get_workspace_transform() const
-{
-    return glm::mat4(1.f);
+    auto const window_ = window_sync.lock()->window_;
+    auto const& info = window_controller->info_for(window_);
+    if (info.has_output_id())
+        return output_manager->from(info.output_id());
+    return output_manager->focused();
 }
 
 glm::mat4 ShellComponentContainer::get_output_transform() const
@@ -202,37 +188,9 @@ glm::mat4 ShellComponentContainer::get_output_transform() const
     return glm::mat4(1.f);
 }
 
-void ShellComponentContainer::set_alpha(float const alpha)
-{
-}
-
-uint32_t ShellComponentContainer::animation_handle() const
-{
-    return handle_;
-}
-
-void ShellComponentContainer::animation_handle(uint32_t handle)
-{
-    handle_ = handle;
-}
-
 bool ShellComponentContainer::is_focused() const
 {
     return true;
-}
-
-ContainerType ShellComponentContainer::get_type() const
-{
-    return ContainerType::shell;
-}
-
-void ShellComponentContainer::on_open()
-{
-}
-
-std::optional<miral::Window> ShellComponentContainer::window() const
-{
-    return window_;
 }
 
 bool ShellComponentContainer::select_next(miracle::Direction)
@@ -267,6 +225,7 @@ bool ShellComponentContainer::move_by(float dx, float dy)
 
 bool ShellComponentContainer::move_to(int x, int y, bool)
 {
+    auto const window_ = window_sync.lock()->window_;
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_, spec);
@@ -278,8 +237,14 @@ bool ShellComponentContainer::is_fullscreen() const
     return false;
 }
 
+bool ShellComponentContainer::can_animate()
+{
+    return false;
+}
+
 nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
 {
+    auto const window_ = window_sync.lock()->window_;
     auto const app = window_.application();
     auto const& win_info = window_controller->info_for(window_);
     auto const visible_area = get_visible_area();

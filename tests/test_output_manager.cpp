@@ -40,9 +40,9 @@ TEST(OutputManagerTest, CreateOutputSuccess)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output))); // Mock return value
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output))); // Mock return value
 
-    static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
@@ -73,7 +73,7 @@ TEST(OutputManagerTest, UpdateOutputArea)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
 
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
@@ -82,7 +82,7 @@ TEST(OutputManagerTest, UpdateOutputArea)
                                   { 1280, 720 }
     }));
 
-    static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
@@ -114,9 +114,9 @@ TEST(OutputManagerTest, RemoveOutput)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
 
-    static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
 
     ON_CALL(*mock_output, id())
@@ -155,11 +155,11 @@ TEST(OutputManagerTest, FocusAndUnfocus)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
 
-    static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
@@ -201,11 +201,11 @@ TEST(OutputManagerTest, RemoveFocusedOutput)
                                                         { 0,    0    },
                                                         { 1920, 1080 }
     }))
-        .WillOnce(testing::Return(std::shared_ptr<OutputInterface>(mock_output)));
+        .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
 
-    static const std::vector<std::shared_ptr<WorkspaceInterface>> empty_workspaces;
+    static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();

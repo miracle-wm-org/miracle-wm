@@ -272,8 +272,59 @@ pub const miracle_animation_type_miracle_animation_type_workspace_switch: miracl
     3;
 pub const miracle_animation_type_miracle_animation_type_window_none: miracle_animation_type = 4;
 pub type miracle_animation_type = ::std::os::raw::c_uint;
+#[doc = " Describes the properties of a window.\n\n Plugin authors may use this information to decide on the placement of a window.\n\n Use #miracle_plugin_get_application to get the application from which this window\n originated.\n\n Use #miracle_plugin_get_workspace to get the workspace of the window."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct miracle_window_info_t {
+    #[doc = " The type of this window."]
+    pub window_type: MirWindowType,
+    #[doc = " The state of the window."]
+    pub state: MirWindowState,
+    #[doc = " The position of the window.\n\n If the window has not yet been placed, this will be arbitrary."]
+    pub top_left: miracle_point_t,
+    #[doc = " The size of the window."]
+    pub size: miracle_size_t,
+    #[doc = " The depth layer of the window."]
+    pub depth_layer: MirDepthLayer,
+    #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
+    pub internal: u64,
+    #[doc = " The 4x4 transform matrix of the window (column-major).\n\n Defaults to the identity matrix."]
+    pub transform: [f32; 16usize],
+    #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
+    pub alpha: f32,
+}
+impl Default for miracle_window_info_t {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[doc = " Describes a workspace."]
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_workspace_t {
+    #[doc = " If `TRUE`, the workspace is valid.\n\n This may be `FALSE` for shell components that are not tethered to a particular\n workspace."]
+    pub is_set: i32,
+    #[doc = " If `TRUE`, #number is set."]
+    pub has_number: i32,
+    #[doc = " The number of the workspace.\n\n Only valid if #has_number is `TRUE`."]
+    pub number: u32,
+    #[doc = " If `TRUE`, #name is set."]
+    pub has_name: i32,
+    #[doc = " The number of container trees in this workspace.\n\n Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.\n Each tree is represented by a #miracle_container_t which is the root of the tree."]
+    pub num_trees: u32,
+    #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
+    pub internal: u64,
+    #[doc = " The position of the workspace area."]
+    pub position: miracle_point_t,
+    #[doc = " The size of the workspace area."]
+    pub size: miracle_size_t,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct miracle_plugin_animation_frame_data_t {
     #[doc = " Animation type.\n\n This one of #miracle_animation_type."]
     pub type_: u32,
@@ -289,6 +340,27 @@ pub struct miracle_plugin_animation_frame_data_t {
     pub opacity_start: f32,
     #[doc = " The opacity end of the animation."]
     pub opacity_end: f32,
+    #[doc = " If `TRUE`, #window_info and #window_name are valid.\n\n Set for window events (open, close, move). Not set for workspace events."]
+    pub has_window_info: i32,
+    #[doc = " Info about the window being animated.\n\n Only valid when #has_window_info is `TRUE`. The `internal` field is the\n stable window ID, usable for host calls such as #miracle_window_set_state."]
+    pub window_info: miracle_window_info_t,
+    #[doc = " Null-terminated window title (up to 255 characters).\n\n Only valid when #has_window_info is `TRUE`."]
+    pub window_name: [::std::os::raw::c_char; 256usize],
+    #[doc = " If `TRUE`, #workspace and #workspace_name are valid."]
+    pub has_workspace: i32,
+    #[doc = " Info about the workspace of the animated object.\n\n Only valid when #has_workspace is `TRUE`. The `internal` field is the\n stable workspace ID, usable for host calls such as\n #miracle_plugin_get_workspace_tree."]
+    pub workspace: miracle_workspace_t,
+    #[doc = " Null-terminated workspace name (up to 255 characters).\n\n Only valid when #has_workspace is `TRUE` and the workspace has a name."]
+    pub workspace_name: [::std::os::raw::c_char; 256usize],
+}
+impl Default for miracle_plugin_animation_frame_data_t {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -318,32 +390,6 @@ pub struct miracle_application_info_t {
     pub internal: u64,
 }
 impl Default for miracle_application_info_t {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-#[doc = " Describes the properties of a window.\n\n Plugin authors may use this information to decide on the placement of a window.\n\n Use #miracle_plugin_get_application to get the application from which this window\n originated.\n\n Use #miracle_plugin_get_workspace to get the workspace of the window."]
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct miracle_window_info_t {
-    #[doc = " The type of this window."]
-    pub window_type: MirWindowType,
-    #[doc = " The state of the window."]
-    pub state: MirWindowState,
-    #[doc = " The position of the window.\n\n If the window has not yet been placed, this will be arbitrary."]
-    pub top_left: miracle_point_t,
-    #[doc = " The size of the window."]
-    pub size: miracle_size_t,
-    #[doc = " The depth layer of the window."]
-    pub depth_layer: MirDepthLayer,
-    #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
-    pub internal: u64,
-}
-impl Default for miracle_window_info_t {
     fn default() -> Self {
         let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
         unsafe {
@@ -383,23 +429,6 @@ pub struct miracle_container_t {
     #[doc = " The number of child containers inside of this container.\n\n Use #miracle_plugin_get_child_from_container to query the container by index."]
     pub num_child_containers: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky!"]
-    pub internal: u64,
-}
-#[doc = " Describes a workspace."]
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct miracle_workspace_t {
-    #[doc = " If `TRUE`, the workspace is valid.\n\n This may be `FALSE` for shell components that are not tethered to a particular\n workspace."]
-    pub is_set: i32,
-    #[doc = " If `TRUE`, #number is set."]
-    pub has_number: i32,
-    #[doc = " The number of the workspace.\n\n Only valid if #has_number is `TRUE`."]
-    pub number: u32,
-    #[doc = " If `TRUE`, #name is set."]
-    pub has_name: i32,
-    #[doc = " The number of container trees in this workspace.\n\n Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.\n Each tree is represented by a #miracle_container_t which is the root of the tree."]
-    pub num_trees: u32,
-    #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
 }
 #[doc = " Describes an output."]
@@ -460,6 +489,14 @@ pub struct miracle_freestyle_placement_t {
     pub workspace_internal: u64,
     #[doc = " The size of the window.\n\n This value may not be honored by the window itself."]
     pub size: miracle_size_t,
+    #[doc = " The 4x4 transform matrix applied to the window (column-major).\n\n Defaults to the identity matrix."]
+    pub transform: [f32; 16usize],
+    #[doc = " The alpha (opacity) of the window.\n\n Defaults to 1.0 (fully opaque)."]
+    pub alpha: f32,
+    #[doc = " Whether the window can be resized.\n\n Defaults to `TRUE`."]
+    pub resizable: i32,
+    #[doc = " Whether the window can be moved.\n\n Defaults to `TRUE`."]
+    pub movable: i32,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -480,3 +517,138 @@ impl Default for miracle_placement_t {
         }
     }
 }
+#[doc = " Describes a keyboard event."]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_keyboard_event_t {
+    #[doc = " The keyboard action."]
+    pub action: u32,
+    #[doc = " The keysym."]
+    pub keysym: u32,
+    #[doc = " The raw scan code."]
+    pub scan_code: i32,
+    #[doc = " The modifiers held during the event."]
+    pub modifiers: u32,
+}
+#[doc = " Describes a pointer event."]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct miracle_pointer_event_t {
+    #[doc = " The x position of the pointer."]
+    pub x: f32,
+    #[doc = " The y position of the pointer."]
+    pub y: f32,
+    #[doc = " The pointer action.\n\n This is one of the MirPointerAction values."]
+    pub action: u32,
+    #[doc = " The modifiers held during the event."]
+    pub modifiers: u32,
+    #[doc = " The buttons held during the event."]
+    pub buttons: u32,
+}
+pub const MirEventType_mir_event_type_key: MirEventType = 0;
+pub const MirEventType_mir_event_type_motion: MirEventType = 1;
+pub const MirEventType_mir_event_type_window: MirEventType = 2;
+pub const MirEventType_mir_event_type_resize: MirEventType = 3;
+pub const MirEventType_mir_event_type_prompt_session_state_change: MirEventType = 4;
+pub const MirEventType_mir_event_type_orientation: MirEventType = 5;
+pub const MirEventType_mir_event_type_close_window: MirEventType = 6;
+pub const MirEventType_mir_event_type_input: MirEventType = 7;
+pub const MirEventType_mir_event_type_input_configuration: MirEventType = 8;
+pub const MirEventType_mir_event_type_window_output: MirEventType = 9;
+pub const MirEventType_mir_event_type_input_device_state: MirEventType = 10;
+pub const MirEventType_mir_event_type_window_placement: MirEventType = 11;
+pub type MirEventType = ::std::os::raw::c_uint;
+pub const MirInputEventType_mir_input_event_type_key: MirInputEventType = 0;
+pub const MirInputEventType_mir_input_event_type_touch: MirInputEventType = 1;
+pub const MirInputEventType_mir_input_event_type_pointer: MirInputEventType = 2;
+pub const MirInputEventType_mir_input_event_type_keyboard_resync: MirInputEventType = 3;
+pub const MirInputEventType_mir_input_event_types: MirInputEventType = 4;
+pub type MirInputEventType = ::std::os::raw::c_uint;
+pub const MirInputEventModifier_mir_input_event_modifier_none: MirInputEventModifier = 1;
+pub const MirInputEventModifier_mir_input_event_modifier_alt: MirInputEventModifier = 2;
+pub const MirInputEventModifier_mir_input_event_modifier_alt_left: MirInputEventModifier = 4;
+pub const MirInputEventModifier_mir_input_event_modifier_alt_right: MirInputEventModifier = 8;
+pub const MirInputEventModifier_mir_input_event_modifier_shift: MirInputEventModifier = 16;
+pub const MirInputEventModifier_mir_input_event_modifier_shift_left: MirInputEventModifier = 32;
+pub const MirInputEventModifier_mir_input_event_modifier_shift_right: MirInputEventModifier = 64;
+pub const MirInputEventModifier_mir_input_event_modifier_sym: MirInputEventModifier = 128;
+pub const MirInputEventModifier_mir_input_event_modifier_function: MirInputEventModifier = 256;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl: MirInputEventModifier = 512;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl_left: MirInputEventModifier = 1024;
+pub const MirInputEventModifier_mir_input_event_modifier_ctrl_right: MirInputEventModifier = 2048;
+pub const MirInputEventModifier_mir_input_event_modifier_meta: MirInputEventModifier = 4096;
+pub const MirInputEventModifier_mir_input_event_modifier_meta_left: MirInputEventModifier = 8192;
+pub const MirInputEventModifier_mir_input_event_modifier_meta_right: MirInputEventModifier = 16384;
+pub const MirInputEventModifier_mir_input_event_modifier_caps_lock: MirInputEventModifier = 32768;
+pub const MirInputEventModifier_mir_input_event_modifier_num_lock: MirInputEventModifier = 65536;
+pub const MirInputEventModifier_mir_input_event_modifier_scroll_lock: MirInputEventModifier =
+    131072;
+#[doc = " Description of key modifier state."]
+pub type MirInputEventModifier = ::std::os::raw::c_uint;
+pub type MirInputEventModifiers = ::std::os::raw::c_uint;
+pub const MirKeyboardAction_mir_keyboard_action_up: MirKeyboardAction = 0;
+pub const MirKeyboardAction_mir_keyboard_action_down: MirKeyboardAction = 1;
+pub const MirKeyboardAction_mir_keyboard_action_repeat: MirKeyboardAction = 2;
+pub const MirKeyboardAction_mir_keyboard_action_modifiers: MirKeyboardAction = 3;
+pub const MirKeyboardAction_mir_keyboard_actions: MirKeyboardAction = 4;
+#[doc = " Possible actions for changing key state"]
+pub type MirKeyboardAction = ::std::os::raw::c_uint;
+pub const MirTouchAction_mir_touch_action_up: MirTouchAction = 0;
+pub const MirTouchAction_mir_touch_action_down: MirTouchAction = 1;
+pub const MirTouchAction_mir_touch_action_change: MirTouchAction = 2;
+pub const MirTouchAction_mir_touch_actions: MirTouchAction = 3;
+#[doc = " Possible per touch actions for state changing"]
+pub type MirTouchAction = ::std::os::raw::c_uint;
+pub const MirTouchAxis_mir_touch_axis_x: MirTouchAxis = 0;
+pub const MirTouchAxis_mir_touch_axis_y: MirTouchAxis = 1;
+pub const MirTouchAxis_mir_touch_axis_pressure: MirTouchAxis = 2;
+pub const MirTouchAxis_mir_touch_axis_touch_major: MirTouchAxis = 3;
+pub const MirTouchAxis_mir_touch_axis_touch_minor: MirTouchAxis = 4;
+pub const MirTouchAxis_mir_touch_axis_size: MirTouchAxis = 5;
+pub const MirTouchAxis_mir_touch_axes: MirTouchAxis = 6;
+#[doc = " Identifiers for touch axis"]
+pub type MirTouchAxis = ::std::os::raw::c_uint;
+pub const MirTouchTooltype_mir_touch_tooltype_unknown: MirTouchTooltype = 0;
+pub const MirTouchTooltype_mir_touch_tooltype_finger: MirTouchTooltype = 1;
+pub const MirTouchTooltype_mir_touch_tooltype_stylus: MirTouchTooltype = 2;
+pub const MirTouchTooltype_mir_touch_tooltypes: MirTouchTooltype = 3;
+#[doc = " Identifiers for per-touch tool types"]
+pub type MirTouchTooltype = ::std::os::raw::c_uint;
+pub const MirPointerAction_mir_pointer_action_button_up: MirPointerAction = 0;
+pub const MirPointerAction_mir_pointer_action_button_down: MirPointerAction = 1;
+pub const MirPointerAction_mir_pointer_action_enter: MirPointerAction = 2;
+pub const MirPointerAction_mir_pointer_action_leave: MirPointerAction = 3;
+pub const MirPointerAction_mir_pointer_action_motion: MirPointerAction = 4;
+pub const MirPointerAction_mir_pointer_actions: MirPointerAction = 5;
+#[doc = " Possible pointer actions"]
+pub type MirPointerAction = ::std::os::raw::c_uint;
+pub const MirPointerAxis_mir_pointer_axis_x: MirPointerAxis = 0;
+pub const MirPointerAxis_mir_pointer_axis_y: MirPointerAxis = 1;
+pub const MirPointerAxis_mir_pointer_axis_vscroll: MirPointerAxis = 2;
+pub const MirPointerAxis_mir_pointer_axis_hscroll: MirPointerAxis = 3;
+pub const MirPointerAxis_mir_pointer_axis_relative_x: MirPointerAxis = 4;
+pub const MirPointerAxis_mir_pointer_axis_relative_y: MirPointerAxis = 5;
+pub const MirPointerAxis_mir_pointer_axis_vscroll_discrete: MirPointerAxis = 6;
+pub const MirPointerAxis_mir_pointer_axis_hscroll_discrete: MirPointerAxis = 7;
+pub const MirPointerAxis_mir_pointer_axis_vscroll_value120: MirPointerAxis = 8;
+pub const MirPointerAxis_mir_pointer_axis_hscroll_value120: MirPointerAxis = 9;
+pub const MirPointerAxis_mir_pointer_axes: MirPointerAxis = 10;
+#[doc = " Identifiers for pointer axis"]
+pub type MirPointerAxis = ::std::os::raw::c_uint;
+pub const MirPointerButton_mir_pointer_button_primary: MirPointerButton = 1;
+pub const MirPointerButton_mir_pointer_button_secondary: MirPointerButton = 2;
+pub const MirPointerButton_mir_pointer_button_tertiary: MirPointerButton = 4;
+pub const MirPointerButton_mir_pointer_button_back: MirPointerButton = 8;
+pub const MirPointerButton_mir_pointer_button_forward: MirPointerButton = 16;
+pub const MirPointerButton_mir_pointer_button_side: MirPointerButton = 32;
+pub const MirPointerButton_mir_pointer_button_extra: MirPointerButton = 64;
+pub const MirPointerButton_mir_pointer_button_task: MirPointerButton = 128;
+pub type MirPointerButton = ::std::os::raw::c_uint;
+pub type MirPointerButtons = ::std::os::raw::c_uint;
+pub const MirPointerAxisSource_mir_pointer_axis_source_none: MirPointerAxisSource = 0;
+pub const MirPointerAxisSource_mir_pointer_axis_source_wheel: MirPointerAxisSource = 1;
+pub const MirPointerAxisSource_mir_pointer_axis_source_finger: MirPointerAxisSource = 2;
+pub const MirPointerAxisSource_mir_pointer_axis_source_continuous: MirPointerAxisSource = 3;
+pub const MirPointerAxisSource_mir_pointer_axis_source_wheel_tilt: MirPointerAxisSource = 4;
+#[doc = " Identifiers for pointer event source"]
+pub type MirPointerAxisSource = ::std::os::raw::c_uint;

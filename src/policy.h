@@ -29,8 +29,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mode_observer.h"
 #include "move_service.h"
 #include "output.h"
+#include "plugin_bridge.h"
 #include "resize_service.h"
 #include "scratchpad.h"
+#include "window_allocation.h"
 #include "window_manager_tools_window_controller.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -51,7 +53,6 @@ namespace miracle
 
 class ConfigObserverRegistrar;
 class Container;
-class ContainerGroupContainer;
 class AnimatorLoop;
 class OutputManager;
 class DyingSurfaceManager;
@@ -82,6 +83,8 @@ public:
     auto place_new_window(
         miral::ApplicationInfo const& app_info,
         miral::WindowSpecification const& requested_specification) -> miral::WindowSpecification override;
+    void advise_new_app(miral::ApplicationInfo& app_info) override;
+    void advise_delete_app(miral::ApplicationInfo const& app_info) override;
     void advise_new_window(miral::WindowInfo const& window_info) override;
     void handle_window_ready(miral::WindowInfo& window_info) override;
     void advise_focus_gained(miral::WindowInfo const& window_info) override;
@@ -124,6 +127,8 @@ private:
     std::shared_ptr<ConfigObserverRegistrar> config_observer_registrar;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
+    std::shared_ptr<WindowIdMap> window_id_map_;
+    std::shared_ptr<ApplicationIdMap> application_id_map_;
     std::shared_ptr<WindowManagerToolsWindowController> window_controller;
     std::shared_ptr<AutoRestartingLauncher> launcher;
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_observer_registrar;
@@ -141,7 +146,6 @@ private:
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     std::unique_ptr<AnimatorLoop> animator_loop;
-    std::shared_ptr<ContainerGroupContainer> group_selection;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
@@ -149,6 +153,8 @@ private:
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
+    uint64_t next_window_id_ = 0;
+    uint64_t next_application_id_ = 0;
 };
 }
 

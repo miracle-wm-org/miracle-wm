@@ -1,0 +1,11 @@
+name = "miracle-plugin-docs"
+compatibility_date = "2026-03-15"
+main = "wrangler.js"
+
+[assets]
+directory = "target/doc"
+binding = "ASSETS"
+
+[env.production]
+name = "miracle-plugin-docs"
+route = { pattern = "docs.miracle-wm.org/*", zone_name = "miracle-wm.org" }

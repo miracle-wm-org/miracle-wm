@@ -17,16 +17,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "config_observer.h"
 #include "display_config.h"
+#include "freestyle_window_container.h"
 #include "ipc_client.h"
+#include "leaf_container.h"
 #include "output_listener.h"
 #include "parent_container.h"
 #include "policy.h"
 #include "stub_configuration.h"
 #include "vertical_display_configuration_policy.h"
 
+#include <linux/input-event-codes.h>
 #include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <filesystem>
 #include <gmock/gmock.h>
@@ -206,7 +210,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     EXPECT_THAT(container->get_logical_area(), Eq(mir::geometry::Rectangle {
                                                    { 800,  0   },
                                                    { 1000, 600 }
@@ -237,7 +241,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window = create_window(app, spec);
-    auto const container = compositor_state->containers()[0].lock();
+    auto const container = compositor_state->windows()[0].lock();
     update_outputs(output_configs_from_output_rectangles({}));
 
     update_outputs(output_configs_from_output_rectangles({
@@ -256,7 +260,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_1 };
         int const scan_code { KEY_1 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -272,13 +276,13 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     auto const app = open_application("test");
     miral::WindowSpecification spec;
     auto const window1 = create_window(app, spec);
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -297,7 +301,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         // Move to workspace 1
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta };
         auto const event = mir::events::make_key_event(
@@ -310,13 +314,13 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
         publish_event(*event);
     }
 
-    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->containers().front().lock()));
+    EXPECT_THAT(compositor_state->focused_container(), Eq(compositor_state->windows().front().lock()));
 
     {
         // Move the window1 to workspace 2
         std::chrono::nanoseconds const event_timestamp = std::chrono::system_clock::now().time_since_epoch();
         MirKeyboardAction const action { mir_keyboard_action_down };
-        xkb_keysym_t const keysym { 0 };
+        xkb_keysym_t const keysym { XKB_KEY_2 };
         int const scan_code { KEY_2 };
         MirInputEventModifiers const modifiers { mir_input_event_modifier_meta | mir_input_event_modifier_shift };
         auto const event = mir::events::make_key_event(
@@ -330,7 +334,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     }
 
     // Expect that all containers are on workspace 2
-    for (auto const& container : compositor_state->containers())
+    for (auto const& container : compositor_state->windows())
     {
         EXPECT_THAT(container.lock()->get_workspace()->num(), Eq(2));
     }
@@ -691,4 +695,118 @@ TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
                                                                                      { 800, 800 }
     }));
     ipc_close_socket(socket_fd);
+}
+
+// ---- FreestyleWindowContainer policy tests ----
+
+/// Helper: returns the first container in focus_order that is a FreestyleWindowContainer.
+static std::shared_ptr<FreestyleWindowContainer> first_freestyle(CompositorState const& state)
+{
+    for (auto const& weak : state.windows())
+    {
+        if (auto const container = weak.lock())
+        {
+            if (auto const freestyle = std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
+                return freestyle;
+        }
+    }
+    return nullptr;
+}
+
+TEST_F(SingleWindowPolicyTest, DialogWindowCreatesFreestyleWindowContainer)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_dialog;
+    create_window(app, spec);
+
+    EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
+}
+
+TEST_F(SingleWindowPolicyTest, SatelliteWindowCreatesFreestyleWindowContainer)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_satellite;
+    create_window(app, spec);
+
+    EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
+}
+
+TEST_F(SingleWindowPolicyTest, UtilityWindowCreatesFreestyleWindowContainer)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_utility;
+    create_window(app, spec);
+
+    EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
+}
+
+TEST_F(SingleWindowPolicyTest, NormalWindowIsNotFreestyleWindowContainer)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    auto const window = create_window(app, spec);
+
+    EXPECT_THAT(first_freestyle(*compositor_state), Eq(nullptr));
+    EXPECT_THAT(compositor_state->first_tiling(), Ne(nullptr));
+    EXPECT_THAT(compositor_state->first_tiling()->window(), Eq(window));
+}
+
+TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotTiling)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_dialog;
+    create_window(app, spec);
+
+    EXPECT_THAT(compositor_state->first_tiling(), Eq(nullptr));
+}
+
+TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotAnchored)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_dialog;
+    create_window(app, spec);
+
+    auto const container = first_freestyle(*compositor_state);
+    ASSERT_THAT(container, Ne(nullptr));
+    EXPECT_FALSE(container->anchored());
+}
+
+TEST_F(SingleWindowPolicyTest, DialogWindowInheritsWorkspaceFromParent)
+{
+    auto const app = open_application("test");
+
+    // Create a normal tiling window first
+    miral::WindowSpecification parent_spec;
+    auto const parent_window = create_window(app, parent_spec);
+    auto const parent_container = compositor_state->first_tiling();
+    ASSERT_THAT(parent_container, Ne(nullptr));
+    auto const parent_workspace = parent_container->get_workspace();
+    ASSERT_THAT(parent_workspace, Ne(nullptr));
+
+    // Create a dialog with the tiling window as its parent
+    miral::WindowSpecification child_spec;
+    child_spec.type() = mir_window_type_dialog;
+    child_spec.parent() = parent_window;
+    create_window(app, child_spec);
+
+    auto const dialog = first_freestyle(*compositor_state);
+    ASSERT_THAT(dialog, Ne(nullptr));
+    EXPECT_EQ(dialog->get_workspace(), parent_workspace);
+}
+
+TEST_F(SingleWindowPolicyTest, FreestyleWindowWithoutParentOpensOnActiveWorkspace)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.type() = mir_window_type_dialog;
+    create_window(app, spec);
+
+    auto const container = first_freestyle(*compositor_state);
+    ASSERT_THAT(container, Ne(nullptr));
+    EXPECT_THAT(container->get_workspace(), Ne(nullptr));
 }

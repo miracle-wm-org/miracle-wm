@@ -3,6 +3,10 @@ use super::core::{Point, Size};
 use super::host::*;
 use super::workspace::*;
 
+/// Represents a physical or logical display.
+///
+/// Each output hosts one or more [`crate::workspace::Workspace`]s. Use [`Output::workspaces`]
+/// to get all workspaces on this output, or [`Output::workspace`] to retrieve one by index.
 #[derive(Debug, Clone)]
 pub struct Output {
     /// The position of the output.
@@ -20,10 +24,12 @@ pub struct Output {
 }
 
 impl Output {
-    /// Create from the C struct and a name string.
-    ///
-    /// The name is passed separately because the C struct doesn't contain
-    /// the name directly (it's written to a separate buffer by the host).
+    /// Returns the opaque internal ID used to refer to this output across API calls.
+    pub fn id(&self) -> u64 {
+        self.internal
+    }
+
+    #[doc(hidden)]
     pub fn from_c_with_name(value: &bindings::miracle_output_t, name: String) -> Self {
         Self {
             position: value.position.into(),
@@ -35,12 +41,14 @@ impl Output {
         }
     }
 
+    /// Returns all workspaces hosted by this output.
     pub fn workspaces(&self) -> Vec<Workspace> {
         (0..self.num_workspaces)
             .filter_map(|i| self.workspace(i))
             .collect()
     }
 
+    /// Returns the workspace at `index`, or `None` if out of bounds.
     pub fn workspace(&self, index: u32) -> Option<Workspace> {
         if index >= self.num_workspaces {
             return None;

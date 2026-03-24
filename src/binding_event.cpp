@@ -16,7 +16,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "binding_event.h"
-#include <libevdev-1.0/libevdev/libevdev.h>
 #include <mir_toolkit/events/enums.h>
 
 using namespace miracle;
