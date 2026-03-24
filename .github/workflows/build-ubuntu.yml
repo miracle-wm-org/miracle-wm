@@ -97,10 +97,10 @@ jobs:
       run: podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
 
     - name: Unit Tests
-      run: podman exec ${{ env.CONTAINER }} /workspace/build/tests/miracle-wm-tests
+      run: podman exec -e XDG_RUNTIME_DIR=/tmp ${{ env.CONTAINER }} /workspace/build/tests/miracle-wm-tests
 
     - name: miracle-wm-config unit tests
-      run: podman exec ${{ env.CONTAINER }} /workspace/build/miracle-wm-c/test_miracle_wm_c_api
+      run: podman exec -e XDG_RUNTIME_DIR=/tmp ${{ env.CONTAINER }} /workspace/build/miracle-wm-c/test_miracle_wm_c_api
 
     - name: IPC Tests
       if: false
