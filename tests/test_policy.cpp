@@ -32,11 +32,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_test_framework/window_management_test_harness.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
+#include <dirent.h>
 #include <filesystem>
+#include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
+#include <set>
 #include <sys/socket.h>
+#include <unistd.h>
 
 namespace mg = mir::graphics;
 
@@ -74,17 +78,8 @@ class SingleWindowPolicyTest : public PolicyTest
 {
 public:
     SingleWindowPolicyTest() :
-        config_path { std::filesystem::temp_directory_path() / "policy_test.yaml" },
-        config { std::make_shared<FilesystemConfiguration>(
-            registrar,
-            config_path,
-            true) }
+        config { std::make_shared<test::StubConfiguration>() }
     {
-    }
-
-    ~SingleWindowPolicyTest() override
-    {
-        std::filesystem::remove(config_path);
     }
 
     auto get_builder() -> mir_test_framework::WindowManagementPolicyBuilder override

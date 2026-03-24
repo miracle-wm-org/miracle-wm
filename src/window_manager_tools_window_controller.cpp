@@ -41,7 +41,14 @@ auto create_window_animation_callback(std::weak_ptr<Container> const& container,
         action_queue->enqueue(controller, [container_weak = container_weak, result = result, controller]
         {
             if (auto const container = container_weak.lock())
-                controller->process_animation(result, container);
+            {
+                // Note: We MUST invoke this under the lock, because the window could theoretically get
+                // removed while it is animation.
+                controller->invoke_under_lock([container = container, result = result, controller = controller]
+                {
+                    controller->process_animation(result, container);
+                });
+            }
         });
     };
 }
@@ -209,64 +216,59 @@ void WindowManagerToolsWindowController::process_animation(
     AnimationFrameResult const& result,
     std::shared_ptr<Container> const& container)
 {
-    // Note: We MUST invoke this under the lock, because the window could theoretically get
-    // removed while it is ani
-    invoke_under_lock([&]
+    // TODO (hack): we really need to refactor the entire animation system. The issue
+    //  here is that our current system relies on us enqueuing animation processing
+    //  onto the main loop for animations. However, this may cause a situation where
+    //  a window is deleted, but we still have an animation pending to it. When we
+    //  try to modify that windows, things blow up on us. The solution here is temporary
+    //  but the real solution is to refactor how we're doing animations so that it is
+    //  less generic and makes more sense. The "hack" is the try/catch block
+    try
     {
-        // TODO (hack): we really need to refactor the entire animation system. The issue
-        //  here is that our current system relies on us enqueuing animation processing
-        //  onto the main loop for animations. However, this may cause a situation where
-        //  a window is deleted, but we still have an animation pending to it. When we
-        //  try to modify that windows, things blow up on us. The solution here is temporary
-        //  but the real solution is to refactor how we're doing animations so that it is
-        //  less generic and makes more sense. The "hack" is the try/catch block
-        try
+        bool needs_modify = false;
+        miral::WindowSpecification spec;
+        auto const& rectangle = result.rectangle;
+
+        if (rectangle)
         {
-            bool needs_modify = false;
-            miral::WindowSpecification spec;
-            auto const& rectangle = result.rectangle;
+            spec.top_left() = rectangle->top_left;
+            // TODO: Remove once a real fix is added upstream
+            // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
+            // Workaround for: https://github.com/canonical/mir/issues/4222
+            auto const& info = tools.info_for(container->window().value());
+            spec.size() = geom::Size {
+                geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
+                geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
+            };
 
-            if (rectangle)
-            {
-                spec.top_left() = rectangle->top_left;
-                // TODO: Remove once a real fix is added upstream
-                // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
-                // Workaround for: https://github.com/canonical/mir/issues/4222
-                auto const& info = tools.info_for(container->window().value());
-                spec.size() = geom::Size {
-                    geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
-                    geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
-                };
-
-                needs_modify = true;
-            }
-
-            if (!container->window())
-                return;
-
-            auto const window = container->window().value();
-            if (!window)
-                return;
-
-            // TODO: Modify window can throw an exception, which we are catching
-            if (needs_modify)
-                tools.modify_window(window, spec);
-
-            if (result.transform)
-                container->set_animation_transform(result.transform.value());
-
-            if (result.opacity != std::nullopt)
-                container->set_animation_alpha(result.opacity.value());
-
-            if (result.is_complete)
-                container->constrain();
-            else if (rectangle)
-                clip(window, rectangle.value());
+            needs_modify = true;
         }
-        catch (std::out_of_range const&)
-        {
-        }
-    });
+
+        if (!container->window())
+            return;
+
+        auto const window = container->window().value();
+        if (!window)
+            return;
+
+        // TODO: Modify window can throw an exception, which we are catching
+        if (needs_modify)
+            tools.modify_window(window, spec);
+
+        if (result.transform)
+            container->set_animation_transform(result.transform.value());
+
+        if (result.opacity != std::nullopt)
+            container->set_animation_alpha(result.opacity.value());
+
+        if (result.is_complete)
+            container->constrain();
+        else if (rectangle)
+            clip(window, rectangle.value());
+    }
+    catch (std::out_of_range const&)
+    {
+    }
 }
 
 void WindowManagerToolsWindowController::set_user_data(
