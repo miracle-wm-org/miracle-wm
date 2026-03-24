@@ -54,7 +54,7 @@ else()
 endif()
 
 # Feature flags
-option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" OFF)
+option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" ON)
 option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
 
 if(FEATURE_PLUGIN_SYSTEM)
