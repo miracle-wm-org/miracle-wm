@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Miracle (snap)
 Comment=A wayland tiling window manager based on Mir
-Exec=sh -l -c /snap/bin/miracle-wm
+Exec=/usr/local/bin/miracle-wm-snap-session
 Type=Application
+DesktopNames=miracle-wm;mir

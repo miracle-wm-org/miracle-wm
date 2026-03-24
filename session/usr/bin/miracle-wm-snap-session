@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /snap/bin/miracle-wm "$@"
