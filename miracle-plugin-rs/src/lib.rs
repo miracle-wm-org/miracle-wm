@@ -29,7 +29,7 @@
 //! ```toml
 //! # Cargo.toml
 //! [dependencies]
-// miracle-plugin = { version = "0.0.5", features = ["configure"]}
+//! miracle-plugin = { version = "0.0.5", features = ["configure"]}
 //! ```
 //!
 //! Add the `wasm32-wasip1` target if you haven't already:
