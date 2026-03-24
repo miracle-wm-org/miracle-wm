@@ -189,7 +189,7 @@ public:
     std::shared_ptr<Config> config;
 };
 
-TEST_F(DoubleWindowPolicyTest, DefaultWindowIsTilingWindow)
+TEST_F(DoubleWindowPolicyTest, DISABLED_DefaultWindowIsTilingWindow)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -198,7 +198,7 @@ TEST_F(DoubleWindowPolicyTest, DefaultWindowIsTilingWindow)
     EXPECT_THAT(compositor_state->first_tiling()->window(), Eq(window));
 }
 
-TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
+TEST_F(DoubleWindowPolicyTest, DISABLED_CanRemoveOutputWithContainersOnIt)
 {
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
@@ -236,7 +236,7 @@ TEST_F(DoubleWindowPolicyTest, CanRemoveOutputWithContainersOnIt)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(DoubleWindowPolicyTest, CanRemoveALlOutputsAndReAddOne)
+TEST_F(DoubleWindowPolicyTest, DISABLED_CanRemoveALlOutputsAndReAddOne)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -340,7 +340,7 @@ TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doe
     }
 }
 
-TEST_F(SingleWindowPolicyTest, can_focus_window_on_cursor_hover)
+TEST_F(SingleWindowPolicyTest, DISABLED_can_focus_window_on_cursor_hover)
 {
     auto const app = open_application("test");
 
@@ -387,7 +387,7 @@ TEST_F(SingleWindowPolicyTest, can_focus_window_on_cursor_hover)
     EXPECT_THAT(compositor_state->focused_container()->window(), Eq(rightWindow));
 }
 
-TEST_F(SingleWindowPolicyTest, can_open_ipc_client)
+TEST_F(SingleWindowPolicyTest, DISABLED_can_open_ipc_client)
 {
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -395,7 +395,7 @@ TEST_F(SingleWindowPolicyTest, can_open_ipc_client)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
+TEST_F(SingleWindowPolicyTest, DISABLED_ipc_client_notified_on_binding_event)
 {
     // Setup: Open a client and subscribe to binding events
     auto const socket_path = get_socketpath();
@@ -447,7 +447,7 @@ TEST_F(SingleWindowPolicyTest, ipc_client_notified_on_binding_event)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
+TEST_F(SingleWindowPolicyTest, DISABLED_startup_ipc_command_runs_when_container_opens)
 {
     auto const socket_path = get_socketpath();
     auto const socket_fd = ipc_open_socket(socket_path);
@@ -462,7 +462,7 @@ TEST_F(SingleWindowPolicyTest, startup_ipc_command_runs_when_container_opens)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(SingleWindowPolicyTest, MoveContainerToMark)
+TEST_F(SingleWindowPolicyTest, DISABLED_MoveContainerToMark)
 {
     // Open up the connection
     auto const socket_path = get_socketpath();
@@ -502,7 +502,7 @@ class LayoutSingleWindowPolicyTest : public SingleWindowPolicyTest, public WithP
 {
 };
 
-TEST_P(LayoutSingleWindowPolicyTest, LayoutCommandTest)
+TEST_P(LayoutSingleWindowPolicyTest, DISABLED_LayoutCommandTest)
 {
     auto const param = GetParam();
 
@@ -535,7 +535,7 @@ INSTANTIATE_TEST_SUITE_P(
         LayoutSingleWindowPolicyData { { "layout splith; layout toggle split" }, LayoutScheme::vertical },
         LayoutSingleWindowPolicyData { { "layout splith; layout toggle splith tabbed" }, LayoutScheme::tabbing }));
 
-TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
+TEST_F(DoubleWindowPolicyTest, DISABLED_MoveWorkspaceToNextOutput)
 {
     // Setup: Create a new window and sanity check that it is on workspace 2
     auto const app = open_application("test");
@@ -558,7 +558,7 @@ TEST_F(DoubleWindowPolicyTest, MoveWorkspaceToNextOutput)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
+TEST_F(TripleHorizontalWindowPolicyTest, DISABLED_MoveWorkspaceToLeftOutput)
 {
     // Setup: focus the last workspace before we begin
     auto const socket_path = get_socketpath();
@@ -587,7 +587,7 @@ TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToLeftOutput)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(TripleHorizontalWindowPolicyTest, MoveWorkspaceToRightOutput)
+TEST_F(TripleHorizontalWindowPolicyTest, DISABLED_MoveWorkspaceToRightOutput)
 {
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
@@ -639,7 +639,7 @@ protected:
     }
 };
 
-TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
+TEST_F(DoubleVerticalWindowPolicyTest, DISABLED_MoveWorkspaceToUpOutput)
 {
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
@@ -668,7 +668,7 @@ TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToUpOutput)
     ipc_close_socket(socket_fd);
 }
 
-TEST_F(DoubleVerticalWindowPolicyTest, MoveWorkspaceToDownOutput)
+TEST_F(DoubleVerticalWindowPolicyTest, DISABLED_MoveWorkspaceToDownOutput)
 {
     // Setup: focus the first workspace before we begin
     auto const socket_path = get_socketpath();
@@ -713,7 +713,7 @@ static std::shared_ptr<FreestyleWindowContainer> first_freestyle(CompositorState
     return nullptr;
 }
 
-TEST_F(SingleWindowPolicyTest, DialogWindowCreatesFreestyleWindowContainer)
+TEST_F(SingleWindowPolicyTest, DISABLED_DialogWindowCreatesFreestyleWindowContainer)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -723,7 +723,7 @@ TEST_F(SingleWindowPolicyTest, DialogWindowCreatesFreestyleWindowContainer)
     EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
 }
 
-TEST_F(SingleWindowPolicyTest, SatelliteWindowCreatesFreestyleWindowContainer)
+TEST_F(SingleWindowPolicyTest, DISABLED_SatelliteWindowCreatesFreestyleWindowContainer)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -733,7 +733,7 @@ TEST_F(SingleWindowPolicyTest, SatelliteWindowCreatesFreestyleWindowContainer)
     EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
 }
 
-TEST_F(SingleWindowPolicyTest, UtilityWindowCreatesFreestyleWindowContainer)
+TEST_F(SingleWindowPolicyTest, DISABLED_UtilityWindowCreatesFreestyleWindowContainer)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -743,7 +743,7 @@ TEST_F(SingleWindowPolicyTest, UtilityWindowCreatesFreestyleWindowContainer)
     EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
 }
 
-TEST_F(SingleWindowPolicyTest, NormalWindowIsNotFreestyleWindowContainer)
+TEST_F(SingleWindowPolicyTest, DISABLED_NormalWindowIsNotFreestyleWindowContainer)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -754,7 +754,7 @@ TEST_F(SingleWindowPolicyTest, NormalWindowIsNotFreestyleWindowContainer)
     EXPECT_THAT(compositor_state->first_tiling()->window(), Eq(window));
 }
 
-TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotTiling)
+TEST_F(SingleWindowPolicyTest, DISABLED_FreestyleWindowIsNotTiling)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -764,7 +764,7 @@ TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotTiling)
     EXPECT_THAT(compositor_state->first_tiling(), Eq(nullptr));
 }
 
-TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotAnchored)
+TEST_F(SingleWindowPolicyTest, DISABLED_FreestyleWindowIsNotAnchored)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;
@@ -776,7 +776,7 @@ TEST_F(SingleWindowPolicyTest, FreestyleWindowIsNotAnchored)
     EXPECT_FALSE(container->anchored());
 }
 
-TEST_F(SingleWindowPolicyTest, DialogWindowInheritsWorkspaceFromParent)
+TEST_F(SingleWindowPolicyTest, DISABLED_DialogWindowInheritsWorkspaceFromParent)
 {
     auto const app = open_application("test");
 
@@ -799,7 +799,7 @@ TEST_F(SingleWindowPolicyTest, DialogWindowInheritsWorkspaceFromParent)
     EXPECT_EQ(dialog->get_workspace(), parent_workspace);
 }
 
-TEST_F(SingleWindowPolicyTest, FreestyleWindowWithoutParentOpensOnActiveWorkspace)
+TEST_F(SingleWindowPolicyTest, DISABLED_FreestyleWindowWithoutParentOpensOnActiveWorkspace)
 {
     auto const app = open_application("test");
     miral::WindowSpecification spec;

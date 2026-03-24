@@ -45,6 +45,7 @@ set(SOURCES
     test_ipc_command_executor.cpp
     test_workspace_manager.cpp
     test_compositor_state.cpp
+    test_plugin_helpers.cpp
     stub_configuration.h
     stub_surface.h
     stub_window_controller.h

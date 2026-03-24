@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_observer.h"
 #include "workspace_manager.h"
 
+#include "plugin_helpers.h"
 #include <iostream>
 #include <map>
 #include <mir/geometry/rectangle.h>
@@ -198,39 +199,23 @@ public:
 
     void on_plugins_changed(std::vector<PluginConfiguration> const& plugins) override
     {
-        std::map<std::string, std::string> new_plugin_map;
-        for (auto const& p : plugins)
-            new_plugin_map[p.path] = p.userdata_json;
-
-        for (auto it = loaded_plugins.begin(); it != loaded_plugins.end();)
+        update_plugins(
+            plugins,
+            loaded_plugins,
+            [this](std::string const& path, std::string const& userdata_json)
         {
-            auto const& [path, handle_and_data] = *it;
-            auto const& [handle, userdata_json] = handle_and_data;
-            auto const found = new_plugin_map.find(path);
-            if (found == new_plugin_map.end() || found->second != userdata_json)
-            {
-                policy.plugin_manager->unload_wasm_module(handle);
-                it = loaded_plugins.erase(it);
-            }
-            else
-                ++it;
-        }
-
-        for (auto const& p : plugins)
+            return policy.plugin_manager->load_wasm_module(path, userdata_json);
+        },
+            [this](PluginHandle handle)
         {
-            if (loaded_plugins.count(p.path) == 0)
-            {
-                auto result = policy.plugin_manager->load_wasm_module(p.path, p.userdata_json);
-                if (result.success)
-                    loaded_plugins[p.path] = { result.handle, p.userdata_json };
-            }
-        }
+            policy.plugin_manager->unload_wasm_module(handle);
+        });
     }
 
     Policy& policy;
     std::shared_ptr<mir::ServerActionQueue> queue;
     bool has_loaded_once = false;
-    std::map<std::string, std::pair<PluginHandle, std::string>> loaded_plugins;
+    std::map<std::string, LoadedPlugin> loaded_plugins;
 };
 
 Policy::Policy(
@@ -842,12 +827,18 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     if (workspace)
         workspace->advise_focus_gained(container);
     window_observer_registrar->advise_window_focused(*container);
-    plugin_manager->window_focused(window_info);
+
+    // Warning: This must be enqueued because the plugin itself could have
+    // triggered the focus, leading to a reentry on the plugin.
+    main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
+    {
+        plugin_manager->window_focused(window_info);
+    });
 }
 
 void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 {
-    auto container = window_controller->get_window_container(window_info.window());
+    auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
         mir::log_error("advise_focus_lost: container is not provided");
@@ -859,7 +850,13 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
     state->unfocus_container(container);
     container->on_focus_lost();
-    plugin_manager->window_unfocused(window_info);
+
+    // Warning: This must be enqueued because the plugin itself could have
+    // triggered the focus, leading to a reentry on the plugin.
+    main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
+    {
+        plugin_manager->window_unfocused(window_info);
+    });
 }
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
