@@ -57,6 +57,7 @@ parts:
       - -DSNAP_BUILD=ON
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DFEATURE_PLUGIN_SYSTEM=0
     source: .
     override-build: |
       apt-get install -y libmirrenderer-dev || true
