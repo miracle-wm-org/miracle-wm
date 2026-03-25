@@ -46,7 +46,7 @@ namespace test
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const& container), (override));
         MOCK_METHOD(void, set_transform, (glm::mat4 const& in), (override));
         MOCK_METHOD(std::shared_ptr<AbstractWorkspace>, active, (), (const, override));
-        MOCK_METHOD(std::vector<std::shared_ptr<AbstractWorkspace>> const&, get_workspaces, (), (const, override));
+        MOCK_METHOD(std::vector<std::shared_ptr<AbstractWorkspace>>, get_workspaces, (), (const, override));
         MOCK_METHOD(geom::Rectangle const&, get_area, (), (const, override));
         MOCK_METHOD(std::vector<miral::Zone> const&, get_app_zones, (), (const, override));
         MOCK_METHOD(std::string const&, name, (), (const, override));
