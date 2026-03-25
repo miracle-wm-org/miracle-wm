@@ -1,13 +1,6 @@
-> [!WARNING]
-> This project is a work in progress. The first stable, feature-complete release
-> will be version 1.0.0. As such, it is advised that you do not use this as your daily driver
-> unless you are willing to encounter some paper cuts along the way. If you are willing to 
-> lend your time to find bugs, fix bugs, or submit proposals for new features, it would
-> be greatly appreciated.
-
 <p align="center">
-  <a href="https://wiki.miracle-wm.org/latest/">
-    <img alt="Visit Website" src="https://img.shields.io/badge/Visit-Website-blue?style=for-the-badge&logo=google-chrome&logoColor=white"/>
+  <a href="https://miracle-wm.org/">
+    <img alt="Website" src="https://img.shields.io/badge/Visit-Website-blue?style=for-the-badge&logo=google-chrome&logoColor=white"/>
   </a>
   &nbsp;
   <a href="https://matrix.to/#/#miracle-wm:matrix.org">
@@ -15,13 +8,49 @@
   </a>
 </p>
 
-**miracle-wm** is a Wayland compositor based on [Mir](https://github.com/MirServer/mir). It features a tiling
-window manager at its core, very much in the style of [i3](https://i3wm.org/) and [sway](https://github.com/swaywm/sway).
-The intention is to build a compositor that is flashier and more feature-rich than either of those compositors, like [swayfx](https://github.com/WillPower3309/swayfx).
+# miracle-wm
+
+**miracle-wm** is a hackable, stylish, and modern Wayland compositor built on [Mir](https://github.com/MirServer/mir). It brings the keyboard-driven efficiency of i3/Sway to a richer, more extensible experience with smooth animations, a powerful WebAssembly plugin system, and a clean YAML configuration.
 
 ![miracle in action](./resources/screenshot1.png "miracle in action")
 
+## Features
 
-# User Guide
-For all information related to `miracle-wm`, including installation instructions, build instructions,
-and a roadmap, visit: https://wiki.miracle-wm.org/latest/
+- **Manual tiling** — organize windows into horizontal, vertical, tabbed, or stacked layouts with full keyboard control
+- **Floating windows** — seamlessly mix floating and tiled windows in the same workspace
+- **Smooth animations** — window open/close, moves, resizes, and workspace transitions all animate out of the box
+- **WebAssembly plugin system** — extend and override core behavior without touching a line of C++
+- **i3/Sway-compatible IPC** — works with `swaymsg`, Waybar, and the rest of the ecosystem you already know
+- **Hot-reload config** — apply changes instantly with `Meta+Shift+R`, no restart required
+- **Multi-monitor support** — independent workspaces across outputs, fully configurable
+- **Accessibility built in** — magnifier, slow keys, sticky keys, and cursor configuration included
+
+## Plugins
+
+Plugins run as sandboxed [WebAssembly](https://webassembly.org/) modules, so you get first-class extensibility with zero risk to compositor stability.
+
+Write plugins in **Rust** (via the [`miracle-plugin` crate](https://docs.miracle-wm.org/)) and hook into:
+
+- Window placement logic — put windows exactly where you want them
+- Input events — intercept keystrokes and pointer events before the compositor handles them
+- Animations — trigger custom animations with arbitrary timing at any lifecycle event
+- Workspace and output events — react to workspace creation, deletion, and switching
+- Configuration — read and extend the compositor's config at runtime
+
+Plugins hot-reload when the configuration reloads, so your iteration loop is fast.
+
+## Getting Started
+
+Installation instructions, build instructions, and a full roadmap live at:
+
+**[wiki.miracle-wm.org](https://wiki.miracle-wm.org/latest/)**
+
+Plugin API documentation is at:
+
+**[docs.miracle-wm.org](https://docs.miracle-wm.org/)**
+
+## Community
+
+Questions, ideas, and contributions are welcome. Find us on Matrix:
+
+**[#miracle-wm:matrix.org](https://matrix.to/#/#miracle-wm:matrix.org)**
