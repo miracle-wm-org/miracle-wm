@@ -96,6 +96,12 @@ public:
             .WillByDefault(Return(workspaces));
     }
 
+    void TearDown() override
+    {
+        ::testing::Mock::VerifyAndClear(workspace.get());
+        ::testing::Mock::VerifyAndClear(output.get());
+    }
+
     std::shared_ptr<CompositorState> make_state() { return std::make_shared<CompositorState>(); }
 
     std::shared_ptr<LeafContainer> make_leaf(std::shared_ptr<CompositorState> const& state)

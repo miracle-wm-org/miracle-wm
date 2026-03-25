@@ -80,6 +80,12 @@ public:
         leaf_container->associate_to_window(window);
     }
 
+    void TearDown() override
+    {
+        ::testing::Mock::VerifyAndClear(workspace.get());
+        ::testing::Mock::VerifyAndClear(output.get());
+    }
+
 protected:
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
