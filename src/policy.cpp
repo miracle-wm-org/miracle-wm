@@ -832,7 +832,13 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     // triggered the focus, leading to a reentry on the plugin.
     main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
     {
-        plugin_manager->window_focused(window_info);
+        try
+        {
+            plugin_manager->window_focused(window_info);
+        }
+        catch (std::out_of_range const&)
+        {
+        }
     });
 }
 
@@ -855,7 +861,13 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
     // triggered the focus, leading to a reentry on the plugin.
     main_loop_->enqueue(this, [window_info, plugin_manager = plugin_manager]
     {
-        plugin_manager->window_unfocused(window_info);
+        try
+        {
+            plugin_manager->window_unfocused(window_info);
+        }
+        catch (std::out_of_range const&)
+        {
+        }
     });
 }
 
