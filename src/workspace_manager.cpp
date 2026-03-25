@@ -77,8 +77,8 @@ bool WorkspaceManager::request_workspace(
         .num = num,
         .name = workspace_config.name,
         .registrar = registry });
-    registry->advise_created(id);
     request_focus(id);
+    registry->advise_created(id);
     return true;
 }
 
@@ -255,15 +255,17 @@ bool WorkspaceManager::request_focus(uint32_t id)
     else
         last_selected.reset();
 
-    // Note: it is important that this is sent before the workspace
-    // is activated because 'advise_workspace-active' might remove
-    // the workspace if it is empty
+    std::optional<uint32_t> previous_id;
     if (active_screen != nullptr && !last_selected.expired())
-        registry->advise_focused(last_selected.lock()->id(), id);
-    else
-        registry->advise_focused(std::nullopt, id);
+        previous_id = last_selected.lock()->id();
 
     existing->get_output()->advise_workspace_active(*this, id);
+
+    // Note: the focus event is sent AFTER activation so that IPC clients
+    // receive the EMPTY event for the deleted old workspace before the
+    // FOCUS event, preventing a brief flash of both workspaces.
+    // workspace_to_json handles the case where previous_id no longer exists.
+    registry->advise_focused(previous_id, id);
     return true;
 }
 

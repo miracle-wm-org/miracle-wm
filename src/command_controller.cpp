@@ -2007,6 +2007,8 @@ nlohmann::json CommandController::workspace_to_json(uint32_t id) const
 {
 
     auto const workspace = workspace_manager->workspace(id);
+    if (!workspace)
+        return nullptr;
     auto const focused = output_manager->focused();
     return workspace->to_json(focused ? focused == workspace->get_output() : false);
 }
