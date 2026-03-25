@@ -234,7 +234,8 @@ TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)
     // that it is associated with the output
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
-        .WillRepeatedly(Return(workspaces));
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
@@ -267,7 +268,8 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
     // that it is associated with the output
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
-        .WillRepeatedly(Return(workspaces));
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();

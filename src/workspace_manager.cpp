@@ -364,6 +364,12 @@ bool WorkspaceManager::set_workspace_num(uint32_t id, std::optional<int> const& 
         }
     }
 
+    if (!workspace_to_set)
+    {
+        mir::log_error("set_workspace_num: cannot find workspace with id %d", id);
+        return false;
+    }
+
     workspace_to_set->num(num);
     registry->advise_renamed(id);
     return true;
@@ -425,6 +431,12 @@ bool WorkspaceManager::set_workspace_name(uint32_t id, std::optional<std::string
             mir::log_error("set_workspace_name: Cannot steal another workspace's name");
             return false;
         }
+    }
+
+    if (!workspace_to_set)
+    {
+        mir::log_error("set_workspace_name: cannot find workspace with id %d", id);
+        return false;
     }
 
     workspace_to_set->name(name);
