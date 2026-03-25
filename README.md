@@ -16,8 +16,6 @@
 
 ## Features
 
-Most tiling compositors make you choose between productivity and polish. miracle-wm doesn't.
-
 - **Manual tiling** — organize windows into horizontal, vertical, tabbed, or stacked layouts with full keyboard control
 - **Floating windows** — seamlessly mix floating and tiled windows in the same workspace
 - **Smooth animations** — window open/close, moves, resizes, and workspace transitions all animate out of the box
