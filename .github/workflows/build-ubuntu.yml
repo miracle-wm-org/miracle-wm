@@ -55,7 +55,7 @@ jobs:
           set -e
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             gcc g++ clang libclang-dev cmake ninja-build python3 curl \
-            libmiral-dev libmircommon-internal-dev libmircommon-dev libmirserver-internal-dev \
+            libmiral-dev libmircommon-dev libmirserver-internal-dev \
             libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev \
             libnotify-dev pcre2-utils libmiroil-dev libmirplatform-dev libgles2-mesa-dev \
             libmirwayland-dev libjson-c-dev libgmock-dev mirtest-dev mirtest-internal-dev \
