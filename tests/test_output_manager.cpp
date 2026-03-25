@@ -43,7 +43,7 @@ TEST(OutputManagerTest, CreateOutputSuccess)
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output))); // Mock return value
 
     static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
-    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
+    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::Return(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
     auto config = std::make_shared<test::StubConfiguration>();
@@ -83,7 +83,7 @@ TEST(OutputManagerTest, UpdateOutputArea)
     }));
 
     static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
-    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
+    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::Return(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
     auto config = std::make_shared<test::StubConfiguration>();
@@ -117,7 +117,7 @@ TEST(OutputManagerTest, RemoveOutput)
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
 
     static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
-    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
+    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::Return(empty_workspaces));
 
     ON_CALL(*mock_output, id())
         .WillByDefault(testing::Return(1));
@@ -160,7 +160,7 @@ TEST(OutputManagerTest, FocusAndUnfocus)
         .WillByDefault(testing::Return(1));
 
     static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
-    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
+    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::Return(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
     auto config = std::make_shared<test::StubConfiguration>();
@@ -206,7 +206,7 @@ TEST(OutputManagerTest, RemoveFocusedOutput)
         .WillByDefault(testing::Return(1));
 
     static const std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
-    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::ReturnRef(empty_workspaces));
+    ON_CALL(*mock_output, get_workspaces).WillByDefault(::testing::Return(empty_workspaces));
 
     auto workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
     auto config = std::make_shared<test::StubConfiguration>();

@@ -59,7 +59,7 @@ std::shared_ptr<test::MockOutput> create_output(geom::Rectangle const& bounds)
     ON_CALL(*output, get_area())
         .WillByDefault(ReturnRef(bounds));
     ON_CALL(*output, get_workspaces())
-        .WillByDefault(ReturnRef(empty_workspaces));
+        .WillByDefault(Return(empty_workspaces));
     ON_CALL(*output, get_app_zones())
         .WillByDefault(ReturnRef(empty_app_zones));
     return output;
@@ -313,7 +313,7 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
     ON_CALL(*output, get_area())
         .WillByDefault(ReturnRef(OTHER_OUTPUT_SIZE));
     ON_CALL(*output, get_workspaces())
-        .WillByDefault(ReturnRef(empty_workspaces));
+        .WillByDefault(Return(empty_workspaces));
 
     mir::geometry::Rectangle const zone_bounds(
         mir::geometry::Point(100, 100),

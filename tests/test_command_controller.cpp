@@ -126,7 +126,7 @@ TEST_F(CommandControllerTest, SetInnerGapsSetsWorkspaceGaps)
     workspaces.push_back(workspace);
 
     EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
-    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(Return(workspaces));
     EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
 
     output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
@@ -174,7 +174,7 @@ TEST_F(CommandControllerTest, SetOuterGapsSetsWorkspaceGaps)
     workspaces.push_back(workspace);
 
     EXPECT_CALL(*workspace, get_output()).WillRepeatedly(Return(output));
-    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(ReturnRef(workspaces));
+    EXPECT_CALL(*output, get_workspaces()).WillRepeatedly(Return(workspaces));
     EXPECT_CALL(*output, active()).WillRepeatedly(Return(workspace));
 
     output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
@@ -193,7 +193,7 @@ TEST_F(CommandControllerTest, CannotMoveActiveToSameWorkspaceByNumber)
 
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces())
-        .WillRepeatedly(ReturnRef(workspaces));
+        .WillRepeatedly(Return(workspaces));
 
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
     output_manager->focus(output->id());
@@ -234,7 +234,7 @@ TEST_F(CommandControllerTest, CanRenameSelectedWorkspace)
     // that it is associated with the output
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
-        .WillRepeatedly(ReturnRef(workspaces));
+        .WillRepeatedly(Return(workspaces));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
@@ -267,7 +267,7 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
     // that it is associated with the output
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     EXPECT_CALL(*output, get_workspaces)
-        .WillRepeatedly(ReturnRef(workspaces));
+        .WillRepeatedly(Return(workspaces));
     output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
 
     auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
@@ -359,8 +359,8 @@ public:
 
         workspaces1.push_back(workspace1);
         workspaces2.push_back(workspace2);
-        ON_CALL(*output1, get_workspaces()).WillByDefault(ReturnRef(workspaces1));
-        ON_CALL(*output2, get_workspaces()).WillByDefault(ReturnRef(workspaces2));
+        ON_CALL(*output1, get_workspaces()).WillByDefault(Return(workspaces1));
+        ON_CALL(*output2, get_workspaces()).WillByDefault(Return(workspaces2));
         ON_CALL(*output1, active()).WillByDefault(Return(workspace1));
         ON_CALL(*output2, active()).WillByDefault(Return(workspace2));
         ON_CALL(*output1, advise_workspace_active(_, _)).WillByDefault(Return(true));
