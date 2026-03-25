@@ -67,7 +67,7 @@ TEST_F(ScratchpadTest, CanShowContainer)
         .WillOnce(::testing::ReturnRef(output_area));
     std::vector<std::shared_ptr<AbstractWorkspace>> empty_workspaces;
     EXPECT_CALL(*output, get_workspaces())
-        .WillRepeatedly(::testing::ReturnRef(empty_workspaces));
+        .WillRepeatedly(::testing::Return(empty_workspaces));
     EXPECT_CALL(*output, id())
         .WillRepeatedly(::testing::Return(1));
     auto output_manager = std::make_shared<OutputManager>(std::move(output_factory));

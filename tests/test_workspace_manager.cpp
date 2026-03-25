@@ -53,7 +53,8 @@ public:
         { return active_workspace; }));
 
         ON_CALL(*output, get_workspaces)
-            .WillByDefault(ReturnRef(workspaces));
+            .WillByDefault(Invoke([this]()
+        { return workspaces; }));
 
         ON_CALL(*output, advise_new_workspace)
             .WillByDefault(Invoke([this](WorkspaceCreationData const& data)

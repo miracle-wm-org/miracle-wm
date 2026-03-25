@@ -74,10 +74,16 @@ public:
         ON_CALL(*output, get_area())
             .WillByDefault(testing::ReturnRef(parent_area));
         ON_CALL(*output, get_workspaces())
-            .WillByDefault(testing::ReturnRef(workspaces));
+            .WillByDefault(testing::Return(workspaces));
 
         state->add(leaf_container);
         leaf_container->associate_to_window(window);
+    }
+
+    void TearDown() override
+    {
+        ::testing::Mock::VerifyAndClear(workspace.get());
+        ::testing::Mock::VerifyAndClear(output.get());
     }
 
 protected:

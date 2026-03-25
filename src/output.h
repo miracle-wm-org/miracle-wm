@@ -63,7 +63,7 @@ public:
     void unset_defunct() override;
 
     [[nodiscard]] std::shared_ptr<AbstractWorkspace> active() const override;
-    [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> const& get_workspaces() const override { return workspaces; }
+    [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> get_workspaces() const override { return sync.lock()->workspaces; }
     [[nodiscard]] geom::Rectangle const& get_area() const override { return sync.lock()->area; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const override { return application_zone_list; }
     [[nodiscard]] std::string const& name() const override { return sync.lock()->name_; }
@@ -85,8 +85,6 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
-    std::weak_ptr<AbstractWorkspace> active_workspace;
-    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     std::vector<miral::Zone> application_zone_list;
     std::shared_ptr<PluginManager> plugin_manager;
 
@@ -100,6 +98,10 @@ private:
         glm::mat4 transform = glm::mat4(1.f);
 
         bool is_defunct_ = false;
+
+        std::weak_ptr<AbstractWorkspace> active_workspace;
+
+        std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     };
 
     SynchronisedRecursive<State> sync;

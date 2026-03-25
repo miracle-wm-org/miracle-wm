@@ -92,7 +92,7 @@ TEST_F(DragAndDropServiceTest, CanStartDragging)
         .WillByDefault(::testing::Return(container));
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     ON_CALL(*mock_output, get_workspaces())
-        .WillByDefault(::testing::ReturnRef(workspaces));
+        .WillByDefault(::testing::Return(workspaces));
 
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
@@ -127,7 +127,7 @@ TEST_F(DragAndDropServiceTest, CanStopDragging)
         .WillByDefault(::testing::Return(container));
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     ON_CALL(*mock_output, get_workspaces())
-        .WillByDefault(::testing::ReturnRef(workspaces));
+        .WillByDefault(::testing::Return(workspaces));
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
     output_manager->create("Output1", 1, {
@@ -168,7 +168,7 @@ TEST_F(DragAndDropServiceTest, CanDragToOtherContainer)
     test::MockOutput* mock_output = new test::MockOutput();
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     ON_CALL(*mock_output, get_workspaces())
-        .WillByDefault(::testing::ReturnRef(workspaces));
+        .WillByDefault(::testing::Return(workspaces));
     EXPECT_CALL(*output_factory, create(::testing::_, ::testing::_, ::testing::_))
         .WillOnce(testing::Return(std::shared_ptr<AbstractOutput>(mock_output)));
     output_manager->create("Output1", 1, {

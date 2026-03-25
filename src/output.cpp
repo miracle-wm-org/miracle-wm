@@ -71,10 +71,11 @@ Output::~Output() = default;
 
 std::shared_ptr<AbstractWorkspace> Output::active() const
 {
-    if (active_workspace.expired())
+    auto const lock = sync.lock();
+    if (lock->active_workspace.expired())
         return nullptr;
 
-    return active_workspace.lock();
+    return lock->active_workspace.lock();
 }
 
 std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
@@ -94,13 +95,14 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
 
 std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
 {
-    if (active_workspace.expired())
+    auto const lock = sync.lock();
+    if (lock->active_workspace.expired())
     {
         mir::log_error("intersect_leaf: there is no active workspace");
         return nullptr;
     }
 
-    auto const workspace = active_workspace.lock().get();
+    auto const workspace = lock->active_workspace.lock().get();
     std::shared_ptr<WindowContainer> result = nullptr;
     workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
@@ -130,7 +132,8 @@ void Output::delete_container(std::shared_ptr<Container> const& container)
 
 void Output::insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace)
 {
-    insert_sorted(workspaces, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
+    auto const lock = sync.lock();
+    insert_sorted(lock->workspaces, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
     {
         if (a->num() && b->num())
             return a->num().value() < b->num().value();
@@ -164,11 +167,12 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 
 void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id)
 {
-    for (auto it = workspaces.begin(); it != workspaces.end(); it++)
+    auto const lock = sync.lock();
+    for (auto it = lock->workspaces.begin(); it != lock->workspaces.end(); it++)
     {
         if (it->get()->id() == id)
         {
-            workspaces.erase(it);
+            lock->workspaces.erase(it);
             return;
         }
     }
@@ -221,16 +225,17 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // When the workspace becomes active, we try to move this output to the new
     // workspace transform, which may involve an animation.
     mir::log_info("advise_workspace_active: %d", id);
+    auto const lock = sync.lock();
 
     // First, we find where we're coming from and where we're going to.
     std::shared_ptr<AbstractWorkspace> from = nullptr;
     std::shared_ptr<AbstractWorkspace> to = nullptr;
     size_t from_index = 0;
     size_t to_index = 0;
-    for (size_t i = 0; i < workspaces.size(); i++)
+    for (size_t i = 0; i < lock->workspaces.size(); i++)
     {
-        auto const& workspace = workspaces[i];
-        if (!active_workspace.expired() && workspace == active_workspace.lock())
+        auto const& workspace = lock->workspaces[i];
+        if (!lock->active_workspace.expired() && workspace == lock->active_workspace.lock())
         {
             from = workspace;
             from_index = i;
@@ -252,15 +257,15 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // If we're not coming from anywhere, then we can immediately jump to our destination.
     if (!from || to == from)
     {
-        active_workspace = to;
+        lock->active_workspace = to;
         to->show(geom::Point(0, 0));
         return true;
     }
 
     // It is very important that [active_workspace] be modified before notifications are sent out.
-    active_workspace = to;
+    lock->active_workspace = to;
 
-    auto const area = sync.lock()->area;
+    auto const area = lock->area;
     from->transfer_pinned_windows_to(to);
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
@@ -276,11 +281,12 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
 void Output::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    auto const area = sync.lock()->area;
+    auto const lock = sync.lock();
+    auto const area = lock->area;
     if (application_zone.extents().contains(area))
     {
         application_zone_list.push_back(application_zone);
-        for (auto& workspace : workspaces)
+        for (auto& workspace : lock->workspaces)
             workspace->recalculate_area();
     }
 }
@@ -291,7 +297,7 @@ void Output::advise_application_zone_update(miral::Zone const& updated, miral::Z
         if (zone == original)
         {
             zone = updated;
-            for (auto const& workspace : workspaces)
+            for (auto const& workspace : sync.lock()->workspaces)
                 workspace->recalculate_area();
             break;
         }
@@ -300,13 +306,11 @@ void Output::advise_application_zone_update(miral::Zone const& updated, miral::Z
 void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 {
     auto const original_size = application_zone_list.size();
-    application_zone_list.erase(
-        std::remove(application_zone_list.begin(), application_zone_list.end(), application_zone),
-        application_zone_list.end());
+    std::erase(application_zone_list, application_zone);
 
     if (application_zone_list.size() != original_size)
     {
-        for (auto const& workspace : workspaces)
+        for (auto const& workspace : sync.lock()->workspaces)
             workspace->recalculate_area();
     }
 }
@@ -319,8 +323,9 @@ bool Output::point_is_in_output(int x, int y)
 
 void Output::update_area(geom::Rectangle const& new_area)
 {
-    sync.lock()->area = new_area;
-    for (auto const& workspace : workspaces)
+    auto const lock = sync.lock();
+    lock->area = new_area;
+    for (auto const& workspace : lock->workspaces)
         workspace->recalculate_area();
 }
 
@@ -331,7 +336,7 @@ void Output::graft(std::shared_ptr<Container> const& container)
 
 [[nodiscard]] AbstractWorkspace const* Output::workspace(uint32_t id) const
 {
-    for (auto const& workspace : workspaces)
+    for (auto const& workspace : sync.lock()->workspaces)
     {
         if (workspace->id() == id)
             return workspace.get();
@@ -353,8 +358,9 @@ void Output::set_transform(glm::mat4 const& in)
 
 void Output::set_info(int next_id, std::string next_name)
 {
-    sync.lock()->id_ = next_id;
-    sync.lock()->name_ = std::move(next_name);
+    auto const lock = sync.lock();
+    lock->id_ = next_id;
+    lock->name_ = std::move(next_name);
 }
 
 void Output::set_defunct()
@@ -372,7 +378,7 @@ nlohmann::json Output::to_json(bool is_focused) const
     auto const lock = sync.lock();
     auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
-    for (auto const& workspace : workspaces)
+    for (auto const& workspace : lock->workspaces)
     {
         if (workspace)
             nodes.push_back(workspace->to_json(is_focused));

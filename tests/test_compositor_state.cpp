@@ -93,7 +93,13 @@ public:
         ON_CALL(*output, get_area())
             .WillByDefault(ReturnRef(parent_area));
         ON_CALL(*output, get_workspaces())
-            .WillByDefault(ReturnRef(workspaces));
+            .WillByDefault(Return(workspaces));
+    }
+
+    void TearDown() override
+    {
+        ::testing::Mock::VerifyAndClear(workspace.get());
+        ::testing::Mock::VerifyAndClear(output.get());
     }
 
     std::shared_ptr<CompositorState> make_state() { return std::make_shared<CompositorState>(); }
