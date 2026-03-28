@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef DYING_SURFACE_MANAGER_H
 #define DYING_SURFACE_MANAGER_H
 
-#include "plugin_bridge.h"
 #include <memory>
 
 namespace mir
@@ -50,8 +49,7 @@ public:
         std::shared_ptr<Config> const& config,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<PluginManager> const& plugin_manager,
-        std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<WindowIdMap> const& window_id_map);
+        std::shared_ptr<WindowController> const& window_controller);
 
     void animate_dying_surface(std::shared_ptr<WindowContainer> const& container);
 
@@ -62,7 +60,6 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<PluginManager> plugin_manager;
     std::shared_ptr<WindowController> window_controller;
-    std::shared_ptr<WindowIdMap> window_id_map;
 };
 
 } // miracle

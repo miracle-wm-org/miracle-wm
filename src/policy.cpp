@@ -277,8 +277,7 @@ Policy::Policy(
         config,
         animator,
         plugin_manager,
-        window_controller,
-        window_id_map_)),
+        window_controller)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
