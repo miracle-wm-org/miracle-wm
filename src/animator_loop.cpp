@@ -80,7 +80,6 @@ void ThreadedAnimatorLoop::run()
         float const dt = std::chrono::duration<float>(now - frame_start).count();
         frame_start = now;
         animator->tick(dt);
-        printf("%f\n", dt);
     }
 }
 
