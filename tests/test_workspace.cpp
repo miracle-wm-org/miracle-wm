@@ -86,7 +86,6 @@ public:
             state,
             registry,
             animator,
-            std::make_shared<PassthroughServerActionQueue>(),
             plugin_manager))
     {
     }
@@ -244,7 +243,6 @@ TEST_F(WorkspaceTest, CanMoveContainerToContainerInOtherTree)
         state,
         registry,
         animator,
-        std::make_shared<PassthroughServerActionQueue>(),
         plugin_manager);
     auto leaf1 = create_leaf();
     auto leaf2 = create_leaf(std::nullopt, other.get());
@@ -271,7 +269,6 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
         state,
         registry,
         animator,
-        std::make_shared<PassthroughServerActionQueue>(),
         plugin_manager);
     auto leaf1 = create_leaf();
 
@@ -332,7 +329,6 @@ TEST_F(WorkspaceTest, WorkspaceBoundsAreInitializedToFirstZoneSizeWhenAppZonesAr
         state,
         registry,
         animator,
-        std::make_shared<PassthroughServerActionQueue>(),
         plugin_manager);
 
     // Assert that the first tree (w/o app zones) is equal to the output size.

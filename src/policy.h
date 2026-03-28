@@ -153,7 +153,6 @@ private:
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
-    uint64_t next_window_id_ = 0;
     uint64_t next_application_id_ = 0;
 };
 }

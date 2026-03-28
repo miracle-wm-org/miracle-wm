@@ -55,7 +55,6 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
         std::shared_ptr<Animator> const& animator,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
     ~Workspace() override;
 
@@ -125,7 +124,6 @@ private:
     std::shared_ptr<WorkspaceObserverRegistrar> registry;
     std::shared_ptr<Config> config;
     std::shared_ptr<Animator> animator;
-    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<PluginManager> plugin_manager;
     AnimationHandle animation_handle;
 

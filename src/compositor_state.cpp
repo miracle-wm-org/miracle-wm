@@ -126,3 +126,8 @@ uint64_t CompositorState::next_container_id()
 {
     return next_container_id_++;
 }
+
+uint64_t CompositorState::peak_next_container_id() const
+{
+    return next_container_id_ + 1;
+}

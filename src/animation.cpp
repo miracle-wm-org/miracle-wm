@@ -255,13 +255,6 @@ bool Animation::is_being_removed() const
 bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
-    float const t = (runtime_seconds / definition_.duration_seconds);
-    if (runtime_seconds >= definition_.duration_seconds)
-    {
-        on_tick(finish());
-        return true;
-    }
-
     if (plugin_manager)
     {
         auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds);
@@ -294,6 +287,13 @@ bool Animation::tick(float dt)
                 on_tick(finish());
             return animation_result.is_complete;
         }
+    }
+
+    float const t = (runtime_seconds / definition_.duration_seconds);
+    if (runtime_seconds >= definition_.duration_seconds)
+    {
+        on_tick(finish());
+        return true;
     }
 
     AnimationFrameResult result;

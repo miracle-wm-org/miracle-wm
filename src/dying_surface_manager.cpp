@@ -80,11 +80,10 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         geom::Rectangle {},
         1, 0
     };
-    {
-        miral::WindowInfo const& win_info = window_controller->info_for(win.value());
-        anim_data.window_info = from_window(win_info, container->id(), container.get());
-        anim_data.window_name = win_info.name();
-    }
+
+    miral::WindowInfo const& win_info = window_controller->info_for(win.value());
+    anim_data.window_info = from_window(win_info, container->id(), container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),

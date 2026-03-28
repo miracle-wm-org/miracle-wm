@@ -49,7 +49,6 @@ Output::Output(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
     shell_application_manager { shell_application_manager },
     output_config { output_config },
@@ -57,7 +56,6 @@ Output::Output(
     config { config },
     window_controller { window_controller },
     animator { animator },
-    server_action_queue { server_action_queue },
     plugin_manager { plugin_manager },
     sync(State {
         id,
@@ -160,7 +158,6 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
         state,
         data.registrar,
         animator,
-        server_action_queue,
         plugin_manager);
     insert_workspace_sorted(new_workspace);
 }
