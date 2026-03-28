@@ -45,15 +45,13 @@ public:
         config(std::make_shared<test::MockConfig>()),
         animator(std::make_shared<Animator>()),
         window_controller(std::make_shared<test::MockWindowController>()),
-        window_id_map(std::make_shared<WindowIdMap>()),
         dying_surface_manager(
             surface_stack,
             compositor_state,
             config,
             animator,
             std::make_shared<PluginManager>(),
-            window_controller,
-            window_id_map)
+            window_controller)
     {
     }
 
@@ -62,7 +60,6 @@ public:
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<test::MockWindowController> window_controller;
-    std::shared_ptr<WindowIdMap> window_id_map;
     DyingSurfaceManager dying_surface_manager;
 };
 
