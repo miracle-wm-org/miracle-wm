@@ -267,7 +267,8 @@ Policy::Policy(
         server.the_main_loop(),
         command_controller,
         ipc_command_executor,
-        config)),
+        config,
+        window_controller)),
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
     dying_surface_manager(std::make_unique<DyingSurfaceManager>(
