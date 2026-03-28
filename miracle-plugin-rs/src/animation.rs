@@ -14,8 +14,6 @@ pub struct RawCustomAnimationData {
 pub struct AnimationFrameData {
     /// Elapsed time since the animation started, in seconds.
     pub runtime_seconds: f32,
-    /// Total requested duration of the animation, in seconds.
-    pub duration_seconds: f32,
     /// The starting rectangle of the window (position and size at animation start).
     pub origin: Rect,
     /// The target rectangle of the window (position and size at animation end).
@@ -30,7 +28,6 @@ impl From<bindings::miracle_plugin_animation_frame_data_t> for AnimationFrameDat
     fn from(value: bindings::miracle_plugin_animation_frame_data_t) -> Self {
         Self {
             runtime_seconds: value.runtime_seconds,
-            duration_seconds: value.duration_seconds,
             origin: Rect::from_array(value.origin),
             destination: Rect::from_array(value.destination),
             opacity_start: value.opacity_start,

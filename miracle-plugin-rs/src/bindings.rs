@@ -330,8 +330,6 @@ pub struct miracle_plugin_animation_frame_data_t {
     pub type_: u32,
     #[doc = " The runtime of the animation frame in seconds."]
     pub runtime_seconds: f32,
-    #[doc = " The total duration of the animation in seconds."]
-    pub duration_seconds: f32,
     #[doc = " The origin area, packed with x, y, w, and h."]
     pub origin: [f32; 4usize],
     #[doc = " The destination area, packed with x, y, w, and h."]

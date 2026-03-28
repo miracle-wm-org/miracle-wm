@@ -127,10 +127,9 @@ public:
     ///
     /// \param data The animation data to animate.
     /// \param runtime_seconds The current runtime of the animation in seconds.
-    /// \param duration_seconds The total duration of the animation in seconds.
     /// \returns The result of the animation frame, or none if none is set.
     std::optional<miracle_plugin_animation_frame_result_t> animate(
-        AnimationData const& data, float runtime_seconds, float duration_seconds);
+        AnimationData const& data, float runtime_seconds);
 
     /// Tick a custom animation for the given plugin.
     ///
@@ -319,7 +318,7 @@ public:
     PluginHandle get_wasm_module(std::string const&) { return 0; }
     bool unload_wasm_module(PluginHandle) { return false; }
     std::optional<miracle_plugin_animation_frame_result_t> animate(
-        AnimationData const&, float, float) { return std::nullopt; }
+        AnimationData const&, float) { return std::nullopt; }
     void custom_animate(PluginHandle, uint32_t, float, float) { }
     std::optional<PluginWindowPlacement> place_new_window(
         miral::ApplicationInfo const&,

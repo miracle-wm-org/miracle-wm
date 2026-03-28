@@ -1143,7 +1143,7 @@ void PluginManager::unload_all()
 }
 
 std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
-    AnimationData const& data, float runtime_seconds, float duration_seconds)
+    AnimationData const& data, float runtime_seconds)
 {
     std::lock_guard lock(mutex_);
     if (self->loaded_modules.empty())
@@ -1152,7 +1152,6 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     miracle_plugin_animation_frame_data_t frame_data;
     frame_data.type = from_animateable_event(data.event);
     frame_data.runtime_seconds = runtime_seconds;
-    frame_data.duration_seconds = duration_seconds;
     frame_data.origin[0] = static_cast<float>(data.area_start.top_left.x.as_int());
     frame_data.origin[1] = static_cast<float>(data.area_start.top_left.y.as_int());
     frame_data.origin[2] = static_cast<float>(data.area_start.size.width.as_value());
