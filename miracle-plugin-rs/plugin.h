@@ -152,9 +152,6 @@ extern "C"
         /// The runtime of the animation frame in seconds.
         float runtime_seconds;
 
-        /// The total duration of the animation in seconds.
-        float duration_seconds;
-
         /// The origin area, packed with x, y, w, and h.
         float origin[4];
 

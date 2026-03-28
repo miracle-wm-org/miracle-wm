@@ -264,7 +264,7 @@ bool Animation::tick(float dt)
 
     if (plugin_manager)
     {
-        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds, definition_.duration_seconds);
+        auto const maybe_frame_result = plugin_manager->animate(data_, runtime_seconds);
         if (maybe_frame_result)
         {
             auto const frame_result = maybe_frame_result.value();
