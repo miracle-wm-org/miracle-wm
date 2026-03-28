@@ -282,9 +282,10 @@ bool Animation::tick(float dt)
             {
                 animation_result.opacity = frame_result.opacity;
             }
-            on_tick(animation_result);
             if (animation_result.is_complete)
                 on_tick(finish());
+            else
+                on_tick(animation_result);
             return animation_result.is_complete;
         }
     }
