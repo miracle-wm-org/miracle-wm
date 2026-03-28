@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "ipc_command_executor.h"
 #include "version.h"
+#include "window_controller.h"
 #include <mir/log.h>
 #include <nlohmann/json.hpp>
 
@@ -30,14 +31,29 @@ using namespace miracle;
 
 IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<AbstractIpcCommandExecutor> const& ipc_command_executor,
-    std::shared_ptr<Config> const& config) :
+    std::shared_ptr<Config> const& config,
+    std::shared_ptr<WindowController> const& window_controller) :
     command_controller { command_controller },
     ipc_command_executor { ipc_command_executor },
-    config { config }
+    config { config },
+    window_controller { window_controller }
 {
 }
 
 MessageHandlerResult IpcMessageHandler::handle_msg(
+    IpcType payload_type,
+    const char* payload,
+    uint32_t payload_length)
+{
+    MessageHandlerResult result;
+    window_controller->invoke_under_lock([&]()
+    {
+        result = process_msg(payload_type, payload, payload_length);
+    });
+    return result;
+}
+
+MessageHandlerResult IpcMessageHandler::process_msg(
     IpcType payload_type,
     const char* payload,
     uint32_t)

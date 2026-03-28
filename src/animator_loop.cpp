@@ -53,36 +53,33 @@ void ThreadedAnimatorLoop::stop()
 void ThreadedAnimatorLoop::run()
 {
     using clock = std::chrono::steady_clock;
-    constexpr float target_fps = 120.f;
-    constexpr float target_ms = 1000.f / target_fps;
-    constexpr float dt = 1.f / target_fps;
-    constexpr std::chrono::duration<float, std::milli> frame_duration(target_ms);
     running = true;
+    auto frame_start = clock::now();
 
     while (running)
     {
-        auto frame_start = clock::now();
+        bool was_idle = false;
         {
             std::unique_lock lock(animator->get_lock());
-            animator->get_cv().wait(lock, [&]
+            if (!animator->has_animations())
             {
-                return animator->has_animations() || !running;
-            });
-            frame_start = clock::now();
+                was_idle = true;
+                animator->get_cv().wait(lock, [&]
+                {
+                    return animator->has_animations() || !running;
+                });
+            }
 
             if (!running)
                 return;
         }
 
+        auto const now = clock::now();
+        if (was_idle)
+            frame_start = now;
+        float const dt = std::chrono::duration<float>(now - frame_start).count();
+        frame_start = now;
         animator->tick(dt);
-
-        auto frame_end = clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(frame_end - frame_start);
-
-        if (elapsed < frame_duration)
-        {
-            std::this_thread::sleep_for(frame_duration - elapsed);
-        }
     }
 }
 

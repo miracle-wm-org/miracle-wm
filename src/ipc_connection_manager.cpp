@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "command_controller.h"
 #include "config.h"
 #include "ipc_command_executor.h"
+#include "window_controller.h"
 
 #include <fcntl.h>
 #include <mir/log.h>
@@ -86,10 +87,11 @@ IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<mir::MainLoop> const& main_loop_,
     std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<IpcCommandExecutor> const& command_executor,
-    std::shared_ptr<Config> const& config) :
+    std::shared_ptr<Config> const& config,
+    std::shared_ptr<WindowController> const& window_controller) :
     main_loop(main_loop_),
     command_controller(command_controller),
-    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config))
+    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)

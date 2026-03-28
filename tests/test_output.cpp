@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "output.h"
-#include "passthrough_server_action_queue.h"
 #include "shell_application_manager.h"
 #include "stub_configuration.h"
 #include "workspace_observer.h"
@@ -77,7 +76,6 @@ protected:
             config,
             window_controller,
             animator,
-            std::make_shared<PassthroughServerActionQueue>(),
             std::make_shared<PluginManager>());
 
         auto const registrar = std::make_shared<WorkspaceObserverRegistrar>();
@@ -234,7 +232,6 @@ TEST_F(OutputTest, OutputToJsonWithUnsetCurrentMode)
         config,
         window_controller,
         animator,
-        std::make_shared<PassthroughServerActionQueue>(),
         std::make_shared<PluginManager>());
     EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
                                                                      { "width",   0 },
@@ -265,7 +262,6 @@ TEST_F(OutputTest, OutputToJsonWithInvalidCurrentMode)
         config,
         window_controller,
         animator,
-        std::make_shared<PassthroughServerActionQueue>(),
         std::make_shared<PluginManager>());
     EXPECT_THAT(output->get_outputs_json(false)["current_mode"], testing::Eq(nlohmann::json({
                                                                      { "width",   0 },

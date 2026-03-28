@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "forwarding_surface.h"
 #include "plugin_bridge.h"
-#include "shell_component_container.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
 
@@ -33,15 +32,13 @@ DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<PluginManager> const& plugin_manager,
-    std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<WindowIdMap> const& window_id_map) :
+    std::shared_ptr<WindowController> const& window_controller) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
     animator(animator),
     plugin_manager(plugin_manager),
-    window_controller(window_controller),
-    window_id_map(window_id_map)
+    window_controller(window_controller)
 {
 }
 
@@ -83,18 +80,10 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         geom::Rectangle {},
         1, 0
     };
-    {
-        miral::WindowInfo const& win_info = window_controller->info_for(win.value());
-        uint64_t win_id = 0;
-        for (auto const& [id, w] : *window_id_map)
-            if (w == win.value())
-            {
-                win_id = id;
-                break;
-            }
-        anim_data.window_info = from_window(win_info, win_id, container.get());
-        anim_data.window_name = win_info.name();
-    }
+
+    miral::WindowInfo const& win_info = window_controller->info_for(win.value());
+    anim_data.window_info = from_window(win_info, container->id(), container.get());
+    anim_data.window_name = win_info.name();
     animator->append(Animation(
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),

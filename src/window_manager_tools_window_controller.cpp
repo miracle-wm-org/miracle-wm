@@ -38,17 +38,12 @@ auto create_window_animation_callback(std::weak_ptr<Container> const& container,
     return [container_weak = container, controller, action_queue](
                AnimationFrameResult const& result)
     {
-        action_queue->enqueue(controller, [container_weak = container_weak, result = result, controller]
+        // Note: We MUST invoke this under the lock, because the window could theoretically get
+        // removed while it is animation.
+        controller->invoke_under_lock([container_weak = container_weak, result = result, controller = controller]
         {
             if (auto const container = container_weak.lock())
-            {
-                // Note: We MUST invoke this under the lock, because the window could theoretically get
-                // removed while it is animation.
-                controller->invoke_under_lock([container = container, result = result, controller = controller]
-                {
-                    controller->process_animation(result, container);
-                });
-            }
+                controller->process_animation(result, container);
         });
     };
 }

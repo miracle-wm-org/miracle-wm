@@ -34,7 +34,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
 #include <mir/scene/surface.h>
-#include <mir/server_action_queue.h>
 #include <miral/zone.h>
 
 #include "shell_application_manager.h"
@@ -122,7 +121,6 @@ Workspace::Workspace(
     std::shared_ptr<CompositorState> const& state,
     std::shared_ptr<WorkspaceObserverRegistrar> const& registry,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<mir::ServerActionQueue> const& action_queue,
     std::shared_ptr<PluginManager> const& plugin_manager) :
     shell_application_manager {
         shell_application_manager
@@ -134,7 +132,6 @@ Workspace::Workspace(
     registry { registry },
     config { config },
     animator { animator },
-    server_action_queue { action_queue },
     plugin_manager { plugin_manager },
     animation_handle { animator->register_animateable() },
     sync { State {
@@ -240,7 +237,7 @@ void Workspace::show(geom::Point const& origin)
     {
         if (auto const locked = that.lock())
         {
-            locked->server_action_queue->enqueue(locked.get(), [asr = asr, that = that]()
+            locked->window_controller->invoke_under_lock([asr = asr, that = that]()
             {
                 auto const locked = that.lock();
                 if (!locked)
@@ -292,7 +289,7 @@ void Workspace::hide(geom::Point const& end)
         std::move(hide_anim_data),
         [this](AnimationFrameResult const& asr)
     {
-        server_action_queue->enqueue(this, [asr = asr, this]()
+        window_controller->invoke_under_lock([asr = asr, this]()
         {
             auto const locked = std::dynamic_pointer_cast<Workspace>(shared_from_this());
             if (!locked)

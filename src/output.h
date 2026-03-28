@@ -40,7 +40,6 @@ public:
         std::shared_ptr<Config> const& options,
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
     ~Output() override;
 
@@ -84,7 +83,6 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
-    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::vector<miral::Zone> application_zone_list;
     std::shared_ptr<PluginManager> plugin_manager;
 

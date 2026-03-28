@@ -1,6 +1,6 @@
 [package]
 name = "miracle-plugin"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2024"
 description = "Rust bindings for the miracle-wm plugin API"
 license = "GPL-3.0-or-later"

@@ -29,6 +29,7 @@ namespace miracle
 {
 class AbstractCommandController;
 class Config;
+class WindowController;
 
 /// This it taken directly from sway
 enum class IpcType
@@ -81,7 +82,8 @@ class IpcMessageHandler
 public:
     IpcMessageHandler(std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<AbstractIpcCommandExecutor> const&,
-        std::shared_ptr<Config> const&);
+        std::shared_ptr<Config> const&,
+        std::shared_ptr<WindowController> const&);
     MessageHandlerResult handle_msg(IpcType payload_type,
         const char* payload,
         uint32_t payload_length);
@@ -90,7 +92,9 @@ private:
     std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
+    std::shared_ptr<WindowController> window_controller;
 
+    MessageHandlerResult process_msg(IpcType payload_type, const char* payload, uint32_t payload_length);
     std::vector<IpcValidationResult> process_ipc_command(const char* command);
 };
 }

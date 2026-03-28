@@ -935,11 +935,12 @@ void ParentContainer::scratchpad_state(ScratchpadState next_scratchpad_state)
 nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
 {
     auto const logical_area = get_logical_area();
-    auto s = sync.lock();
+    auto const container_list = sync.lock()->container_list;
     nlohmann::json containers_json;
-    for (auto const& container : s->container_list)
+    for (auto const& container : container_list)
         containers_json.push_back(container->to_json(is_workspace_visible));
 
+    auto s = sync.lock();
     auto locked_parent = s->parent.lock();
     auto const scheme = s->scheme;
     s.drop();

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_command_controller.h"
 #include "mock_configuration.h"
 #include "mock_ipc_command_executor.h"
+#include "mock_window_controller.h"
 #include "version.h"
 
 #include <gtest/gtest.h>
@@ -35,12 +36,17 @@ public:
         message_handler(
             command_controller,
             std::unique_ptr<test::MockIpcCommandExecutor>(ipc_command_executor),
-            config)
+            config,
+            window_controller)
     {
+        ON_CALL(*window_controller, invoke_under_lock)
+            .WillByDefault([](std::function<void()> const& f)
+        { f(); });
     }
 
     std::shared_ptr<test::MockCommandController> command_controller = std::make_shared<NiceMock<test::MockCommandController>>();
     std::shared_ptr<test::MockConfig> config = std::make_shared<NiceMock<test::MockConfig>>();
+    std::shared_ptr<NiceMock<test::MockWindowController>> window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
     test::MockIpcCommandExecutor* ipc_command_executor;
     IpcMessageHandler message_handler;
 };

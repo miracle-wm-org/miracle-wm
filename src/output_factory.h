@@ -46,7 +46,6 @@ public:
         std::shared_ptr<WindowController> const&,
         std::shared_ptr<Animator> const&,
         std::shared_ptr<DisplayConfig> const& display_config,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
         std::shared_ptr<PluginManager> const& plugin_manager);
     std::shared_ptr<AbstractOutput> create(
         std::string name,
@@ -60,7 +59,6 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<DisplayConfig> display_config;
-    std::shared_ptr<mir::ServerActionQueue> server_action_queue;
     std::shared_ptr<PluginManager> plugin_manager;
 };
 

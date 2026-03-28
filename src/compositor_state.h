@@ -97,6 +97,12 @@ public:
     /// Returns the next unique container ID, then increments the counter.
     uint64_t next_container_id();
 
+    /// Returns the next unique container ID but does NOT increment the counter.
+    /// This is useful for `Policy::place_new_window` only!
+    ///
+    /// \returns the next container id
+    uint64_t peak_next_container_id() const;
+
 private:
     mutable std::mutex mutex;
     std::weak_ptr<Container> focused;

@@ -251,7 +251,6 @@ Policy::Policy(
             window_controller,
             animator,
             display_config,
-            server.the_main_loop(),
             plugin_manager))),
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this, server.the_main_loop())),
@@ -268,7 +267,8 @@ Policy::Policy(
         server.the_main_loop(),
         command_controller,
         ipc_command_executor,
-        config)),
+        config,
+        window_controller)),
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
     dying_surface_manager(std::make_unique<DyingSurfaceManager>(
@@ -277,8 +277,7 @@ Policy::Policy(
         config,
         animator,
         plugin_manager,
-        window_controller,
-        window_id_map_)),
+        window_controller)),
     window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
@@ -566,13 +565,12 @@ auto Policy::place_new_window(
     // 3. If it meets the criteria of a shell component, call it one
     // 4. If it is a regular window, allocate it as such on the current workspace
     AllocationHint hint;
-    hint.pending_window_id = ++next_window_id_;
     auto new_spec = requested_specification;
 
     // All windows in Miracle are NOT server side decorated.
     new_spec.server_side_decorated() = false;
 
-    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification, hint.pending_window_id);
+    auto const plugin_placement = plugin_manager->place_new_window(app_info, requested_specification, state->peak_next_container_id());
     if (plugin_placement && plugin_placement->strategy == miracle_window_management_strategy_freestyle)
     {
         hint.container_type = AllocationType::plugin;
@@ -745,7 +743,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
-    (*window_id_map_)[pending_allocation.pending_window_id] = window_info.window();
+    (*window_id_map_)[container->id()] = window_info.window();
     container->animation_handle(animator->register_animateable());
     container->on_open();
     state->add(container);

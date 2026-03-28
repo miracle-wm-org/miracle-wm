@@ -36,6 +36,7 @@ namespace miracle
 {
 class AbstractCommandController;
 class BindingEvent;
+class WindowController;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver,
@@ -49,7 +50,8 @@ public:
         std::shared_ptr<mir::MainLoop> const& main_loop,
         std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<IpcCommandExecutor> const&,
-        std::shared_ptr<Config> const&);
+        std::shared_ptr<Config> const&,
+        std::shared_ptr<WindowController> const&);
     ~IpcConnectionManager() override;
     void on_workspace_created(uint32_t id) override;
     void on_workspace_empty(uint32_t id) override;

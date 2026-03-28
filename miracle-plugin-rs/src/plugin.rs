@@ -493,7 +493,7 @@ macro_rules! miracle_plugin {
                     }
                 },
                 $crate::bindings::miracle_animation_type_miracle_animation_type_window_close => {
-                    let window = extract_window();
+                        let window = extract_window();
                     match plugin.window_close_animation(&data, &window) {
                         Some(result) => { write_result(result); 1 }
                         None => 0,
