@@ -31,10 +31,11 @@ namespace geom = mir::geometry;
 AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& other) const
 {
     return AnimationFrameResult {
-        is_complete || other.is_complete,
-        rectangle ? *rectangle : other.rectangle,
-        transform ? *transform : other.transform,
-        opacity ? *opacity : other.opacity
+        .is_complete = is_complete || other.is_complete,
+        .rectangle = rectangle ? *rectangle : other.rectangle,
+        .transform = transform ? *transform : other.transform,
+        .opacity = opacity ? *opacity : other.opacity,
+        .clip_area = clip_area ? *clip_area : other.clip_area
     };
 }
 

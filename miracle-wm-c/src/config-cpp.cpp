@@ -56,7 +56,7 @@ const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::Animate
      0.25f,
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
-            miracle::EaseFunction::linear,
+            miracle::EaseFunction::ease_out_sine,
         } } },
     { true,
      0.3f,

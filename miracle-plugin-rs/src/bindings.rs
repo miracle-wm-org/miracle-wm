@@ -377,6 +377,10 @@ pub struct miracle_plugin_animation_frame_result_t {
     pub has_opacity: i32,
     #[doc = " The opacity of the object.\n\n This must be [0, 1]."]
     pub opacity: f32,
+    #[doc = " If `TRUE`, #clip_area is set.\n\n When set, #clip_area is used as the scissor rectangle to reveal the\n window's surface gradually, while #area carries the window's actual\n target geometry sent to the client via configure."]
+    pub has_clip_area: i32,
+    #[doc = " The scissor-clip rectangle as a packed x, y, width, height."]
+    pub clip_area: [f32; 4usize],
 }
 #[doc = " Describes the properties of an application.\n\n Plugin authors may use #miracle_plugin_get_application to get the application\n given a window."]
 #[repr(C)]

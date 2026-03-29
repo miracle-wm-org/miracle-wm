@@ -41,11 +41,21 @@ pub struct AnimationFrameResult {
     /// Set to `true` to signal that the animation is finished.
     pub completed: bool,
     /// Override the window's rectangle for this frame. `None` leaves it unchanged.
+    ///
+    /// When also setting `clip_area`, this should carry the window's **final target
+    /// size** so the client receives the correct configure event immediately.
     pub area: Option<Rect>,
     /// Override the window's transform matrix for this frame. `None` leaves it unchanged.
     pub transform: Option<Mat4>,
     /// Override the window's opacity for this frame. `None` leaves it unchanged.
     pub opacity: Option<f32>,
+    /// Set the scissor-clip rectangle for this frame independently from `area`.
+    ///
+    /// When set, this rectangle is used as the compositor scissor region rather
+    /// than `area`, allowing the window surface to be revealed gradually while
+    /// `area` carries the final target geometry for the Wayland configure event.
+    /// This avoids blank space during resize animations.
+    pub clip_area: Option<Rect>,
 }
 
 impl From<AnimationFrameResult> for bindings::miracle_plugin_animation_frame_result_t {
@@ -58,6 +68,8 @@ impl From<AnimationFrameResult> for bindings::miracle_plugin_animation_frame_res
             transform: value.transform.map(mat4_to_f32_array).unwrap_or_default(),
             has_opacity: value.opacity.is_some() as i32,
             opacity: value.opacity.unwrap_or_default(),
+            has_clip_area: value.clip_area.is_some() as i32,
+            clip_area: value.clip_area.map(|r| r.to_array()).unwrap_or_default(),
         }
     }
 }
@@ -78,6 +90,11 @@ impl From<bindings::miracle_plugin_animation_frame_result_t> for AnimationFrameR
             },
             opacity: if value.has_opacity != 0 {
                 Some(value.opacity)
+            } else {
+                None
+            },
+            clip_area: if value.has_clip_area != 0 {
+                Some(Rect::from_array(value.clip_area))
             } else {
                 None
             },
