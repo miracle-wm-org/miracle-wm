@@ -124,7 +124,7 @@ std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager()
 
 uint64_t CompositorState::next_container_id()
 {
-    return next_container_id_++;
+    return ++next_container_id_;
 }
 
 uint64_t CompositorState::peak_next_container_id() const
