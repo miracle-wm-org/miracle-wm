@@ -40,7 +40,8 @@ IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> 
 {
 }
 
-MessageHandlerResult IpcMessageHandler::handle_msg(
+MessageHandlerResult
+IpcMessageHandler::handle_msg(
     IpcType payload_type,
     const char* payload,
     uint32_t payload_length)

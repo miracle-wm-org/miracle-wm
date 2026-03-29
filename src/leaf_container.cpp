@@ -475,6 +475,15 @@ void LeafContainer::commit_changes()
 
             state->render_data_manager()->needs_outline_change(render_id.value(), s->next_state != mir_window_state_fullscreen);
             s->next_state.reset();
+
+            if (s->next_depth_layer)
+            {
+                miral::WindowSpecification spec;
+                spec.depth_layer() = s->next_depth_layer.value();
+                window_controller->modify(w, spec);
+                s->next_depth_layer.reset();
+            }
+
             s.drop();
             constrain();
             return;
