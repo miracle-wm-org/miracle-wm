@@ -745,7 +745,6 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     (*window_id_map_)[container->id()] = window_info.window();
     container->animation_handle(animator->register_animateable());
-    container->on_open();
     state->add(container);
 
     window_observer_registrar->advise_created(*container);
@@ -780,6 +779,7 @@ void Policy::handle_window_ready(miral::WindowInfo& window_info)
         return;
     }
 
+    container->on_open();
     container->handle_ready();
     ipc_command_executor->apply_startup_commands_to(container);
 }
