@@ -232,6 +232,18 @@ extern "C"
         ///
         /// This must be [0, 1].
         float opacity;
+
+        /// If `TRUE`, #clip_area is set.
+        ///
+        /// When set, #clip_area is used as the scissor rectangle to reveal the
+        /// window's surface gradually, while #area carries the window's actual
+        /// target geometry sent to the client via configure. This separation
+        /// avoids blank space during resize animations: the client renders at
+        /// the final size immediately, and the clip progressively reveals it.
+        int32_t has_clip_area;
+
+        /// The scissor-clip rectangle as a packed x, y, width, height.
+        float clip_area[4];
     } miracle_plugin_animation_frame_result_t;
 
     /// Describes the properties of an application.

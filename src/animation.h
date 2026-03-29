@@ -73,6 +73,11 @@ struct AnimationFrameResult
     /// The current opacity set by the animation, if any.
     std::optional<float> opacity;
 
+    /// Separate scissor-clip region for slide animations.
+    /// When set, process_animation() uses this for clip() instead of rectangle,
+    /// so rectangle can carry the final target size for modify_window().
+    std::optional<mir::geometry::Rectangle> clip_area;
+
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
 

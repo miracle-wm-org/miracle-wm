@@ -258,6 +258,8 @@ void WindowManagerToolsWindowController::process_animation(
 
         if (result.is_complete)
             container->constrain();
+        else if (result.clip_area)
+            clip(window, result.clip_area.value());
         else if (rectangle)
             clip(window, rectangle.value());
     }

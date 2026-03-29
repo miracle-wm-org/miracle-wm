@@ -319,8 +319,7 @@ impl WindowInfo {
 
     /// Get the container that holds this window.
     pub fn container(&self) -> Option<Container> {
-        let mut container =
-            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
 
         unsafe {
             let result = miracle_window_info_get_container(

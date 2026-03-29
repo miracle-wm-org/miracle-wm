@@ -282,6 +282,13 @@ bool Animation::tick(float dt)
             {
                 animation_result.opacity = frame_result.opacity;
             }
+            if (frame_result.has_clip_area != 0)
+            {
+                animation_result.clip_area = geom::Rectangle {
+                    geom::Point { static_cast<int>(frame_result.clip_area[0]), static_cast<int>(frame_result.clip_area[1]) },
+                    geom::Size { frame_result.clip_area[2],                   frame_result.clip_area[3]                   }
+                };
+            }
             if (animation_result.is_complete)
                 on_tick(finish());
             else
@@ -319,15 +326,31 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
     {
         auto const p = ease(builtin_def, t);
         const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
-        auto const next = geom::Rectangle {
+        // For growing axes: set the final size immediately so the client can start
+        // rendering at the correct dimensions right away (avoids blank space).
+        // For shrinking axes: keep the starting size so the clip can hide the excess;
+        // the actual resize happens at animation end via finish().
+        auto const window_w = (data_.area_end.size.width >= data_.area_start.size.width)
+            ? data_.area_end.size.width
+            : data_.area_start.size.width;
+        auto const window_h = (data_.area_end.size.height >= data_.area_start.size.height)
+            ? data_.area_end.size.height
+            : data_.area_start.size.height;
+        auto const window_rect = geom::Rectangle {
+            geom::Point { position.x, position.y },
+            geom::Size { window_w,   window_h   }
+        };
+        // clip_area carries the animated scissor size to reveal/conceal content gradually.
+        auto const clip_rect = geom::Rectangle {
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
         };
         return {
-            false,
-            next,
-            std::nullopt,
-            1.f
+            .is_complete = false,
+            .rectangle = window_rect,
+            .transform = std::nullopt,
+            .opacity = 1.f,
+            .clip_area = clip_rect
         };
     }
     case BultInAnimationType::grow:
