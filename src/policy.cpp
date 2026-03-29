@@ -740,6 +740,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         break;
     }
 
+    container->set_animation_alpha(0.0f);
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
