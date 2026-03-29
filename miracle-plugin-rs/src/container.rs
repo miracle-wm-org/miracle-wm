@@ -161,14 +161,10 @@ impl Container {
     ///
     /// Returns `None` if the container is a root (has no parent).
     pub fn parent(&self) -> Option<Container> {
-        let mut parent =
-            std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
+        let mut parent = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
 
         unsafe {
-            let result = miracle_container_get_parent(
-                self.id() as i64,
-                parent.as_mut_ptr() as i32,
-            );
+            let result = miracle_container_get_parent(self.id() as i64, parent.as_mut_ptr() as i32);
 
             if result != 0 {
                 return None;
