@@ -109,7 +109,7 @@ private:
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::shared_ptr<RenderDataManager> render_data_manager_;
-    std::atomic<uint64_t> next_container_id_ { 1 };
+    std::atomic<uint64_t> next_container_id_ { 0 };
 };
 }
 
