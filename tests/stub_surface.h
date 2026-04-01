@@ -151,7 +151,7 @@ public:
     {
     }
 
-#ifdef MIR_COMPILING_AGAINST_DEV
+#ifdef MIR_VERSION_2_26_OR_GREATER
     float alpha() const override
     {
         return 1.f;
