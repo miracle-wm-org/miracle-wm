@@ -99,7 +99,7 @@ namespace test
 #else
         MOCK_METHOD((mir::wayland::Weak<mir::frontend::WlSurface> const&), wayland_surface, (), (override));
 #endif
-#ifdef MIR_COMPILING_AGAINST_DEV
+#ifdef MIR_VERSION_2_26_OR_GREATER
         MOCK_METHOD(float, alpha, (), (const, override));
 #endif
     };
