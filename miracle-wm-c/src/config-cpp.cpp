@@ -1121,6 +1121,10 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
     if (auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
         cursor.focus_mode = mode.value();
 
+    std::string theme;
+    if (try_parse_value(node, "theme", theme, context, true) && !theme.empty())
+        cursor.theme = theme;
+
     context.result.config.cursor = cursor;
 }
 
@@ -1757,6 +1761,8 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "cursor" << YAML::Value << YAML::BeginMap;
         out << YAML::Key << "scale" << YAML::Value << config.cursor->scale;
         out << YAML::Key << "focus_mode" << YAML::Value << cursor_focus_mode_strings[static_cast<uint32_t>(config.cursor->focus_mode)];
+        if (config.cursor->theme)
+            out << YAML::Key << "theme" << YAML::Value << config.cursor->theme.value();
         out << YAML::EndMap;
     }
 
@@ -1844,6 +1850,24 @@ std::string miracle::get_config_path()
 std::string miracle::get_user_config_dir()
 {
     return g_get_user_config_dir();
+}
+
+std::optional<std::string> miracle::read_cursor_theme_from_file(std::string const& path)
+{
+    try
+    {
+        if (!std::filesystem::exists(path))
+            return std::nullopt;
+        YAML::Node config = YAML::LoadFile(path);
+        if (!config["cursor"] || !config["cursor"]["theme"])
+            return std::nullopt;
+        auto theme = config["cursor"]["theme"].as<std::string>();
+        return theme.empty() ? std::nullopt : std::make_optional(theme);
+    }
+    catch (...)
+    {
+        return std::nullopt;
+    }
 }
 
 std::string miracle::get_display_config_path()

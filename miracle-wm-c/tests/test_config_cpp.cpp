@@ -15,6 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <filesystem>
+#include <fstream>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <miracle/cpp/config-cpp.h>
@@ -246,4 +248,76 @@ TEST_F(KeymapConfigurationTest, KeymapVariant)
     config.language = "en";
     config.variant = "qwerty";
     EXPECT_EQ(config.to_string(), "en+qwerty");
+}
+
+class ReadCursorThemeFromFileTest : public Test
+{
+protected:
+    std::filesystem::path tmp_path;
+
+    void SetUp() override
+    {
+        tmp_path = std::filesystem::temp_directory_path() / "miracle_test_cursor_theme.yaml";
+    }
+
+    void TearDown() override
+    {
+        std::filesystem::remove(tmp_path);
+    }
+
+    void write_yaml(std::string const& content)
+    {
+        std::ofstream f(tmp_path);
+        f << content;
+    }
+};
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptForNonExistentFile)
+{
+    auto result = miracle::read_cursor_theme_from_file("/nonexistent/path/config.yaml");
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptWhenNoCursorSection)
+{
+    write_yaml("inner_gaps:\n  top: 10\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptWhenNoThemeKey)
+{
+    write_yaml("cursor:\n  scale: 1.5\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptForEmptyTheme)
+{
+    write_yaml("cursor:\n  theme: \"\"\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsThemeWhenSet)
+{
+    write_yaml("cursor:\n  theme: Adwaita\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), "Adwaita");
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsColonSeparatedTheme)
+{
+    write_yaml("cursor:\n  theme: \"Adwaita:DMZ-White\"\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), "Adwaita:DMZ-White");
+}
+
+TEST_F(ReadCursorThemeFromFileTest, ReturnsNulloptForInvalidYaml)
+{
+    write_yaml(": invalid: yaml: [\n");
+    auto result = miracle::read_cursor_theme_from_file(tmp_path.string());
+    EXPECT_FALSE(result.has_value());
 }

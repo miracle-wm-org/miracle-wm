@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/cursor_scale.h>
+#include <miral/cursor_theme.h>
 #include <miral/custom_renderer.h>
 #include <miral/decorations.h>
 #include <miral/external_client.h>
@@ -110,6 +111,10 @@ int main(int argc, char const* argv[])
 
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
+    // Read cursor theme early, before run_with(), because miral::CursorTheme is immutable
+    // and must be constructed at startup. We read from the default config path here.
+    // Note: if --config is passed, that custom path is not used for this early read.
+    auto const early_cursor_theme = miracle::read_cursor_theme_from_file(miracle::get_config_path());
     for (auto const& env : config->get_env_variables())
     {
         setenv(env.key.c_str(), env.value.c_str(), 1);
@@ -244,6 +249,16 @@ int main(int argc, char const* argv[])
     } });
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
+    struct OptionalCursorTheme
+    {
+        std::optional<miral::CursorTheme> theme;
+        void operator()(mir::Server& server) const
+        {
+            if (theme)
+                theme->operator()(server);
+        }
+    };
+
     return runner.run_with(
         { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
             wayland_extensions,
@@ -256,6 +271,9 @@ int main(int argc, char const* argv[])
             hover_click,
             simulated_secondary_click,
             cursor_scale,
+            OptionalCursorTheme { early_cursor_theme
+                    ? std::make_optional(miral::CursorTheme { *early_cursor_theme })
+                    : std::nullopt },
             slow_keys,
             sticky_keys,
             Decorations::always_csd(),
