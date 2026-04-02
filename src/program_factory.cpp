@@ -59,9 +59,11 @@ varying vec2 v_texcoord;
 
 void main() {
    // First, we transform the border to be resized and scaled to match the
-   // surface that it is surrounding.
+   // surface that it is surrounding. We subtract p to shift the model origin
+   // from its center (0,0) to its bottom-left (-0.5,-0.5), so the transform
+   // maps the unit quad correctly to [border_rect.top_left, border_rect.top_left + border_rect.size].
    vec4 p = vec4(-0.5, -0.5, 0.0, 0.0);
-   vec4 transformed = (border_transform * (vec4(position, 1.0) - p)) + p;
+   vec4 transformed = border_transform * (vec4(position, 1.0) - p);
 
    // Afterwards. we apply the regular transform from the surface.
    p = vec4(center, 0.0, 0.0);

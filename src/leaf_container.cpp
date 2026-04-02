@@ -276,6 +276,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     /// Note: This request comes from the client, so we may accept or ignore whatever
     /// it is that we find here.
     auto const w = window_sync.lock()->window_;
+    auto const& info = window_controller->info_for(w);
     auto mods = modifications;
     auto visible_area = get_visible_area();
     auto cur_state = window_controller->get_state(w);
@@ -300,7 +301,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             mods.state().value() == mir_window_state_fullscreen,
             sync.lock()->parent.lock()->anchored());
 
-        if (mods.state().value() == mir_window_state_restored)
+        if (info.state() != mods.state().value() && mods.state().value() == mir_window_state_restored)
         {
             /// If the next state if restored, set the area and depth layer.
             mods.top_left() = visible_area.top_left;

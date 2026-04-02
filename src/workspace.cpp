@@ -443,23 +443,22 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
     auto parent = from.get_parent().lock();
     if (root() == parent)
     {
-        auto new_layout_direction = from_direction(direction);
+        auto const new_layout_direction = from_direction(direction);
         if (new_layout_direction == root()->get_scheme())
             return {};
 
-        auto after_root_lane = std::make_shared<ParentContainer>(
+        auto const after_root_lane = std::make_shared<ParentContainer>(
             shell_application_manager,
             state,
             window_controller,
             config,
-            root()->get_logical_area(),
+            get_output_area(output.lock()),
             shared_from_this(),
             nullptr,
             true);
         after_root_lane->set_layout(new_layout_direction);
         after_root_lane->add_child(root(), 0);
         root_ = after_root_lane;
-        recalculate_area();
     }
 
     if (is_negative_direction(direction))
