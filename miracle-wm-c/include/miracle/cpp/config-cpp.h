@@ -139,6 +139,7 @@ struct MIRACLE_WM_CONFIG_API CursorConfiguration
 {
     float scale = 1.f;
     CursorFocusMode focus_mode = CursorFocusMode::Hover;
+    std::optional<std::string> theme = std::nullopt;
 
     bool operator==(const CursorConfiguration&) const = default;
 };
@@ -311,6 +312,8 @@ MIRACLE_WM_CONFIG_API PluginConfigLoadResult load_plugin_config_from_string(std:
 MIRACLE_WM_CONFIG_API ConfigSaveResult save_config(std::string const& path, ConfigData const& config);
 
 MIRACLE_WM_CONFIG_API std::string get_config_path();
+
+MIRACLE_WM_CONFIG_API std::optional<std::string> read_cursor_theme_from_file(std::string const& path);
 
 MIRACLE_WM_CONFIG_API std::string get_user_config_dir();
 
