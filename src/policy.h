@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "resize_service.h"
 #include "scratchpad.h"
 #include "window_allocation.h"
+#include "window_id_map.h"
 #include "window_manager_tools_window_controller.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -138,6 +139,7 @@ private:
     std::shared_ptr<WorkspaceManager> workspace_manager;
     std::shared_ptr<Self> self;
     std::shared_ptr<Scratchpad> scratchpad_;
+    std::shared_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::shared_ptr<AbstractCommandController> command_controller;
     std::vector<ContainerScope> empty_scope;
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
@@ -148,7 +150,6 @@ private:
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
-    std::unique_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::unique_ptr<MagnifierWrapper> magnifier;
 
     bool is_starting_ = true;

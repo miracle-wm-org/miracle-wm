@@ -20,14 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "command_controller.h"
 #include "config.h"
 #include "container_listener.h"
+#include "freestyle_window_container.h"
 #include "geometry_helpers.h"
 #include "leaf_container.h"
-#include "math_helpers.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "parent_container.h"
+#include "plugin_managed_container.h"
 #include "scratchpad.h"
+#include "shell_component_container.h"
 #include "window_container.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 
 #include <mir/log.h>
@@ -43,7 +46,12 @@ CommandController::CommandController(
     std::shared_ptr<ModeObserverRegistrar> const& mode_observer_registrar,
     std::unique_ptr<CommandControllerInterface> interface,
     std::shared_ptr<Scratchpad> const& scratchpad_,
-    std::shared_ptr<OutputManager> const& output_manager) :
+    std::shared_ptr<OutputManager> const& output_manager,
+    std::shared_ptr<WindowIdMap> const& window_id_map_,
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
+    std::shared_ptr<WindowObserverRegistrar> const& window_observer_registrar,
+    std::shared_ptr<ContainerListener> const& container_listener) :
     config { config },
     state { state },
     window_controller { window_controller },
@@ -51,7 +59,12 @@ CommandController::CommandController(
     mode_observer_registrar { mode_observer_registrar },
     interface { std::move(interface) },
     scratchpad_ { scratchpad_ },
-    output_manager { output_manager }
+    output_manager { output_manager },
+    window_id_map_ { window_id_map_ },
+    animator { animator },
+    shell_application_manager(shell_application_manager),
+    window_observer_registrar(window_observer_registrar),
+    container_listener { container_listener }
 {
 }
 
@@ -180,6 +193,112 @@ bool CommandController::try_cycle_through_request_types(
     }
 
     return true;
+}
+
+std::shared_ptr<WindowContainer> CommandController::place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint)
+{
+    if (!output_manager->focused())
+    {
+        mir::log_error("CommandController::place_new_window: no focused output");
+        return nullptr;
+    }
+
+    miral::WindowSpecification spec;
+    std::shared_ptr<WindowContainer> container;
+    switch (hint.container_type)
+    {
+    case AllocationType::grid:
+    {
+        assert(hint.parent);
+        container = Container::as_window_container(hint.parent->confirm_window(window_info.window()));
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+        break;
+    }
+    case AllocationType::plugin:
+    {
+        auto const workspace = hint.workspace
+            ? hint.workspace->shared_from_this()
+            : output_manager->focused()->active();
+        container = std::make_shared<PluginManagedContainer>(
+            hint.plugin_handle,
+            window_info.window(),
+            window_controller,
+            state,
+            workspace,
+            hint.transform,
+            hint.alpha,
+            hint.resizable,
+            hint.movable);
+        workspace->add_other_container(container);
+    }
+    break;
+    case AllocationType::freestyle:
+    {
+        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
+        if (window_info.parent())
+        {
+            if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
+            {
+                if (auto const parent_workspace = parent_container->get_workspace())
+                    workspace = parent_workspace;
+            }
+        }
+
+        auto const& info = window_controller->info_for(window_info.window());
+        bool const has_border = (info.type() == mir_window_type_dialog
+            || info.type() == mir_window_type_satellite
+            || info.type() == mir_window_type_normal
+            || info.type() == mir_window_type_freestyle);
+
+        container = std::make_shared<FreestyleWindowContainer>(
+            window_info.window(),
+            window_controller,
+            state,
+            workspace,
+            config,
+            has_border);
+        workspace->add_other_container(container);
+
+        spec.min_width() = mir::geometry::Width(0);
+        spec.min_height() = mir::geometry::Height(0);
+        spec.depth_layer() = mir_depth_layer_always_on_top;
+
+        if (window_info.parent())
+        {
+            auto const& type = info.type();
+            if (type == mir_window_type_normal || type == mir_window_type_freestyle || type == mir_window_type_dialog)
+            {
+                auto const active = workspace->area();
+                auto const size = window_info.window().size();
+                if (size.width.as_int() > 0 && size.height.as_int() > 0)
+                {
+                    spec.top_left() = geom::Point {
+                        active.top_left.x.as_int() + (active.size.width.as_int() - size.width.as_int()) / 2,
+                        active.top_left.y.as_int() + (active.size.height.as_int() - size.height.as_int()) / 2
+                    };
+                }
+            }
+        }
+        break;
+    }
+    case AllocationType::shell:
+    default:
+        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()), output_manager, state);
+        break;
+    }
+
+    container->set_animation_alpha(0.0f);
+    spec.userdata() = container;
+    window_controller->modify(window_info.window(), spec);
+
+    (*window_id_map_)[container->id()] = window_info.window();
+    container->animation_handle(animator->register_animateable());
+    state->add(container);
+
+    window_observer_registrar->advise_created(*container);
+    container->register_interest(container_listener);
+    return container;
 }
 
 bool CommandController::try_request_horizontal(std::vector<ContainerScope> const& scope)
@@ -1041,46 +1160,26 @@ std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std
 {
     if (auto const wc = Container::as_window_container(container))
     {
-        auto focused_output = output_manager->focused();
+        auto const focused_output = output_manager->focused();
         if (!focused_output)
             return nullptr;
-
-        // Walk up the parent tree to get the root node.
-        auto parent = wc->get_parent().lock();
-        if (!parent)
-            return nullptr;
-
-        while (!parent->get_parent().expired())
-            parent = parent->get_parent().lock();
 
         // Remove the container from whatever workspace it is on.
         auto const workspace = wc->get_workspace();
         workspace->delete_container(container);
 
-        // If the parent is anchored, we move [container] to a new floating tree.
-        if (parent->anchored())
+        auto const& window_info = window_controller->info_for(wc->window().value());
+        if (auto const leaf = Container::as_leaf(wc))
         {
-            auto const output = wc->get_output();
-            auto const output_area = output->get_area();
-            geom::Rectangle const new_area = {
-                geom::Point {
-                             as_float(output_area.top_left.x) + as_float(output_area.size.width) * 0.1f,
-                             as_float(output_area.top_left.y) + as_float(output_area.size.height) * 0.1f },
-                geom::Size {
-                             as_float(output_area.size.width) * 0.8f,
-                             as_float(output_area.size.height) * 0.8f                                    }
-            };
-            auto new_parent = workspace->create_floating_tree(new_area);
-            new_parent->add_child(wc, new_parent->num_children());
-            wc->set_workspace(workspace);
-            new_parent->commit_changes();
-            return new_parent;
+            // We are in a grid, let's remove it and make it a freestyle container.
+            auto const new_container = place_new_window(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
+            new_container->on_open();
         }
         else
         {
-            // Otherwise, we move the container to the root
-            workspace->graft(container);
-            return container->get_parent().lock();
+            auto const active = focused_output->active()->get_root().get();
+            auto const new_container = place_new_window(window_info, AllocationHint { AllocationType::grid, active, workspace.get() });
+            new_container->on_open();
         }
     }
 

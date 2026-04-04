@@ -255,10 +255,11 @@ Policy::Policy(
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this, server.the_main_loop())),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
+    window_observer_registrar(std::make_shared<WindowObserverRegistrar>()),
     command_controller(std::make_shared<CommandController>(
         config, state, window_controller,
         workspace_manager, mode_observer_registrar,
-        std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager)),
+        std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager, window_id_map_, animator, shell_application_manager, window_observer_registrar, self)),
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
@@ -278,7 +279,6 @@ Policy::Policy(
         animator,
         plugin_manager,
         window_controller)),
-    window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));

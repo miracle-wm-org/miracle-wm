@@ -57,6 +57,7 @@ public:
     void handle_modify(miral::WindowSpecification const&) override;
     void handle_request_move(MirInputEvent const* input_event) override;
     void handle_raise() override;
+    void on_focus_gained() override;
     bool resize(Direction direction, int pixels) override;
     bool set_size(std::optional<int> const& width, std::optional<int> const& height) override;
     bool toggle_fullscreen() override;

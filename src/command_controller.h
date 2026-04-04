@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "container_scope.h"
 #include "direction.h"
+#include "window_allocation.h"
+#include "window_id_map.h"
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -38,6 +40,7 @@ namespace miracle
 class Scratchpad;
 class ModeObserverRegistrar;
 class OutputManager;
+class WindowObserverRegistrar;
 
 enum class LayoutRequestType
 {
@@ -89,6 +92,7 @@ class AbstractCommandController
 {
 public:
     virtual ~AbstractCommandController() = default;
+    virtual std::shared_ptr<WindowContainer> place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint) = 0;
     virtual bool try_request_horizontal(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_request_vertical(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) = 0;
@@ -198,8 +202,14 @@ public:
         std::shared_ptr<ModeObserverRegistrar> const& mode_observer_registrar,
         std::unique_ptr<CommandControllerInterface> interface,
         std::shared_ptr<Scratchpad> const& scratchpad,
-        std::shared_ptr<OutputManager> const& output_manager);
+        std::shared_ptr<OutputManager> const& output_manager,
+        std::shared_ptr<WindowIdMap> const& window_id_map_,
+        std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
+        std::shared_ptr<WindowObserverRegistrar> const& window_observer_registrar,
+        std::shared_ptr<ContainerListener> const& container_listener);
 
+    std::shared_ptr<WindowContainer> place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint) override;
     bool try_request_horizontal(std::vector<ContainerScope> const& scope) override;
     bool try_request_vertical(std::vector<ContainerScope> const& scope) override;
     bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) override;
@@ -297,6 +307,11 @@ private:
     std::unique_ptr<CommandControllerInterface> interface;
     std::shared_ptr<Scratchpad> scratchpad_;
     std::shared_ptr<OutputManager> output_manager;
+    std::shared_ptr<WindowIdMap> window_id_map_;
+    std::shared_ptr<Animator> animator;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager;
+    std::shared_ptr<WindowObserverRegistrar> window_observer_registrar;
+    std::shared_ptr<ContainerListener> container_listener;
 
     bool can_move_container() const;
     bool can_set_layout() const;
