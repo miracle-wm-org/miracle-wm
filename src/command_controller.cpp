@@ -1179,8 +1179,15 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
         {
             // We are in a grid, let's remove it and make it a freestyle container.
             auto const new_container = create_container(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
-            new_container->on_open();
             new_container->handle_ready();
+            auto const& output_area = focused_output->get_area();
+            auto const gap_x = output_area.size.width.as_int() / 4;
+            auto const gap_y = output_area.size.height.as_int() / 4;
+            new_container->set_logical_area(geom::Rectangle {
+                                                geom::Point { output_area.top_left.x.as_int() + gap_x, output_area.top_left.y.as_int() + gap_y },
+                                                geom::Size { output_area.size.width.as_int() / 2,     output_area.size.height.as_int() / 2    }
+            },
+                true);
         }
         else
         {
@@ -1188,13 +1195,21 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             // the window is dead to that plugin as far as it is concerned.
             plugin_manager->window_deleted(window_info);
 
+            // Capture the floating position before the container is replaced so we can animate from it.
+            auto const floating_area = wc->get_visible_area();
+
             auto const active = focused_output->active()->get_root();
-            miral::WindowSpecification spec;
-            spec = active->place_new_window(spec, std::nullopt);
-            window_controller->modify(window_info.window(), spec);
             auto const new_container = create_container(window_info, AllocationHint { AllocationType::grid, active.get(), workspace.get() });
-            new_container->on_open();
             new_container->handle_ready();
+            window_controller->select_active_window(new_container->window().value());
+
+            // Animate from the floating position to the new grid position.
+            window_controller->set_rectangle(
+                window_info.window(),
+                floating_area,
+                new_container->get_visible_area(),
+                true);
+            window_controller->select_active_window(new_container->window().value());
         }
 
         return true;
