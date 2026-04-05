@@ -255,10 +255,11 @@ Policy::Policy(
     workspace_manager(std::make_shared<WorkspaceManager>(workspace_observer_registrar, config, output_manager)),
     self(std::make_shared<Self>(*this, server.the_main_loop())),
     scratchpad_(std::make_shared<Scratchpad>(window_controller, output_manager)),
+    window_observer_registrar(std::make_shared<WindowObserverRegistrar>()),
     command_controller(std::make_shared<CommandController>(
         config, state, window_controller,
         workspace_manager, mode_observer_registrar,
-        std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager)),
+        std::make_unique<MirRunnerCommandControllerInterface>(server.the_main_loop()), scratchpad_, output_manager, animator, shell_application_manager, window_observer_registrar, self, plugin_manager)),
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
@@ -278,7 +279,6 @@ Policy::Policy(
         animator,
         plugin_manager,
         window_controller)),
-    window_observer_registrar(std::make_unique<WindowObserverRegistrar>()),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
@@ -656,100 +656,8 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
         return;
     }
 
-    miral::WindowSpecification spec;
-    std::shared_ptr<WindowContainer> container;
-    switch (pending_allocation.container_type)
-    {
-    case AllocationType::grid:
-    {
-        assert(pending_allocation.parent);
-        container = Container::as_window_container(pending_allocation.parent->confirm_window(window_info.window()));
-        spec.min_width() = mir::geometry::Width(0);
-        spec.min_height() = mir::geometry::Height(0);
-        break;
-    }
-    case AllocationType::plugin:
-    {
-        auto const workspace = pending_allocation.workspace
-            ? pending_allocation.workspace->shared_from_this()
-            : output_manager->focused()->active();
-        container = std::make_shared<PluginManagedContainer>(
-            pending_allocation.plugin_handle,
-            window_info.window(),
-            window_controller,
-            state,
-            workspace,
-            pending_allocation.transform,
-            pending_allocation.alpha,
-            pending_allocation.resizable,
-            pending_allocation.movable);
-        workspace->add_other_container(container);
-    }
-    break;
-    case AllocationType::freestyle:
-    {
-        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
-        if (window_info.parent())
-        {
-            if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
-            {
-                if (auto const parent_workspace = parent_container->get_workspace())
-                    workspace = parent_workspace;
-            }
-        }
-
-        auto const& info = window_controller->info_for(window_info.window());
-        bool const has_border = (info.type() == mir_window_type_dialog
-            || info.type() == mir_window_type_satellite
-            || info.type() == mir_window_type_normal
-            || info.type() == mir_window_type_freestyle);
-
-        container = std::make_shared<FreestyleWindowContainer>(
-            window_info.window(),
-            window_controller,
-            state,
-            workspace,
-            config,
-            has_border);
-        workspace->add_other_container(container);
-
-        spec.min_width() = mir::geometry::Width(0);
-        spec.min_height() = mir::geometry::Height(0);
-
-        if (window_info.parent())
-        {
-            auto const& type = info.type();
-            if (type == mir_window_type_normal || type == mir_window_type_freestyle || type == mir_window_type_dialog)
-            {
-                auto const active = workspace->area();
-                auto const size = window_info.window().size();
-                if (size.width.as_int() > 0 && size.height.as_int() > 0)
-                {
-                    spec.top_left() = geom::Point {
-                        active.top_left.x.as_int() + (active.size.width.as_int() - size.width.as_int()) / 2,
-                        active.top_left.y.as_int() + (active.size.height.as_int() - size.height.as_int()) / 2
-                    };
-                }
-            }
-        }
-        break;
-    }
-    case AllocationType::shell:
-    default:
-        container = std::make_shared<ShellComponentContainer>(window_info.window(), window_controller, shell_application_manager->delegate(window_info.window().application()), output_manager, state);
-        break;
-    }
-
-    container->set_animation_alpha(0.0f);
-    spec.userdata() = container;
-    window_controller->modify(window_info.window(), spec);
-
+    auto const container = command_controller->create_container(window_info, pending_allocation);
     (*window_id_map_)[container->id()] = window_info.window();
-    container->animation_handle(animator->register_animateable());
-    state->add(container);
-
-    window_observer_registrar->advise_created(*container);
-    container->register_interest(self);
     pending_allocation.container_type = AllocationType::none;
 }
 

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "../miracle-plugin-rs/plugin.h"
 #include "compositor_state.h"
+#include "window_id_map.h"
 #include <functional>
 #include <miral/application_info.h>
 #include <miral/window.h>
@@ -46,7 +47,6 @@ class WindowContainer;
 class WindowController;
 class WorkspaceManager;
 
-using WindowIdMap = std::unordered_map<uint64_t, miral::Window>;
 using ApplicationIdMap = std::unordered_map<uint64_t, miral::Application>;
 
 /// Convert an AbstractWorkspace to its C plugin representation.

@@ -66,7 +66,12 @@ public:
             mode_observer_registrar,
             std::make_unique<StubCommandControllerInterface>(),
             scratchpad,
-            output_manager))
+            output_manager,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr))
     {
         Mock::AllowLeak(output.get());
     }
@@ -387,7 +392,12 @@ public:
             mode_observer_registrar,
             std::make_unique<StubCommandControllerInterface>(),
             scratchpad,
-            output_manager);
+            output_manager,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr);
 
         output_manager->create("output1", 1, geom::Rectangle({ 0, 0 }, { 1280, 720 }), *workspace_manager);
         output_manager->create("output2", 2, geom::Rectangle({ 1280, 0 }, { 1280, 720 }), *workspace_manager);

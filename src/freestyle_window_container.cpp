@@ -139,6 +139,12 @@ void FreestyleWindowContainer::handle_raise()
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 
+void FreestyleWindowContainer::on_focus_gained()
+{
+    WindowContainer::on_focus_gained();
+    window_controller->raise(window_sync.lock()->window_);
+}
+
 bool FreestyleWindowContainer::resize(Direction direction, int pixels)
 {
     auto const area = get_logical_area();
