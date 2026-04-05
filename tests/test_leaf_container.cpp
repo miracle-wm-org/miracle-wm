@@ -78,6 +78,10 @@ public:
 
         state->add(leaf_container);
         leaf_container->associate_to_window(window);
+
+        default_window_info = std::make_unique<miral::WindowInfo>(window, miral::WindowSpecification {});
+        ON_CALL(*window_controller, info_for(testing::A<miral::Window const&>()))
+            .WillByDefault(testing::ReturnRef(*default_window_info));
     }
 
     void TearDown() override
@@ -99,6 +103,7 @@ protected:
     std::shared_ptr<test::MockSurface> surface;
     miral::Application app;
     miral::Window window;
+    std::unique_ptr<miral::WindowInfo> default_window_info;
 };
 
 TEST_F(LeafContainerTest, InitializesWithCorrectLogicalArea)
