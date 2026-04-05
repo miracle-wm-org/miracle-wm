@@ -59,7 +59,12 @@ public:
             mode_observer_registrar,
             std::make_unique<StubCommandControllerInterface>(),
             scratchpad,
-            output_manager)),
+            output_manager,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr,
+            nullptr)),
         service(command_controller, config, output_manager)
     {
         ON_CALL(*config, drag_and_drop())

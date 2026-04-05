@@ -28,6 +28,7 @@ namespace test
     class MockCommandController : public AbstractCommandController
     {
     public:
+        MOCK_METHOD(std::shared_ptr<WindowContainer>, create_container, (miral::WindowInfo const&, AllocationHint const&), (override));
         MOCK_METHOD(bool, try_request_horizontal, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_request_vertical, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, try_toggle_layout, (bool, std::vector<ContainerScope> const&), (override));
