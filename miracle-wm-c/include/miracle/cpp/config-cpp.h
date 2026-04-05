@@ -138,7 +138,7 @@ struct MIRACLE_WM_CONFIG_API OutputFilterConfiguration
 struct MIRACLE_WM_CONFIG_API CursorConfiguration
 {
     float scale = 1.f;
-    CursorFocusMode focus_mode = CursorFocusMode::Hover;
+    CursorFocusMode focus_mode = CursorFocusMode::Click;
     std::optional<std::string> theme = std::nullopt;
 
     bool operator==(const CursorConfiguration&) const = default;
