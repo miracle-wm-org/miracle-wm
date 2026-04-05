@@ -253,7 +253,7 @@ std::shared_ptr<Container> ParentContainer::confirm_window(miral::Window const& 
     if (s->pending_node == nullptr)
     {
         mir::log_error("confirm_window: create_space_for_window wasn't called, so we will call it, but this is odd!");
-        s->pending_node = create_space_for_window(-1);
+        s->pending_node = create_space_for_window(std::nullopt);
     }
 
     mir::log_debug("Parent on workspace %s receiving new window", !s->workspace.expired() ? s->workspace.lock()->display_name().c_str() : "nullptr");

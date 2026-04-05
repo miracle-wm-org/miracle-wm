@@ -92,7 +92,7 @@ class AbstractCommandController
 {
 public:
     virtual ~AbstractCommandController() = default;
-    virtual std::shared_ptr<WindowContainer> place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint) = 0;
+    virtual std::shared_ptr<WindowContainer> create_container(miral::WindowInfo const& window_info, AllocationHint const& hint) = 0;
     virtual bool try_request_horizontal(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_request_vertical(std::vector<ContainerScope> const& scope) = 0;
     virtual bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) = 0;
@@ -203,13 +203,13 @@ public:
         std::unique_ptr<CommandControllerInterface> interface,
         std::shared_ptr<Scratchpad> const& scratchpad,
         std::shared_ptr<OutputManager> const& output_manager,
-        std::shared_ptr<WindowIdMap> const& window_id_map_,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
         std::shared_ptr<WindowObserverRegistrar> const& window_observer_registrar,
-        std::shared_ptr<ContainerListener> const& container_listener);
+        std::shared_ptr<ContainerListener> const& container_listener,
+        std::shared_ptr<PluginManager> const& plugin_manager);
 
-    std::shared_ptr<WindowContainer> place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint) override;
+    std::shared_ptr<WindowContainer> create_container(miral::WindowInfo const& window_info, AllocationHint const& hint) override;
     bool try_request_horizontal(std::vector<ContainerScope> const& scope) override;
     bool try_request_vertical(std::vector<ContainerScope> const& scope) override;
     bool try_toggle_layout(bool cycle_through_all, std::vector<ContainerScope> const& scope) override;
@@ -307,11 +307,11 @@ private:
     std::unique_ptr<CommandControllerInterface> interface;
     std::shared_ptr<Scratchpad> scratchpad_;
     std::shared_ptr<OutputManager> output_manager;
-    std::shared_ptr<WindowIdMap> window_id_map_;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<WindowObserverRegistrar> window_observer_registrar;
     std::shared_ptr<ContainerListener> container_listener;
+    std::shared_ptr<PluginManager> plugin_manager;
 
     bool can_move_container() const;
     bool can_set_layout() const;
@@ -327,7 +327,7 @@ private:
         std::function<std::shared_ptr<AbstractOutput>()> const& request);
 
     /// Floats the container and returns the new [ParentContainer] of that container.
-    std::shared_ptr<ParentContainer> toggle_floating_internal(std::shared_ptr<Container> const& container);
+    bool toggle_floating_internal(std::shared_ptr<Container> const& container);
 };
 }
 

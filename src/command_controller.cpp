@@ -47,11 +47,11 @@ CommandController::CommandController(
     std::unique_ptr<CommandControllerInterface> interface,
     std::shared_ptr<Scratchpad> const& scratchpad_,
     std::shared_ptr<OutputManager> const& output_manager,
-    std::shared_ptr<WindowIdMap> const& window_id_map_,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<WindowObserverRegistrar> const& window_observer_registrar,
-    std::shared_ptr<ContainerListener> const& container_listener) :
+    std::shared_ptr<ContainerListener> const& container_listener,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     config { config },
     state { state },
     window_controller { window_controller },
@@ -60,11 +60,11 @@ CommandController::CommandController(
     interface { std::move(interface) },
     scratchpad_ { scratchpad_ },
     output_manager { output_manager },
-    window_id_map_ { window_id_map_ },
     animator { animator },
     shell_application_manager(shell_application_manager),
     window_observer_registrar(window_observer_registrar),
-    container_listener { container_listener }
+    container_listener { container_listener },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -195,7 +195,7 @@ bool CommandController::try_cycle_through_request_types(
     return true;
 }
 
-std::shared_ptr<WindowContainer> CommandController::place_new_window(miral::WindowInfo const& window_info, AllocationHint const& hint)
+std::shared_ptr<WindowContainer> CommandController::create_container(miral::WindowInfo const& window_info, AllocationHint const& hint)
 {
     if (!output_manager->focused())
     {
@@ -292,7 +292,6 @@ std::shared_ptr<WindowContainer> CommandController::place_new_window(miral::Wind
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
-    (*window_id_map_)[container->id()] = window_info.window();
     container->animation_handle(animator->register_animateable());
     state->add(container);
 
@@ -1156,34 +1155,52 @@ bool CommandController::can_move_container() const
     return true;
 }
 
-std::shared_ptr<ParentContainer> CommandController::toggle_floating_internal(std::shared_ptr<Container> const& container)
+bool CommandController::toggle_floating_internal(std::shared_ptr<Container> const& container)
 {
     if (auto const wc = Container::as_window_container(container))
     {
         auto const focused_output = output_manager->focused();
         if (!focused_output)
-            return nullptr;
+            return false;
 
         // Remove the container from whatever workspace it is on.
         auto const workspace = wc->get_workspace();
         workspace->delete_container(container);
 
+        // Remove the container from the relevant state because we are making it anew.
+        // This is somewhat similar to Policy::advise_delete_window, but we skip a lot
+        // of cleanup around the `miral::Window` in particular.
+        state->remove(wc);
+        scratchpad_->remove(wc);
+        animator->remove_by_animation_handle(wc->animation_handle());
+
         auto const& window_info = window_controller->info_for(wc->window().value());
         if (auto const leaf = Container::as_leaf(wc))
         {
             // We are in a grid, let's remove it and make it a freestyle container.
-            auto const new_container = place_new_window(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
+            auto const new_container = create_container(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
             new_container->on_open();
+            new_container->handle_ready();
         }
         else
         {
-            auto const active = focused_output->active()->get_root().get();
-            auto const new_container = place_new_window(window_info, AllocationHint { AllocationType::grid, active, workspace.get() });
+            // The window may be a part of a plugin. Since the window is being moved out of the plugin,
+            // the window is dead to that plugin as far as it is concerned.
+            plugin_manager->window_deleted(window_info);
+
+            auto const active = focused_output->active()->get_root();
+            miral::WindowSpecification spec;
+            spec = active->place_new_window(spec, std::nullopt);
+            window_controller->modify(window_info.window(), spec);
+            auto const new_container = create_container(window_info, AllocationHint { AllocationType::grid, active.get(), workspace.get() });
             new_container->on_open();
+            new_container->handle_ready();
         }
+
+        return true;
     }
 
-    return nullptr;
+    return false;
 }
 
 bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope)
