@@ -223,24 +223,7 @@ void WindowManagerToolsWindowController::process_animation(
     //  less generic and makes more sense. The "hack" is the try/catch block
     try
     {
-        bool needs_modify = false;
-        miral::WindowSpecification spec;
         auto const& rectangle = result.rectangle;
-
-        if (rectangle)
-        {
-            spec.top_left() = rectangle->top_left;
-            // TODO: Remove once a real fix is added upstream
-            // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
-            // Workaround for: https://github.com/canonical/mir/issues/4222
-            auto const& info = tools.info_for(container->window().value());
-            spec.size() = geom::Size {
-                geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
-                geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
-            };
-
-            needs_modify = true;
-        }
 
         if (!container->window())
             return;
@@ -249,9 +232,25 @@ void WindowManagerToolsWindowController::process_animation(
         if (!window)
             return;
 
-        // TODO: Modify window can throw an exception, which we are catching
-        if (needs_modify)
-            tools.modify_window(window, spec);
+        if (rectangle)
+        {
+            miral::WindowSpecification spec;
+            spec.top_left() = rectangle->top_left;
+            // TODO: Remove once a real fix is added upstream
+            // Fixes: https://github.com/miracle-wm-org/miracle-wm/issues/489
+            // Workaround for: https://github.com/canonical/mir/issues/4222
+            auto& info = tools.info_for(window);
+            auto const next_size = geom::Size {
+                geom::Width(std::max(rectangle->size.width.as_int(), info.min_width().as_value())),
+                geom::Height(std::max(rectangle->size.height.as_int(), info.min_height().as_value()))
+            };
+
+            // Optimization: only tell the window about the new size when the sizes differ.
+            if (next_size != window.size())
+                spec.size() = next_size;
+
+            tools.modify_window(info, spec);
+        }
 
         if (result.transform)
             container->set_animation_transform(result.transform.value());
@@ -260,7 +259,10 @@ void WindowManagerToolsWindowController::process_animation(
             container->set_animation_alpha(result.opacity.value());
 
         if (result.is_complete)
-            container->constrain();
+        {
+            if (result.rectangle)
+                clip(window, result.rectangle.value());
+        }
         else if (result.clip_area)
             clip(window, result.clip_area.value());
         else if (rectangle)
