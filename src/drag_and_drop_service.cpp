@@ -127,6 +127,9 @@ bool DragAndDropService::handle_pointer_event(CompositorState& state, float x, f
             return false;
         }
 
+        if (intersected != state.focused_container())
+            return false;
+
         command_controller->set_mode(WindowManagerMode::dragging);
         command_controller->select_container(intersected);
         cursor_start_x = x;
