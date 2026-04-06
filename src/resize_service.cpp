@@ -37,6 +37,8 @@ ResizeService::ResizeService(
 void ResizeService::stop()
 {
     is_resizing = false;
+    last_x_diff = 0;
+    last_y_diff = 0;
     command_controller->set_mode(WindowManagerMode::normal);
 }
 
@@ -49,14 +51,14 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
     if (action == mir_pointer_action_button_up)
     {
         stop();
-        return false;
+        return true;
     }
 
     auto const container = resizing_container.lock();
     if (!container)
     {
         stop();
-        return false;
+        return true;
     }
 
     float x_diff = 0;
@@ -75,6 +77,22 @@ bool ResizeService::handle_pointer_event(float x, float y, MirPointerAction acti
         break;
     case mir_resize_edge_north:
         y_diff = area.top().as_value() - y;
+        break;
+    case mir_resize_edge_northwest:
+        x_diff = area.left().as_value() - x;
+        y_diff = area.top().as_value() - y;
+        break;
+    case mir_resize_edge_northeast:
+        x_diff = x - area.right().as_value();
+        y_diff = area.top().as_value() - y;
+        break;
+    case mir_resize_edge_southwest:
+        x_diff = area.left().as_value() - x;
+        y_diff = y - area.bottom().as_value();
+        break;
+    case mir_resize_edge_southeast:
+        x_diff = x - area.right().as_value();
+        y_diff = y - area.bottom().as_value();
         break;
     default:
         break;

@@ -122,6 +122,17 @@ size_t FreestyleWindowContainer::get_min_width() const
 
 void FreestyleWindowContainer::handle_ready()
 {
+    if (has_border_)
+    {
+        int const border_size = config->get_border_config().size;
+        auto const w = window_sync.lock()->window_;
+        auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
+        surface->set_window_margins(
+            mir::geometry::DeltaY { border_size },
+            mir::geometry::DeltaX { border_size },
+            mir::geometry::DeltaY { border_size },
+            mir::geometry::DeltaX { border_size });
+    }
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 

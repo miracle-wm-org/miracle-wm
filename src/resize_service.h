@@ -50,6 +50,8 @@ private:
     std::weak_ptr<WindowContainer> resizing_container;
     MirResizeEdge resize_edge = mir_resize_edge_none;
     bool is_resizing = false;
+    int last_x_diff = 0;
+    int last_y_diff = 0;
 };
 
 } // namespace miracle
