@@ -85,6 +85,9 @@ bool MoveService::handle_pointer_event(
         if (!intersected)
             return false;
 
+        if (intersected != state.focused_container())
+            return false;
+
         command_controller->set_mode(WindowManagerMode::moving);
         command_controller->select_container(intersected);
         cursor_x = x;
