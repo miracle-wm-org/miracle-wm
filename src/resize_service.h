@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "output_manager.h"
+#include <mir/geometry/point.h>
+#include <mir/geometry/size.h>
 
 namespace miracle
 {
@@ -36,7 +38,7 @@ public:
         std::shared_ptr<OutputManager> const& output_manager);
 
     bool handle_pointer_event(float x, float y, MirPointerAction action);
-    void handle_request_resize(std::shared_ptr<WindowContainer> const& container, MirPointerAction action, MirResizeEdge edge);
+    void handle_request_resize(std::shared_ptr<WindowContainer> const& container, MirPointerAction action, MirResizeEdge edge, float x, float y);
 
 private:
     void stop();
@@ -50,6 +52,11 @@ private:
     std::weak_ptr<WindowContainer> resizing_container;
     MirResizeEdge resize_edge = mir_resize_edge_none;
     bool is_resizing = false;
+    float last_x = 0;
+    float last_y = 0;
+    // For floating windows: accumulated position+size (miral-style, never re-read from constrained window)
+    mir::geometry::Point resize_top_left;
+    mir::geometry::Size resize_size;
 };
 
 } // namespace miracle

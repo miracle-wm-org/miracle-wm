@@ -134,22 +134,6 @@ ResizeResult resize_internal(Container* container, MirResizeEdge edge, int x_dif
     case mir_resize_edge_west:
         set_west();
         break;
-    case mir_resize_edge_northeast:
-        set_north();
-        set_east();
-        break;
-    case mir_resize_edge_northwest:
-        set_north();
-        set_west();
-        break;
-    case mir_resize_edge_southeast:
-        set_south();
-        set_east();
-        break;
-    case mir_resize_edge_southwest:
-        set_south();
-        set_west();
-        break;
     default:
         break;
     }
@@ -247,73 +231,6 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
         neighbor->commit_changes();
     };
 
-    // Handles a diagonal resize by combining two cardinal axes into a single
-    // set_logical_area call on the actual container, avoiding two independent animations.
-    // axis_y must be north or south; axis_x must be east or west.
-    auto const execute_diagonal = [&](MirResizeEdge axis_y, MirResizeEdge axis_x)
-    {
-        auto const ny = neighbor_in_direction(container, axis_y);
-        auto const nx = neighbor_in_direction(container, axis_x);
-
-        if (!ny && !nx)
-        {
-            if (!container->anchored())
-            {
-                auto const root = container->root();
-                auto const root_rect = resize_internal(root.get(), edge, xi, yi);
-                root->set_logical_area(root_rect.rect, with_animations);
-                root->commit_changes();
-            }
-            return;
-        }
-
-        // Resolve the actual container from the neighbor's reverse lookup.
-        // In a normal tiling layout both lookups yield the same container.
-        auto const actual = ny ? neighbor_in_direction(ny.get(), opposite_resize_edge(axis_y))
-                               : neighbor_in_direction(nx.get(), opposite_resize_edge(axis_x));
-        auto const current_rect = actual->get_logical_area();
-
-        // Compute per-axis results independently from the same base rectangle.
-        auto const ry = ny ? resize_internal(actual.get(), axis_y, 0, yi) : ResizeResult { current_rect, false };
-        auto const rx = nx ? resize_internal(actual.get(), axis_x, xi, 0) : ResizeResult { current_rect, false };
-
-        int const height_diff = current_rect.size.height.as_int() - ry.rect.size.height.as_int();
-        int const width_diff = current_rect.size.width.as_int() - rx.rect.size.width.as_int();
-
-        auto const ny_result = ny ? resize_internal(ny.get(), opposite_resize_edge(axis_y), 0, height_diff) : ResizeResult {};
-        auto const nx_result = nx ? resize_internal(nx.get(), opposite_resize_edge(axis_x), width_diff, 0) : ResizeResult {};
-
-        bool const y_ok = !ny || !ny_result.clamped;
-        bool const x_ok = !nx || !nx_result.clamped;
-
-        if (!y_ok && !x_ok)
-            return;
-
-        // Combine both axes into a single rectangle update to avoid double animations.
-        geom::Rectangle const combined {
-            geom::Point {
-                         x_ok ? rx.rect.top_left.x : current_rect.top_left.x,
-                         y_ok ? ry.rect.top_left.y : current_rect.top_left.y   },
-            geom::Size {
-                         x_ok ? rx.rect.size.width : current_rect.size.width,
-                         y_ok ? ry.rect.size.height : current_rect.size.height }
-        };
-
-        actual->set_logical_area(combined, with_animations);
-        actual->commit_changes();
-
-        if (y_ok && ny)
-        {
-            ny->set_logical_area(ny_result.rect, with_animations);
-            ny->commit_changes();
-        }
-        if (x_ok && nx)
-        {
-            nx->set_logical_area(nx_result.rect, with_animations);
-            nx->commit_changes();
-        }
-    };
-
     switch (edge)
     {
     case mir_resize_edge_north:
@@ -321,18 +238,6 @@ void Container::execute_resize(Container* container, MirResizeEdge edge, float x
     case mir_resize_edge_east:
     case mir_resize_edge_west:
         execute_cardinal(edge);
-        break;
-    case mir_resize_edge_northeast:
-        execute_diagonal(mir_resize_edge_north, mir_resize_edge_east);
-        break;
-    case mir_resize_edge_northwest:
-        execute_diagonal(mir_resize_edge_north, mir_resize_edge_west);
-        break;
-    case mir_resize_edge_southeast:
-        execute_diagonal(mir_resize_edge_south, mir_resize_edge_east);
-        break;
-    case mir_resize_edge_southwest:
-        execute_diagonal(mir_resize_edge_south, mir_resize_edge_west);
         break;
     default:
         break;

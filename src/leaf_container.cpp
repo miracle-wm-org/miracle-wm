@@ -263,6 +263,15 @@ void LeafContainer::handle_ready()
     auto const focused = state->focused_container();
     auto const window_focused = std::dynamic_pointer_cast<WindowContainer>(focused);
     auto const w = window_sync.lock()->window_;
+
+    int const border_size = config->get_border_config().size;
+    auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
+    surface->set_window_margins(
+        mir::geometry::DeltaY { border_size },
+        mir::geometry::DeltaX { border_size },
+        mir::geometry::DeltaY { border_size },
+        mir::geometry::DeltaX { border_size });
+
     if (!focused || !window_focused || !window_focused->is_fullscreen())
     {
         auto& info = window_controller->info_for(w);

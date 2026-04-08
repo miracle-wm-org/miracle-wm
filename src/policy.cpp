@@ -937,7 +937,9 @@ void Policy::handle_request_resize(
 
     auto const pointer_event = mir_input_event_get_pointer_event(input_event);
     auto const action = miral::toolkit::mir_pointer_event_action(pointer_event);
-    resize_service->handle_request_resize(container, action, edge);
+    auto const x = miral::toolkit::mir_pointer_event_axis_value(pointer_event, mir_pointer_axis_x);
+    auto const y = miral::toolkit::mir_pointer_event_axis_value(pointer_event, mir_pointer_axis_y);
+    resize_service->handle_request_resize(container, action, edge, x, y);
 }
 
 mir::geometry::Rectangle Policy::confirm_inherited_move(
