@@ -112,12 +112,18 @@ void FreestyleWindowContainer::set_parent(std::shared_ptr<ParentContainer> const
 
 size_t FreestyleWindowContainer::get_min_height() const
 {
-    return 0;
+    auto const& info = window_controller->info_for(window_sync.lock()->window_);
+    if (info.min_height().as_value() == 0)
+        return 50;
+    return info.min_height().as_value();
 }
 
 size_t FreestyleWindowContainer::get_min_width() const
 {
-    return 0;
+    auto const& info = window_controller->info_for(window_sync.lock()->window_);
+    if (info.min_width().as_value() == 0)
+        return 50;
+    return info.min_width().as_value();
 }
 
 void FreestyleWindowContainer::handle_ready()
