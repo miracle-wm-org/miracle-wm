@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16) # PCH support needs 3.16+
 cmake_policy(SET CMP0015 NEW)
 cmake_policy(SET CMP0022 NEW)
 
-project(miracle-wm VERSION 0.8.3)
+project(miracle-wm VERSION 0.9.0)
 
 # ----------------------------------------
 # Speed tweaks
