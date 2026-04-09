@@ -14,7 +14,7 @@ binary: binary-indep binary-arch
 binary-indep:
 	# nothing to be done
 
-binary-arch:
+binary-arch: build
 	make -C $(BUILDDIR) install
 	mkdir debian/tmp/DEBIAN
 	dpkg-gencontrol -pmiracle-wm
@@ -25,4 +25,4 @@ clean:
 	rm -f build
 	rm -rf $(BUILDDIR)
 
-.PHONY: binary binary-arch binary-indep clean
+.PHONY: build binary binary-arch binary-indep clean
