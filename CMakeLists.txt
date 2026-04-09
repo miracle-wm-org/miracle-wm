@@ -292,7 +292,7 @@ if(SYSTEMD_INTEGRATION)
             session/usr/lib/systemd/user/miracle-wm-session.target
             session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
             session/usr/lib/systemd/user/miracle-wm-xdg-autostart.target
-            DESTINATION /usr/lib/systemd/user/
+            DESTINATION lib/systemd/user/
     )
     configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
