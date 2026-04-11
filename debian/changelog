@@ -1,3 +1,15 @@
+miracle-wm (0.7.1-noble) noble; urgency=medium
+  - Fix PPA install failure caused by missing shlibs substitution.
+    debian/rules now explicitly runs dpkg-shlibdeps so that the binary
+    package ends up with real runtime Depends on the Mir ABI it was
+    actually linked against (libmirserver, libmircommon, libmirplatform),
+    instead of just the hardcoded libmiral7.
+  - Note in debian/control that end users must enable ppa:mir-team/dev
+    alongside the miracle-wm PPA so that the unstable Mir ABI runtime
+    packages can be resolved by apt at install time.
+
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Fri, 11 Apr 2026 09:00:00 -0400
+
 miracle-wm (0.6.1-noble) noble; urgency=medium
   - Update to version 0.6.1
 

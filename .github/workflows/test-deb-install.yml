@@ -1,0 +1,96 @@
+name: Test .deb Install
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+# This workflow replicates what an end user does when they install
+# miracle-wm from the PPA:
+#   1. They add ppa:mir-team/dev (required because miracle-wm is built
+#      against the unstable Mir ABI provided by that PPA).
+#   2. They run `sudo apt install miracle-wm`, which pulls the .deb
+#      and tries to satisfy its runtime Depends.
+#
+# Instead of waiting for a PPA build to land and then noticing at
+# `apt install` time that libmirserver<N>, libmircommon<N>, and
+# libmirplatform<N> cannot be resolved, this job builds the .deb from
+# source on the CI runner and then asks apt to install it with deps
+# pulled from ppa:mir-team/dev. If the resulting package has any
+# unsatisfiable runtime Depends (the exact failure mode described in
+# the PPA install error), this job will fail.
+
+jobs:
+  deb-install-test:
+    runs-on: ubuntu-24.04
+    name: Build and install miracle-wm .deb on Ubuntu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable ppa:mir-team/dev
+        run: |
+          sudo apt-add-repository -y ppa:mir-team/dev
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt update
+
+      - name: Install build dependencies
+        run: |
+          sudo apt install -y \
+            dpkg-dev debhelper devscripts fakeroot \
+            gcc-13 g++-13 \
+            cmake pkg-config build-essential \
+            libmiral-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev \
+            libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
+            libmiroil-dev libmirrenderer-dev libgles2-mesa-dev \
+            libmirwayland-dev libmircommon-internal-dev libmircommon-dev \
+            libmirserver-internal-dev libjson-c-dev libgmock-dev \
+            libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
+            python3-tenacity python3-dbus-next
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
+            --slave /usr/bin/g++ g++ /usr/bin/g++-13
+
+      - name: Build miracle-wm .deb package
+        run: |
+          # Build a binary-only package (-b) without signing (-us -uc).
+          # -d skips Build-Depends checking; we installed them above.
+          dpkg-buildpackage -us -uc -b -d
+
+      - name: Locate built .deb
+        id: locate-deb
+        run: |
+          DEB_PATH="$(ls ../miracle-wm_*.deb | head -n1)"
+          if [ -z "$DEB_PATH" ]; then
+            echo "No .deb was produced by dpkg-buildpackage" >&2
+            exit 1
+          fi
+          echo "Built package: $DEB_PATH"
+          echo "deb_path=$DEB_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Show Depends field of built .deb
+        run: |
+          # Dump the runtime Depends so failures are easy to diagnose:
+          # if this lists libmirserver<N>/libmircommon<N>/libmirplatform<N>
+          # then we know dpkg-shlibdeps ran correctly and we are about to
+          # verify that those ABI packages are actually resolvable.
+          dpkg-deb -f "${{ steps.locate-deb.outputs.deb_path }}" Package Version Depends
+
+      - name: Install miracle-wm from built .deb
+        run: |
+          # `apt install ./foo.deb` resolves runtime Depends against the
+          # configured apt sources (including ppa:mir-team/dev, which we
+          # enabled above). This is the exact code path that was failing
+          # for end users installing from the miracle-wm PPA.
+          sudo apt install -y "${{ steps.locate-deb.outputs.deb_path }}"
+
+      - name: Verify miracle-wm binary is installed and links cleanly
+        run: |
+          # Confirm the binary landed on $PATH and that all of its shared
+          # library dependencies can actually be resolved at runtime.
+          command -v miracle-wm
+          ldd "$(command -v miracle-wm)" | tee /tmp/ldd.txt
+          if grep -q "not found" /tmp/ldd.txt; then
+            echo "miracle-wm has unresolved shared library dependencies" >&2
+            exit 1
+          fi
