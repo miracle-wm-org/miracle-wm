@@ -226,6 +226,7 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
             window_controller,
             state,
             workspace,
+            config,
             hint.transform,
             hint.alpha,
             hint.resizable,

@@ -76,7 +76,7 @@ void main() {
 
 const GLchar* const fragment_border_src = R"(
 #ifdef GL_ES
-precision mediump float;
+precision highp float;
 #endif
 
 uniform float alpha;

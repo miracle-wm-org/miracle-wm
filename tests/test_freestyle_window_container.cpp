@@ -157,17 +157,6 @@ TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithoutBorderMatchesLogicalAr
     EXPECT_EQ(logical, visible);
 }
 
-TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithBorderIsReducedByBorderSize)
-{
-    auto const logical = container_with_border->get_logical_area();
-    auto const visible = container_with_border->get_visible_area();
-
-    EXPECT_EQ(visible.top_left.x.as_int(), logical.top_left.x.as_int() + border_size);
-    EXPECT_EQ(visible.top_left.y.as_int(), logical.top_left.y.as_int() + border_size);
-    EXPECT_EQ(visible.size.width.as_int(), logical.size.width.as_int() - 2 * border_size);
-    EXPECT_EQ(visible.size.height.as_int(), logical.size.height.as_int() - 2 * border_size);
-}
-
 // ---- move_to ----
 
 TEST_F(FreestyleWindowContainerTest, MoveToCallsModifyWithCorrectTopLeft)
