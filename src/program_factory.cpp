@@ -76,8 +76,7 @@ void main() {
 
 const GLchar* const fragment_border_src = R"(
 #ifdef GL_ES
-#extension GL_OES_standard_derivatives : enable
-precision mediump float;
+precision highp float;
 #endif
 
 uniform float alpha;
@@ -105,11 +104,9 @@ void main() {
     vec2 innerPos = pixelPos - center + (innerSize * 0.5);  // recenter coordinates
     float innerSDF = roundedRectSDF(innerPos, innerSize, innerRadius);
 
-    float outerAA = fwidth(outerSDF);
-    float innerAA = fwidth(innerSDF);
     float borderAlpha =
-        smoothstep(outerAA, -outerAA, outerSDF) *
-        (1.0 - smoothstep(innerAA, -innerAA, innerSDF));
+        smoothstep(0.5, -0.5, outerSDF) *
+        (1.0 - smoothstep(0.5, -0.5, innerSDF));
 
     vec4 color = borderColor * alpha * borderAlpha;
 
@@ -242,8 +239,7 @@ float roundedRectSDF(vec2 p, vec2 size, float r) {
 void main() {
     vec2 pixelPos = v_texcoord * surfaceSize;
     float sdf = roundedRectSDF(pixelPos, surfaceSize, borderRadius);
-    float aa = fwidth(sdf);
-    float shapeMask = 1.0 - smoothstep(0.0, aa, sdf);
+    float shapeMask = 1.0 - smoothstep(0.0, 1.0, sdf);
 
     vec4 contentColor = alpha * sample_to_rgba(v_texcoord);
     contentColor *= shapeMask;
