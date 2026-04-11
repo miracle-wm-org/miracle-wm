@@ -127,8 +127,6 @@ public:
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;
     virtual std::optional<miral::Window> window() const = 0;
-    virtual bool pinned() const = 0;
-    virtual bool pinned(bool) = 0;
     virtual bool move_to(int x, int y, bool with_animations) = 0;
     virtual bool move_by(float dx, float dy) = 0;
     virtual bool toggle_tabbing() = 0;

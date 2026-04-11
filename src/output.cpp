@@ -263,7 +263,6 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     lock->active_workspace = to;
 
     auto const area = lock->area;
-    from->transfer_pinned_windows_to(to);
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
     to->show(to_start);

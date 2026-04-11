@@ -77,8 +77,6 @@ public:
     bool is_fullscreen() const override;
     bool needs_outline() const override;
     bool select_next(Direction) override;
-    bool pinned() const override;
-    bool pinned(bool) override;
     bool move(Direction) override;
     bool move_by(Direction direction, int pixels) override;
     bool move_to(Container& other) override;
@@ -107,7 +105,6 @@ private:
         uint32_t handle_ = 0;
         bool is_focused_ = false;
         bool is_dragging_ = false;
-        bool pinned = false;
         geom::Point dragged_position;
     };
 

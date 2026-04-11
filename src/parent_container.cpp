@@ -802,27 +802,6 @@ std::optional<miral::Window> ParentContainer::window() const
     return std::nullopt;
 }
 
-bool ParentContainer::pinned(bool value)
-{
-    auto const s = sync.lock();
-    if (auto sh_parent = s->parent.lock())
-        return sh_parent->pinned(value);
-
-    if (s->is_anchored)
-        return false;
-
-    s->pinned_ = value;
-    return true;
-}
-
-bool ParentContainer::pinned() const
-{
-    auto const s = sync.lock();
-    if (auto sh_parent = s->parent.lock())
-        return sh_parent->pinned();
-    return s->pinned_;
-}
-
 bool ParentContainer::move_by(float dx, float dy)
 {
     auto s = sync.lock();

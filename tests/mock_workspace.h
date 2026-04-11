@@ -41,8 +41,6 @@ namespace test
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
         MOCK_METHOD(std::shared_ptr<ParentContainer>, create_floating_tree, (mir::geometry::Rectangle const&), (override));
 
-        MOCK_METHOD(void, transfer_pinned_windows_to, (std::shared_ptr<AbstractWorkspace> const& other), (override));
-
         MOCK_METHOD(bool, for_each_window,
             (std::function<bool(std::shared_ptr<WindowContainer>)> const&), (const, override));
 

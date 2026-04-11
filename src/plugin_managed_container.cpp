@@ -251,16 +251,6 @@ bool PluginManagedContainer::select_next(Direction)
     return false;
 }
 
-bool PluginManagedContainer::pinned() const
-{
-    return false;
-}
-
-bool PluginManagedContainer::pinned(bool)
-{
-    return false;
-}
-
 bool PluginManagedContainer::move(Direction)
 {
     return false;

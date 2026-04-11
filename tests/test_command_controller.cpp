@@ -17,10 +17,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "command_controller.h"
 #include "drag_and_drop_service.h"
+#include "freestyle_window_container.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
+#include "mock_session.h"
+#include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "mode_observer.h"
@@ -437,4 +440,99 @@ TEST_F(TwoOutputCommandControllerTest, MoveContainerToWorkspaceOnDifferentOutput
     EXPECT_CALL(*output2, graft(base_container));
 
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 2, false));
+}
+
+class PinningCommandControllerTest : public CommandControllerTest
+{
+public:
+    PinningCommandControllerTest()
+    {
+        Mock::AllowLeak(workspace.get());
+
+        ON_CALL(*workspace, get_output()).WillByDefault(Return(output));
+        ON_CALL(*output, get_workspaces()).WillByDefault(Return(workspaces));
+        ON_CALL(*output, active()).WillByDefault(Return(workspace));
+
+        output_manager->create("test", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+        output_manager->focus(output->id());
+
+        pinned_container = std::make_shared<FreestyleWindowContainer>(
+            window, window_controller, state, workspace, config, false);
+        unpinned_container = std::make_shared<FreestyleWindowContainer>(
+            window, window_controller, state, nullptr, config, false);
+
+        state->add(pinned_container);
+        state->add(unpinned_container);
+    }
+
+    std::shared_ptr<NiceMock<test::MockWorkspace>> workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces { workspace };
+    std::shared_ptr<NiceMock<test::MockSession>> session = std::make_shared<NiceMock<test::MockSession>>();
+    std::shared_ptr<NiceMock<test::MockSurface>> surface = std::make_shared<NiceMock<test::MockSurface>>();
+    miral::Application app { session };
+    miral::Window window { app, surface };
+    std::shared_ptr<FreestyleWindowContainer> pinned_container;
+    std::shared_ptr<FreestyleWindowContainer> unpinned_container;
+};
+
+TEST_F(PinningCommandControllerTest, TogglePinnedOnPinnedContainer_UnpinsIt)
+{
+    state->focus_container(pinned_container);
+    EXPECT_CALL(*workspace, remove_other_container(std::static_pointer_cast<Container>(pinned_container)));
+    ASSERT_TRUE(command_controller->toggle_pinned_to_workspace({}));
+    EXPECT_EQ(pinned_container->get_workspace(), nullptr);
+}
+
+TEST_F(PinningCommandControllerTest, TogglePinnedOnUnpinnedContainer_PinsIt)
+{
+    state->focus_container(unpinned_container);
+    EXPECT_CALL(*workspace, add_other_container(std::static_pointer_cast<Container>(unpinned_container)));
+    ASSERT_TRUE(command_controller->toggle_pinned_to_workspace({}));
+    EXPECT_EQ(unpinned_container->get_workspace(), workspace);
+}
+
+TEST_F(PinningCommandControllerTest, TogglePinnedReturnsFalseInNonNormalMode)
+{
+    state->mode(WindowManagerMode::moving);
+    state->focus_container(pinned_container);
+    ASSERT_FALSE(command_controller->toggle_pinned_to_workspace({}));
+}
+
+TEST_F(PinningCommandControllerTest, SetIsPinnedTrueOnUnpinnedContainer_PinsIt)
+{
+    state->focus_container(unpinned_container);
+    EXPECT_CALL(*workspace, add_other_container(std::static_pointer_cast<Container>(unpinned_container)));
+    ASSERT_TRUE(command_controller->set_is_pinned(true, {}));
+    EXPECT_EQ(unpinned_container->get_workspace(), workspace);
+}
+
+TEST_F(PinningCommandControllerTest, SetIsPinnedFalseOnPinnedContainer_UnpinsIt)
+{
+    state->focus_container(pinned_container);
+    EXPECT_CALL(*workspace, remove_other_container(std::static_pointer_cast<Container>(pinned_container)));
+    ASSERT_TRUE(command_controller->set_is_pinned(false, {}));
+    EXPECT_EQ(pinned_container->get_workspace(), nullptr);
+}
+
+TEST_F(PinningCommandControllerTest, SetIsPinnedTrueOnAlreadyPinnedContainer_IsNoOp)
+{
+    state->focus_container(pinned_container);
+    EXPECT_CALL(*workspace, add_other_container(testing::_)).Times(0);
+    ASSERT_TRUE(command_controller->set_is_pinned(true, {}));
+    EXPECT_EQ(pinned_container->get_workspace(), workspace);
+}
+
+TEST_F(PinningCommandControllerTest, SetIsPinnedFalseOnAlreadyUnpinnedContainer_IsNoOp)
+{
+    state->focus_container(unpinned_container);
+    EXPECT_CALL(*workspace, remove_other_container(testing::_)).Times(0);
+    ASSERT_TRUE(command_controller->set_is_pinned(false, {}));
+    EXPECT_EQ(unpinned_container->get_workspace(), nullptr);
+}
+
+TEST_F(PinningCommandControllerTest, SetIsPinnedReturnsFalseInNonNormalMode)
+{
+    state->mode(WindowManagerMode::moving);
+    state->focus_container(pinned_container);
+    ASSERT_FALSE(command_controller->set_is_pinned(true, {}));
 }

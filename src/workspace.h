@@ -65,7 +65,6 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
-    void transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other) override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;

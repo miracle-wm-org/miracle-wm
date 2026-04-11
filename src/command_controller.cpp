@@ -1244,6 +1244,22 @@ bool CommandController::toggle_floating(std::vector<ContainerScope> const& scope
     return result;
 }
 
+void CommandController::pin_freestyle_container(std::shared_ptr<FreestyleWindowContainer> const& freestyle)
+{
+    auto const active = output_manager->focused()->active();
+    active->add_other_container(freestyle);
+    freestyle->set_workspace(active);
+}
+
+void CommandController::unpin_freestyle_container(std::shared_ptr<FreestyleWindowContainer> const& freestyle)
+{
+    if (auto const workspace = freestyle->get_workspace())
+    {
+        workspace->remove_other_container(freestyle);
+        freestyle->set_workspace(nullptr);
+    }
+}
+
 bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> const& scope)
 {
     if (state->mode() != WindowManagerMode::normal)
@@ -1253,13 +1269,17 @@ bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
-    bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->pinned(!container->pinned()))
-            result = false;
+        if (auto const freestyle = std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
+        {
+            if (freestyle->get_workspace())
+                unpin_freestyle_container(freestyle);
+            else
+                pin_freestyle_container(freestyle);
+        }
     }
-    return result;
+    return true;
 }
 
 bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> const& scope)
@@ -1267,17 +1287,21 @@ bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> c
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
-    bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->pinned(pinned))
-            result = false;
+        if (auto const freestyle = std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
+        {
+            if (freestyle->get_workspace() && !pinned)
+                unpin_freestyle_container(freestyle);
+            else if (!freestyle->get_workspace() && pinned)
+                pin_freestyle_container(freestyle);
+        }
     }
-    return result;
+    return true;
 }
 
 bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)

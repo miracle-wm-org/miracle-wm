@@ -198,16 +198,6 @@ bool ShellComponentContainer::select_next(miracle::Direction)
     return false;
 }
 
-bool ShellComponentContainer::pinned(bool)
-{
-    return false;
-}
-
-bool ShellComponentContainer::pinned() const
-{
-    return false;
-}
-
 bool ShellComponentContainer::move(Direction direction)
 {
     return false;

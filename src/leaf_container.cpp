@@ -669,20 +669,6 @@ std::shared_ptr<LeafContainer> LeafContainer::handle_select(
     return nullptr;
 }
 
-bool LeafContainer::pinned(bool value)
-{
-    if (auto sh_parent = sync.lock()->parent.lock())
-        return sh_parent->pinned(value);
-    return false;
-}
-
-bool LeafContainer::pinned() const
-{
-    if (auto sh_parent = sync.lock()->parent.lock())
-        return sh_parent->pinned();
-    return false;
-}
-
 bool LeafContainer::move(Direction direction)
 {
     return sync.lock()->workspace.lock()->move_container(direction, *this);

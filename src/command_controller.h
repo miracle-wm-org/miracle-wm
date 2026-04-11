@@ -30,6 +30,7 @@ class MirRunner;
 
 namespace miracle
 {
+class FreestyleWindowContainer;
 class Scratchpad;
 class ModeObserverRegistrar;
 class OutputManager;
@@ -159,6 +160,9 @@ private:
 
     bool can_move_container() const;
     bool can_set_layout() const;
+
+    void pin_freestyle_container(std::shared_ptr<FreestyleWindowContainer> const& freestyle);
+    void unpin_freestyle_container(std::shared_ptr<FreestyleWindowContainer> const& freestyle);
 
     /// Given the provided scope, this method will figure out what containers meet that criteria.
     std::vector<std::shared_ptr<Container>> resolve_scope(std::vector<ContainerScope> const&);

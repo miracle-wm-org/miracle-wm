@@ -92,8 +92,6 @@ public:
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
     std::optional<miral::Window> window() const override;
-    bool pinned(bool) override;
-    bool pinned() const override;
     bool move_by(float dx, float dy) override;
     bool move_to(int x, int y, bool with_animations) override;
     bool toggle_tabbing() override;
@@ -157,7 +155,6 @@ private:
         /// Whether this parent container is anchored to the workspace and cannot be moved.
         /// This will only be `true` for the root container of a workspace.
         bool is_anchored = false;
-        bool pinned_ = false;
         ScratchpadState scratchpad_state_ = ScratchpadState::none;
         bool is_shown = false;
         std::shared_ptr<LeafContainer> pending_node;

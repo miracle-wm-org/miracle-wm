@@ -218,16 +218,6 @@ namespace test
             return false;
         }
 
-        bool pinned() const override
-        {
-            return false;
-        }
-
-        bool pinned(bool b) override
-        {
-            return false;
-        }
-
         bool move(Direction direction) override
         {
             return false;

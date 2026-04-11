@@ -351,20 +351,6 @@ bool Workspace::for_each_window(std::function<bool(std::shared_ptr<WindowContain
     return false;
 }
 
-void Workspace::transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other)
-{
-    for (auto it = floating_trees.begin(); it != floating_trees.end();)
-    {
-        if (it->get()->pinned())
-        {
-            other->graft(*it);
-            it = floating_trees.erase(it);
-        }
-        else
-            it++;
-    }
-}
-
 std::shared_ptr<ParentContainer> Workspace::create_floating_tree(mir::geometry::Rectangle const& area)
 {
     auto floating = std::make_shared<ParentContainer>(

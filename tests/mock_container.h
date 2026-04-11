@@ -77,8 +77,6 @@ namespace test
         MOCK_METHOD(bool, is_fullscreen, (), (const, override));
         MOCK_METHOD(std::optional<miral::Window>, window, (), (const, override));
         MOCK_METHOD(bool, select_next, (Direction), (override));
-        MOCK_METHOD(bool, pinned, (), (const, override));
-        MOCK_METHOD(bool, pinned, (bool), (override));
         MOCK_METHOD(bool, move, (Direction), (override));
         MOCK_METHOD(bool, move_by, (Direction, int), (override));
         MOCK_METHOD(bool, move_to, (int, int, bool), (override));

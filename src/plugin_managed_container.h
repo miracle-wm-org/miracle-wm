@@ -87,8 +87,6 @@ public:
     bool is_focused() const override;
     bool is_fullscreen() const override;
     bool select_next(Direction) override;
-    bool pinned() const override;
-    bool pinned(bool) override;
     bool move(Direction) override;
     bool move_by(Direction, int pixels) override;
     bool move_to(Container& other) override;

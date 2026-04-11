@@ -39,8 +39,6 @@ namespace test
         MOCK_METHOD(void, animation_handle, (uint32_t), (override));
         MOCK_METHOD(bool, is_focused, (), (const, override));
         MOCK_METHOD(std::optional<miral::Window>, window, (), (const, override));
-        MOCK_METHOD(bool, pinned, (), (const, override));
-        MOCK_METHOD(bool, pinned, (bool), (override));
         MOCK_METHOD(bool, move_to, (int, int, bool), (override));
         MOCK_METHOD(bool, move_by, (float, float), (override));
         MOCK_METHOD(bool, toggle_tabbing, (), (override));

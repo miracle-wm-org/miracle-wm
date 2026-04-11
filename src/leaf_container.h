@@ -83,8 +83,6 @@ public:
     std::shared_ptr<AbstractOutput> get_output() const override;
     bool is_focused() const override;
     bool select_next(Direction) override;
-    bool pinned() const override;
-    bool pinned(bool) override;
     bool move(Direction) override;
     bool move_by(Direction, int) override;
     bool move_by(float, float) override;

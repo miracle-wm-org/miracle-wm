@@ -79,8 +79,6 @@ public:
     bool is_focused() const override;
     bool needs_outline() const override { return false; }
     bool select_next(Direction) override;
-    bool pinned(bool) override;
-    bool pinned() const override;
     bool move(Direction direction) override;
     bool move_by(Direction direction, int pixels) override;
     bool move_by(float dx, float dy) override;
