@@ -38,8 +38,8 @@ Architecture: any
 Depends: libmiral7,
          libmircore2,
          libmirplatform34,
-         libmircommon11,
-         libmirserver66,
+         libmircommon12,
+         libmirserver67,
          libmirwayland5,
          mir-graphics-drivers-desktop
 Description: miracle-wm is a Wayland compositor based on Mir.
