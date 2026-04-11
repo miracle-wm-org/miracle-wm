@@ -292,12 +292,13 @@ bool FreestyleWindowContainer::select_next(Direction)
 
 bool FreestyleWindowContainer::pinned() const
 {
-    return false;
+    return sync.lock()->pinned;
 }
 
-bool FreestyleWindowContainer::pinned(bool)
+bool FreestyleWindowContainer::pinned(bool next)
 {
-    return false;
+    sync.lock()->pinned = next;
+    return true;
 }
 
 bool FreestyleWindowContainer::move(Direction)

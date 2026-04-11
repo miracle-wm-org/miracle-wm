@@ -107,6 +107,7 @@ private:
         uint32_t handle_ = 0;
         bool is_focused_ = false;
         bool is_dragging_ = false;
+        bool pinned = false;
         geom::Point dragged_position;
     };
 
