@@ -641,7 +641,7 @@ void Renderer::draw(
         glm::value_ptr(data.data.transform));
 
     auto const border_config = config->get_border_config();
-    auto const content_radius = data.data.needs_outline ? border_config.radius : 0.f;
+    auto const content_radius = data.data.needs_outline ? std::max(border_config.radius - static_cast<GLfloat>(border_config.size), 0.f) : 0.f;
     glUniform1f(prog->border_radius_uniform, content_radius);
 
     glUniform1f(prog->alpha_uniform, alpha);
