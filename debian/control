@@ -36,6 +36,11 @@ Homepage: https://github.com/mattkae/miracle-wm
 Package: miracle-wm
 Architecture: any
 Depends: libmiral7,
+         libmircore2,
+         libmirplatform34,
+         libmircommon12,
+         libmirserver67,
+         libmirwayland5,
          mir-graphics-drivers-desktop
 Description: miracle-wm is a Wayland compositor based on Mir.
  It features a tiling window manager at its core, very much
