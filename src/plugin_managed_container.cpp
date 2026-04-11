@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_output.h"
 #include "abstract_workspace.h"
 #include "compositor_state.h"
+#include "config.h"
 #include "container_listener.h"
 #include "window_controller.h"
 #include <mir/scene/surface.h>
@@ -39,6 +40,7 @@ PluginManagedContainer::PluginManagedContainer(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<AbstractWorkspace> const& workspace,
+    std::shared_ptr<Config> const& config,
     glm::mat4 transform,
     float alpha,
     bool resizable,
@@ -49,6 +51,7 @@ PluginManagedContainer::PluginManagedContainer(
 },
     window_controller { window_controller },
     compositor_state { compositor_state },
+    config { config },
     sync { State {
         .cached = window_controller->info_for(window).state(),
         .workspace_ = workspace,
@@ -125,7 +128,15 @@ size_t PluginManagedContainer::get_min_width() const
 
 void PluginManagedContainer::handle_ready()
 {
-    window_controller->select_active_window(window_sync.lock()->window_);
+    int const border_size = config->get_border_config().size;
+    auto const w = window_sync.lock()->window_;
+    auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
+    surface->set_window_margins(
+        mir::geometry::DeltaY { border_size },
+        mir::geometry::DeltaX { border_size },
+        mir::geometry::DeltaY { border_size },
+        mir::geometry::DeltaX { border_size });
+    window_controller->select_active_window(w);
 }
 
 void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)

@@ -73,19 +73,7 @@ void FreestyleWindowContainer::set_logical_area(geom::Rectangle const& area, boo
 
 geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 {
-    auto const logical = get_logical_area();
-    if (!has_border_)
-        return logical;
-
-    int const border_size = config->get_border_config().size;
-    return geom::Rectangle {
-        geom::Point {
-                     logical.top_left.x.as_int() + border_size,
-                     logical.top_left.y.as_int() + border_size      },
-        geom::Size {
-                     logical.size.width.as_int() - 2 * border_size,
-                     logical.size.height.as_int() - 2 * border_size }
-    };
+    return get_logical_area();
 }
 
 void FreestyleWindowContainer::constrain()

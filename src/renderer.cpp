@@ -741,11 +741,11 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     auto const border_config = config->get_border_config();
     auto const border_rect = geom::Rectangle(
         geom::Point(
-            clip_area_opt.value().top_left.x.as_value() * x_scale - border_config.size,
-            clip_area_opt.value().top_left.y.as_value() * y_scale - border_config.size),
+            clip_area_opt.value().top_left.x.as_value() * x_scale,
+            clip_area_opt.value().top_left.y.as_value() * y_scale),
         geom::Size(
-            clip_area_opt.value().size.width.as_value() * x_scale + 2 * border_config.size,
-            clip_area_opt.value().size.height.as_value() * y_scale + 2 * border_config.size));
+            clip_area_opt.value().size.width.as_value() * x_scale,
+            clip_area_opt.value().size.height.as_value() * y_scale));
 
     // Next, we update the uniforms for the context, including global transforms
     glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,

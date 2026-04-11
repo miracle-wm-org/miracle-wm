@@ -27,6 +27,7 @@ namespace miracle
 {
 class WindowController;
 class CompositorState;
+class Config;
 
 /// A container that is managed by a plugin.
 ///
@@ -47,6 +48,7 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<AbstractWorkspace> const& workspace,
+        std::shared_ptr<Config> const& config,
         glm::mat4 transform = glm::mat4(1.f),
         float alpha = 1.f,
         bool resizable = true,
@@ -119,6 +121,7 @@ private:
     PluginHandle plugin_handle_;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
+    std::shared_ptr<Config> config;
     SynchronisedRecursive<State> sync;
 };
 }
