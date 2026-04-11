@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_output.h"
 #include "compositor_state.h"
 #include "config.h"
+#include "freestyle_window_container.h"
 #include "leaf_container.h"
 #include "math_helpers.h"
 #include "parent_container.h"
@@ -491,7 +492,7 @@ bool Workspace::is_empty() const
 
 void Workspace::graft(std::shared_ptr<Container> const& container)
 {
-    if (container->plugin_handle().has_value())
+    if (container->plugin_handle().has_value() || std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
     {
         add_other_container(container);
     }
