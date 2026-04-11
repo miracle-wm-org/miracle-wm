@@ -1,4 +1,4 @@
-miracle-wm (0.9.0-5-local) UNRELEASED; urgency=medium
+miracle-wm (0.9.0-6-local) UNRELEASED; urgency=medium
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -39,8 +39,13 @@ miracle-wm (0.9.0-5-local) UNRELEASED; urgency=medium
   * * bugfix: add debian depends
   * * task: bump deb to 0.9.0-4
   * * bugfix: fix cmake install dir
+  * Release version 0.9.0-6
+  * Recent changes:
+  * * debian: fix depends versions
+  * * task: bump deb to 0.9.0-5
+  * * bugfix: add debian depends
 
- -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Sat, 11 Apr 2026 10:42:05 -0400
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Sat, 11 Apr 2026 11:30:21 -0400
 
 miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
   * Release version 0.8.2
