@@ -63,6 +63,7 @@ jobs:
             libmirwayland-dev libmircommon-dev \
             libmirserver-internal-dev libjson-c-dev libgmock-dev \
             libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
+            libwasmedge-dev \
             python3-tenacity python3-dbus-next
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
             --slave /usr/bin/g++ g++ /usr/bin/g++-13
