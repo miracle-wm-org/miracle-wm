@@ -7,107 +7,129 @@ on:
     branches: [ "develop" ]
 
 # This workflow replicates what an end user does when they install
-# miracle-wm from the PPA:
-#   1. They add ppa:mir-team/dev (required because miracle-wm is built
-#      against the unstable Mir ABI provided by that PPA).
-#   2. They run `sudo apt install miracle-wm`, which pulls the .deb
-#      and tries to satisfy its runtime Depends.
-#
-# Instead of waiting for a PPA build to land and then noticing at
-# `apt install` time that libmirserver<N>, libmircommon<N>, and
-# libmirplatform<N> cannot be resolved, this job builds the .deb from
-# source on the CI runner and then asks apt to install it with deps
-# pulled from ppa:mir-team/dev. If the resulting package has any
-# unsatisfiable runtime Depends (the exact failure mode described in
-# the PPA install error), this job will fail.
+# miracle-wm from the PPA, but against the latest Ubuntu (25.10) so
+# that the Mir ABI packages from ppa:mir-team/dev actually match the
+# archive and there are no stale leftover -dev packages from the host
+# distribution in the way. Same podman-in-CI approach as
+# build-ubuntu.yml:
+#   1. Start an ubuntu:25.10 container on the 24.04 runner.
+#   2. Enable ppa:mir-team/dev inside the container.
+#   3. Build the .deb from source.
+#   4. Install the resulting .deb with apt so runtime Depends are
+#      resolved against the PPA (the exact code path that fails for
+#      end users when a Mir ABI Depends cannot be satisfied).
+
+env:
+  CONTAINER: miracle-deb-install
 
 jobs:
   deb-install-test:
     runs-on: ubuntu-24.04
-    name: Build and install miracle-wm .deb on Ubuntu
+    name: Build and install miracle-wm .deb on Ubuntu 25.10
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable ppa:mir-team/dev
+      - name: Install podman
         run: |
-          sudo apt-add-repository -y ppa:mir-team/dev
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          # Pin the mir-team PPA above the default Ubuntu archive so that
-          # every libmir* package (including -dev and -internal-dev
-          # variants) is resolved from the PPA. Without this pin, apt
-          # picks the stock Ubuntu 24.04 libmirrenderer-dev /
-          # libmircommon-internal-dev, which are built against an older
-          # Mir release and therefore conflict with the newer
-          # libmircommon-dev / libmirplatform-dev shipped in the PPA.
-          sudo tee /etc/apt/preferences.d/mir-team-dev > /dev/null <<'EOF'
-          Package: *
-          Pin: release o=LP-PPA-mir-team-dev
-          Pin-Priority: 1001
-          EOF
-          sudo apt update
+          sudo apt-get update -q
+          sudo apt-get install -y podman
+
+      - name: Start Ubuntu 25.10 container
+        run: |
+          podman run -d --name ${{ env.CONTAINER }} \
+            --privileged \
+            -v ${{ github.workspace }}:/workspace:z \
+            --workdir /workspace \
+            ubuntu:25.10 \
+            sleep infinity
+
+      - name: Add ppa:mir-team/dev
+        run: |
+          podman exec ${{ env.CONTAINER }} bash -c "
+            set -e
+            apt-get update -q
+            DEBIAN_FRONTEND=noninteractive apt-get install -yq software-properties-common
+            add-apt-repository -y ppa:mir-team/dev
+            apt-get update -q
+          "
 
       - name: Install build dependencies
         run: |
-          # Upgrade any already-installed Mir packages to the PPA versions
-          # first, so the subsequent install step does not have to resolve
-          # mixed-version conflicts between the stock archive and the PPA.
-          sudo apt full-upgrade -y
-          sudo apt install -y \
-            dpkg-dev debhelper devscripts fakeroot \
-            gcc-13 g++-13 \
-            cmake pkg-config build-essential \
-            libmiral-dev libyaml-cpp-dev libglib2.0-dev \
-            libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
-            libmiroil-dev libgles2-mesa-dev \
-            libmirwayland-dev libmircommon-dev \
-            libmirserver-internal-dev libjson-c-dev \
-            libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-            libwasmedge-dev \
-            python3-tenacity python3-dbus-next
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
-            --slave /usr/bin/g++ g++ /usr/bin/g++-13
+          podman exec ${{ env.CONTAINER }} bash -c "
+            set -e
+            DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+              dpkg-dev debhelper devscripts fakeroot \
+              gcc g++ cmake pkg-config build-essential \
+              libmiral-dev libyaml-cpp-dev libglib2.0-dev \
+              libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
+              libmiroil-dev libgles2-mesa-dev \
+              libmirwayland-dev libmircommon-dev \
+              libmirserver-internal-dev libjson-c-dev \
+              libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
+              libwasmedge-dev \
+              python3-tenacity python3-dbus-next
+          "
 
       - name: Build miracle-wm .deb package
         run: |
-          # Build a binary-only package (-b) without signing (-us -uc).
-          # -d skips Build-Depends checking; we installed them above.
-          dpkg-buildpackage -us -uc -b -d
+          # Binary-only (-b), unsigned (-us -uc), skip Build-Depends
+          # check (-d) since we installed them explicitly above.
+          podman exec ${{ env.CONTAINER }} \
+            dpkg-buildpackage -us -uc -b -d
 
       - name: Locate built .deb
         id: locate-deb
         run: |
-          DEB_PATH="$(ls ../miracle-wm_*.deb | head -n1)"
+          # dpkg-buildpackage writes the .deb to the parent of the
+          # source tree, which on the host is the workspace parent.
+          DEB_PATH="$(ls "${{ github.workspace }}"/../miracle-wm_*.deb | head -n1)"
           if [ -z "$DEB_PATH" ]; then
             echo "No .deb was produced by dpkg-buildpackage" >&2
             exit 1
           fi
           echo "Built package: $DEB_PATH"
-          echo "deb_path=$DEB_PATH" >> "$GITHUB_OUTPUT"
+          # Copy into the workspace so the container can see it at a
+          # stable path under /workspace.
+          cp "$DEB_PATH" "${{ github.workspace }}/miracle-wm.deb"
+          echo "deb_path=/workspace/miracle-wm.deb" >> "$GITHUB_OUTPUT"
 
       - name: Show Depends field of built .deb
         run: |
-          # Dump the runtime Depends so failures are easy to diagnose:
-          # if this lists libmirserver<N>/libmircommon<N>/libmirplatform<N>
-          # then we know dpkg-shlibdeps ran correctly and we are about to
-          # verify that those ABI packages are actually resolvable.
-          dpkg-deb -f "${{ steps.locate-deb.outputs.deb_path }}" Package Version Depends
+          # Dump runtime Depends so failures are easy to diagnose: if
+          # this lists libmirserver<N>/libmircommon<N>/libmirplatform<N>
+          # then dpkg-shlibdeps ran correctly and we are about to verify
+          # those ABI packages are actually resolvable from the PPA.
+          podman exec ${{ env.CONTAINER }} \
+            dpkg-deb -f "${{ steps.locate-deb.outputs.deb_path }}" Package Version Depends
 
       - name: Install miracle-wm from built .deb
         run: |
           # `apt install ./foo.deb` resolves runtime Depends against the
-          # configured apt sources (including ppa:mir-team/dev, which we
-          # enabled above). This is the exact code path that was failing
-          # for end users installing from the miracle-wm PPA.
-          sudo apt install -y "${{ steps.locate-deb.outputs.deb_path }}"
+          # configured apt sources (including ppa:mir-team/dev). This is
+          # the exact code path that was failing for end users installing
+          # from the miracle-wm PPA.
+          podman exec ${{ env.CONTAINER }} bash -c "
+            set -e
+            DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+              ${{ steps.locate-deb.outputs.deb_path }}
+          "
 
       - name: Verify miracle-wm binary is installed and links cleanly
         run: |
-          # Confirm the binary landed on $PATH and that all of its shared
-          # library dependencies can actually be resolved at runtime.
-          command -v miracle-wm
-          ldd "$(command -v miracle-wm)" | tee /tmp/ldd.txt
-          if grep -q "not found" /tmp/ldd.txt; then
-            echo "miracle-wm has unresolved shared library dependencies" >&2
-            exit 1
-          fi
+          podman exec ${{ env.CONTAINER }} bash -c "
+            set -e
+            command -v miracle-wm
+            ldd \"\$(command -v miracle-wm)\" | tee /tmp/ldd.txt
+            if grep -q 'not found' /tmp/ldd.txt; then
+              echo 'miracle-wm has unresolved shared library dependencies' >&2
+              exit 1
+            fi
+          "
+
+      - name: Stop container
+        if: always()
+        run: |
+          podman stop ${{ env.CONTAINER }} || true
+          podman rm ${{ env.CONTAINER }} || true
