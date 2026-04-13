@@ -60,7 +60,7 @@ jobs:
             libmiral-dev libgtest-dev libyaml-cpp-dev libglib2.0-dev \
             libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
             libmiroil-dev libmirrenderer-dev libgles2-mesa-dev \
-            libmirwayland-dev libmircommon-internal-dev libmircommon-dev \
+            libmirwayland-dev libmircommon-dev \
             libmirserver-internal-dev libjson-c-dev libgmock-dev \
             libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
             python3-tenacity python3-dbus-next
