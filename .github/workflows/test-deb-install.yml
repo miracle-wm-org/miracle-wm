@@ -76,24 +76,20 @@ jobs:
         run: |
           # Binary-only (-b), unsigned (-us -uc), skip Build-Depends
           # check (-d) since we installed them explicitly above.
-          podman exec ${{ env.CONTAINER }} \
+          # dpkg-buildpackage writes the artefacts to the parent of the
+          # source tree, i.e. / inside the container, which isn't bind
+          # mounted. Move the resulting .deb into /workspace so the
+          # host and subsequent steps can find it at a stable path.
+          podman exec ${{ env.CONTAINER }} bash -c "
+            set -e
             dpkg-buildpackage -us -uc -b -d
-
-      - name: Locate built .deb
-        id: locate-deb
-        run: |
-          # dpkg-buildpackage writes the .deb to the parent of the
-          # source tree, which on the host is the workspace parent.
-          DEB_PATH="$(ls "${{ github.workspace }}"/../miracle-wm_*.deb | head -n1)"
-          if [ -z "$DEB_PATH" ]; then
-            echo "No .deb was produced by dpkg-buildpackage" >&2
-            exit 1
-          fi
-          echo "Built package: $DEB_PATH"
-          # Copy into the workspace so the container can see it at a
-          # stable path under /workspace.
-          cp "$DEB_PATH" "${{ github.workspace }}/miracle-wm.deb"
-          echo "deb_path=/workspace/miracle-wm.deb" >> "$GITHUB_OUTPUT"
+            deb=\$(ls /miracle-wm_*.deb | head -n1)
+            if [ -z \"\$deb\" ]; then
+              echo 'No .deb was produced by dpkg-buildpackage' >&2
+              exit 1
+            fi
+            cp \"\$deb\" /workspace/miracle-wm.deb
+          "
 
       - name: Show Depends field of built .deb
         run: |
@@ -102,7 +98,7 @@ jobs:
           # then dpkg-shlibdeps ran correctly and we are about to verify
           # those ABI packages are actually resolvable from the PPA.
           podman exec ${{ env.CONTAINER }} \
-            dpkg-deb -f "${{ steps.locate-deb.outputs.deb_path }}" Package Version Depends
+            dpkg-deb -f /workspace/miracle-wm.deb Package Version Depends
 
       - name: Install miracle-wm from built .deb
         run: |
@@ -113,7 +109,7 @@ jobs:
           podman exec ${{ env.CONTAINER }} bash -c "
             set -e
             DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-              ${{ steps.locate-deb.outputs.deb_path }}
+              /workspace/miracle-wm.deb
           "
 
       - name: Verify miracle-wm binary is installed and links cleanly
