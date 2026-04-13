@@ -33,10 +33,26 @@ jobs:
         run: |
           sudo apt-add-repository -y ppa:mir-team/dev
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          # Pin the mir-team PPA above the default Ubuntu archive so that
+          # every libmir* package (including -dev and -internal-dev
+          # variants) is resolved from the PPA. Without this pin, apt
+          # picks the stock Ubuntu 24.04 libmirrenderer-dev /
+          # libmircommon-internal-dev, which are built against an older
+          # Mir release and therefore conflict with the newer
+          # libmircommon-dev / libmirplatform-dev shipped in the PPA.
+          sudo tee /etc/apt/preferences.d/mir-team-dev > /dev/null <<'EOF'
+          Package: *
+          Pin: release o=LP-PPA-mir-team-dev
+          Pin-Priority: 1001
+          EOF
           sudo apt update
 
       - name: Install build dependencies
         run: |
+          # Upgrade any already-installed Mir packages to the PPA versions
+          # first, so the subsequent install step does not have to resolve
+          # mixed-version conflicts between the stock archive and the PPA.
+          sudo apt full-upgrade -y
           sudo apt install -y \
             dpkg-dev debhelper devscripts fakeroot \
             gcc-13 g++-13 \
