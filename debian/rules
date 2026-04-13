@@ -16,13 +16,29 @@ binary-indep:
 
 binary-arch: build
 	make -C $(BUILDDIR) install
-	mkdir debian/tmp/DEBIAN
-	dpkg-gencontrol -pmiracle-wm
+	mkdir -p debian/tmp/DEBIAN
+	# Compute shared library dependencies from the actually linked
+	# binary, so that ${shlibs:Depends} in debian/control gets
+	# substituted with the real runtime Mir ABI package names
+	# (e.g. libmirserver67, libmircommon12, libmirplatform34). Without
+	# this step dpkg-gencontrol would leave ${shlibs:Depends} empty and
+	# the resulting .deb would ship with incorrect runtime Depends,
+	# which is what caused the "libmirserver67 is not installable"
+	# failure end users hit when installing from the PPA.
+	dpkg-shlibdeps -Tdebian/miracle-wm.substvars \
+	    debian/tmp/usr/bin/miracle-wm
+	# -Pdebian/tmp tells dpkg-gencontrol to treat debian/tmp as the
+	# package build directory, so it writes DEBIAN/control there (which
+	# is what `dpkg --build debian/tmp ..` expects to find).
+	dpkg-gencontrol -pmiracle-wm -Pdebian/tmp \
+	    -Tdebian/miracle-wm.substvars
 	dpkg --build debian/tmp ..
 
 # firstly called by launchpad
 clean:
 	rm -f build
+	rm -f debian/miracle-wm.substvars
+	rm -rf debian/tmp
 	rm -rf $(BUILDDIR)
 
 .PHONY: build binary binary-arch binary-indep clean
