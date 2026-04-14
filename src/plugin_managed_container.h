@@ -113,6 +113,9 @@ private:
     struct State
     {
         std::optional<MirWindowState> cached;
+        std::optional<MirWindowState> next_state;
+        std::optional<geom::Rectangle> pre_fullscreen_area;
+        std::optional<MirDepthLayer> next_depth_layer;
         std::weak_ptr<AbstractWorkspace> workspace_;
         uint32_t handle_ = 0;
         bool is_focused_ = false;
