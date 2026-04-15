@@ -185,6 +185,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
     {
         window_controller->change_state(w, mods.state().value());
         mods.state().consume();
+        constrain();
     }
     window_controller->modify(w, mods);
 }

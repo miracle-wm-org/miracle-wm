@@ -203,6 +203,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
         else
             window_controller->change_state(w, new_state);
         mods.state().consume();
+        constrain();
     }
     window_controller->modify(w, mods);
 }
