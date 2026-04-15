@@ -5,7 +5,9 @@ pkg_check_modules(MIRAL miral REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-cpp)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)
-find_package(GTest REQUIRED)
+if (ENABLE_TESTS)
+    find_package(GTest REQUIRED)
+endif()
 
 add_library(miracle-wm-c
     SHARED
@@ -62,27 +64,29 @@ install(
 )
 
 # Tests
-add_executable(test_miracle_wm_c_api
-    tests/test_config_c.cpp
-    tests/test_config_cpp.cpp
-)
+if (ENABLE_TESTS)
+    add_executable(test_miracle_wm_c_api
+        tests/test_config_c.cpp
+        tests/test_config_cpp.cpp
+    )
 
-target_include_directories(test_miracle_wm_c_api PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${MIRCORE_INCLUDE_DIRS}
-    ${MIRSERVER_INCLUDE_DIRS}
-    ${MIRAL_INCLUDE_DIRS}
-    ${GTEST_INCLUDE_DIRS}
-    ${GMOCK_INCLUDE_DIRS}
-)
+    target_include_directories(test_miracle_wm_c_api PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${MIRCORE_INCLUDE_DIRS}
+        ${MIRSERVER_INCLUDE_DIRS}
+        ${MIRAL_INCLUDE_DIRS}
+        ${GTEST_INCLUDE_DIRS}
+        ${GMOCK_INCLUDE_DIRS}
+    )
 
-target_link_libraries(test_miracle_wm_c_api
-    miracle-wm-c
-    GTest::GTest
-    GTest::Main
-    ${MIRCORE_LDFLAGS}
-    ${MIRSERVER_LDFLAGS}
-    ${MIRAL_LDFLAGS}
-)
+    target_link_libraries(test_miracle_wm_c_api
+        miracle-wm-c
+        GTest::GTest
+        GTest::Main
+        ${MIRCORE_LDFLAGS}
+        ${MIRSERVER_LDFLAGS}
+        ${MIRAL_LDFLAGS}
+    )
 
-add_test(NAME test_miracle_wm_c_api COMMAND test_miracle_wm_c_api)
+    add_test(NAME test_miracle_wm_c_api COMMAND test_miracle_wm_c_api)
+endif()

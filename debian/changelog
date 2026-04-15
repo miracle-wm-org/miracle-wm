@@ -1,4 +1,4 @@
-miracle-wm (0.9.0-7-local) UNRELEASED; urgency=medium
+miracle-wm (0.9.0-9-local) UNRELEASED; urgency=medium
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -49,8 +49,19 @@ miracle-wm (0.9.0-7-local) UNRELEASED; urgency=medium
   * * debian: fix depends versions again
   * * task: bump deb to 0.9.0-6
   * * debian: fix depends versions
+  * Release version 0.9.0-8
+  * Recent changes:
+  * * Reset changelog
+  * * ci(test-deb-install): relocate built .deb from container / into
+    /workspace
+  * * ci(test-deb-install): run inside an ubuntu:25.10 podman container
+  * Release version 0.9.0-9
+  * Recent changes:
+  * * Fix bad install directory
+  * * task: bump deb to 0.9.0-8
+  * * Reset changelog
 
- -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Sat, 11 Apr 2026 13:45:38 -0400
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Wed, 15 Apr 2026 19:23:59 -0400
 
 miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
   * Release version 0.8.2
