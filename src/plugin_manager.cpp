@@ -266,10 +266,9 @@ WasmEdge_Result host_miracle_workspace_get_tree(
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const workspace_address = WasmEdge_ValueGetI64(params[0]);
-    uint32_t const index = WasmEdge_ValueGetI32(params[1]);
-    int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
+    int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
 
-    auto const container = bridge->tree_at_index(workspace_address, index);
+    auto const container = bridge->root_tree(workspace_address);
 
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     uint8_t* workspace_buf = mem_base + out_ptr;
@@ -960,7 +959,7 @@ void PluginManager::Self::create_host_module()
         host_miracle_workspace_get_output, bridge.get());
 
     add_host_function(module, "miracle_workspace_get_tree",
-        create_func_type({ i64, i32, i32 }, { i32 }),
+        create_func_type({ i64, i32 }, { i32 }),
         host_miracle_workspace_get_tree, bridge.get());
 
     add_host_function(module, "miracle_container_get_child_at",

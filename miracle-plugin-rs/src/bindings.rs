@@ -314,8 +314,6 @@ pub struct miracle_workspace_t {
     pub number: u32,
     #[doc = " If `TRUE`, #name is set."]
     pub has_name: i32,
-    #[doc = " The number of container trees in this workspace.\n\n Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.\n Each tree is represented by a #miracle_container_t which is the root of the tree."]
-    pub num_trees: u32,
     #[doc = " Pointer to internal data.\n\n Please do not use unless you plan to be very sneaky."]
     pub internal: u64,
     #[doc = " The position of the workspace area."]

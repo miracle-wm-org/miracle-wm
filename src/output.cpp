@@ -78,8 +78,8 @@ std::shared_ptr<AbstractWorkspace> Output::active() const
 
 std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
 {
-    // Intersect a window. If the window is on the currently active workspace
-    // or the window is a shell component, then return it.
+    // Fast path: Mir's hit-test is authoritative for shell components (no workspace)
+    // and for the common case where the topmost Mir window is on the active workspace.
     auto const window = window_controller->window_at(x, y);
     if (auto const result = window_controller->get_window_container(window))
     {
@@ -88,7 +88,26 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
             return result;
     }
 
-    return nullptr;
+    // Mir returned a window on an inactive workspace. Fall back to a geometry scan
+    // over the active workspace's windows so that floating windows on other workspaces
+    // cannot create unclickable dead zones.
+    auto const lock = sync.lock();
+    if (lock->active_workspace.expired())
+        return nullptr;
+
+    auto const active_ws = lock->active_workspace.lock().get();
+    std::shared_ptr<WindowContainer> result = nullptr;
+    active_ws->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+    {
+        if (container->get_visible_area().contains(geom::Point(x, y)))
+        {
+            result = container;
+            return true;
+        }
+        return false;
+    });
+
+    return result;
 }
 
 std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
@@ -263,7 +282,6 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     lock->active_workspace = to;
 
     auto const area = lock->area;
-    from->transfer_pinned_windows_to(to);
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
     to->show(to_start);

@@ -124,12 +124,6 @@ extern "C"
         /// If `TRUE`, #name is set.
         int32_t has_name;
 
-        /// The number of container trees in this workspace.
-        ///
-        /// Use #miracle_plugin_get_workspace_tree to get the tree at a particular index.
-        /// Each tree is represented by a #miracle_container_t which is the root of the tree.
-        uint32_t num_trees;
-
         /// Pointer to internal data.
         ///
         /// Please do not use unless you plan to be very sneaky.

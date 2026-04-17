@@ -65,9 +65,7 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
-    void transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other) override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
-    std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
     [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
     void set_output(std::shared_ptr<AbstractOutput> const&) override;
@@ -88,7 +86,6 @@ public:
     glm::mat4 transform() const override;
     void alpha(float) override;
     float alpha() const override;
-    std::vector<std::shared_ptr<ParentContainer>> trees() const override;
     [[nodiscard]] nlohmann::json get_workspaces_json(bool is_output_focused) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_output_focused) const override;
     [[nodiscard]] std::string display_name() const override;
@@ -117,7 +114,6 @@ private:
     std::weak_ptr<AbstractOutput> output;
     uint32_t id_;
     mutable std::shared_ptr<ParentContainer> root_;
-    std::vector<std::shared_ptr<ParentContainer>> floating_trees;
     std::vector<std::weak_ptr<Container>> other_containers;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> state;

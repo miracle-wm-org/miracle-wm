@@ -39,9 +39,6 @@ namespace test
         MOCK_METHOD(void, show, (geom::Point const&), (override));
         MOCK_METHOD(void, hide, (geom::Point const&), (override));
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
-        MOCK_METHOD(std::shared_ptr<ParentContainer>, create_floating_tree, (mir::geometry::Rectangle const&), (override));
-
-        MOCK_METHOD(void, transfer_pinned_windows_to, (std::shared_ptr<AbstractWorkspace> const& other), (override));
 
         MOCK_METHOD(bool, for_each_window,
             (std::function<bool(std::shared_ptr<WindowContainer>)> const&), (const, override));
@@ -79,7 +76,6 @@ namespace test
         MOCK_METHOD(void, alpha, (float), (override));
         MOCK_METHOD(float, alpha, (), (const, override));
 
-        MOCK_METHOD(std::vector<std::shared_ptr<ParentContainer>>, trees, (), (const, override));
         MOCK_METHOD(ParentContainer*, get_layout_container, (), (const, override));
 
         MOCK_METHOD(void, add_other_container, (std::shared_ptr<Container> const&), (override));

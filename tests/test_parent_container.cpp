@@ -48,9 +48,8 @@ public:
         std::shared_ptr<CompositorState> const& state,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<Config> const& config,
-        geom::Rectangle const& area,
-        bool is_anchored = true) :
-        parent(std::make_shared<ParentContainer>(shell_application_manager, state, window_controller, config, area, workspace, nullptr, is_anchored))
+        geom::Rectangle const& area) :
+        parent(std::make_shared<ParentContainer>(shell_application_manager, state, window_controller, config, area, workspace, nullptr))
     {
     }
 
@@ -62,9 +61,9 @@ public:
 class ParentContainerTest : public Test
 {
 public:
-    [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area, bool is_anchored = true) const
+    [[nodiscard]] ParentContainerData make_parent(geom::Rectangle const& area) const
     {
-        return ParentContainerData { shell_application_manager, state, window_controller, config, area, is_anchored };
+        return ParentContainerData { shell_application_manager, state, window_controller, config, area };
     }
 
     std::shared_ptr<ShellApplicationManager> shell_application_manager = std::make_shared<ShellApplicationManager>(
@@ -78,7 +77,7 @@ public:
 TEST_F(ParentContainerTest, WhenParentReceivesFocusThenChildrenAreRaised)
 {
     // Arrange
-    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }), false);
+    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
     std::shared_ptr<test::MockContainer> const child1 = std::make_shared<NiceMock<test::MockContainer>>();
     std::shared_ptr<test::MockContainer> const child2 = std::make_shared<NiceMock<test::MockContainer>>();
     parent_data.parent->add_child(child1, 0);

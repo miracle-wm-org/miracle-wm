@@ -125,7 +125,7 @@ public:
     OutputResult output_from_workspace(uint64_t workspace_id);
     uint32_t num_workspaces_on_output(uint64_t workspace_id);
     WorkspaceResult workspace_on_output_at_index(uint64_t output_id, uint32_t index);
-    miracle_container_t tree_at_index(uint64_t workspace_id, uint32_t index);
+    miracle_container_t root_tree(uint64_t workspace_id);
     miracle_container_t child_at(uint64_t parent_id, uint32_t index);
     miracle_container_t container_from_window(uint64_t window_id);
     miracle_container_t parent_from_container(uint64_t container_id);

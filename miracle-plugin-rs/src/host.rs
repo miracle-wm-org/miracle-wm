@@ -39,7 +39,7 @@ unsafe extern "C" {
     -> i32;
 
     /// Retrieve a tree from a workspace by index.
-    pub fn miracle_workspace_get_tree(workspace_internal: i64, index: u32, out_ptr: i32) -> i32;
+    pub fn miracle_workspace_get_tree(workspace_internal: i64, out_ptr: i32) -> i32;
 
     /// Retrieve a child container from a parent container by index.
     pub fn miracle_container_get_child_at(container_internal: i64, index: u32, out_ptr: i32)

@@ -79,8 +79,7 @@ ParentContainer::ParentContainer(
     std::shared_ptr<Config> const& config,
     geom::Rectangle area,
     std::shared_ptr<AbstractWorkspace> const& workspace,
-    std::shared_ptr<ParentContainer> const& parent,
-    bool is_anchored) :
+    std::shared_ptr<ParentContainer> const& parent) :
     CollectionContainer(state->next_container_id()),
     shell_application_manager {
         shell_application_manager
@@ -93,7 +92,6 @@ ParentContainer::ParentContainer(
         .logical_area = std::move(area),
         .workspace = workspace,
         .scheme = config->get_default_layout_scheme(),
-        .is_anchored = is_anchored,
     } }
 {
     // Parents typically hold around 2 to 8 sub containers inside
@@ -123,7 +121,7 @@ void ParentContainer::update_background_client_area()
 {
     try_remove_background_client();
     auto s = sync.lock();
-    if (s->parent.expired() && !s->is_anchored && feature::parent_container_wallpapers)
+    if (s->parent.expired() && feature::parent_container_wallpapers)
     {
         // Start up the internal client that will display the background for this floating parent
         mir::log_info("Spawning ParentBackgroundInternalClient for unanchored root parent");
@@ -137,7 +135,7 @@ geom::Rectangle ParentContainer::get_logical_area() const
 {
     auto const s = sync.lock();
     // Unanchored parents should not employ outer gaps in their layout.
-    if (s->parent.lock() == nullptr && s->is_anchored)
+    if (s->parent.lock() == nullptr)
     {
         auto outer_gaps = config->get_outer_gaps();
         if (auto sh_workspace = s->workspace.lock())
@@ -226,8 +224,7 @@ miral::WindowSpecification ParentContainer::place_new_window(
     }
 
     new_spec.depth_layer() = LeafContainer::get_depth_layer(
-        new_spec.state().is_set() && new_spec.state() == mir_window_state_fullscreen,
-        anchored());
+        new_spec.state().is_set() && new_spec.state() == mir_window_state_fullscreen);
 
     return new_spec;
 }
@@ -291,8 +288,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
         config,
         container->get_logical_area(),
         sync.lock()->workspace.lock(),
-        Container::as_parent(shared_from_this()),
-        true);
+        Container::as_parent(shared_from_this()));
     new_parent_node->sync.lock()->container_list.push_back(container);
     container->set_parent(new_parent_node);
     sync.lock()->container_list[index.value()] = new_parent_node;
@@ -638,9 +634,6 @@ void ParentContainer::handle_raise()
 
 bool ParentContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
 {
-    if (sync.lock()->is_anchored)
-        return false;
-
     auto area = get_logical_area();
     area.size.width = geom::Width { width.value_or(area.size.width.as_int()) };
     area.size.height = geom::Height { height.value_or(area.size.height.as_int()) };
@@ -703,12 +696,11 @@ void ParentContainer::on_focus_gained()
     }
 
     auto const sh_parent = s->parent.lock();
-    bool const is_anchored = s->is_anchored;
     s.drop();
 
     if (sh_parent)
         sh_parent->on_focus_gained();
-    else if (!anchored())
+    else
         raise_children();
 }
 
@@ -802,35 +794,11 @@ std::optional<miral::Window> ParentContainer::window() const
     return std::nullopt;
 }
 
-bool ParentContainer::pinned(bool value)
-{
-    auto const s = sync.lock();
-    if (auto sh_parent = s->parent.lock())
-        return sh_parent->pinned(value);
-
-    if (s->is_anchored)
-        return false;
-
-    s->pinned_ = value;
-    return true;
-}
-
-bool ParentContainer::pinned() const
-{
-    auto const s = sync.lock();
-    if (auto sh_parent = s->parent.lock())
-        return sh_parent->pinned();
-    return s->pinned_;
-}
-
 bool ParentContainer::move_by(float dx, float dy)
 {
     auto s = sync.lock();
     if (auto const sh_parent = s->parent.lock())
         return sh_parent->move_by(dx, dy);
-
-    if (s->is_anchored)
-        return false;
 
     auto area = s->logical_area;
     s.drop();
@@ -843,12 +811,13 @@ bool ParentContainer::move_by(float dx, float dy)
 
 bool ParentContainer::move_to(int x, int y, bool with_animations)
 {
+    constexpr bool can_move_parent_container = false;
+    if (!can_move_parent_container)
+        return false;
+
     auto s = sync.lock();
     if (auto const sh_parent = s->parent.lock())
         return sh_parent->move_to(x, y, with_animations);
-
-    if (s->is_anchored)
-        return false;
 
     auto area = s->logical_area;
     s.drop();
@@ -897,21 +866,6 @@ bool ParentContainer::set_layout(LayoutScheme new_scheme)
 LayoutScheme ParentContainer::get_layout() const
 {
     return sync.lock()->scheme;
-}
-
-bool ParentContainer::set_anchored(bool anchor)
-{
-    sync.lock()->is_anchored = anchor;
-    update_background_client_area();
-    return true;
-}
-
-bool ParentContainer::anchored() const
-{
-    auto const s = sync.lock();
-    if (auto sh_parent = s->parent.lock())
-        return sh_parent->anchored();
-    return s->is_anchored;
 }
 
 ScratchpadState ParentContainer::scratchpad_state() const

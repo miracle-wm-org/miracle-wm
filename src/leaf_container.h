@@ -96,7 +96,7 @@ public:
     void drag(int x, int y) override;
     bool drag_stop() override;
     bool set_layout(LayoutScheme) override;
-    bool anchored() const override;
+    bool anchored() const override { return true; }
     ScratchpadState scratchpad_state() const override;
     void scratchpad_state(ScratchpadState) override;
     LayoutScheme get_layout() const override;
@@ -106,7 +106,7 @@ public:
     static std::shared_ptr<LeafContainer> handle_select(
         Container& from,
         Direction direction);
-    static MirDepthLayer get_depth_layer(bool is_fullscreen, bool is_anchored);
+    static MirDepthLayer get_depth_layer(bool is_fullscreen);
 
 private:
     struct State

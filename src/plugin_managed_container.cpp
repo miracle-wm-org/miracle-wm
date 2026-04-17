@@ -261,7 +261,7 @@ bool PluginManagedContainer::resize(Direction direction, int pixels)
     return true;
 }
 
-bool PluginManagedContainer::set_size(std::optional<int> const&, std::optional<int> const&)
+bool PluginManagedContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
 {
     if (!window_sync.lock()->resizable_)
         return false;

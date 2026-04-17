@@ -170,8 +170,7 @@ void LeafContainer::set_parent(std::shared_ptr<ParentContainer> const& in_parent
 
     miral::WindowSpecification spec;
     spec.depth_layer() = get_depth_layer(
-        is_fullscreen(),
-        in_parent->anchored());
+        is_fullscreen());
     window_controller->modify(window_sync.lock()->window_, spec);
 }
 
@@ -301,8 +300,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 
         cur_state = mods.state().value();
         mods.depth_layer() = get_depth_layer(
-            mods.state().value() == mir_window_state_fullscreen,
-            sync.lock()->parent.lock()->anchored());
+            mods.state().value() == mir_window_state_fullscreen);
 
         if (info.state() != mods.state().value() && mods.state().value() == mir_window_state_restored)
         {
@@ -433,8 +431,7 @@ bool LeafContainer::toggle_fullscreen()
         }
 
         s->next_depth_layer = get_depth_layer(
-            s->next_state == mir_window_state_fullscreen,
-            s->parent.lock()->anchored());
+            s->next_state == mir_window_state_fullscreen);
     }
     commit_changes();
     return true;
@@ -814,12 +811,6 @@ bool LeafContainer::set_layout(LayoutScheme scheme)
     return true;
 }
 
-bool LeafContainer::anchored() const
-{
-    auto const s = sync.lock();
-    return !s->parent.expired() && s->parent.lock()->anchored();
-}
-
 ScratchpadState LeafContainer::scratchpad_state() const
 {
     auto const s = sync.lock();
@@ -1012,9 +1003,9 @@ bool LeafContainer::matches(ContainerScope const& scope) const
         return int_num == id;
     }
     case ContainerScopeType::floating:
-        return !anchored();
+        return false;
     case ContainerScopeType::tiling:
-        return anchored();
+        return true;
     case ContainerScopeType::con_mark:
     {
         jp::Regex re;
@@ -1044,12 +1035,12 @@ bool LeafContainer::matches(ContainerScope const& scope) const
     }
 }
 
-MirDepthLayer LeafContainer::get_depth_layer(bool is_fullscreen, bool is_anchored)
+MirDepthLayer LeafContainer::get_depth_layer(bool is_fullscreen)
 {
     if (is_fullscreen)
         return mir_depth_layer_above;
     else
-        return !is_anchored ? mir_depth_layer_always_on_top : mir_depth_layer_application;
+        return mir_depth_layer_application;
 }
 
 void LeafContainer::invalidate_visible_area_cache()

@@ -188,8 +188,7 @@ TEST_F(ContainerIdTest, ParentContainerGetsIdFromSamePool)
             { 800, 600 }
     },
         workspace,
-        nullptr,
-        true);
+        nullptr);
 
     EXPECT_GT(pc->id(), 0u);
     EXPECT_NE(leaf->id(), pc->id());

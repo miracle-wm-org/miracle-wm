@@ -49,7 +49,6 @@ miracle_workspace_t from_workspace(std::shared_ptr<AbstractWorkspace> const& wor
         .has_number = workspace->num().has_value(),
         .number = static_cast<uint32_t>(workspace->num().value_or(0)),
         .has_name = workspace->name().has_value(),
-        .num_trees = static_cast<uint32_t>(workspace->trees().size()),
         .internal = static_cast<uint64_t>(workspace->id()),
         .position = from_point(rect.top_left),
         .size = from_size(rect.size),
@@ -222,9 +221,20 @@ std::shared_ptr<Container> PluginBridge::find_container_by_id(uint64_t id)
 {
     for (auto const& output : output_manager->outputs())
         for (auto const& workspace : output->get_workspaces())
-            for (auto const& tree : workspace->trees())
-                if (auto found = find_in_tree(tree, id))
-                    return found;
+        {
+            std::shared_ptr<Container> result;
+            workspace->for_each_window([&](auto const& wc)
+            {
+                if (wc->id() == id)
+                {
+                    result = wc;
+                    return true;
+                }
+                return false;
+            });
+
+            return result;
+        }
     return nullptr;
 }
 
@@ -311,11 +321,10 @@ PluginBridge::WorkspaceResult PluginBridge::workspace_on_output_at_index(uint64_
     return { from_workspace(workspace), workspace->name() };
 }
 
-miracle_container_t PluginBridge::tree_at_index(uint64_t workspace_id, uint32_t index)
+miracle_container_t PluginBridge::root_tree(uint64_t workspace_id)
 {
     auto const workspace = resolve_workspace_shared(workspace_id);
-    auto const trees = workspace->trees();
-    return from_parent(trees[index]);
+    return from_parent(workspace->get_root());
 }
 
 miracle_container_t PluginBridge::container_from_window(uint64_t window_id)
