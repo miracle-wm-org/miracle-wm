@@ -1184,8 +1184,8 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const& output_area = focused_output->get_area();
             auto constexpr floated_size = 0.85f;
             auto constexpr gap_size = 1.f - floated_size;
-            auto const gap_x = output_area.size.width.as_int() * gap_size;
-            auto const gap_y = output_area.size.height.as_int() * gap_size;
+            auto const gap_x = output_area.size.width.as_int() * gap_size / 2.f;
+            auto const gap_y = output_area.size.height.as_int() * gap_size / 2.f;
             new_container->set_logical_area(geom::Rectangle {
                                                 geom::Point { output_area.top_left.x.as_int() + gap_x,        output_area.top_left.y.as_int() + gap_y         },
                                                 geom::Size { output_area.size.width.as_int() * floated_size, output_area.size.height.as_int() * floated_size }

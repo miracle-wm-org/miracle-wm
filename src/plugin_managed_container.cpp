@@ -131,6 +131,9 @@ void PluginManagedContainer::commit_changes()
 
     window_controller->change_state(w, s->next_state.value());
 
+    if (entering_fullscreen || leaving_fullscreen)
+        update_window_margins(config->get_border_config().size, entering_fullscreen);
+
     if (render_id.has_value())
         if (auto const r = rdm.lock())
             r->needs_outline_change(render_id.value(), !entering_fullscreen);
@@ -219,18 +222,57 @@ void PluginManagedContainer::handle_raise()
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 
-bool PluginManagedContainer::resize(Direction, int)
+void PluginManagedContainer::on_focus_gained()
+{
+    WindowContainer::on_focus_gained();
+    window_controller->raise(window_sync.lock()->window_);
+}
+
+bool PluginManagedContainer::resize(Direction direction, int pixels)
 {
     if (!window_sync.lock()->resizable_)
         return false;
-    return false;
+
+    auto const area = get_logical_area();
+    int new_x = area.top_left.x.as_int();
+    int new_y = area.top_left.y.as_int();
+    int new_w = area.size.width.as_int();
+    int new_h = area.size.height.as_int();
+
+    switch (direction)
+    {
+    case Direction::right:
+        new_w += pixels;
+        break;
+    case Direction::left:
+        new_w -= pixels;
+        break;
+    case Direction::down:
+        new_h += pixels;
+        break;
+    case Direction::up:
+        new_h -= pixels;
+        break;
+    default:
+        return false;
+    }
+
+    set_logical_area(geom::Rectangle(geom::Point(new_x, new_y), geom::Size(new_w, new_h)), true);
+    return true;
 }
 
 bool PluginManagedContainer::set_size(std::optional<int> const&, std::optional<int> const&)
 {
     if (!window_sync.lock()->resizable_)
         return false;
-    return false;
+
+    auto area = get_logical_area();
+    area.size = {
+        width.value_or(area.size.width.as_int()),
+        height.value_or(area.size.height.as_int())
+    };
+    set_logical_area(area, true);
+    return true;
 }
 
 bool PluginManagedContainer::toggle_fullscreen()

@@ -114,6 +114,9 @@ void FreestyleWindowContainer::commit_changes()
 
     window_controller->change_state(w, s->next_state.value());
 
+    if (entering_fullscreen || leaving_fullscreen)
+        update_window_margins(has_border_ ? config->get_border_config().size : 0, entering_fullscreen);
+
     if (render_id.has_value())
         if (auto const r = rdm.lock())
             r->needs_outline_change(render_id.value(), !entering_fullscreen);

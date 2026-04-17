@@ -466,8 +466,10 @@ void LeafContainer::commit_changes()
         auto s = sync.lock();
         if (s->next_state)
         {
-            if (s->next_state.value() == mir_window_state_fullscreen
-                || window_controller->get_state(w) == mir_window_state_fullscreen)
+            bool const entering_fs = s->next_state.value() == mir_window_state_fullscreen;
+            bool const leaving_fs = window_controller->get_state(w) == mir_window_state_fullscreen;
+
+            if (entering_fs || leaving_fs)
             {
                 for_each_observer([this](ContainerListener* observer)
                 {
@@ -476,6 +478,9 @@ void LeafContainer::commit_changes()
             }
 
             window_controller->change_state(w, s->next_state.value());
+
+            if (entering_fs || leaving_fs)
+                update_window_margins(config->get_border_config().size, entering_fs);
 
             state->render_data_manager()->needs_outline_change(render_id.value(), s->next_state != mir_window_state_fullscreen);
             s->next_state.reset();
