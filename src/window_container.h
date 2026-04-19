@@ -116,6 +116,8 @@ public:
     virtual bool can_animate();
 
 protected:
+    void update_window_margins(int border_size, bool entering_fullscreen);
+
     struct State
     {
         miral::Window window_;

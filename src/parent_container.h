@@ -49,8 +49,7 @@ public:
         std::shared_ptr<Config> const& config,
         geom::Rectangle area,
         std::shared_ptr<AbstractWorkspace> const& workspace,
-        std::shared_ptr<ParentContainer> const& parent,
-        bool is_anchored);
+        std::shared_ptr<ParentContainer> const& parent);
     ~ParentContainer() override;
 
 protected:
@@ -92,15 +91,14 @@ public:
     void animation_handle(uint32_t uint_32) override;
     bool is_focused() const override;
     std::optional<miral::Window> window() const override;
-    bool pinned(bool) override;
-    bool pinned() const override;
+    bool pinned(bool) override { return false; }
+    bool pinned() const override { return false; }
     bool move_by(float dx, float dy) override;
     bool move_to(int x, int y, bool with_animations) override;
     bool toggle_tabbing() override;
     bool toggle_stacking() override;
     bool set_layout(LayoutScheme scheme) override;
-    bool set_anchored(bool anchor);
-    bool anchored() const override;
+    bool anchored() const override { return true; }
     ScratchpadState scratchpad_state() const override;
     void scratchpad_state(ScratchpadState) override;
     LayoutScheme get_layout() const override;
@@ -154,10 +152,6 @@ private:
         geom::Rectangle logical_area;
         std::weak_ptr<AbstractWorkspace> workspace;
         LayoutScheme scheme = LayoutScheme::horizontal;
-        /// Whether this parent container is anchored to the workspace and cannot be moved.
-        /// This will only be `true` for the root container of a workspace.
-        bool is_anchored = false;
-        bool pinned_ = false;
         ScratchpadState scratchpad_state_ = ScratchpadState::none;
         bool is_shown = false;
         std::shared_ptr<LeafContainer> pending_node;

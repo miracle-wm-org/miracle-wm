@@ -69,6 +69,7 @@ public:
     void handle_modify(const miral::WindowSpecification&) override;
     void handle_request_move(const MirInputEvent* input_event) override;
     void handle_raise() override;
+    void on_focus_gained() override;
     bool resize(Direction direction, int pixels) override;
     bool set_size(const std::optional<int>& width, const std::optional<int>& height) override;
     bool toggle_fullscreen() override;
@@ -113,6 +114,9 @@ private:
     struct State
     {
         std::optional<MirWindowState> cached;
+        std::optional<MirWindowState> next_state;
+        std::optional<geom::Rectangle> pre_fullscreen_area;
+        std::optional<MirDepthLayer> next_depth_layer;
         std::weak_ptr<AbstractWorkspace> workspace_;
         uint32_t handle_ = 0;
         bool is_focused_ = false;

@@ -159,8 +159,7 @@ std::shared_ptr<ParentContainer> Workspace::root() const
             config,
             get_output_area(output.lock()),
             mutable_ws,
-            nullptr,
-            true);
+            nullptr);
     }
 
     return root_;
@@ -189,13 +188,6 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
     {
         auto const parent = handle_remove_container(leaf);
         parent->commit_changes();
-
-        // If we're deleting a container and it is the final container in a
-        // floating tree, then we need to remove the tree entirely.
-        if (parent->num_children() == 0 && parent != root())
-        {
-            std::erase(floating_trees, parent);
-        }
     }
     else
     {
@@ -339,45 +331,19 @@ bool Workspace::for_each_window(std::function<bool(std::shared_ptr<WindowContain
         return false;
     };
 
-    for (auto const& other_root : floating_trees)
+    for (auto const& other : other_containers)
     {
-        if (foreach_node_internal(_for_each_window, other_root))
-            return true;
+        if (auto const locked = other.lock())
+        {
+            if (foreach_node_internal(_for_each_window, locked))
+                return true;
+        }
     }
 
     if (foreach_node_internal(_for_each_window, root()))
         return true;
 
     return false;
-}
-
-void Workspace::transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other)
-{
-    for (auto it = floating_trees.begin(); it != floating_trees.end();)
-    {
-        if (it->get()->pinned())
-        {
-            other->graft(*it);
-            it = floating_trees.erase(it);
-        }
-        else
-            it++;
-    }
-}
-
-std::shared_ptr<ParentContainer> Workspace::create_floating_tree(mir::geometry::Rectangle const& area)
-{
-    auto floating = std::make_shared<ParentContainer>(
-        shell_application_manager,
-        state,
-        window_controller,
-        config,
-        area,
-        shared_from_this(),
-        nullptr,
-        false);
-    floating_trees.push_back(floating);
-    return floating;
 }
 
 bool Workspace::move_container(miracle::Direction direction, Container& container)
@@ -455,8 +421,7 @@ Workspace::MoveResult Workspace::handle_move(Container& from, Direction directio
             config,
             get_output_area(output.lock()),
             shared_from_this(),
-            nullptr,
-            true);
+            nullptr);
         after_root_lane->set_layout(new_layout_direction);
         after_root_lane->add_child(root(), 0);
         root_ = after_root_lane;
@@ -487,7 +452,7 @@ void Workspace::set_output(std::shared_ptr<AbstractOutput> const& new_output)
 
 bool Workspace::is_empty() const
 {
-    return root()->num_children() == 0 && floating_trees.empty() && other_containers.empty();
+    return root()->num_children() == 0 && other_containers.empty();
 }
 
 void Workspace::graft(std::shared_ptr<Container> const& container)
@@ -495,20 +460,6 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
     if (container->plugin_handle().has_value() || std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
     {
         add_other_container(container);
-    }
-    else if (auto const parent = Container::as_parent(container))
-    {
-        // When we move a parent to a new workspace, we add it as a floating tree.
-        if (!parent)
-        {
-            mir::log_error("MiralWorkspace::graft: grafting non-parent container");
-            return;
-        }
-
-        parent->set_anchored(false);
-        parent->set_workspace(shared_from_this());
-        floating_trees.push_back(parent);
-        container->set_workspace(shared_from_this());
     }
     else if (auto const leaf = Container::as_leaf(container))
     {
@@ -576,15 +527,6 @@ void Workspace::alpha(float a)
 float Workspace::alpha() const
 {
     return sync.lock()->alpha_;
-}
-
-std::vector<std::shared_ptr<ParentContainer>> Workspace::trees() const
-{
-    std::vector<std::shared_ptr<ParentContainer>> result;
-    result.push_back(root_);
-    for (auto const& floating : floating_trees)
-        result.push_back(floating);
-    return result;
 }
 
 void Workspace::on_animation_start(bool is_hiding)
@@ -670,8 +612,6 @@ void Workspace::remove_other_container(std::shared_ptr<Container> const& contain
 void Workspace::for_each_container(std::function<void(std::shared_ptr<Container> const&)> const& f)
 {
     f(root_);
-    for (auto const& floating : floating_trees)
-        f(floating);
     for (auto const& other : other_containers)
     {
         if (auto const lock = other.lock())
@@ -742,12 +682,15 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
     auto area = root()->get_logical_area();
 
     nlohmann::json floating_nodes = nlohmann::json::array();
-    for (auto const& container : floating_trees)
-        floating_nodes.push_back(container->to_json(is_active_on_output));
-
     nlohmann::json nodes = nlohmann::json::array();
     for (auto const& container : root()->children())
         nodes.push_back(container->to_json(is_active_on_output));
+
+    for (auto const& container : other_containers)
+    {
+        if (auto const locked = container.lock())
+            nodes.push_back(locked->to_json(is_active_on_output));
+    }
 
     auto const num_ = sync.lock()->num_;
     return {

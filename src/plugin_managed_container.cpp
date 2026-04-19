@@ -109,6 +109,56 @@ std::weak_ptr<ParentContainer> PluginManagedContainer::get_parent() const
 
 void PluginManagedContainer::commit_changes()
 {
+    auto wstate = window_sync.lock();
+    auto const w = wstate->window_;
+    auto const render_id = wstate->render_id;
+    wstate.drop();
+
+    auto s = sync.lock();
+    if (!s->next_state)
+        return;
+
+    bool const entering_fullscreen = s->next_state == mir_window_state_fullscreen;
+    bool const leaving_fullscreen = window_controller->get_state(w) == mir_window_state_fullscreen;
+
+    if (entering_fullscreen || leaving_fullscreen)
+    {
+        for_each_observer([this](ContainerListener* observer)
+        {
+            observer->on_container_fullscreen(*this);
+        });
+    }
+
+    window_controller->change_state(w, s->next_state.value());
+
+    if (entering_fullscreen || leaving_fullscreen)
+        update_window_margins(config->get_border_config().size, entering_fullscreen);
+
+    if (render_id.has_value())
+        if (auto const r = rdm.lock())
+            r->needs_outline_change(render_id.value(), !entering_fullscreen);
+
+    s->next_state.reset();
+
+    if (s->next_depth_layer)
+    {
+        miral::WindowSpecification spec;
+        spec.depth_layer() = s->next_depth_layer.value();
+        window_controller->modify(w, spec);
+        s->next_depth_layer.reset();
+    }
+
+    auto const saved_area = s->pre_fullscreen_area;
+    bool const restoring = !entering_fullscreen;
+    s.drop();
+
+    if (restoring && saved_area)
+    {
+        window_controller->set_rectangle(w, get_visible_area(), saved_area.value(), true);
+        sync.lock()->pre_fullscreen_area.reset();
+    }
+
+    constrain();
 }
 
 void PluginManagedContainer::set_parent(std::shared_ptr<ParentContainer> const&)
@@ -141,7 +191,24 @@ void PluginManagedContainer::handle_ready()
 
 void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)
 {
-    window_controller->modify(window_sync.lock()->window_, specification);
+    auto const w = window_sync.lock()->window_;
+    auto mods = specification;
+    if (mods.state().is_set())
+    {
+        auto const new_state = mods.state().value();
+        bool const is_resize_state = new_state == mir_window_state_maximized
+            || new_state == mir_window_state_horizmaximized
+            || new_state == mir_window_state_vertmaximized
+            || new_state == mir_window_state_fullscreen;
+        bool const allowed = window_sync.lock()->resizable_ && window_sync.lock()->movable_;
+        if (is_resize_state && !allowed)
+            window_controller->change_state(w, mir_window_state_restored);
+        else
+            window_controller->change_state(w, new_state);
+        mods.state().consume();
+        constrain();
+    }
+    window_controller->modify(w, mods);
 }
 
 void PluginManagedContainer::handle_request_move(MirInputEvent const*)
@@ -155,23 +222,83 @@ void PluginManagedContainer::handle_raise()
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 
-bool PluginManagedContainer::resize(Direction, int)
+void PluginManagedContainer::on_focus_gained()
 {
-    if (!window_sync.lock()->resizable_)
-        return false;
-    return false;
+    WindowContainer::on_focus_gained();
+    window_controller->raise(window_sync.lock()->window_);
 }
 
-bool PluginManagedContainer::set_size(std::optional<int> const&, std::optional<int> const&)
+bool PluginManagedContainer::resize(Direction direction, int pixels)
 {
     if (!window_sync.lock()->resizable_)
         return false;
-    return false;
+
+    auto const area = get_logical_area();
+    int new_x = area.top_left.x.as_int();
+    int new_y = area.top_left.y.as_int();
+    int new_w = area.size.width.as_int();
+    int new_h = area.size.height.as_int();
+
+    switch (direction)
+    {
+    case Direction::right:
+        new_w += pixels;
+        break;
+    case Direction::left:
+        new_w -= pixels;
+        break;
+    case Direction::down:
+        new_h += pixels;
+        break;
+    case Direction::up:
+        new_h -= pixels;
+        break;
+    default:
+        return false;
+    }
+
+    set_logical_area(geom::Rectangle(geom::Point(new_x, new_y), geom::Size(new_w, new_h)), true);
+    return true;
+}
+
+bool PluginManagedContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
+{
+    if (!window_sync.lock()->resizable_)
+        return false;
+
+    auto area = get_logical_area();
+    area.size = {
+        width.value_or(area.size.width.as_int()),
+        height.value_or(area.size.height.as_int())
+    };
+    set_logical_area(area, true);
+    return true;
 }
 
 bool PluginManagedContainer::toggle_fullscreen()
 {
-    return false;
+    {
+        auto ws = window_sync.lock();
+        if (!ws->resizable_ || !ws->movable_)
+            return false;
+    }
+
+    {
+        auto s = sync.lock();
+        if (is_fullscreen())
+        {
+            s->next_state = mir_window_state_restored;
+            s->next_depth_layer = mir_depth_layer_application;
+        }
+        else
+        {
+            s->pre_fullscreen_area = get_logical_area();
+            s->next_state = mir_window_state_fullscreen;
+            s->next_depth_layer = mir_depth_layer_above;
+        }
+    }
+    commit_changes();
+    return true;
 }
 
 void PluginManagedContainer::request_horizontal_layout()
@@ -243,7 +370,7 @@ bool PluginManagedContainer::is_focused() const
 
 bool PluginManagedContainer::is_fullscreen() const
 {
-    return false;
+    return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_fullscreen;
 }
 
 bool PluginManagedContainer::select_next(Direction)

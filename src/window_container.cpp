@@ -198,6 +198,18 @@ void miracle::WindowContainer::rerender()
     }
 }
 
+void miracle::WindowContainer::update_window_margins(int border_size, bool entering_fullscreen)
+{
+    int const margin = entering_fullscreen ? 0 : border_size;
+    auto const w = window_sync.lock()->window_;
+    auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
+    surface->set_window_margins(
+        mir::geometry::DeltaY { margin },
+        mir::geometry::DeltaX { margin },
+        mir::geometry::DeltaY { margin },
+        mir::geometry::DeltaX { margin });
+}
+
 bool miracle::WindowContainer::needs_outline() const
 {
     return true;

@@ -51,16 +51,9 @@ public:
     /// \param end the position that the workspace will end up at.
     virtual void hide(mir::geometry::Point const& end) = 0;
 
-    virtual void transfer_pinned_windows_to(std::shared_ptr<AbstractWorkspace> const& other) = 0;
-
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.
     virtual bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const = 0;
-
-    /// Creates a new floating tree on this workspace. The tree is empty by default
-    /// and must be filled in by subsequent calls, lest it become a zombie tree with
-    /// zero sub containers.
-    virtual std::shared_ptr<ParentContainer> create_floating_tree(mir::geometry::Rectangle const& area) = 0;
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
@@ -103,11 +96,6 @@ public:
     ///
     /// \returns the alpha value
     virtual float alpha() const = 0;
-
-    /// Returns a list of the trees on this workspace.
-    ///
-    /// \returns a list of trees
-    [[nodiscard]] virtual std::vector<std::shared_ptr<ParentContainer>> trees() const = 0;
 
     /// Returns the container that is implicitly being used as a reference to add
     /// new containers to this workspace.

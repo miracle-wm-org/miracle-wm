@@ -105,9 +105,86 @@ TEST_F(FreestyleWindowContainerTest, AnchoredReturnsFalse)
 
 // ---- fullscreen ----
 
-TEST_F(FreestyleWindowContainerTest, IsFullscreenReturnsFalse)
+TEST_F(FreestyleWindowContainerTest, IsFullscreenReturnsFalseByDefault)
 {
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
     EXPECT_FALSE(container_with_border->is_fullscreen());
+}
+
+TEST_F(FreestyleWindowContainerTest, IsFullscreenReturnsTrueWhenStateIsFullscreen)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_fullscreen));
+    EXPECT_TRUE(container_with_border->is_fullscreen());
+}
+
+TEST_F(FreestyleWindowContainerTest, ToggleFullscreenReturnsTrueAndCallsChangeState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_fullscreen)).Times(1);
+    EXPECT_TRUE(container_with_border->toggle_fullscreen());
+}
+
+TEST_F(FreestyleWindowContainerTest, ToggleFullscreenWhenAlreadyFullscreenRestores)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_fullscreen));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    EXPECT_TRUE(container_with_border->toggle_fullscreen());
+}
+
+TEST_F(FreestyleWindowContainerTest, ToggleFullscreenNotifiesObserver)
+{
+    class Listener : public NullContainerListener
+    {
+    public:
+        MOCK_METHOD(void, on_container_fullscreen, (Container const&), (override));
+    };
+
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
+    auto listener = std::make_shared<Listener>();
+    container_with_border->register_interest(listener);
+    EXPECT_CALL(*listener, on_container_fullscreen(_)).Times(1);
+    container_with_border->toggle_fullscreen();
+}
+
+TEST_F(FreestyleWindowContainerTest, ToggleFullscreenRestoresAreaWhenLeavingFullscreen)
+{
+    // First call: window at (100,200) 400x300 → goes fullscreen, saves area
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
+    container_with_border->toggle_fullscreen();
+
+    // Second call: window is now fullscreen → restore; set_rectangle should use saved area
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_fullscreen));
+    EXPECT_CALL(*window_controller, set_rectangle(window, _, Truly([](geom::Rectangle const& r)
+    {
+        return r.top_left == geom::Point { 100, 200 }
+        && r.size == geom::Size { 400, 300 };
+    }),
+                                        _))
+        .Times(1);
+    container_with_border->toggle_fullscreen();
+}
+
+TEST_F(FreestyleWindowContainerTest, ConstrainCallsNoclipWhenFullscreen)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_fullscreen));
+    EXPECT_CALL(*window_controller, noclip(window)).Times(1);
+    container_with_border->constrain();
+}
+
+TEST_F(FreestyleWindowContainerTest, HandleModifyWithStateChangeCallsChangeState)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_fullscreen)).Times(1);
+    container_with_border->handle_modify(spec);
 }
 
 // ---- workspace ----

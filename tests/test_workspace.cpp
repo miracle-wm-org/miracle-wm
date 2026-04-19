@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "compositor_state.h"
 #include "leaf_container.h"
+#include "mock_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_shell_application_spawner.h"
@@ -30,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 #include "workspace.h"
 #include "workspace_observer.h"
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -381,4 +383,53 @@ TEST_F(WorkspaceTest, NotifiesWhenEmpty)
     auto const leaf = create_leaf();
     EXPECT_CALL(*observer, on_workspace_empty);
     workspace->delete_container(leaf);
+}
+
+// ---- floating container (other_containers) lifecycle ----
+
+TEST_F(WorkspaceTest, AddOtherContainer_MakesWorkspaceNonEmpty)
+{
+    auto container = std::make_shared<NiceMock<test::MockContainer>>();
+    EXPECT_TRUE(workspace->is_empty());
+    workspace->add_other_container(container);
+    EXPECT_FALSE(workspace->is_empty());
+}
+
+TEST_F(WorkspaceTest, RemoveOtherContainer_EmptiesWorkspaceWhenTilingRootAlsoEmpty)
+{
+    auto container = std::make_shared<NiceMock<test::MockContainer>>();
+    workspace->add_other_container(container);
+    workspace->remove_other_container(container);
+    EXPECT_TRUE(workspace->is_empty());
+}
+
+TEST_F(WorkspaceTest, DeleteOtherContainer_NotifiesEmpty)
+{
+    class Observer : public NullWorkspaceObserver
+    {
+    public:
+        MOCK_METHOD(void, on_workspace_empty, (uint32_t), (override));
+    };
+
+    auto const observer = std::make_shared<Observer>();
+    registry->register_interest(observer);
+
+    auto container = std::make_shared<NiceMock<test::MockContainer>>();
+    workspace->add_other_container(container);
+
+    EXPECT_CALL(*observer, on_workspace_empty);
+    workspace->delete_container(container);
+}
+
+TEST_F(WorkspaceTest, IsEmpty_FalseWhenTiledWindowExistsAlongsideOtherContainer)
+{
+    auto leaf = create_leaf();
+    auto container = std::make_shared<NiceMock<test::MockContainer>>();
+    workspace->add_other_container(container);
+    EXPECT_FALSE(workspace->is_empty());
+}
+
+TEST_F(WorkspaceTest, IsEmpty_TrueInitially)
+{
+    EXPECT_TRUE(workspace->is_empty());
 }

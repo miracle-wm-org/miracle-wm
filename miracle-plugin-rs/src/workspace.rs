@@ -15,8 +15,6 @@ pub struct Workspace {
     pub number: Option<u32>,
     /// The workspace name (if set).
     pub name: Option<String>,
-    /// The number of container trees in this workspace.
-    pub num_trees: u32,
     /// The current area of the workspace.
     pub rectangle: Rectangle,
     internal: u64,
@@ -41,7 +39,6 @@ impl Workspace {
             } else {
                 None
             },
-            num_trees: value.num_trees,
             internal: value.internal,
             rectangle: Rectangle {
                 x: value.position.x,
@@ -86,16 +83,11 @@ impl Workspace {
     /// Get a tree from the workspace by index.
     ///
     /// Returns `None` if the index is out of bounds.
-    pub fn tree_at(&self, index: u32) -> Option<Container> {
-        if index >= self.num_trees {
-            return None;
-        }
-
+    pub fn tree(&self) -> Option<Container> {
         let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
         unsafe {
             let result = miracle_workspace_get_tree(
                 self.internal as i64,
-                index,
                 container.as_mut_ptr() as i32,
             );
 
@@ -106,12 +98,5 @@ impl Workspace {
             let container = container.assume_init();
             Some(Container::from(container))
         }
-    }
-
-    /// Get all trees from the workspace.
-    pub fn trees(&self) -> Vec<Container> {
-        (0..self.num_trees)
-            .filter_map(|i| self.tree_at(i))
-            .collect()
     }
 }

@@ -926,6 +926,9 @@ bool CommandController::move_container_to_workspace(
     std::shared_ptr<Container> const& container,
     std::function<std::shared_ptr<AbstractOutput>()> const& request)
 {
+    if (!container->get_output())
+        return false;
+
     container->get_output()->delete_container(container);
     state->unfocus_container(container);
     if (auto const target = request())
@@ -957,7 +960,8 @@ bool CommandController::try_move_to_workspace(std::vector<ContainerScope> const&
 
     for (auto const& container : containers)
     {
-        if (container->get_workspace()->num() == number)
+        auto const workspace = container->get_workspace();
+        if (!workspace || workspace->num() == number)
             continue;
 
         move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
@@ -993,7 +997,8 @@ bool CommandController::try_move_to_workspace_named(std::vector<ContainerScope> 
 
     for (auto const& container : containers)
     {
-        if (container->get_workspace()->name() == name)
+        auto const workspace = container->get_workspace();
+        if (!workspace || workspace->name() == name)
             continue;
 
         move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
@@ -1029,7 +1034,8 @@ bool CommandController::try_move_to_current_workspace(std::vector<ContainerScope
 
     for (auto const& container : containers)
     {
-        if (container->get_workspace() == focused->active())
+        auto const workspace = container->get_workspace();
+        if (!workspace || workspace == focused->active())
             continue;
 
         move_container_to_workspace(container, [&]() -> std::shared_ptr<AbstractOutput>
@@ -1182,11 +1188,13 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const new_container = create_container(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
             new_container->handle_ready();
             auto const& output_area = focused_output->get_area();
-            auto const gap_x = output_area.size.width.as_int() / 4;
-            auto const gap_y = output_area.size.height.as_int() / 4;
+            auto constexpr floated_size = 0.85f;
+            auto constexpr gap_size = 1.f - floated_size;
+            auto const gap_x = output_area.size.width.as_int() * gap_size / 2.f;
+            auto const gap_y = output_area.size.height.as_int() * gap_size / 2.f;
             new_container->set_logical_area(geom::Rectangle {
-                                                geom::Point { output_area.top_left.x.as_int() + gap_x, output_area.top_left.y.as_int() + gap_y },
-                                                geom::Size { output_area.size.width.as_int() / 2,     output_area.size.height.as_int() / 2    }
+                                                geom::Point { output_area.top_left.x.as_int() + gap_x,        output_area.top_left.y.as_int() + gap_y         },
+                                                geom::Size { output_area.size.width.as_int() * floated_size, output_area.size.height.as_int() * floated_size }
             },
                 true);
         }
@@ -1202,9 +1210,11 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const active = focused_output->active()->get_root();
             auto const new_container = create_container(window_info, AllocationHint { AllocationType::grid, active.get(), workspace.get() });
             new_container->handle_ready();
-            window_controller->select_active_window(new_container->window().value());
 
             // Animate from the floating position to the new grid position.
+            miral::WindowSpecification spec;
+            spec.depth_layer() = mir_depth_layer_application;
+            window_controller->modify(window_info.window(), spec);
             window_controller->set_rectangle(
                 window_info.window(),
                 floating_area,
@@ -1253,13 +1263,29 @@ bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> c
     if (containers.empty())
         return false;
 
-    bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->pinned(!container->pinned()))
-            result = false;
+        if (container->pinned(!container->pinned()))
+        {
+            if (container->pinned())
+            {
+                if (auto const workspace = container->get_workspace())
+                {
+                    workspace->delete_container(container);
+                    container->set_workspace(nullptr);
+                }
+            }
+            else
+            {
+                if (auto const workspace = output_manager->focused()->active())
+                {
+                    workspace->add_other_container(container);
+                    container->set_workspace(workspace);
+                }
+            }
+        }
     }
-    return result;
+    return true;
 }
 
 bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> const& scope)
@@ -1267,17 +1293,34 @@ bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> c
     if (state->mode() != WindowManagerMode::normal)
         return false;
 
-    auto containers = resolve_scope(scope);
+    auto const containers = resolve_scope(scope);
     if (containers.empty())
         return false;
 
-    bool result = true;
     for (auto const& container : containers)
     {
-        if (!container->pinned(pinned))
-            result = false;
+        if (container->pinned(pinned))
+        {
+            if (container->pinned())
+            {
+                if (auto const workspace = container->get_workspace())
+                {
+                    workspace->delete_container(container);
+                    container->set_workspace(nullptr);
+                }
+            }
+            else
+            {
+                if (auto const workspace = output_manager->focused()->active())
+                {
+                    workspace->add_other_container(container);
+                    container->set_workspace(workspace);
+                }
+            }
+        }
     }
-    return result;
+
+    return true;
 }
 
 bool CommandController::toggle_tabbing(std::vector<ContainerScope> const& scope)

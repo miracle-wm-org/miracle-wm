@@ -438,3 +438,32 @@ TEST_F(TwoOutputCommandControllerTest, MoveContainerToWorkspaceOnDifferentOutput
 
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 2, false));
 }
+
+// ---- try_toggle_fullscreen ----
+
+TEST_F(CommandControllerTest, TryToggleFullscreen_CallsToggleOnFocusedContainer)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+
+    EXPECT_CALL(*container, toggle_fullscreen()).WillOnce(Return(true));
+    EXPECT_TRUE(command_controller->try_toggle_fullscreen({}));
+}
+
+TEST_F(CommandControllerTest, TryToggleFullscreen_ReturnsFalse_WhenNoFocusedContainer)
+{
+    // No container added or focused — scope is empty and focused_container() returns nullptr
+    EXPECT_FALSE(command_controller->try_toggle_fullscreen({}));
+}
+
+TEST_F(CommandControllerTest, TryToggleFullscreen_ReturnsFalse_WhenNotInNormalMode)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    state->add(container);
+    state->focus_container(container);
+    state->mode(WindowManagerMode::moving);
+
+    EXPECT_CALL(*container, toggle_fullscreen()).Times(0);
+    EXPECT_FALSE(command_controller->try_toggle_fullscreen({}));
+}

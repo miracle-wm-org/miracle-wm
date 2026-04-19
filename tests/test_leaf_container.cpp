@@ -372,7 +372,7 @@ TEST_F(LeafContainerTest, MatchFloating)
     EXPECT_CALL(*parent, anchored())
         .WillRepeatedly(testing::Return(false));
 
-    EXPECT_TRUE(leaf_container->matches(scope));
+    EXPECT_FALSE(leaf_container->matches(scope));
 }
 
 TEST_F(LeafContainerTest, MatchTiling)
