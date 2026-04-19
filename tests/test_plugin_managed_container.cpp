@@ -213,3 +213,11 @@ TEST_F(PluginManagedContainerTest, HandleModifyAllowsMaximizeWhenResizableAndMov
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_maximized)).Times(1);
     container_resizable_and_movable->handle_modify(spec);
 }
+
+TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotMovable)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_maximized;
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    container_not_movable->handle_modify(spec);
+}
