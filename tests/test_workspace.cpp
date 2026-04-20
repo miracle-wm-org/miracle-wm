@@ -433,3 +433,17 @@ TEST_F(WorkspaceTest, IsEmpty_TrueInitially)
 {
     EXPECT_TRUE(workspace->is_empty());
 }
+
+TEST_F(WorkspaceTest, ToJson_OtherContainerAppearsInFloatingNodes)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json::object()));
+    workspace->add_other_container(container);
+
+    auto const j = workspace->to_json(false);
+    EXPECT_EQ(j["floating_nodes"].size(), 1u);
+    EXPECT_TRUE(j["nodes"].empty());
+}

@@ -689,7 +689,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
     for (auto const& container : other_containers)
     {
         if (auto const locked = container.lock())
-            nodes.push_back(locked->to_json(is_active_on_output));
+            floating_nodes.push_back(locked->to_json(is_active_on_output));
     }
 
     auto const num_ = sync.lock()->num_;
