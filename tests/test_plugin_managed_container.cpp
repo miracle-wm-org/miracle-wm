@@ -221,3 +221,13 @@ TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotMovable)
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
     container_not_movable->handle_modify(spec);
 }
+
+// ---- to_json ----
+
+TEST_F(PluginManagedContainerTest, ToJsonHasCorrectTypeForWaybarCompatibility)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
+    auto const j = container_resizable_and_movable->to_json(false);
+    EXPECT_EQ(j["type"], "floating_con");
+}

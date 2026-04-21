@@ -449,3 +449,16 @@ TEST_F(FreestyleWindowContainerTest, DragStopNotifiesObserver)
     container_with_border->drag(200, 300);
     container_with_border->drag_stop();
 }
+
+// ---- to_json ----
+
+TEST_F(FreestyleWindowContainerTest, ToJsonHasCorrectTypeForWaybarCompatibility)
+{
+    miral::WindowInfo info(window, {});
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_restored));
+    ON_CALL(*window_controller, info_for(window))
+        .WillByDefault(ReturnRef(info));
+    auto const j = container_with_border->to_json(false);
+    EXPECT_EQ(j["type"], "floating_con");
+}

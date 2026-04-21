@@ -523,7 +523,7 @@ nlohmann::json PluginManagedContainer::to_json(bool) const
         { "urgent",               false                                  },
         { "floating_nodes",       std::vector<int>()                     },
         { "sticky",               false                                  },
-        { "type",                 "plugin"                               },
+        { "type",                 "floating_con"                         },
         { "fullscreen_mode",      is_fullscreen() ? 1 : 0                },
         { "pid",                  app->process_id()                      },
         { "app_id",               win_info.application_id()              },
