@@ -7,7 +7,6 @@ description: |
 confinement: classic
 base: core26
 version: 0.0.0
-grade: stable
 
 platforms:
   amd64:
@@ -52,6 +51,7 @@ parts:
       published=`git describe --tags --abbrev=0`
       version=`git describe --tags`
       craftctl set version=$version
+      if echo $mir_version | grep -e '+dev' -e '~rc' -q; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
