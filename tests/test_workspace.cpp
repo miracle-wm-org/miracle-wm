@@ -391,14 +391,14 @@ TEST_F(WorkspaceTest, AddOtherContainer_MakesWorkspaceNonEmpty)
 {
     auto container = std::make_shared<NiceMock<test::MockContainer>>();
     EXPECT_TRUE(workspace->is_empty());
-    workspace->add_other_container(container);
+    workspace->add_other_container(container, false);
     EXPECT_FALSE(workspace->is_empty());
 }
 
 TEST_F(WorkspaceTest, RemoveOtherContainer_EmptiesWorkspaceWhenTilingRootAlsoEmpty)
 {
     auto container = std::make_shared<NiceMock<test::MockContainer>>();
-    workspace->add_other_container(container);
+    workspace->add_other_container(container, false);
     workspace->remove_other_container(container);
     EXPECT_TRUE(workspace->is_empty());
 }
@@ -415,7 +415,7 @@ TEST_F(WorkspaceTest, DeleteOtherContainer_NotifiesEmpty)
     registry->register_interest(observer);
 
     auto container = std::make_shared<NiceMock<test::MockContainer>>();
-    workspace->add_other_container(container);
+    workspace->add_other_container(container, false);
 
     EXPECT_CALL(*observer, on_workspace_empty);
     workspace->delete_container(container);
@@ -425,7 +425,7 @@ TEST_F(WorkspaceTest, IsEmpty_FalseWhenTiledWindowExistsAlongsideOtherContainer)
 {
     auto leaf = create_leaf();
     auto container = std::make_shared<NiceMock<test::MockContainer>>();
-    workspace->add_other_container(container);
+    workspace->add_other_container(container, false);
     EXPECT_FALSE(workspace->is_empty());
 }
 
@@ -441,7 +441,7 @@ TEST_F(WorkspaceTest, ToJson_OtherContainerAppearsInFloatingNodes)
 
     auto container = std::make_shared<NiceMock<test::MockContainer>>();
     ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json::object()));
-    workspace->add_other_container(container);
+    workspace->add_other_container(container, false);
 
     auto const j = workspace->to_json(false);
     EXPECT_EQ(j["floating_nodes"].size(), 1u);

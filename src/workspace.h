@@ -91,7 +91,7 @@ public:
     [[nodiscard]] std::string display_name() const override;
     [[nodiscard]] std::shared_ptr<ParentContainer> get_root() const override;
     ParentContainer* get_layout_container() const override;
-    void add_other_container(std::shared_ptr<Container> const& container) override;
+    void add_other_container(std::shared_ptr<Container> const& container, bool is_active) override;
     void remove_other_container(std::shared_ptr<Container> const& container) override;
 
 private:

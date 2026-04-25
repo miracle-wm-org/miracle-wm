@@ -321,3 +321,54 @@ void WindowManagerToolsWindowController::invoke_under_lock(std::function<void()>
 {
     tools.invoke_under_lock(f);
 }
+
+RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& window)
+{
+    RestoreResult result {
+        .state = get_state(window),
+        .position = window.top_left()
+    };
+    move_to_offscreen_workspace(window);
+    // HACK: Move the window far offscreen to work around an X11 bug where windows
+    // assigned to the offscreen workspace may still be visible. This may be
+    // resolved in a future Mir release.
+    miral::WindowSpecification spec;
+    spec.top_left() = geom::Point { 1000000, 1000000 };
+    tools.modify_window(window, spec);
+    change_state(window, mir_window_state_hidden);
+    return result;
+}
+
+void WindowManagerToolsWindowController::show(miral::Window const& window, RestoreResult const& result)
+{
+    move_to_onscreen_workspace(window);
+    miral::WindowSpecification spec;
+    spec.top_left() = result.position;
+    tools.modify_window(window, spec);
+    auto const restore_state = result.state == mir_window_state_hidden
+        ? mir_window_state_restored
+        : result.state;
+    change_state(window, restore_state);
+}
+
+void WindowManagerToolsWindowController::move_to_offscreen_workspace(miral::Window const& window)
+{
+    if (!offscreen)
+        offscreen = tools.create_workspace();
+
+    if (onscreen)
+        tools.remove_tree_from_workspace(window, onscreen);
+
+    tools.add_tree_to_workspace(window, offscreen);
+}
+
+void WindowManagerToolsWindowController::move_to_onscreen_workspace(miral::Window const& window)
+{
+    if (!onscreen)
+        onscreen = tools.create_workspace();
+
+    if (offscreen)
+        tools.remove_tree_from_workspace(window, offscreen);
+
+    tools.add_tree_to_workspace(window, onscreen);
+}

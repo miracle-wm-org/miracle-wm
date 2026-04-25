@@ -116,7 +116,7 @@ private:
         std::optional<geom::Rectangle> next_logical_area;
         bool next_with_animations = true;
         std::weak_ptr<ParentContainer> parent;
-        std::optional<MirWindowState> before_shown_state;
+        std::optional<RestoreResult> restore_result;
         std::optional<MirWindowState> next_state;
         std::optional<MirDepthLayer> next_depth_layer;
         bool is_dragging_ = false;

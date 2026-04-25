@@ -578,7 +578,7 @@ int32_t PluginBridge::window_set_workspace(uint64_t window_internal, uint64_t wo
     if (auto const old_ws = container->get_workspace())
         old_ws->remove_other_container(container);
 
-    new_ws->add_other_container(container);
+    new_ws->add_other_container(container, output_manager->focused()->active() == new_ws);
     return 0;
 }
 
