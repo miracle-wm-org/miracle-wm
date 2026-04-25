@@ -231,7 +231,7 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
             hint.alpha,
             hint.resizable,
             hint.movable);
-        workspace->add_other_container(container);
+        workspace->add_other_container(container, output_manager->focused()->active() == workspace);
     }
     break;
     case AllocationType::freestyle:
@@ -259,7 +259,7 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
             workspace,
             config,
             has_border);
-        workspace->add_other_container(container);
+        workspace->add_other_container(container, output_manager->focused()->active() == workspace);
 
         spec.min_width() = mir::geometry::Width(0);
         spec.min_height() = mir::geometry::Height(0);
@@ -289,7 +289,11 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
         break;
     }
 
-    container->set_animation_alpha(0.0f);
+    // If we already have a buffer, then we should maintain it being shown on screen.
+    if (!hint.has_buffer)
+    {
+        container->set_animation_alpha(0.0f);
+    }
     spec.userdata() = container;
     window_controller->modify(window_info.window(), spec);
 
@@ -1170,6 +1174,8 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
         if (!focused_output)
             return false;
 
+        animator->remove_by_animation_handle(wc->animation_handle());
+
         // Remove the container from whatever workspace it is on.
         auto const workspace = wc->get_workspace();
         workspace->delete_container(container);
@@ -1179,24 +1185,35 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
         // of cleanup around the `miral::Window` in particular.
         state->remove(wc);
         scratchpad_->remove(wc);
-        animator->remove_by_animation_handle(wc->animation_handle());
 
-        auto const& window_info = window_controller->info_for(wc->window().value());
+        auto& window_info = window_controller->info_for(wc->window().value());
         if (auto const leaf = Container::as_leaf(wc))
         {
             // We are in a grid, let's remove it and make it a freestyle container.
-            auto const new_container = create_container(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get() });
-            new_container->handle_ready();
+            auto const old_area = wc->get_visible_area();
+            auto const new_container = create_container(window_info, AllocationHint { .container_type = AllocationType::freestyle, .workspace = workspace.get(), .has_buffer = true });
+            if (!new_container)
+            {
+                mir::log_error("Cannot float the currently selected window");
+                return false;
+            }
+
             auto const& output_area = focused_output->get_area();
             auto constexpr floated_size = 0.85f;
             auto constexpr gap_size = 1.f - floated_size;
             auto const gap_x = output_area.size.width.as_int() * gap_size / 2.f;
             auto const gap_y = output_area.size.height.as_int() * gap_size / 2.f;
-            new_container->set_logical_area(geom::Rectangle {
-                                                geom::Point { output_area.top_left.x.as_int() + gap_x,        output_area.top_left.y.as_int() + gap_y         },
-                                                geom::Size { output_area.size.width.as_int() * floated_size, output_area.size.height.as_int() * floated_size }
+            miral::WindowSpecification spec;
+            window_controller->modify(window_info.window(), spec);
+            window_controller->set_rectangle(
+                window_info.window(),
+                old_area,
+                geom::Rectangle {
+                    geom::Point { output_area.top_left.x.as_int() + gap_x,        output_area.top_left.y.as_int() + gap_y         },
+                    geom::Size { output_area.size.width.as_int() * floated_size, output_area.size.height.as_int() * floated_size }
             },
                 true);
+            window_controller->select_active_window(new_container->window().value());
         }
         else
         {
@@ -1208,8 +1225,14 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const floating_area = wc->get_visible_area();
 
             auto const active = focused_output->active()->get_root();
-            auto const new_container = create_container(window_info, AllocationHint { AllocationType::grid, active.get(), workspace.get() });
-            new_container->handle_ready();
+            auto hint = AllocationHint { AllocationType::grid, active.get(), workspace.get() };
+            hint.has_buffer = true;
+            auto const new_container = create_container(window_info, hint);
+            if (!new_container)
+            {
+                mir::log_error("Cannot unfloat the currently selected window");
+                return false;
+            }
 
             // Animate from the floating position to the new grid position.
             miral::WindowSpecification spec;
@@ -1279,7 +1302,7 @@ bool CommandController::toggle_pinned_to_workspace(std::vector<ContainerScope> c
             {
                 if (auto const workspace = output_manager->focused()->active())
                 {
-                    workspace->add_other_container(container);
+                    workspace->add_other_container(container, true);
                     container->set_workspace(workspace);
                 }
             }
@@ -1313,7 +1336,7 @@ bool CommandController::set_is_pinned(bool pinned, std::vector<ContainerScope> c
             {
                 if (auto const workspace = output_manager->focused()->active())
                 {
-                    workspace->add_other_container(container);
+                    workspace->add_other_container(container, true);
                     container->set_workspace(workspace);
                 }
             }

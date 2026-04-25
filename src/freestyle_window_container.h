@@ -20,10 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "synchronized_recursive.h"
 #include "window_container.h"
+#include "window_controller.h"
 
 namespace miracle
 {
-class WindowController;
 class CompositorState;
 class Config;
 
@@ -103,7 +103,7 @@ private:
     struct State
     {
         std::weak_ptr<AbstractWorkspace> workspace_;
-        std::optional<MirWindowState> cached_state;
+        std::optional<RestoreResult> restore_result;
         std::optional<MirWindowState> next_state;
         std::optional<geom::Rectangle> pre_fullscreen_area;
         std::optional<MirDepthLayer> next_depth_layer;

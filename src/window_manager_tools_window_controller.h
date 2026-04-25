@@ -23,6 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 #include <miral/window_manager_tools.h>
 
+namespace miral
+{
+class Workspace;
+}
+
 namespace miracle
 {
 class CompositorState;
@@ -60,6 +65,10 @@ public:
     miral::Window window_at(float x, float y) override;
     void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&) override;
     void invoke_under_lock(std::function<void()> const& f) override;
+    void move_to_offscreen_workspace(miral::Window const&) override;
+    void move_to_onscreen_workspace(miral::Window const&) override;
+    RestoreResult hide(miral::Window const&) override;
+    void show(miral::Window const&, RestoreResult const&) override;
 
 private:
     miral::WindowManagerTools tools;
@@ -69,6 +78,9 @@ private:
     std::shared_ptr<CompositorState> state;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowIdMap> window_id_map;
+
+    std::shared_ptr<miral::Workspace> onscreen;
+    std::shared_ptr<miral::Workspace> offscreen;
 };
 }
 

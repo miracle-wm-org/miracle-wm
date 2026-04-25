@@ -47,17 +47,18 @@ FreestyleWindowContainer::FreestyleWindowContainer(
 void FreestyleWindowContainer::show()
 {
     auto const w = window_sync.lock()->window_;
-    auto show_state = sync.lock()->cached_state.value_or(mir_window_state_restored);
-    if (show_state == mir_window_state_hidden)
-        show_state = mir_window_state_restored;
-    window_controller->change_state(w, show_state);
+    auto restore = sync.lock()->restore_result;
+    sync.lock()->restore_result.reset();
+    if (restore)
+        window_controller->show(w, restore.value());
+    else
+        window_controller->show(w, { mir_window_state_restored, w.top_left() });
 }
 
 void FreestyleWindowContainer::hide()
 {
     auto const w = window_sync.lock()->window_;
-    sync.lock()->cached_state = window_controller->info_for(w).state();
-    window_controller->change_state(w, mir_window_state_hidden);
+    sync.lock()->restore_result = window_controller->hide(w);
 }
 
 geom::Rectangle FreestyleWindowContainer::get_logical_area() const
@@ -79,10 +80,7 @@ geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 void FreestyleWindowContainer::constrain()
 {
     auto const w = window_sync.lock()->window_;
-    if (is_fullscreen() || sync.lock()->is_dragging_)
-        window_controller->noclip(w);
-    else
-        window_controller->clip(w, get_visible_area());
+    window_controller->noclip(w);
 }
 
 std::weak_ptr<ParentContainer> FreestyleWindowContainer::get_parent() const

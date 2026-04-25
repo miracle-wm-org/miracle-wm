@@ -106,12 +106,6 @@ public:
         if (old)
         {
             auto const& last_workspace = policy.workspace_manager->workspace(old.value());
-            if (!last_workspace)
-            {
-                mir::log_error("Policy::Self::on_focused missing last workspace");
-                return;
-            }
-
             auto const& next_workspace = policy.workspace_manager->workspace(next);
             if (!next_workspace)
             {
@@ -119,7 +113,7 @@ public:
                 return;
             }
 
-            if (last_workspace->get_output() != next_workspace->get_output())
+            if (last_workspace && last_workspace->get_output() != next_workspace->get_output())
                 policy.command_controller->move_cursor_to_output(*next_workspace->get_output());
         }
 

@@ -209,7 +209,7 @@ void Workspace::show(geom::Point const& origin)
 {
     if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
-        on_animation_end(false);
+        on_animation_start(false);
         return;
     }
 
@@ -459,7 +459,8 @@ void Workspace::graft(std::shared_ptr<Container> const& container)
 {
     if (container->plugin_handle().has_value() || std::dynamic_pointer_cast<FreestyleWindowContainer>(container))
     {
-        add_other_container(container);
+        // TODO: Assuming that this is always called on the active workspace
+        add_other_container(container, true);
     }
     else if (auto const leaf = Container::as_leaf(container))
     {
@@ -531,20 +532,20 @@ float Workspace::alpha() const
 
 void Workspace::on_animation_start(bool is_hiding)
 {
-    // HACK: miral will try to select a newly visible window if none is currently
-    // selected. In most instances, we do not want this, as we would rather
-    // select our [last_selected_container] instead. To work around this, we set
-    // a flag that tells miral not to select the last focused container while we
-    // are in the process of becoming visible.
-    sync.lock()->is_showing = true;
-    for_each_container([](auto const& container)
-    {
-        container->show();
-    });
-    sync.lock()->is_showing = false;
-
     if (!is_hiding)
     {
+        // HACK: miral will try to select a newly visible window if none is currently
+        // selected. In most instances, we do not want this, as we would rather
+        // select our [last_selected_container] instead. To work around this, we set
+        // a flag that tells miral not to select the last focused container while we
+        // are in the process of becoming visible.
+        sync.lock()->is_showing = true;
+        for_each_container([](auto const& container)
+        {
+            container->show();
+        });
+        sync.lock()->is_showing = false;
+
         if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
         {
             if (sh_last_selected->window().has_value())
@@ -552,7 +553,7 @@ void Workspace::on_animation_start(bool is_hiding)
             return;
         }
 
-        for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+        if (!for_each_window([&](std::shared_ptr<WindowContainer> const& container)
         {
             if (container->window().has_value())
             {
@@ -561,7 +562,10 @@ void Workspace::on_animation_start(bool is_hiding)
             }
 
             return false;
-        });
+        }))
+        {
+            window_controller->select_active_window({});
+        }
     }
 }
 
@@ -591,11 +595,11 @@ ParentContainer* Workspace::get_layout_container() const
     return parent.get();
 }
 
-void Workspace::add_other_container(std::shared_ptr<Container> const& container)
+void Workspace::add_other_container(std::shared_ptr<Container> const& container, bool is_active)
 {
     container->set_workspace(shared_from_this());
     other_containers.push_back(container);
-    if (sync.lock()->is_showing)
+    if (is_active)
         container->show();
     else
         container->hide();
@@ -611,7 +615,9 @@ void Workspace::remove_other_container(std::shared_ptr<Container> const& contain
 
 void Workspace::for_each_container(std::function<void(std::shared_ptr<Container> const&)> const& f)
 {
-    f(root_);
+    if (root_)
+        f(root_);
+
     for (auto const& other : other_containers)
     {
         if (auto const lock = other.lock())

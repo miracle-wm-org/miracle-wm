@@ -396,23 +396,18 @@ bool LeafContainer::set_size(std::optional<int> const& width, std::optional<int>
 
 void LeafContainer::show()
 {
-    {
-        auto s = sync.lock();
-        s->next_state = s->before_shown_state;
-        s->before_shown_state.reset();
-    }
-    commit_changes();
-    window_controller->raise(window_sync.lock()->window_);
+    auto const w = window_sync.lock()->window_;
+    auto restore = sync.lock()->restore_result;
+    sync.lock()->restore_result.reset();
+    if (restore)
+        window_controller->show(w, restore.value());
+    window_controller->raise(w);
 }
 
 void LeafContainer::hide()
 {
     auto const w = window_sync.lock()->window_;
-    auto s = sync.lock();
-    s->before_shown_state = window_controller->get_state(w);
-    s->next_state = mir_window_state_hidden;
-    s.drop();
-    commit_changes();
+    sync.lock()->restore_result = window_controller->hide(w);
     window_controller->send_to_back(w);
 }
 

@@ -31,6 +31,12 @@ namespace miracle
 class Container;
 class WindowContainer;
 
+struct RestoreResult
+{
+    MirWindowState state;
+    geom::Point position;
+};
+
 /**
  * The sole interface for making changes to a window. This interface allows
  * all interactions with a window to be testable.
@@ -59,6 +65,10 @@ public:
     virtual miral::Window window_at(float x, float y) = 0;
     virtual void process_animation(AnimationFrameResult const&, std::shared_ptr<Container> const&) = 0;
     virtual void invoke_under_lock(std::function<void()> const& f) = 0;
+    virtual void move_to_offscreen_workspace(miral::Window const&) = 0;
+    virtual void move_to_onscreen_workspace(miral::Window const&) = 0;
+    virtual RestoreResult hide(miral::Window const&) = 0;
+    virtual void show(miral::Window const&, RestoreResult const&) = 0;
 };
 
 }

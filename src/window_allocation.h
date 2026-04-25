@@ -58,6 +58,7 @@ struct AllocationHint
     float alpha = 1.f;
     bool resizable = true;
     bool movable = true;
+    bool has_buffer = false;
 };
 }
 
