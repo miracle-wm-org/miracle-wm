@@ -41,15 +41,24 @@ def visual_server():
     ])
     socket = ""
     marker = "Listening to IPC socket on path: "
-    with process.stdout:
-        for line in iter(process.stdout.readline, b""):
-            data = line.decode("utf-8").strip()
-            if marker in data:
-                i = data.index(marker) + len(marker)
-                socket = data[i:].strip()
-                break
+    startup_output = []
 
-        yield Server(socket, env["WAYLAND_DISPLAY"])
+    for line in iter(process.stdout.readline, b""):
+        data = line.decode("utf-8").strip()
+        startup_output.append(data)
+        if marker in data:
+            i = data.index(marker) + len(marker)
+            socket = data[i:].strip()
+            break
 
-        process.terminate()
-        return
+    if not socket:
+        process.wait()
+        output = "\n".join(startup_output)
+        pytest.fail(
+            f"miracle-wm failed to start (exit {process.returncode}).\n{output}"
+        )
+
+    yield Server(socket, env["WAYLAND_DISPLAY"])
+
+    process.terminate()
+    process.stdout.close()

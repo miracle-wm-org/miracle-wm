@@ -92,6 +92,10 @@ jobs:
     - name: Install
       run: podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
 
+    - name: Verify DRI devices in container
+      run: |
+        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/ && stat /dev/dri/card0"
+
     - name: Install Python visual test deps
       run: |
         podman exec ${{ env.CONTAINER }} bash -c "
