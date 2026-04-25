@@ -90,7 +90,9 @@ jobs:
       run: podman exec ${{ env.CONTAINER }} cmake --build /workspace/build --config ${{ env.BUILD_TYPE }}
 
     - name: Install
-      run: podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
+      run: |
+        podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
+        podman exec ${{ env.CONTAINER }} ldconfig
 
     - name: Verify DRI devices in container
       run: |
