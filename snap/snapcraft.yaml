@@ -5,7 +5,7 @@ description: |
   miracle-wm is a Wayland compositor based off the Mir library
   that provides a tiling-window manager.
 confinement: classic
-base: core24
+base: core26
 version: 0.0.0
 grade: stable
 
@@ -57,7 +57,6 @@ parts:
       - -DSNAP_BUILD=ON
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
-      - -DFEATURE_PLUGIN_SYSTEM=0
     source: .
     override-build: |
       apt-get install -y libmirrenderer-dev || true
@@ -93,6 +92,7 @@ parts:
       - libgmock-dev
       - libboost-filesystem-dev
       - libboost-system-dev
+      - libwasmedge-dev
     stage-packages:
       - libmiral7
       - mir-graphics-drivers-desktop
@@ -103,6 +103,7 @@ parts:
       - python3-dbus-next
       - libgl1-mesa-dri
       - libdrm-nouveau2
+      - libwasmedge0
     prime:
       - -lib/udev
       - -usr/doc
