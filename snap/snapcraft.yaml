@@ -67,7 +67,6 @@ parts:
     build-packages:
       - pkg-config
       - libmiral-dev
-      - libmircommon-internal-dev
       - libmircommon-dev
       - libmirserver-internal-dev
       - mirtest-dev
