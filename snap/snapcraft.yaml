@@ -6,6 +6,8 @@ description: |
   that provides a tiling-window manager.
 confinement: classic
 base: core26
+build-base: devel
+grade: devel
 version: 0.0.0
 
 platforms:
@@ -61,7 +63,7 @@ parts:
     override-build: |
       apt-get install -y libmirrenderer-dev || true
       apt-get install -y mir-renderer-gl-dev || true
-      snapcraftctl build
+      craftctl default
     build-packages:
       - pkg-config
       - libmiral-dev
