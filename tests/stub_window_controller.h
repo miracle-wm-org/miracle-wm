@@ -143,6 +143,11 @@ public:
         f();
     }
 
+    void move_to_offscreen_workspace(miral::Window const&) override { }
+    void move_to_onscreen_workspace(miral::Window const&) override { }
+    miracle::RestoreResult hide(miral::Window const&) override { return { mir_window_state_restored, {} }; }
+    void show(miral::Window const&, miracle::RestoreResult const&) override { }
+
 private:
     std::vector<StubWindowData>& pairs;
     miral::WindowInfo stub_win_info;

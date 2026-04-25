@@ -80,7 +80,10 @@ geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 void FreestyleWindowContainer::constrain()
 {
     auto const w = window_sync.lock()->window_;
-    window_controller->noclip(w);
+    if (is_fullscreen() || !has_border_)
+        window_controller->noclip(w);
+    else
+        window_controller->clip(w, get_visible_area());
 }
 
 std::weak_ptr<ParentContainer> FreestyleWindowContainer::get_parent() const
