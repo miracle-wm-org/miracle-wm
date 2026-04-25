@@ -53,7 +53,6 @@ parts:
       published=`git describe --tags --abbrev=0`
       version=`git describe --tags`
       craftctl set version=$version
-      if echo $mir_version | grep -e '+dev' -e '~rc' -q; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
