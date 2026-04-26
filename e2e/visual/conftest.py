@@ -1,10 +1,20 @@
 import pytest
 import subprocess
+import threading
 from subprocess import Popen, PIPE, STDOUT
 import os
 from pathlib import Path
 
 SCREENSHOT_DIR = Path(os.environ.get("MIRACLE_SCREENSHOT_DIR", "/tmp/miracle-screenshots"))
+
+
+def _drain_pipe(pipe):
+    """Discard process output to prevent the pipe buffer filling and blocking the compositor's event loop."""
+    try:
+        while pipe.readline():
+            pass
+    except Exception:
+        pass
 
 
 class Server:
@@ -57,6 +67,8 @@ def visual_server():
         pytest.fail(
             f"miracle-wm failed to start (exit {process.returncode}).\n{output}"
         )
+
+    threading.Thread(target=_drain_pipe, args=(process.stdout,), daemon=True).start()
 
     yield Server(socket, env["WAYLAND_DISPLAY"])
 

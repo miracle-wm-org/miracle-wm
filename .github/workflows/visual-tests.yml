@@ -69,7 +69,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -yq libmirrenderer-dev || true
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             mir-platform-graphics-virtual xwayland \
-            mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess weston
+            mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
         "
 
     - name: Install Rust
