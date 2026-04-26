@@ -436,7 +436,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
     auto const make = output_config.display_info.vendor.value_or("Unknown");
     auto const model = output_config.display_info.model.value_or("Unknown");
-    auto const serial = output_config.display_info.serial.value_or("0x00000000");
+    auto const serial = output_config.display_info.serial.value_or("Unknown");
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
@@ -542,7 +542,7 @@ nlohmann::json Output::get_outputs_json(bool) const
 
     auto const make = output_config.display_info.vendor.value_or("Unknown");
     auto const model = output_config.display_info.model.value_or("Unknown");
-    auto const serial = output_config.display_info.serial.value_or("0x00000000");
+    auto const serial = output_config.display_info.serial.value_or("Unknown");
 
     return {
         { "name",             lock->name_                                   },

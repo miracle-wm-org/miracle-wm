@@ -23,7 +23,7 @@ class TestMoveCommand:
         sleep(1)
 
         conn.command("workspace 2")
-        p2 = server.open_app("gnome-calculator")
+        p2 = server.open_app("gnome-chess")
         sleep(1)
 
         conn.command("move window to workspace next")

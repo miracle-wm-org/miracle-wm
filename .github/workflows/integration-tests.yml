@@ -1,4 +1,4 @@
-name: Build & Test - Ubuntu
+name: Integration Tests
 
 on:
   push:
@@ -8,19 +8,14 @@ on:
 
 env:
   BUILD_TYPE: Debug
-  CONTAINER: miracle-build
+  CONTAINER: miracle-visual
 
 jobs:
 
-  build-and-test:
-    strategy:
-      matrix:
-        ppa: [release, rc]
-        compiler: [gcc, clang]
-
+  visual-tests:
     runs-on: ubuntu-24.04
-    name: Ubuntu Build & Test
-    timeout-minutes: 30
+    name: Visual Integration Tests
+    timeout-minutes: 45
 
     steps:
     - uses: actions/checkout@v3
@@ -30,13 +25,12 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y podman
 
-    - name: Start Ubuntu 25.10 container
+    - name: Start Ubuntu 26.04 container
       run: |
         podman run -d --name ${{ env.CONTAINER }} \
-          --privileged \
           -v ${{ github.workspace }}:/workspace:z \
           --workdir /workspace \
-          ubuntu:25.10 \
+          ubuntu:26.04 \
           sleep infinity
 
     - name: Add PPA
@@ -45,7 +39,7 @@ jobs:
           set -e
           apt-get update -q
           apt-get install -yq software-properties-common
-          add-apt-repository ppa:mir-team/${{ matrix.ppa }}
+          add-apt-repository ppa:mir-team/release
           apt-get update -q
         "
 
@@ -54,17 +48,17 @@ jobs:
         podman exec ${{ env.CONTAINER }} bash -c "
           set -e
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-            gcc g++ clang libclang-dev cmake ninja-build python3 curl \
+            gcc g++ cmake ninja-build python3 python3-venv curl \
             libmiral-dev libmircommon-dev libmirserver-internal-dev \
             libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev \
             libnotify-dev pcre2-utils libmiroil-dev libmirplatform-dev libgles2-mesa-dev \
             libmirwayland-dev libjson-c-dev libgmock-dev mirtest-dev mirtest-internal-dev \
             mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-            libwasmedge-dev
+            libwasmedge-dev grim
           DEBIAN_FRONTEND=noninteractive apt-get install -yq libmirrenderer-dev || true
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             mir-platform-graphics-virtual xwayland \
-            mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
+            mir-platform-rendering-egl-generic gedit gnome-chess
         "
 
     - name: Install Rust
@@ -78,40 +72,56 @@ jobs:
 
     - name: Configure CMake
       run: |
-        EXTRA_FLAGS=""
-        if [ "${{ matrix.ppa }}" = "dev" ]; then
-          EXTRA_FLAGS="$EXTRA_FLAGS -DCOMPILING_AGAINST_DEV=1"
-        fi
-        if [ "${{ matrix.compiler }}" = "clang" ]; then
-          EXTRA_FLAGS="$EXTRA_FLAGS -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
-        fi
         podman exec ${{ env.CONTAINER }} \
           cmake -B /workspace/build \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DEND_TO_END_TESTS=1 \
-            $EXTRA_FLAGS
+            -DENABLE_TESTS=OFF
 
     - name: Build
       run: podman exec ${{ env.CONTAINER }} cmake --build /workspace/build --config ${{ env.BUILD_TYPE }}
 
     - name: Install
-      run: podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
+      run: |
+        podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
+        podman exec ${{ env.CONTAINER }} ldconfig
 
-    - name: Unit Tests
-      run: podman exec -e XDG_RUNTIME_DIR=/tmp ${{ env.CONTAINER }} /workspace/build/tests/miracle-wm-tests
-
-    - name: miracle-wm-config unit tests
-      run: podman exec -e XDG_RUNTIME_DIR=/tmp ${{ env.CONTAINER }} /workspace/build/miracle-wm-c/test_miracle_wm_c_api
-
-    - name: Build miracle-plugin-rs
+    - name: Install Python e2e test deps
       run: |
         podman exec ${{ env.CONTAINER }} bash -c "
-          . /root/.cargo/env
-          cargo build --manifest-path /workspace/miracle-plugin-rs/Cargo.toml --target wasm32-unknown-unknown
+          set -e
+          cd /workspace/e2e
+          python3 -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
         "
 
-    - name: Check Licenses
-      run: podman exec ${{ env.CONTAINER }} python3 /workspace/tools/check_license.py
+    - name: Run e2e tests
+      run: |
+        podman exec \
+          -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
+          -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
+          -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
+          -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:virtual \
+          -e MIR_SERVER_VIRTUAL_OUTPUT=800x600 \
+          ${{ env.CONTAINER }} bash -c "
+            set -eo pipefail
+            mkdir -p /tmp/miracle-e2e
+            chmod 700 /tmp/miracle-e2e
+            mkdir -p /workspace/screenshots
+            cd /workspace/e2e
+            . venv/bin/activate
+            pytest visual/ -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
+          "
+
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: visual-test-screenshots-${{ github.run_number }}
+        path: ${{ github.workspace }}/screenshots/
+        retention-days: 30
+        if-no-files-found: warn
 
     - name: Stop container
       if: always()

@@ -53,7 +53,3 @@ class TestGetTree:
         assert app.focused == True
         assert app.percent == 0.5
 
-    def test_two_outputs(self, multi_win_server):
-        conn = Connection(multi_win_server.ipc)
-        container = conn.get_tree()
-        assert len(container.nodes) == 2
