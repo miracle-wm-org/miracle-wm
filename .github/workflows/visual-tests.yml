@@ -117,7 +117,7 @@ jobs:
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
           ${{ env.CONTAINER }} bash -c "
-            set -e
+            set -eo pipefail
             mkdir -p /tmp/miracle-e2e
             chmod 700 /tmp/miracle-e2e
             mkdir -p /workspace/screenshots
