@@ -8,10 +8,11 @@ from pathlib import Path
 SCREENSHOT_DIR = Path(os.environ.get("MIRACLE_SCREENSHOT_DIR", "/tmp/miracle-screenshots"))
 
 
-def _drain_pipe(pipe):
+def _pipe_to_file(pipe, log_file):
     try:
-        while pipe.readline():
-            pass
+        for line in iter(pipe.readline, b""):
+            log_file.write(line.decode("utf-8", errors="replace"))
+            log_file.flush()
     except Exception:
         pass
 
@@ -37,7 +38,12 @@ class Server:
 
 
 @pytest.fixture(scope="function")
-def server():
+def server(request):
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = request.node.name.replace("/", "_").replace(" ", "_")
+    log_path = SCREENSHOT_DIR / f"{safe_name}-compositor.log"
+    log_file = open(log_path, "w")
+
     binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
     env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
     cmd = [binary, "--no-config", "1", "--platform-display-libs=mir:virtual", "--virtual-output=800x600"]
@@ -51,8 +57,10 @@ def server():
     startup_output = []
 
     for line in iter(process.stdout.readline, b""):
-        data = line.decode("utf-8").strip()
-        startup_output.append(data)
+        data = line.decode("utf-8", errors="replace")
+        log_file.write(data)
+        log_file.flush()
+        startup_output.append(data.strip())
         if marker in data:
             i = data.index(marker) + len(marker)
             socket = data[i:].strip()
@@ -60,12 +68,15 @@ def server():
 
     if not socket:
         process.wait()
+        log_file.close()
         output = "\n".join(startup_output)
         pytest.fail(f"miracle-wm failed to start (exit {process.returncode}).\n{output}")
 
-    threading.Thread(target=_drain_pipe, args=(process.stdout,), daemon=True).start()
+    threading.Thread(target=_pipe_to_file, args=(process.stdout, log_file), daemon=True).start()
 
     yield Server(socket, env["WAYLAND_DISPLAY"])
 
     process.terminate()
+    process.wait()
     process.stdout.close()
+    log_file.close()
