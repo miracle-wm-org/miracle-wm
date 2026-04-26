@@ -86,7 +86,8 @@ jobs:
         podman exec ${{ env.CONTAINER }} \
           cmake -B /workspace/build \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DEND_TO_END_TESTS=1
+            -DEND_TO_END_TESTS=1 \
+            -DENABLE_TESTS=OFF
 
     - name: Build
       run: podman exec ${{ env.CONTAINER }} cmake --build /workspace/build --config ${{ env.BUILD_TYPE }}
@@ -96,9 +97,10 @@ jobs:
         podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
         podman exec ${{ env.CONTAINER }} ldconfig
 
-    - name: Verify and fix DRI permissions in container
+    - name: Fix DRI permissions on host and verify in container
       run: |
-        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/ && chmod a+rw /dev/dri/*"
+        sudo chmod a+rw /dev/dri/*
+        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/"
 
     - name: Install Python e2e test deps
       run: |
