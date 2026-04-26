@@ -119,6 +119,7 @@ jobs:
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
           -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:gbm-kms \
+          -e MIRACLE_CONSOLE_PROVIDER=vt \
           ${{ env.CONTAINER }} bash -c "
             set -eo pipefail
             mkdir -p /tmp/miracle-e2e
