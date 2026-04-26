@@ -30,13 +30,13 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y podman
 
-    - name: Start Ubuntu 25.10 container
+    - name: Start Ubuntu 26.04 container
       run: |
         podman run -d --name ${{ env.CONTAINER }} \
           --privileged \
           -v ${{ github.workspace }}:/workspace:z \
           --workdir /workspace \
-          ubuntu:25.10 \
+          ubuntu:26.04 \
           sleep infinity
 
     - name: Add PPA
