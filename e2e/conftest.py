@@ -46,7 +46,7 @@ def server(request):
 
     binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
     env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
-    cmd = [binary, "--no-config", "1", "--platform-display-libs=mir:virtual", "--platform-input-lib=mir:stub-input" "--virtual-output=800x600"]
+    cmd = [binary, "--no-config", "1", "--platform-display-libs=mir:virtual", "--platform-input-lib=mir:stub-input", "--virtual-output=800x600"]
     process = Popen(
         cmd,
         env=env, stdout=PIPE, stderr=STDOUT,
