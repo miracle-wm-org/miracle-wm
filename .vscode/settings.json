@@ -1,0 +1,5 @@
+{
+  "chat.agent.enabled": false,
+  "chat.agent.codeBlockProgress": false,
+  "chat.agent.thinking.generateTitles": false
+}

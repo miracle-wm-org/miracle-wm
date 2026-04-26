@@ -9,7 +9,6 @@ SCREENSHOT_DIR = Path(os.environ.get("MIRACLE_SCREENSHOT_DIR", "/tmp/miracle-scr
 
 
 def _drain_pipe(pipe):
-    """Discard process output to prevent the pipe buffer filling and blocking the compositor's event loop."""
     try:
         while pipe.readline():
             pass
@@ -36,19 +35,15 @@ class Server:
         return path
 
 
-def _create_server(args):
-    binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
-    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-99"}
-    process = Popen([binary] + args, env=env, stdout=PIPE, stderr=STDOUT)
-    return process, env
-
-
 @pytest.fixture(scope="function")
-def visual_server():
-    process, env = _create_server([
-        "--platform-display-libs", "mir:gbm-kms",
-        "--no-config", "1",
-    ])
+def server():
+    binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
+    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
+    process = Popen(
+        [binary, "--platform-display-libs", "mir:gbm-kms", "--no-config", "1"],
+        env=env, stdout=PIPE, stderr=STDOUT,
+    )
+
     socket = ""
     marker = "Listening to IPC socket on path: "
     startup_output = []
@@ -64,9 +59,7 @@ def visual_server():
     if not socket:
         process.wait()
         output = "\n".join(startup_output)
-        pytest.fail(
-            f"miracle-wm failed to start (exit {process.returncode}).\n{output}"
-        )
+        pytest.fail(f"miracle-wm failed to start (exit {process.returncode}).\n{output}")
 
     threading.Thread(target=_drain_pipe, args=(process.stdout,), daemon=True).start()
 

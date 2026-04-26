@@ -3,15 +3,15 @@ from PIL import Image
 from i3ipc import Connection
 
 
-def test_compositor_starts_and_renders(visual_server):
-    p = visual_server.open_app("gedit")
+def test_compositor_starts_and_renders(server):
+    p = server.open_app("gedit")
     time.sleep(2.0)  # allow surface to be composited on llvmpipe
 
-    conn = Connection(visual_server.ipc)
+    conn = Connection(server.ipc)
     tree = conn.get_tree()
     assert len(tree.nodes) > 0, "IPC tree has no outputs"
 
-    shot = visual_server.screenshot("compositor_renders")
+    shot = server.screenshot("compositor_renders")
     img = Image.open(shot).convert("RGB")
     w, h = img.size
     samples = {

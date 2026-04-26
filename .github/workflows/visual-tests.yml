@@ -100,28 +100,28 @@ jobs:
       run: |
         podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/ && stat /dev/dri/card0"
 
-    - name: Install Python visual test deps
+    - name: Install Python e2e test deps
       run: |
         podman exec ${{ env.CONTAINER }} bash -c "
           set -e
-          cd /workspace/e2e/visual
+          cd /workspace/e2e
           python3 -m venv venv
           . venv/bin/activate
           pip install -r requirements.txt
         "
 
-    - name: Run visual tests
+    - name: Run e2e tests
       run: |
         podman exec \
-          -e XDG_RUNTIME_DIR=/tmp/miracle-visual \
+          -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
           ${{ env.CONTAINER }} bash -c "
             set -e
-            mkdir -p /tmp/miracle-visual
-            chmod 700 /tmp/miracle-visual
+            mkdir -p /tmp/miracle-e2e
+            chmod 700 /tmp/miracle-e2e
             mkdir -p /workspace/screenshots
-            cd /workspace/e2e/visual
+            cd /workspace/e2e
             . venv/bin/activate
             pytest -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
           "
