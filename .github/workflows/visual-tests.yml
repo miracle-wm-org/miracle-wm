@@ -65,7 +65,7 @@ jobs:
             libnotify-dev pcre2-utils libmiroil-dev libmirplatform-dev libgles2-mesa-dev \
             libmirwayland-dev libjson-c-dev libgmock-dev mirtest-dev mirtest-internal-dev \
             mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-            libwasmedge-dev grim
+            libwasmedge-dev grim seatd
           DEBIAN_FRONTEND=noninteractive apt-get install -yq libmirrenderer-dev || true
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             mir-platform-graphics-virtual xwayland \
@@ -119,12 +119,14 @@ jobs:
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
           -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:gbm-kms \
-          -e MIRACLE_CONSOLE_PROVIDER=none \
+          -e LIBSEAT_BACKEND=seatd \
           ${{ env.CONTAINER }} bash -c "
             set -eo pipefail
             mkdir -p /tmp/miracle-e2e
             chmod 700 /tmp/miracle-e2e
             mkdir -p /workspace/screenshots
+            seatd -g root &
+            sleep 1
             cd /workspace/e2e
             . venv/bin/activate
             pytest -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
