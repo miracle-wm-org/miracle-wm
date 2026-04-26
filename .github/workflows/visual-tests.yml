@@ -96,9 +96,9 @@ jobs:
         podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
         podman exec ${{ env.CONTAINER }} ldconfig
 
-    - name: Verify DRI devices in container
+    - name: Verify and fix DRI permissions in container
       run: |
-        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/ && stat /dev/dri/card0"
+        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/ && chmod a+rw /dev/dri/*"
 
     - name: Install Python e2e test deps
       run: |
@@ -116,6 +116,7 @@ jobs:
           -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
+          -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:gbm-kms \
           ${{ env.CONTAINER }} bash -c "
             set -eo pipefail
             mkdir -p /tmp/miracle-e2e

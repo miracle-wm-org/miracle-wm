@@ -22,7 +22,8 @@ class Server:
         self.wayland = wayland
 
     def open_app(self, command: str):
-        env = {**os.environ, "WAYLAND_DISPLAY": self.wayland}
+        path = os.environ.get("PATH", "") + ":/usr/games"
+        env = {**os.environ, "WAYLAND_DISPLAY": self.wayland, "PATH": path}
         return subprocess.Popen([command], env=env)
 
     def screenshot(self, name: str) -> Path:
@@ -38,9 +39,13 @@ class Server:
 @pytest.fixture(scope="function")
 def server():
     binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
+    platform_libs = os.environ.get("MIRACLE_PLATFORM_DISPLAY_LIBS", "mir:gbm-kms")
     env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
+    cmd = [binary, "--no-config", "1"]
+    if platform_libs:
+        cmd += ["--platform-display-libs", platform_libs]
     process = Popen(
-        [binary, "--platform-display-libs", "mir:gbm-kms", "--no-config", "1"],
+        cmd,
         env=env, stdout=PIPE, stderr=STDOUT,
     )
 
