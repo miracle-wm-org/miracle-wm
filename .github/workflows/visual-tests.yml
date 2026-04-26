@@ -20,14 +20,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Load vkms kernel module
-      run: |
-        sudo apt-get update -q
-        sudo apt-get install -y linux-modules-extra-$(uname -r)
-        sudo modprobe vkms
-        sudo chmod a+rw /dev/dri/*
-        ls -la /dev/dri/
-
     - name: Install podman
       run: |
         sudo apt-get update -q
@@ -36,9 +28,6 @@ jobs:
     - name: Start Ubuntu 26.04 container
       run: |
         podman run -d --name ${{ env.CONTAINER }} \
-          --privileged \
-          --security-opt apparmor=unconfined \
-          --device /dev/dri:/dev/dri \
           -v ${{ github.workspace }}:/workspace:z \
           --workdir /workspace \
           ubuntu:26.04 \
@@ -65,11 +54,11 @@ jobs:
             libnotify-dev pcre2-utils libmiroil-dev libmirplatform-dev libgles2-mesa-dev \
             libmirwayland-dev libjson-c-dev libgmock-dev mirtest-dev mirtest-internal-dev \
             mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-            libwasmedge-dev grim seatd
+            libwasmedge-dev grim
           DEBIAN_FRONTEND=noninteractive apt-get install -yq libmirrenderer-dev || true
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             mir-platform-graphics-virtual xwayland \
-            mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic gedit gnome-chess
+            mir-platform-rendering-egl-generic gedit gnome-chess
         "
 
     - name: Install Rust
@@ -97,11 +86,6 @@ jobs:
         podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
         podman exec ${{ env.CONTAINER }} ldconfig
 
-    - name: Fix DRI permissions on host and verify in container
-      run: |
-        sudo chmod a+rw /dev/dri/*
-        podman exec ${{ env.CONTAINER }} bash -c "ls -la /dev/dri/"
-
     - name: Install Python e2e test deps
       run: |
         podman exec ${{ env.CONTAINER }} bash -c "
@@ -118,15 +102,13 @@ jobs:
           -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
           -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
           -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
-          -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:gbm-kms \
-          -e LIBSEAT_BACKEND=seatd \
+          -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:virtual \
+          -e MIRACLE_VIRTUAL_OUTPUT=1920x1080 \
           ${{ env.CONTAINER }} bash -c "
             set -eo pipefail
             mkdir -p /tmp/miracle-e2e
             chmod 700 /tmp/miracle-e2e
             mkdir -p /workspace/screenshots
-            seatd -g root &
-            sleep 1
             cd /workspace/e2e
             . venv/bin/activate
             pytest -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
