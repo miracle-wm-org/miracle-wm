@@ -1,4 +1,4 @@
-name: Visual Integration Tests
+name: Integration Tests
 
 on:
   push:
@@ -111,7 +111,7 @@ jobs:
             mkdir -p /workspace/screenshots
             cd /workspace/e2e
             . venv/bin/activate
-            pytest -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
+            pytest visual/ -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
           "
 
     - name: Upload screenshots
