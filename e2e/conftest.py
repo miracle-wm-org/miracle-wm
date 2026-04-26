@@ -39,12 +39,8 @@ class Server:
 @pytest.fixture(scope="function")
 def server():
     binary = os.environ.get("MIRACLE_VISUAL_TEST_BIN", "miracle-wm")
-    platform_libs = os.environ.get("MIRACLE_PLATFORM_DISPLAY_LIBS", "mir:virtual")
-    virtual_output = os.environ.get("MIR_SERVER_VIRTUAL_OUTPUT", "800x600")
-    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98", "MIR_SERVER_VIRTUAL_OUTPUT": virtual_output}
-    cmd = [binary, "--no-config", "1"]
-    if platform_libs:
-        cmd += ["--platform-display-libs", platform_libs]
+    env = {**os.environ, "WAYLAND_DISPLAY": "wayland-98"}
+    cmd = [binary, "--no-config", "1", "--platform-display-libs=mir:virtual", "--virtual-output=800x600"]
     process = Popen(
         cmd,
         env=env, stdout=PIPE, stderr=STDOUT,

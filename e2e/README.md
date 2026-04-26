@@ -28,5 +28,3 @@ pytest visual/
 ### Environment variables
 - `MIRACLE_VISUAL_TEST_BIN`: path to the `miracle-wm` binary. Defaults to `miracle-wm`.
 - `MIRACLE_SCREENSHOT_DIR`: directory where screenshots are saved. Defaults to `/tmp/miracle-screenshots`.
-- `MIRACLE_PLATFORM_DISPLAY_LIBS`: Mir platform library. Defaults to `mir:virtual`.
-- `MIR_SERVER_VIRTUAL_OUTPUT`: virtual output dimensions (e.g. `800x600`). Defaults to `800x600`.
