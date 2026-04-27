@@ -1,4 +1,4 @@
-miracle-wm (0.9.0-9-local) UNRELEASED; urgency=medium
+miracle-wm (0.9.1-local) UNRELEASED; urgency=medium
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -60,8 +60,13 @@ miracle-wm (0.9.0-9-local) UNRELEASED; urgency=medium
   * * Fix bad install directory
   * * task: bump deb to 0.9.0-8
   * * Reset changelog
+  * Release version 0.9.1
+  * Recent changes:
+  * * task: update CI to 26.04 (#869)
+  * * feature: implement e2e tests with screenshots (#868)
+  * * task: bump version to 0.9.1
 
- -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Wed, 15 Apr 2026 19:23:59 -0400
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Mon, 27 Apr 2026 07:18:21 -0400
 
 miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
   * Release version 0.8.2
