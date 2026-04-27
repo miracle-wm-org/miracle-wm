@@ -1,0 +1,58 @@
+name: Build & Test - Arch Linux
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build-and-test:
+    name: Arch Linux Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Setup Podman
+        run: |
+          sudo apt update
+          sudo apt-get -y install podman
+          podman pull archlinux:latest
+      - name: Get source
+        uses: actions/checkout@v3
+        with:
+          path: 'miracle-wm'
+      - name: Create container and run tests
+        run: |
+          {
+              echo 'FROM archlinux:latest'
+              echo '# set TZ to ensure the test using timestamp'
+              echo 'ENV TZ=America/New_York'
+              echo 'RUN pacman -Sy --noconfirm archlinux-keyring && pacman -Su --noconfirm'
+              echo 'RUN pacman -S --noconfirm --needed base-devel git cmake ninja clang glib2 yaml-cpp nlohmann-json libevdev libnotify gtest libxkbcommon pcre2 glm boost json-c mesa libglvnd wayland sudo curl'
+              echo 'RUN useradd -m builder && echo "builder ALL=(ALL) NOPASSWD: /usr/bin/pacman" >> /etc/sudoers'
+              echo 'USER builder'
+              echo 'WORKDIR /home/builder'
+              echo 'RUN git clone https://aur.archlinux.org/mir.git && cd mir && makepkg -si --noconfirm'
+              echo 'RUN git clone https://aur.archlinux.org/wasmedge-bin.git && cd wasmedge-bin && makepkg -si --noconfirm'
+              echo 'USER root'
+              echo 'RUN curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+              echo 'ENV PATH="/root/.cargo/bin:${PATH}"'
+              echo 'COPY miracle-wm miracle-wm'
+              echo 'WORKDIR /miracle-wm'
+              echo 'RUN cmake -DFEATURE_PLUGIN_SYSTEM=1 -Bbuild'
+              echo 'RUN cmake --build build'
+              echo 'WORKDIR /miracle-wm/build'
+              echo 'RUN make install'
+              echo 'WORKDIR /miracle-wm'
+              echo 'RUN ./build/tests/miracle-wm-tests'
+              echo 'WORKDIR /miracle-wm/build'
+              echo 'RUN ./miracle-wm-c/test_miracle_wm_c_api'
+              echo 'WORKDIR /miracle-wm'
+              echo 'RUN rustup target add wasm32-unknown-unknown'
+              echo 'RUN cargo build --manifest-path miracle-plugin-rs/Cargo.toml --target wasm32-unknown-unknown'
+          } > podmanfile
+          podman build --tag archlatestmiraclewm -f ./podmanfile
