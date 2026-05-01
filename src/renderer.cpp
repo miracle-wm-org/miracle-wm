@@ -609,6 +609,11 @@ void Renderer::draw(
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
     float const alpha = data.alpha;
+
+    // First, we check if a custom shader is being applied to this. If that is the case,
+    // then we resolve the shader from their and call on `ProgramFactory` with the custom
+    // code.
+    // If not, we go down the regular route.
     auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
 
     glUseProgram(prog->id);

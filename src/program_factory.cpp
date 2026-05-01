@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include <cstdint>
 #define MIR_LOG_COMPONENT "program_factory"
 
 #include "program_factory.h"
@@ -263,6 +264,11 @@ void main() {
 
     // We delete the shaders here. This is fine; it only marks them
     // for deletion. GL will only delete them once the GL Program they're linked in is destroyed.
+}
+
+uint8_t miracle::ProgramFactory::next_id()
+{
+    return id++;
 }
 
 GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)

@@ -38,6 +38,7 @@ struct RenderData
     glm::mat4 transform = glm::mat4(1.f);
     glm::mat4 workspace_transform = glm::mat4(1.f);
     std::optional<mir::geometry::Rectangle> output_area;
+    std::optional<uint8_t> shader_id;
 };
 
 class RenderDataManager

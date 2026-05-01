@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <GLES2/gl2.h>
 #include <array>
+#include <atomic>
+#include <cstdint>
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
 #include <mutex>
@@ -115,6 +117,9 @@ public:
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
+    // Retrieve the next unique id.
+    uint8_t next_id();
+
 private:
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
@@ -129,6 +134,7 @@ private:
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
+    std::atomic<uint8_t> id = 1;
 };
 
 } // miracle
