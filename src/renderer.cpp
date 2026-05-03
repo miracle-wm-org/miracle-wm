@@ -611,10 +611,13 @@ void Renderer::draw(
     float const alpha = data.alpha;
 
     // First, we check if a custom shader is being applied to this. If that is the case,
-    // then we resolve the shader from their and call on `ProgramFactory` with the custom
+    // then we resolve the shader from there and call on `ProgramFactory` with the custom
     // code.
     // If not, we go down the regular route.
-    auto const* const prog = &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
+    auto const* const prog = &dynamic_cast<Program const&>(data.data.shader_id
+            ? program_factory->resolve(*data.data.shader_id)
+            : texture->shader(*program_factory))
+                                  .data;
 
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)

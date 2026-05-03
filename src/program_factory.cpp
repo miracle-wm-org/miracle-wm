@@ -266,9 +266,29 @@ void main() {
     // for deletion. GL will only delete them once the GL Program they're linked in is destroyed.
 }
 
-uint8_t miracle::ProgramFactory::next_id()
+mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
 {
-    return id++;
+    std::lock_guard lock { custom_mutex };
+    for (auto const& custom : custom_samplers)
+    {
+        if (custom.id == id)
+        {
+            return compile_fragment_shader(
+                reinterpret_cast<void*>(id),
+                "",
+                custom.sample_to_rgba_func.c_str());
+        }
+    }
+
+    throw std::runtime_error("Unknown custom sampler id");
+}
+
+uint8_t miracle::ProgramFactory::register_sample_to_rgba(std::string sample_to_rgba_func)
+{
+    std::lock_guard lock { custom_mutex };
+    auto const next_id = id++;
+    custom_samplers.push_back(CustomSamplers { next_id, std::move(sample_to_rgba_func) });
+    return next_id;
 }
 
 GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)

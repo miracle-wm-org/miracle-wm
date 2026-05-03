@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <GLES2/gl2.h>
 #include <array>
-#include <atomic>
 #include <cstdint>
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
@@ -114,13 +113,34 @@ public:
         char const* extension_fragment,
         char const* fragment_fragment) override;
 
+    /// Resolve the program from its unique identifier.
+    ///
+    /// \param id the unique identifier
+    /// \returns the program
+    /// \throws if the identifier cannot be found
+    mir::graphics::gl::Program& resolve_custom(uint8_t id);
+
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
-    // Retrieve the next unique id.
-    uint8_t next_id();
+    /// Register the sampler method and return its unique identifier.
+    /// This returned id may be used later in "resolve" to get the shader
+    /// program that matches this sampler function.
+    ///
+    /// This is specifically used to register unique shaders on a per-window
+    /// basis.
+    ///
+    /// \param sample_to_rgba_func the sample_to_rgba glsl string
+    /// \returns the unique identifier
+    uint8_t register_sample_to_rgba(std::string sample_to_rgba_func);
 
 private:
+    struct CustomSamplers
+    {
+        uint8_t id;
+        std::string sample_to_rgba_func;
+    };
+
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
         ShaderHandle const& vertex_shader,
@@ -134,7 +154,12 @@ private:
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
-    std::atomic<uint8_t> id = 1;
+
+    std::mutex custom_mutex;
+    // TODO: This relies on non-local knowledge that Mir internally never
+    //  claims identifiers above 1.
+    uint8_t id = 5;
+    std::vector<CustomSamplers> custom_samplers;
 };
 
 } // miracle
