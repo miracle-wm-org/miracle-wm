@@ -161,7 +161,8 @@ TEST_F(OutputIntersectTest, ReturnsNullWhenOnContainerIsAnimating)
         1,
         AnimationDefinition(),
         AnimationData(),
-        [](auto const&) { },
+        [](auto const& asr)
+    { (void)asr; },
         std::make_shared<PluginManager>()));
     EXPECT_CALL(*mock_container, animation_handle())
         .WillRepeatedly(Return(1));
