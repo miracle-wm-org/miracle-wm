@@ -615,7 +615,7 @@ void Renderer::draw(
     // code.
     // If not, we go down the regular route.
     auto const* const prog = &dynamic_cast<Program const&>(data.data.shader_id
-            ? program_factory->resolve(*data.data.shader_id)
+            ? program_factory->resolve_custom(*data.data.shader_id)
             : texture->shader(*program_factory))
                                   .data;
 
