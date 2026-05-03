@@ -144,6 +144,35 @@ TEST_F(OutputIntersectTest, ReturnsContainerWhenOnActiveWorkspace)
     EXPECT_EQ(result, mock_container);
 }
 
+TEST_F(OutputIntersectTest, ReturnsNullWhenOnContainerIsAnimating)
+{
+    // Arrange
+    miral::Window test_window;
+    auto mock_container = std::make_shared<NiceMock<test::MockContainer>>();
+
+    EXPECT_CALL(*window_controller, window_at(100.0f, 100.0f))
+        .WillOnce(Return(test_window));
+    EXPECT_CALL(*window_controller, get_window_container(test_window))
+        .WillOnce(Return(mock_container));
+
+    // Setup container to be on active workspace and append an animation to the
+    // animator so that it is animating.
+    animator->append(Animation(
+        1,
+        AnimationDefinition(),
+        AnimationData(),
+        [](auto const&) { },
+        std::make_shared<PluginManager>()));
+    EXPECT_CALL(*mock_container, animation_handle())
+        .WillRepeatedly(Return(1));
+
+    // Act
+    auto result = output->intersect(100.0f, 100.0f);
+
+    // Assert
+    EXPECT_EQ(result, nullptr);
+}
+
 TEST_F(OutputIntersectTest, ReturnsNullWhenContainerOnDifferentWorkspace)
 {
     // Arrange

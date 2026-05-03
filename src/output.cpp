@@ -83,6 +83,10 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
     auto const window = window_controller->window_at(x, y);
     if (auto const result = window_controller->get_window_container(window))
     {
+        // Animating windows CANNOT be intersected.
+        if (animator->is_animating(result->animation_handle()))
+            return nullptr;
+
         auto const workspace = result->get_workspace();
         if (!workspace || workspace == active())
             return result;
@@ -106,6 +110,10 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
         }
         return false;
     });
+
+    // Animating windows CANNOT be intersected.
+    if (result && animator->is_animating(result->animation_handle()))
+        return nullptr;
 
     return result;
 }
