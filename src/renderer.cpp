@@ -370,10 +370,11 @@ Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<CompositorState> const& compositor_state) :
+    std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     output_surface { std::make_unique<OutputFilter>(make_output_current(std::move(output))) },
     clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
-    program_factory { std::make_unique<ProgramFactory>() },
+    program_factory { std::make_unique<ProgramFactory>(sampler_registry) },
     screen_to_gl_coords(1),
     display_transform(1),
     gl_interface { std::move(gl_interface) },

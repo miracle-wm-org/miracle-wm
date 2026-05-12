@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "parent_background_internal_client.h"
 #include "policy.h"
 #include "renderer.h"
+#include "sampler_registry.h"
 #include "version.h"
 #include "wlr-ouput-management-unstable-v1.h"
 #include "wlr-output-management-unstable-v1_wrapper.h"
@@ -61,14 +62,16 @@ public:
         std::shared_ptr<miracle::OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
         std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
-        Magnifier const& magnifier) :
+        Magnifier const& magnifier,
+        std::shared_ptr<miracle::SamplerRegistry> const& sampler_registry) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
         output_listener(output_listener),
         display_config(display_config),
         config_observer_registrar(config_observer_registrar),
-        magnifier(magnifier)
+        magnifier(magnifier),
+        sampler_registry(sampler_registry)
     {
     }
 
@@ -76,7 +79,7 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -90,6 +93,7 @@ private:
     std::shared_ptr<miracle::DisplayConfig> display_config;
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
     Magnifier magnifier;
+    std::shared_ptr<miracle::SamplerRegistry> sampler_registry;
 };
 
 int main(int argc, char const* argv[])
@@ -97,6 +101,7 @@ int main(int argc, char const* argv[])
     PRINT_OPENING_MESSAGE(MIRACLE_VERSION_STRING);
     MirRunner runner { argc, argv };
     auto compositor_state = std::make_shared<miracle::CompositorState>();
+    auto sampler_registry = std::make_shared<miracle::SamplerRegistry>();
     auto output_listener = std::make_shared<miracle::OutputListenerMultiplexer>();
     auto display_config = std::make_shared<miracle::DisplayConfig>();
 
@@ -260,7 +265,7 @@ int main(int argc, char const* argv[])
     };
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,
@@ -279,6 +284,6 @@ int main(int argc, char const* argv[])
             Decorations::always_csd(),
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
-        return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state);
+        return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state, sampler_registry);
     }) });
 }

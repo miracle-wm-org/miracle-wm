@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "../miracle-plugin-rs/plugin.h"
 #include "compositor_state.h"
+#include "sampler_registry.h"
 #include "window_id_map.h"
 #include <functional>
 #include <miral/application_info.h>
@@ -116,7 +117,8 @@ public:
         std::shared_ptr<WindowIdMap> const& window_id_map,
         std::shared_ptr<ApplicationIdMap> const& application_id_map,
         std::shared_ptr<Animator> const& animator,
-        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue);
+        std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+        std::shared_ptr<SamplerRegistry> const& sampler_registry);
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -138,6 +140,8 @@ public:
         uint32_t* out_animation_id,
         PluginManager* manager,
         float duration_seconds);
+
+    uint8_t register_window_sample_to_rgba(std::string glsl);
 
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);
@@ -183,6 +187,7 @@ private:
     std::shared_ptr<ApplicationIdMap> application_id_map;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<mir::ServerActionQueue> server_action_queue;
+    std::shared_ptr<SamplerRegistry> sampler_registry_;
     uint32_t next_animation_id = 1;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
     std::unordered_map<uint32_t, std::string> plugin_userdata_map;

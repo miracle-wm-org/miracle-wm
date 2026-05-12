@@ -55,7 +55,8 @@ public:
     Renderer(std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
         std::unique_ptr<mir::graphics::gl::OutputSurface> output,
         std::shared_ptr<Config> const& config,
-        std::shared_ptr<CompositorState> const& compositor_state);
+        std::shared_ptr<CompositorState> const& compositor_state,
+        std::shared_ptr<SamplerRegistry> const& sampler_registry);
     ~Renderer() override;
 
     // These are called with a valid GL context:

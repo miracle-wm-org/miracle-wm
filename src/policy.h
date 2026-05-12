@@ -77,7 +77,8 @@ public:
         std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
         std::shared_ptr<DisplayConfig> const& display_config,
         std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
-        miral::Magnifier const& magnifier);
+        miral::Magnifier const& magnifier,
+        std::shared_ptr<SamplerRegistry> const& sampler_registry);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
