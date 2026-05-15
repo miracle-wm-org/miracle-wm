@@ -13,7 +13,7 @@ env:
 jobs:
 
   visual-tests:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     name: Visual Integration Tests
     timeout-minutes: 45
 
