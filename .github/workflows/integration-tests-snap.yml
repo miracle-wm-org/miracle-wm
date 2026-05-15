@@ -113,6 +113,13 @@ jobs:
             pip install -r requirements.txt
           "
 
+      - name: Verify snap launcher script is executable
+        run: |
+          podman exec ${{ env.CONTAINER }} bash -c "
+            chmod +x /workspace/run-miracle-from-snap.sh
+            ls -la /workspace/run-miracle-from-snap.sh
+          "
+
       - name: Run visual e2e tests against snap binary
         run: |
           podman exec \
