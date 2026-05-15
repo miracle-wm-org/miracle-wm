@@ -1,0 +1,35 @@
+name: Snap Publish
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number && format('pr{0}', github.event.number) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Snap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build the snap
+        run: |
+          sudo snap install snapcraft --classic
+          snapcraft remote-build --build-for=amd64,armhf,arm64 --launchpad-accept-public-upload
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
+
+      - name: Publish the snaps
+        run: |
+          for snap_file in *.snap; do
+            snapcraft upload "$snap_file" --release=edge
+          done
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
