@@ -67,13 +67,14 @@ jobs:
           podman exec ${{ env.CONTAINER }} bash -c "
             set -e
             rm -rf /workspace/miracle-snap
-            snap_file=\"$(basename '${{ steps.build-snap.outputs.snap-path }}')\"
-            if [ ! -f \"/workspace/$snap_file\" ]; then
-              echo \"Snap file not found in mounted workspace: /workspace/$snap_file\" >&2
+            snap_file=\$(find /workspace -maxdepth 1 -name '*.snap' -type f | head -n1)
+            if [ -z \"\$snap_file\" ]; then
+              echo \"No .snap file found in /workspace\" >&2
               ls -la /workspace >&2
               exit 1
             fi
-            unsquashfs -f -d /workspace/miracle-snap \"/workspace/$snap_file\"
+            echo \"Unpacking snap: \$snap_file\"
+            unsquashfs -f -d /workspace/miracle-snap \"\$snap_file\"
           "
 
       - name: Create snap launcher script
