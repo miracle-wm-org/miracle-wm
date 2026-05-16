@@ -77,29 +77,9 @@ jobs:
             unsquashfs -f -d /workspace/miracle-snap \"\$snap_file\"
           "
 
-      - name: Create snap launcher script
+      - name: Make snap launcher script executable
         run: |
           podman exec ${{ env.CONTAINER }} bash -c "
-            set -e
-            cat > /workspace/run-miracle-from-snap.sh <<'EOF'
-            #!/usr/bin/env bash
-            set -e
-
-            SNAP=/workspace/miracle-snap
-            ARCH_TRIPLET=\$(dpkg-architecture -qDEB_HOST_MULTIARCH)
-
-            export SNAP
-            export PATH=\"\$SNAP/bin:\$SNAP/usr/bin:\$SNAP/usr/local/bin:\$PATH\"
-            export LD_LIBRARY_PATH=\"\$SNAP/usr/lib/\$ARCH_TRIPLET:\$SNAP/lib/\$ARCH_TRIPLET:\$SNAP/usr/lib:\$SNAP/lib:\${LD_LIBRARY_PATH:-}\"
-            export MIR_SERVER_PLATFORM_PATH=\"\$SNAP/usr/lib/\$ARCH_TRIPLET/mir/server-platform\"
-            export __EGL_VENDOR_LIBRARY_DIRS=\"\$SNAP/etc/glvnd/egl_vendor.d:\$SNAP/usr/share/glvnd/egl_vendor.d\"
-            export GBM_BACKENDS_PATH=\"\$SNAP/usr/lib/\$ARCH_TRIPLET/gbm\"
-            export LIBGL_DRIVERS_PATH=\"\$SNAP/usr/lib/\$ARCH_TRIPLET/dri\"
-            export LIBINPUT_QUIRKS_DIR=\"\$SNAP/usr/share/libinput\"
-            export DRIRC_CONFIGDIR=\"\$SNAP/usr/share/drirc.d\"
-
-            exec \"\$SNAP/usr/bin/miracle-wm\" \"\$@\"
-            EOF
             chmod +x /workspace/run-miracle-from-snap.sh
           "
 
@@ -113,12 +93,6 @@ jobs:
             pip install -r requirements.txt
           "
 
-      - name: Verify snap launcher script is executable
-        run: |
-          podman exec ${{ env.CONTAINER }} bash -c "
-            chmod +x /workspace/run-miracle-from-snap.sh
-            ls -la /workspace/run-miracle-from-snap.sh
-          "
 
       - name: Run visual e2e tests against snap binary
         run: |
