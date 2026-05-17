@@ -11,9 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number && format('pr{0}', github.event.number) || github.ref }}
   cancel-in-progress: true
 
-env:
-  CONTAINER: miracle-visual-snap
-
 jobs:
   visual-tests-snap:
     runs-on: ubuntu-latest
@@ -38,79 +35,38 @@ jobs:
           name: ${{ steps.build-snap.outputs.snap-name }}
           path: ${{ steps.build-snap.outputs.snap-path }}
 
-      - name: Install podman
+      - name: Install system dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y podman
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+            python3 python3-venv python3-pip \
+            gedit gnome-chess grim
 
-      - name: Start Ubuntu 26.04 container
+      - name: Install snap
         run: |
-          podman run -d --name ${{ env.CONTAINER }} \
-            -v ${{ github.workspace }}:/workspace:z \
-            --workdir /workspace \
-            ubuntu:26.04 \
-            sleep infinity
-
-      - name: Install test dependencies
-        run: |
-          podman exec ${{ env.CONTAINER }} bash -c "
-            set -e
-            apt-get update -q
-            DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-              python3 python3-venv python3-pip \
-              squashfs-tools dpkg-dev \
-              gedit gnome-chess grim
-          "
-
-      - name: Unpack built snap
-        run: |
-          podman exec ${{ env.CONTAINER }} bash -c "
-            set -e
-            rm -rf /workspace/miracle-snap
-            snap_file=\$(find /workspace -maxdepth 1 -name '*.snap' -type f | head -n1)
-            if [ -z \"\$snap_file\" ]; then
-              echo \"No .snap file found in /workspace\" >&2
-              ls -la /workspace >&2
-              exit 1
-            fi
-            echo \"Unpacking snap: \$snap_file\"
-            unsquashfs -f -d /workspace/miracle-snap \"\$snap_file\"
-          "
-
-      - name: Make snap launcher script executable
-        run: |
-          podman exec ${{ env.CONTAINER }} bash -c "
-            chmod +x /workspace/run-miracle-from-snap.sh
-          "
+          sudo snap install --dangerous --classic ${{ steps.build-snap.outputs.snap-path }}
 
       - name: Install Python e2e test deps
         run: |
-          podman exec ${{ env.CONTAINER }} bash -c "
-            set -e
-            cd /workspace/e2e
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
-          "
+          cd e2e
+          python3 -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
 
-
-      - name: Run visual e2e tests against snap binary
+      - name: Run visual e2e tests against snap
         run: |
-          podman exec \
-            -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
-            -e MIRACLE_VISUAL_TEST_BIN=/workspace/run-miracle-from-snap.sh \
-            -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots-snap \
-            -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:virtual \
-            -e MIR_SERVER_VIRTUAL_OUTPUT=800x600 \
-            ${{ env.CONTAINER }} bash -c "
-              set -eo pipefail
-              mkdir -p /tmp/miracle-e2e
-              chmod 700 /tmp/miracle-e2e
-              mkdir -p /workspace/screenshots-snap
-              cd /workspace/e2e
-              . venv/bin/activate
-              pytest visual/ -v --tb=short 2>&1 | tee /workspace/screenshots-snap/test-output.txt
-            "
+          set -eo pipefail
+          mkdir -p /tmp/miracle-e2e
+          chmod 700 /tmp/miracle-e2e
+          mkdir -p ${{ github.workspace }}/screenshots-snap
+          cd e2e
+          . venv/bin/activate
+          XDG_RUNTIME_DIR=/tmp/miracle-e2e \
+          MIRACLE_VISUAL_TEST_BIN=/snap/bin/miracle-wm \
+          MIRACLE_SCREENSHOT_DIR=${{ github.workspace }}/screenshots-snap \
+          MIRACLE_PLATFORM_DISPLAY_LIBS=mir:virtual \
+          MIR_SERVER_VIRTUAL_OUTPUT=800x600 \
+          pytest visual/ -v --tb=short 2>&1 | tee ${{ github.workspace }}/screenshots-snap/test-output.txt
 
       - name: Upload screenshots
         if: always()
@@ -120,9 +76,3 @@ jobs:
           path: ${{ github.workspace }}/screenshots-snap/
           retention-days: 30
           if-no-files-found: warn
-
-      - name: Stop container
-        if: always()
-        run: |
-          podman stop ${{ env.CONTAINER }} || true
-          podman rm ${{ env.CONTAINER }} || true
