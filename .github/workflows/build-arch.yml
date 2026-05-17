@@ -1,0 +1,68 @@
+name: Build & Test - Arch Linux
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build-and-test:
+    name: Arch Linux Build & Test
+    runs-on: ubuntu-latest
+    # Mir and WasmEdge are not in the official Arch repos and must be
+    # built from the AUR, so this job needs a generous timeout.
+    timeout-minutes: 120
+
+    steps:
+      - name: Setup Podman
+        run: |
+          sudo apt update
+          sudo apt-get -y install podman
+          podman pull archlinux:latest
+      - name: Get source
+        uses: actions/checkout@v3
+        with:
+          path: 'miracle-wm'
+      - name: Create container and run tests
+        run: |
+          cat <<'EOF' > Containerfile
+          FROM archlinux:latest
+          # set TZ to ensure the test using timestamp passes
+          ENV TZ=America/New_York
+          RUN pacman -Syu --noconfirm --needed \
+                base-devel git cmake rustup sudo \
+                glib2 yaml-cpp nlohmann-json libevdev json-c libnotify \
+                gtest libxkbcommon desktop-file-utils pcre2 libglvnd \
+                glm boost mesa clang
+          # makepkg refuses to run as root, so build AUR packages as a
+          # dedicated unprivileged user with passwordless sudo for pacman.
+          RUN useradd -m builder \
+                && echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          USER builder
+          WORKDIR /home/builder
+          RUN git clone https://aur.archlinux.org/mir.git \
+                && cd mir && makepkg -si --noconfirm --needed
+          RUN git clone https://aur.archlinux.org/wasmedge.git \
+                && cd wasmedge && makepkg -si --noconfirm --needed
+          USER root
+          WORKDIR /
+          RUN rustup default stable \
+                && rustup target add wasm32-unknown-unknown
+          COPY miracle-wm miracle-wm
+          WORKDIR /miracle-wm
+          RUN cmake -DFEATURE_PLUGIN_SYSTEM=1 -DCMAKE_BUILD_TYPE=Debug -Bbuild
+          RUN cmake --build build
+          WORKDIR /miracle-wm/build
+          RUN make install
+          WORKDIR /miracle-wm
+          RUN ./build/tests/miracle-wm-tests
+          WORKDIR /miracle-wm/build
+          RUN ./miracle-wm-c/test_miracle_wm_c_api
+          WORKDIR /miracle-wm
+          RUN cargo build --manifest-path miracle-plugin-rs/Cargo.toml --target wasm32-unknown-unknown
+          EOF
+          podman build --tag archlatestmiraclewm -f ./Containerfile
