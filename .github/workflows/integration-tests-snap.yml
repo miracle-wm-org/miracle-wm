@@ -59,7 +59,12 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -yq \
               python3 python3-venv python3-pip \
               squashfs-tools dpkg-dev patchelf binutils \
+              software-properties-common \
               gedit gnome-chess grim
+            add-apt-repository ppa:mir-team/release
+            apt-get update -q
+            DEBIAN_FRONTEND=noninteractive apt-get install -yq \
+              libmiral7 mir-platform-graphics-virtual
           "
 
       - name: Unpack built snap
