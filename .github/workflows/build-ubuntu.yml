@@ -18,7 +18,7 @@ jobs:
         ppa: [release, rc]
         compiler: [gcc, clang]
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     name: Ubuntu Build & Test
     timeout-minutes: 30
 

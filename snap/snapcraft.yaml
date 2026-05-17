@@ -1,13 +1,10 @@
 name: miracle-wm
 adopt-info: miracle-wm
-summary: "miracle-wm: a tiling window manager built on Mir"
+summary: "A hackable Wayland window manager built on Mir"
 description: |
-  miracle-wm is a Wayland compositor based off the Mir library
-  that provides a tiling-window manager.
+  miracle-wm is a hackable, stylish, and modern Wayland compositor built on Mir. It brings the keyboard-driven efficiency of i3/Sway to a richer, more extensible experience with smooth animations, a powerful WebAssembly plugin system, and a clean YAML configuration.
 confinement: classic
 base: core26
-build-base: devel
-grade: devel
 version: 0.0.0
 
 platforms:
@@ -53,6 +50,7 @@ parts:
       published=`git describe --tags --abbrev=0`
       version=`git describe --tags`
       craftctl set version=$version
+      if [[ "$published" != *"$version"* ]]; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
