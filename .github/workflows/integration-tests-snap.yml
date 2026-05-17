@@ -58,7 +58,7 @@ jobs:
             apt-get update -q
             DEBIAN_FRONTEND=noninteractive apt-get install -yq \
               python3 python3-venv python3-pip \
-              squashfs-tools dpkg-dev \
+              squashfs-tools dpkg-dev patchelf binutils \
               gedit gnome-chess grim
           "
 
@@ -83,11 +83,20 @@ jobs:
             chmod +x /workspace/run-miracle-from-snap.sh
           "
 
-      - name: Create snap mount symlink for direct execution
+      - name: Fix snap binary ELF interpreter
         run: |
           podman exec ${{ env.CONTAINER }} bash -c "
-            mkdir -p /snap/miracle-wm
-            ln -sfn /workspace/miracle-snap /snap/miracle-wm/current
+            set -e
+            BIN=/workspace/miracle-snap/usr/bin/miracle-wm
+            echo \"Original interpreter: \$(patchelf --print-interpreter \$BIN)\"
+            ARCH=\$(dpkg --print-architecture)
+            case \$ARCH in
+              amd64) INTERP=/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ;;
+              arm64) INTERP=/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 ;;
+              armhf) INTERP=/lib/arm-linux-gnueabihf/ld-linux-armhf.so.3 ;;
+            esac
+            patchelf --set-interpreter \$INTERP \$BIN
+            echo \"Patched interpreter: \$(patchelf --print-interpreter \$BIN)\"
           "
 
       - name: Install Python e2e test deps
