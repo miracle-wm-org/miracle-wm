@@ -5,6 +5,7 @@ description: |
   miracle-wm is a hackable, stylish, and modern Wayland compositor built on Mir. It brings the keyboard-driven efficiency of i3/Sway to a richer, more extensible experience with smooth animations, a powerful WebAssembly plugin system, and a clean YAML configuration.
 confinement: classic
 base: core26
+build-base: devel
 version: 0.0.0
 grade: devel
 
