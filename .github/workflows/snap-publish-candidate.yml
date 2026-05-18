@@ -24,7 +24,7 @@ jobs:
           sudo snap install snapcraft --classic
           mkdir -p ~/.local/share/snapcraft
           printenv LP_CREDENTIALS > ~/.local/share/snapcraft/launchpad-credentials
-          snapcraft remote-build --build-for=amd64,armhf,arm64 --launchpad-accept-public-upload
+          snapcraft remote-build --build-for=amd64,arm64 --launchpad-accept-public-upload
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
           LP_CREDENTIALS: ${{ secrets.LP_CREDENTIALS }}
