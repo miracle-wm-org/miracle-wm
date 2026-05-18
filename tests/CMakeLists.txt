@@ -16,6 +16,7 @@ find_package(GTest REQUIRED)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 set(SOURCES
+    mock_binding_event_listener.h
     mock_command_controller.h
     mock_configuration.h
     mock_container.h
