@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "wlr-output-management-unstable-v1_wrapper.h"
 
 #include <memory>
+#include <mir/wayland/weak.h>
 #include <miral/output.h>
 
 namespace miracle
@@ -40,7 +41,7 @@ public:
 private:
     void bind(wl_resource* new_zwlr_output_manager_v1) override;
 
-    std::vector<WlrOutputManagerV1*> active_managers;
+    std::vector<mir::wayland::Weak<WlrOutputManagerV1>> active_managers;
     std::shared_ptr<DisplayConfig> config;
     std::vector<miral::Output> outputs;
 };

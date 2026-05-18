@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/graphics/display_configuration.h>
 #include <mir/log.h>
+#include <mir/wayland/weak.h>
 #include <utility>
 
 using namespace miracle;
@@ -120,7 +121,7 @@ public:
         std::shared_ptr<DisplayConfig> const& config,
         std::vector<miral::Output> const& outputs);
     ~WlrOutputManagerV1() override;
-    WlrOutputHeadV1 const* head(wl_resource* resource);
+    WlrOutputHeadV1* head(wl_resource* resource);
     void advise_output_create(miral::Output const& output);
     void advise_output_update(miral::Output const& updated, miral::Output const& original);
     void advise_output_delete(miral::Output const& output);
@@ -140,7 +141,7 @@ private:
 class WlrOutputConfigurationHeadV1 : public mir::wayland::OutputConfigurationHeadV1
 {
 public:
-    WlrOutputConfigurationHeadV1(struct wl_resource* id, WlrOutputHeadV1 const*);
+    WlrOutputConfigurationHeadV1(struct wl_resource* id, WlrOutputHeadV1*);
     void set_mode(struct wl_resource* mode) override;
     void set_custom_mode(int32_t width, int32_t height, int32_t refresh) override;
     void set_position(int32_t x, int32_t y) override;
@@ -154,7 +155,7 @@ public:
         double refresh;
     };
 
-    WlrOutputHeadV1 const* head;
+    mir::wayland::Weak<WlrOutputHeadV1> head;
     std::optional<struct wl_resource*> mode;
     std::optional<CustomMode> custom_mode;
     std::optional<geom::Point> position;
@@ -174,7 +175,7 @@ private:
     void test() override;
     void destroy() override;
 
-    WlrOutputManagerV1* manager;
+    mir::wayland::Weak<WlrOutputManagerV1> manager;
     std::vector<std::shared_ptr<WlrOutputConfigurationHeadV1>> heads;
 
 private:
@@ -190,7 +191,9 @@ WlrOutputConfigurationV1::WlrOutputConfigurationV1(wl_resource* resource, WlrOut
 
 void WlrOutputConfigurationV1::enable_head(struct wl_resource* id, struct wl_resource* head)
 {
-    auto head_object = manager->head(head);
+    if (!manager)
+        return;
+    auto head_object = manager.value().head(head);
     if (!head_object)
     {
         mir::log_error("Unable to enable_head because it cannot be found");
@@ -204,7 +207,7 @@ void WlrOutputConfigurationV1::disable_head(struct wl_resource* head)
 {
     auto const it = std::find_if(this->heads.begin(), this->heads.end(), [&](std::shared_ptr<WlrOutputConfigurationHeadV1> const& other)
     {
-        return other->head->resource == head;
+        return other->head && other->head.value().resource == head;
     });
     if (it != heads.end())
     {
@@ -218,23 +221,35 @@ void WlrOutputConfigurationV1::disable_head(struct wl_resource* head)
 
 void WlrOutputConfigurationV1::apply()
 {
+    if (!manager)
+    {
+        send_cancelled_event();
+        return;
+    }
 
     /// Finally, we update all of the configs, write the config, and reload.
+    auto& mgr = manager.value();
     for (auto const& output : create_configs())
-        manager->config->update(output);
-    manager->config->write();
-    manager->config->reload();
+        mgr.config->update(output);
+    mgr.config->write();
+    mgr.config->reload();
     send_succeeded_event();
 }
 
 std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_configs() const
 {
+    if (!manager)
+        return {};
+
     std::vector<DisplayConfig::OutputConfig> new_outputs;
     auto constexpr apply_to_config = [&](
                                          std::shared_ptr<WlrOutputConfigurationHeadV1> const& head_config,
                                          DisplayConfig::OutputConfig& card)
     {
-        card.name = head_config->head->output.name();
+        if (!head_config->head)
+            return;
+        auto& head = head_config->head.value();
+        card.name = head.output.name();
         card.enabled = true;
         if (head_config->position)
             card.position = *head_config->position;
@@ -267,7 +282,7 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
             card.scale = *head_config->scale;
         if (head_config->mode)
         {
-            auto const& modes = head_config->head->modes;
+            auto const& modes = head.modes;
             auto const& mode_resource = *head_config->mode;
             for (auto const& mode : modes)
             {
@@ -289,13 +304,15 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
 
     /// First, we iterate over all of the heads that we have. We either update the existing head,
     /// or we add a new head if the head wasn't previously configured.
-    auto const existing_configs = manager->config->get_configs();
+    auto const existing_configs = manager.value().config->get_configs();
     for (auto const& wlr_output_config_head : heads)
     {
+        if (!wlr_output_config_head->head)
+            continue;
         bool is_new = true;
         for (auto const& output_config : existing_configs)
         {
-            if (output_config.name == wlr_output_config_head->head->name())
+            if (output_config.name == wlr_output_config_head->head.value().name())
             {
                 auto new_output_config = output_config;
                 apply_to_config(wlr_output_config_head, new_output_config);
@@ -320,7 +337,7 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
         bool found = false;
         for (auto const& wlr_output_config_head : heads)
         {
-            if (output_config.name == wlr_output_config_head->head->name())
+            if (wlr_output_config_head->head && output_config.name == wlr_output_config_head->head.value().name())
             {
                 found = true;
                 break;
@@ -340,7 +357,9 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
 
 void WlrOutputConfigurationV1::test()
 {
-    manager->config->test(create_configs());
+    if (!manager)
+        return;
+    manager.value().config->test(create_configs());
 }
 
 void WlrOutputConfigurationV1::destroy()
@@ -383,7 +402,7 @@ WlrOutputManagerV1::~WlrOutputManagerV1()
     send_finished_event();
 }
 
-WlrOutputHeadV1 const* WlrOutputManagerV1::head(wl_resource* resource)
+WlrOutputHeadV1* WlrOutputManagerV1::head(wl_resource* resource)
 {
     std::lock_guard lock(mutex);
     for (auto const& head : heads)
@@ -565,38 +584,45 @@ WlrOutputManagementUnstableV1::WlrOutputManagementUnstableV1(
 
 void WlrOutputManagementUnstableV1::bind(wl_resource* new_zwlr_output_manager_v1)
 {
-    active_managers.push_back(new WlrOutputManagerV1(new_zwlr_output_manager_v1, config, outputs));
+    active_managers.push_back(mir::wayland::Weak<WlrOutputManagerV1> {
+        new WlrOutputManagerV1(new_zwlr_output_manager_v1, config, outputs) });
 }
 
 void WlrOutputManagementUnstableV1::output_created(miral::Output const& output)
 {
+    std::erase_if(active_managers, [](auto const& m)
+    { return !m; });
     outputs.push_back(output);
     for (auto const& manager : active_managers)
-        manager->advise_output_create(output);
+        manager.value().advise_output_create(output);
 }
 
 void WlrOutputManagementUnstableV1::output_updated(miral::Output const& updated, miral::Output const& original)
 {
+    std::erase_if(active_managers, [](auto const& m)
+    { return !m; });
     std::ranges::replace_if(outputs, [&](miral::Output const& output)
     {
         return output.is_same_output(original);
     }, updated);
     for (auto const& manager : active_managers)
-        manager->advise_output_update(updated, original);
+        manager.value().advise_output_update(updated, original);
 }
 
 void WlrOutputManagementUnstableV1::output_deleted(miral::Output const& output)
 {
+    std::erase_if(active_managers, [](auto const& m)
+    { return !m; });
     std::erase_if(outputs, [&](miral::Output const& other)
     {
         return other.is_same_output(output);
     });
     for (auto const& manager : active_managers)
-        manager->advise_output_delete(output);
+        manager.value().advise_output_delete(output);
 }
 
 WlrOutputConfigurationHeadV1::WlrOutputConfigurationHeadV1(
-    struct wl_resource* id, WlrOutputHeadV1 const* head) :
+    struct wl_resource* id, WlrOutputHeadV1* head) :
     OutputConfigurationHeadV1(id, Version<4>()),
     head { head }
 {
