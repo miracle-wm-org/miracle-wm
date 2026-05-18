@@ -433,6 +433,34 @@ private:
 
     void apply_internal(mg::DisplayConfiguration& conf, std::vector<OutputConfig> const& configs) const
     {
+        // Pre-pass: find the rightmost right-edge of all configured outputs so that
+        // any unconfigured (newly plugged-in) monitors can be placed after them.
+        int rightmost_x = 0;
+        conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
+        {
+            if (!output.connected || output.modes.empty())
+                return;
+            auto const config_it = std::ranges::find_if(configs, [&](OutputConfig const& card)
+            {
+                return card.name == output.name;
+            });
+            if (config_it == configs.end())
+                return;
+
+            int x = config_it->position ? config_it->position->x.as_int() : 0;
+            int width = 0;
+            if (config_it->size)
+                width = config_it->size->width.as_int();
+            else
+            {
+                auto const mode_idx = select_mode_index(output.preferred_mode_index, output.modes);
+                if (mode_idx)
+                    width = output.modes[*mode_idx].size.width.as_int();
+            }
+            rightmost_x = std::max(rightmost_x, x + width);
+        });
+        int next_unconfigured_x = rightmost_x;
+
         bool has_had_primary = false;
         bool has_applied_any = false;
         conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
@@ -451,9 +479,17 @@ private:
 
             if (config_it == configs.end())
             {
-                output.used = false;
-                output.power_mode = mir_power_mode_off;
-                mir::log_info("Unused output with name and ID: %s, %d", output.name.c_str(), output.card_id.as_value());
+                output.used = true;
+                output.power_mode = mir_power_mode_on;
+                output.top_left = geom::Point(next_unconfigured_x, 0);
+                auto const preferred_mode_index = select_mode_index(output.preferred_mode_index, output.modes);
+                output.current_mode_index = preferred_mode_index.value_or(0);
+                output.logical_group_id = empty_group_id;
+                output.orientation = mir_orientation_normal;
+                next_unconfigured_x += output.extents().size.width.as_int();
+                has_applied_any = true;
+                mir::log_info("Output '%s' not in display config, enabled at (%d, 0)",
+                    output.name.c_str(), output.top_left.x.as_int());
                 return;
             }
 
@@ -565,6 +601,11 @@ void miracle::DisplayConfig::reload()
 void miracle::DisplayConfig::test(std::vector<OutputConfig> const& configs)
 {
     self->test(configs);
+}
+
+void miracle::DisplayConfig::apply_to_config(mir::graphics::DisplayConfiguration& conf)
+{
+    self->apply_to(conf);
 }
 
 void miracle::DisplayConfig::write()
