@@ -264,6 +264,7 @@ Policy::Policy(
         ipc_command_executor,
         config,
         window_controller)),
+    binding_event_listener_ { ipc_connection_manager.get() },
     animator_loop(std::make_unique<ThreadedAnimatorLoop>(animator)),
     main_loop_(server.the_main_loop()),
     dying_surface_manager(std::make_unique<DyingSurfaceManager>(
@@ -330,142 +331,150 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
         if (key_command == DefaultKeyCommand::MAX)
             return false;
 
-        BindingEvent const binding_event(
-            BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
-            default_key_command_strings[static_cast<size_t>(key_command)],
-            modifiers,
-            keysym,
-            BindingEventType::keyboard);
-        ipc_connection_manager->on_binding_event(binding_event);
+        auto const handled = [&]() -> bool
+        {
+            switch (key_command)
+            {
+            case DefaultKeyCommand::Terminal:
+            {
+                if (auto const terminal_command = config->get_terminal_command())
+                    launcher->launch({ terminal_command.value() });
+                return true;
+            }
+            case DefaultKeyCommand::RequestVertical:
+                return command_controller->try_request_vertical(empty_scope);
+            case DefaultKeyCommand::RequestHorizontal:
+                return command_controller->try_request_horizontal(empty_scope);
+            case DefaultKeyCommand::ToggleResize:
+                command_controller->try_toggle_resize_mode();
+                return true;
+            case DefaultKeyCommand::ResizeUp:
+                return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::up, config->get_resize_jump(), empty_scope);
+            case DefaultKeyCommand::ResizeDown:
+                return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::down, config->get_resize_jump(), empty_scope);
+            case DefaultKeyCommand::ResizeLeft:
+                return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::left, config->get_resize_jump(), empty_scope);
+            case DefaultKeyCommand::ResizeRight:
+                return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::right, config->get_resize_jump(), empty_scope);
+            case DefaultKeyCommand::MoveUp:
+                return command_controller->try_move_by_direction(Direction::up, empty_scope);
+            case DefaultKeyCommand::MoveDown:
+                return command_controller->try_move_by_direction(Direction::down, empty_scope);
+            case DefaultKeyCommand::MoveLeft:
+                return command_controller->try_move_by_direction(Direction::left, empty_scope);
+            case DefaultKeyCommand::MoveRight:
+                return command_controller->try_move_by_direction(Direction::right, empty_scope);
+            case DefaultKeyCommand::SelectUp:
+                return command_controller->try_select(Direction::up, empty_scope);
+            case DefaultKeyCommand::SelectDown:
+                return command_controller->try_select(Direction::down, empty_scope);
+            case DefaultKeyCommand::SelectLeft:
+                return command_controller->try_select(Direction::left, empty_scope);
+            case DefaultKeyCommand::SelectRight:
+                return command_controller->try_select(Direction::right, empty_scope);
+            case DefaultKeyCommand::QuitActiveWindow:
+                return command_controller->try_close_window(empty_scope);
+            case DefaultKeyCommand::QuitCompositor:
+                return command_controller->quit();
+            case DefaultKeyCommand::Fullscreen:
+                return command_controller->try_toggle_fullscreen(empty_scope);
+            case DefaultKeyCommand::SelectWorkspace1:
+                return command_controller->select_workspace(1, true);
+            case DefaultKeyCommand::SelectWorkspace2:
+                return command_controller->select_workspace(2, true);
+            case DefaultKeyCommand::SelectWorkspace3:
+                return command_controller->select_workspace(3, true);
+            case DefaultKeyCommand::SelectWorkspace4:
+                return command_controller->select_workspace(4, true);
+            case DefaultKeyCommand::SelectWorkspace5:
+                return command_controller->select_workspace(5, true);
+            case DefaultKeyCommand::SelectWorkspace6:
+                return command_controller->select_workspace(6, true);
+            case DefaultKeyCommand::SelectWorkspace7:
+                return command_controller->select_workspace(7, true);
+            case DefaultKeyCommand::SelectWorkspace8:
+                return command_controller->select_workspace(8, true);
+            case DefaultKeyCommand::SelectWorkspace9:
+                return command_controller->select_workspace(9, true);
+            case DefaultKeyCommand::SelectWorkspace0:
+                return command_controller->select_workspace(0, true);
+            case DefaultKeyCommand::MoveToWorkspace1:
+                return command_controller->try_move_to_workspace(empty_scope, 1, true);
+            case DefaultKeyCommand::MoveToWorkspace2:
+                return command_controller->try_move_to_workspace(empty_scope, 2, true);
+            case DefaultKeyCommand::MoveToWorkspace3:
+                return command_controller->try_move_to_workspace(empty_scope, 3, true);
+            case DefaultKeyCommand::MoveToWorkspace4:
+                return command_controller->try_move_to_workspace(empty_scope, 4, true);
+            case DefaultKeyCommand::MoveToWorkspace5:
+                return command_controller->try_move_to_workspace(empty_scope, 5, true);
+            case DefaultKeyCommand::MoveToWorkspace6:
+                return command_controller->try_move_to_workspace(empty_scope, 6, true);
+            case DefaultKeyCommand::MoveToWorkspace7:
+                return command_controller->try_move_to_workspace(empty_scope, 7, true);
+            case DefaultKeyCommand::MoveToWorkspace8:
+                return command_controller->try_move_to_workspace(empty_scope, 8, true);
+            case DefaultKeyCommand::MoveToWorkspace9:
+                return command_controller->try_move_to_workspace(empty_scope, 9, true);
+            case DefaultKeyCommand::MoveToWorkspace0:
+                return command_controller->try_move_to_workspace(empty_scope, 0, true);
+            case DefaultKeyCommand::ToggleFloating:
+                return command_controller->toggle_floating({});
+            case DefaultKeyCommand::TogglePinnedToWorkspace:
+                return command_controller->toggle_pinned_to_workspace({});
+            case DefaultKeyCommand::ToggleTabbing:
+                return command_controller->toggle_tabbing({});
+            case DefaultKeyCommand::ToggleStacking:
+                return command_controller->toggle_stacking({});
+            case DefaultKeyCommand::MagnifierOn:
+                return magnifier->enable();
+            case DefaultKeyCommand::MagnifierOff:
+                return magnifier->disable();
+            case DefaultKeyCommand::MagnifierIncreaseSize:
+            {
+                magnifier->set_size(
+                    magnifier->get_width() + config->magnifier().size_increment,
+                    magnifier->get_height() + config->magnifier().size_increment);
+                return true;
+            }
+            case DefaultKeyCommand::MagnifierDecreaseSize:
+            {
+                magnifier->set_size(
+                    std::max(magnifier->get_width() - config->magnifier().size_increment, 100),
+                    std::max(magnifier->get_height() - config->magnifier().size_increment, 100));
+                return true;
+            }
+            case DefaultKeyCommand::MagnifierIncreaseScale:
+            {
+                magnifier->set_scale(magnifier->get_scale() + config->magnifier().scale_increment);
+                return true;
+            }
+            case DefaultKeyCommand::MagnifierDecreaseScale:
+            {
+                magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
+                return true;
+            }
+            case DefaultKeyCommand::ReloadConfig:
+                return command_controller->reload_config();
+            default:
+                mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
+                break;
+            }
+            return false;
+        }();
 
-        switch (key_command)
+        if (handled)
         {
-        case DefaultKeyCommand::Terminal:
-        {
-            if (auto const terminal_command = config->get_terminal_command())
-                launcher->launch({ terminal_command.value() });
-            return true;
+            BindingEvent const binding_event(
+                BINDING_MODE_STRINGS[static_cast<size_t>(state->mode())],
+                default_key_command_strings[static_cast<size_t>(key_command)],
+                modifiers,
+                keysym,
+                BindingEventType::keyboard);
+            binding_event_listener_->on_binding_event(binding_event);
         }
-        case DefaultKeyCommand::RequestVertical:
-            return command_controller->try_request_vertical(empty_scope);
-        case DefaultKeyCommand::RequestHorizontal:
-            return command_controller->try_request_horizontal(empty_scope);
-        case DefaultKeyCommand::ToggleResize:
-            command_controller->try_toggle_resize_mode();
-            return true;
-        case DefaultKeyCommand::ResizeUp:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::up, config->get_resize_jump(), empty_scope);
-        case DefaultKeyCommand::ResizeDown:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::down, config->get_resize_jump(), empty_scope);
-        case DefaultKeyCommand::ResizeLeft:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::left, config->get_resize_jump(), empty_scope);
-        case DefaultKeyCommand::ResizeRight:
-            return state->mode() != WindowManagerMode::normal && command_controller->try_resize(Direction::right, config->get_resize_jump(), empty_scope);
-        case DefaultKeyCommand::MoveUp:
-            return command_controller->try_move_by_direction(Direction::up, empty_scope);
-        case DefaultKeyCommand::MoveDown:
-            return command_controller->try_move_by_direction(Direction::down, empty_scope);
-        case DefaultKeyCommand::MoveLeft:
-            return command_controller->try_move_by_direction(Direction::left, empty_scope);
-        case DefaultKeyCommand::MoveRight:
-            return command_controller->try_move_by_direction(Direction::right, empty_scope);
-        case DefaultKeyCommand::SelectUp:
-            return command_controller->try_select(Direction::up, empty_scope);
-        case DefaultKeyCommand::SelectDown:
-            return command_controller->try_select(Direction::down, empty_scope);
-        case DefaultKeyCommand::SelectLeft:
-            return command_controller->try_select(Direction::left, empty_scope);
-        case DefaultKeyCommand::SelectRight:
-            return command_controller->try_select(Direction::right, empty_scope);
-        case DefaultKeyCommand::QuitActiveWindow:
-            return command_controller->try_close_window(empty_scope);
-        case DefaultKeyCommand::QuitCompositor:
-            return command_controller->quit();
-        case DefaultKeyCommand::Fullscreen:
-            return command_controller->try_toggle_fullscreen(empty_scope);
-        case DefaultKeyCommand::SelectWorkspace1:
-            return command_controller->select_workspace(1, true);
-        case DefaultKeyCommand::SelectWorkspace2:
-            return command_controller->select_workspace(2, true);
-        case DefaultKeyCommand::SelectWorkspace3:
-            return command_controller->select_workspace(3, true);
-        case DefaultKeyCommand::SelectWorkspace4:
-            return command_controller->select_workspace(4, true);
-        case DefaultKeyCommand::SelectWorkspace5:
-            return command_controller->select_workspace(5, true);
-        case DefaultKeyCommand::SelectWorkspace6:
-            return command_controller->select_workspace(6, true);
-        case DefaultKeyCommand::SelectWorkspace7:
-            return command_controller->select_workspace(7, true);
-        case DefaultKeyCommand::SelectWorkspace8:
-            return command_controller->select_workspace(8, true);
-        case DefaultKeyCommand::SelectWorkspace9:
-            return command_controller->select_workspace(9, true);
-        case DefaultKeyCommand::SelectWorkspace0:
-            return command_controller->select_workspace(0, true);
-        case DefaultKeyCommand::MoveToWorkspace1:
-            return command_controller->try_move_to_workspace(empty_scope, 1, true);
-        case DefaultKeyCommand::MoveToWorkspace2:
-            return command_controller->try_move_to_workspace(empty_scope, 2, true);
-        case DefaultKeyCommand::MoveToWorkspace3:
-            return command_controller->try_move_to_workspace(empty_scope, 3, true);
-        case DefaultKeyCommand::MoveToWorkspace4:
-            return command_controller->try_move_to_workspace(empty_scope, 4, true);
-        case DefaultKeyCommand::MoveToWorkspace5:
-            return command_controller->try_move_to_workspace(empty_scope, 5, true);
-        case DefaultKeyCommand::MoveToWorkspace6:
-            return command_controller->try_move_to_workspace(empty_scope, 6, true);
-        case DefaultKeyCommand::MoveToWorkspace7:
-            return command_controller->try_move_to_workspace(empty_scope, 7, true);
-        case DefaultKeyCommand::MoveToWorkspace8:
-            return command_controller->try_move_to_workspace(empty_scope, 8, true);
-        case DefaultKeyCommand::MoveToWorkspace9:
-            return command_controller->try_move_to_workspace(empty_scope, 9, true);
-        case DefaultKeyCommand::MoveToWorkspace0:
-            return command_controller->try_move_to_workspace(empty_scope, 0, true);
-        case DefaultKeyCommand::ToggleFloating:
-            return command_controller->toggle_floating({});
-        case DefaultKeyCommand::TogglePinnedToWorkspace:
-            return command_controller->toggle_pinned_to_workspace({});
-        case DefaultKeyCommand::ToggleTabbing:
-            return command_controller->toggle_tabbing({});
-        case DefaultKeyCommand::ToggleStacking:
-            return command_controller->toggle_stacking({});
-        case DefaultKeyCommand::MagnifierOn:
-            return magnifier->enable();
-        case DefaultKeyCommand::MagnifierOff:
-            return magnifier->disable();
-        case DefaultKeyCommand::MagnifierIncreaseSize:
-        {
-            magnifier->set_size(
-                magnifier->get_width() + config->magnifier().size_increment,
-                magnifier->get_height() + config->magnifier().size_increment);
-            return true;
-        }
-        case DefaultKeyCommand::MagnifierDecreaseSize:
-        {
-            magnifier->set_size(
-                std::max(magnifier->get_width() - config->magnifier().size_increment, 100),
-                std::max(magnifier->get_height() - config->magnifier().size_increment, 100));
-            return true;
-        }
-        case DefaultKeyCommand::MagnifierIncreaseScale:
-        {
-            magnifier->set_scale(magnifier->get_scale() + config->magnifier().scale_increment);
-            return true;
-        }
-        case DefaultKeyCommand::MagnifierDecreaseScale:
-        {
-            magnifier->set_scale(std::max(magnifier->get_scale() - config->magnifier().scale_increment, 1.f));
-            return true;
-        }
-        case DefaultKeyCommand::ReloadConfig:
-            return command_controller->reload_config();
-        default:
-            mir::log_error("Unknown key_command: %d", std::to_underlying(key_command));
-            break;
-        }
-        return false;
+
+        return handled;
     }))
     {
         return true;

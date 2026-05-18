@@ -15,11 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "binding_event.h"
 #include "config_observer.h"
 #include "display_config.h"
 #include "freestyle_window_container.h"
 #include "ipc_client.h"
 #include "leaf_container.h"
+#include "mock_binding_event_listener.h"
 #include "output_listener.h"
 #include "parent_container.h"
 #include "policy.h"
@@ -809,4 +811,121 @@ TEST_F(SingleWindowPolicyTest, DISABLED_FreestyleWindowWithoutParentOpensOnActiv
     auto const container = first_freestyle(*compositor_state);
     ASSERT_THAT(container, Ne(nullptr));
     EXPECT_THAT(container->get_workspace(), Ne(nullptr));
+}
+
+// ---- Binding event tests ----
+
+namespace
+{
+
+class KeyBindingTestConfig : public test::StubConfiguration
+{
+public:
+    std::function<bool(MirKeyboardAction, uint32_t, unsigned int, std::function<bool(DefaultKeyCommand)> const&)>
+        on_matches_key_command;
+
+    bool matches_key_command(
+        MirKeyboardAction action,
+        uint32_t keysym,
+        unsigned int modifiers,
+        std::function<bool(DefaultKeyCommand)> const& f) const override
+    {
+        if (on_matches_key_command)
+            return on_matches_key_command(action, keysym, modifiers, f);
+        return false;
+    }
+};
+
+} // namespace
+
+class BindingEventPolicyTest : public PolicyTest
+{
+public:
+    BindingEventPolicyTest() :
+        config { std::make_shared<KeyBindingTestConfig>() },
+        mock_listener { std::make_shared<NiceMock<test::MockBindingEventListener>>() }
+    {
+    }
+
+    auto get_builder() -> mir_test_framework::WindowManagementPolicyBuilder override
+    {
+        return [&](miral::WindowManagerTools const& tools)
+        {
+            auto policy = std::make_unique<Policy>(
+                tools,
+                server,
+                launcher,
+                config,
+                compositor_state,
+                std::make_shared<OutputListenerMultiplexer>(),
+                std::make_shared<DisplayConfig>(),
+                std::make_shared<ConfigObserverRegistrar>(),
+                miral::Magnifier());
+            policy_ptr = policy.get();
+            return policy;
+        };
+    }
+
+    auto get_initial_output_configs() -> std::vector<mir::graphics::DisplayConfigurationOutput> override
+    {
+        return output_configs_from_output_rectangles({
+            mir::geometry::Rectangle { { 0, 0 }, { 800, 600 } }
+        });
+    }
+
+    void SetUp() override
+    {
+        PolicyTest::SetUp();
+        policy_ptr->override_binding_event_listener(mock_listener.get());
+    }
+
+    std::shared_ptr<KeyBindingTestConfig> config;
+    std::shared_ptr<NiceMock<test::MockBindingEventListener>> mock_listener;
+    Policy* policy_ptr = nullptr;
+};
+
+TEST_F(BindingEventPolicyTest, binding_event_not_sent_when_keybind_handler_returns_false)
+{
+    // ResizeUp returns false in normal (non-resize) mode, so no binding event should fire.
+    config->on_matches_key_command = [](MirKeyboardAction action, uint32_t keysym, unsigned int,
+                                         std::function<bool(DefaultKeyCommand)> const& f) -> bool
+    {
+        if (action == mir_keyboard_action_down && keysym == XKB_KEY_Up)
+            return f(DefaultKeyCommand::ResizeUp);
+        return false;
+    };
+
+    EXPECT_CALL(*mock_listener, on_binding_event).Times(0);
+
+    auto const event = mir::events::make_key_event(
+        mir_input_event_type_key,
+        std::chrono::system_clock::now().time_since_epoch(),
+        mir_keyboard_action_down,
+        XKB_KEY_Up,
+        KEY_UP,
+        mir_input_event_modifier_meta);
+    publish_event(*event);
+}
+
+TEST_F(BindingEventPolicyTest, binding_event_sent_when_keybind_handler_returns_true)
+{
+    // SelectWorkspace1 always returns true, so the binding event must fire exactly once.
+    config->on_matches_key_command = [](MirKeyboardAction action, uint32_t keysym, unsigned int,
+                                         std::function<bool(DefaultKeyCommand)> const& f) -> bool
+    {
+        if (action == mir_keyboard_action_down && keysym == XKB_KEY_1)
+            return f(DefaultKeyCommand::SelectWorkspace1);
+        return false;
+    };
+
+    EXPECT_CALL(*mock_listener, on_binding_event).Times(1);
+
+    auto const event = mir::events::make_key_event(
+        mir_input_event_type_key,
+        std::chrono::system_clock::now().time_since_epoch(),
+        mir_keyboard_action_down,
+        XKB_KEY_1,
+        KEY_1,
+        mir_input_event_modifier_meta);
+    publish_event(*event);
 }

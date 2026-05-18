@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "animator.h"
 #include "auto_restarting_launcher.h"
+#include "binding_event_listener.h"
 #include "command_controller.h"
 #include "compositor_state.h"
 #include "config.h"
@@ -118,6 +119,8 @@ public:
 
     [[nodiscard]] std::shared_ptr<mir::MainLoop> const& main_loop() const { return main_loop_; }
 
+    void override_binding_event_listener(BindingEventListener* listener) { binding_event_listener_ = listener; }
+
 private:
     class Self;
 
@@ -147,6 +150,7 @@ private:
     std::unique_ptr<ResizeService> resize_service;
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
+    BindingEventListener* binding_event_listener_;
     std::unique_ptr<AnimatorLoop> animator_loop;
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;

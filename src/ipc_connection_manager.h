@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef IPC_CONNECTION_H
 #define IPC_CONNECTION_H
 
+#include "binding_event_listener.h"
 #include "config_observer.h"
 #include "ipc_message_handler.h"
 #include "mode_observer.h"
@@ -43,7 +44,8 @@ class IpcConnectionManager : public virtual WorkspaceObserver,
                              public virtual ModeObserver,
                              public virtual WindowObserver,
                              public virtual ConfigObserver,
-                             public virtual OutputListener
+                             public virtual OutputListener,
+                             public BindingEventListener
 {
 public:
     IpcConnectionManager(
@@ -72,7 +74,7 @@ public:
     void output_created(miral::Output const&) override;
     void output_deleted(miral::Output const&) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
-    void on_binding_event(BindingEvent const& binding_event);
+    void on_binding_event(BindingEvent const& binding_event) override;
 
 private:
     struct IpcClient
