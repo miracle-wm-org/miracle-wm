@@ -864,7 +864,8 @@ public:
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
-                miral::Magnifier());
+                miral::Magnifier(),
+                std::make_shared<SamplerRegistry>());
             policy_ptr = policy.get();
             return policy;
         };
