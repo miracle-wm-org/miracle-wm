@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "parent_container.h"
 #include "policy.h"
+#include "sampler_registry.h"
 #include "stub_configuration.h"
 #include "vertical_display_configuration_policy.h"
 
@@ -102,7 +103,8 @@ public:
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
-                miral::Magnifier());
+                miral::Magnifier(),
+                std::make_shared<SamplerRegistry>());
         };
     }
 
@@ -139,7 +141,8 @@ public:
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
-                miral::Magnifier());
+                miral::Magnifier(),
+                std::make_shared<SamplerRegistry>());
         };
     }
 
@@ -175,7 +178,8 @@ public:
                 std::make_shared<OutputListenerMultiplexer>(),
                 std::make_shared<DisplayConfig>(),
                 std::make_shared<ConfigObserverRegistrar>(),
-                miral::Magnifier());
+                miral::Magnifier(),
+                std::make_shared<SamplerRegistry>());
         };
     }
 
