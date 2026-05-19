@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "layout_scheme.h"
 #include "mir/geometry/forward.h"
 #include "shell_application_manager.h"
+#include "stacking_header_internal_client.h"
 #include "synchronized_recursive.h"
 #include "window_controller.h"
 #include <mir/geometry/rectangle.h>
@@ -124,6 +125,9 @@ public:
     [[nodiscard]] std::optional<size_t> get_index_of_node(Container const* node) const;
     [[nodiscard]] std::optional<size_t> get_index_of_node(std::shared_ptr<Container> const& node) const;
     [[nodiscard]] std::optional<size_t> get_index_of_node(Container const&) const;
+    void update_header_if_stacking();
+
+    static constexpr int HEADER_HEIGHT = 30;
 
     static void swap(
         std::shared_ptr<ParentContainer> const& first_parent,
@@ -145,6 +149,24 @@ private:
         std::weak_ptr<Container> container;
     };
 
+public:
+    class StackingHeaderPositioner : public ShellApplicationDelegate
+    {
+    public:
+        explicit StackingHeaderPositioner(ParentContainer* parent);
+        void place_window(miral::WindowSpecification& spec) override;
+        void handle_ready(std::shared_ptr<Container> const& container) override;
+        void set_area(mir::geometry::Rectangle const& area);
+        void update_tabs(std::vector<std::string> names, int focused_index);
+        std::shared_ptr<TabState> tab_state() const { return tab_state_; }
+
+    private:
+        ParentContainer* parent;
+        std::weak_ptr<Container> container_;
+        std::shared_ptr<TabState> tab_state_;
+    };
+
+private:
     struct State
     {
         std::vector<std::shared_ptr<Container>> container_list;
@@ -157,6 +179,8 @@ private:
         std::shared_ptr<LeafContainer> pending_node;
         std::optional<ShellApplicationId> shell_application_id;
         std::weak_ptr<ParentContainerBackgroundPositioner> shell_application_positioner;
+        std::optional<ShellApplicationId> header_application_id;
+        std::shared_ptr<StackingHeaderPositioner> header_positioner;
     };
 
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
@@ -171,6 +195,9 @@ private:
     void raise_children();
     void update_background_client_area();
     void try_remove_background_client();
+    void spawn_header_client();
+    void remove_header_client();
+    void update_header_tabs();
 };
 
 } // miracle

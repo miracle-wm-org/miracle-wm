@@ -66,8 +66,20 @@ public:
         return ParentContainerData { shell_application_manager, state, window_controller, config, area };
     }
 
-    std::shared_ptr<ShellApplicationManager> shell_application_manager = std::make_shared<ShellApplicationManager>(
-        std::make_unique<NiceMock<test::MockShellApplicationSpawner>>());
+    std::shared_ptr<ShellApplicationManager> make_shell_app_manager()
+    {
+        auto spawner = std::make_unique<NiceMock<test::MockShellApplicationSpawner>>();
+        spawner_raw = spawner.get();
+        ON_CALL(*spawner_raw, spawn(_, _))
+            .WillByDefault([](auto, auto) -> std::unique_ptr<ShellApplication>
+        {
+            return std::make_unique<NiceMock<test::MockShellApplication>>();
+        });
+        return std::make_shared<ShellApplicationManager>(std::move(spawner));
+    }
+
+    test::MockShellApplicationSpawner* spawner_raw = nullptr;
+    std::shared_ptr<ShellApplicationManager> shell_application_manager = make_shell_app_manager();
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
     std::shared_ptr<Config> config = std::make_shared<test::StubConfiguration>();
@@ -202,4 +214,52 @@ TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsOnDifferentWorkspace
         0,
         second_parent_data.parent,
         0);
+}
+
+TEST_F(ParentContainerTest, WhenEnteringStackingModeSpawnerIsCalledWithStackingHeaderRole)
+{
+    // Arrange
+    auto parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 600 }));
+    auto child = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(child.get());
+    ON_CALL(*child, get_logical_area()).WillByDefault(Return(geom::Rectangle({ 0, 0 }, { 800, 600 })));
+    parent_data.parent->add_child(child, 0);
+
+    // Expect
+    EXPECT_CALL(*spawner_raw, spawn(ShellApplicationRole::stacking_header, _));
+
+    // Act
+    parent_data.parent->toggle_stacking();
+}
+
+TEST_F(ParentContainerTest, WhenEnteringTabbingModeSpawnerIsCalledWithStackingHeaderRole)
+{
+    // Arrange
+    auto parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 600 }));
+    auto child = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(child.get());
+    ON_CALL(*child, get_logical_area()).WillByDefault(Return(geom::Rectangle({ 0, 0 }, { 800, 600 })));
+    parent_data.parent->add_child(child, 0);
+
+    // Expect
+    EXPECT_CALL(*spawner_raw, spawn(ShellApplicationRole::stacking_header, _));
+
+    // Act
+    parent_data.parent->toggle_tabbing();
+}
+
+TEST_F(ParentContainerTest, WhenNotInStackingOrTabbingModeNoHeaderIsSpawned)
+{
+    // Arrange: default scheme is horizontal
+    auto parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 600 }));
+    auto child = std::make_shared<NiceMock<test::MockContainer>>();
+    Mock::AllowLeak(child.get());
+    ON_CALL(*child, get_logical_area()).WillByDefault(Return(geom::Rectangle({ 0, 0 }, { 400, 600 })));
+    parent_data.parent->add_child(child, 0);
+
+    // Expect: stacking_header spawn is never called
+    EXPECT_CALL(*spawner_raw, spawn(ShellApplicationRole::stacking_header, _)).Times(0);
+
+    // Act: toggle to vertical (not stacking/tabbing)
+    parent_data.parent->request_vertical_layout();
 }

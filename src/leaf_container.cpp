@@ -333,6 +333,12 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     }
 
     window_controller->modify(w, mods);
+
+    if (modifications.name().is_set())
+    {
+        if (auto parent_sh = sync.lock()->parent.lock())
+            parent_sh->update_header_if_stacking();
+    }
 }
 
 void LeafContainer::handle_raise()

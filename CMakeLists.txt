@@ -113,6 +113,8 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
+pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
 find_path(WASMEDGE_INCLUDE_DIR wasmedge/wasmedge.h)
 find_library(WASMEDGE_LIB wasmedge)
 
@@ -189,6 +191,7 @@ add_library(miracle-wm-implementation STATIC
         src/shell_application_manager.cpp src/shell_application_manager.h
         src/shell_application_spawner.h
         src/internal_shell_application_spawner.h src/internal_shell_application_spawner.cpp
+        src/stacking_header_internal_client.h src/stacking_header_internal_client.cpp
         src/plugin_managed_container.h src/plugin_managed_container.cpp
         src/freestyle_window_container.h src/freestyle_window_container.cpp
         src/collection_container.h src/collection_container.cpp
@@ -269,6 +272,8 @@ target_link_libraries(miracle-wm-implementation
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-c
         xdg-shell-protocol
+        PkgConfig::CAIRO
+        PkgConfig::PANGOCAIRO
 )
 
 if (FEATURE_PLUGIN_SYSTEM)

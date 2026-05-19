@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "tiling_algorithms.h"
 #include <cmath>
 #include <mir/log.h>
+#include <unistd.h>
 
 #include "auto_restarting_launcher.h"
 
@@ -72,6 +73,66 @@ void ParentContainer::ParentContainerBackgroundPositioner::set_area(mir::geometr
     }
 }
 
+ParentContainer::StackingHeaderPositioner::StackingHeaderPositioner(ParentContainer* parent) :
+    parent { parent },
+    tab_state_ { std::make_shared<TabState>() }
+{
+}
+
+void ParentContainer::StackingHeaderPositioner::place_window(miral::WindowSpecification& spec)
+{
+    spec.focus_mode() = mir_focus_mode_disabled;
+    spec.depth_layer() = mir_depth_layer_overlay;
+}
+
+void ParentContainer::StackingHeaderPositioner::handle_ready(std::shared_ptr<Container> const& in)
+{
+    container_ = in;
+    auto area = parent->get_logical_area();
+    in->set_logical_area(
+        {
+            area.top_left,
+            { area.size.width, geom::Height { ParentContainer::HEADER_HEIGHT } }
+    },
+        false);
+    {
+        std::lock_guard lk(tab_state_->mutex);
+        tab_state_->width = area.size.width.as_int();
+    }
+    uint64_t v = 1;
+    write(tab_state_->update_fd, &v, sizeof(v));
+}
+
+void ParentContainer::StackingHeaderPositioner::set_area(mir::geometry::Rectangle const& area)
+{
+    if (auto sh = container_.lock())
+    {
+        sh->set_logical_area(
+            {
+                area.top_left,
+                { area.size.width, geom::Height { ParentContainer::HEADER_HEIGHT } }
+        },
+            false);
+    }
+    {
+        std::lock_guard lk(tab_state_->mutex);
+        tab_state_->width = area.size.width.as_int();
+    }
+    uint64_t v = 1;
+    write(tab_state_->update_fd, &v, sizeof(v));
+}
+
+void ParentContainer::StackingHeaderPositioner::update_tabs(std::vector<std::string> names, int focused_index)
+{
+    {
+        std::lock_guard lk(tab_state_->mutex);
+        tab_state_->names = std::move(names);
+        tab_state_->focused_index = focused_index;
+    }
+    uint64_t v = 1;
+    write(tab_state_->update_fd, &v, sizeof(v));
+}
+
 ParentContainer::ParentContainer(
     std::shared_ptr<ShellApplicationManager> const& shell_application_manager,
     std::shared_ptr<CompositorState> const& state,
@@ -104,6 +165,7 @@ ParentContainer::ParentContainer(
 ParentContainer::~ParentContainer()
 {
     try_remove_background_client();
+    remove_header_client();
 }
 
 void ParentContainer::try_remove_background_client()
@@ -171,7 +233,14 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
             placement_area,
             pending_index);
     else if (s->scheme == LayoutScheme::tabbing || s->scheme == LayoutScheme::stacking)
+    {
         pending_logical_rect = placement_area;
+        if (s->header_application_id.has_value())
+        {
+            pending_logical_rect.top_left.y = geom::Y { pending_logical_rect.top_left.y.as_int() + HEADER_HEIGHT };
+            pending_logical_rect.size.height = geom::Height { pending_logical_rect.size.height.as_int() - HEADER_HEIGHT };
+        }
+    }
     else
         mir::fatal_error("Invalid scheme during create_space");
 
@@ -258,6 +327,7 @@ std::shared_ptr<Container> ParentContainer::confirm_window(miral::Window const& 
     retval->associate_to_window(window);
     retval->set_parent(as_parent(shared_from_this()));
     commit_changes();
+    update_header_if_stacking();
     return retval;
 }
 
@@ -398,10 +468,16 @@ void ParentContainer::set_logical_area(const geom::Rectangle& target_rect, bool 
     }
     else if (s->scheme == LayoutScheme::tabbing || s->scheme == LayoutScheme::stacking)
     {
-        for (size_t idx = 0; idx < s->container_list.size(); idx++)
+        auto child_area = target_placement_area;
+        if (s->header_application_id.has_value())
         {
-            pending_size_updates.push_back(target_placement_area);
+            child_area.top_left.y = geom::Y { child_area.top_left.y.as_int() + HEADER_HEIGHT };
+            child_area.size.height = geom::Height { child_area.size.height.as_int() - HEADER_HEIGHT };
         }
+        for (size_t idx = 0; idx < s->container_list.size(); idx++)
+            pending_size_updates.push_back(child_area);
+        if (s->header_positioner)
+            s->header_positioner->set_area(target_placement_area);
     }
     else
     {
@@ -512,6 +588,7 @@ void ParentContainer::remove_child(const std::shared_ptr<Container>& container)
     }
 
     relayout();
+    update_header_if_stacking();
 }
 
 std::optional<size_t> ParentContainer::get_index_of_node(Container const* node) const
@@ -572,6 +649,19 @@ void ParentContainer::set_parent(std::shared_ptr<ParentContainer> const& in_pare
 void ParentContainer::relayout()
 {
     auto const placement_area = get_logical_area();
+
+    // Spawn or remove header client based on scheme (drop lock before calling to avoid re-entrancy)
+    {
+        auto s = sync.lock();
+        bool const is_stack_tab = (s->scheme == LayoutScheme::tabbing || s->scheme == LayoutScheme::stacking);
+        bool const has_header = s->header_application_id.has_value();
+        s.drop();
+        if (!is_stack_tab && has_header)
+            remove_header_client();
+        else if (is_stack_tab && !has_header)
+            spawn_header_client();
+    }
+
     auto s = sync.lock();
     if (s->scheme == LayoutScheme::horizontal)
     {
@@ -611,8 +701,14 @@ void ParentContainer::relayout()
     }
     else if (s->scheme == LayoutScheme::tabbing || s->scheme == LayoutScheme::stacking)
     {
+        auto child_area = placement_area;
+        if (s->header_application_id.has_value())
+        {
+            child_area.top_left.y = geom::Y { child_area.top_left.y.as_int() + HEADER_HEIGHT };
+            child_area.size.height = geom::Height { child_area.size.height.as_int() - HEADER_HEIGHT };
+        }
         for (auto const& node : s->container_list)
-            node->set_logical_area(placement_area, true);
+            node->set_logical_area(child_area, true);
     }
     else
     {
@@ -697,6 +793,8 @@ void ParentContainer::on_focus_gained()
 
     auto const sh_parent = s->parent.lock();
     s.drop();
+
+    update_header_if_stacking();
 
     if (sh_parent)
         sh_parent->on_focus_gained();
@@ -952,6 +1050,76 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
         { "window_properties",    nlohmann::json::object()                                                                                                                                                                                                                           }, // TODO
         { "nodes",                containers_json                                                                                                                                                                                                                                    }
     };
+}
+
+void ParentContainer::spawn_header_client()
+{
+    auto s = sync.lock();
+    if (s->header_application_id.has_value())
+        return;
+    if (config->get_wm_clients_config().stacking_client.empty())
+        return;
+    auto positioner = std::make_shared<StackingHeaderPositioner>(this);
+    s->header_positioner = positioner;
+    s->header_application_id = shell_application_manager->spawn(
+        ShellApplicationRole::stacking_header, positioner);
+}
+
+void ParentContainer::remove_header_client()
+{
+    auto s = sync.lock();
+    if (!s->header_application_id.has_value())
+        return;
+    shell_application_manager->stop(s->header_application_id.value());
+    s->header_application_id.reset();
+    s->header_positioner.reset();
+}
+
+void ParentContainer::update_header_tabs()
+{
+    std::shared_ptr<StackingHeaderPositioner> positioner;
+    std::vector<std::shared_ptr<Container>> containers;
+    {
+        auto s = sync.lock();
+        positioner = s->header_positioner;
+        containers = s->container_list;
+    }
+    if (!positioner)
+        return;
+
+    auto focused = state->focused_container();
+    std::vector<std::string> names;
+    int focused_idx = -1;
+    for (size_t i = 0; i < containers.size(); i++)
+    {
+        if (auto leaf = as_leaf(containers[i]))
+        {
+            if (auto w = leaf->window())
+            {
+                auto const& info = window_controller->info_for(*w);
+                names.push_back(info.name().empty() ? "Window" : info.name());
+            }
+            else
+                names.push_back("Window");
+        }
+        else
+        {
+            names.push_back("Container");
+        }
+        if (containers[i] == focused)
+            focused_idx = static_cast<int>(i);
+    }
+    positioner->update_tabs(std::move(names), focused_idx);
+}
+
+void ParentContainer::update_header_if_stacking()
+{
+    auto s = sync.lock();
+    if (s->scheme == LayoutScheme::tabbing || s->scheme == LayoutScheme::stacking)
+    {
+        s.drop();
+        update_header_tabs();
+    }
 }
 
 void ParentContainer::swap(

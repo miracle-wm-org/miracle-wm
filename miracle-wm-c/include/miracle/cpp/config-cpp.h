@@ -182,6 +182,16 @@ struct MIRACLE_WM_CONFIG_API PluginConfiguration
     std::string userdata_json;
 };
 
+/// Controls which client programs are used for WM-internal UI surfaces.
+struct MIRACLE_WM_CONFIG_API WmClientsConfig
+{
+    /// The client to use for stacking/tabbed container headers.
+    /// "default" uses the built-in internal client; empty string disables the header.
+    std::string stacking_client = "default";
+
+    bool operator==(const WmClientsConfig&) const = default;
+};
+
 // Forward declaration so ConfigData::merge_with_plugin_config can reference PluginConfigData.
 struct PluginConfigData;
 
@@ -217,6 +227,7 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth = true;
     miracle::WithDefaultFlag<std::vector<PluginConfiguration>> plugins;
+    miracle::WithDefaultFlag<WmClientsConfig> wm_clients;
 
     /// Other configuration files to include in addition to this one.
     miracle::WithDefaultFlag<std::vector<std::string>> includes;

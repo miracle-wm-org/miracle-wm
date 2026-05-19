@@ -27,7 +27,7 @@ miracle::ShellApplicationId miracle::ShellApplicationManager::spawn(ShellApplica
 {
     registered_apps.push_back({ .role = type,
         .id = next_id++,
-        .application = spawner->spawn(type),
+        .application = spawner->spawn(type, delegate),
         .delegate = std::move(delegate) });
     return registered_apps.back().id;
 }

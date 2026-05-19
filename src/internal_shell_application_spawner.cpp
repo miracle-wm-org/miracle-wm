@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "internal_shell_application_spawner.h"
 #include "parent_background_internal_client.h"
+#include "parent_container.h"
+#include "stacking_header_internal_client.h"
 #include <mir/log.h>
 
 using namespace miracle;
@@ -57,7 +59,9 @@ InternalShellApplicationSpawner::InternalShellApplicationSpawner(mir::Server& se
 {
 }
 
-std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(ShellApplicationRole role)
+std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(
+    ShellApplicationRole role,
+    std::shared_ptr<ShellApplicationDelegate> const& delegate)
 {
     switch (role)
     {
@@ -88,6 +92,25 @@ std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(ShellAp
             client_pool[i].is_taken = false;
         });
         return wrapper_client;
+    }
+    case ShellApplicationRole::stacking_header:
+    {
+        auto* positioner = dynamic_cast<ParentContainer::StackingHeaderPositioner*>(delegate.get());
+        if (!positioner)
+        {
+            mir::log_error("stacking_header role requires a StackingHeaderPositioner delegate");
+            return nullptr;
+        }
+
+        auto header_client = std::make_unique<StackingHeaderInternalClient>(positioner->tab_state());
+
+        miral::InternalClientLauncher launcher;
+        launcher(server);
+        launcher.launch(*header_client);
+
+        return std::make_unique<NotifyingInternalApplication>(
+            std::move(header_client),
+            [] { });
     }
     }
 

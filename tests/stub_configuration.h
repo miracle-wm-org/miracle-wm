@@ -182,6 +182,11 @@ namespace test
             return true;
         }
 
+        [[nodiscard]] WmClientsConfig const& get_wm_clients_config() const override
+        {
+            return wm_clients_config;
+        }
+
     private:
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;
@@ -190,6 +195,7 @@ namespace test
         std::optional<std::string> terminal_command;
         std::vector<EnvironmentVariable> env;
         std::vector<PluginConfiguration> plugins;
+        WmClientsConfig wm_clients_config;
     };
 }
 }

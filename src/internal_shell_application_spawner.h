@@ -33,7 +33,9 @@ class InternalShellApplicationSpawner : public ShellApplicationSpawner
 {
 public:
     explicit InternalShellApplicationSpawner(mir::Server& server);
-    std::unique_ptr<ShellApplication> spawn(ShellApplicationRole role) override;
+    std::unique_ptr<ShellApplication> spawn(
+        ShellApplicationRole role,
+        std::shared_ptr<ShellApplicationDelegate> const& delegate) override;
 
 private:
     mir::Server& server;

@@ -1162,6 +1162,13 @@ void read_workspace_back_and_forth(YAML::Node const& node, ParsingContext& conte
     if (try_parse_value(node, workspace_back_and_forth, context))
         context.result.config.workspace_back_and_forth = workspace_back_and_forth;
 }
+
+void read_wm_clients(YAML::Node const& node, ParsingContext& context)
+{
+    miracle::WmClientsConfig cfg;
+    try_parse_value(node, "stacking_client", cfg.stacking_client, context, true);
+    context.result.config.wm_clients = cfg;
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -1232,6 +1239,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_magnifier(config["magnifier"], context);
         if (config["workspace_back_and_forth"])
             read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
+        if (config["wm_clients"])
+            read_wm_clients(config["wm_clients"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1985,6 +1994,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     auto result = merge_config_fields(*this, other);
     result.plugins = other.plugins.is_set() ? other.plugins : plugins;
     result.includes = concat_vectors(*other.includes, *includes);
+    result.wm_clients = other.wm_clients.is_set() ? other.wm_clients : wm_clients;
     return result;
 }
 

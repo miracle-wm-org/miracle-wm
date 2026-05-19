@@ -326,6 +326,12 @@ bool FilesystemConfiguration::get_workspace_back_and_forth() const
     return options.workspace_back_and_forth;
 }
 
+WmClientsConfig const& FilesystemConfiguration::get_wm_clients_config() const
+{
+    std::lock_guard lock(mutex);
+    return options.wm_clients;
+}
+
 MagnifierConfiguration FilesystemConfiguration::magnifier() const
 {
     std::lock_guard lock(mutex);

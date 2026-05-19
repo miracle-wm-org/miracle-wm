@@ -33,7 +33,7 @@ public:
 class MockShellApplicationSpawner : public ShellApplicationSpawner
 {
 public:
-    MOCK_METHOD(std::unique_ptr<ShellApplication>, spawn, (ShellApplicationRole role), (override));
+    MOCK_METHOD(std::unique_ptr<ShellApplication>, spawn, (ShellApplicationRole role, std::shared_ptr<ShellApplicationDelegate> const& delegate), (override));
 };
 }
 

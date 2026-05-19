@@ -26,7 +26,8 @@ class Container;
 
 enum class ShellApplicationRole
 {
-    parent_container_background
+    parent_container_background,
+    stacking_header
 };
 
 /// Used to notify delegates about shell component events.
@@ -52,11 +53,15 @@ class ShellApplicationSpawner
 public:
     virtual ~ShellApplicationSpawner() = default;
 
-    /// Spawns a shell application with the given \p type.
+    /// Spawns a shell application with the given \p role.
     ///
     /// \param role the application that should be spawned
+    /// \param delegate the delegate that will receive placement callbacks
     /// \returns the spawned shell application
-    virtual std::unique_ptr<ShellApplication> spawn(ShellApplicationRole role) = 0;
+    virtual std::unique_ptr<ShellApplication> spawn(
+        ShellApplicationRole role,
+        std::shared_ptr<ShellApplicationDelegate> const& delegate)
+        = 0;
 };
 }
 
