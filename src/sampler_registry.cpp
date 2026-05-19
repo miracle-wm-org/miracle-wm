@@ -15,34 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef MIRACLE_WM_SAMPLER_REGISTRY_H
-#define MIRACLE_WM_SAMPLER_REGISTRY_H
+#include "sampler_registry.h"
 
-#include <cstdint>
-#include <mutex>
-#include <string>
-#include <vector>
-
-namespace miracle
+uint8_t miracle::SamplerRegistry::register_sample_to_rgba(std::string sample_to_rgba_func)
 {
-
-struct SamplerRegistry
-{
-    struct Entry
-    {
-        uint8_t id;
-        std::string sample_to_rgba_func;
-    };
-
-    // TODO: This relies on non-local knowledge that Mir internally never
-    //  claims identifiers above 1.
-    uint8_t id = 5;
-    std::vector<Entry> entries;
-    std::mutex mutex;
-
-    uint8_t register_sample_to_rgba(std::string sample_to_rgba_func);
-};
-
-} // miracle
-
-#endif // MIRACLE_WM_SAMPLER_REGISTRY_H
+    std::lock_guard lock { mutex };
+    auto const next_id = id++;
+    entries.push_back(Entry { next_id, std::move(sample_to_rgba_func) });
+    return next_id;
+}

@@ -10,28 +10,28 @@ project(miracle-wm VERSION 0.9.1)
 
 # Prefer Ninja for faster builds (if user hasn't chosen a generator)
 if(CMAKE_GENERATOR STREQUAL "")
-    message(STATUS "Tip: Use Ninja for faster builds: cmake -G Ninja")
+  message(STATUS "Tip: Use Ninja for faster builds: cmake -G Ninja")
 endif()
 
 # Enable ccache if available
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+  set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
 endif()
 
 # Enable mold if available
 find_program(MOLD_LINKER mold)
 if(MOLD_LINKER)
-    message(STATUS "Using mold linker: ${MOLD_LINKER}")
-    add_link_options(-fuse-ld=mold)
+  message(STATUS "Using mold linker: ${MOLD_LINKER}")
+  add_link_options(-fuse-ld=mold)
 endif()
 
 # Optional LTO
 option(ENABLE_LTO "Enable link-time optimization (slower builds, faster binaries)" OFF)
 if(ENABLE_LTO)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+  set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
 
 # ----------------------------------------
@@ -48,9 +48,9 @@ option(COMPILING_AGAINST_DEV "Enable if compiling against Mir RC or dev" OFF)
 option(ENABLE_TESTS "Build unit tests" ON)
 
 if(COMPILING_AGAINST_DEV)
-    set(COMPILING_AGAINST_DEV 1)
+  set(COMPILING_AGAINST_DEV 1)
 else()
-    set(COMPILING_AGAINST_DEV 0)
+  set(COMPILING_AGAINST_DEV 0)
 endif()
 
 # Feature flags
@@ -58,23 +58,23 @@ option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" ON)
 option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
 
 if(FEATURE_PLUGIN_SYSTEM)
-    set(FEATURE_PLUGIN_SYSTEM 1)
+  set(FEATURE_PLUGIN_SYSTEM 1)
 else()
-    set(FEATURE_PLUGIN_SYSTEM 0)
+  set(FEATURE_PLUGIN_SYSTEM 0)
 endif()
 
 if(FEATURE_PARENT_CONTAINER_WALLPAPERS)
-    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 1)
+  set(FEATURE_PARENT_CONTAINER_WALLPAPERS 1)
 else()
-    set(FEATURE_PARENT_CONTAINER_WALLPAPERS 0)
+  set(FEATURE_PARENT_CONTAINER_WALLPAPERS 0)
 endif()
 
 # ----------------------------------------
 # Compiler warnings
 # ----------------------------------------
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-    set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
-    add_compile_options(
+  set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+  add_compile_options(
             -Wall -Wextra -Wpedantic
             -Wconversion -Wsign-conversion
             -Wimplicit-fallthrough
@@ -83,11 +83,11 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
             -g -fno-omit-frame-pointer
     )
 else()
-    message(STATUS "Skipping most warnings for non-Debug build")
+  message(STATUS "Skipping most warnings for non-Debug build")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
-    add_compile_options(
+  add_compile_options(
             -O3
             -march=native
     )
@@ -194,6 +194,7 @@ add_library(miracle-wm-implementation STATIC
         src/collection_container.h src/collection_container.cpp
         src/container_effect.h src/container_effect.cpp
         src/window_container.cpp src/window_container.h
+        src/sampler_registry.h src/sampler_registry.cpp
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
@@ -249,7 +250,7 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
 )
 
 if (FEATURE_PLUGIN_SYSTEM)
-    target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
+  target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
 endif()
 
 target_link_libraries(miracle-wm-implementation
@@ -272,7 +273,7 @@ target_link_libraries(miracle-wm-implementation
 )
 
 if (FEATURE_PLUGIN_SYSTEM)
-    target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
+  target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
 endif()
 
 # ----------------------------------------
@@ -288,18 +289,18 @@ target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-impl
 install(TARGETS miracle-wm DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(SYSTEMD_INTEGRATION)
-    install(FILES
+  install(FILES
             session/usr/lib/systemd/user/miracle-wm-session.target
             session/usr/lib/systemd/user/miracle-wm-session-shutdown.target
             session/usr/lib/systemd/user/miracle-wm-xdg-autostart.target
             DESTINATION lib/systemd/user/
     )
-    configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
-    install(PROGRAMS session/usr/bin/libexec/miracle-wm-wait-sni-ready DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
+  configure_file(session/usr/bin/libexec/miracle-wm-session-setup.in miracle-wm-session-setup @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/miracle-wm-session-setup DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
+  install(PROGRAMS session/usr/bin/libexec/miracle-wm-wait-sni-ready DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.systemd.in miracle-wm-session @ONLY)
 else()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/miracle-wm-session.none.in miracle-wm-session @ONLY)
 endif()
 
 configure_file(session/usr/share/wayland-sessions/miracle-wm.desktop.in miracle-wm.desktop @ONLY)
@@ -312,7 +313,7 @@ install(PROGRAMS
 )
 
 if(SNAP_BUILD)
-    install(PROGRAMS src/miracle-wm-unsnap DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(PROGRAMS src/miracle-wm-unsnap DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 install(
@@ -325,7 +326,7 @@ install(
 # Subdirectories
 # ----------------------------------------
 if (ENABLE_TESTS)
-add_subdirectory(tests/)
+  add_subdirectory(tests/)
 endif()
 add_subdirectory(miracle-wm-c/)
 add_subdirectory(protocols/)
