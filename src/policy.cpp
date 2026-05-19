@@ -289,6 +289,14 @@ Policy::Policy(
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
     animator_loop->start();
+
+    server.set_exception_handler([ipc_connection_manager = ipc_connection_manager]
+    {
+        // If an exception occurs, send out the shutdown event to all clients
+        // in case we're crashing. This will ensure that they teardown their
+        // systemd sessions appropriately, if necessary.
+        ipc_connection_manager->on_shutdown();
+    });
 }
 
 Policy::~Policy()
