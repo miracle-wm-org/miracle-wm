@@ -237,10 +237,11 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
     }
 }
 
-/// A snapshot of a window's state at the time of a plugin callback.
+/// A window's state, exposed to plugin callbacks and to [`crate::plugin::managed_windows`].
 ///
-/// `WindowInfo` is read-only. To mutate a window managed by your plugin,
-/// use [`PluginWindow`] (returned by [`crate::plugin::managed_windows`]).
+/// Read-only fields describe the window at the time of the callback. Setter
+/// methods (`set_state`, `set_rectangle`, etc.) are available for windows
+/// returned by [`crate::plugin::managed_windows`].
 #[derive(Debug)]
 pub struct WindowInfo {
     /// The type of this window.
@@ -368,41 +369,17 @@ impl WindowInfo {
             Some(Workspace::from_c_with_name(&workspace, name))
         }
     }
-}
-
-impl PartialEq for WindowInfo {
-    fn eq(&self, other: &Self) -> bool {
-        self.internal == other.internal
-    }
-}
-
-/// A handle to a window managed by this plugin, with mutation methods.
-///
-/// Returned by [`crate::plugin::Plugin::managed_windows`]. Wraps [`WindowInfo`] and exposes
-/// all of its read-only fields via [`std::ops::Deref`], while adding setter methods that
-/// call into the compositor host.
-#[derive(Debug)]
-pub struct PluginWindow {
-    info: WindowInfo,
-}
-
-impl PluginWindow {
-    #[doc(hidden)]
-    pub fn from_window_info(info: WindowInfo) -> Self {
-        Self { info }
-    }
 
     /// Set the state of this window.
     pub fn set_state(&self, state: WindowState) -> Result<(), ()> {
-        let r = unsafe { miracle_window_set_state(self.info.internal as i64, state as i32) };
+        let r = unsafe { miracle_window_set_state(self.internal as i64, state as i32) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
     /// Move this window to a different workspace.
     pub fn set_workspace(&self, workspace: &Workspace) -> Result<(), ()> {
-        let r = unsafe {
-            miracle_window_set_workspace(self.info.internal as i64, workspace.id() as i64)
-        };
+        let r =
+            unsafe { miracle_window_set_workspace(self.internal as i64, workspace.id() as i64) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
@@ -410,7 +387,7 @@ impl PluginWindow {
     pub fn set_rectangle(&self, rect: Rectangle, animate: bool) -> Result<(), ()> {
         let r = unsafe {
             miracle_window_set_rectangle(
-                self.info.internal as i64,
+                self.internal as i64,
                 rect.x,
                 rect.y,
                 rect.width,
@@ -424,36 +401,27 @@ impl PluginWindow {
     /// Set the 4x4 column-major transform matrix of this window.
     pub fn set_transform(&self, transform: Mat4) -> Result<(), ()> {
         let arr = transform.to_cols_array();
-        let r =
-            unsafe { miracle_window_set_transform(self.info.internal as i64, arr.as_ptr() as i32) };
+        let r = unsafe { miracle_window_set_transform(self.internal as i64, arr.as_ptr() as i32) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
     /// Set the alpha (opacity) of this window.
     pub fn set_alpha(&self, alpha: f32) -> Result<(), ()> {
         let r = unsafe {
-            miracle_window_set_alpha(self.info.internal as i64, (&alpha as *const f32) as i32)
+            miracle_window_set_alpha(self.internal as i64, (&alpha as *const f32) as i32)
         };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 
     /// Request keyboard focus on this window.
     pub fn request_focus(&self) -> Result<(), ()> {
-        let r = unsafe { miracle_window_request_focus(self.info.internal as i64) };
+        let r = unsafe { miracle_window_request_focus(self.internal as i64) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 }
 
-impl std::ops::Deref for PluginWindow {
-    type Target = WindowInfo;
-
-    fn deref(&self) -> &Self::Target {
-        &self.info
-    }
-}
-
-impl PartialEq for PluginWindow {
+impl PartialEq for WindowInfo {
     fn eq(&self, other: &Self) -> bool {
-        self.info == other.info
+        self.internal == other.internal
     }
 }
