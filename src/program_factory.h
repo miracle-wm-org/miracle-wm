@@ -18,9 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_PROGRAM_FACTORY_H
 #define MIRACLE_WM_PROGRAM_FACTORY_H
 
+#include "sampler_registry.h"
+
 #include <GLES2/gl2.h>
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
 #include <mutex>
@@ -103,7 +106,7 @@ public:
 class ProgramFactory : public mir::graphics::gl::ProgramFactory
 {
 public:
-    ProgramFactory();
+    explicit ProgramFactory(std::shared_ptr<SamplerRegistry> const& sampler_registry);
 
     /// Creates a fragment shader for the given [id] that appends
     /// the [extension_fragment] to the top, and expects [fragment_fragment]
@@ -135,17 +138,12 @@ public:
     uint8_t register_sample_to_rgba(std::string sample_to_rgba_func);
 
 private:
-    struct CustomSamplers
-    {
-        uint8_t id;
-        std::string sample_to_rgba_func;
-    };
-
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
         ShaderHandle const& vertex_shader,
         ShaderHandle const& fragment_shader);
 
+    std::shared_ptr<SamplerRegistry> sampler_registry_;
     ShaderHandle const vertex_shader;
     ShaderHandle const border_vertex_shader;
 
@@ -154,12 +152,6 @@ private:
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
-
-    std::mutex custom_mutex;
-    // TODO: This relies on non-local knowledge that Mir internally never
-    //  claims identifiers above 1.
-    uint8_t id = 5;
-    std::vector<CustomSamplers> custom_samplers;
 };
 
 } // miracle

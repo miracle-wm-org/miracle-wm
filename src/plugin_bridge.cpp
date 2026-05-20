@@ -172,7 +172,8 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<WindowIdMap> const& window_id_map,
     std::shared_ptr<ApplicationIdMap> const& application_id_map,
     std::shared_ptr<Animator> const& animator,
-    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue) :
+    std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
+    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     output_manager(output_manager),
     window_controller(window_controller),
     workspace_manager(workspace_manager),
@@ -180,8 +181,14 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
     window_id_map(window_id_map),
     application_id_map(application_id_map),
     animator(animator),
-    server_action_queue(server_action_queue)
+    server_action_queue(server_action_queue),
+    sampler_registry_(sampler_registry)
 {
+}
+
+uint8_t PluginBridge::register_window_sample_to_rgba(std::string glsl)
+{
+    return sampler_registry_->register_sample_to_rgba(std::move(glsl));
 }
 
 uint64_t PluginBridge::find_window_id(miral::Window const& window) const

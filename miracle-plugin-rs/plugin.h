@@ -543,6 +543,13 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_queue_custom_animation(int32_t plugin_handle, int32_t* out_animation_id, float duration_seconds);
 
+    /// Register a custom GLSL `sample_to_rgba` function for use in window shaders.
+    ///
+    /// \param glsl     pointer to the GLSL source string
+    /// \param glsl_len length of the GLSL source string in bytes
+    /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
+    int32_t miracle_register_window_sample_to_rgba(const char* glsl, int32_t glsl_len);
+
 #ifdef __cplusplus
 }
 #endif

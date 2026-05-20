@@ -221,7 +221,8 @@ Policy::Policy(
     std::shared_ptr<OutputListenerMultiplexer> const& output_listener,
     std::shared_ptr<DisplayConfig> const& display_config,
     std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
-    miral::Magnifier const& magnifier) :
+    miral::Magnifier const& magnifier,
+    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     tools { tools },
     config { config },
     state { state },
@@ -276,7 +277,7 @@ Policy::Policy(
         window_controller)),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
-    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop()));
+    plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry));
     config->set_plugin_configure_hook([pm = plugin_manager]()
     {
         return pm->configure();

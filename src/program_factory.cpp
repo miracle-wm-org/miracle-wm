@@ -189,7 +189,8 @@ miracle::Program::Program(ProgramHandle&& program) :
 {
 }
 
-miracle::ProgramFactory::ProgramFactory() :
+miracle::ProgramFactory::ProgramFactory(std::shared_ptr<SamplerRegistry> const& sampler_registry) :
+    sampler_registry_ { sampler_registry },
     vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) },
     border_vertex_shader { compile_shader(GL_VERTEX_SHADER, border_vertex_shader_src) },
     border_fragment_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
@@ -268,15 +269,15 @@ void main() {
 
 mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
 {
-    std::lock_guard lock { custom_mutex };
-    for (auto const& custom : custom_samplers)
+    std::lock_guard lock { sampler_registry_->mutex };
+    for (auto const& entry : sampler_registry_->entries)
     {
-        if (custom.id == id)
+        if (entry.id == id)
         {
             return compile_fragment_shader(
                 reinterpret_cast<void*>(id),
                 "",
-                custom.sample_to_rgba_func.c_str());
+                entry.sample_to_rgba_func.c_str());
         }
     }
 
@@ -285,10 +286,7 @@ mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
 
 uint8_t miracle::ProgramFactory::register_sample_to_rgba(std::string sample_to_rgba_func)
 {
-    std::lock_guard lock { custom_mutex };
-    auto const next_id = id++;
-    custom_samplers.push_back(CustomSamplers { next_id, std::move(sample_to_rgba_func) });
-    return next_id;
+    return sampler_registry_->register_sample_to_rgba(std::move(sample_to_rgba_func));
 }
 
 GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)
