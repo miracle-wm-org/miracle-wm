@@ -4,7 +4,7 @@ use crate::host::*;
 use crate::input::{KeyboardEvent, PointerEvent};
 use crate::output::*;
 use crate::placement::Placement;
-use crate::window::WindowInfo;
+use crate::window::Window;
 use crate::workspace::*;
 
 unsafe extern "C" {
@@ -58,7 +58,7 @@ pub trait Plugin {
     fn window_open_animation(
         &mut self,
         _data: &AnimationFrameData,
-        _window: &WindowInfo,
+        _window: &Window,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -69,7 +69,7 @@ pub trait Plugin {
     fn window_close_animation(
         &mut self,
         _data: &AnimationFrameData,
-        _window: &WindowInfo,
+        _window: &Window,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -80,7 +80,7 @@ pub trait Plugin {
     fn window_move_animation(
         &mut self,
         _data: &AnimationFrameData,
-        _window: &WindowInfo,
+        _window: &Window,
     ) -> Option<AnimationFrameResult> {
         None
     }
@@ -100,7 +100,7 @@ pub trait Plugin {
     ///
     /// Return a [`Placement`] to override where and how the window is placed.
     /// Return `None` to let the compositor handle placement normally.
-    fn place_new_window(&mut self, _info: &WindowInfo) -> Option<Placement> {
+    fn place_new_window(&mut self, _info: &Window) -> Option<Placement> {
         None
     }
 
@@ -108,13 +108,13 @@ pub trait Plugin {
     ///
     /// The window info is still valid at this point (the window has not yet
     /// been removed from the compositor).
-    fn window_deleted(&mut self, _info: &WindowInfo) {}
+    fn window_deleted(&mut self, _info: &Window) {}
 
     /// Called when a window gains focus.
-    fn window_focused(&mut self, _info: &WindowInfo) {}
+    fn window_focused(&mut self, _info: &Window) {}
 
     /// Called when a window loses focus.
-    fn window_unfocused(&mut self, _info: &WindowInfo) {}
+    fn window_unfocused(&mut self, _info: &Window) {}
 
     /// Called when a workspace is created.
     fn workspace_created(&mut self, _workspace: &Workspace) {}
@@ -134,7 +134,7 @@ pub trait Plugin {
     ///
     /// This fires whenever a window is moved to a different workspace,
     /// whether initiated by the user, a command, or a plugin.
-    fn window_workspace_changed(&mut self, _info: &WindowInfo, _workspace: &Workspace) {}
+    fn window_workspace_changed(&mut self, _info: &Window, _workspace: &Workspace) {}
 
     /// Called on every config reload. Return a [`Configuration`] with the fields
     /// this plugin wants to override, or `None` to leave the compositor's config unchanged.
@@ -176,7 +176,7 @@ pub trait Plugin {
 ///
 /// Each returned [`WindowInfo`] exposes both read-only fields and setter methods
 /// for mutating the window's state, workspace, size, transform, and alpha.
-pub fn managed_windows() -> Vec<WindowInfo> {
+pub fn managed_windows() -> Vec<Window> {
     let handle = unsafe { miracle_get_plugin_handle() };
     let count = unsafe { miracle_num_managed_windows(handle) };
 
@@ -207,7 +207,7 @@ pub fn managed_windows() -> Vec<WindowInfo> {
                     .unwrap_or(NAME_BUF_LEN);
                 let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-                Some(WindowInfo::from_c_with_name(&window_info, name))
+                Some(Window::from_c_with_name(&window_info, name))
             }
         })
         .collect()
