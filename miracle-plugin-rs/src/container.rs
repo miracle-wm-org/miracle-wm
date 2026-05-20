@@ -50,7 +50,7 @@ pub struct WindowContainer {
 
 impl WindowContainer {
     /// Get the window info from this container.
-    pub fn window(&self) -> Option<WindowInfo> {
+    pub fn window(&self) -> Option<Window> {
         const NAME_BUF_LEN: usize = 256;
         let mut window = std::mem::MaybeUninit::<crate::bindings::miracle_window_info_t>::uninit();
         let mut name_buf: [u8; NAME_BUF_LEN] = [0; NAME_BUF_LEN];
@@ -75,7 +75,7 @@ impl WindowContainer {
                 .unwrap_or(NAME_BUF_LEN);
             let name = String::from_utf8_lossy(&name_buf[..name_len]).into_owned();
 
-            Some(WindowInfo::from_c_with_name(&window, name))
+            Some(Window::from_c_with_name(&window, name))
         }
     }
 }

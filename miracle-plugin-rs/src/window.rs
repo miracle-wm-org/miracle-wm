@@ -243,7 +243,7 @@ impl TryFrom<bindings::MirDepthLayer> for DepthLayer {
 /// methods (`set_state`, `set_rectangle`, etc.) are available for windows
 /// returned by [`crate::plugin::managed_windows`].
 #[derive(Debug)]
-pub struct WindowInfo {
+pub struct Window {
     /// The type of this window.
     pub window_type: WindowType,
     /// The state of the window.
@@ -264,7 +264,7 @@ pub struct WindowInfo {
     internal: u64,
 }
 
-impl WindowInfo {
+impl Window {
     #[doc(hidden)]
     pub unsafe fn from_c_with_name(value: &bindings::miracle_window_info_t, name: String) -> Self {
         Self {
@@ -428,7 +428,7 @@ impl WindowInfo {
     }
 }
 
-impl PartialEq for WindowInfo {
+impl PartialEq for Window {
     fn eq(&self, other: &Self) -> bool {
         self.internal == other.internal
     }
