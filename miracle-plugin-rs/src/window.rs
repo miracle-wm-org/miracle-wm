@@ -418,6 +418,14 @@ impl WindowInfo {
         let r = unsafe { miracle_window_request_focus(self.internal as i64) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
+
+    /// Set the custom shader applied to this window.
+    ///
+    /// Pass the ID returned by `register_window_sample_to_rgba`.
+    pub fn set_shader(&self, shader_id: u8) -> Result<(), ()> {
+        let r = unsafe { miracle_window_set_shader_id(self.internal as i64, shader_id as i32) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
 }
 
 impl PartialEq for WindowInfo {

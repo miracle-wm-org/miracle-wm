@@ -125,6 +125,19 @@ void miracle::WindowContainer::set_window_alpha(float alpha)
     rerender();
 }
 
+void miracle::WindowContainer::set_window_shader_id(std::optional<uint8_t> shader_id)
+{
+    auto state = window_sync.lock();
+    if (state->render_id.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+        {
+            rdm_locked->shader_id_change(state->render_id.value(), shader_id);
+        }
+    }
+    rerender();
+}
+
 bool miracle::WindowContainer::can_animate()
 {
     return true;

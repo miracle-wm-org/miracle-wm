@@ -649,6 +649,23 @@ int32_t PluginBridge::window_request_focus(uint64_t window_internal)
     return 0;
 }
 
+int32_t PluginBridge::window_set_shader_id(uint64_t window_internal, int32_t shader_id_param)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return -1;
+
+    std::optional<uint8_t> shader_id = (shader_id_param < 0)
+        ? std::nullopt
+        : std::optional<uint8_t>(static_cast<uint8_t>(shader_id_param));
+    container->set_window_shader_id(shader_id);
+    return 0;
+}
+
 void PluginBridge::set_plugin_userdata(uint32_t handle, std::string const& userdata_json)
 {
     plugin_userdata_map[handle] = userdata_json;

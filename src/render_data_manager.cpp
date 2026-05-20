@@ -101,6 +101,19 @@ void RenderDataManager::needs_outline_change(RenderDataManagerId id, bool needs_
     }
 }
 
+void RenderDataManager::shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id)
+{
+    std::lock_guard lock(mutex);
+    for (auto& data : render_data)
+    {
+        if (data.id == id)
+        {
+            data.shader_id = shader_id;
+            return;
+        }
+    }
+}
+
 void RenderDataManager::remove(RenderDataManagerId id)
 {
     std::lock_guard lock(mutex);

@@ -530,6 +530,16 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_request_focus(int64_t window_internal);
 
+    /// Set the custom shader applied to a plugin-managed window.
+    ///
+    /// Pass the ID returned by #miracle_register_window_sample_to_rgba to activate
+    /// the shader, or pass -1 to clear any custom shader and revert to default rendering.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param shader_id the shader ID returned by #miracle_register_window_sample_to_rgba, or -1 to clear
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_shader_id(int64_t window_internal, int32_t shader_id);
+
     /// Queue a custom per-frame animation.
     ///
     /// The compositor will call the plugin's `custom_animate` WASM export each frame
