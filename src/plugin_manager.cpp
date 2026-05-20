@@ -742,6 +742,20 @@ WasmEdge_Result host_miracle_window_request_focus(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_set_shader_id(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const shader_id = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_set_shader_id(static_cast<uint64_t>(window_internal), shader_id));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_get_plugin_userdata(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -1042,6 +1056,9 @@ void PluginManager::Self::create_host_module()
     add_host_function(module, "miracle_window_request_focus",
         create_func_type({ i64 }, { i32 }),
         host_miracle_window_request_focus, bridge.get());
+    add_host_function(module, "miracle_window_set_shader_id",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_shader_id, bridge.get());
 
     add_host_function(module, "miracle_get_plugin_userdata",
         create_func_type({ i32, i32, i32 }, { i32 }),
@@ -1066,7 +1083,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 22);
+    mir::log_info("Host module 'env' registered with %d functions", 23);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& userdata_json)

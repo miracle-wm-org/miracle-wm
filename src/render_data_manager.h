@@ -52,6 +52,7 @@ public:
     void output_area_change(RenderDataManagerId id, mir::geometry::Rectangle const& area);
     void focus_change(RenderDataManagerId id, bool is_focused);
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
+    void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
     std::vector<RenderData> const& get();
 
 private:

@@ -111,6 +111,11 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_request_focus(window_internal: i64) -> i32;
 
+    /// Set the custom shader applied to a managed window.
+    /// Pass -1 as `shader_id` to clear any custom shader.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_shader_id(window_internal: i64, shader_id: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.
