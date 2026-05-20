@@ -86,10 +86,8 @@ impl Workspace {
     pub fn tree(&self) -> Option<Container> {
         let mut container = std::mem::MaybeUninit::<crate::bindings::miracle_container_t>::uninit();
         unsafe {
-            let result = miracle_workspace_get_tree(
-                self.internal as i64,
-                container.as_mut_ptr() as i32,
-            );
+            let result =
+                miracle_workspace_get_tree(self.internal as i64, container.as_mut_ptr() as i32);
 
             if result != 0 {
                 return None;

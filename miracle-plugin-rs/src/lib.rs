@@ -68,7 +68,7 @@
 //! | Module | Contents |
 //! |---|---|
 //! | [`plugin`] | [`plugin::Plugin`] trait, [`miracle_plugin!`] macro, helper functions |
-//! | [`window`] | [`window::WindowInfo`], [`window::PluginWindow`], window-state enums |
+//! | [`window`] | [`window::WindowInfo`], window-state enums |
 //! | [`placement`] | [`placement::Placement`] |
 //! | [`animation`] | [`animation::AnimationFrameData`], [`animation::AnimationFrameResult`] |
 //! | [`input`] | [`input::KeyboardEvent`], [`input::PointerEvent`], modifier/button flags |
