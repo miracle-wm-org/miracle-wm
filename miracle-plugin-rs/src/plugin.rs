@@ -174,7 +174,7 @@ pub trait Plugin {
 /// via a freestyle placement strategy, otherwise the tiling manager
 /// or the system is handling it independently.
 ///
-/// Each returned [`WindowInfo`] exposes both read-only fields and setter methods
+/// Each returned [`Window`] exposes both read-only fields and setter methods
 /// for mutating the window's state, workspace, size, transform, and alpha.
 pub fn managed_windows() -> Vec<Window> {
     let handle = unsafe { miracle_get_plugin_handle() };
@@ -385,6 +385,24 @@ where
     }
 }
 
+/// Register a custom GLSL `sample_to_rgba` shader function with the compositor.
+///
+/// The `glsl` string should contain a GLSL function body that the compositor will
+/// substitute into its window-rendering shader.
+///
+/// Returns the shader ID on success (pass to [`crate::window::Window::set_shader`]),
+/// or `None` if registration failed.
+pub fn register_window_sample_to_rgba(glsl: &str) -> Option<u8> {
+    let result = unsafe {
+        crate::host::miracle_register_window_sample_to_rgba(glsl.as_ptr() as i32, glsl.len() as i32)
+    };
+    if result >= 0 {
+        Some(result as u8)
+    } else {
+        None
+    }
+}
+
 static mut _CUSTOM_ANIM_CALLBACKS: Option<
     std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)>,
 > = None;
@@ -459,7 +477,7 @@ macro_rules! miracle_plugin {
                 };
                 let len = bytes.iter().position(|&b| b == 0).unwrap_or(256);
                 let name = String::from_utf8_lossy(&bytes[..len]).into_owned();
-                unsafe { $crate::window::WindowInfo::from_c_with_name(&c_data.window_info, name) }
+                unsafe { $crate::window::Window::from_c_with_name(&c_data.window_info, name) }
             };
 
             let extract_workspace = || {
@@ -563,7 +581,7 @@ macro_rules! miracle_plugin {
                 String::new()
             };
 
-            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+            let info = unsafe { $crate::window::Window::from_c_with_name(c_info, name) };
 
             match plugin.place_new_window(&info) {
                 Some(placement) => {
@@ -604,7 +622,7 @@ macro_rules! miracle_plugin {
                 String::new()
             };
 
-            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+            let info = unsafe { $crate::window::Window::from_c_with_name(c_info, name) };
 
             plugin.window_deleted(&info);
         }
@@ -635,7 +653,7 @@ macro_rules! miracle_plugin {
                 String::new()
             };
 
-            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+            let info = unsafe { $crate::window::Window::from_c_with_name(c_info, name) };
 
             plugin.window_focused(&info);
         }
@@ -666,7 +684,7 @@ macro_rules! miracle_plugin {
                 String::new()
             };
 
-            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, name) };
+            let info = unsafe { $crate::window::Window::from_c_with_name(c_info, name) };
 
             plugin.window_unfocused(&info);
         }
@@ -823,7 +841,7 @@ macro_rules! miracle_plugin {
                 String::new()
             };
 
-            let info = unsafe { $crate::window::WindowInfo::from_c_with_name(c_info, window_name) };
+            let info = unsafe { $crate::window::Window::from_c_with_name(c_info, window_name) };
 
             let c_ws = unsafe {
                 &*(workspace_info_ptr as *const $crate::bindings::miracle_workspace_t)

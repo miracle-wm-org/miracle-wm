@@ -283,7 +283,7 @@ impl Window {
     /// Retrieve the ID of this window.
     ///
     /// Plugins may elect to keep a reference to this ID so that they can
-    /// match it with [`WindowInfo`] later.
+    /// match it with [`Window`] later.
     pub fn id(&self) -> u64 {
         self.internal
     }
@@ -421,9 +421,11 @@ impl Window {
 
     /// Set the custom shader applied to this window.
     ///
-    /// Pass the ID returned by `register_window_sample_to_rgba`.
-    pub fn set_shader(&self, shader_id: u8) -> Result<(), ()> {
-        let r = unsafe { miracle_window_set_shader_id(self.internal as i64, shader_id as i32) };
+    /// Pass `Some(id)` with the ID returned by `register_window_sample_to_rgba` to activate
+    /// the shader, or `None` to clear any custom shader and revert to default rendering.
+    pub fn set_shader(&self, shader_id: Option<u8>) -> Result<(), ()> {
+        let id = shader_id.map(|id| id as i32).unwrap_or(-1);
+        let r = unsafe { miracle_window_set_shader_id(self.internal as i64, id) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
 }
