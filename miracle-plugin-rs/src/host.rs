@@ -153,4 +153,12 @@ unsafe extern "C" {
         out_animation_id_ptr: i32,
         duration_seconds_ptr: i32,
     ) -> i32;
+
+    /// Register a custom GLSL `sample_to_rgba` function for use in window shaders.
+    ///
+    /// `glsl_ptr` is a WASM linear memory offset pointing to the GLSL source bytes.
+    /// `glsl_len` is the length of the GLSL source in bytes.
+    ///
+    /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
+    pub fn miracle_register_window_sample_to_rgba(glsl_ptr: i32, glsl_len: i32) -> i32;
 }

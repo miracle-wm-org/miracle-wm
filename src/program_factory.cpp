@@ -276,7 +276,7 @@ mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
         {
             return compile_fragment_shader(
                 reinterpret_cast<void*>(id),
-                "",
+                "uniform sampler2D tex;\n", // Always include the texture for custom samplers, as it is not provided by default.
                 entry.sample_to_rgba_func.c_str());
         }
     }
