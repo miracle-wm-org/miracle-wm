@@ -385,16 +385,33 @@ where
     }
 }
 
-/// Register a custom GLSL `sample_to_rgba` shader function with the compositor.
+/// Register a multi-pass GLSL shader with the compositor.
 ///
-/// The `glsl` string should contain a GLSL function body that the compositor will
-/// substitute into its window-rendering shader.
+/// Each element of `passes` is a complete `sample_to_rgba(vec2 texcoord)` function.
+/// The compositor chains them so that pass *i* samples the output of pass *i-1*:
+///
+/// - **Pass 0** — `tex` is the window's content texture; `tex_source` is the same.
+/// - **Pass i (i > 0)** — `tex` is the output of pass *i-1*; `tex_source` is
+///   always the original window content, useful for combining a processed result
+///   with the untouched original (e.g. bloom = blur + original).
+/// - **Final pass** — the alpha mask, rounded-corner SDF, and window transform are
+///   applied after `sample_to_rgba` returns, exactly as with a single-pass shader.
+/// - `surfaceSize` (the window size in pixels) is available in every pass.
 ///
 /// Returns the shader ID on success (pass to [`crate::window::Window::set_shader`]),
 /// or `None` if registration failed.
-pub fn register_window_sample_to_rgba(glsl: &str) -> Option<u8> {
+pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
+    // Build an array of [ptr, len] descriptors pointing into WASM linear memory.
+    // In wasm32 Rust pointers are linear-memory offsets, so casting to i32 is correct.
+    let descriptors: Vec<[i32; 2]> = passes
+        .iter()
+        .map(|p| [p.as_ptr() as i32, p.len() as i32])
+        .collect();
     let result = unsafe {
-        crate::host::miracle_register_window_sample_to_rgba(glsl.as_ptr() as i32, glsl.len() as i32)
+        crate::host::miracle_register_window_sample_to_rgba(
+            descriptors.as_ptr() as i32,
+            passes.len() as i32,
+        )
     };
     if result >= 0 {
         Some(result as u8)

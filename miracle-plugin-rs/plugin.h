@@ -553,12 +553,26 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_queue_custom_animation(int32_t plugin_handle, int32_t* out_animation_id, float duration_seconds);
 
-    /// Register a custom GLSL `sample_to_rgba` function for use in window shaders.
+    /// A single shader-pass descriptor used with #miracle_register_window_sample_to_rgba.
+    typedef struct
+    {
+        /// Pointer to the GLSL source bytes for this pass.
+        const char* glsl;
+
+        /// Byte length of the GLSL source.
+        int32_t len;
+    } miracle_shader_pass_t;
+
+    /// Register a multi-pass GLSL shader for use in window rendering.
     ///
-    /// \param glsl     pointer to the GLSL source string
-    /// \param glsl_len length of the GLSL source string in bytes
+    /// Each pass is a complete `sample_to_rgba(vec2 texcoord)` GLSL function.
+    /// Passes are chained: pass *i* receives the output of pass *i-1* as `tex`.
+    ///
+    /// \param passes     pointer to an array of #miracle_shader_pass_t descriptors
+    /// \param num_passes number of elements in the array
     /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
-    int32_t miracle_register_window_sample_to_rgba(const char* glsl, int32_t glsl_len);
+    int32_t miracle_register_window_sample_to_rgba(
+        const miracle_shader_pass_t* passes, int32_t num_passes);
 
 #ifdef __cplusplus
 }

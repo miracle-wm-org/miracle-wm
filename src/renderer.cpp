@@ -366,6 +366,158 @@ private:
     GLint tex_uniform;
 };
 
+Renderer::PassTarget::~PassTarget()
+{
+    if (framebuffer_id)
+        glDeleteFramebuffers(1, &framebuffer_id);
+    if (texture_id)
+        glDeleteTextures(1, &texture_id);
+}
+
+void Renderer::PassTarget::ensure(mir::geometry::Size requested)
+{
+    if (requested.width.as_int() <= size.width.as_int() && requested.height.as_int() <= size.height.as_int())
+        return;
+
+    if (framebuffer_id)
+        glDeleteFramebuffers(1, &framebuffer_id);
+    if (texture_id)
+        glDeleteTextures(1, &texture_id);
+
+    size = requested;
+
+    glGenTextures(1, &texture_id);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+        size.width.as_int(), size.height.as_int(), 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    glGenFramebuffers(1, &framebuffer_id);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_id);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D, texture_id, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+}
+
+int Renderer::run_offscreen_passes(
+    mg::gl::Texture& texture,
+    uint8_t shader_id,
+    size_t pass_count,
+    mir::geometry::Size buf_size,
+    bool source_is_top_row_first) const
+{
+    // Save GL state that the off-screen passes will alter.
+    GLint saved_fbo = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved_fbo);
+    GLint saved_vp[4];
+    glGetIntegerv(GL_VIEWPORT, saved_vp);
+    GLboolean scissor_was_enabled = glIsEnabled(GL_SCISSOR_TEST);
+    GLboolean blend_was_enabled = glIsEnabled(GL_BLEND);
+
+    int const w = buf_size.width.as_int();
+    int const h = buf_size.height.as_int();
+
+    pass_targets[0].ensure(buf_size);
+    pass_targets[1].ensure(buf_size);
+
+    glViewport(0, 0, w, h);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+
+    // Fullscreen triangle positions (NDC) and two sets of texcoords.
+    // Normal (GL convention, y=0 at bottom):
+    static const GLfloat tri_pos[] = { -1.f, -1.f, 3.f, -1.f, -1.f, 3.f };
+    static const GLfloat tri_tc_normal[] = { 0.f, 0.f, 2.f, 0.f, 0.f, 2.f };
+    // Flipped Y (for TopRowFirst source textures):
+    static const GLfloat tri_tc_flipped[] = { 0.f, 1.f, 2.f, 1.f, 0.f, -1.f };
+
+    int ping = 0;
+    int pong = 1;
+
+    for (size_t i = 0; i < pass_count - 1; ++i)
+    {
+        auto variant = program_factory->resolve_custom_pass(shader_id, i, pass_count);
+        PassProgram* pp = std::get<PassProgram*>(variant);
+
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pass_targets[ping].framebuffer_id);
+        glUseProgram(pp->id);
+
+        // Unit 0: tex (the pass input)
+        glActiveTexture(GL_TEXTURE0);
+        if (i == 0)
+        {
+            // Pass 0 reads from the Mir window content texture.
+            texture.bind();
+        }
+        else
+        {
+            glBindTexture(GL_TEXTURE_2D, pass_targets[pong].texture_id);
+        }
+        if (pp->tex_uniform >= 0)
+            glUniform1i(pp->tex_uniform, 0);
+
+        // Unit 1: tex_source (always the original window content)
+        glActiveTexture(GL_TEXTURE1);
+        texture.bind();
+        if (pp->tex_source_uniform >= 0)
+            glUniform1i(pp->tex_source_uniform, 1);
+
+        if (pp->surface_size_uniform >= 0)
+            glUniform2f(pp->surface_size_uniform, static_cast<GLfloat>(w), static_cast<GLfloat>(h));
+
+        glEnableVertexAttribArray(static_cast<GLuint>(pp->position_attr));
+        glEnableVertexAttribArray(static_cast<GLuint>(pp->texcoord_attr));
+
+        glVertexAttribPointer(static_cast<GLuint>(pp->position_attr),
+            2, GL_FLOAT, GL_FALSE, 0, tri_pos);
+
+        // For pass 0: optionally flip Y for TopRowFirst source textures.
+        // For pass 1+: scale UV so only the valid buf_size sub-region of the
+        // (potentially oversized) pass_target texture is sampled.
+        GLfloat tri_tc_scaled[6];
+        const GLfloat* tc;
+        if (i == 0)
+        {
+            tc = source_is_top_row_first ? tri_tc_flipped : tri_tc_normal;
+        }
+        else
+        {
+            float const u_max = static_cast<float>(w) / static_cast<float>(pass_targets[pong].size.width.as_int());
+            float const v_max = static_cast<float>(h) / static_cast<float>(pass_targets[pong].size.height.as_int());
+            tri_tc_scaled[0] = 0.f;
+            tri_tc_scaled[1] = 0.f;
+            tri_tc_scaled[2] = 2.f * u_max;
+            tri_tc_scaled[3] = 0.f;
+            tri_tc_scaled[4] = 0.f;
+            tri_tc_scaled[5] = 2.f * v_max;
+            tc = tri_tc_scaled;
+        }
+        glVertexAttribPointer(static_cast<GLuint>(pp->texcoord_attr),
+            2, GL_FLOAT, GL_FALSE, 0, tc);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glDisableVertexAttribArray(static_cast<GLuint>(pp->texcoord_attr));
+        glDisableVertexAttribArray(static_cast<GLuint>(pp->position_attr));
+
+        std::swap(ping, pong);
+    }
+
+    // Restore GL state.
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(saved_fbo));
+    glViewport(saved_vp[0], saved_vp[1], saved_vp[2], saved_vp[3]);
+    if (scissor_was_enabled)
+        glEnable(GL_SCISSOR_TEST);
+    if (blend_was_enabled)
+        glEnable(GL_BLEND);
+
+    // Return the index of the target holding the result (last ping before final swap).
+    return pong;
+}
+
 Renderer::Renderer(
     std::shared_ptr<mir::graphics::GLRenderingProvider> gl_interface,
     std::unique_ptr<mir::graphics::gl::OutputSurface> output,
@@ -611,14 +763,41 @@ void Renderer::draw(
     // -Wdangling-reference.
     float const alpha = data.alpha;
 
-    // First, we check if a custom shader is being applied to this. If that is the case,
-    // then we resolve the shader from there and call on `ProgramFactory` with the custom
-    // code.
-    // If not, we go down the regular route.
-    auto const* const prog = &dynamic_cast<Program const&>(data.data.shader_id
-            ? program_factory->resolve_custom(*data.data.shader_id)
-            : texture->shader(*program_factory))
-                                  .data;
+    // Determine pass count for multi-pass custom shaders.
+    size_t const num_passes = data.data.shader_id
+        ? program_factory->pass_count(*data.data.shader_id)
+        : 1;
+    bool const is_multipass = num_passes > 1;
+
+    // For multi-pass shaders, run intermediate off-screen passes first.
+    int offscreen_result_target = -1;
+    if (is_multipass)
+    {
+        bool const source_is_top_row_first = texture->layout() == mg::gl::Texture::Layout::TopRowFirst;
+        offscreen_result_target = run_offscreen_passes(
+            *texture,
+            *data.data.shader_id,
+            num_passes,
+            renderable.buffer()->size(),
+            source_is_top_row_first);
+    }
+
+    // Resolve the final-pass program.
+    // For multi-pass: final pass (pass_count-1) via resolve_custom_pass.
+    // For single-pass custom or default: existing path.
+    auto const* const prog = [&]() -> ProgramData const*
+    {
+        if (is_multipass)
+        {
+            auto variant = program_factory->resolve_custom_pass(
+                *data.data.shader_id, num_passes - 1, num_passes);
+            return &dynamic_cast<Program const&>(*std::get<Program*>(variant)).data;
+        }
+        return &dynamic_cast<Program const&>(data.data.shader_id
+                ? program_factory->resolve_custom(*data.data.shader_id)
+                : texture->shader(*program_factory))
+                    .data;
+    }();
 
     glUseProgram(prog->id);
     if (prog->last_used_frameno != frameno)
@@ -663,7 +842,32 @@ void Renderer::draw(
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
     primitives.clear();
-    tessellate(primitives, renderable, texture->layout() == mg::gl::Texture::Layout::TopRowFirst);
+    // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
+    // so tessellate with is_flipped=false regardless of the original Mir texture layout.
+    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst));
+
+    // The pass_targets use a grow-only allocation: a previously large window may have left
+    // the textures bigger than the current buf_size. Scale the UV coords so the final pass
+    // only samples the valid buf_size sub-region of the (potentially oversized) texture.
+    if (is_multipass)
+    {
+        auto const& target = pass_targets[offscreen_result_target];
+        float const u_scale = static_cast<float>(renderable.buffer()->size().width.as_int())
+            / static_cast<float>(target.size.width.as_int());
+        float const v_scale = static_cast<float>(renderable.buffer()->size().height.as_int())
+            / static_cast<float>(target.size.height.as_int());
+        if (u_scale < 1.0f || v_scale < 1.0f)
+        {
+            for (auto& p : primitives)
+            {
+                for (int vi = 0; vi < p.nvertices; ++vi)
+                {
+                    p.vertices[vi].texcoord[0] *= u_scale;
+                    p.vertices[vi].texcoord[1] *= v_scale;
+                }
+            }
+        }
+    }
 
     // if we fail to load the texture, we need to carry on (part of lp:1629275)
     try
@@ -698,7 +902,20 @@ void Renderer::draw(
         for (auto const& p : primitives)
         {
             auto const blend = client_blend;
-            texture->bind();
+
+            if (is_multipass)
+            {
+                // Bind the result of the off-screen pass chain.
+                // Unit 1 (tex_source) = original window content.
+                glActiveTexture(GL_TEXTURE1);
+                texture->bind();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, pass_targets[offscreen_result_target].texture_id);
+            }
+            else
+            {
+                texture->bind();
+            }
 
             glVertexAttribPointer(static_cast<GLuint>(prog->position_attr), 3, GL_FLOAT,
                 GL_FALSE, sizeof(mgl::Vertex),

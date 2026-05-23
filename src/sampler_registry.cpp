@@ -17,10 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "sampler_registry.h"
 
-uint8_t miracle::SamplerRegistry::register_sample_to_rgba(std::string sample_to_rgba_func)
+uint8_t miracle::SamplerRegistry::register_window_shader(std::vector<std::string> passes)
 {
     std::lock_guard lock { mutex };
     auto const next_id = id++;
-    entries.push_back(Entry { next_id, std::move(sample_to_rgba_func) });
+    entries.push_back(Entry { next_id, std::move(passes) });
     return next_id;
 }

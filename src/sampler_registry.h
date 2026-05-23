@@ -31,7 +31,7 @@ struct SamplerRegistry
     struct Entry
     {
         uint8_t id;
-        std::string sample_to_rgba_func;
+        std::vector<std::string> passes;
     };
 
     // TODO: This relies on non-local knowledge that Mir internally never
@@ -40,7 +40,7 @@ struct SamplerRegistry
     std::vector<Entry> entries;
     std::mutex mutex;
 
-    uint8_t register_sample_to_rgba(std::string sample_to_rgba_func);
+    uint8_t register_window_shader(std::vector<std::string> passes);
 };
 
 } // miracle

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/graphics/program.h>
 #include <mir/graphics/program_factory.h>
 #include <mutex>
+#include <variant>
 #include <vector>
 
 namespace miracle
@@ -103,6 +104,20 @@ public:
     ProgramData data;
 };
 
+/// Lightweight program for intermediate (non-final) passes that don't need
+/// the full ProgramData uniform set (alpha, transforms, SDF, etc.).
+struct PassProgram
+{
+    explicit PassProgram(ProgramHandle&& prog);
+    ProgramHandle program_handle;
+    GLuint id = 0;
+    GLint position_attr = -1;
+    GLint texcoord_attr = -1;
+    GLint tex_uniform = -1;
+    GLint tex_source_uniform = -1;
+    GLint surface_size_uniform = -1;
+};
+
 class ProgramFactory : public mir::graphics::gl::ProgramFactory
 {
 public:
@@ -123,33 +138,37 @@ public:
     /// \throws if the identifier cannot be found
     mir::graphics::gl::Program& resolve_custom(uint8_t id);
 
+    /// For multi-pass shaders: resolve the program for a specific pass.
+    /// - final pass (pass_index == pass_count-1): returns a full Program& (alpha + SDF wrapper).
+    /// - intermediate pass: returns a PassProgram& (plain gl_FragColor = sample_to_rgba wrapper).
+    /// \throws if id cannot be found
+    std::variant<Program*, PassProgram*> resolve_custom_pass(uint8_t id, size_t pass_index, size_t pass_count);
+
+    /// Returns the number of passes registered for the given shader id.
+    size_t pass_count(uint8_t id) const;
+
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
     /// Register the sampler method and return its unique identifier.
     /// This returned id may be used later in "resolve" to get the shader
-    /// program that matches this sampler function.
-    ///
-    /// This is specifically used to register unique shaders on a per-window
-    /// basis.
-    ///
-    /// \param sample_to_rgba_func the sample_to_rgba glsl string
-    /// \returns the unique identifier
-    uint8_t register_sample_to_rgba(std::string sample_to_rgba_func);
-
 private:
     static GLuint compile_shader(GLenum type, GLchar const* src);
     static ProgramHandle link_shader(
         ShaderHandle const& vertex_shader,
         ShaderHandle const& fragment_shader);
 
+    PassProgram& compile_intermediate_pass(void const* key, char const* sampler_glsl);
+
     std::shared_ptr<SamplerRegistry> sampler_registry_;
     ShaderHandle const vertex_shader;
+    ShaderHandle const pass_vertex_shader;
     ShaderHandle const border_vertex_shader;
 
     ShaderHandle const border_fragment_shader;
     Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
+    std::vector<std::pair<void const*, std::unique_ptr<PassProgram>>> pass_programs;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
 };

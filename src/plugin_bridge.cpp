@@ -186,9 +186,9 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
 {
 }
 
-uint8_t PluginBridge::register_window_sample_to_rgba(std::string glsl)
+uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes)
 {
-    return sampler_registry_->register_sample_to_rgba(std::move(glsl));
+    return sampler_registry_->register_window_shader(std::move(passes));
 }
 
 uint64_t PluginBridge::find_window_id(miral::Window const& window) const

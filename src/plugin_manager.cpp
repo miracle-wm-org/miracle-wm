@@ -874,8 +874,8 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     WasmEdge_Value* returns)
 {
     auto const bridge = static_cast<PluginBridge*>(data);
-    int32_t const glsl_ptr = WasmEdge_ValueGetI32(params[0]);
-    int32_t const glsl_len = WasmEdge_ValueGetI32(params[1]);
+    int32_t const passes_ptr = WasmEdge_ValueGetI32(params[0]);
+    int32_t const num_passes = WasmEdge_ValueGetI32(params[1]);
 
     auto* memory = get_memory_from_frame(frame);
     if (!memory)
@@ -885,9 +885,20 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     }
 
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    std::string glsl(reinterpret_cast<char const*>(mem_base + glsl_ptr), glsl_len);
 
-    auto const id = bridge->register_window_sample_to_rgba(std::move(glsl));
+    struct PassDescriptor
+    {
+        int32_t ptr;
+        int32_t len;
+    };
+    auto* descriptors = reinterpret_cast<PassDescriptor const*>(mem_base + passes_ptr);
+
+    std::vector<std::string> passes;
+    passes.reserve(static_cast<size_t>(num_passes));
+    for (int32_t i = 0; i < num_passes; ++i)
+        passes.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
+
+    auto const id = bridge->register_window_shader(std::move(passes));
     returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
     return WasmEdge_Result_Success;
 }

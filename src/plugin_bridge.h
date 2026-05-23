@@ -141,7 +141,7 @@ public:
         PluginManager* manager,
         float duration_seconds);
 
-    uint8_t register_window_sample_to_rgba(std::string glsl);
+    uint8_t register_window_shader(std::vector<std::string> passes);
 
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);

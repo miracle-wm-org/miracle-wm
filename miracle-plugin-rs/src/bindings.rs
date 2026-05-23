@@ -545,6 +545,24 @@ pub struct miracle_pointer_event_t {
     #[doc = " The buttons held during the event."]
     pub buttons: u32,
 }
+#[doc = " A single shader-pass descriptor used with #miracle_register_window_sample_to_rgba."]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct miracle_shader_pass_t {
+    #[doc = " Pointer to the GLSL source bytes for this pass."]
+    pub glsl: *const ::std::os::raw::c_char,
+    #[doc = " Byte length of the GLSL source."]
+    pub len: i32,
+}
+impl Default for miracle_shader_pass_t {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
 pub const MirEventType_mir_event_type_key: MirEventType = 0;
 pub const MirEventType_mir_event_type_motion: MirEventType = 1;
 pub const MirEventType_mir_event_type_window: MirEventType = 2;

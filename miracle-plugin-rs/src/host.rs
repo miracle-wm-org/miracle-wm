@@ -154,11 +154,13 @@ unsafe extern "C" {
         duration_seconds_ptr: i32,
     ) -> i32;
 
-    /// Register a custom GLSL `sample_to_rgba` function for use in window shaders.
+    /// Register a multi-pass GLSL shader for use in window rendering.
     ///
-    /// `glsl_ptr` is a WASM linear memory offset pointing to the GLSL source bytes.
-    /// `glsl_len` is the length of the GLSL source in bytes.
+    /// `passes_ptr` is a WASM linear memory offset pointing to an array of
+    /// `num_passes` pass descriptors.  Each descriptor is 8 bytes:
+    ///   - bytes 0–3: `i32` WASM linear-memory offset of the pass's GLSL UTF-8 bytes
+    ///   - bytes 4–7: `i32` byte length of that pass
     ///
     /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
-    pub fn miracle_register_window_sample_to_rgba(glsl_ptr: i32, glsl_len: i32) -> i32;
+    pub fn miracle_register_window_sample_to_rgba(passes_ptr: i32, num_passes: i32) -> i32;
 }
