@@ -39,6 +39,7 @@ namespace graphics
 namespace graphics::gl
 {
     class OutputSurface;
+    class Texture;
 }
 }
 
@@ -144,14 +145,38 @@ private:
         GLuint ebo = 0;
     };
 
+    /// Offscreen framebuffer target for intermediate rendering passes.
+    struct PassTarget
+    {
+        mir::geometry::Size size = { 0, 0 };
+        GLuint texture_id = 0;
+        GLuint framebuffer_id = 0;
+
+        ~PassTarget();
+        /// Ensures the target is allocated at least as large as `requested`.
+        /// Reallocates only when requested exceeds the current size.
+        void ensure(mir::geometry::Size requested);
+    };
+
     DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
     void update_gl_viewport();
 
+    /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
+    /// custom shader, leaving the result in pass_targets[last_target].
+    /// Returns the index of the ping-pong target that holds the final result.
+    int run_offscreen_passes(
+        mir::graphics::gl::Texture& texture,
+        uint8_t shader_id,
+        size_t pass_count,
+        mir::geometry::Size buf_size,
+        bool source_is_top_row_first) const;
+
     class OutputFilter;
     std::unique_ptr<OutputFilter> const output_surface;
+    mutable PassTarget pass_targets[2];
 
     GLfloat clear_color[4];
     mutable long long frameno = 0;

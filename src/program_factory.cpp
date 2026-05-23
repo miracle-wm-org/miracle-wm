@@ -189,9 +189,31 @@ miracle::Program::Program(ProgramHandle&& program) :
 {
 }
 
+miracle::PassProgram::PassProgram(ProgramHandle&& prog) :
+    program_handle(std::move(prog)),
+    id { program_handle },
+    position_attr { glGetAttribLocation(id, "position") },
+    texcoord_attr { glGetAttribLocation(id, "texcoord") },
+    tex_uniform { glGetUniformLocation(id, "tex") },
+    tex_source_uniform { glGetUniformLocation(id, "tex_source") },
+    surface_size_uniform { glGetUniformLocation(id, "surfaceSize") }
+{
+}
+
+const GLchar* const pass_vertex_shader_src = R"(
+attribute vec2 position;
+attribute vec2 texcoord;
+varying vec2 v_texcoord;
+void main() {
+    gl_Position = vec4(position, 0, 1);
+    v_texcoord = texcoord;
+}
+)";
+
 miracle::ProgramFactory::ProgramFactory(std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     sampler_registry_ { sampler_registry },
     vertex_shader { compile_shader(GL_VERTEX_SHADER, vertex_shader_src) },
+    pass_vertex_shader { compile_shader(GL_VERTEX_SHADER, pass_vertex_shader_src) },
     border_vertex_shader { compile_shader(GL_VERTEX_SHADER, border_vertex_shader_src) },
     border_fragment_shader { ShaderHandle(compile_shader(GL_FRAGMENT_SHADER, fragment_border_src)) },
     border_program { Program(link_shader(border_vertex_shader, border_fragment_shader)) }
@@ -222,12 +244,13 @@ mir::graphics::gl::Program& miracle::ProgramFactory::compile_fragment_shader(
 precision mediump float;
 #endif
 
+uniform vec2 surfaceSize;
+
 )" + std::string(fragment_fragment)
         +
         R"(
 
 uniform float alpha;
-uniform vec2 surfaceSize;
 uniform float borderRadius;
 
 varying vec2 v_texcoord;  // This is going to be [0, 1]
@@ -276,17 +299,96 @@ mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
         {
             return compile_fragment_shader(
                 reinterpret_cast<void*>(id),
-                "uniform sampler2D tex;\n", // Always include the texture for custom samplers, as it is not provided by default.
-                entry.sample_to_rgba_func.c_str());
+                "uniform sampler2D tex;\nuniform sampler2D tex_source;\n",
+                entry.passes[0].c_str());
         }
     }
 
     throw std::runtime_error("Unknown custom sampler id");
 }
 
-uint8_t miracle::ProgramFactory::register_sample_to_rgba(std::string sample_to_rgba_func)
+size_t miracle::ProgramFactory::pass_count(uint8_t id) const
 {
-    return sampler_registry_->register_sample_to_rgba(std::move(sample_to_rgba_func));
+    std::lock_guard lock { sampler_registry_->mutex };
+    for (auto const& entry : sampler_registry_->entries)
+    {
+        if (entry.id == id)
+            return entry.passes.size();
+    }
+    return 1;
+}
+
+miracle::PassProgram& miracle::ProgramFactory::compile_intermediate_pass(void const* key, char const* sampler_glsl)
+{
+    for (auto const& pair : pass_programs)
+    {
+        if (pair.first == key)
+            return *pair.second;
+    }
+
+    std::string const fragment_src = "#ifdef GL_ES\n"
+                                     "precision mediump float;\n"
+                                     "#endif\n"
+                                     "\n"
+                                     "uniform sampler2D tex;\n"
+                                     "uniform sampler2D tex_source;\n"
+                                     "uniform vec2 surfaceSize;\n"
+                                     "\n"
+        + std::string(sampler_glsl) + "\n"
+                                      "varying vec2 v_texcoord;\n"
+                                      "void main() {\n"
+                                      "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+                                      "}\n";
+
+    std::lock_guard lock { compilation_mutex };
+
+    ShaderHandle frag { compile_shader(GL_FRAGMENT_SHADER, fragment_src.c_str()) };
+    ProgramHandle prog { glCreateProgram() };
+    glAttachShader(prog, frag);
+    glAttachShader(prog, pass_vertex_shader);
+    glLinkProgram(prog);
+    GLint ok;
+    glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+    if (!ok)
+    {
+        GLchar log[1024];
+        glGetProgramInfoLog(prog, sizeof log - 1, NULL, log);
+        log[sizeof log - 1] = '\0';
+        throw std::runtime_error(std::string("Linking intermediate pass shader failed: ") + log);
+    }
+
+    pass_programs.emplace_back(key, std::make_unique<PassProgram>(std::move(prog)));
+    return *pass_programs.back().second;
+}
+
+std::variant<miracle::Program*, miracle::PassProgram*> miracle::ProgramFactory::resolve_custom_pass(
+    uint8_t id, size_t pass_index, size_t pass_count_val)
+{
+    std::lock_guard lock { sampler_registry_->mutex };
+    for (auto const& entry : sampler_registry_->entries)
+    {
+        if (entry.id != id)
+            continue;
+
+        auto const& glsl = entry.passes[pass_index];
+        if (pass_index == pass_count_val - 1)
+        {
+            // Final pass: use the full alpha+SDF wrapper via compile_fragment_shader.
+            // Cast away the lock — compile_fragment_shader has its own compilation_mutex.
+            auto* prog = &dynamic_cast<Program&>(compile_fragment_shader(
+                reinterpret_cast<void const*>((uintptr_t(id) << 8) | pass_index),
+                "uniform sampler2D tex;\nuniform sampler2D tex_source;\n",
+                glsl.c_str()));
+            return prog;
+        }
+        else
+        {
+            void const* key = reinterpret_cast<void const*>((uintptr_t(id) << 8) | pass_index);
+            auto* pp = &compile_intermediate_pass(key, glsl.c_str());
+            return pp;
+        }
+    }
+    throw std::runtime_error("Unknown custom sampler id");
 }
 
 GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)
