@@ -82,6 +82,7 @@
 pub mod animation;
 pub mod application;
 #[doc(hidden)]
+#[allow(warnings)]
 pub mod bindings;
 pub mod config;
 pub mod container;
