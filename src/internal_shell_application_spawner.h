@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "shell_application_spawner.h"
 #include <miral/internal_client.h>
-#include <vector>
+#include <list>
 
 namespace mir
 {
@@ -43,7 +43,7 @@ private:
         miral::InternalClientLauncher launcher;
         bool is_taken = false;
     };
-    std::vector<ClientPoolItem> client_pool;
+    std::list<ClientPoolItem> client_pool;
 };
 
 }
