@@ -91,7 +91,7 @@ varying vec2 v_texcoord;
 float roundedRectSDF(vec2 p, vec2 size, float r) {
     vec2 halfSize = size * 0.5;
     vec2 d = abs(p - halfSize) - (halfSize - vec2(r));
-    return length(max(d, 0.0)) - r;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
 }
 
 void main() {
