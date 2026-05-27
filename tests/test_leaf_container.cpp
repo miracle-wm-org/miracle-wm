@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mir_toolkit/common.h"
 #include "miral/application_info.h"
 #include "miral/window_specification.h"
+#include "mock_configuration.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
 #include "mock_parent_container.h"
@@ -856,4 +857,121 @@ TEST_F(LeafContainerTest, CommitChangesCallsSetRectangleWhenNotDragging)
         .Times(1);
 
     leaf_container->commit_changes();
+}
+
+// ---- border / visible-area relationship ----
+
+namespace
+{
+int const leaf_border_size = 5;
+geom::Rectangle const leaf_logical_area {
+    { 0,   0   },
+    { 400, 300 }
+};
+}
+
+class LeafContainerBorderTest : public ::testing::Test
+{
+public:
+    LeafContainerBorderTest() :
+        workspace(std::make_shared<testing::NiceMock<test::MockWorkspace>>()),
+        parent(std::make_shared<testing::NiceMock<test::MockParentContainer>>()),
+        leaf_container(std::make_shared<LeafContainer>(
+            workspace,
+            window_controller,
+            leaf_logical_area,
+            config,
+            parent,
+            state))
+    {
+        ON_CALL(*workspace, get_output()).WillByDefault(testing::Return(output));
+        ON_CALL(*output, get_area()).WillByDefault(testing::ReturnRef(parent_area));
+        ON_CALL(*config, get_border_config()).WillByDefault(testing::ReturnRef(border_config));
+        ON_CALL(*config, get_inner_gaps()).WillByDefault(testing::Return(miracle::Gaps {}));
+        ON_CALL(*workspace, inner_gaps()).WillByDefault(testing::Return(std::nullopt));
+        state->add(leaf_container);
+    }
+
+protected:
+    BorderConfig border_config { .size = leaf_border_size };
+    std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
+    std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<testing::NiceMock<test::MockWindowController>>();
+    std::shared_ptr<testing::NiceMock<test::MockConfig>> config = std::make_shared<testing::NiceMock<test::MockConfig>>();
+    std::shared_ptr<testing::NiceMock<test::MockWorkspace>> workspace;
+    std::shared_ptr<testing::NiceMock<test::MockOutput>> output = std::make_shared<testing::NiceMock<test::MockOutput>>();
+    std::shared_ptr<testing::NiceMock<test::MockParentContainer>> parent;
+    std::shared_ptr<LeafContainer> leaf_container;
+};
+
+TEST_F(LeafContainerBorderTest, VisibleAreaIsInsetFromLogicalAreaByBorderSize)
+{
+    auto const logical = leaf_container->get_logical_area();
+    auto const visible = leaf_container->get_visible_area();
+
+    EXPECT_EQ(visible.top_left.x.as_int(), logical.top_left.x.as_int() + leaf_border_size);
+    EXPECT_EQ(visible.top_left.y.as_int(), logical.top_left.y.as_int() + leaf_border_size);
+    EXPECT_EQ(visible.size.width.as_int(), logical.size.width.as_int() - 2 * leaf_border_size);
+    EXPECT_EQ(visible.size.height.as_int(), logical.size.height.as_int() - 2 * leaf_border_size);
+}
+
+// ---- compute_visible_area (static) ----
+
+namespace
+{
+std::array<bool, static_cast<size_t>(Direction::MAX)> const no_neighbors { false, false, false, false };
+}
+
+TEST(ComputeVisibleAreaTest, NoBorderNoGapsNoNeighbors)
+{
+    // When there is no border and no gaps, visible == logical.
+    geom::Rectangle const logical {
+        { 10,  20  },
+        { 800, 600 }
+    };
+    auto const visible = LeafContainer::compute_visible_area(logical, no_neighbors, 0, 0, 0);
+    EXPECT_EQ(visible, logical);
+}
+
+TEST(ComputeVisibleAreaTest, BorderInsetApplied)
+{
+    // border_size = 5: origin shifts +5 on each side, size shrinks by 2*5.
+    geom::Rectangle const logical {
+        { 0,   0   },
+        { 800, 600 }
+    };
+    int const b = 5;
+    auto const visible = LeafContainer::compute_visible_area(logical, no_neighbors, 0, 0, b);
+    EXPECT_EQ(visible.top_left.x.as_int(), b);
+    EXPECT_EQ(visible.top_left.y.as_int(), b);
+    EXPECT_EQ(visible.size.width.as_int(), 800 - 2 * b);
+    EXPECT_EQ(visible.size.height.as_int(), 600 - 2 * b);
+}
+
+TEST(ComputeVisibleAreaTest, ZeroBorderSimulatesFullscreen)
+{
+    // Callers pass border_size=0 when fullscreen; the result must equal the
+    // gap-adjusted logical area (here no gaps, so visible == logical).
+    geom::Rectangle const logical {
+        { 0,    0    },
+        { 1920, 1080 }
+    };
+    auto const visible = LeafContainer::compute_visible_area(logical, no_neighbors, 0, 0, 0);
+    EXPECT_EQ(visible, logical);
+}
+
+TEST(ComputeVisibleAreaTest, GapsAreAppliedBeforeBorder)
+{
+    // With a left neighbor: x shifts right by half_gap_x, width shrinks.
+    // Border is then applied on top of the gap-adjusted area.
+    geom::Rectangle const logical {
+        { 0,   0   },
+        { 800, 600 }
+    };
+    std::array<bool, static_cast<size_t>(Direction::MAX)> left_neighbor { false, true, false, false };
+    int const half_gap = 4;
+    int const b = 2;
+    auto const visible = LeafContainer::compute_visible_area(logical, left_neighbor, half_gap, 0, b);
+    // After left gap: x = half_gap, width = 800 - half_gap. After border: x += b, width -= 2*b.
+    EXPECT_EQ(visible.top_left.x.as_int(), half_gap + b);
+    EXPECT_EQ(visible.size.width.as_int(), 800 - half_gap - 2 * b);
 }

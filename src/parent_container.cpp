@@ -196,7 +196,31 @@ miral::WindowSpecification ParentContainer::place_new_window(
     }
 
     auto const container = create_space_for_window(index);
-    auto const rect = container->get_visible_area();
+
+    // The container has no associated Mir window yet: create_space_for_window() runs
+    // during place_new_window(), but the window is only bound later when confirm_window()
+    // calls associate_to_window(). Calling container->get_visible_area() would invoke
+    // is_fullscreen(), which calls window_controller->get_state() on an invalid
+    // default-constructed miral::Window. Instead, resolve the state from the incoming
+    // spec and call the static helper directly.
+    bool const fullscreen = requested_specification.state().is_set()
+        && requested_specification.state().value() == mir_window_state_fullscreen;
+    int const border_size = fullscreen ? 0 : config->get_border_config().size;
+
+    auto gaps = config->get_inner_gaps();
+    if (auto const ws = get_workspace())
+        if (auto const wgaps = ws->inner_gaps())
+            gaps = *wgaps;
+
+    int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
+    int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
+
+    auto const rect = LeafContainer::compute_visible_area(
+        container->get_logical_area(),
+        container->get_neighbors(),
+        half_gap_x,
+        half_gap_y,
+        border_size);
 
     miral::WindowSpecification new_spec = requested_specification;
     new_spec.server_side_decorated() = false;

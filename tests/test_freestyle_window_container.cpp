@@ -234,14 +234,37 @@ TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithoutBorderMatchesLogicalAr
     EXPECT_EQ(logical, visible);
 }
 
+TEST_F(FreestyleWindowContainerTest, GetVisibleAreaWithBorderIsInsetFromLogicalArea)
+{
+    auto const logical = container_with_border->get_logical_area();
+    auto const visible = container_with_border->get_visible_area();
+
+    EXPECT_EQ(visible.top_left.x.as_int(), logical.top_left.x.as_int() + border_size);
+    EXPECT_EQ(visible.top_left.y.as_int(), logical.top_left.y.as_int() + border_size);
+    EXPECT_EQ(visible.size.width.as_int(), logical.size.width.as_int() - 2 * border_size);
+    EXPECT_EQ(visible.size.height.as_int(), logical.size.height.as_int() - 2 * border_size);
+}
+
+TEST_F(FreestyleWindowContainerTest, GetLogicalAreaWithBorderExpandsAroundWindowSurface)
+{
+    auto const logical = container_with_border->get_logical_area();
+
+    EXPECT_EQ(logical.top_left.x.as_int(), window_position.x.as_int() - border_size);
+    EXPECT_EQ(logical.top_left.y.as_int(), window_position.y.as_int() - border_size);
+    EXPECT_EQ(logical.size.width.as_int(), window_size.width.as_int() + 2 * border_size);
+    EXPECT_EQ(logical.size.height.as_int(), window_size.height.as_int() + 2 * border_size);
+}
+
 // ---- move_to ----
 
 TEST_F(FreestyleWindowContainerTest, MoveToCallsModifyWithCorrectTopLeft)
 {
+    // move_to receives the logical (outer) position; the Mir surface is placed at
+    // the inset content position = logical + border on each side.
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
         return spec.top_left().is_set()
-            && spec.top_left().value() == geom::Point { 50, 75 };
+            && spec.top_left().value() == geom::Point { 50 + border_size, 75 + border_size };
     }))).Times(1);
 
     container_with_border->move_to(50, 75, false);

@@ -64,17 +64,27 @@ void FreestyleWindowContainer::hide()
 geom::Rectangle FreestyleWindowContainer::get_logical_area() const
 {
     auto const w = window_sync.lock()->window_;
-    return geom::Rectangle(w.top_left(), w.size());
+    int const b = has_border_ ? config->get_border_config().size : 0;
+    return geom::Rectangle {
+        { w.top_left().x.as_int() - b,     w.top_left().y.as_int() - b      },
+        { w.size().width.as_int() + 2 * b, w.size().height.as_int() + 2 * b }
+    };
 }
 
 void FreestyleWindowContainer::set_logical_area(geom::Rectangle const& area, bool with_animations)
 {
-    window_controller->set_rectangle(window_sync.lock()->window_, get_visible_area(), area, with_animations);
+    int const b = has_border_ ? config->get_border_config().size : 0;
+    auto const inner = geom::Rectangle {
+        { area.top_left.x.as_int() + b,     area.top_left.y.as_int() + b      },
+        { area.size.width.as_int() - 2 * b, area.size.height.as_int() - 2 * b }
+    };
+    window_controller->set_rectangle(window_sync.lock()->window_, get_visible_area(), inner, with_animations);
 }
 
 geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 {
-    return get_logical_area();
+    auto const w = window_sync.lock()->window_;
+    return geom::Rectangle(w.top_left(), w.size());
 }
 
 void FreestyleWindowContainer::constrain()
@@ -115,9 +125,6 @@ void FreestyleWindowContainer::commit_changes()
 
     window_controller->change_state(w, s->next_state.value());
 
-    if (entering_fullscreen || leaving_fullscreen)
-        update_window_margins(has_border_ ? config->get_border_config().size : 0, entering_fullscreen);
-
     if (render_id.has_value())
         if (auto const r = rdm.lock())
             r->needs_outline_change(render_id.value(), !entering_fullscreen);
@@ -138,7 +145,7 @@ void FreestyleWindowContainer::commit_changes()
 
     if (restoring && saved_area)
     {
-        window_controller->set_rectangle(w, get_visible_area(), saved_area.value(), true);
+        set_logical_area(saved_area.value(), true);
         sync.lock()->pre_fullscreen_area.reset();
     }
 
@@ -167,17 +174,6 @@ size_t FreestyleWindowContainer::get_min_width() const
 
 void FreestyleWindowContainer::handle_ready()
 {
-    if (has_border_)
-    {
-        int const border_size = config->get_border_config().size;
-        auto const w = window_sync.lock()->window_;
-        auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
-        surface->set_window_margins(
-            mir::geometry::DeltaY { border_size },
-            mir::geometry::DeltaX { border_size },
-            mir::geometry::DeltaY { border_size },
-            mir::geometry::DeltaX { border_size });
-    }
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 
@@ -389,8 +385,9 @@ bool FreestyleWindowContainer::move_to(Container&)
 
 bool FreestyleWindowContainer::move_to(int x, int y, bool)
 {
+    int const b = has_border_ ? config->get_border_config().size : 0;
     miral::WindowSpecification spec;
-    spec.top_left() = { x, y };
+    spec.top_left() = { x + b, y + b };
     window_controller->modify(window_sync.lock()->window_, spec);
     constrain();
     return true;

@@ -108,6 +108,19 @@ public:
         Direction direction);
     static MirDepthLayer get_depth_layer(bool is_fullscreen);
 
+    /// Compute the visible (content) area from layout data without accessing the Mir
+    /// window. This is exposed as a static so callers that do not yet have a valid
+    /// window (e.g. ParentContainer::place_new_window during two-step init) can
+    /// resolve the visible area by supplying the fullscreen state themselves.
+    ///
+    /// \param border_size  Pass 0 when the window is fullscreen.
+    static geom::Rectangle compute_visible_area(
+        geom::Rectangle const& logical_area,
+        std::array<bool, static_cast<size_t>(Direction::MAX)> const& neighbors,
+        int half_gap_x,
+        int half_gap_y,
+        int border_size);
+
 private:
     struct State
     {

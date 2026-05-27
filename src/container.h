@@ -189,14 +189,14 @@ public:
     /// \returns the plugin handle
     virtual std::optional<PluginHandle> plugin_handle() const;
 
+    [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
+
 protected:
     Container() = default;
     explicit Container(uint64_t id) noexcept :
         id_(id)
     {
     }
-
-    [[nodiscard]] std::array<bool, (size_t)Direction::MAX> get_neighbors() const;
     std::vector<std::string> marks;
 
 private:

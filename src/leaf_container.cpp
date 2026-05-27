@@ -179,6 +179,39 @@ void LeafContainer::set_state(MirWindowState in_state)
     sync.lock()->next_state = in_state;
 }
 
+geom::Rectangle LeafContainer::compute_visible_area(
+    geom::Rectangle const& logical_area,
+    std::array<bool, static_cast<size_t>(Direction::MAX)> const& neighbors,
+    int half_gap_x,
+    int half_gap_y,
+    int border_size)
+{
+    int x = logical_area.top_left.x.as_int();
+    int y = logical_area.top_left.y.as_int();
+    int width = logical_area.size.width.as_int();
+    int height = logical_area.size.height.as_int();
+
+    if (neighbors[std::to_underlying(Direction::left)])
+    {
+        x += half_gap_x;
+        width -= half_gap_x;
+    }
+    if (neighbors[std::to_underlying(Direction::right)])
+        width -= half_gap_x;
+    if (neighbors[std::to_underlying(Direction::up)])
+    {
+        y += half_gap_y;
+        height -= half_gap_y;
+    }
+    if (neighbors[std::to_underlying(Direction::down)])
+        height -= half_gap_y;
+
+    return geom::Rectangle {
+        geom::Point { x + border_size,         y + border_size          },
+        geom::Size { width - 2 * border_size, height - 2 * border_size }
+    };
+}
+
 geom::Rectangle LeafContainer::get_visible_area() const
 {
     if (!visible_area_dirty && cached_visible_area.has_value())
@@ -198,35 +231,14 @@ geom::Rectangle LeafContainer::get_visible_area() const
     }
     int const half_gap_x = static_cast<int>(ceil(static_cast<double>(gaps.left) / 2.0));
     int const half_gap_y = static_cast<int>(ceil(static_cast<double>(gaps.top) / 2.0));
-    auto const neighbors = get_neighbors();
-    auto const logical_area = sync.lock()->logical_area;
-    int x = logical_area.top_left.x.as_int();
-    int y = logical_area.top_left.y.as_int();
-    int width = logical_area.size.width.as_int();
-    int height = logical_area.size.height.as_int();
-    if (neighbors[std::to_underlying(Direction::left)])
-    {
-        x += half_gap_x;
-        width -= half_gap_x;
-    }
-    if (neighbors[std::to_underlying(Direction::right)])
-    {
-        width -= half_gap_x;
-    }
-    if (neighbors[std::to_underlying(Direction::up)])
-    {
-        y += half_gap_y;
-        height -= half_gap_y;
-    }
-    if (neighbors[std::to_underlying(Direction::down)])
-    {
-        height -= half_gap_y;
-    }
+    int const border_size = is_fullscreen() ? 0 : config->get_border_config().size;
 
-    cached_visible_area = geom::Rectangle {
-        geom::Point { x,     y      },
-        geom::Size { width, height }
-    };
+    cached_visible_area = compute_visible_area(
+        sync.lock()->logical_area,
+        get_neighbors(),
+        half_gap_x,
+        half_gap_y,
+        border_size);
     visible_area_dirty = false;
 
     return cached_visible_area.value();
@@ -256,14 +268,6 @@ void LeafContainer::handle_ready()
     auto const focused = state->focused_container();
     auto const window_focused = std::dynamic_pointer_cast<WindowContainer>(focused);
     auto const w = window_sync.lock()->window_;
-
-    int const border_size = config->get_border_config().size;
-    auto surface = w.operator std::shared_ptr<mir::scene::Surface>();
-    surface->set_window_margins(
-        mir::geometry::DeltaY { border_size },
-        mir::geometry::DeltaX { border_size },
-        mir::geometry::DeltaY { border_size },
-        mir::geometry::DeltaX { border_size });
 
     if (!focused || !window_focused || !window_focused->is_fullscreen())
     {
@@ -470,9 +474,6 @@ void LeafContainer::commit_changes()
             }
 
             window_controller->change_state(w, s->next_state.value());
-
-            if (entering_fs || leaving_fs)
-                update_window_margins(config->get_border_config().size, entering_fs);
 
             state->render_data_manager()->needs_outline_change(render_id.value(), s->next_state != mir_window_state_fullscreen);
             s->next_state.reset();

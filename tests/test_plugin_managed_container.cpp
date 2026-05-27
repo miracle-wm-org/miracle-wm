@@ -231,3 +231,76 @@ TEST_F(PluginManagedContainerTest, ToJsonHasCorrectTypeForWaybarCompatibility)
     auto const j = container_resizable_and_movable->to_json(false);
     EXPECT_EQ(j["type"], "floating_con");
 }
+
+// ---- visible area / logical area with border ----
+
+namespace
+{
+int const plugin_border_size = 4;
+}
+
+class PluginManagedContainerBorderTest : public ::testing::Test
+{
+public:
+    PluginManagedContainerBorderTest() :
+        session(std::make_shared<NiceMock<test::MockSession>>()),
+        surface(std::make_shared<NiceMock<test::MockSurface>>()),
+        app(session),
+        window(app, surface)
+    {
+        ON_CALL(*workspace, get_output()).WillByDefault(Return(output));
+        ON_CALL(*output, get_area()).WillByDefault(ReturnRef(output_area));
+        ON_CALL(*output, get_transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*workspace, transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*config, get_border_config()).WillByDefault(ReturnRef(border_config));
+        ON_CALL(*surface, top_left()).WillByDefault(Return(window_position));
+        ON_CALL(*surface, window_size()).WillByDefault(Return(window_size));
+        ON_CALL(*window_controller, info_for(window))
+            .WillByDefault(ReturnRef(window_info));
+
+        container = std::make_shared<PluginManagedContainer>(
+            1, window, window_controller, state, workspace, config,
+            glm::mat4(1.f), 1.f, true, true);
+        state->add(container);
+    }
+
+protected:
+    BorderConfig border_config { .size = plugin_border_size };
+    miral::WindowInfo window_info;
+    std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
+    std::shared_ptr<test::MockWindowController> window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
+    std::shared_ptr<NiceMock<test::MockConfig>> config = std::make_shared<NiceMock<test::MockConfig>>();
+    std::shared_ptr<NiceMock<test::MockWorkspace>> workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    std::shared_ptr<NiceMock<test::MockOutput>> output = std::make_shared<NiceMock<test::MockOutput>>();
+    std::shared_ptr<NiceMock<test::MockSession>> session;
+    std::shared_ptr<NiceMock<test::MockSurface>> surface;
+    miral::Application app;
+    miral::Window window;
+    std::shared_ptr<PluginManagedContainer> container;
+};
+
+TEST_F(PluginManagedContainerBorderTest, GetVisibleAreaMatchesWindowSurface)
+{
+    auto const visible = container->get_visible_area();
+    EXPECT_EQ(visible.top_left, window_position);
+    EXPECT_EQ(visible.size, window_size);
+}
+
+TEST_F(PluginManagedContainerBorderTest, GetLogicalAreaExpandsAroundWindowSurface)
+{
+    auto const logical = container->get_logical_area();
+    EXPECT_EQ(logical.top_left.x.as_int(), window_position.x.as_int() - plugin_border_size);
+    EXPECT_EQ(logical.top_left.y.as_int(), window_position.y.as_int() - plugin_border_size);
+    EXPECT_EQ(logical.size.width.as_int(), window_size.width.as_int() + 2 * plugin_border_size);
+    EXPECT_EQ(logical.size.height.as_int(), window_size.height.as_int() + 2 * plugin_border_size);
+}
+
+TEST_F(PluginManagedContainerBorderTest, GetVisibleAreaIsInsetFromLogicalAreaByBorderSize)
+{
+    auto const logical = container->get_logical_area();
+    auto const visible = container->get_visible_area();
+    EXPECT_EQ(visible.top_left.x.as_int(), logical.top_left.x.as_int() + plugin_border_size);
+    EXPECT_EQ(visible.top_left.y.as_int(), logical.top_left.y.as_int() + plugin_border_size);
+    EXPECT_EQ(visible.size.width.as_int(), logical.size.width.as_int() - 2 * plugin_border_size);
+    EXPECT_EQ(visible.size.height.as_int(), logical.size.height.as_int() - 2 * plugin_border_size);
+}
