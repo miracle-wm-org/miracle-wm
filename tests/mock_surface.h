@@ -102,6 +102,9 @@ namespace test
 #ifdef MIR_VERSION_2_26_OR_GREATER
         MOCK_METHOD(float, alpha, (), (const, override));
 #endif
+#ifdef MIR_VERSION_2_28_OR_GREATER
+        MOCK_METHOD(void, set_parent, (std::weak_ptr<Surface> const&), (override));
+#endif
     };
 
 }

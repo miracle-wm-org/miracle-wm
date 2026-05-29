@@ -184,6 +184,10 @@ public:
         return std::shared_ptr<Surface>();
     }
 
+#ifdef MIR_VERSION_2_28_OR_GREATER
+    void set_parent(std::weak_ptr<Surface> const& parent) override { }
+#endif
+
     int configure(MirWindowAttrib attrib, int value) override
     {
         return 0;
