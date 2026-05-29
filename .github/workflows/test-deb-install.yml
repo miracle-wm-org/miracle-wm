@@ -8,12 +8,12 @@ on:
 
 # This workflow replicates what an end user does when they install
 # miracle-wm from the PPA, but against the latest Ubuntu (26.04) so
-# that the Mir ABI packages from ppa:mir-team/dev actually match the
+# that the Mir ABI packages from ppa:mir-team/release actually match the
 # archive and there are no stale leftover -dev packages from the host
 # distribution in the way. Same podman-in-CI approach as
 # build-ubuntu.yml:
 #   1. Start an ubuntu:26.04 container on the 24.04 runner.
-#   2. Enable ppa:mir-team/dev inside the container.
+#   2. Enable ppa:mir-team/release inside the container.
 #   3. Build the .deb from source.
 #   4. Install the resulting .deb with apt so runtime Depends are
 #      resolved against the PPA (the exact code path that fails for
@@ -103,7 +103,7 @@ jobs:
       - name: Install miracle-wm from built .deb
         run: |
           # `apt install ./foo.deb` resolves runtime Depends against the
-          # configured apt sources (including ppa:mir-team/dev). This is
+          # configured apt sources (including ppa:mir-team/release). This is
           # the exact code path that was failing for end users installing
           # from the miracle-wm PPA.
           podman exec ${{ env.CONTAINER }} bash -c "
