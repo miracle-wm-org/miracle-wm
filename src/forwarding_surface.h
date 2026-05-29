@@ -74,6 +74,9 @@ public:
     void set_reception_mode(mir::input::InputReceptionMode mode) override;
     void request_client_surface_close() override;
     std::shared_ptr<Surface> parent() const override;
+#ifdef MIR_VERSION_2_28_OR_GREATER
+    void set_parent(std::weak_ptr<Surface> const& parent) override;
+#endif
     int configure(MirWindowAttrib attrib, int value) override;
     int query(MirWindowAttrib attrib) const override;
     void rename(const std::string& title) override;

@@ -28,7 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_VERSION_2_26_OR_GREATER
 #endif
 
-#if COMPILING_AGAINST_DEV
+#if ((MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 28)) || COMPILING_AGAINST_DEV
+#define MIR_VERSION_2_28_OR_GREATER
 #define MIR_COMPILING_AGAINST_DEV
 #endif
 

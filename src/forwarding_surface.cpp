@@ -286,6 +286,13 @@ std::shared_ptr<mir::scene::Surface> ForwardingSurface::parent() const
     return surface_->parent();
 }
 
+#ifdef MIR_VERSION_2_28_OR_GREATER
+void ForwardingSurface::set_parent(std::weak_ptr<mir::scene::Surface> const& parent)
+{
+    surface_->set_parent(parent);
+}
+#endif
+
 int ForwardingSurface::configure(MirWindowAttrib attrib, int value)
 {
     return surface_->configure(attrib, value);
