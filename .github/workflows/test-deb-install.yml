@@ -2,9 +2,9 @@ name: Test .deb Install
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: ["develop"]
   pull_request:
-    branches: [ "develop" ]
+    branches: ["develop"]
 
 # This workflow replicates what an end user does when they install
 # miracle-wm from the PPA, but against the latest Ubuntu (26.04) so
@@ -45,13 +45,13 @@ jobs:
             ubuntu:26.04 \
             sleep infinity
 
-      - name: Add ppa:mir-team/dev
+      - name: Add ppa:mir-team/release
         run: |
           podman exec ${{ env.CONTAINER }} bash -c "
             set -e
             apt-get update -q
             DEBIAN_FRONTEND=noninteractive apt-get install -yq software-properties-common
-            add-apt-repository -y ppa:mir-team/dev
+            add-apt-repository -y ppa:mir-team/release
             apt-get update -q
           "
 
