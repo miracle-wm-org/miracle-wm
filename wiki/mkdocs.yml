@@ -1,0 +1,123 @@
+site_name: miracle-wm wiki
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Open Sans
+  features:
+    - content.code.copy
+    - navigation.top
+    - content.tabs.link
+    - palette.toggle
+    - content.heading.permalink
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+repo_url: https://github.com/mattkae/miracle
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - def_list
+  - pymdownx.tasklist
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting_started/installation.md
+    - getting_started/building.md
+    - getting_started/logs.md
+    - getting_started/what_is_a_wayland_compositor.md
+  - Configuration: 
+    - configuration/introduction.md
+    - configuration/action_key.md
+    - configuration/includes.md
+    - configuration/plugins.md
+    - configuration/default_keybinds.md
+    - configuration/custom_actions.md
+    - configuration/startup_apps.md
+    - configuration/inner_gaps.md
+    - configuration/outer_gaps.md
+    - configuration/border.md
+    - configuration/enable_animations.md
+    - configuration/animations.md
+    - configuration/terminal.md
+    - configuration/resize_jump.md
+    - configuration/environment_variables.md
+    - configuration/workspaces.md
+    - configuration/workspace_back_and_forth.md
+    - configuration/move_modifier.md
+    - configuration/drag_and_drop.md
+    - configuration/output_filter.md
+    - configuration/cursor.md
+    - Input Devices:
+      - configuration/input/touchpad.md
+      - configuration/input/mouse.md
+      - configuration/input/keyboard.md
+    - Accessibility:
+      - configuration/accessibility/hover_click.md
+      - configuration/accessibility/simulated_secondary_click.md
+      - configuration/accessibility/slow_keys.md
+      - configuration/accessibility/sticky_keys.md
+      - configuration/accessibility/magnifier.md
+  - IPC:
+    - ipc/index.md
+    - ipc/run_command.md
+    - ipc/get_workspaces.md
+    - ipc/subscribe.md
+    - ipc/get_outputs.md
+    - ipc/get_tree.md
+    - ipc/get_marks.md
+    - ipc/get_version.md
+    - ipc/get_binding_modes.md
+    - ipc/send_tick.md
+    - ipc/sync.md
+    - ipc/get_binding_state.md
+    - Commands:
+      - ipc/commands/exec.md
+      - ipc/commands/split.md
+      - ipc/commands/layout.md
+      - ipc/commands/focus.md
+      - ipc/commands/move.md
+      - ipc/commands/resize.md
+      - ipc/commands/mark.md
+      - ipc/commands/swap.md
+      - ipc/commands/sticky.md
+      - ipc/commands/workspace.md
+      - ipc/commands/rename.md
+      - ipc/commands/gaps.md
+      - ipc/commands/scratchpad.md
+      - ipc/commands/nop.md
+    - Events:
+      - ipc/events/workspace.md
+      - ipc/events/output.md
+      - ipc/events/mode.md
+      - ipc/events/window.md
+      - ipc/events/binding.md
+      - ipc/events/shutdown.md
+      - ipc/events/tick.md
+  - Plugins: plugins.md
+  - Display Configuration: configuration/display_configuration.md
+  - Screen Sharing: screenshare.md
+  - Mir's Built-in Configuration: configuration/mir.md
+  - Roadmap: roadmap.md
+extra:
+  version:
+    provider: mike
