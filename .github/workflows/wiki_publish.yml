@@ -1,0 +1,29 @@
+name: Build/Publish Latest Release Docs
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.6
+      - name: Install Dependencies
+        run: |
+          pip install mkdocs-material
+          pip install pillow cairosvg mike
+      - name: Setup Docs Deploy
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Build Docs Website
+        working-directory: wiki
+        run: mike deploy --push --update-aliases ${{ github.event.release.tag_name }} latest
