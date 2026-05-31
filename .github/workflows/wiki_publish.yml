@@ -26,4 +26,6 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - name: Build Docs Website
         working-directory: wiki
-        run: mike deploy --push --update-aliases ${{ github.event.release.tag_name }} latest
+        run: |
+          mike deploy --push --update-aliases ${{ github.event.release.tag_name }} latest
+          mike set-default --push latest
