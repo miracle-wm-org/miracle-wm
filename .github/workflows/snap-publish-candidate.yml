@@ -11,8 +11,16 @@ concurrency:
 
 jobs:
   Snap:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -20,19 +28,13 @@ jobs:
           fetch-depth: 0
 
       - name: Build the snap
-        run: |
-          sudo snap install snapcraft --classic
-          mkdir -p ~/.local/share/snapcraft
-          printenv LP_CREDENTIALS > ~/.local/share/snapcraft/launchpad-credentials
-          snapcraft remote-build --build-for=amd64,arm64 --launchpad-accept-public-upload
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
-          LP_CREDENTIALS: ${{ secrets.LP_CREDENTIALS }}
+        uses: snapcore/action-build@v1
+        id: build
 
-      - name: Publish the snaps
-        run: |
-          for snap_file in *.snap; do
-            snapcraft upload "$snap_file" --release=edge
-          done
+      - name: Publish the snap
+        uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.STORE_LOGIN }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: edge
