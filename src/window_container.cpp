@@ -68,6 +68,20 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
     }
 }
 
+void miracle::WindowContainer::update_output_area()
+{
+    auto const render_id = window_sync.lock()->render_id;
+    if (!render_id.has_value())
+        return;
+
+    auto const output = get_output();
+    if (!output)
+        return;
+
+    if (auto const locked = rdm.lock())
+        locked->output_area_change(render_id.value(), output->get_area());
+}
+
 uint32_t miracle::WindowContainer::animation_handle() const
 {
     return window_sync.lock()->animation_handle_;

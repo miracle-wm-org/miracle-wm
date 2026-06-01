@@ -84,6 +84,13 @@ public:
     [[nodiscard]] std::optional<miral::Window> window() const override { return window_sync.lock()->window_; }
     [[nodiscard]] bool has_render_data() const { return window_sync.lock()->render_id.has_value(); }
 
+    /// Push this container's current output area into its render data.
+    ///
+    /// The renderer culls a window when its stored output area no longer
+    /// overlaps the viewport, so this must be refreshed whenever the output's
+    /// position or size changes (e.g. monitors are repositioned).
+    void update_output_area();
+
     /// Get the window transform.
     glm::mat4 get_window_transform() const;
 

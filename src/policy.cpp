@@ -613,12 +613,14 @@ auto Policy::place_new_window(
             auto const t = requested_specification.type();
             auto const has_parent = !requested_specification.parent().value_or(std::weak_ptr<mir::scene::Surface>()).expired();
             bool const is_normal_or_freestyle = t == mir_window_type_normal || t == mir_window_type_freestyle;
+            bool const wants_fullscreen = requested_specification.state() == mir_window_state_fullscreen;
 
             // Windows with a parent (popups, dialogs) are freestyle. Normal/freestyle windows without
-            // a parent go into the grid. Everything else is freestyle.
+            // a parent go into the grid, unless they want to be fullscreen by default. Everything else
+            // is freestyle.
             if (has_parent)
                 hint.container_type = AllocationType::freestyle;
-            else if (is_normal_or_freestyle)
+            else if (is_normal_or_freestyle && !wants_fullscreen)
                 hint.container_type = AllocationType::grid;
             else
                 hint.container_type = AllocationType::freestyle;
