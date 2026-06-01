@@ -179,6 +179,16 @@ void Workspace::recalculate_area()
         root()->set_logical_area(get_output_area(sh_output), true);
         root()->commit_changes();
     }
+
+    // The output's position/size may have changed, so refresh each window's
+    // cached output area in the render data. Otherwise the renderer culls
+    // windows whose stale output area no longer overlaps the viewport.
+    for_each_window([](std::shared_ptr<WindowContainer> const& container)
+    {
+        container->update_output_area();
+        return false;
+    });
+
     registry->advise_area_changed(id());
 }
 

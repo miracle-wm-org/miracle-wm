@@ -749,6 +749,17 @@ TEST_F(SingleWindowPolicyTest, DISABLED_UtilityWindowCreatesFreestyleWindowConta
     EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
 }
 
+TEST_F(SingleWindowPolicyTest, DISABLED_FullscreenByDefaultWindowCreatesFreestyleWindowContainer)
+{
+    auto const app = open_application("test");
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+    create_window(app, spec);
+
+    EXPECT_THAT(first_freestyle(*compositor_state), Ne(nullptr));
+    EXPECT_THAT(compositor_state->first_tiling(), Eq(nullptr));
+}
+
 TEST_F(SingleWindowPolicyTest, DISABLED_NormalWindowIsNotFreestyleWindowContainer)
 {
     auto const app = open_application("test");
