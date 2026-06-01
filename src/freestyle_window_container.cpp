@@ -187,6 +187,8 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
     auto mods = specification;
     if (mods.state().is_set())
     {
+        if (mods.state().value() == mir_window_state_maximized)
+            sync.lock()->pre_maximize_area = get_logical_area();
         window_controller->change_state(w, mods.state().value());
         mods.state().consume();
         constrain();
@@ -211,6 +213,12 @@ void FreestyleWindowContainer::on_focus_gained()
 
 bool FreestyleWindowContainer::resize(Direction direction, int pixels)
 {
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
+
     auto const area = get_logical_area();
     int new_x = area.top_left.x.as_int();
     int new_y = area.top_left.y.as_int();
@@ -241,6 +249,12 @@ bool FreestyleWindowContainer::resize(Direction direction, int pixels)
 
 bool FreestyleWindowContainer::set_size(std::optional<int> const& width, std::optional<int> const& height)
 {
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
+
     auto area = get_logical_area();
     area.size = {
         width.value_or(area.size.width.as_int()),
@@ -342,6 +356,23 @@ bool FreestyleWindowContainer::is_fullscreen() const
     return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_fullscreen;
 }
 
+bool FreestyleWindowContainer::is_maximized() const
+{
+    return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_maximized;
+}
+
+void FreestyleWindowContainer::restore_from_maximize()
+{
+    auto const w = window_sync.lock()->window_;
+    auto s = sync.lock();
+    auto const saved = s->pre_maximize_area;
+    s->pre_maximize_area.reset();
+    s.drop();
+    window_controller->change_state(w, mir_window_state_restored);
+    if (saved)
+        window_controller->set_rectangle(w, get_visible_area(), saved.value(), true);
+}
+
 bool FreestyleWindowContainer::needs_outline() const
 {
     return has_border_;
@@ -389,6 +420,12 @@ bool FreestyleWindowContainer::move_to(Container&)
 
 bool FreestyleWindowContainer::move_to(int x, int y, bool)
 {
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
+
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_sync.lock()->window_, spec);
@@ -415,6 +452,8 @@ bool FreestyleWindowContainer::drag_start()
 {
     if (sync.lock()->is_dragging_)
         return false;
+    if (is_maximized())
+        restore_from_maximize();
     sync.lock()->is_dragging_ = true;
     constrain();
     return true;
