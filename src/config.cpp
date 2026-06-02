@@ -206,6 +206,17 @@ void FilesystemConfiguration::reload()
         // before we call `advise_config_changed`.
         for (auto& plugin : *options.plugins)
             plugin.path = expand_tilde_getenv(plugin.path);
+
+        auto const plugins_dir = std::filesystem::path(config_path).parent_path() / "plugins";
+        if (std::filesystem::exists(plugins_dir) && std::filesystem::is_directory(plugins_dir))
+        {
+            for (auto const& entry : std::filesystem::directory_iterator(plugins_dir))
+            {
+                if (entry.is_regular_file() && entry.path().extension() == ".wasm")
+                    options.plugins->push_back(PluginConfiguration { entry.path().string(), "" });
+            }
+        }
+
         observer_registrar->advise_load_plugins(*options.plugins);
 
         // Let plugins override configuration values.

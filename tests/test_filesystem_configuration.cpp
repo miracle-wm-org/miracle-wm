@@ -734,3 +734,101 @@ TEST_F(FilesystemConfigurationTest, CanReadIncludes)
 
     std::filesystem::remove(include_path.c_str());
 }
+
+TEST_F(FilesystemConfigurationTest, AutoLoadsWasmFilesFromPluginsDir)
+{
+    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
+    std::filesystem::create_directories(plugins_dir);
+    std::ofstream(plugins_dir / "test.wasm").close();
+
+    class Observer : public ConfigObserver
+    {
+    public:
+        MOCK_METHOD((void), on_config_changed, (Config const&), (override));
+        MOCK_METHOD((void), on_plugins_changed, (std::vector<PluginConfiguration> const&), (override));
+    };
+    auto observer = std::make_shared<Observer>();
+    registrar->register_interest(observer);
+
+    std::vector<PluginConfiguration> received;
+    EXPECT_CALL(*observer, on_plugins_changed)
+        .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
+    { received = plugins; });
+
+    FilesystemConfiguration config(registrar, path, true);
+
+    ASSERT_EQ(received.size(), 1u);
+    EXPECT_EQ(std::filesystem::path(received[0].path).filename(), "test.wasm");
+
+    std::filesystem::remove_all(plugins_dir);
+}
+
+TEST_F(FilesystemConfigurationTest, AutoDiscoveredPluginsLoadedAfterConfigPlugins)
+{
+    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
+    std::filesystem::create_directories(plugins_dir);
+    std::ofstream(plugins_dir / "auto.wasm").close();
+
+    YAML::Node plugin_node;
+    plugin_node["path"] = "/some/config.wasm";
+    YAML::Node plugins_list;
+    plugins_list.push_back(plugin_node);
+    YAML::Node root;
+    root["plugins"] = plugins_list;
+    write_yaml_node(root);
+
+    class Observer : public ConfigObserver
+    {
+    public:
+        MOCK_METHOD((void), on_config_changed, (Config const&), (override));
+        MOCK_METHOD((void), on_plugins_changed, (std::vector<PluginConfiguration> const&), (override));
+    };
+    auto observer = std::make_shared<Observer>();
+    registrar->register_interest(observer);
+
+    std::vector<PluginConfiguration> received;
+    EXPECT_CALL(*observer, on_plugins_changed)
+        .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
+    { received = plugins; });
+
+    FilesystemConfiguration config(registrar, path, true);
+
+    ASSERT_EQ(received.size(), 2u);
+    EXPECT_EQ(received[0].path, "/some/config.wasm");
+    EXPECT_EQ(std::filesystem::path(received[1].path).filename(), "auto.wasm");
+
+    std::filesystem::remove_all(plugins_dir);
+}
+
+TEST_F(FilesystemConfigurationTest, NonWasmFilesInPluginsDirAreIgnored)
+{
+    const auto plugins_dir = std::filesystem::path(path).parent_path() / "plugins";
+    std::filesystem::create_directories(plugins_dir);
+    std::ofstream(plugins_dir / "lib.so").close();
+    std::ofstream(plugins_dir / "script.js").close();
+
+    class Observer : public ConfigObserver
+    {
+    public:
+        MOCK_METHOD((void), on_config_changed, (Config const&), (override));
+        MOCK_METHOD((void), on_plugins_changed, (std::vector<PluginConfiguration> const&), (override));
+    };
+    auto observer = std::make_shared<Observer>();
+    registrar->register_interest(observer);
+
+    std::vector<PluginConfiguration> received;
+    EXPECT_CALL(*observer, on_plugins_changed)
+        .WillOnce([&](std::vector<PluginConfiguration> const& plugins)
+    { received = plugins; });
+
+    FilesystemConfiguration config(registrar, path, true);
+
+    EXPECT_TRUE(received.empty());
+
+    std::filesystem::remove_all(plugins_dir);
+}
+
+TEST_F(FilesystemConfigurationTest, MissingPluginsDirDoesNotCrash)
+{
+    EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
+}
