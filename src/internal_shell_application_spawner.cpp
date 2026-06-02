@@ -63,7 +63,8 @@ std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(ShellAp
     {
     case ShellApplicationRole::parent_container_background:
     {
-        auto free_client = std::ranges::find_if(client_pool, [](auto const& client) { return !client.is_taken; });
+        auto free_client = std::ranges::find_if(client_pool, [](auto const& client)
+        { return !client.is_taken; });
 
         if (free_client == client_pool.end())
         {

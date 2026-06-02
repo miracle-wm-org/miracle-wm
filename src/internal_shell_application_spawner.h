@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_WM_INTERNAL_SHELL_APPLICATION_SPAWNER_H
 
 #include "shell_application_spawner.h"
-#include <miral/internal_client.h>
 #include <list>
+#include <miral/internal_client.h>
 
 namespace mir
 {
