@@ -75,6 +75,7 @@ public:
     void animation_handle(uint32_t) override;
     bool is_focused() const override;
     bool is_fullscreen() const override;
+    bool is_maximized() const;
     bool needs_outline() const override;
     bool select_next(Direction) override;
     bool pinned() const override;
@@ -113,6 +114,8 @@ private:
         bool pinned = false;
         geom::Point dragged_position;
     };
+
+    void restore_from_maximize();
 
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;

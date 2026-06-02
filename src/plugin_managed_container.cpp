@@ -233,6 +233,12 @@ bool PluginManagedContainer::resize(Direction direction, int pixels)
     if (!window_sync.lock()->resizable_)
         return false;
 
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
+
     auto const area = get_logical_area();
     int new_x = area.top_left.x.as_int();
     int new_y = area.top_left.y.as_int();
@@ -265,6 +271,12 @@ bool PluginManagedContainer::set_size(std::optional<int> const& width, std::opti
 {
     if (!window_sync.lock()->resizable_)
         return false;
+
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
 
     auto area = get_logical_area();
     area.size = {
@@ -373,6 +385,16 @@ bool PluginManagedContainer::is_fullscreen() const
     return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_fullscreen;
 }
 
+bool PluginManagedContainer::is_maximized() const
+{
+    return window_controller->get_state(window_sync.lock()->window_) == mir_window_state_maximized;
+}
+
+void PluginManagedContainer::restore_from_maximize()
+{
+    window_controller->change_state(window_sync.lock()->window_, mir_window_state_restored);
+}
+
 bool PluginManagedContainer::select_next(Direction)
 {
     return false;
@@ -407,6 +429,13 @@ bool PluginManagedContainer::move_to(int x, int y, bool)
 {
     if (!window_sync.lock()->movable_)
         return false;
+
+    if (is_maximized())
+    {
+        restore_from_maximize();
+        return true;
+    }
+
     miral::WindowSpecification spec;
     spec.top_left() = { x, y };
     window_controller->modify(window_sync.lock()->window_, spec);

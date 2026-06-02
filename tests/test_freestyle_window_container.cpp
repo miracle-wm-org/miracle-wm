@@ -450,6 +450,48 @@ TEST_F(FreestyleWindowContainerTest, DragStopNotifiesObserver)
     container_with_border->drag_stop();
 }
 
+// ---- maximize ----
+
+TEST_F(FreestyleWindowContainerTest, MoveToWhenMaximizedRestoresState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_maximized));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    container_with_border->move_to(500, 600, false);
+}
+
+TEST_F(FreestyleWindowContainerTest, MoveByWhenMaximizedRestoresState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_maximized));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    container_with_border->move_by(Direction::right, 30);
+}
+
+TEST_F(FreestyleWindowContainerTest, ResizeWhenMaximizedRestoresState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_maximized));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    container_with_border->resize(Direction::right, 50);
+}
+
+TEST_F(FreestyleWindowContainerTest, SetSizeWhenMaximizedRestoresState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_maximized));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    container_with_border->set_size(800, 600);
+}
+
+TEST_F(FreestyleWindowContainerTest, DragStartWhenMaximizedRestoresState)
+{
+    ON_CALL(*window_controller, get_state(window))
+        .WillByDefault(Return(mir_window_state_maximized));
+    EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
+    EXPECT_TRUE(container_with_border->drag_start());
+}
+
 // ---- to_json ----
 
 TEST_F(FreestyleWindowContainerTest, ToJsonHasCorrectTypeForWaybarCompatibility)
