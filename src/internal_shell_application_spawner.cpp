@@ -63,29 +63,24 @@ std::unique_ptr<ShellApplication> InternalShellApplicationSpawner::spawn(ShellAp
     {
     case ShellApplicationRole::parent_container_background:
     {
-        size_t i = 0;
-        for (i = 0; i < client_pool.size(); ++i)
-        {
-            if (!client_pool[i].is_taken)
-                break;
-        }
+        auto free_client = std::ranges::find_if(client_pool, [](auto const& client) { return !client.is_taken; });
 
-        if (i == client_pool.size())
+        if (free_client == client_pool.end())
         {
             miral::InternalClientLauncher launcher;
             launcher(server);
-            client_pool.push_back({ launcher, true });
+            free_client = client_pool.insert(client_pool.end(), { launcher, true });
         }
 
         auto background_client = std::make_unique<ParentBackgroundInternalClient>();
-        client_pool[i].launcher(server);
-        client_pool[i].launcher.launch(*background_client);
+        free_client->launcher(server);
+        free_client->launcher.launch(*background_client);
 
         auto wrapper_client = std::make_unique<NotifyingInternalApplication>(
             std::move(background_client),
-            [this, i]
+            [this, free_client]
         {
-            client_pool[i].is_taken = false;
+            free_client->is_taken = false;
         });
         return wrapper_client;
     }
