@@ -107,7 +107,6 @@ private:
         std::optional<RestoreResult> restore_result;
         std::optional<MirWindowState> next_state;
         std::optional<geom::Rectangle> pre_fullscreen_area;
-        std::optional<geom::Rectangle> pre_maximize_area;
         std::optional<MirDepthLayer> next_depth_layer;
         uint32_t handle_ = 0;
         bool is_focused_ = false;

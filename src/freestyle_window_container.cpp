@@ -187,8 +187,6 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
     auto mods = specification;
     if (mods.state().is_set())
     {
-        if (mods.state().value() == mir_window_state_maximized)
-            sync.lock()->pre_maximize_area = get_logical_area();
         window_controller->change_state(w, mods.state().value());
         mods.state().consume();
         constrain();
@@ -363,14 +361,7 @@ bool FreestyleWindowContainer::is_maximized() const
 
 void FreestyleWindowContainer::restore_from_maximize()
 {
-    auto const w = window_sync.lock()->window_;
-    auto s = sync.lock();
-    auto const saved = s->pre_maximize_area;
-    s->pre_maximize_area.reset();
-    s.drop();
-    window_controller->change_state(w, mir_window_state_restored);
-    if (saved)
-        window_controller->set_rectangle(w, get_visible_area(), saved.value(), true);
+    window_controller->change_state(window_sync.lock()->window_, mir_window_state_restored);
 }
 
 bool FreestyleWindowContainer::needs_outline() const
