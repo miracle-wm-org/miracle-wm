@@ -87,6 +87,7 @@ public:
     void animation_handle(uint32_t) override;
     bool is_focused() const override;
     bool is_fullscreen() const override;
+    bool is_maximized() const;
     bool select_next(Direction) override;
     bool pinned() const override;
     bool pinned(bool) override;
@@ -121,6 +122,8 @@ private:
         uint32_t handle_ = 0;
         bool is_focused_ = false;
     };
+
+    void restore_from_maximize();
 
     PluginHandle plugin_handle_;
     std::shared_ptr<WindowController> window_controller;
