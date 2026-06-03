@@ -1,3 +1,4 @@
+#[link(wasm_import_module = "env")]
 unsafe extern "C" {
     /// Retrieve the application info for a given window.
     /// Returns the internal ID on success, or -1 if the buffer is too small.
