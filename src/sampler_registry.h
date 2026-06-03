@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,10 @@ struct SamplerRegistry
     {
         uint8_t id;
         std::vector<std::string> passes;
+        /// The plugin that registered this shader, if any. Shaders registered
+        /// without an owner (e.g. from tests or built-in code) have no handle
+        /// and are never removed by a plugin unload.
+        std::optional<uint32_t> plugin_handle;
     };
 
     // TODO: This relies on non-local knowledge that Mir internally never
@@ -40,7 +45,12 @@ struct SamplerRegistry
     std::vector<Entry> entries;
     std::mutex mutex;
 
-    uint8_t register_window_shader(std::vector<std::string> passes);
+    uint8_t register_window_shader(
+        std::vector<std::string> passes,
+        std::optional<uint32_t> plugin_handle = std::nullopt);
+
+    /// Remove all shaders registered by the given plugin and return their ids.
+    std::vector<uint8_t> remove_shaders_for_plugin(uint32_t plugin_handle);
 };
 
 } // miracle

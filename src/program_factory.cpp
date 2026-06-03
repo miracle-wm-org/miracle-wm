@@ -290,21 +290,21 @@ void main() {
     // for deletion. GL will only delete them once the GL Program they're linked in is destroyed.
 }
 
-mir::graphics::gl::Program& miracle::ProgramFactory::resolve_custom(uint8_t id)
+mir::graphics::gl::Program* miracle::ProgramFactory::resolve_custom(uint8_t id)
 {
     std::lock_guard lock { sampler_registry_->mutex };
     for (auto const& entry : sampler_registry_->entries)
     {
         if (entry.id == id)
         {
-            return compile_fragment_shader(
+            return &compile_fragment_shader(
                 reinterpret_cast<void*>(id),
                 "uniform sampler2D tex;\nuniform sampler2D tex_source;\n",
                 entry.passes[0].c_str());
         }
     }
 
-    throw std::runtime_error("Unknown custom sampler id");
+    return nullptr;
 }
 
 size_t miracle::ProgramFactory::pass_count(uint8_t id) const
@@ -388,7 +388,12 @@ std::variant<miracle::Program*, miracle::PassProgram*> miracle::ProgramFactory::
             return pp;
         }
     }
-    throw std::runtime_error("Unknown custom sampler id");
+
+    // The shader is gone (e.g. its owning plugin unloaded). Return a null pointer
+    // of the kind the caller expects for this pass so it can fall back gracefully.
+    if (pass_index == pass_count_val - 1)
+        return static_cast<Program*>(nullptr);
+    return static_cast<PassProgram*>(nullptr);
 }
 
 GLuint miracle::ProgramFactory::compile_shader(GLenum type, GLchar const* src)

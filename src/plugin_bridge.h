@@ -141,7 +141,11 @@ public:
         PluginManager* manager,
         float duration_seconds);
 
-    uint8_t register_window_shader(std::vector<std::string> passes);
+    uint8_t register_window_shader(std::vector<std::string> passes, std::optional<uint32_t> plugin_handle);
+
+    /// Clean up after a plugin unloads: remove the shaders it registered and revert
+    /// any windows still using them back to the default shader.
+    void on_plugin_unloaded(uint32_t plugin_handle);
 
     int32_t window_set_state(uint64_t window_internal, int32_t state);
     int32_t window_set_workspace(uint64_t window_internal, uint64_t workspace_internal);

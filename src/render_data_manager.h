@@ -53,6 +53,9 @@ public:
     void focus_change(RenderDataManagerId id, bool is_focused);
     void needs_outline_change(RenderDataManagerId id, bool needs_outline);
     void shader_id_change(RenderDataManagerId id, std::optional<uint8_t> shader_id);
+    /// Reset every RenderData whose shader_id is in \p ids back to the default
+    /// shader (std::nullopt). Used when the shaders are removed (e.g. on plugin unload).
+    void reset_shaders(std::vector<uint8_t> const& ids);
     std::vector<RenderData> const& get();
 
 private:

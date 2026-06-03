@@ -874,8 +874,9 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     WasmEdge_Value* returns)
 {
     auto const bridge = static_cast<PluginBridge*>(data);
-    int32_t const passes_ptr = WasmEdge_ValueGetI32(params[0]);
-    int32_t const num_passes = WasmEdge_ValueGetI32(params[1]);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const passes_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const num_passes = WasmEdge_ValueGetI32(params[2]);
 
     auto* memory = get_memory_from_frame(frame);
     if (!memory)
@@ -898,7 +899,7 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     for (int32_t i = 0; i < num_passes; ++i)
         passes.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
 
-    auto const id = bridge->register_window_shader(std::move(passes));
+    auto const id = bridge->register_window_shader(std::move(passes), static_cast<uint32_t>(plugin_handle));
     returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
     return WasmEdge_Result_Success;
 }
@@ -1081,7 +1082,7 @@ void PluginManager::Self::create_host_module()
         host_miracle_queue_custom_animation, &host_fn_data);
 
     add_host_function(module, "miracle_register_window_sample_to_rgba",
-        create_func_type({ i32, i32 }, { i32 }),
+        create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_register_window_sample_to_rgba, bridge.get());
 
     // Register the host module with the executor
@@ -1189,12 +1190,16 @@ bool PluginManager::unload_wasm_module(PluginHandle handle)
     {
         return module.handle == handle;
     });
+    if (erased > 0)
+        self->bridge->on_plugin_unloaded(handle);
     return erased > 0;
 }
 
 void PluginManager::unload_all()
 {
     std::lock_guard lock(mutex_);
+    for (auto const& module : self->loaded_modules)
+        self->bridge->on_plugin_unloaded(module.handle);
     self->loaded_modules.clear();
 }
 
