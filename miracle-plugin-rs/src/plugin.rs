@@ -424,20 +424,29 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
 
 /// Set or clear the full-screen (output) shader.
 ///
-/// `source` is a complete `vec4 sample_to_rgba(in vec2 texcoord)` GLSL function
-/// applied as a post-process over the whole composited output. Pass `None` to
-/// clear it and revert to the configured `output_filter.shader_path`.
+/// Each element of `passes` is a complete `vec4 sample_to_rgba(in vec2 texcoord)`
+/// GLSL function applied as a post-process over the whole composited output.
+/// Like [`register_window_shader`] the passes are chained: pass *i* reads pass
+/// *i-1*'s output as `tex`, `tex_source` is always the original screen content,
+/// and `surfaceSize` is the output size in pixels. Pass an empty slice to clear
+/// the shader and revert to the configured `output_filter.shader_path`.
 ///
 /// The plugin's screen shader overrides the config path until cleared or the
 /// plugin unloads. Returns `Ok` on success, `Err` on failure.
-pub fn set_screen_shader(source: Option<&str>) -> Result<(), ()> {
+pub fn set_screen_shader(passes: &[&str]) -> Result<(), ()> {
     let handle = unsafe { miracle_get_plugin_handle() };
     // In wasm32 Rust pointers are linear-memory offsets, so casting to i32 is correct.
-    let (ptr, len) = match source {
-        Some(s) => (s.as_ptr() as i32, s.len() as i32),
-        None => (0, 0),
+    let descriptors: Vec<[i32; 2]> = passes
+        .iter()
+        .map(|p| [p.as_ptr() as i32, p.len() as i32])
+        .collect();
+    let r = unsafe {
+        crate::host::miracle_set_screen_shader(
+            handle as i32,
+            descriptors.as_ptr() as i32,
+            passes.len() as i32,
+        )
     };
-    let r = unsafe { crate::host::miracle_set_screen_shader(handle as i32, ptr, len) };
     if r == 0 {
         Ok(())
     } else {

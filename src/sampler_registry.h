@@ -47,8 +47,10 @@ struct SamplerRegistry
 
     /// The single, global full-screen (output) shader, if any. Unlike window
     /// shaders this is not addressed by id: only one can be active at a time,
-    /// and it overrides the config `output_filter.shader_path`.
-    std::optional<std::string> screen_shader_source;
+    /// and it overrides the config `output_filter.shader_path`. Like window
+    /// shaders it may be multi-pass: each element is a complete
+    /// `sample_to_rgba` and passes are chained (pass i reads pass i-1's output).
+    std::optional<std::vector<std::string>> screen_shader_passes;
     std::optional<uint32_t> screen_shader_plugin_handle;
     /// Bumped on every change so the renderer can detect (and recompile on)
     /// transitions without comparing source strings.
@@ -64,12 +66,12 @@ struct SamplerRegistry
 
     /// Set (or, with std::nullopt, clear) the global full-screen shader.
     void set_screen_shader(
-        std::optional<std::string> source,
+        std::optional<std::vector<std::string>> passes,
         std::optional<uint32_t> plugin_handle = std::nullopt);
 
     struct ScreenShaderState
     {
-        std::optional<std::string> source;
+        std::optional<std::vector<std::string>> passes;
         uint64_t generation;
     };
 

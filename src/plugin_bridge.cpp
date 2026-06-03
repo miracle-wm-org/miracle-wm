@@ -191,9 +191,9 @@ uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes, st
     return sampler_registry_->register_window_shader(std::move(passes), plugin_handle);
 }
 
-int32_t PluginBridge::set_screen_shader(uint32_t plugin_handle, std::optional<std::string> source)
+int32_t PluginBridge::set_screen_shader(uint32_t plugin_handle, std::optional<std::vector<std::string>> passes)
 {
-    sampler_registry_->set_screen_shader(std::move(source), plugin_handle);
+    sampler_registry_->set_screen_shader(std::move(passes), plugin_handle);
     return 0;
 }
 

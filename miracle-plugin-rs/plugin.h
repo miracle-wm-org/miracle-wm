@@ -579,19 +579,23 @@ extern "C"
 
     /// Set or clear the full-screen (output) shader.
     ///
-    /// \p glsl is a complete `vec4 sample_to_rgba(in vec2 texcoord)` GLSL source
-    /// applied as a post-process over the whole composited output. Pass \p len
-    /// <= 0 to clear and revert to the configured `output_filter.shader_path`.
-    /// The plugin's screen shader overrides the config path until cleared or the
-    /// plugin unloads.
+    /// Each pass is a complete `vec4 sample_to_rgba(in vec2 texcoord)` GLSL
+    /// function applied as a post-process over the whole composited output. Like
+    /// #miracle_register_window_sample_to_rgba, passes are chained: pass *i*
+    /// receives the output of pass *i-1* as `tex`, while `tex_source` is always
+    /// the original screen content and `surfaceSize` is the output size in px.
+    /// Pass \p num_passes <= 0 to clear and revert to the configured
+    /// `output_filter.shader_path`. The plugin's screen shader overrides the
+    /// config path until cleared or the plugin unloads.
     ///
     /// \param plugin_handle the registering plugin's handle (from
     ///                      `miracle_get_plugin_handle()`); the host uses it to
     ///                      clear the shader when the plugin unloads
-    /// \param glsl GLSL source bytes, or NULL to clear
-    /// \param len  byte length of \p glsl, or <= 0 to clear
+    /// \param passes     pointer to an array of #miracle_shader_pass_t descriptors, or NULL to clear
+    /// \param num_passes number of elements in the array, or <= 0 to clear
     /// \returns 0 on success, -1 on error
-    int32_t miracle_set_screen_shader(int32_t plugin_handle, const char* glsl, int32_t len);
+    int32_t miracle_set_screen_shader(
+        int32_t plugin_handle, const miracle_shader_pass_t* passes, int32_t num_passes);
 
 #ifdef __cplusplus
 }

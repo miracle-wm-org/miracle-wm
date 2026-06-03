@@ -912,11 +912,11 @@ WasmEdge_Result host_miracle_set_screen_shader(
 {
     auto const bridge = static_cast<PluginBridge*>(data);
     int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
-    int32_t const glsl_ptr = WasmEdge_ValueGetI32(params[1]);
-    int32_t const len = WasmEdge_ValueGetI32(params[2]);
+    int32_t const passes_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const num_passes = WasmEdge_ValueGetI32(params[2]);
 
-    std::optional<std::string> source;
-    if (len > 0)
+    std::optional<std::vector<std::string>> passes;
+    if (num_passes > 0)
     {
         auto* memory = get_memory_from_frame(frame);
         if (!memory)
@@ -926,11 +926,23 @@ WasmEdge_Result host_miracle_set_screen_shader(
         }
 
         uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-        source = std::string(reinterpret_cast<char const*>(mem_base + glsl_ptr), len);
+
+        struct PassDescriptor
+        {
+            int32_t ptr;
+            int32_t len;
+        };
+        auto* descriptors = reinterpret_cast<PassDescriptor const*>(mem_base + passes_ptr);
+
+        std::vector<std::string> result;
+        result.reserve(static_cast<size_t>(num_passes));
+        for (int32_t i = 0; i < num_passes; ++i)
+            result.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
+        passes = std::move(result);
     }
 
     returns[0] = WasmEdge_ValueGenI32(
-        bridge->set_screen_shader(static_cast<uint32_t>(plugin_handle), std::move(source)));
+        bridge->set_screen_shader(static_cast<uint32_t>(plugin_handle), std::move(passes)));
     return WasmEdge_Result_Success;
 }
 
