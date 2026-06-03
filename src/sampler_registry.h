@@ -45,12 +45,36 @@ struct SamplerRegistry
     std::vector<Entry> entries;
     std::mutex mutex;
 
+    /// The single, global full-screen (output) shader, if any. Unlike window
+    /// shaders this is not addressed by id: only one can be active at a time,
+    /// and it overrides the config `output_filter.shader_path`.
+    std::optional<std::string> screen_shader_source;
+    std::optional<uint32_t> screen_shader_plugin_handle;
+    /// Bumped on every change so the renderer can detect (and recompile on)
+    /// transitions without comparing source strings.
+    uint64_t screen_shader_generation = 0;
+
     uint8_t register_window_shader(
         std::vector<std::string> passes,
         std::optional<uint32_t> plugin_handle = std::nullopt);
 
     /// Remove all shaders registered by the given plugin and return their ids.
+    /// Also clears the screen shader if the given plugin owns it.
     std::vector<uint8_t> remove_shaders_for_plugin(uint32_t plugin_handle);
+
+    /// Set (or, with std::nullopt, clear) the global full-screen shader.
+    void set_screen_shader(
+        std::optional<std::string> source,
+        std::optional<uint32_t> plugin_handle = std::nullopt);
+
+    struct ScreenShaderState
+    {
+        std::optional<std::string> source;
+        uint64_t generation;
+    };
+
+    /// A locked snapshot of the current screen shader, for the renderer.
+    ScreenShaderState screen_shader_state();
 };
 
 } // miracle

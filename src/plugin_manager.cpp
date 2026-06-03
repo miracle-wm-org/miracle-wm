@@ -904,6 +904,36 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_set_screen_shader(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const glsl_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const len = WasmEdge_ValueGetI32(params[2]);
+
+    std::optional<std::string> source;
+    if (len > 0)
+    {
+        auto* memory = get_memory_from_frame(frame);
+        if (!memory)
+        {
+            mir::log_error("host_miracle_set_screen_shader: memory not found");
+            return WasmEdge_Result_Fail;
+        }
+
+        uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+        source = std::string(reinterpret_cast<char const*>(mem_base + glsl_ptr), len);
+    }
+
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->set_screen_shader(static_cast<uint32_t>(plugin_handle), std::move(source)));
+    return WasmEdge_Result_Success;
+}
+
 // Helper to add a host function to a module
 void add_host_function(
     WasmEdge_ModuleInstanceContext* module,
@@ -1085,6 +1115,10 @@ void PluginManager::Self::create_host_module()
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_register_window_sample_to_rgba, bridge.get());
 
+    add_host_function(module, "miracle_set_screen_shader",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_set_screen_shader, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -1095,7 +1129,7 @@ void PluginManager::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 23);
+    mir::log_info("Host module 'env' registered with %d functions", 24);
 }
 
 PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& userdata_json)

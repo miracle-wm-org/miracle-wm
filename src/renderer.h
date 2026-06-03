@@ -199,6 +199,7 @@ private:
     mutable Mesh border_model;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
+    std::shared_ptr<SamplerRegistry> sampler_registry;
 };
 
 }

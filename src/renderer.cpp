@@ -147,7 +147,16 @@ public:
 
     void set_custom_output_filter(std::optional<std::string> const& path)
     {
-        if (!needs_refresh(path))
+        // If a plugin-set source filter was active, drop it and force the
+        // config path to (re)load below.
+        if (plugin_source_active)
+        {
+            plugin_source_active = false;
+            program_path = std::nullopt;
+            has_program = false;
+            applied_screen_shader_generation = ~0ull;
+        }
+        else if (!needs_refresh(path))
             return;
 
         has_program = false;
@@ -171,6 +180,20 @@ public:
         buffer << file.rdbuf();
         next_program = buffer.str();
         has_program = true;
+    }
+
+    /// Apply a plugin-supplied screen shader source directly, bypassing the
+    /// config file path. \p generation is used to detect changes cheaply.
+    void set_custom_output_filter_source(std::optional<std::string> const& source, uint64_t generation)
+    {
+        plugin_source_active = source.has_value();
+        if (generation == applied_screen_shader_generation)
+            return;
+
+        applied_screen_shader_generation = generation;
+        program_path = std::nullopt;
+        has_program = source.has_value();
+        next_program = source;
     }
 
     void bind() override
@@ -364,6 +387,8 @@ private:
     GLint position_attrib;
     GLint texcoord_attrib;
     GLint tex_uniform;
+    bool plugin_source_active = false;
+    uint64_t applied_screen_shader_generation = ~0ull;
 };
 
 Renderer::PassTarget::~PassTarget()
@@ -536,7 +561,8 @@ Renderer::Renderer(
     gl_interface { std::move(gl_interface) },
     border_model(Mesh::rectangle(glm::vec3(-0.5, -0.5, 0), glm::vec2(1, 1))),
     config { config },
-    compositor_state { compositor_state }
+    compositor_state { compositor_state },
+    sampler_registry { sampler_registry }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -642,7 +668,12 @@ Renderer::DrawData Renderer::get_draw_data(
 
 auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
 {
-    output_surface->set_custom_output_filter(config->output_filter().shader_path);
+    // A plugin-set screen shader takes precedence over the config path.
+    auto const screen = sampler_registry->screen_shader_state();
+    if (screen.source)
+        output_surface->set_custom_output_filter_source(screen.source, screen.generation);
+    else
+        output_surface->set_custom_output_filter(config->output_filter().shader_path);
     output_surface->make_current();
     output_surface->bind();
 

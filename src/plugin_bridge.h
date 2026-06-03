@@ -143,6 +143,9 @@ public:
 
     uint8_t register_window_shader(std::vector<std::string> passes, std::optional<uint32_t> plugin_handle);
 
+    /// Set (or, with std::nullopt source, clear) the global full-screen shader.
+    int32_t set_screen_shader(uint32_t plugin_handle, std::optional<std::string> source);
+
     /// Clean up after a plugin unloads: remove the shaders it registered and revert
     /// any windows still using them back to the default shader.
     void on_plugin_unloaded(uint32_t plugin_handle);

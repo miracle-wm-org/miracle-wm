@@ -108,3 +108,53 @@ TEST_F(SamplerRegistryTest, IdsStayMonotonicAfterRemoval)
     ASSERT_EQ(id0, 5);
     ASSERT_EQ(id1, 6);
 }
+
+TEST_F(SamplerRegistryTest, ScreenShaderIsEmptyByDefault)
+{
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.source.has_value());
+    ASSERT_EQ(state.generation, 0u);
+}
+
+TEST_F(SamplerRegistryTest, SetScreenShaderStoresSourceAndBumpsGeneration)
+{
+    std::string const src = "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }";
+    registry.set_screen_shader(src, 1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_TRUE(state.source.has_value());
+    ASSERT_EQ(*state.source, src);
+    ASSERT_EQ(state.generation, 1u);
+}
+
+TEST_F(SamplerRegistryTest, ClearScreenShaderResetsSourceAndBumpsGeneration)
+{
+    registry.set_screen_shader("vec4 sample_to_rgba(vec2 tc) { return vec4(1); }", 1u);
+    registry.set_screen_shader(std::nullopt, 1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.source.has_value());
+    ASSERT_EQ(state.generation, 2u);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginClearsOwnedScreenShader)
+{
+    registry.set_screen_shader("vec4 sample_to_rgba(vec2 tc) { return vec4(1); }", 1u);
+    registry.remove_shaders_for_plugin(1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.source.has_value());
+    ASSERT_EQ(state.generation, 2u);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginLeavesScreenShaderOwnedByOther)
+{
+    std::string const src = "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }";
+    registry.set_screen_shader(src, 1u);
+    registry.remove_shaders_for_plugin(2u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_TRUE(state.source.has_value());
+    ASSERT_EQ(*state.source, src);
+    ASSERT_EQ(state.generation, 1u);
+}

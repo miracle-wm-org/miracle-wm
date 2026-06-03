@@ -43,5 +43,29 @@ std::vector<uint8_t> miracle::SamplerRegistry::remove_shaders_for_plugin(uint32_
         return false;
     });
     entries.erase(new_end, entries.end());
+
+    if (screen_shader_plugin_handle == plugin_handle)
+    {
+        screen_shader_source = std::nullopt;
+        screen_shader_plugin_handle = std::nullopt;
+        ++screen_shader_generation;
+    }
+
     return removed;
+}
+
+void miracle::SamplerRegistry::set_screen_shader(
+    std::optional<std::string> source,
+    std::optional<uint32_t> plugin_handle)
+{
+    std::lock_guard lock { mutex };
+    screen_shader_source = std::move(source);
+    screen_shader_plugin_handle = plugin_handle;
+    ++screen_shader_generation;
+}
+
+miracle::SamplerRegistry::ScreenShaderState miracle::SamplerRegistry::screen_shader_state()
+{
+    std::lock_guard lock { mutex };
+    return { screen_shader_source, screen_shader_generation };
 }

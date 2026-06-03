@@ -422,6 +422,29 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
     }
 }
 
+/// Set or clear the full-screen (output) shader.
+///
+/// `source` is a complete `vec4 sample_to_rgba(in vec2 texcoord)` GLSL function
+/// applied as a post-process over the whole composited output. Pass `None` to
+/// clear it and revert to the configured `output_filter.shader_path`.
+///
+/// The plugin's screen shader overrides the config path until cleared or the
+/// plugin unloads. Returns `Ok` on success, `Err` on failure.
+pub fn set_screen_shader(source: Option<&str>) -> Result<(), ()> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    // In wasm32 Rust pointers are linear-memory offsets, so casting to i32 is correct.
+    let (ptr, len) = match source {
+        Some(s) => (s.as_ptr() as i32, s.len() as i32),
+        None => (0, 0),
+    };
+    let r = unsafe { crate::host::miracle_set_screen_shader(handle as i32, ptr, len) };
+    if r == 0 {
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
 static mut _CUSTOM_ANIM_CALLBACKS: Option<
     std::collections::HashMap<u32, (Box<dyn FnMut(u32, f32, f32)>, f32)>,
 > = None;

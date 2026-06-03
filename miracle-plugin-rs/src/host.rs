@@ -168,4 +168,17 @@ unsafe extern "C" {
     ///
     /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
     pub fn miracle_register_window_sample_to_rgba(plugin_handle: i32, passes_ptr: i32, num_passes: i32) -> i32;
+
+    /// Set or clear the full-screen (output) shader.
+    ///
+    /// `plugin_handle` is the registering plugin's handle (from
+    /// `miracle_get_plugin_handle()`); the host uses it to clear the shader when
+    /// the plugin unloads.
+    ///
+    /// `glsl_ptr` is a WASM linear-memory offset pointing to the complete
+    /// `sample_to_rgba` GLSL source, `len` its byte length. Pass `len <= 0` to
+    /// clear and revert to the configured `output_filter.shader_path`.
+    ///
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_set_screen_shader(plugin_handle: i32, glsl_ptr: i32, len: i32) -> i32;
 }
