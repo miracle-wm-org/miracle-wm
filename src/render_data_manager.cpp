@@ -114,6 +114,16 @@ void RenderDataManager::shader_id_change(RenderDataManagerId id, std::optional<u
     }
 }
 
+void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
+{
+    std::lock_guard lock(mutex);
+    for (auto& data : render_data)
+    {
+        if (data.shader_id && std::find(ids.begin(), ids.end(), *data.shader_id) != ids.end())
+            data.shader_id = std::nullopt;
+    }
+}
+
 void RenderDataManager::remove(RenderDataManagerId id)
 {
     std::lock_guard lock(mutex);

@@ -407,8 +407,10 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
         .iter()
         .map(|p| [p.as_ptr() as i32, p.len() as i32])
         .collect();
+    let handle = unsafe { miracle_get_plugin_handle() };
     let result = unsafe {
         crate::host::miracle_register_window_sample_to_rgba(
+            handle as i32,
             descriptors.as_ptr() as i32,
             passes.len() as i32,
         )

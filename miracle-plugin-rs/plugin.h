@@ -568,11 +568,14 @@ extern "C"
     /// Each pass is a complete `sample_to_rgba(vec2 texcoord)` GLSL function.
     /// Passes are chained: pass *i* receives the output of pass *i-1* as `tex`.
     ///
+    /// \param plugin_handle the registering plugin's handle (from
+    ///                      `miracle_get_plugin_handle()`); the host uses it to remove
+    ///                      the shader when the plugin unloads
     /// \param passes     pointer to an array of #miracle_shader_pass_t descriptors
     /// \param num_passes number of elements in the array
     /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
     int32_t miracle_register_window_sample_to_rgba(
-        const miracle_shader_pass_t* passes, int32_t num_passes);
+        int32_t plugin_handle, const miracle_shader_pass_t* passes, int32_t num_passes);
 
 #ifdef __cplusplus
 }

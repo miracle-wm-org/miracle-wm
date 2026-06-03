@@ -441,6 +441,10 @@ int Renderer::run_offscreen_passes(
     {
         auto variant = program_factory->resolve_custom_pass(shader_id, i, pass_count);
         PassProgram* pp = std::get<PassProgram*>(variant);
+        // The shader may have been removed mid-frame (plugin unload). Bail out and let
+        // the caller fall back to the default window shader.
+        if (!pp)
+            break;
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pass_targets[ping].framebuffer_id);
         glUseProgram(pp->id);
@@ -785,18 +789,23 @@ void Renderer::draw(
     // Resolve the final-pass program.
     // For multi-pass: final pass (pass_count-1) via resolve_custom_pass.
     // For single-pass custom or default: existing path.
+    // If a custom shader cannot be resolved (e.g. its owning plugin unloaded and the
+    // shader was removed), fall back to the default window shader instead of throwing.
     auto const* const prog = [&]() -> ProgramData const*
     {
         if (is_multipass)
         {
             auto variant = program_factory->resolve_custom_pass(
                 *data.data.shader_id, num_passes - 1, num_passes);
-            return &dynamic_cast<Program const&>(*std::get<Program*>(variant)).data;
+            if (auto* const p = std::get<Program*>(variant))
+                return &p->data;
         }
-        return &dynamic_cast<Program const&>(data.data.shader_id
-                ? program_factory->resolve_custom(*data.data.shader_id)
-                : texture->shader(*program_factory))
-                    .data;
+        else if (data.data.shader_id)
+        {
+            if (auto* const p = program_factory->resolve_custom(*data.data.shader_id))
+                return &dynamic_cast<Program const&>(*p).data;
+        }
+        return &dynamic_cast<Program const&>(texture->shader(*program_factory)).data;
     }();
 
     glUseProgram(prog->id);

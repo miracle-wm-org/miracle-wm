@@ -156,11 +156,15 @@ unsafe extern "C" {
 
     /// Register a multi-pass GLSL shader for use in window rendering.
     ///
+    /// `plugin_handle` is the registering plugin's handle (from
+    /// `miracle_get_plugin_handle()`); the host uses it to remove the shader when
+    /// the plugin unloads.
+    ///
     /// `passes_ptr` is a WASM linear memory offset pointing to an array of
     /// `num_passes` pass descriptors.  Each descriptor is 8 bytes:
     ///   - bytes 0–3: `i32` WASM linear-memory offset of the pass's GLSL UTF-8 bytes
     ///   - bytes 4–7: `i32` byte length of that pass
     ///
     /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
-    pub fn miracle_register_window_sample_to_rgba(passes_ptr: i32, num_passes: i32) -> i32;
+    pub fn miracle_register_window_sample_to_rgba(plugin_handle: i32, passes_ptr: i32, num_passes: i32) -> i32;
 }

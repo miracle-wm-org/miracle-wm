@@ -134,14 +134,16 @@ public:
     /// Resolve the program from its unique identifier.
     ///
     /// \param id the unique identifier
-    /// \returns the program
-    /// \throws if the identifier cannot be found
-    mir::graphics::gl::Program& resolve_custom(uint8_t id);
+    /// \returns the program, or nullptr if the identifier cannot be found
+    ///          (e.g. the shader was removed when its owning plugin unloaded).
+    ///          Callers should fall back to the default window shader.
+    mir::graphics::gl::Program* resolve_custom(uint8_t id);
 
     /// For multi-pass shaders: resolve the program for a specific pass.
-    /// - final pass (pass_index == pass_count-1): returns a full Program& (alpha + SDF wrapper).
-    /// - intermediate pass: returns a PassProgram& (plain gl_FragColor = sample_to_rgba wrapper).
-    /// \throws if id cannot be found
+    /// - final pass (pass_index == pass_count-1): returns a full Program* (alpha + SDF wrapper).
+    /// - intermediate pass: returns a PassProgram* (plain gl_FragColor = sample_to_rgba wrapper).
+    /// If the id cannot be found, returns a null pointer of the kind matching the requested
+    /// pass; callers should fall back to the default window shader.
     std::variant<Program*, PassProgram*> resolve_custom_pass(uint8_t id, size_t pass_index, size_t pass_count);
 
     /// Returns the number of passes registered for the given shader id.

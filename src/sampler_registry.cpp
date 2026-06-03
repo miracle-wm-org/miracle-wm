@@ -17,10 +17,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "sampler_registry.h"
 
-uint8_t miracle::SamplerRegistry::register_window_shader(std::vector<std::string> passes)
+#include <algorithm>
+
+uint8_t miracle::SamplerRegistry::register_window_shader(
+    std::vector<std::string> passes,
+    std::optional<uint32_t> plugin_handle)
 {
     std::lock_guard lock { mutex };
     auto const next_id = id++;
-    entries.push_back(Entry { next_id, std::move(passes) });
+    entries.push_back(Entry { next_id, std::move(passes), plugin_handle });
     return next_id;
+}
+
+std::vector<uint8_t> miracle::SamplerRegistry::remove_shaders_for_plugin(uint32_t plugin_handle)
+{
+    std::lock_guard lock { mutex };
+    std::vector<uint8_t> removed;
+    auto const new_end = std::remove_if(entries.begin(), entries.end(), [&](Entry const& entry)
+    {
+        if (entry.plugin_handle == plugin_handle)
+        {
+            removed.push_back(entry.id);
+            return true;
+        }
+        return false;
+    });
+    entries.erase(new_end, entries.end());
+    return removed;
 }

@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "sampler_registry.h"
+#include <algorithm>
 #include <gtest/gtest.h>
 
 using namespace miracle;
@@ -65,4 +66,45 @@ TEST_F(SamplerRegistryTest, MultipleRegistrationsAccumulate)
     for (int i = 0; i < 8; ++i)
         registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" });
     ASSERT_EQ(registry.entries.size(), 8u);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginRemovesOnlyMatchingEntries)
+{
+    auto id_a = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" }, 1u);
+    auto id_b = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(0); }" }, 2u);
+    auto id_a2 = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(0.5); }" }, 1u);
+
+    auto removed = registry.remove_shaders_for_plugin(1u);
+
+    ASSERT_EQ(removed.size(), 2u);
+    ASSERT_NE(std::find(removed.begin(), removed.end(), id_a), removed.end());
+    ASSERT_NE(std::find(removed.begin(), removed.end(), id_a2), removed.end());
+    ASSERT_EQ(registry.entries.size(), 1u);
+    ASSERT_EQ(registry.entries[0].id, id_b);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginLeavesUnownedEntries)
+{
+    auto id_unowned = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" });
+    registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(0); }" }, 3u);
+
+    auto removed = registry.remove_shaders_for_plugin(3u);
+
+    ASSERT_EQ(removed.size(), 1u);
+    ASSERT_EQ(registry.entries.size(), 1u);
+    ASSERT_EQ(registry.entries[0].id, id_unowned);
+
+    // An unowned shader is never removed by any plugin unload.
+    auto removed_none = registry.remove_shaders_for_plugin(0u);
+    ASSERT_TRUE(removed_none.empty());
+    ASSERT_EQ(registry.entries.size(), 1u);
+}
+
+TEST_F(SamplerRegistryTest, IdsStayMonotonicAfterRemoval)
+{
+    auto id0 = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" }, 1u);
+    registry.remove_shaders_for_plugin(1u);
+    auto id1 = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(0); }" }, 1u);
+    ASSERT_EQ(id0, 5);
+    ASSERT_EQ(id1, 6);
 }

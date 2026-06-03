@@ -186,9 +186,16 @@ PluginBridge::PluginBridge(std::shared_ptr<OutputManager> const& output_manager,
 {
 }
 
-uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes)
+uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes, std::optional<uint32_t> plugin_handle)
 {
-    return sampler_registry_->register_window_shader(std::move(passes));
+    return sampler_registry_->register_window_shader(std::move(passes), plugin_handle);
+}
+
+void PluginBridge::on_plugin_unloaded(uint32_t plugin_handle)
+{
+    auto const removed = sampler_registry_->remove_shaders_for_plugin(plugin_handle);
+    if (!removed.empty())
+        compositor_state->render_data_manager()->reset_shaders(removed);
 }
 
 uint64_t PluginBridge::find_window_id(miral::Window const& window) const
