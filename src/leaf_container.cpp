@@ -1060,10 +1060,8 @@ nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
 
     if (locked_parent == nullptr)
         visible = false;
-
-    if (locked_parent->get_scheme() == LayoutScheme::stacking || locked_parent->get_scheme() == LayoutScheme::tabbing)
-        if (!is_focused())
-            visible = false;
+    else if ((locked_parent->get_scheme() == LayoutScheme::stacking || locked_parent->get_scheme() == LayoutScheme::tabbing) && !is_focused())
+        visible = false;
 
     nlohmann::json properties = nlohmann::json::object();
     return {
