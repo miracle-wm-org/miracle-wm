@@ -28,7 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#include <chrono>
 #include <cmath>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -52,6 +54,11 @@ using namespace miracle;
 
 namespace
 {
+/// Monotonic anchor captured at process load, shared by all per-output
+/// OutputFilters so the screen-shader `time` uniform reads the same on every
+/// output.
+std::chrono::steady_clock::time_point const g_program_start = std::chrono::steady_clock::now();
+
 auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::unique_ptr<mg::gl::OutputSurface>
 {
     output->make_current();
@@ -298,6 +305,23 @@ public:
             if (cp.surface_size_uniform >= 0)
                 glUniform2f(cp.surface_size_uniform, static_cast<float>(w), static_cast<float>(h));
 
+            if (cp.time_uniform >= 0)
+                glUniform1f(cp.time_uniform,
+                    std::chrono::duration<float>(std::chrono::steady_clock::now() - g_program_start).count());
+
+            if (cp.time_of_day_uniform >= 0)
+            {
+                auto const now = std::chrono::system_clock::now();
+                std::time_t const tt = std::chrono::system_clock::to_time_t(now);
+                std::tm lt {};
+                localtime_r(&tt, &lt);
+                auto const frac = std::chrono::duration<float>(
+                    now.time_since_epoch() - std::chrono::floor<std::chrono::seconds>(now.time_since_epoch()))
+                                      .count();
+                glUniform1f(cp.time_of_day_uniform,
+                    lt.tm_hour * 3600.f + lt.tm_min * 60.f + lt.tm_sec + frac);
+            }
+
             glEnableVertexAttribArray(cp.position_attrib);
             glVertexAttribPointer(cp.position_attrib, 2, GL_FLOAT, GL_FALSE, 0, vertices);
             glEnableVertexAttribArray(cp.texcoord_attrib);
@@ -335,6 +359,8 @@ private:
         GLint tex_uniform = -1;
         GLint tex_source_uniform = -1;
         GLint surface_size_uniform = -1;
+        GLint time_uniform = -1;
+        GLint time_of_day_uniform = -1;
     };
 
     static GLuint compile_shader(GLenum type, GLchar const* src)
@@ -382,9 +408,14 @@ private:
             // The same shader contract as window shaders: `tex` is this pass's
             // input (pass 0 = original screen), `tex_source` is always the
             // original screen content, `surfaceSize` is the output size in px.
+            // `time` is seconds since the compositor started; `timeOfDay` is
+            // seconds since local midnight. All are optional — declare only what
+            // you use.
             << "uniform sampler2D tex;\n"
                "uniform sampler2D tex_source;\n"
                "uniform vec2 surfaceSize;\n"
+               "uniform float time;\n"
+               "uniform float timeOfDay;\n"
             << "\n"
             << src
             << "\n"
@@ -417,6 +448,8 @@ private:
         cp.tex_uniform = glGetUniformLocation(cp.program, "tex");
         cp.tex_source_uniform = glGetUniformLocation(cp.program, "tex_source");
         cp.surface_size_uniform = glGetUniformLocation(cp.program, "surfaceSize");
+        cp.time_uniform = glGetUniformLocation(cp.program, "time");
+        cp.time_of_day_uniform = glGetUniformLocation(cp.program, "timeOfDay");
         return cp;
     }
 

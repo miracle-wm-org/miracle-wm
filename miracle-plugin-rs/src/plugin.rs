@@ -428,8 +428,10 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
 /// GLSL function applied as a post-process over the whole composited output.
 /// Like [`register_window_shader`] the passes are chained: pass *i* reads pass
 /// *i-1*'s output as `tex`, `tex_source` is always the original screen content,
-/// and `surfaceSize` is the output size in pixels. Pass an empty slice to clear
-/// the shader and revert to the configured `output_filter.shader_path`.
+/// and `surfaceSize` is the output size in pixels. Two optional time uniforms
+/// are also available: `time` (seconds since the compositor started) and
+/// `timeOfDay` (seconds since local midnight). Pass an empty slice to clear the
+/// shader and revert to the configured `output_filter.shader_path`.
 ///
 /// The plugin's screen shader overrides the config path until cleared or the
 /// plugin unloads. Returns `Ok` on success, `Err` on failure.

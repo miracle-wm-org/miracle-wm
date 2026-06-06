@@ -584,6 +584,8 @@ extern "C"
     /// #miracle_register_window_sample_to_rgba, passes are chained: pass *i*
     /// receives the output of pass *i-1* as `tex`, while `tex_source` is always
     /// the original screen content and `surfaceSize` is the output size in px.
+    /// Two optional time uniforms are also available: `time` (seconds since the
+    /// compositor started) and `timeOfDay` (seconds since local midnight).
     /// Pass \p num_passes <= 0 to clear and revert to the configured
     /// `output_filter.shader_path`. The plugin's screen shader overrides the
     /// config path until cleared or the plugin unloads.
