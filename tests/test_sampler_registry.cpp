@@ -108,3 +108,58 @@ TEST_F(SamplerRegistryTest, IdsStayMonotonicAfterRemoval)
     ASSERT_EQ(id0, 5);
     ASSERT_EQ(id1, 6);
 }
+
+TEST_F(SamplerRegistryTest, ScreenShaderIsEmptyByDefault)
+{
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.passes.has_value());
+    ASSERT_EQ(state.generation, 0u);
+}
+
+TEST_F(SamplerRegistryTest, SetScreenShaderStoresPassesAndBumpsGeneration)
+{
+    std::vector<std::string> const passes = {
+        "vec4 sample_to_rgba(vec2 tc) { return texture2D(tex, tc); }",
+        "vec4 sample_to_rgba(vec2 tc) { return texture2D(tex, tc) * 0.5; }",
+    };
+    registry.set_screen_shader(passes, 1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_TRUE(state.passes.has_value());
+    ASSERT_EQ(state.passes->size(), 2u);
+    ASSERT_EQ((*state.passes)[0], passes[0]);
+    ASSERT_EQ((*state.passes)[1], passes[1]);
+    ASSERT_EQ(state.generation, 1u);
+}
+
+TEST_F(SamplerRegistryTest, ClearScreenShaderResetsPassesAndBumpsGeneration)
+{
+    registry.set_screen_shader(std::vector<std::string> { "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" }, 1u);
+    registry.set_screen_shader(std::nullopt, 1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.passes.has_value());
+    ASSERT_EQ(state.generation, 2u);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginClearsOwnedScreenShader)
+{
+    registry.set_screen_shader(std::vector<std::string> { "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" }, 1u);
+    registry.remove_shaders_for_plugin(1u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_FALSE(state.passes.has_value());
+    ASSERT_EQ(state.generation, 2u);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginLeavesScreenShaderOwnedByOther)
+{
+    std::vector<std::string> const passes = { "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" };
+    registry.set_screen_shader(passes, 1u);
+    registry.remove_shaders_for_plugin(2u);
+
+    auto state = registry.screen_shader_state();
+    ASSERT_TRUE(state.passes.has_value());
+    ASSERT_EQ(state.passes->size(), 1u);
+    ASSERT_EQ(state.generation, 1u);
+}

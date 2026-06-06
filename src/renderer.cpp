@@ -28,7 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#include <chrono>
 #include <cmath>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
@@ -52,6 +54,11 @@ using namespace miracle;
 
 namespace
 {
+/// Monotonic anchor captured at process load, shared by all per-output
+/// OutputFilters so the screen-shader `time` uniform reads the same on every
+/// output.
+std::chrono::steady_clock::time_point const g_program_start = std::chrono::steady_clock::now();
+
 auto make_output_current(std::unique_ptr<mg::gl::OutputSurface> output) -> std::unique_ptr<mg::gl::OutputSurface>
 {
     output->make_current();
@@ -118,11 +125,7 @@ public:
     explicit OutputFilter(std::unique_ptr<OutputSurface> output) :
         output { std::move(output) },
         texture { make_texture(this->output->size()) },
-        framebuffer { make_framebuffer(texture) },
-        program { nullptr },
-        position_attrib { 0 },
-        texcoord_attrib { 0 },
-        tex_uniform { 0 }
+        framebuffer { make_framebuffer(texture) }
     {
     }
 
@@ -147,7 +150,16 @@ public:
 
     void set_custom_output_filter(std::optional<std::string> const& path)
     {
-        if (!needs_refresh(path))
+        // If a plugin-set source filter was active, drop it and force the
+        // config path to (re)load below.
+        if (plugin_source_active)
+        {
+            plugin_source_active = false;
+            program_path = std::nullopt;
+            has_program = false;
+            applied_screen_shader_generation = ~0ull;
+        }
+        else if (!needs_refresh(path))
             return;
 
         has_program = false;
@@ -169,12 +181,49 @@ public:
 
         std::stringstream buffer;
         buffer << file.rdbuf();
-        next_program = buffer.str();
+        next_passes = std::vector<std::string> { buffer.str() };
         has_program = true;
+    }
+
+    /// Apply a plugin-supplied screen shader, bypassing the config file path.
+    /// \p passes is a chained multi-pass shader (see #SamplerRegistry).
+    /// \p generation is used to detect changes cheaply.
+    void set_custom_output_filter_source(std::optional<std::vector<std::string>> const& passes, uint64_t generation)
+    {
+        plugin_source_active = passes.has_value();
+        if (generation == applied_screen_shader_generation)
+            return;
+
+        applied_screen_shader_generation = generation;
+        program_path = std::nullopt;
+        has_program = passes.has_value() && !passes->empty();
+        next_passes = passes;
     }
 
     void bind() override
     {
+        // (Re)compile pending passes before rendering the screen content.
+        if (next_passes)
+        {
+            try
+            {
+                std::vector<CompiledPass> compiled;
+                compiled.reserve(next_passes->size());
+                for (auto const& src : *next_passes)
+                    compiled.push_back(compile_pass(src.c_str()));
+                programs = std::move(compiled);
+                has_program = !programs.empty();
+                next_passes = std::nullopt;
+            }
+            catch (std::exception const& e)
+            {
+                mir::log_error("Failed to compile custom output filter: %s", e.what());
+                programs.clear();
+                has_program = false;
+                next_passes = std::nullopt;
+            }
+        }
+
         // Bypass if no filter.
         if (!has_program)
         {
@@ -182,27 +231,9 @@ public:
             return;
         }
 
+        // Render the screen content into our intermediate texture; commit() then
+        // runs the shader pass(es) over it.
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
-
-        if (next_program)
-        {
-            try
-            {
-                program = std::make_unique<ProgramHandle>(compile_program(next_program.value().c_str()));
-                position_attrib = glGetAttribLocation(*program, "position");
-                texcoord_attrib = glGetAttribLocation(*program, "texcoord");
-                tex_uniform = glGetUniformLocation(*program, "tex");
-                next_program = std::nullopt;
-            }
-            catch (std::exception const& e)
-            {
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-                mir::log_error("Failed to compile custom output filter: %s", e.what());
-                has_program = false;
-                next_program = std::nullopt;
-                output->bind();
-            }
-        }
     }
 
     void make_current() override
@@ -221,24 +252,89 @@ public:
         if (!has_program)
             return output->commit();
 
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        // A single right-angle triangle that covers the whole output.
+        static GLfloat const vertices[] = { -1, -1, 3, -1, -1, 3 };
+        static GLfloat const tex_coords[] = { 0, 0, 2, 0, 0, 2 };
 
-        output->bind();
+        auto const out_size = output->size();
+        int const w = miracle::geometry_helpers::gl::width_value(out_size);
+        int const h = miracle::geometry_helpers::gl::height_value(out_size);
 
-        glUseProgram(*program);
-        glUniform1i(tex_uniform, 0);
+        size_t const pass_count = programs.size();
+        if (pass_count > 1)
+        {
+            pass_targets[0].ensure(out_size);
+            pass_targets[1].ensure(out_size);
+        }
 
+        // Intermediate passes must overwrite, not blend into, their targets.
+        GLboolean const blend_was_enabled = glIsEnabled(GL_BLEND);
+        glDisable(GL_BLEND);
+
+        // `texture` holds the original composited screen content; it is the
+        // `tex_source` for every pass and the `tex` input of pass 0.
+        GLuint read_tex = texture;
+        for (size_t i = 0; i < pass_count; ++i)
+        {
+            bool const last = (i == pass_count - 1);
+            auto const& cp = programs[i];
+
+            if (last)
+            {
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                output->bind(); // restores the output viewport
+            }
+            else
+            {
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pass_targets[i % 2].framebuffer_id);
+                glViewport(0, 0, w, h);
+            }
+
+            glUseProgram(cp.program);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, read_tex);
+            if (cp.tex_uniform >= 0)
+                glUniform1i(cp.tex_uniform, 0);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            if (cp.tex_source_uniform >= 0)
+                glUniform1i(cp.tex_source_uniform, 1);
+
+            if (cp.surface_size_uniform >= 0)
+                glUniform2f(cp.surface_size_uniform, static_cast<float>(w), static_cast<float>(h));
+
+            if (cp.time_uniform >= 0)
+                glUniform1f(cp.time_uniform,
+                    std::chrono::duration<float>(std::chrono::steady_clock::now() - g_program_start).count());
+
+            if (cp.time_of_day_uniform >= 0)
+            {
+                auto const now = std::chrono::system_clock::now();
+                std::time_t const tt = std::chrono::system_clock::to_time_t(now);
+                std::tm lt {};
+                localtime_r(&tt, &lt);
+                auto const frac = std::chrono::duration<float>(
+                    now.time_since_epoch() - std::chrono::floor<std::chrono::seconds>(now.time_since_epoch()))
+                                      .count();
+                glUniform1f(cp.time_of_day_uniform,
+                    lt.tm_hour * 3600.f + lt.tm_min * 60.f + lt.tm_sec + frac);
+            }
+
+            glEnableVertexAttribArray(cp.position_attrib);
+            glVertexAttribPointer(cp.position_attrib, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+            glEnableVertexAttribArray(cp.texcoord_attrib);
+            glVertexAttribPointer(cp.texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 0, tex_coords);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+
+            if (!last)
+                read_tex = pass_targets[i % 2].texture_id;
+        }
+
+        if (blend_was_enabled)
+            glEnable(GL_BLEND);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
-
-        // Draw a single right angle triangle that covers the whole output.
-        GLfloat vertices[] = { -1, -1, 3, -1, -1, 3 };
-        GLfloat tex_coords[] = { 0, 0, 2, 0, 0, 2 };
-        glEnableVertexAttribArray(position_attrib);
-        glVertexAttribPointer(position_attrib, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-        glEnableVertexAttribArray(texcoord_attrib);
-        glVertexAttribPointer(texcoord_attrib, 2, GL_FLOAT, GL_FALSE, 0, tex_coords);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         return output->commit();
     }
@@ -254,6 +350,19 @@ public:
     }
 
 private:
+    /// A single compiled screen-shader pass and its attribute/uniform locations.
+    struct CompiledPass
+    {
+        ProgramHandle program;
+        GLint position_attrib = -1;
+        GLint texcoord_attrib = -1;
+        GLint tex_uniform = -1;
+        GLint tex_source_uniform = -1;
+        GLint surface_size_uniform = -1;
+        GLint time_uniform = -1;
+        GLint time_of_day_uniform = -1;
+    };
+
     static GLuint compile_shader(GLenum type, GLchar const* src)
     {
         GLuint id = glCreateShader(type);
@@ -278,7 +387,7 @@ private:
         return id;
     }
 
-    static ProgramHandle compile_program(GLchar const* src)
+    static CompiledPass compile_pass(GLchar const* src)
     {
         const GLchar* vertex_src = "attribute vec2 position;\n"
                                    "attribute vec2 texcoord;\n"
@@ -295,6 +404,18 @@ private:
             << "#ifdef GL_ES\n"
                "precision mediump float;\n"
                "#endif\n"
+            << "\n"
+            // The same shader contract as window shaders: `tex` is this pass's
+            // input (pass 0 = original screen), `tex_source` is always the
+            // original screen content, `surfaceSize` is the output size in px.
+            // `time` is seconds since the compositor started; `timeOfDay` is
+            // seconds since local midnight. All are optional — declare only what
+            // you use.
+            << "uniform sampler2D tex;\n"
+               "uniform sampler2D tex_source;\n"
+               "uniform vec2 surfaceSize;\n"
+               "uniform float time;\n"
+               "uniform float timeOfDay;\n"
             << "\n"
             << src
             << "\n"
@@ -321,7 +442,15 @@ private:
                     std::string("Linking GL shader failed: ") + log));
         }
 
-        return program;
+        CompiledPass cp { std::move(program) };
+        cp.position_attrib = glGetAttribLocation(cp.program, "position");
+        cp.texcoord_attrib = glGetAttribLocation(cp.program, "texcoord");
+        cp.tex_uniform = glGetUniformLocation(cp.program, "tex");
+        cp.tex_source_uniform = glGetUniformLocation(cp.program, "tex_source");
+        cp.surface_size_uniform = glGetUniformLocation(cp.program, "surfaceSize");
+        cp.time_uniform = glGetUniformLocation(cp.program, "time");
+        cp.time_of_day_uniform = glGetUniformLocation(cp.program, "timeOfDay");
+        return cp;
     }
 
     static GLuint make_texture(mir::geometry::Size size)
@@ -359,11 +488,14 @@ private:
     bool has_program = false;
     std::optional<std::string> program_path;
     std::filesystem::file_time_type last_write_time;
-    std::optional<std::string> next_program;
-    std::unique_ptr<ProgramHandle> program;
-    GLint position_attrib;
-    GLint texcoord_attrib;
-    GLint tex_uniform;
+    /// Pending shader source awaiting (re)compilation in bind().
+    std::optional<std::vector<std::string>> next_passes;
+    /// Compiled passes, run in order in commit().
+    std::vector<CompiledPass> programs;
+    /// Ping-pong targets for intermediate passes (only used when >1 pass).
+    PassTarget pass_targets[2];
+    bool plugin_source_active = false;
+    uint64_t applied_screen_shader_generation = ~0ull;
 };
 
 Renderer::PassTarget::~PassTarget()
@@ -536,7 +668,8 @@ Renderer::Renderer(
     gl_interface { std::move(gl_interface) },
     border_model(Mesh::rectangle(glm::vec3(-0.5, -0.5, 0), glm::vec2(1, 1))),
     config { config },
-    compositor_state { compositor_state }
+    compositor_state { compositor_state },
+    sampler_registry { sampler_registry }
 {
     // http://directx.com/2014/06/egl-understanding-eglchooseconfig-then-ignoring-it/
     eglBindAPI(EGL_OPENGL_ES_API);
@@ -642,7 +775,12 @@ Renderer::DrawData Renderer::get_draw_data(
 
 auto Renderer::render(mg::RenderableList const& renderables) const -> std::unique_ptr<mg::Framebuffer>
 {
-    output_surface->set_custom_output_filter(config->output_filter().shader_path);
+    // A plugin-set screen shader takes precedence over the config path.
+    auto const screen = sampler_registry->screen_shader_state();
+    if (screen.passes)
+        output_surface->set_custom_output_filter_source(screen.passes, screen.generation);
+    else
+        output_surface->set_custom_output_filter(config->output_filter().shader_path);
     output_surface->make_current();
     output_surface->bind();
 
