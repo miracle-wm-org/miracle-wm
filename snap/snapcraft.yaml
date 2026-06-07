@@ -5,7 +5,6 @@ description: |
   miracle-wm is a hackable, stylish, and modern Wayland compositor built on Mir. It brings the keyboard-driven efficiency of i3/Sway to a richer, more extensible experience with smooth animations, a powerful WebAssembly plugin system, and a clean YAML configuration.
 confinement: classic
 base: core26
-build-base: devel
 version: 0.0.0
 grade: devel
 
@@ -13,7 +12,7 @@ platforms:
   amd64:
   arm64:
   armhf:
-    
+
 package-repositories:
   - type: apt
     ppa: mir-team/release
@@ -21,8 +20,7 @@ package-repositories:
 apps:
   miracle-wm:
     command: usr/bin/miracle-wm
-    environment: &_environment
-      # Prep for Mir
+    environment: &_environment # Prep for Mir
       MIR_SERVER_PLATFORM_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/mir/server-platform
       __EGL_VENDOR_LIBRARY_DIRS: ${SNAP}/etc/glvnd/egl_vendor.d:${SNAP}/usr/share/glvnd/egl_vendor.d
       GBM_BACKENDS_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/gbm
@@ -122,7 +120,7 @@ parts:
       - -usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/libgallium*
       - -usr/include
       - -usr/lib/*/pkgconfig
-      
+
   session:
     plugin: dump
     source: session
