@@ -30,6 +30,8 @@ jobs:
       - name: Build the snap
         uses: snapcore/action-build@v1
         id: build
+        with:
+          snapcraft-channel: candidate
 
       - name: Publish the snap
         uses: snapcore/action-publish@v1
