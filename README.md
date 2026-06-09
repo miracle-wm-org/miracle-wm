@@ -43,7 +43,7 @@ Plugins hot-reload when the configuration reloads, so your iteration loop is fas
 
 Installation instructions, build instructions, and a full roadmap live at:
 
-**[wiki.miracle-wm.org](https://wiki.miracle-wm.org/latest/)**
+**[wiki.miracle-wm.org](https://wiki.miracle-wm.org/)**
 
 Plugin API documentation is at:
 
