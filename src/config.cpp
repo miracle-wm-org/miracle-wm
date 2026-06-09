@@ -161,7 +161,7 @@ void FilesystemConfiguration::_init(
 
 namespace
 {
-ConfigData load_config_recursive(std::string const& path)
+ConfigData load_config_recursive(std::string const& path, std::vector<Error>& out_errors)
 {
     auto [config, errors] = load_config(expand_tilde_getenv(path));
 
@@ -173,13 +173,17 @@ ConfigData load_config_recursive(std::string const& path)
                 error.filename.c_str(),
                 error.line,
                 error.column);
+
+        out_errors.reserve(out_errors.size() + errors.size());
+        for (auto const& error : errors)
+            out_errors.push_back(error);
     }
 
     /// Load the includes provided by this path. Note that this may be recursive, but
     /// miracle will not prevent you from loading erroneously.
     for (auto const& include : *config.includes)
     {
-        auto loaded = load_config_recursive(include);
+        auto loaded = load_config_recursive(include, out_errors);
         config = config.merge_with(loaded);
     }
 
@@ -196,11 +200,13 @@ void FilesystemConfiguration::reload()
         {
             mir::log_info("No configuration was specified, so the config will not load.");
             options = ConfigData();
+            config_errors_.clear();
             return;
         }
 
         mir::log_info("Configuration is loading...");
-        options = load_config_recursive(config_path);
+        config_errors_.clear();
+        options = load_config_recursive(config_path, config_errors_);
 
         // The plugins are loaded immediately so that they have an opportunity to define the configuration
         // before we call `advise_config_changed`.
@@ -346,6 +352,18 @@ MagnifierConfiguration FilesystemConfiguration::magnifier() const
 std::string const& FilesystemConfiguration::get_filename() const
 {
     return config_path;
+}
+
+std::vector<Error> const& FilesystemConfiguration::get_config_errors() const
+{
+    std::lock_guard lock(mutex);
+    return config_errors_;
+}
+
+std::string FilesystemConfiguration::get_error_reporter_client() const
+{
+    std::lock_guard lock(mutex);
+    return options.wm_clients->error_reporter;
 }
 
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const

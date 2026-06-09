@@ -67,6 +67,7 @@ nav:
     - configuration/drag_and_drop.md
     - configuration/output_filter.md
     - configuration/cursor.md
+    - configuration/wm_clients.md
     - Input Devices:
       - configuration/input/touchpad.md
       - configuration/input/mouse.md
@@ -113,6 +114,7 @@ nav:
       - ipc/events/binding.md
       - ipc/events/shutdown.md
       - ipc/events/tick.md
+      - ipc/events/config_errors.md
   - Plugins: plugins.md
   - Display Configuration: configuration/display_configuration.md
   - Screen Sharing: screenshare.md

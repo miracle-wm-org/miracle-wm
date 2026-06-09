@@ -37,6 +37,10 @@ apps:
     command: usr/bin/miraclemsg
     environment: *_environment
 
+  miracle-wm-basic-error-reporter:
+    command: usr/bin/miracle-wm-basic-error-reporter
+    environment: *_environment
+
 parts:
   miracle-wm:
     build-attributes:
@@ -91,6 +95,10 @@ parts:
       - libboost-filesystem-dev
       - libboost-system-dev
       - libwasmedge-dev
+      # miracle-wm-basic-error-reporter (GTK4 client)
+      - libgtk-4-dev
+      - libgtk4-layer-shell-dev
+      - gettext
     stage-packages:
       - libmiral7
       - mir-graphics-drivers-desktop
@@ -102,6 +110,11 @@ parts:
       - libgl1-mesa-dri
       - libdrm-nouveau2
       - libwasmedge0
+      # miracle-wm-basic-error-reporter (GTK4 client) runtime
+      - libgtk-4-1
+      - libgtk4-layer-shell0
+      - libjson-c5
+      - adwaita-icon-theme
     prime:
       - -lib/udev
       - -usr/doc

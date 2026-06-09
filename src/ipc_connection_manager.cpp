@@ -81,6 +81,22 @@ json mode_event_to_json(WindowManagerMode mode)
         { "pango_markup", true                                            }
     };
 }
+
+json config_errors_to_json(std::vector<miracle::Error> const& errors)
+{
+    json result = json::array();
+    for (auto const& error : errors)
+    {
+        result.push_back({
+            { "filename", error.filename                                                    },
+            { "line",     error.line                                                        },
+            { "column",   error.column                                                      },
+            { "level",    error.level == miracle::ErrorLevel::warning ? "warning" : "error" },
+            { "message",  error.message                                                     },
+        });
+    }
+    return result;
+}
 }
 
 IpcConnectionManager::IpcConnectionManager(
@@ -91,6 +107,7 @@ IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<WindowController> const& window_controller) :
     main_loop(main_loop_),
     command_controller(command_controller),
+    config(config),
     ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -358,22 +375,22 @@ void IpcConnectionManager::on_workspace_renamed(uint32_t id)
     }
 }
 
-void IpcConnectionManager::on_config_changed(Config const&)
+void IpcConnectionManager::on_config_changed(Config const& changed_config)
 {
     json const j = {
         { "change", "reload" }
     };
 
     auto const serialized_value = to_string(j);
+    auto const serialized_errors = to_string(config_errors_to_json(changed_config.get_config_errors()));
     std::lock_guard lock(clients_mutex);
     for (auto& client : clients)
     {
-        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE)) == 0)
-        {
-            continue;
-        }
+        if (client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_WORKSPACE))
+            send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
 
-        send_reply(*client, IpcType::IPC_EVENT_WORKSPACE, serialized_value);
+        if (client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_CONFIG_ERRORS))
+            send_reply(*client, IpcType::IPC_EVENT_CONFIG_ERRORS, serialized_errors);
     }
 }
 
@@ -582,6 +599,14 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
             { "payload", ""   }
         };
         send_reply(client, IpcType::IPC_EVENT_TICK, to_string(response));
+    }
+
+    if (result.subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_CONFIG_ERRORS))
+    {
+        // A freshly-subscribed client immediately receives all errors from the most
+        // recent configuration load.
+        auto const serialized_errors = to_string(config_errors_to_json(config->get_config_errors()));
+        send_reply(client, IpcType::IPC_EVENT_CONFIG_ERRORS, serialized_errors);
     }
 
     if (result.send_tick_event)

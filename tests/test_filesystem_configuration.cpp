@@ -832,3 +832,50 @@ TEST_F(FilesystemConfigurationTest, MissingPluginsDirDoesNotCrash)
 {
     EXPECT_NO_THROW(FilesystemConfiguration config(registrar, path, true));
 }
+
+TEST_F(FilesystemConfigurationTest, CleanConfigHasNoErrors)
+{
+    write_kvp("action_key", "alt");
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_TRUE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ErroneousConfigRetainsErrors)
+{
+    // A terminal that does not resolve to an existing program produces an error.
+    write_kvp("terminal", "definitely_not_a_real_program_xyz");
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_FALSE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ReloadClearsPreviousErrors)
+{
+    write_kvp("terminal", "definitely_not_a_real_program_xyz");
+    FilesystemConfiguration config(registrar, path, true);
+    ASSERT_FALSE(config.get_config_errors().empty());
+
+    // Replace the config with a clean one and reload.
+    SetUp();
+    write_kvp("action_key", "alt");
+    config.reload();
+    EXPECT_TRUE(config.get_config_errors().empty());
+}
+
+TEST_F(FilesystemConfigurationTest, ErrorReporterDefaultsToDefault)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_error_reporter_client(), "default");
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadWmClientsErrorReporter)
+{
+    YAML::Node wm_clients_node;
+    wm_clients_node["error_reporter"] = "disabled";
+
+    YAML::Node root;
+    root["wm_clients"] = wm_clients_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_error_reporter_client(), "disabled");
+}
