@@ -26,6 +26,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstring>
 #include <mir/log.h>
 #include <miral/toolkit_event.h>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using namespace miracle;
 
@@ -49,18 +53,174 @@ miracle_animation_type from_animateable_event(AnimateableEvent event)
     }
 }
 
-// Helper to get memory instance from calling frame
-WasmEdge_MemoryInstanceContext* get_memory_from_frame(
-    WasmEdge_CallingFrameContext const* frame)
+// RAII wrapper around WasmEdge_String so callers don't hand-balance every
+// StringCreateByCString/StringDelete pair.
+class WasmString
 {
-    auto const* module = WasmEdge_CallingFrameGetModuleInstance(frame);
-    if (!module)
-        return nullptr;
+public:
+    explicit WasmString(char const* s) :
+        str_(WasmEdge_StringCreateByCString(s))
+    {
+    }
+    ~WasmString() { WasmEdge_StringDelete(str_); }
+    WasmString(WasmString const&) = delete;
+    WasmString& operator=(WasmString const&) = delete;
+    operator WasmEdge_String() const { return str_; }
 
-    auto const memory_name = WasmEdge_StringCreateByCString("memory");
-    auto* memory = WasmEdge_ModuleInstanceFindMemory(module, memory_name);
-    WasmEdge_StringDelete(memory_name);
+private:
+    WasmEdge_String str_;
+};
+
+// Find a module's "memory" export. Logs "<ctx>: memory not found" and returns
+// nullptr on miss.
+WasmEdge_MemoryInstanceContext* find_memory(
+    WasmEdge_ModuleInstanceContext const* module, char const* ctx)
+{
+    if (!module)
+    {
+        mir::log_error("%s: module not found", ctx);
+        return nullptr;
+    }
+
+    auto* memory = WasmEdge_ModuleInstanceFindMemory(module, WasmString("memory"));
+    if (!memory)
+        mir::log_error("%s: memory not found", ctx);
     return memory;
+}
+
+// Memory instance for the module that owns the current calling frame.
+WasmEdge_MemoryInstanceContext* get_memory_from_frame(
+    WasmEdge_CallingFrameContext const* frame, char const* ctx)
+{
+    return find_memory(WasmEdge_CallingFrameGetModuleInstance(frame), ctx);
+}
+
+// Find a named function export. Absence is normal (optional callbacks), so this
+// does not log.
+WasmEdge_FunctionInstanceContext const* find_function(
+    WasmEdge_ModuleInstanceContext const* module, char const* name)
+{
+    return WasmEdge_ModuleInstanceFindFunction(module, WasmString(name));
+}
+
+// Invoke a function; logs "<ctx>: invocation failed" on error. Returns success.
+bool invoke(
+    WasmEdge_ExecutorContext* executor,
+    WasmEdge_FunctionInstanceContext const* func,
+    WasmEdge_Value const* params, uint32_t n_params,
+    WasmEdge_Value* returns, uint32_t n_returns, char const* ctx)
+{
+    auto const r = WasmEdge_ExecutorInvoke(executor, func, params, n_params, returns, n_returns);
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("%s: invocation failed: %s", ctx, WasmEdge_ResultGetMessage(r));
+        return false;
+    }
+    return true;
+}
+
+// Lays out blobs sequentially in a module's linear memory starting at `base`,
+// tracking the cursor so callers don't recompute offsets. Logs on failure.
+class WasmWriter
+{
+public:
+    WasmWriter(WasmEdge_MemoryInstanceContext* memory, uint32_t base) :
+        memory_(memory),
+        cursor_(base)
+    {
+    }
+
+    // Copy `size` bytes into memory, returning the pointer written to and
+    // advancing the cursor. Returns nullopt (and logs) on failure.
+    std::optional<uint32_t> write(void const* data, uint32_t size, char const* ctx)
+    {
+        uint32_t const ptr = cursor_;
+        auto const r = WasmEdge_MemoryInstanceSetData(
+            memory_, static_cast<uint8_t const*>(data), ptr, size);
+        if (!WasmEdge_ResultOK(r))
+        {
+            mir::log_error("%s: failed to write %u bytes to WASM memory: %s",
+                ctx, size, WasmEdge_ResultGetMessage(r));
+            return std::nullopt;
+        }
+        cursor_ += size;
+        return ptr;
+    }
+
+    // Copy a string's bytes (no NUL terminator). An empty string writes nothing
+    // but still yields the current cursor with length 0.
+    std::optional<uint32_t> write_string(std::string_view s, char const* ctx)
+    {
+        uint32_t const ptr = cursor_;
+        if (s.empty())
+            return ptr;
+        return write(s.data(), static_cast<uint32_t>(s.size()), ctx);
+    }
+
+    uint32_t cursor() const { return cursor_; }
+
+private:
+    WasmEdge_MemoryInstanceContext* memory_;
+    uint32_t cursor_;
+};
+
+// Copy `data` to out_ptr, then a NUL-terminated `name` into the name buffer with
+// a bounds check. Sets returns[0] = 0 on success, -1 if the name doesn't fit.
+// Always returns WasmEdge_Result_Success.
+WasmEdge_Result write_handle_with_name(
+    WasmEdge_MemoryInstanceContext* memory,
+    int32_t out_ptr, void const* data, size_t size,
+    int32_t name_ptr, int32_t name_len, std::string_view name,
+    WasmEdge_Value* returns, char const* ctx)
+{
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::memcpy(mem_base + out_ptr, data, size);
+
+    if (name.size() + 1 > static_cast<size_t>(name_len))
+    {
+        mir::log_error("%s: buffer too small (%zu > %d)", ctx, name.size() + 1, name_len);
+        returns[0] = WasmEdge_ValueGenI32(-1);
+        return WasmEdge_Result_Success;
+    }
+
+    char* name_buf = reinterpret_cast<char*>(mem_base + name_ptr);
+    if (!name.empty())
+        std::memcpy(name_buf, name.data(), name.size());
+    name_buf[name.size()] = '\0';
+
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+// Struct-only variant: copy `data` to out_ptr, set returns[0] = 0.
+WasmEdge_Result write_handle(
+    WasmEdge_MemoryInstanceContext* memory,
+    int32_t out_ptr, void const* data, size_t size, WasmEdge_Value* returns)
+{
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::memcpy(mem_base + out_ptr, data, size);
+    returns[0] = WasmEdge_ValueGenI32(0);
+    return WasmEdge_Result_Success;
+}
+
+// Read an array of {ptr,len} string descriptors from WASM memory into host
+// strings.
+std::vector<std::string> read_string_array(
+    WasmEdge_MemoryInstanceContext* memory, int32_t array_ptr, int32_t count)
+{
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    struct PassDescriptor
+    {
+        int32_t ptr;
+        int32_t len;
+    };
+    auto const* descriptors = reinterpret_cast<PassDescriptor const*>(mem_base + array_ptr);
+
+    std::vector<std::string> result;
+    result.reserve(static_cast<size_t>(count));
+    for (int32_t i = 0; i < count; ++i)
+        result.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
+    return result;
 }
 
 WasmEdge_Result host_miracle_window_info_get_application(
@@ -69,12 +229,9 @@ WasmEdge_Result host_miracle_window_info_get_application(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_info_get_application");
     if (!memory)
-    {
-        mir::log_error("host_miracle_window_info_get_application: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int64_t const window_info_address = WasmEdge_ValueGetI64(params[0]);
@@ -128,32 +285,8 @@ WasmEdge_Result return_output_internal(
     WasmEdge_Value* returns,
     PluginBridge::OutputResult const& output)
 {
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* output_buf = mem_base + out_ptr;
-    std::memcpy(output_buf, &output.output, sizeof(output.output));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-
-    // Get the output name from host memory
-    char const* output_name = output.name.c_str();
-    size_t const name_len = std::strlen(output_name);
-
-    // Check if name fits in buffer (need space for null terminator)
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_get_output_at: buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    // Copy name to WASM linear memory
-    std::memcpy(name_buf, output_name, name_len);
-    name_buf[name_len] = '\0';
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &output.output, sizeof(output.output),
+        name_buffer_ptr, name_buffer_length, output.name, returns, "host_miracle_get_output_at");
 }
 
 WasmEdge_Result host_miracle_get_output_at(
@@ -162,12 +295,9 @@ WasmEdge_Result host_miracle_get_output_at(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_get_output_at");
     if (!memory)
-    {
-        mir::log_error("host_miracle_get_output_at: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint32_t const index = WasmEdge_ValueGetI32(params[0]);
@@ -185,12 +315,9 @@ WasmEdge_Result host_miracle_workspace_get_output(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_workspace_get_output");
     if (!memory)
-    {
-        mir::log_error("host_miracle_get_output_at: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const workspace_address_ptr = WasmEdge_ValueGetI64(params[0]);
@@ -208,12 +335,9 @@ WasmEdge_Result host_miracle_window_info_get_workspace(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_info_get_workspace");
     if (!memory)
-    {
-        mir::log_error("host_miracle_window_info_get_workspace: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const window_address = WasmEdge_ValueGetI64(params[0]);
@@ -222,33 +346,9 @@ WasmEdge_Result host_miracle_window_info_get_workspace(
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
 
     auto const workspace = bridge->workspace_from_window(window_address);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_ptr;
-    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-
-    // Get the output name from host memory
-    char const* workspace_name = workspace.name.value_or("").c_str();
-    size_t const name_len = std::strlen(workspace_name);
-
-    // Check if name fits in buffer (need space for null terminator)
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    // Copy name to WASM linear memory
-    std::memcpy(name_buf, workspace_name, name_len);
-    name_buf[name_len] = '\0';
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &workspace.workspace, sizeof(workspace.workspace),
+        name_buffer_ptr, name_buffer_length, workspace.name.value_or(""), returns,
+        "host_miracle_window_info_get_workspace");
 }
 
 WasmEdge_Result host_miracle_workspace_get_tree(
@@ -257,26 +357,16 @@ WasmEdge_Result host_miracle_workspace_get_tree(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_workspace_get_tree");
     if (!memory)
-    {
-        mir::log_error("host_miracle_workspace_get_tree: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const workspace_address = WasmEdge_ValueGetI64(params[0]);
     int32_t const out_ptr = WasmEdge_ValueGetI32(params[1]);
 
     auto const container = bridge->root_tree(workspace_address);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_ptr;
-    std::memcpy(workspace_buf, &container, sizeof(container));
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle(memory, out_ptr, &container, sizeof(container), returns);
 }
 
 WasmEdge_Result host_miracle_container_get_child_at(
@@ -285,12 +375,9 @@ WasmEdge_Result host_miracle_container_get_child_at(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_container_get_child_at");
     if (!memory)
-    {
-        mir::log_error("host_miracle_container_get_child_at: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
@@ -298,14 +385,7 @@ WasmEdge_Result host_miracle_container_get_child_at(
     int32_t const out_ptr = WasmEdge_ValueGetI32(params[2]);
 
     auto const container = bridge->child_at(container_address, index);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* container_buf = mem_base + out_ptr;
-    std::memcpy(container_buf, &container, sizeof(container));
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle(memory, out_ptr, &container, sizeof(container), returns);
 }
 
 WasmEdge_Result host_miracle_window_info_get_container(
@@ -314,12 +394,9 @@ WasmEdge_Result host_miracle_window_info_get_container(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_info_get_container");
     if (!memory)
-    {
-        mir::log_error("host_miracle_window_info_get_container: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const window_address = WasmEdge_ValueGetI64(params[0]);
@@ -332,11 +409,7 @@ WasmEdge_Result host_miracle_window_info_get_container(
         return WasmEdge_Result_Success;
     }
 
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    std::memcpy(mem_base + out_ptr, &container, sizeof(container));
-
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle(memory, out_ptr, &container, sizeof(container), returns);
 }
 
 WasmEdge_Result host_miracle_container_get_parent(
@@ -345,12 +418,9 @@ WasmEdge_Result host_miracle_container_get_parent(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_container_get_parent");
     if (!memory)
-    {
-        mir::log_error("host_miracle_container_get_parent: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
@@ -363,11 +433,7 @@ WasmEdge_Result host_miracle_container_get_parent(
         return WasmEdge_Result_Success;
     }
 
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    std::memcpy(mem_base + out_ptr, &parent, sizeof(parent));
-
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle(memory, out_ptr, &parent, sizeof(parent), returns);
 }
 
 WasmEdge_Result host_miracle_container_get_window(
@@ -376,12 +442,9 @@ WasmEdge_Result host_miracle_container_get_window(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_container_get_window");
     if (!memory)
-    {
-        mir::log_error("host_miracle_container_get_window: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const container_address = WasmEdge_ValueGetI64(params[0]);
@@ -390,31 +453,9 @@ WasmEdge_Result host_miracle_container_get_window(
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[3]);
 
     auto const window = bridge->get_window(container_address);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_ptr;
-    std::memcpy(workspace_buf, &window.window_info, sizeof(window.window_info));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-    char const* workspace_name = window.name.c_str();
-    size_t const name_len = std::strlen(workspace_name);
-
-    // Check if name fits in buffer (need space for null terminator)
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    // Copy name to WASM linear memory
-    std::memcpy(name_buf, workspace_name, name_len);
-    name_buf[name_len] = '\0';
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &window.window_info, sizeof(window.window_info),
+        name_buffer_ptr, name_buffer_length, window.name, returns,
+        "host_miracle_container_get_window");
 }
 
 WasmEdge_Result host_miracle_request_workspace(
@@ -423,12 +464,9 @@ WasmEdge_Result host_miracle_request_workspace(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_request_workspace");
     if (!memory)
-    {
-        mir::log_error("host_miracle_request_workspace: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int32_t const has_number = WasmEdge_ValueGetI32(params[0]);
@@ -459,27 +497,9 @@ WasmEdge_Result host_miracle_request_workspace(
         return WasmEdge_Result_Success;
     }
 
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_workspace_ptr;
-    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + out_name_buf_ptr);
-    char const* workspace_name = workspace.name.value_or("").c_str();
-    size_t const name_len = std::strlen(workspace_name);
-
-    if (name_len + 1 > static_cast<size_t>(out_name_buf_len))
-    {
-        mir::log_error("host_miracle_request_workspace: name buffer too small (%zu > %d)",
-            name_len + 1, out_name_buf_len);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    std::memcpy(name_buf, workspace_name, name_len);
-    name_buf[name_len] = '\0';
-
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_workspace_ptr, &workspace.workspace, sizeof(workspace.workspace),
+        out_name_buf_ptr, out_name_buf_len, workspace.name.value_or(""), returns,
+        "host_miracle_request_workspace");
 }
 
 WasmEdge_Result host_miracle_get_active_workspace(
@@ -488,12 +508,9 @@ WasmEdge_Result host_miracle_get_active_workspace(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_get_active_workspace");
     if (!memory)
-    {
-        mir::log_error("host_miracle_get_active_workspace: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int32_t const out_ptr = WasmEdge_ValueGetI32(params[0]);
@@ -507,27 +524,9 @@ WasmEdge_Result host_miracle_get_active_workspace(
         return WasmEdge_Result_Success;
     }
 
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_ptr;
-    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-    char const* workspace_name = workspace.name.value_or("").c_str();
-    size_t const name_len = std::strlen(workspace_name);
-
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_get_active_workspace: name buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    std::memcpy(name_buf, workspace_name, name_len);
-    name_buf[name_len] = '\0';
-
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &workspace.workspace, sizeof(workspace.workspace),
+        name_buffer_ptr, name_buffer_length, workspace.name.value_or(""), returns,
+        "host_miracle_get_active_workspace");
 }
 
 WasmEdge_Result host_miracle_output_get_workspace(
@@ -536,12 +535,9 @@ WasmEdge_Result host_miracle_output_get_workspace(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_output_get_workspace");
     if (!memory)
-    {
-        mir::log_error("host_miracle_output_get_workspace: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint64_t const output_address = WasmEdge_ValueGetI64(params[0]);
@@ -551,32 +547,9 @@ WasmEdge_Result host_miracle_output_get_workspace(
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[4]);
 
     auto const workspace = bridge->workspace_on_output_at_index(output_address, index);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* workspace_buf = mem_base + out_ptr;
-    std::memcpy(workspace_buf, &workspace.workspace, sizeof(workspace.workspace));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-
-    char const* workspace_name = workspace.name.value_or("").c_str();
-    size_t const name_len = std::strlen(workspace_name);
-
-    // Check if name fits in buffer (need space for null terminator)
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_window_info_get_workspace: buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    // Copy name to WASM linear memory
-    std::memcpy(name_buf, workspace_name, name_len);
-    name_buf[name_len] = '\0';
-
-    // Return success
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &workspace.workspace, sizeof(workspace.workspace),
+        name_buffer_ptr, name_buffer_length, workspace.name.value_or(""), returns,
+        "host_miracle_output_get_workspace");
 }
 
 WasmEdge_Result host_miracle_num_managed_windows(
@@ -597,12 +570,9 @@ WasmEdge_Result host_miracle_get_managed_window_at(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_get_managed_window_at");
     if (!memory)
-    {
-        mir::log_error("host_miracle_get_managed_window_at: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     uint32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
@@ -612,28 +582,9 @@ WasmEdge_Result host_miracle_get_managed_window_at(
     int32_t const name_buffer_length = WasmEdge_ValueGetI32(params[4]);
 
     auto const window = bridge->get_managed_window_at(plugin_handle, index);
-
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-    uint8_t* window_buf = mem_base + out_ptr;
-    std::memcpy(window_buf, &window.window_info, sizeof(window.window_info));
-
-    char* name_buf = reinterpret_cast<char*>(mem_base + name_buffer_ptr);
-    char const* window_name = window.name.c_str();
-    size_t const name_len = std::strlen(window_name);
-
-    if (name_len + 1 > static_cast<size_t>(name_buffer_length))
-    {
-        mir::log_error("host_miracle_get_managed_window_at: buffer too small (%zu > %d)",
-            name_len + 1, name_buffer_length);
-        returns[0] = WasmEdge_ValueGenI32(-1);
-        return WasmEdge_Result_Success;
-    }
-
-    std::memcpy(name_buf, window_name, name_len);
-    name_buf[name_len] = '\0';
-
-    returns[0] = WasmEdge_ValueGenI32(0);
-    return WasmEdge_Result_Success;
+    return write_handle_with_name(memory, out_ptr, &window.window_info, sizeof(window.window_info),
+        name_buffer_ptr, name_buffer_length, window.name, returns,
+        "host_miracle_get_managed_window_at");
 }
 
 WasmEdge_Result host_miracle_window_set_state(
@@ -687,12 +638,9 @@ WasmEdge_Result host_miracle_window_set_transform(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_set_transform");
     if (!memory)
-    {
-        mir::log_error("host_miracle_window_set_transform: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
@@ -711,12 +659,9 @@ WasmEdge_Result host_miracle_window_set_alpha(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_window_set_alpha");
     if (!memory)
-    {
-        mir::log_error("host_miracle_window_set_alpha: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
     auto const bridge = static_cast<PluginBridge*>(data);
     int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
@@ -778,12 +723,9 @@ WasmEdge_Result host_miracle_get_plugin_userdata(
         returns[0] = WasmEdge_ValueGenI32(-1);
         return WasmEdge_Result_Success;
     }
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_get_plugin_userdata");
     if (!memory)
-    {
-        mir::log_error("host_miracle_get_plugin_userdata: memory not found");
         return WasmEdge_Result_Fail;
-    }
     uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
     char* buf = reinterpret_cast<char*>(mem_base + buf_ptr);
     std::memcpy(buf, userdata->data(), userdata->size());
@@ -816,10 +758,9 @@ WasmEdge_Result host_miracle_queue_custom_animation(
     WasmEdge_Value* returns)
 {
     auto* ctx = static_cast<PluginManager::HostFunctionData*>(data);
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_queue_custom_animation");
     if (!memory)
     {
-        mir::log_error("host_miracle_queue_custom_animation: memory not found");
         returns[0] = WasmEdge_ValueGenI32(-1);
         return WasmEdge_Result_Success;
     }
@@ -878,27 +819,11 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
     int32_t const passes_ptr = WasmEdge_ValueGetI32(params[1]);
     int32_t const num_passes = WasmEdge_ValueGetI32(params[2]);
 
-    auto* memory = get_memory_from_frame(frame);
+    auto* memory = get_memory_from_frame(frame, "host_miracle_register_window_sample_to_rgba");
     if (!memory)
-    {
-        mir::log_error("host_miracle_register_window_sample_to_rgba: memory not found");
         return WasmEdge_Result_Fail;
-    }
 
-    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-
-    struct PassDescriptor
-    {
-        int32_t ptr;
-        int32_t len;
-    };
-    auto* descriptors = reinterpret_cast<PassDescriptor const*>(mem_base + passes_ptr);
-
-    std::vector<std::string> passes;
-    passes.reserve(static_cast<size_t>(num_passes));
-    for (int32_t i = 0; i < num_passes; ++i)
-        passes.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
-
+    auto passes = read_string_array(memory, passes_ptr, num_passes);
     auto const id = bridge->register_window_shader(std::move(passes), static_cast<uint32_t>(plugin_handle));
     returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
     return WasmEdge_Result_Success;
@@ -918,27 +843,11 @@ WasmEdge_Result host_miracle_set_screen_shader(
     std::optional<std::vector<std::string>> passes;
     if (num_passes > 0)
     {
-        auto* memory = get_memory_from_frame(frame);
+        auto* memory = get_memory_from_frame(frame, "host_miracle_set_screen_shader");
         if (!memory)
-        {
-            mir::log_error("host_miracle_set_screen_shader: memory not found");
             return WasmEdge_Result_Fail;
-        }
 
-        uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
-
-        struct PassDescriptor
-        {
-            int32_t ptr;
-            int32_t len;
-        };
-        auto* descriptors = reinterpret_cast<PassDescriptor const*>(mem_base + passes_ptr);
-
-        std::vector<std::string> result;
-        result.reserve(static_cast<size_t>(num_passes));
-        for (int32_t i = 0; i < num_passes; ++i)
-            result.emplace_back(reinterpret_cast<char const*>(mem_base + descriptors[i].ptr), descriptors[i].len);
-        passes = std::move(result);
+        passes = read_string_array(memory, passes_ptr, num_passes);
     }
 
     returns[0] = WasmEdge_ValueGenI32(
@@ -1583,389 +1492,95 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     return std::nullopt;
 }
 
-void PluginManager::window_deleted(miral::WindowInfo const& window_info)
+void PluginManager::dispatch_window_event(char const* fn_name, miral::WindowInfo const& window_info)
 {
     std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->existing_window_info(window_info);
     auto const window_info_t = bridge_handle.get();
+    auto const window_name = window_info.name();
     for (auto const& module : self->loaded_modules)
     {
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
-        {
-            mir::log_error("Memory not found in module.");
+        auto* memory = find_memory(module.module_context.get(), fn_name);
+        if (!memory)
             continue;
-        }
 
-        uint32_t constexpr window_info_ptr = 8;
-
-        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
-        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
-        auto r = WasmEdge_MemoryInstanceSetData(
-            memory_context,
-            window_info_buffer,
-            window_info_ptr,
-            sizeof(window_info_buffer));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+        WasmWriter writer(memory, 8);
+        auto const window_info_ptr = writer.write(&window_info_t, sizeof(window_info_t), fn_name);
+        if (!window_info_ptr)
             continue;
-        }
-
-        auto const window_name = window_info.name();
-        uint32_t const name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
-        uint32_t const name_len = static_cast<uint32_t>(window_name.size());
-        if (name_len > 0)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory_context,
-                reinterpret_cast<uint8_t const*>(window_name.data()),
-                name_ptr,
-                name_len);
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-                continue;
-            }
-        }
+        auto const name_ptr = writer.write_string(window_name, fn_name);
+        if (!name_ptr)
+            continue;
 
         WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
-        params[1] = WasmEdge_ValueGenI32(name_ptr);
-        params[2] = WasmEdge_ValueGenI32(name_len);
+        params[0] = WasmEdge_ValueGenI32(*window_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(*name_ptr);
+        params[2] = WasmEdge_ValueGenI32(static_cast<int32_t>(window_name.size()));
 
-        auto const func_name = WasmEdge_StringCreateByCString("window_deleted");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-
-        if (func_context == nullptr)
+        auto const* func = find_function(module.module_context.get(), fn_name);
+        if (!func)
             continue;
 
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'window_deleted' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
+        invoke(self->executor_context.get(), func, params, 3, nullptr, 0, fn_name);
     }
+}
+
+void PluginManager::window_deleted(miral::WindowInfo const& window_info)
+{
+    dispatch_window_event("window_deleted", window_info);
 }
 
 void PluginManager::window_focused(miral::WindowInfo const& window_info)
 {
-    std::lock_guard lock(mutex_);
-    auto const bridge_handle = self->bridge->existing_window_info(window_info);
-    auto const window_info_t = bridge_handle.get();
-    for (auto const& module : self->loaded_modules)
-    {
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
-        {
-            mir::log_error("Memory not found in module.");
-            continue;
-        }
-
-        uint32_t constexpr window_info_ptr = 8;
-
-        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
-        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
-        auto r = WasmEdge_MemoryInstanceSetData(
-            memory_context,
-            window_info_buffer,
-            window_info_ptr,
-            sizeof(window_info_buffer));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        auto const window_name = window_info.name();
-        uint32_t const name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
-        uint32_t const name_len = static_cast<uint32_t>(window_name.size());
-        if (name_len > 0)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory_context,
-                reinterpret_cast<uint8_t const*>(window_name.data()),
-                name_ptr,
-                name_len);
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-                continue;
-            }
-        }
-
-        WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
-        params[1] = WasmEdge_ValueGenI32(name_ptr);
-        params[2] = WasmEdge_ValueGenI32(name_len);
-
-        auto const func_name = WasmEdge_StringCreateByCString("window_focused");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-
-        if (func_context == nullptr)
-            continue;
-
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'window_focused' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-    }
+    dispatch_window_event("window_focused", window_info);
 }
 
 void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
 {
+    dispatch_window_event("window_unfocused", window_info);
+}
+
+void PluginManager::dispatch_workspace_event(char const* fn_name, uint32_t id)
+{
     std::lock_guard lock(mutex_);
-    auto const bridge_handle = self->bridge->existing_window_info(window_info);
-    auto const window_info_t = bridge_handle.get();
+    auto const result = self->bridge->workspace_by_id(id);
+    auto const& workspace_t = result.workspace;
+    auto const workspace_name = result.name.value_or("");
     for (auto const& module : self->loaded_modules)
     {
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
-        {
-            mir::log_error("Memory not found in module.");
+        auto* memory = find_memory(module.module_context.get(), fn_name);
+        if (!memory)
             continue;
-        }
 
-        uint32_t constexpr window_info_ptr = 8;
-
-        uint8_t window_info_buffer[sizeof(miracle_window_info_t)];
-        std::memcpy(window_info_buffer, &window_info_t, sizeof(window_info_t));
-        auto r = WasmEdge_MemoryInstanceSetData(
-            memory_context,
-            window_info_buffer,
-            window_info_ptr,
-            sizeof(window_info_buffer));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write window_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
+        WasmWriter writer(memory, 8);
+        auto const workspace_info_ptr = writer.write(&workspace_t, sizeof(workspace_t), fn_name);
+        if (!workspace_info_ptr)
             continue;
-        }
-
-        auto const window_name = window_info.name();
-        uint32_t const name_ptr = window_info_ptr + sizeof(miracle_window_info_t);
-        uint32_t const name_len = static_cast<uint32_t>(window_name.size());
-        if (name_len > 0)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory_context,
-                reinterpret_cast<uint8_t const*>(window_name.data()),
-                name_ptr,
-                name_len);
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("Failed to write window name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-                continue;
-            }
-        }
+        auto const name_ptr = writer.write_string(workspace_name, fn_name);
+        if (!name_ptr)
+            continue;
 
         WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(window_info_ptr);
-        params[1] = WasmEdge_ValueGenI32(name_ptr);
-        params[2] = WasmEdge_ValueGenI32(name_len);
+        params[0] = WasmEdge_ValueGenI32(*workspace_info_ptr);
+        params[1] = WasmEdge_ValueGenI32(*name_ptr);
+        params[2] = WasmEdge_ValueGenI32(static_cast<int32_t>(workspace_name.size()));
 
-        auto const func_name = WasmEdge_StringCreateByCString("window_unfocused");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-
-        if (func_context == nullptr)
+        auto const* func = find_function(module.module_context.get(), fn_name);
+        if (!func)
             continue;
 
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'window_unfocused' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
+        invoke(self->executor_context.get(), func, params, 3, nullptr, 0, fn_name);
     }
 }
 
 void PluginManager::workspace_created(uint32_t id)
 {
-    std::lock_guard lock(mutex_);
-    auto const result = self->bridge->workspace_by_id(id);
-    auto const& workspace_t = result.workspace;
-    auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->loaded_modules)
-    {
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
-        {
-            mir::log_error("Memory not found in module.");
-            continue;
-        }
-
-        uint32_t constexpr workspace_info_ptr = 8;
-
-        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
-        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
-        auto r = WasmEdge_MemoryInstanceSetData(
-            memory_context,
-            workspace_info_buffer,
-            workspace_info_ptr,
-            sizeof(workspace_info_buffer));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
-        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
-        if (name_len > 0)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory_context,
-                reinterpret_cast<uint8_t const*>(workspace_name.data()),
-                name_ptr,
-                name_len);
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-                continue;
-            }
-        }
-
-        WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
-        params[1] = WasmEdge_ValueGenI32(name_ptr);
-        params[2] = WasmEdge_ValueGenI32(name_len);
-
-        auto const func_name = WasmEdge_StringCreateByCString("workspace_created");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-
-        if (func_context == nullptr)
-            continue;
-
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'workspace_created' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-    }
+    dispatch_workspace_event("workspace_created", id);
 }
 
 void PluginManager::workspace_removed(uint32_t id)
 {
-    std::lock_guard lock(mutex_);
-    auto const result = self->bridge->workspace_by_id(id);
-    auto const& workspace_t = result.workspace;
-    auto const& workspace_name = result.name.value_or("");
-    for (auto const& module : self->loaded_modules)
-    {
-        auto const memory_name = WasmEdge_StringCreateByCString("memory");
-        auto const memory_context = WasmEdge_ModuleInstanceFindMemory(module.module_context.get(), memory_name);
-        WasmEdge_StringDelete(memory_name);
-
-        if (memory_context == nullptr)
-        {
-            mir::log_error("Memory not found in module.");
-            continue;
-        }
-
-        uint32_t constexpr workspace_info_ptr = 8;
-
-        uint8_t workspace_info_buffer[sizeof(miracle_workspace_t)];
-        std::memcpy(workspace_info_buffer, &workspace_t, sizeof(workspace_t));
-        auto r = WasmEdge_MemoryInstanceSetData(
-            memory_context,
-            workspace_info_buffer,
-            workspace_info_ptr,
-            sizeof(workspace_info_buffer));
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to write workspace_info to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-
-        uint32_t const name_ptr = workspace_info_ptr + sizeof(miracle_workspace_t);
-        uint32_t const name_len = static_cast<uint32_t>(workspace_name.size());
-        if (name_len > 0)
-        {
-            r = WasmEdge_MemoryInstanceSetData(
-                memory_context,
-                reinterpret_cast<uint8_t const*>(workspace_name.data()),
-                name_ptr,
-                name_len);
-            if (!WasmEdge_ResultOK(r))
-            {
-                mir::log_error("Failed to write workspace name to WASM memory: %s", WasmEdge_ResultGetMessage(r));
-                continue;
-            }
-        }
-
-        WasmEdge_Value params[3];
-        params[0] = WasmEdge_ValueGenI32(workspace_info_ptr);
-        params[1] = WasmEdge_ValueGenI32(name_ptr);
-        params[2] = WasmEdge_ValueGenI32(name_len);
-
-        auto const func_name = WasmEdge_StringCreateByCString("workspace_removed");
-        auto const func_context = WasmEdge_ModuleInstanceFindFunction(module.module_context.get(), func_name);
-        WasmEdge_StringDelete(func_name);
-
-        if (func_context == nullptr)
-            continue;
-
-        r = WasmEdge_ExecutorInvoke(
-            self->executor_context.get(),
-            func_context,
-            params,
-            3,
-            nullptr,
-            0);
-
-        if (!WasmEdge_ResultOK(r))
-        {
-            mir::log_error("Failed to invoke 'workspace_removed' function: %s", WasmEdge_ResultGetMessage(r));
-            continue;
-        }
-    }
+    dispatch_workspace_event("workspace_removed", id);
 }
 
 void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id)
