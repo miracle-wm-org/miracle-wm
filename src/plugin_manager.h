@@ -282,6 +282,14 @@ private:
 
     PluginWindowPlacement from_c(miracle_placement_t placement, PluginHandle plugin_handle);
 
+    /// Broadcast a window-info-only callback (export \p fn_name) to every loaded plugin.
+    /// Writes the window_info struct followed by its name into each module's memory.
+    void dispatch_window_event(char const* fn_name, miral::WindowInfo const& window_info);
+
+    /// Broadcast a workspace-info-only callback (export \p fn_name) to every loaded plugin.
+    /// Writes the workspace struct followed by its name into each module's memory.
+    void dispatch_workspace_event(char const* fn_name, uint32_t id);
+
     std::mutex mutex_;
     std::unique_ptr<Self> self;
 };
