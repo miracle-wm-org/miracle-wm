@@ -30,9 +30,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miral
 {
-class ApplicationInfo;
+struct ApplicationInfo;
 class WindowSpecification;
-class WindowInfo;
+struct WindowInfo;
 }
 
 namespace miracle
