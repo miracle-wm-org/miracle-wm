@@ -50,7 +50,7 @@ public:
             compositor_state,
             config,
             animator,
-            std::make_shared<PluginManager>(),
+            make_null_plugin_manager(),
             window_controller)
     {
     }

@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #define MIR_LOG_COMPONENT "plugin_manager"
-#include "plugin_manager.h"
+#include "plugin_manager_impl.h"
 
 #include "animation.h"
 #include "compositor_state.h"
@@ -757,7 +757,7 @@ WasmEdge_Result host_miracle_queue_custom_animation(
     WasmEdge_Value const* params,
     WasmEdge_Value* returns)
 {
-    auto* ctx = static_cast<PluginManager::HostFunctionData*>(data);
+    auto* ctx = static_cast<PluginManagerImpl::HostFunctionData*>(data);
     auto* memory = get_memory_from_frame(frame, "host_miracle_queue_custom_animation");
     if (!memory)
     {
@@ -871,7 +871,7 @@ void add_host_function(
 }
 }
 
-PluginManager::Self::Self(std::unique_ptr<PluginBridge> bridge) :
+PluginManagerImpl::Self::Self(std::unique_ptr<PluginBridge> bridge) :
     bridge(std::move(bridge)),
     configure_context(create_configure_context()),
     store_context(WasmEdge_StoreCreate()),
@@ -909,17 +909,17 @@ PluginManager::Self::Self(std::unique_ptr<PluginBridge> bridge) :
     create_host_module();
 }
 
-PluginManager::Self::~Self() = default;
+PluginManagerImpl::Self::~Self() = default;
 
-PluginManager::~PluginManager() = default;
+PluginManagerImpl::~PluginManagerImpl() = default;
 
-void PluginManager::initialize(std::unique_ptr<PluginBridge> bridge)
+void PluginManagerImpl::initialize(std::unique_ptr<PluginBridge> bridge)
 {
     self = std::make_unique<Self>(std::move(bridge));
     self->host_fn_data.manager = this;
 }
 
-void PluginManager::Self::create_host_module()
+void PluginManagerImpl::Self::create_host_module()
 {
     // Create the "env" module which is the standard import module name for C/C++ compiled WASM
     auto const module_name = WasmEdge_StringCreateByCString("env");
@@ -1053,7 +1053,7 @@ void PluginManager::Self::create_host_module()
     mir::log_info("Host module 'env' registered with %d functions", 24);
 }
 
-PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::string const& userdata_json)
+PluginLoadResult PluginManagerImpl::load_wasm_module(std::string const& path, std::string const& userdata_json)
 {
     std::lock_guard lock(mutex_);
     auto const erased = std::erase_if(self->loaded_modules, [&path](auto const& module)
@@ -1138,7 +1138,7 @@ PluginLoadResult PluginManager::load_wasm_module(std::string const& path, std::s
     };
 }
 
-bool PluginManager::unload_wasm_module(PluginHandle handle)
+bool PluginManagerImpl::unload_wasm_module(PluginHandle handle)
 {
     std::lock_guard lock(mutex_);
     auto const erased = std::erase_if(self->loaded_modules, [handle](auto const& module)
@@ -1150,7 +1150,7 @@ bool PluginManager::unload_wasm_module(PluginHandle handle)
     return erased > 0;
 }
 
-void PluginManager::unload_all()
+void PluginManagerImpl::unload_all()
 {
     std::lock_guard lock(mutex_);
     for (auto const& module : self->loaded_modules)
@@ -1158,7 +1158,7 @@ void PluginManager::unload_all()
     self->loaded_modules.clear();
 }
 
-std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
+std::optional<miracle_plugin_animation_frame_result_t> PluginManagerImpl::animate(
     AnimationData const& data, float runtime_seconds)
 {
     std::lock_guard lock(mutex_);
@@ -1302,7 +1302,7 @@ std::optional<miracle_plugin_animation_frame_result_t> PluginManager::animate(
     return std::nullopt;
 }
 
-void PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds)
+void PluginManagerImpl::custom_animate(PluginHandle plugin_handle, uint32_t animation_id, float dt, float elapsed_seconds)
 {
     std::lock_guard lock(mutex_);
     for (auto const& target_module : self->loaded_modules)
@@ -1376,7 +1376,7 @@ void PluginManager::custom_animate(PluginHandle plugin_handle, uint32_t animatio
     mir::log_warning("custom_animate: no plugin found with handle %u", plugin_handle);
 }
 
-std::optional<PluginWindowPlacement> PluginManager::place_new_window(
+std::optional<PluginWindowPlacement> PluginManagerImpl::place_new_window(
     miral::ApplicationInfo const& app_info,
     miral::WindowSpecification const& spec,
     uint64_t window_id)
@@ -1492,7 +1492,7 @@ std::optional<PluginWindowPlacement> PluginManager::place_new_window(
     return std::nullopt;
 }
 
-void PluginManager::dispatch_window_event(char const* fn_name, miral::WindowInfo const& window_info)
+void PluginManagerImpl::dispatch_window_event(char const* fn_name, miral::WindowInfo const& window_info)
 {
     std::lock_guard lock(mutex_);
     auto const bridge_handle = self->bridge->existing_window_info(window_info);
@@ -1525,22 +1525,22 @@ void PluginManager::dispatch_window_event(char const* fn_name, miral::WindowInfo
     }
 }
 
-void PluginManager::window_deleted(miral::WindowInfo const& window_info)
+void PluginManagerImpl::window_deleted(miral::WindowInfo const& window_info)
 {
     dispatch_window_event("window_deleted", window_info);
 }
 
-void PluginManager::window_focused(miral::WindowInfo const& window_info)
+void PluginManagerImpl::window_focused(miral::WindowInfo const& window_info)
 {
     dispatch_window_event("window_focused", window_info);
 }
 
-void PluginManager::window_unfocused(miral::WindowInfo const& window_info)
+void PluginManagerImpl::window_unfocused(miral::WindowInfo const& window_info)
 {
     dispatch_window_event("window_unfocused", window_info);
 }
 
-void PluginManager::dispatch_workspace_event(char const* fn_name, uint32_t id)
+void PluginManagerImpl::dispatch_workspace_event(char const* fn_name, uint32_t id)
 {
     std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(id);
@@ -1573,17 +1573,17 @@ void PluginManager::dispatch_workspace_event(char const* fn_name, uint32_t id)
     }
 }
 
-void PluginManager::workspace_created(uint32_t id)
+void PluginManagerImpl::workspace_created(uint32_t id)
 {
     dispatch_workspace_event("workspace_created", id);
 }
 
-void PluginManager::workspace_removed(uint32_t id)
+void PluginManagerImpl::workspace_removed(uint32_t id)
 {
     dispatch_workspace_event("workspace_removed", id);
 }
 
-void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id)
+void PluginManagerImpl::workspace_focused(std::optional<uint32_t> previous_id, uint32_t current_id)
 {
     std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(current_id);
@@ -1665,7 +1665,7 @@ void PluginManager::workspace_focused(std::optional<uint32_t> previous_id, uint3
     }
 }
 
-void PluginManager::workspace_area_changed(uint32_t id)
+void PluginManagerImpl::workspace_area_changed(uint32_t id)
 {
     std::lock_guard lock(mutex_);
     auto const result = self->bridge->workspace_by_id(id);
@@ -1742,7 +1742,7 @@ void PluginManager::workspace_area_changed(uint32_t id)
     }
 }
 
-void PluginManager::window_workspace_changed(miral::WindowInfo const& window_info, uint32_t workspace_id)
+void PluginManagerImpl::window_workspace_changed(miral::WindowInfo const& window_info, uint32_t workspace_id)
 {
     std::lock_guard lock(mutex_);
     auto const bridge_window = self->bridge->existing_window_info(window_info);
@@ -1857,7 +1857,7 @@ void PluginManager::window_workspace_changed(miral::WindowInfo const& window_inf
     }
 }
 
-bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
+bool PluginManagerImpl::handle_keyboard_event(MirKeyboardEvent const& event)
 {
     std::lock_guard lock(mutex_);
     miracle_keyboard_event_t const keyboard_event = {
@@ -1926,7 +1926,7 @@ bool PluginManager::handle_keyboard_event(MirKeyboardEvent const& event)
     return false;
 }
 
-bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
+bool PluginManagerImpl::handle_pointer_event(MirPointerEvent const& event)
 {
     std::lock_guard lock(mutex_);
     miracle_pointer_event_t const pointer_event = {
@@ -1996,7 +1996,7 @@ bool PluginManager::handle_pointer_event(MirPointerEvent const& event)
     return false;
 }
 
-miracle::PluginConfigData PluginManager::configure()
+miracle::PluginConfigData PluginManagerImpl::configure()
 {
     // Accumulate config overrides from all loaded plugins into a single ConfigData,
     // then return it as PluginConfigData. The plugins and includes fields are never set.
@@ -2105,7 +2105,7 @@ miracle::PluginConfigData PluginManager::configure()
     return result;
 }
 
-PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, PluginHandle plugin_handle)
+PluginWindowPlacement PluginManagerImpl::from_c(miracle_placement_t placement, PluginHandle plugin_handle)
 {
     PluginWindowPlacement result;
     result.strategy = static_cast<miracle_window_management_strategy_t>(placement.strategy);
@@ -2136,6 +2136,14 @@ PluginWindowPlacement PluginManager::from_c(miracle_placement_t placement, Plugi
         break;
     }
     return result;
+}
+
+/// Factory entry point resolved by the host via dlsym(). Returns a heap-allocated
+/// PluginManagerImpl; the host owns it and deletes it before dlclose()-ing the
+/// module. Declared extern "C" to keep the symbol name stable and unmangled.
+extern "C" miracle::PluginManager* miracle_wm_create_plugin_manager()
+{
+    return new miracle::PluginManagerImpl();
 }
 
 #endif
