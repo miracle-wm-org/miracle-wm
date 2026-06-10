@@ -31,6 +31,8 @@ namespace test
         void operator()(mir::Server& server) override { }
         void reload() override { }
         [[nodiscard]] std::string const& get_filename() const override { return filename; }
+        [[nodiscard]] std::vector<miracle::Error> const& get_config_errors() const override { return config_errors; }
+        [[nodiscard]] std::string get_error_reporter_client() const override { return "default"; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
         [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override
         {
@@ -186,6 +188,7 @@ namespace test
         miracle::BorderConfig border_config;
         std::array<AnimationDefinition, static_cast<int>(AnimateableEvent::max)> animations;
         std::string filename;
+        std::vector<miracle::Error> config_errors;
         std::vector<StartupApp> startup_apps;
         std::optional<std::string> terminal_command;
         std::vector<EnvironmentVariable> env;

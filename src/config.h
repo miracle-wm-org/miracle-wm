@@ -46,6 +46,12 @@ public:
     virtual void operator()(mir::Server& server) = 0;
     virtual void reload() = 0;
     [[nodiscard]] virtual std::string const& get_filename() const = 0;
+    /// Errors collected during the most recent configuration load. Empty if the
+    /// configuration loaded cleanly.
+    [[nodiscard]] virtual std::vector<Error> const& get_config_errors() const = 0;
+    /// The configured error reporter client (the raw `wm_clients.error_reporter`
+    /// value: "default", "disabled", or a path/name of an executable).
+    [[nodiscard]] virtual std::string get_error_reporter_client() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
@@ -100,6 +106,8 @@ public:
     void operator()(mir::Server& server) override;
     void reload() override;
     [[nodiscard]] std::string const& get_filename() const override;
+    [[nodiscard]] std::vector<Error> const& get_config_errors() const override;
+    [[nodiscard]] std::string get_error_reporter_client() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
@@ -147,6 +155,7 @@ private:
     std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
+    std::vector<Error> config_errors_;
     std::optional<StartupApp> cached_systemd_app_;
     std::optional<StartupApp> cached_exec_app_;
     std::function<PluginConfigData()> plugin_configure_hook_;
