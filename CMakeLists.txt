@@ -186,7 +186,8 @@ add_library(miracle-wm-implementation STATIC
         src/binding_event.cpp
         src/magnifier_wrapper.cpp
         src/math_helpers.cpp
-        src/plugin_manager.cpp
+        src/plugin_manager_null.cpp
+        src/plugin_manager_loader.cpp
         src/plugin_bridge.h src/plugin_bridge.cpp
         src/shell_application_manager.cpp src/shell_application_manager.h
         src/shell_application_spawner.h
@@ -199,7 +200,10 @@ add_library(miracle-wm-implementation STATIC
         src/sampler_registry.h src/sampler_registry.cpp
 )
 
-target_compile_definitions(miracle-wm-implementation PRIVATE COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV} FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM})
+target_compile_definitions(miracle-wm-implementation PRIVATE
+        COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
+        FEATURE_PLUGIN_SYSTEM=${FEATURE_PLUGIN_SYSTEM}
+        MIRACLE_PLUGIN_MODULE_PATH="${CMAKE_INSTALL_FULL_LIBDIR}/libmiracle-wm-plugins.so")
 
 # ----------------------------------------
 # Precompiled headers for speed
@@ -251,10 +255,6 @@ target_include_directories(miracle-wm-implementation PUBLIC SYSTEM
         ${CMAKE_CURRENT_BINARY_DIR}/src
 )
 
-if (FEATURE_PLUGIN_SYSTEM)
-  target_include_directories(miracle-wm-implementation PRIVATE ${WASMEDGE_INCLUDE_DIR})
-endif()
-
 target_link_libraries(miracle-wm-implementation
         ${MIRAL_LDFLAGS}
         ${MIRRENDERER_LDFLAGS}
@@ -274,8 +274,37 @@ target_link_libraries(miracle-wm-implementation
         xdg-shell-protocol
 )
 
+# ----------------------------------------
+# miracle-wm-plugins shared module (WasmEdge-backed plugin system)
+# ----------------------------------------
+# The WasmEdge runtime links LLVM. When that LLVM sits in the process's global
+# symbol scope it interposes on Mesa's software renderer (llvmpipe), which also
+# uses LLVM, and breaks rendering (issue #865 — black screen in QEMU). To avoid
+# this, the WasmEdge-backed PluginManager lives in its own shared module that the
+# main binary loads with dlopen()/RTLD_LOCAL only when needed, so libwasmedge and
+# its LLVM never enter the global scope. The module resolves host symbols against
+# the main executable at load time (hence ENABLE_EXPORTS on miracle-wm below).
 if (FEATURE_PLUGIN_SYSTEM)
-  target_link_libraries(miracle-wm-implementation ${WASMEDGE_LIB})
+  add_library(miracle-wm-plugins SHARED src/plugin_manager_impl.cpp)
+
+  target_compile_definitions(miracle-wm-plugins PRIVATE
+          COMPILING_AGAINST_DEV=${COMPILING_AGAINST_DEV}
+          FEATURE_PLUGIN_SYSTEM=1)
+
+  target_include_directories(miracle-wm-plugins PRIVATE SYSTEM
+          $<TARGET_PROPERTY:miracle-wm-implementation,INTERFACE_INCLUDE_DIRECTORIES>
+          ${WASMEDGE_INCLUDE_DIR})
+
+  # miracle-wm-c provides config-cpp headers/symbols; nlohmann is header-only.
+  # The host (miracle-wm-implementation) symbols are intentionally NOT linked
+  # here — they are resolved against the main executable at dlopen() time.
+  target_link_libraries(miracle-wm-plugins
+          PkgConfig::YAML
+          nlohmann_json::nlohmann_json
+          miracle-wm-c
+          ${WASMEDGE_LIB})
+
+  install(TARGETS miracle-wm-plugins DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 # ----------------------------------------
@@ -283,7 +312,13 @@ endif()
 # ----------------------------------------
 add_executable(miracle-wm src/main.cpp)
 target_include_directories(miracle-wm PUBLIC SYSTEM ${MIRAL_INCLUDE_DIRS})
-target_link_libraries(miracle-wm PUBLIC ${MIRAL_LDFLAGS} PRIVATE miracle-wm-implementation)
+# Export the executable's dynamic symbols so the dlopen'd plugin module can
+# resolve host symbols against the main binary, and force every object of the
+# (static) implementation library into the executable so none are dropped.
+set_target_properties(miracle-wm PROPERTIES ENABLE_EXPORTS ON)
+target_link_libraries(miracle-wm
+        PUBLIC ${MIRAL_LDFLAGS}
+        PRIVATE -Wl,--whole-archive miracle-wm-implementation -Wl,--no-whole-archive)
 
 # ----------------------------------------
 # Install rules

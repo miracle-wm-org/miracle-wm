@@ -125,7 +125,7 @@ public:
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
     std::shared_ptr<Animator> animator = std::make_shared<Animator>();
-    std::shared_ptr<PluginManager> plugin_manager = std::make_shared<PluginManager>();
+    std::shared_ptr<PluginManager> plugin_manager = make_null_plugin_manager();
     std::shared_ptr<Workspace> workspace;
 };
 
