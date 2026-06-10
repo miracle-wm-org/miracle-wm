@@ -246,6 +246,12 @@ int main(int argc, char const* argv[])
                                                .enable(WaylandExtensions::zwlr_screencopy_manager_v1)
                                                .enable(WaylandExtensions::ext_session_lock_manager_v1);
 
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 6, 0)
+    // Allows clients like wl-clipboard to access the clipboard without the
+    // focus-stealing popup-surface fallback (#691).
+    wayland_extensions.enable(WaylandExtensions::ext_data_control_manager_v1);
+#endif
+
     for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
         wayland_extensions.enable(extension);
 
