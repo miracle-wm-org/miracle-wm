@@ -80,10 +80,7 @@ geom::Rectangle FreestyleWindowContainer::get_visible_area() const
 void FreestyleWindowContainer::constrain()
 {
     auto const w = window_sync.lock()->window_;
-    if (is_fullscreen() || !has_border_)
-        window_controller->noclip(w);
-    else
-        window_controller->clip(w, get_visible_area());
+    window_controller->noclip(w);
 }
 
 std::weak_ptr<ParentContainer> FreestyleWindowContainer::get_parent() const
@@ -188,8 +185,6 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
     if (mods.state().is_set())
     {
         window_controller->change_state(w, mods.state().value());
-        mods.state().consume();
-        constrain();
     }
     window_controller->modify(w, mods);
 }

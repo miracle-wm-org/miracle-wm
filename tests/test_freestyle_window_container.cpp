@@ -219,9 +219,9 @@ TEST_F(FreestyleWindowContainerTest, SetWorkspaceNotifiesObserver)
 
 // ---- constrain ----
 
-TEST_F(FreestyleWindowContainerTest, ConstrainWithBorderClipsToVisibleArea)
+TEST_F(FreestyleWindowContainerTest, ConstrainWithBorderNeverclips)
 {
-    EXPECT_CALL(*window_controller, clip(window, _)).Times(1);
+    EXPECT_CALL(*window_controller, noclip(_)).Times(1);
     container_with_border->constrain();
 }
 
