@@ -2687,6 +2687,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2725,6 +2736,17 @@
     <span class="md-ellipsis">
       
         Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
       
     </span>
   </a>
@@ -2825,6 +2847,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2869,6 +2902,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2904,44 +2948,62 @@ applications to access the contents of the Wayland compositor.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Please be aware that you will <em>only</em> be able to share a single screen with
-this method, not individual windows.</p>
+this method, not individual windows. Sharing individual windows requires
+the <code>ext_foreign_toplevel_image_capture_source_manager_v1</code> protocol, which
+Mir does not implement yet.</p>
+</div>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>miracle-wm built against MirAL &gt;= 5.6 (Mir &gt;= 2.26), which provides the
+  <code>ext_image_copy_capture_v1</code> and <code>ext_image_capture_source_v1</code> protocols</li>
+<li><a href="https://github.com/emersion/xdg-desktop-portal-wlr">xdg-desktop-portal-wlr</a>
+  &gt;= 0.8.0, which prefers those protocols when the compositor provides them</li>
+<li><code>slurp</code>, used as the output chooser</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Older versions of these instructions required building
+xdg-desktop-portal-wlr v0.5.0 from source, because later versions depended
+on dma-buf support in the compositor's <code>zwlr_screencopy_manager_v1</code>
+implementation that Mir lacks. This is no longer necessary: with the
+versions above, the portal uses <code>ext_image_copy_capture_v1</code> instead, so
+the package from your distribution works.</p>
 </div>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<p>First, we need to install
-<a href="https://github.com/emersion/xdg-desktop-portal-wlr">xdg-desktop-portal-wlr</a>.
-Unfortunately, Mir only has support for v0.5.0 of this software, so we will need
-to checkout the source  at a particualr commit:</p>
+<p>Install <code>xdg-desktop-portal-wlr</code> (&gt;= 0.8.0) and <code>slurp</code> from your
+distribution, for example:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xdg-desktop-portal-wlr<span class="w"> </span>slurp
+</code></pre></div>
+<p>If your distribution only packages an older version, build the latest release
+from source:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/emersion/xdg-desktop-portal-wlr
 <span class="nb">cd</span><span class="w"> </span>xdg-desktop-portal-wlr
-git<span class="w"> </span>checkout<span class="w"> </span>7c0f352<span class="w">  </span><span class="c1"># This is release 0.5.0</span>
-</code></pre></div>
-<p>Next, we can build the project:
-<div class="highlight"><pre><span></span><code>meson<span class="w"> </span>setup<span class="w"> </span>builddir<span class="w"> </span>--prefix<span class="o">=</span>/usr
+git<span class="w"> </span>checkout<span class="w"> </span>v0.8.2
+meson<span class="w"> </span>setup<span class="w"> </span>builddir<span class="w"> </span>--prefix<span class="o">=</span>/usr
 <span class="nb">cd</span><span class="w"> </span>builddir
 ninja<span class="w"> </span>-j4
 sudo<span class="w"> </span>ninja<span class="w"> </span>install
-</code></pre></div></p>
-<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<p>First, copy <code>/usr/share/xdg-desktop-portal/portals/wlr.portal</code> to
-<code>/usr/share/xdg-desktop-portal/portals/mir.portal</code></p>
-<p>Next, modify <code>/usr/share/xdg-desktop-portal/portals/mir.portal</code>:</p>
-<div class="highlight"><pre><span></span><code>[portal]
-DBusName=org.freedesktop.impl.portal.desktop.wlr
-Interfaces=org.freedesktop.impl.portal.Screenshot;org.freedesktop.impl.portal.ScreenCast;
-<span class="gd">-UseIn=wlroots;sway;Wayfire;river</span>
-<span class="gi">+UseIn=mir</span>
 </code></pre></div>
-<p>Finally, create a file at <code>/etc/xdg/xdg-desktop-portal-wlr/config</code> with:
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<p>First, tell <code>xdg-desktop-portal</code> to use the <code>wlr</code> backend for screenshots and
+screen casting by creating <code>~/.config/xdg-desktop-portal/portals.conf</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[preferred]</span>
+<span class="na">org.freedesktop.impl.portal.Screenshot</span><span class="o">=</span><span class="s">wlr</span>
+<span class="na">org.freedesktop.impl.portal.ScreenCast</span><span class="o">=</span><span class="s">wlr</span>
+</code></pre></div>
+<p>Next, create a file at <code>/etc/xdg/xdg-desktop-portal-wlr/config</code> with:
 <div class="highlight"><pre><span></span><code><span class="k">[screencast]</span>
 <span class="na">max_fps</span><span class="o">=</span><span class="s">30</span>
 <span class="na">chooser_type</span><span class="o">=</span><span class="s">simple</span>
 <span class="na">chooser_cmd</span><span class="o">=</span><span class="s">slurp -f %o -or</span>
 </code></pre></div></p>
-<p>Note that you must have <code>slurp</code> installed on your machine.</p>
 <h3 id="running">Running<a class="headerlink" href="#running" title="Permanent link">&para;</a></h3>
-<p>Build miracle with the systemd cmake flag: <code>-DSYSTEMD_INTEGRATION=1</code>. Next, add
-the following startup application to miracle:</p>
+<p>Build miracle with the systemd cmake flag: <code>-DSYSTEMD_INTEGRATION=1</code>. Among
+other things, this ensures that <code>WAYLAND_DISPLAY</code> and <code>XDG_CURRENT_DESKTOP</code>
+are imported into the D-Bus activation environment at startup, which the
+portal needs in order to find the compositor.</p>
+<p>Next, add the following startup application to miracle:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># ~/.config/miracle-wm/config.yaml</span>
 
 <span class="nt">startup_apps</span><span class="p">:</span>
@@ -2952,6 +3014,12 @@ the following startup application to miracle:</p>
 runtime in favor of our new one.</p>
 <p>Finally, restart your compositor and then open up <code>obs-studio</code> or <code>Google Meet</code>
 and see that you are able to share your screen.</p>
+<h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
+<p>To verify that the portal is using the new capture path, kill any running
+instance of <code>xdg-desktop-portal-wlr</code> and start it manually with tracing:</p>
+<div class="highlight"><pre><span></span><code>xdg-desktop-portal-wlr<span class="w"> </span>-l<span class="w"> </span>TRACE<span class="w"> </span>-r
+</code></pre></div>
+<p>It should log <code>wayland: using ext_image_copy_capture</code> on startup.</p>
 
 
 
