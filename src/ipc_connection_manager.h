@@ -90,6 +90,7 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop;
     std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
+    std::shared_ptr<Config> config;
     std::unique_ptr<IpcMessageHandler> ipc_message_handler;
     mir::Fd ipc_socket;
     sockaddr_un* ipc_sockaddr = nullptr;

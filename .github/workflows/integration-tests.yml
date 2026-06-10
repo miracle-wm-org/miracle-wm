@@ -54,7 +54,7 @@ jobs:
             libnotify-dev pcre2-utils libmiroil-dev libmirplatform-dev libgles2-mesa-dev \
             libmirwayland-dev libjson-c-dev libgmock-dev mirtest-dev mirtest-internal-dev \
             mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-            libwasmedge-dev grim
+            libwasmedge-dev grim libgtk-4-dev libgtk4-layer-shell-dev gettext
           DEBIAN_FRONTEND=noninteractive apt-get install -yq libmirrenderer-dev || true
           DEBIAN_FRONTEND=noninteractive apt-get install -yq \
             mir-platform-graphics-virtual xwayland \

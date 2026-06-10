@@ -130,6 +130,8 @@ MessageHandlerResult IpcMessageHandler::process_msg(
                 result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_TICK);
             else if (event_type == "input")
                 result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_INPUT);
+            else if (event_type == "config_errors")
+                result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_CONFIG_ERRORS);
             else
             {
                 mir::log_warning("Cannot process IPC subscription event for event_type: %s", event_type.c_str());

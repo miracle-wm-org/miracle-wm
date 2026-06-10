@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "display_config.h"
+#include "error_reporter_controller.h"
 #include "output_listener.h"
 #include "parent_background_internal_client.h"
 #include "policy.h"
@@ -231,6 +232,9 @@ int main(int argc, char const* argv[])
 #endif
     auto const input_config_observer = std::make_shared<InputConfigurationConfigObserver>(input_configuration, keymap, hover_click, simulated_secondary_click, cursor_scale, slow_keys, sticky_keys);
     config_observer_registrar->register_interest(input_config_observer);
+
+    auto const error_reporter_controller = std::make_shared<miracle::ErrorReporterController>(external_client_launcher, config);
+    config_observer_registrar->register_interest(error_reporter_controller);
 
     WaylandExtensions wayland_extensions = WaylandExtensions {}
                                                .enable(WaylandExtensions::zwlr_layer_shell_v1)

@@ -756,6 +756,27 @@ void read_terminal(YAML::Node const& node, ParsingContext& context)
     context.result.config.terminal = desired_terminal;
 }
 
+void read_wm_clients(YAML::Node const& node, ParsingContext& context)
+{
+    if (!node.IsMap())
+    {
+        context.builder << "Expected wm_clients to be a map";
+        create_error(node, context);
+        return;
+    }
+
+    miracle::WmClientsConfig wm_clients;
+    if (node["error_reporter"])
+    {
+        std::string error_reporter;
+        if (!try_parse_value(node["error_reporter"], error_reporter, context))
+            return;
+        wm_clients.error_reporter = error_reporter;
+    }
+
+    context.result.config.wm_clients = wm_clients;
+}
+
 void read_resize_jump(YAML::Node const& node, ParsingContext& context)
 {
     int resize_jump;
@@ -1232,6 +1253,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_magnifier(config["magnifier"], context);
         if (config["workspace_back_and_forth"])
             read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
+        if (config["wm_clients"])
+            read_wm_clients(config["wm_clients"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1984,6 +2007,7 @@ miracle::ConfigData miracle::ConfigData::merge_with(miracle::ConfigData& other)
     // if it is set.
     auto result = merge_config_fields(*this, other);
     result.plugins = other.plugins.is_set() ? other.plugins : plugins;
+    result.wm_clients = other.wm_clients.is_set() ? other.wm_clients : wm_clients;
     result.includes = concat_vectors(*other.includes, *includes);
     return result;
 }
@@ -1993,6 +2017,7 @@ miracle::ConfigData miracle::ConfigData::merge_with_plugin_config(miracle::Plugi
     // Plugins cannot override plugins or includes; those are always preserved from this.
     auto result = merge_config_fields(*this, const_cast<miracle::PluginConfigData&>(other));
     result.plugins = plugins;
+    result.wm_clients = wm_clients;
     result.includes = includes;
     return result;
 }
