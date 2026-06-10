@@ -23,6 +23,9 @@
 - [dbus-next](https://pypi.org/project/dbus-next/)
 - [tenacity](https://pypi.org/project/tenacity/)
 - [wasmedge](https://wasmedge.org/)
+- [libgtk-4-dev](https://docs.gtk.org/gtk4/)
+- [libgtk4-layer-shell-dev](https://github.com/wmww/gtk4-layer-shell)
+- [gettext](https://www.gnu.org/software/gettext/)
 
 ## From source
 
@@ -34,7 +37,8 @@ sudo apt install libmiral-dev libmircommon-dev libmirserver-internal-dev \
   libgtest-dev libyaml-cpp-dev libglib2.0-dev libevdev-dev nlohmann-json3-dev libnotify-dev pcre2-utils \
   libmiroil-dev libmirplatform-dev libgles2-mesa-dev libmirwayland-dev libjson-c-dev libgtest-dev libgmock-dev \
   mirtest-dev mirtest-internal-dev mir-wlcs-integration libxkbcommon-dev libboost-filesystem-dev libboost-system-dev \
-  xwayland mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic
+  xwayland mir-platform-graphics-gbm-kms mir-platform-rendering-egl-generic \
+  libgtk-4-dev libgtk4-layer-shell-dev gettext
 
 # If running on a desktop, you will also want to add the desktop graphics drivers.
 sudo apt install mir-graphics-drivers-desktop
