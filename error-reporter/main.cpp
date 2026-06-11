@@ -201,6 +201,10 @@ void activate(GtkApplication* app, gpointer user_data)
     gtk_layer_set_anchor(state->window, GTK_LAYER_SHELL_EDGE_BOTTOM, TRUE);
     gtk_layer_set_anchor(state->window, GTK_LAYER_SHELL_EDGE_LEFT, TRUE);
     gtk_layer_set_anchor(state->window, GTK_LAYER_SHELL_EDGE_RIGHT, TRUE);
+    // Span the entire output, ignoring exclusive zones reserved by other
+    // layer-shell surfaces (e.g. waybar). Without this, the compositor shrinks
+    // this surface to avoid waybar's exclusive zone and "pushes it down".
+    gtk_layer_set_exclusive_zone(state->window, -1);
     gtk_layer_set_keyboard_mode(state->window, GTK_LAYER_SHELL_KEYBOARD_MODE_EXCLUSIVE);
 
     GtkWidget* root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
