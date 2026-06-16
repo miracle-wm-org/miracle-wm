@@ -128,7 +128,7 @@ void AutoRestartingLauncher::reap()
 
             if (cmd.restart_on_death)
             {
-                if (status == 127)
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
                 {
                     mir::log_error(
                         "Process could not be found and will not be restarted: %s",
