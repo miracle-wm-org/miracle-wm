@@ -58,6 +58,10 @@ extern "C"
 
         miracle_animation_type_workspace_switch,
 
+        miracle_animation_type_shell_window_open,
+
+        miracle_animation_type_shell_window_close,
+
         miracle_animation_type_window_none
     } miracle_animation_type;
 

@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "container_effect.h"
 #include "synchronized_recursive.h"
+#include <miracle/cpp/animation_definition.h>
 #include <optional>
 
 namespace miracle
@@ -122,6 +123,12 @@ public:
 
     /// Check if animations are turned on for this type of window.
     virtual bool can_animate();
+
+    /// The animation event fired when this container's window opens.
+    virtual AnimateableEvent get_open_animation_event() const;
+
+    /// The animation event fired when this container's window closes.
+    virtual AnimateableEvent get_close_animation_event() const;
 
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
