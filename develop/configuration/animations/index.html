@@ -3258,7 +3258,7 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <h2 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h2>
 <p>A list of animation rules. Each rule defines how a specific event should be animated.</p>
 <div class="highlight"><pre><span></span><code><span class="nt">animations</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;window_open|window_move|window_close|workspace_switch|shell_window_open|shell_window_close&gt;</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;window_open|window_move|window_close|workspace_switch&gt;</span>
 <span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;float seconds&gt;</span>
 <span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;built_in&gt;</span>
 <span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">parts?</span><span class="p p-Indicator">:</span>
@@ -3276,12 +3276,8 @@ by default, please see <a href="../enable_animations/">Enable Animations</a>.</p
 <h3 id="event"><code>event</code><a class="headerlink" href="#event" title="Permanent link">&para;</a></h3>
 <dl>
 <dd>
-<p><small>required</small> <strong>type:</strong> <code>window_open</code> | <code>window_move</code> | <code>window_close</code> | <code>workspace_switch</code> | <code>shell_window_open</code> | <code>shell_window_close</code></p>
+<p><small>required</small> <strong>type:</strong> <code>window_open</code> | <code>window_move</code> | <code>window_close</code> | <code>workspace_switch</code></p>
 <p>The window or workspace event that triggers this animation.</p>
-<p><code>shell_window_open</code> and <code>shell_window_close</code> animate <em>shell components</em> —
-non-standard surfaces such as panels, menus, popups and tooltips — when they
-appear and disappear. Shell components are never animated when they move, so
-there is no <code>shell_window_move</code> event.</p>
 </dd>
 </dl>
 <h3 id="duration"><code>duration</code><a class="headerlink" href="#duration" title="Permanent link">&para;</a></h3>
@@ -3409,18 +3405,6 @@ Options: <code>linear</code>, <code>ease_in_sine</code>, <code>ease_out_sine</co
 <span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slide</span>
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ease_out_sine</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shell_window_open</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
-<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
-<span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fade</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linear</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shell_window_close</span>
-<span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
-<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">built_in</span>
-<span class="w">    </span><span class="nt">parts</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fade</span>
-<span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linear</span>
 </code></pre></div>
 
 
