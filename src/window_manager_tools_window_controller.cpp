@@ -97,12 +97,13 @@ void WindowManagerToolsWindowController::open(miral::Window const& window)
             win_id = id;
             break;
         }
-    AnimationData anim_data { AnimateableEvent::window_open, rect, rect, 0, 1 };
+    auto const open_event = container->get_open_animation_event();
+    AnimationData anim_data { open_event, rect, rect, 0, 1 };
     anim_data.window_info = from_window(win_info, win_id, container.get());
     anim_data.window_name = win_info.name();
     animator->append(Animation(
         container->animation_handle(),
-        config->get_animation_definition(AnimateableEvent::window_open),
+        config->get_animation_definition(open_event),
         std::move(anim_data),
         create_window_animation_callback(container, this, server_action_queue), plugin_manager));
 }

@@ -37,7 +37,7 @@ A list of animation rules. Each rule defines how a specific event should be anim
 
 ```yaml
 animations:
-  - event: <window_open|window_move|window_close|workspace_switch>
+  - event: <window_open|window_move|window_close|workspace_switch|shell_window_open|shell_window_close>
     duration: <float seconds>
     type: <built_in>
     parts?:
@@ -56,9 +56,14 @@ animations:
 
 ### `event`
 
-:   <small>required</small> **type:** `window_open` | `window_move` | `window_close` | `workspace_switch`
+:   <small>required</small> **type:** `window_open` | `window_move` | `window_close` | `workspace_switch` | `shell_window_open` | `shell_window_close`
 
     The window or workspace event that triggers this animation.
+
+    `shell_window_open` and `shell_window_close` animate *shell components* —
+    non-standard surfaces such as panels, menus, popups and tooltips — when they
+    appear and disappear. Shell components are never animated when they move, so
+    there is no `shell_window_move` event.
 
 ### `duration`
 
@@ -178,4 +183,16 @@ animations:
     parts:
       - type: slide
         function: ease_out_sine
+  - event: shell_window_open
+    duration: 0.2
+    type: built_in
+    parts:
+      - type: fade
+        function: linear
+  - event: shell_window_close
+    duration: 0.2
+    type: built_in
+    parts:
+      - type: fade
+        function: linear
 ```

@@ -34,7 +34,7 @@ ShellComponentContainer::ShellComponentContainer(
     std::shared_ptr<ShellApplicationDelegate>&& delegate,
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<CompositorState> const& compositor_state) :
-    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller, false),
+    WindowContainer(compositor_state->next_container_id(), compositor_state->render_data_manager(), window_controller, true),
     window_controller { window_controller },
     delegate { std::move(delegate) },
     output_manager { output_manager }
@@ -65,8 +65,10 @@ mir::geometry::Rectangle ShellComponentContainer::get_logical_area() const
 
 void ShellComponentContainer::set_logical_area(mir::geometry::Rectangle const& rectangle, bool with_animations)
 {
+    // Shell components do not animate moves; positioning is driven by the shell
+    // client, so always issue the rectangle change without animation.
     auto const window_ = window_sync.lock()->window_;
-    window_controller->set_rectangle(window_, get_visible_area(), rectangle, with_animations);
+    window_controller->set_rectangle(window_, get_visible_area(), rectangle, false);
 }
 
 mir::geometry::Rectangle ShellComponentContainer::get_visible_area() const
@@ -239,7 +241,17 @@ bool ShellComponentContainer::is_fullscreen() const
 
 bool ShellComponentContainer::can_animate()
 {
-    return false;
+    return true;
+}
+
+AnimateableEvent ShellComponentContainer::get_open_animation_event() const
+{
+    return AnimateableEvent::shell_window_open;
+}
+
+AnimateableEvent ShellComponentContainer::get_close_animation_event() const
+{
+    return AnimateableEvent::shell_window_close;
 }
 
 nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
