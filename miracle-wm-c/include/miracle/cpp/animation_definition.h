@@ -152,8 +152,6 @@ enum class MIRACLE_WM_CONFIG_API AnimateableEvent
     window_move,
     window_close,
     workspace_switch,
-    shell_window_open,
-    shell_window_close,
     max
 };
 
@@ -161,9 +159,7 @@ constexpr std::array<const char*, static_cast<int>(AnimateableEvent::max)> anima
     "window_open",
     "window_move",
     "window_close",
-    "workspace_switch",
-    "shell_window_open",
-    "shell_window_close"
+    "workspace_switch"
 };
 }
 

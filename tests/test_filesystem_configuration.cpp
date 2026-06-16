@@ -582,48 +582,6 @@ TEST_F(FilesystemConfigurationTest, CanReadSimulatedSecondaryClick)
     EXPECT_THAT(ssc.displacement_threshold, testing::Eq(456));
 }
 
-TEST_F(FilesystemConfigurationTest, CanReadShellWindowOpenAndCloseAnimations)
-{
-    auto build_animation = [](char const* event, char const* type)
-    {
-        YAML::Node list_item;
-        list_item["type"] = type;
-        list_item["function"] = "linear";
-
-        YAML::Node list;
-        list.push_back(list_item);
-
-        YAML::Node animation;
-        animation["duration"] = 0.5;
-        animation["event"] = event;
-        animation["parts"] = list;
-        return animation;
-    };
-
-    YAML::Node animations_node;
-    animations_node.push_back(build_animation("shell_window_open", "slide"));
-    animations_node.push_back(build_animation("shell_window_close", "grow"));
-
-    YAML::Node root;
-    root["animations"] = animations_node;
-    write_yaml_node(root);
-
-    FilesystemConfiguration config(registrar, path, true);
-    auto const open_def = config.get_animation_definition(AnimateableEvent::shell_window_open);
-    auto const close_def = config.get_animation_definition(AnimateableEvent::shell_window_close);
-    EXPECT_EQ(open_def.data[0].type, BultInAnimationType::slide);
-    EXPECT_EQ(close_def.data[0].type, BultInAnimationType::grow);
-}
-
-TEST_F(FilesystemConfigurationTest, ShellWindowAnimationsDefaultToFade)
-{
-    FilesystemConfiguration config(registrar, path, true);
-    auto const open_def = config.get_animation_definition(AnimateableEvent::shell_window_open);
-    auto const close_def = config.get_animation_definition(AnimateableEvent::shell_window_close);
-    EXPECT_EQ(open_def.data[0].type, BultInAnimationType::fade);
-    EXPECT_EQ(close_def.data[0].type, BultInAnimationType::fade);
-}
-
 INSTANTIATE_TEST_SUITE_P(
     FilesystemConfigurationTestAnimationTypes,
     FilesystemConfigurationTestAnimationTypes,

@@ -99,8 +99,6 @@ public:
     bool matches(ContainerScope const&) const override { return false; }
     bool is_fullscreen() const override;
     bool can_animate() override;
-    AnimateableEvent get_open_animation_event() const override;
-    AnimateableEvent get_close_animation_event() const override;
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
 private:

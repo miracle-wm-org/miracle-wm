@@ -561,15 +561,6 @@ TEST_F(ContainerExecuteResizeTest, ResizeEastClampedToMinimumWidth)
     Container::execute_resize(container.get(), mir_resize_edge_east, -30, 0, false);
 }
 
-// === Animation event defaults ===
-TEST(WindowContainerAnimationEventTest, DefaultsToWindowOpenAndClose)
-{
-    auto container = std::make_shared<NiceMock<test::MockContainer>>();
-    Mock::AllowLeak(container.get());
-    EXPECT_EQ(container->get_open_animation_event(), AnimateableEvent::window_open);
-    EXPECT_EQ(container->get_close_animation_event(), AnimateableEvent::window_close);
-}
-
 // === None Edge Test ===
 TEST_F(ContainerExecuteResizeTest, ResizeNoneEdgeDoesNothing)
 {

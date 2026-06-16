@@ -157,16 +157,6 @@ bool miracle::WindowContainer::can_animate()
     return true;
 }
 
-miracle::AnimateableEvent miracle::WindowContainer::get_open_animation_event() const
-{
-    return AnimateableEvent::window_open;
-}
-
-miracle::AnimateableEvent miracle::WindowContainer::get_close_animation_event() const
-{
-    return AnimateableEvent::window_close;
-}
-
 void miracle::WindowContainer::set_animation_transform(glm::mat4 transform)
 {
     auto state = window_sync.lock();

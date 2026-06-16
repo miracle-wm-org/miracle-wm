@@ -74,9 +74,8 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     surface->set_transformation(transform);
 
     surface_stack->add_surface(animating_surface, mir::input::InputReceptionMode::normal);
-    auto const close_event = container->get_close_animation_event();
     AnimationData anim_data {
-        close_event,
+        AnimateableEvent::window_close,
         container->get_visible_area(),
         geom::Rectangle {},
         1, 0
@@ -87,7 +86,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     anim_data.window_name = win_info.name();
     animator->append(Animation(
         handle,
-        config->get_animation_definition(close_event),
+        config->get_animation_definition(AnimateableEvent::window_close),
         std::move(anim_data),
         [compositor_state = compositor_state, surface_stack = surface_stack, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {

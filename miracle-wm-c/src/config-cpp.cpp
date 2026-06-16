@@ -69,19 +69,7 @@ const std::array<miracle::AnimationDefinition, static_cast<int>(miracle::Animate
      miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
             miracle::BultInAnimationType::slide,
             miracle::EaseFunction::ease_out_sine,
-        } } },
-    { true,
-     0.2f,
-     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::fade,
-            miracle::EaseFunction::linear,
-        } } }, // shell_window_open: fade in
-    { true,
-     0.2f,
-     miracle::BuiltInAnimationList { miracle::BuiltInAnimationDefinition {
-            miracle::BultInAnimationType::fade,
-            miracle::EaseFunction::linear,
-        } } }  // shell_window_close: fade out
+        } } }
 });
 
 struct ParsingContext

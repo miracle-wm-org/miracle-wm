@@ -48,10 +48,6 @@ miracle_animation_type from_animateable_event(AnimateableEvent event)
         return miracle_animation_type_window_close;
     case AnimateableEvent::workspace_switch:
         return miracle_animation_type_workspace_switch;
-    case AnimateableEvent::shell_window_open:
-        return miracle_animation_type_shell_window_open;
-    case AnimateableEvent::shell_window_close:
-        return miracle_animation_type_shell_window_close;
     default:
         return miracle_animation_type_window_none;
     }
