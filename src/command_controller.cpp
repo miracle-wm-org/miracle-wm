@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <mir/log.h>
+#include <mir_toolkit/common.h>
 #include <miral/runner.h>
 
 using namespace miracle;
@@ -1204,6 +1205,7 @@ bool CommandController::toggle_floating_internal(std::shared_ptr<Container> cons
             auto const gap_x = output_area.size.width.as_int() * gap_size / 2.f;
             auto const gap_y = output_area.size.height.as_int() * gap_size / 2.f;
             miral::WindowSpecification spec;
+            spec.depth_layer() = mir_depth_layer_always_on_top;
             window_controller->modify(window_info.window(), spec);
             window_controller->set_rectangle(
                 window_info.window(),
