@@ -264,7 +264,7 @@ bool FreestyleWindowContainer::toggle_fullscreen()
         if (is_fullscreen())
         {
             s->next_state = mir_window_state_restored;
-            s->next_depth_layer = mir_depth_layer_application;
+            s->next_depth_layer = mir_depth_layer_always_on_top;
         }
         else
         {
