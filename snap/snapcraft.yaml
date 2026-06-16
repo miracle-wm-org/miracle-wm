@@ -6,7 +6,7 @@ description: |
 confinement: classic
 base: core26
 version: 0.0.0
-grade: devel
+grade: stable
 
 platforms:
   amd64:
