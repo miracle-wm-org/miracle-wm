@@ -20,13 +20,13 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed for version determination
+          fetch-depth: 0 # needed for version determination
 
       - id: build-snap
         name: Build the snap
         uses: canonical/actions/build-snap@release
         with:
-          snapcraft-channel: candidate
+          snapcraft-channel: stable
           review-opts: "--allow-classic"
 
       - name: Store the snap as artifact

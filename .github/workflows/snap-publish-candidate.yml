@@ -31,7 +31,7 @@ jobs:
         uses: snapcore/action-build@v1
         id: build
         with:
-          snapcraft-channel: candidate
+          snapcraft-channel: stable
 
       - name: Publish the snap
         uses: snapcore/action-publish@v1
