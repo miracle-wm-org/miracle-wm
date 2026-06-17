@@ -6,3 +6,11 @@ cp "$SNAP/usr/share/wayland-sessions/miracle-wm-snap.desktop.in" "/usr/share/way
 mkdir -p /usr/local/bin/
 cp "$SNAP/usr/bin/miracle-wm-snap-session" "/usr/local/bin/miracle-wm-snap-session"
 chmod +x "/usr/local/bin/miracle-wm-snap-session"
+
+# The session setup script starts miracle-wm-session.target via `systemctl --user`,
+# which only searches host paths (e.g. /etc/systemd/user). The units live inside the
+# snap, so copy them out to make them discoverable by the host's user manager.
+mkdir -p /etc/systemd/user/
+for t in miracle-wm-session.target miracle-wm-session-shutdown.target miracle-wm-xdg-autostart.target; do
+    cp "$SNAP/usr/lib/systemd/user/$t" "/etc/systemd/user/$t"
+done

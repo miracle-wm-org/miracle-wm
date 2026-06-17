@@ -1,2 +1,4 @@
 #!/bin/sh
-exec /snap/bin/miracle-wm "$@"
+exec /snap/bin/miracle-wm \
+    --systemd-session-configure=/snap/miracle-wm/current/usr/bin/libexec/miracle-wm-session-setup \
+    "$@"

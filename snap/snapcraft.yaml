@@ -60,6 +60,7 @@ parts:
       - -DSNAP_BUILD=ON
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DSYSTEMD_INTEGRATION=1
     source: .
     override-build: |
       apt-get install -y libmirrenderer-dev || true
@@ -137,6 +138,8 @@ parts:
   session:
     plugin: dump
     source: session
+    organize:
+      usr/bin/libexec/miracle-wm-session-setup.in: usr/bin/libexec/miracle-wm-session-setup
 
   mesa-no-patchelf:
     plugin: nil
