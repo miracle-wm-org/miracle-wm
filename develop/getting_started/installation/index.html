@@ -2898,7 +2898,7 @@
 
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Snap</label><label for="__tabbed_1_2">Fedora</label><label for="__tabbed_1_3">Ubuntu (mantic and noble)</label><label for="__tabbed_1_4">Arch Linux (AUR)</label><label for="__tabbed_1_5">Nightly</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Snap</label><label for="__tabbed_1_2">Fedora</label><label for="__tabbed_1_3">Ubuntu (resolute)</label><label for="__tabbed_1_4">Arch Linux (AUR)</label><label for="__tabbed_1_5">Nightly</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code>sudo snap install miracle-wm --classic
@@ -2909,7 +2909,10 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code>sudo add-apt-repository ppa:matthew-kosarek/miracle-wm
+<div class="highlight"><pre><span></span><code>sudo add-apt-repository ppa:mir-team/release
+sudo apt update
+
+sudo add-apt-repository ppa:matthew-kosarek/miracle-wm
 sudo apt update
 sudo apt install miracle-wm
 </code></pre></div>
