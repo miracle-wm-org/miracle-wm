@@ -2,3 +2,7 @@
 
 rm -f /usr/share/wayland-sessions/miracle-wm-snap.desktop
 rm -f /usr/local/bin/miracle-wm-snap-session
+
+rm -f /etc/systemd/user/miracle-wm-session.target
+rm -f /etc/systemd/user/miracle-wm-session-shutdown.target
+rm -f /etc/systemd/user/miracle-wm-xdg-autostart.target
