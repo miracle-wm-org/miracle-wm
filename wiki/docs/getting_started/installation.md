@@ -11,8 +11,11 @@
     sudo dnf install miracle-wm
     ```
     
-=== "Ubuntu (mantic and noble)"
+=== "Ubuntu (resolute)"
     ```
+    sudo add-apt-repository ppa:mir-team/release
+    sudo apt update
+
     sudo add-apt-repository ppa:matthew-kosarek/miracle-wm
     sudo apt update
     sudo apt install miracle-wm
