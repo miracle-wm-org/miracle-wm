@@ -54,7 +54,7 @@ parts:
       published=`git describe --tags --abbrev=0`
       version=`git describe --tags`
       craftctl set version=$version
-      if [[ "$published" != *"$version"* ]]; then craftctl set grade=devel; else craftctl set grade=stable; fi
+    # if [[ "$published" != *"$version"* ]]; then craftctl set grade=devel; else craftctl set grade=stable; fi
     plugin: cmake
     cmake-parameters:
       - -DSNAP_BUILD=ON
