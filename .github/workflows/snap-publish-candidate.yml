@@ -32,6 +32,7 @@ jobs:
         id: build
         with:
           snapcraft-channel: stable
+          review-opts: "--allow-classic"
 
       - name: Publish the snap
         uses: snapcore/action-publish@v1
