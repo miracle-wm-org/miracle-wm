@@ -20,8 +20,8 @@
 - [libxkbcommon](https://github.com/xkbcommon/libxkbcommon)
 - [libgles2-mesa-dev](https://docs.mesa3d.org/opengles.html)
 - [json-c](https://github.com/json-c/json-c) >= 0.17
-- [dbus-next](https://pypi.org/project/dbus-next/)
-- [tenacity](https://pypi.org/project/tenacity/)
+- [dbus-next](https://pypi.org/project/dbus-next/) (runtime, required for `-DSYSTEMD_INTEGRATION`)
+- [tenacity](https://pypi.org/project/tenacity/) (runtime, required for `-DSYSTEMD_INTEGRATION`)
 - [wasmedge](https://wasmedge.org/)
 - [libgtk-4-dev](https://docs.gtk.org/gtk4/)
 - [libgtk4-layer-shell-dev](https://github.com/wmww/gtk4-layer-shell)
@@ -42,6 +42,11 @@ sudo apt install libmiral-dev libmircommon-dev libmirserver-internal-dev \
 
 # If running on a desktop, you will also want to add the desktop graphics drivers.
 sudo apt install mir-graphics-drivers-desktop
+
+# Runtime Python deps for the systemd session (-DSYSTEMD_INTEGRATION). Without
+# these, miracle-wm-wait-sni-ready crashes and miracle-wm-xdg-autostart.target
+# never starts (XDG autostart apps / tray won't launch).
+sudo apt install python3-tenacity python3-dbus-next
 
 # Then, clone the repo:
 git clone https://github.com/miracle-window-manager/miracle-wm.git
@@ -68,7 +73,7 @@ The following options are available at build time:
 - `-DSYSTEMD_INTEGRATION`: If enabled, miracle will build with full
   systemd integration, including establishing a user session and
   importing the proper environment variables in to systemd.
-- `DENABLE_TESTS`: If enabled, tests are built (default=true)
+- `-DENABLE_TESTS`: If enabled, tests are built (default=true)
 - `-DEND_TO_END_TESTS`: If enabled, miracle's end-to-end tests will
   be compiled as part of the test suite.
 
