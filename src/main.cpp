@@ -41,6 +41,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <miral/hover_click.h>
 #include <miral/internal_client.h>
 #include <miral/keymap.h>
+#include <miral/version.h>
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(6, 0, 0)
+#include <miral/live_config_ini_file.h>
+#endif
 #include <miral/magnifier.h>
 #include <miral/runner.h>
 #include <miral/simulated_secondary_click.h>
@@ -107,7 +111,17 @@ int main(int argc, char const* argv[])
     auto display_config = std::make_shared<miracle::DisplayConfig>();
 
     ExternalClientLauncher external_client_launcher;
+#if MIRAL_VERSION >= MIR_VERSION_NUMBER(6, 0, 0)
+    // miral 6.0 removed InputConfiguration's default constructor; it now
+    // requires a live_config::Store. We pass an unloaded IniFile (never given
+    // a file) so the store stays inert and our imperative mouse/touchpad/
+    // keyboard setters in InputConfigurationConfigObserver remain the source
+    // of truth. The store must outlive input_configuration.
+    miral::live_config::IniFile input_config_store;
+    InputConfiguration input_configuration { input_config_store };
+#else
     InputConfiguration input_configuration;
+#endif
     Magnifier magnifier;
     HoverClick hover_click = HoverClick::disabled();
     SimulatedSecondaryClick simulated_secondary_click = SimulatedSecondaryClick::disabled();
