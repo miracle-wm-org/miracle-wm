@@ -366,6 +366,12 @@ std::string FilesystemConfiguration::get_error_reporter_client() const
     return options.wm_clients->error_reporter;
 }
 
+std::string FilesystemConfiguration::get_debug_overlay_client() const
+{
+    std::lock_guard lock(mutex);
+    return options.wm_clients->debug_overlay;
+}
+
 MirInputEventModifier FilesystemConfiguration::get_input_event_modifier() const
 {
     std::lock_guard lock(mutex);

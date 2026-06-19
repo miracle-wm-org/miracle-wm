@@ -196,6 +196,13 @@ struct MIRACLE_WM_CONFIG_API WmClientsConfig
     ///   "disabled" - do not launch any error reporter
     ///   <string>   - path or name of an executable to launch instead
     std::string error_reporter = "default";
+
+    /// Selects the client used to draw the debug overlay (toggled with
+    /// `miraclemsg debug`). Accepts:
+    ///   "default"  - use the bundled miracle-wm-debug-overlay
+    ///   "disabled" - never launch a debug overlay
+    ///   <string>   - path or name of an executable to launch instead
+    std::string debug_overlay = "default";
 };
 
 struct MIRACLE_WM_CONFIG_API ConfigData

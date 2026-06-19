@@ -44,6 +44,7 @@ namespace test
         MOCK_METHOD(std::string const&, get_filename, (), (const, override));
         MOCK_METHOD(std::vector<miracle::Error> const&, get_config_errors, (), (const, override));
         MOCK_METHOD(std::string, get_error_reporter_client, (), (const, override));
+        MOCK_METHOD(std::string, get_debug_overlay_client, (), (const, override));
         MOCK_METHOD(MirInputEventModifier, get_input_event_modifier, (), (const, override));
         MOCK_METHOD(CustomKeyCommand const*, matches_custom_key_command, (MirKeyboardAction action, uint32_t keysym, unsigned int modifiers), (const, override));
         MOCK_METHOD(bool, matches_key_command, (MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f), (const, override));

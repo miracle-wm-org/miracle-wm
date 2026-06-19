@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipc_command_executor.h"
 #include "auto_restarting_launcher.h"
 #include "command_controller.h"
+#include "debug_overlay_controller.h"
 #include "direction.h"
 #include "ipc_command.h"
 #include "leaf_container.h"
@@ -142,9 +143,11 @@ protected:
 
 IpcCommandExecutor::IpcCommandExecutor(
     std::shared_ptr<AbstractCommandController> const& command_controller,
-    std::shared_ptr<Launcher> const& launcher) :
+    std::shared_ptr<Launcher> const& launcher,
+    std::shared_ptr<DebugOverlayController> const& debug_overlay_controller) :
     command_controller { command_controller },
-    launcher { launcher }
+    launcher { launcher },
+    debug_overlay_controller { debug_overlay_controller }
 {
 }
 
@@ -215,6 +218,9 @@ std::vector<IpcValidationResult> IpcCommandExecutor::process(IpcParseResult cons
             break;
         case IpcCommandType::nop:
             result.push_back(process_nop(command, parse_result));
+            break;
+        case IpcCommandType::debug:
+            result.push_back(process_debug(command, parse_result));
             break;
         default:
             result.push_back(IpcValidationResult::create_failure(std::format("Unsupported command type: {}", command.raw_command), true));
@@ -1332,5 +1338,29 @@ IpcValidationResult IpcCommandExecutor::process_nop(IpcCommand const& command, I
 {
     (void)command;
     (void)parse_result;
+    return IpcValidationResult::create_success();
+}
+
+IpcValidationResult IpcCommandExecutor::process_debug(IpcCommand const& command, IpcParseResult const&) const
+{
+    if (!debug_overlay_controller)
+        return IpcValidationResult::create_failure("Debug overlay support is not available", false);
+
+    // Accept an optional leading "overlay" subcommand so that both
+    // `miraclemsg debug` and `miraclemsg debug overlay [on|off|toggle]` work.
+    std::vector<std::string> args = command.arguments;
+    if (!args.empty() && args.front() == "overlay")
+        args.erase(args.begin());
+
+    if (args.empty() || args.front() == "toggle")
+        debug_overlay_controller->toggle();
+    else if (args.front() == "on" || args.front() == "show" || args.front() == "enable")
+        debug_overlay_controller->set_enabled(true);
+    else if (args.front() == "off" || args.front() == "hide" || args.front() == "disable")
+        debug_overlay_controller->set_enabled(false);
+    else
+        return IpcValidationResult::create_failure(
+            std::format("Unknown 'debug' subcommand: {}", args.front()), true);
+
     return IpcValidationResult::create_success();
 }

@@ -634,6 +634,10 @@ int main(int argc, char** argv)
     {
         type = IPC_GET_CONFIG;
     }
+    else if (strcasecmp(cmdtype, "get_debug_state") == 0)
+    {
+        type = IPC_GET_DEBUG_STATE;
+    }
     else if (strcasecmp(cmdtype, "send_tick") == 0)
     {
         type = IPC_SEND_TICK;

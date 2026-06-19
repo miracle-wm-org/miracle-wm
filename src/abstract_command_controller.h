@@ -175,6 +175,11 @@ public:
     [[nodiscard]] virtual nlohmann::json workspaces_json() const = 0;
     [[nodiscard]] virtual nlohmann::json workspace_to_json(uint32_t) const = 0;
     [[nodiscard]] virtual nlohmann::json mode_to_json() const = 0;
+
+    /// Builds the JSON consumed by the debug overlay client: the cursor
+    /// position, the id of the window under the cursor, and a flat list of every
+    /// window (with geometry, clip area, visibility, ...) across all outputs.
+    [[nodiscard]] virtual nlohmann::json debug_state_to_json() const = 0;
 };
 
 class CommandControllerInterface

@@ -52,6 +52,9 @@ public:
     /// The configured error reporter client (the raw `wm_clients.error_reporter`
     /// value: "default", "disabled", or a path/name of an executable).
     [[nodiscard]] virtual std::string get_error_reporter_client() const = 0;
+    /// The configured debug overlay client (the raw `wm_clients.debug_overlay`
+    /// value: "default", "disabled", or a path/name of an executable).
+    [[nodiscard]] virtual std::string get_debug_overlay_client() const = 0;
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
@@ -108,6 +111,7 @@ public:
     [[nodiscard]] std::string const& get_filename() const override;
     [[nodiscard]] std::vector<Error> const& get_config_errors() const override;
     [[nodiscard]] std::string get_error_reporter_client() const override;
+    [[nodiscard]] std::string get_debug_overlay_client() const override;
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;

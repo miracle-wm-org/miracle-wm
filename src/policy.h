@@ -64,6 +64,7 @@ class WindowObserverRegistrar;
 class MagnifierWrapper;
 class PluginManager;
 class ShellApplicationManager;
+class DebugOverlayController;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -149,6 +150,7 @@ private:
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;
     std::unique_ptr<ResizeService> resize_service;
+    std::shared_ptr<DebugOverlayController> debug_overlay_controller;
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;
     BindingEventListener* binding_event_listener_;

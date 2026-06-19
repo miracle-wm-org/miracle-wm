@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_manager.h"
 
 #include <mir/log.h>
+#include <mir/scene/surface.h>
 #include <mir_toolkit/common.h>
 #include <miral/runner.h>
 
@@ -2171,6 +2172,94 @@ nlohmann::json CommandController::to_json() const
         { "type", "root" }
     };
     return root;
+}
+
+nlohmann::json CommandController::debug_state_to_json() const
+{
+    auto const cursor = state->cursor_position;
+    auto const cursor_x = cursor.x.as_int();
+    auto const cursor_y = cursor.y.as_int();
+
+    // Determine the window directly underneath the cursor (if any).
+    int64_t window_under_cursor = -1;
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->is_defunct())
+            continue;
+        if (!output->point_is_in_output(cursor_x, cursor_y))
+            continue;
+        if (auto const container = output->intersect(
+                static_cast<float>(cursor_x), static_cast<float>(cursor_y)))
+            window_under_cursor = static_cast<int64_t>(container->id());
+        break;
+    }
+
+    // Flat list of every window across every output/workspace. Each entry reuses
+    // the per-container JSON (which carries `rect` and `window_rect`) and is
+    // annotated with a stable `debug_id` plus output/workspace context.
+    nlohmann::json windows = nlohmann::json::array();
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->is_defunct())
+            continue;
+
+        bool const output_focused = output_manager->focused() == output;
+        for (auto const& workspace : output->get_workspaces())
+        {
+            bool const workspace_visible = output->active() == workspace;
+            workspace->for_each_window([&](std::shared_ptr<WindowContainer> container)
+            {
+                nlohmann::json w = container->to_json(workspace_visible);
+                w["debug_id"] = container->id();
+                w["output"] = output->name();
+                w["output_focused"] = output_focused;
+                w["workspace_id"] = workspace->id();
+                if (auto const& name = workspace->name())
+                    w["workspace_name"] = name.value();
+
+                // Input geometry queried directly from the Mir scene surface, for
+                // debugging input bugs. `input_bounds` is the global bounding box
+                // of the input area; `input_region` are the individual accepting
+                // rectangles in global coordinates (an empty array means the whole
+                // surface accepts input, i.e. equal to `input_bounds`).
+                if (auto const win = container->window())
+                {
+                    if (auto const surface = win->operator std::shared_ptr<mir::scene::Surface>())
+                    {
+                        auto const bounds = surface->input_bounds();
+                        w["input_bounds"] = {
+                            { "x",      bounds.top_left.x.as_int()  },
+                            { "y",      bounds.top_left.y.as_int()  },
+                            { "width",  bounds.size.width.as_int()  },
+                            { "height", bounds.size.height.as_int() }
+                        };
+
+                        auto const top_left = surface->top_left();
+                        nlohmann::json regions = nlohmann::json::array();
+                        for (auto const& region : surface->get_input_region())
+                        {
+                            regions.push_back({
+                                { "x",      top_left.x.as_int() + region.top_left.x.as_int() },
+                                { "y",      top_left.y.as_int() + region.top_left.y.as_int() },
+                                { "width",  region.size.width.as_int()                       },
+                                { "height", region.size.height.as_int()                      }
+                            });
+                        }
+                        w["input_region"] = regions;
+                    }
+                }
+
+                windows.push_back(std::move(w));
+                return false;
+            });
+        }
+    }
+
+    return {
+        { "cursor",              { { "x", cursor_x }, { "y", cursor_y } } },
+        { "window_under_cursor", window_under_cursor                      },
+        { "windows",             windows                                  }
+    };
 }
 
 nlohmann::json CommandController::outputs_json() const

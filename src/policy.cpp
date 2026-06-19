@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config_observer.h"
 #include "constants.h"
 #include "container_listener.h"
+#include "debug_overlay_controller.h"
 #include "dying_surface_manager.h"
 #include "freestyle_window_container.h"
 #include "internal_shell_application_spawner.h"
@@ -258,7 +259,8 @@ Policy::Policy(
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
-    ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher)),
+    debug_overlay_controller(std::make_shared<DebugOverlayController>(external_client_launcher, config)),
+    ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher, debug_overlay_controller)),
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
         server.the_main_loop(),
         command_controller,
@@ -289,6 +291,7 @@ Policy::Policy(
     config_observer_registrar->register_interest(ipc_connection_manager);
     output_listener->register_listener(ipc_connection_manager);
     config_observer_registrar->register_interest(self);
+    config_observer_registrar->register_interest(debug_overlay_controller);
     animator_loop->start();
 
     server.set_exception_handler([ipc_connection_manager = ipc_connection_manager]
