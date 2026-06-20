@@ -1194,6 +1194,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#debug_overlay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        debug_overlay
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1949,6 +1960,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../ipc/get_debug_state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GET_DEBUG_STATE (200)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -1958,10 +1997,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14" >
         
           
-          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
             
   
   
@@ -1979,8 +2018,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_13">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_14">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2361,6 +2400,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../ipc/commands/debug/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    debug
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../ipc/commands/nop/" class="md-nav__link">
         
   
@@ -2405,10 +2472,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -2426,8 +2493,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2882,6 +2949,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#debug_overlay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        debug_overlay
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2919,20 +2997,23 @@
 
 
 <h1 id="wm-clients">WM Clients<a class="headerlink" href="#wm-clients" title="Permanent link">&para;</a></h1>
-<p>Configures the helper clients that ship with <code>miracle-wm</code>. These are internal clients that
-the compositor launches on your behalf to provide extra functionality. Today the only such
-client is the <strong>error reporter</strong>, which displays configuration errors fullscreen so that you
-can see them without reading the logs. More internal clients (decorations, top bars, etc.)
-will be configured here in the future.</p>
+<p>Configures the helper clients that ship with <code>miracle-wm</code>. These are clients that
+the compositor launches on your behalf to provide extra functionality. Today these are the
+<strong>error reporter</strong>, which displays configuration errors fullscreen so that you can see them
+without reading the logs, and the <strong>debug overlay</strong>, which draws live debugging information
+on top of every window. More clients (decorations, top bars, etc.) will be configured here
+in the future.</p>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># ~/.config/miracle-wm/config.yaml</span>
 
 <span class="nt">wm_clients</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">error_reporter</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
+<span class="w">  </span><span class="nt">debug_overlay</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
 </code></pre></div>
 <h2 id="schema">Schema<a class="headerlink" href="#schema" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">wm_clients</span><span class="p">:</span>
 <span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">error_reporter?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="err"> &quot;disabled&quot; | &lt;string&gt;</span>
+<span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">debug_overlay?</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="err"> &quot;disabled&quot; | &lt;string&gt;</span>
 </code></pre></div>
 <h2 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h2>
 <h3 id="error_reporter"><code>error_reporter</code><a class="headerlink" href="#error_reporter" title="Permanent link">&para;</a></h3>
@@ -2952,9 +3033,28 @@ and it shows the errors fullscreen with an "X" to dismiss them.</p>
 </ul>
 </dd>
 </dl>
+<h3 id="debug_overlay"><code>debug_overlay</code><a class="headerlink" href="#debug_overlay" title="Permanent link">&para;</a></h3>
+<dl>
+<dd>
+<p><strong>type:</strong> String<br />
+<strong>Default:</strong> <code>"default"</code></p>
+<p>Selects the client used to draw the <a href="../../ipc/commands/debug/">debug overlay</a>. The
+overlay is toggled at runtime with <code>miraclemsg debug</code> and draws window geometry, clip
+areas, the window under the cursor, the cursor position, and a list of hidden windows on
+top of everything else.</p>
+<p>Accepts one of:</p>
+<ul>
+<li><code>"default"</code> — use the bundled <code>miracle-wm-debug-overlay</code> client.</li>
+<li><code>"disabled"</code> — never launch a debug overlay. <code>miraclemsg debug</code> becomes a no-op.</li>
+<li>any other string — treated as the path or name of an executable to launch instead of
+  the bundled overlay.</li>
+</ul>
+</dd>
+</dl>
 <h2 id="default">Default<a class="headerlink" href="#default" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">wm_clients</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">error_reporter</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
+<span class="w">  </span><span class="nt">debug_overlay</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
 </code></pre></div>
 
 
