@@ -279,6 +279,20 @@ void draw_cb(GtkDrawingArea*, cairo_t* cr, int width, int height, gpointer user_
                 }
             }
 
+            // REAL applied surface clip_area (global coords), solid red. This is the
+            // field Mir actually gates input hit-testing on. If it disagrees with the
+            // input region / surface size, that's the input bug. null => unclipped.
+            {
+                Rect const ac = read_rect(w, "applied_clip");
+                if (ac.w > 0 && ac.h > 0)
+                {
+                    set_source_rgba(cr, 1.0, 0.1, 0.1, 0.95);
+                    cairo_set_line_width(cr, 1.0);
+                    cairo_rectangle(cr, (ac.x - geo.x) + 0.5, (ac.y - geo.y) + 0.5, ac.w - 1, ac.h - 1);
+                    cairo_stroke(cr);
+                }
+            }
+
             // Colocated label: id, app id, geometry, and clip if it differs.
             std::string label = "#" + std::to_string(id) + " " + json_str(w, "app_id");
             std::string geom = std::to_string(r.x) + "," + std::to_string(r.y) + " " + std::to_string(r.w) + "x" + std::to_string(r.h);

@@ -2246,6 +2246,33 @@ nlohmann::json CommandController::debug_state_to_json() const
                             });
                         }
                         w["input_region"] = regions;
+
+                        // Surface content size (what the client has actually been
+                        // resized/c
+                        // onfigured to) — distinct from the logical `rect`.
+                        auto const content = surface->content_size();
+                        w["content_size"] = {
+                            { "width",  content.width.as_int()  },
+                            { "height", content.height.as_int() }
+                        };
+
+                        // The REAL applied clip area (global coords). Mir gates input
+                        // hit-testing on this (BasicSurface::input_area_contains), so a
+                        // stale clip here makes regions non-interactable even when the
+                        // surface is full-size. null means unclipped.
+                        if (auto const clip = surface->clip_area())
+                        {
+                            w["applied_clip"] = {
+                                { "x",      clip->top_left.x.as_int()  },
+                                { "y",      clip->top_left.y.as_int()  },
+                                { "width",  clip->size.width.as_int()  },
+                                { "height", clip->size.height.as_int() }
+                            };
+                        }
+                        else
+                        {
+                            w["applied_clip"] = nullptr;
+                        }
                     }
                 }
 
