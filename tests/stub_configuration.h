@@ -33,6 +33,7 @@ namespace test
         [[nodiscard]] std::string const& get_filename() const override { return filename; }
         [[nodiscard]] std::vector<miracle::Error> const& get_config_errors() const override { return config_errors; }
         [[nodiscard]] std::string get_error_reporter_client() const override { return "default"; }
+        [[nodiscard]] std::string get_debug_overlay_client() const override { return "default"; }
         [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override { return mir_input_event_modifier_none; }
         [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override
         {

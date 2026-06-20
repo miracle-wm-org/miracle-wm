@@ -58,7 +58,8 @@ enum class IpcCommandType
     gaps,
     input,
     resize,
-    rename
+    rename,
+    debug
 };
 
 struct IpcCommand

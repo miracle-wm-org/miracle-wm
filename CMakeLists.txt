@@ -57,6 +57,7 @@ endif()
 option(FEATURE_PLUGIN_SYSTEM "Enable the plugin system" ON)
 option(FEATURE_PARENT_CONTAINER_WALLPAPERS "Enable parent container wallpapers feature" OFF)
 option(BUILD_ERROR_REPORTER "Build the miracle-wm-basic-error-reporter GTK client" ON)
+option(BUILD_DEBUG_OVERLAY "Build the miracle-wm-debug-overlay GTK client" ON)
 
 if(FEATURE_PLUGIN_SYSTEM)
   set(FEATURE_PLUGIN_SYSTEM 1)
@@ -149,6 +150,7 @@ add_library(miracle-wm-implementation STATIC
         src/ipc_connection_manager.cpp
         src/auto_restarting_launcher.cpp
         src/error_reporter_controller.cpp
+        src/debug_overlay_controller.cpp
         src/workspace_observer.cpp
         src/workspace.cpp
         src/leaf_container.cpp
@@ -373,4 +375,8 @@ add_subdirectory(miraclemsg/)
 
 if (BUILD_ERROR_REPORTER)
   add_subdirectory(error-reporter/)
+endif()
+
+if (BUILD_DEBUG_OVERLAY)
+  add_subdirectory(debug-overlay/)
 endif()

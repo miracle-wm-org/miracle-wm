@@ -773,6 +773,13 @@ void read_wm_clients(YAML::Node const& node, ParsingContext& context)
             return;
         wm_clients.error_reporter = error_reporter;
     }
+    if (node["debug_overlay"])
+    {
+        std::string debug_overlay;
+        if (!try_parse_value(node["debug_overlay"], debug_overlay, context))
+            return;
+        wm_clients.debug_overlay = debug_overlay;
+    }
 
     context.result.config.wm_clients = wm_clients;
 }

@@ -91,6 +91,7 @@ nav:
     - ipc/send_tick.md
     - ipc/sync.md
     - ipc/get_binding_state.md
+    - ipc/get_debug_state.md
     - Commands:
       - ipc/commands/exec.md
       - ipc/commands/split.md
@@ -105,6 +106,7 @@ nav:
       - ipc/commands/rename.md
       - ipc/commands/gaps.md
       - ipc/commands/scratchpad.md
+      - ipc/commands/debug.md
       - ipc/commands/nop.md
     - Events:
       - ipc/events/workspace.md

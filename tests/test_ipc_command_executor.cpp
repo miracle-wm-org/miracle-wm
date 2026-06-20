@@ -28,7 +28,7 @@ class IpcCommandExecutorTest : public Test
 {
 public:
     IpcCommandExecutorTest() :
-        executor(controller, launcher)
+        executor(controller, launcher, nullptr)
     {
     }
 

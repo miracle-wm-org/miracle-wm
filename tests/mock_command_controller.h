@@ -110,6 +110,7 @@ namespace test
         MOCK_METHOD(nlohmann::json, workspaces_json, (), (const, override));
         MOCK_METHOD(nlohmann::json, workspace_to_json, (uint32_t), (const, override));
         MOCK_METHOD(nlohmann::json, mode_to_json, (), (const, override));
+        MOCK_METHOD(nlohmann::json, debug_state_to_json, (), (const, override));
     };
 }
 }

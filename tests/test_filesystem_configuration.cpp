@@ -879,3 +879,22 @@ TEST_F(FilesystemConfigurationTest, CanReadWmClientsErrorReporter)
     FilesystemConfiguration config(registrar, path, true);
     EXPECT_EQ(config.get_error_reporter_client(), "disabled");
 }
+
+TEST_F(FilesystemConfigurationTest, DebugOverlayDefaultsToDefault)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_debug_overlay_client(), "default");
+}
+
+TEST_F(FilesystemConfigurationTest, CanReadWmClientsDebugOverlay)
+{
+    YAML::Node wm_clients_node;
+    wm_clients_node["debug_overlay"] = "disabled";
+
+    YAML::Node root;
+    root["wm_clients"] = wm_clients_node;
+    write_yaml_node(root);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.get_debug_overlay_client(), "disabled");
+}
