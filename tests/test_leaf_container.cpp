@@ -167,7 +167,7 @@ TEST_F(LeafContainerTest, IfModifyingWindowToFullScreenThenNoclipIsCalled)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, noclip(testing::_));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 TEST_F(LeafContainerTest, IfModifyingWindowToRestoredThenClipIsCalled)
@@ -175,7 +175,7 @@ TEST_F(LeafContainerTest, IfModifyingWindowToRestoredThenClipIsCalled)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_restored;
     EXPECT_CALL(*window_controller, clip(testing::_, testing::_));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 namespace
@@ -200,13 +200,39 @@ TEST_P(LeafContainerMaximizedTest, CannotMaximizeWindowInHandleModify)
     spec.state() = state;
 
     EXPECT_CALL(*window_controller, modify(window, testing::Truly(has_restored_state)));
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     LeafContainerMaximizedTest,
     LeafContainerMaximizedTest,
     ::testing::Values(mir_window_state_maximized, mir_window_state_vertmaximized, mir_window_state_horizmaximized, mir_window_state_minimized, mir_window_state_hidden));
+
+TEST_F(LeafContainerTest, HandleModifyWhileHiddenDefersStateUntilShown)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+
+    // While the workspace is hidden, no live state change (hence no clip/noclip) happens now.
+    EXPECT_CALL(*window_controller, change_state(testing::_, testing::_)).Times(0);
+    EXPECT_CALL(*window_controller, noclip(testing::_)).Times(0);
+    leaf_container->handle_modify(spec, true);
+
+    // The deferred state is applied via the restore mechanism when the container is shown.
+    EXPECT_CALL(*window_controller, show(window, testing::Field(&RestoreResult::state, mir_window_state_fullscreen))).Times(1);
+    leaf_container->show();
+}
+
+TEST_F(LeafContainerTest, HandleModifyWhileHiddenSanitizesMaximizeToRestored)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_maximized;
+    leaf_container->handle_modify(spec, true);
+
+    // Only fullscreen is honoured for tiled windows; a maximize request defers as restored.
+    EXPECT_CALL(*window_controller, show(window, testing::Field(&RestoreResult::state, mir_window_state_restored))).Times(1);
+    leaf_container->show();
+}
 
 TEST_F(LeafContainerTest, ShowingContainerCausesRaise)
 {
@@ -517,7 +543,7 @@ TEST_F(LeafContainerTest, HandleModifyChangeStateToFullscreenTriggersObserver)
 
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
-    leaf_container->handle_modify(spec);
+    leaf_container->handle_modify(spec, false);
 }
 
 TEST_F(LeafContainerTest, SetStateToFullscreenTriggersObserver)

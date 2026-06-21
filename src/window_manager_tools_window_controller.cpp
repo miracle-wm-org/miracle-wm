@@ -329,12 +329,6 @@ RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& wind
         .position = window.top_left()
     };
     move_to_offscreen_workspace(window);
-    // HACK: Move the window far offscreen to work around an X11 bug where windows
-    // assigned to the offscreen workspace may still be visible. This may be
-    // resolved in a future Mir release.
-    miral::WindowSpecification spec;
-    spec.top_left() = geom::Point { 1000000, 1000000 };
-    tools.modify_window(window, spec);
     change_state(window, mir_window_state_hidden);
     return result;
 }

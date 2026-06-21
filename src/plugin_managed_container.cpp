@@ -189,7 +189,7 @@ void PluginManagedContainer::handle_ready()
     window_controller->select_active_window(w);
 }
 
-void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification)
+void PluginManagedContainer::handle_modify(miral::WindowSpecification const& specification, bool hidden)
 {
     auto const w = window_sync.lock()->window_;
     auto mods = specification;
@@ -201,12 +201,26 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
             || new_state == mir_window_state_vertmaximized
             || new_state == mir_window_state_fullscreen;
         bool const allowed = window_sync.lock()->resizable_ && window_sync.lock()->movable_;
-        if (is_resize_state && !allowed)
-            window_controller->change_state(w, mir_window_state_restored);
+        auto const resolved_state = (is_resize_state && !allowed)
+            ? mir_window_state_restored
+            : new_state;
+        if (hidden)
+        {
+            // This container's workspace is not being rendered. Defer the state change
+            // until the container is shown again (via restore_result) so the workspace
+            // stays hidden; non-state modifications below are still applied immediately.
+            auto s = sync.lock();
+            if (s->restore_result)
+                s->restore_result->state = resolved_state;
+            else
+                s->restore_result = RestoreResult { resolved_state, w.top_left() };
+        }
         else
-            window_controller->change_state(w, new_state);
+        {
+            window_controller->change_state(w, resolved_state);
+            constrain();
+        }
         mods.state().consume();
-        constrain();
     }
     window_controller->modify(w, mods);
 }

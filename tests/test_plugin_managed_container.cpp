@@ -179,7 +179,7 @@ TEST_F(PluginManagedContainerTest, HandleModifyBlocksFullscreenWhenNotResizable)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
-    container_not_resizable->handle_modify(spec);
+    container_not_resizable->handle_modify(spec, false);
 }
 
 TEST_F(PluginManagedContainerTest, HandleModifyBlocksFullscreenWhenNotMovable)
@@ -187,7 +187,7 @@ TEST_F(PluginManagedContainerTest, HandleModifyBlocksFullscreenWhenNotMovable)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
-    container_not_movable->handle_modify(spec);
+    container_not_movable->handle_modify(spec, false);
 }
 
 TEST_F(PluginManagedContainerTest, HandleModifyAllowsFullscreenWhenResizableAndMovable)
@@ -195,7 +195,7 @@ TEST_F(PluginManagedContainerTest, HandleModifyAllowsFullscreenWhenResizableAndM
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_fullscreen)).Times(1);
-    container_resizable_and_movable->handle_modify(spec);
+    container_resizable_and_movable->handle_modify(spec, false);
 }
 
 TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotResizable)
@@ -203,7 +203,7 @@ TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotResizable)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_maximized;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
-    container_not_resizable->handle_modify(spec);
+    container_not_resizable->handle_modify(spec, false);
 }
 
 TEST_F(PluginManagedContainerTest, HandleModifyAllowsMaximizeWhenResizableAndMovable)
@@ -211,7 +211,7 @@ TEST_F(PluginManagedContainerTest, HandleModifyAllowsMaximizeWhenResizableAndMov
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_maximized;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_maximized)).Times(1);
-    container_resizable_and_movable->handle_modify(spec);
+    container_resizable_and_movable->handle_modify(spec, false);
 }
 
 TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotMovable)
@@ -219,7 +219,21 @@ TEST_F(PluginManagedContainerTest, HandleModifyBlocksMaximizeWhenNotMovable)
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_maximized;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_restored)).Times(1);
-    container_not_movable->handle_modify(spec);
+    container_not_movable->handle_modify(spec, false);
+}
+
+TEST_F(PluginManagedContainerTest, HandleModifyWhileHiddenDefersStateUntilShown)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+
+    // While hidden, no live state change is applied now...
+    EXPECT_CALL(*window_controller, change_state(_, _)).Times(0);
+    container_resizable_and_movable->handle_modify(spec, true);
+
+    // ...the deferred state is applied when the container is next shown.
+    EXPECT_CALL(*window_controller, show(window, Field(&RestoreResult::state, mir_window_state_fullscreen))).Times(1);
+    container_resizable_and_movable->show();
 }
 
 // ---- to_json ----

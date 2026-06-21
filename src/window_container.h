@@ -41,7 +41,15 @@ public:
     WindowContainer(uint64_t id, std::shared_ptr<RenderDataManager> const& rdm, std::shared_ptr<WindowController> const& window_controller, bool enable_render_data = true);
     ~WindowContainer() override;
     virtual void handle_ready() = 0;
-    virtual void handle_modify(miral::WindowSpecification const&) = 0;
+
+    /// Handle a client-requested modification of this container's window.
+    ///
+    /// \param hidden true when this container's workspace is not currently
+    ///        rendered (a background workspace or a hidden scratchpad). When
+    ///        hidden, a requested window-state change must be deferred until the
+    ///        container is next shown, so its workspace is not revealed
+    ///        prematurely. Non-state modifications are still applied immediately.
+    virtual void handle_modify(miral::WindowSpecification const&, bool hidden) = 0;
     virtual void handle_request_move(MirInputEvent const* input_event) = 0;
     virtual void on_open();
     virtual bool needs_outline() const;

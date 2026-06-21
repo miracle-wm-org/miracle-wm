@@ -273,7 +273,7 @@ void LeafContainer::handle_ready()
     }
 }
 
-void LeafContainer::handle_modify(miral::WindowSpecification const& modifications)
+void LeafContainer::handle_modify(miral::WindowSpecification const& modifications, bool hidden)
 {
     /// Note: This request comes from the client, so we may accept or ignore whatever
     /// it is that we find here.
@@ -291,37 +291,52 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
         case mir_window_state_horizmaximized:
         case mir_window_state_vertmaximized:
         case mir_window_state_minimized:
-        case mir_window_state_hidden: // Hidden window requests form the client are NOT respected.
+        case mir_window_state_hidden: // Hidden window requests from the client are NOT respected.
             mods.state() = mir_window_state_restored;
             break;
         default:
             break;
         }
 
-        cur_state = mods.state().value();
-        mods.depth_layer() = get_depth_layer(
-            mods.state().value() == mir_window_state_fullscreen);
-
-        if (info.state() != mods.state().value() && mods.state().value() == mir_window_state_restored)
+        if (hidden)
         {
-            /// If the next state if restored, set the area and depth layer.
-            mods.top_left() = visible_area.top_left;
-            mods.size() = visible_area.size;
+            // This container's workspace is not being rendered. Defer the state change
+            // until the container is shown again (via restore_result) so the workspace
+            // stays hidden; non-state modifications below are still applied immediately.
+            auto s = sync.lock();
+            if (s->restore_result)
+                s->restore_result->state = mods.state().value();
+            else
+                s->restore_result = RestoreResult { mods.state().value(), visible_area.top_left };
+            mods.state().consume();
         }
-
-        if (cur_state == mir_window_state_fullscreen
-            || window_controller->get_state(w) == mir_window_state_fullscreen)
-        {
-            for_each_observer([this](ContainerListener* observer)
-            {
-                observer->on_container_fullscreen(*this);
-            });
-        }
-
-        if (cur_state == mir_window_state_fullscreen)
-            window_controller->noclip(w);
         else
-            window_controller->clip(w, visible_area);
+        {
+            cur_state = mods.state().value();
+            mods.depth_layer() = get_depth_layer(
+                mods.state().value() == mir_window_state_fullscreen);
+
+            if (info.state() != mods.state().value() && mods.state().value() == mir_window_state_restored)
+            {
+                /// If the next state if restored, set the area and depth layer.
+                mods.top_left() = visible_area.top_left;
+                mods.size() = visible_area.size;
+            }
+
+            if (cur_state == mir_window_state_fullscreen
+                || window_controller->get_state(w) == mir_window_state_fullscreen)
+            {
+                for_each_observer([this](ContainerListener* observer)
+                {
+                    observer->on_container_fullscreen(*this);
+                });
+            }
+
+            if (cur_state == mir_window_state_fullscreen)
+                window_controller->noclip(w);
+            else
+                window_controller->clip(w, visible_area);
+        }
     }
 
     if (cur_state == mir_window_state_restored)

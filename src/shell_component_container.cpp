@@ -106,8 +106,10 @@ void ShellComponentContainer::handle_ready()
         window_controller->select_active_window(window_);
 }
 
-void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification)
+void ShellComponentContainer::handle_modify(miral::WindowSpecification const& specification, bool /*hidden*/)
 {
+    // Shell components are output-level and are never on a hidden workspace, so there
+    // is nothing to defer.
     auto const window_ = window_sync.lock()->window_;
     window_controller->modify(window_, specification);
 }

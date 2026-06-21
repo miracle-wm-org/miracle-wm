@@ -886,23 +886,23 @@ void Policy::handle_modify_window(
         return;
     }
 
-    auto const workspace = container->get_workspace();
-    if (workspace)
+    // A container is "hidden" when it is genuinely not being rendered: either its
+    // workspace is not the active workspace on the workspace's OWN output (note: a
+    // workspace active on a non-focused output is still rendered), or it is a hidden
+    // scratchpad window. When hidden, the container defers any requested state change
+    // until it is shown again; all other modifications are always applied.
+    bool hidden = false;
+    if (auto const workspace = container->get_workspace())
     {
-        auto focused_output = output_manager->focused();
-        if (!focused_output)
-        {
-            mir::log_error("Policy::handle_modify_window: focused_output unavailable");
-            return;
-        }
-
-        if (workspace != focused_output->active())
-            return;
+        auto const output = workspace->get_output();
+        hidden = output && output->active().get() != workspace.get();
     }
     else if (scratchpad_->contains(container) && !scratchpad_->is_showing(container))
-        return;
+    {
+        hidden = true;
+    }
 
-    container->handle_modify(modifications);
+    container->handle_modify(modifications, hidden);
 }
 
 void Policy::handle_raise_window(miral::WindowInfo& window_info)

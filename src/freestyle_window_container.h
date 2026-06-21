@@ -54,7 +54,7 @@ public:
     size_t get_min_height() const override;
     size_t get_min_width() const override;
     void handle_ready() override;
-    void handle_modify(miral::WindowSpecification const&) override;
+    void handle_modify(miral::WindowSpecification const&, bool hidden) override;
     void handle_request_move(MirInputEvent const* input_event) override;
     void handle_raise() override;
     void on_focus_gained() override;
