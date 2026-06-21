@@ -184,7 +184,21 @@ TEST_F(FreestyleWindowContainerTest, HandleModifyWithStateChangeCallsChangeState
     miral::WindowSpecification spec;
     spec.state() = mir_window_state_fullscreen;
     EXPECT_CALL(*window_controller, change_state(window, mir_window_state_fullscreen)).Times(1);
-    container_with_border->handle_modify(spec);
+    container_with_border->handle_modify(spec, false);
+}
+
+TEST_F(FreestyleWindowContainerTest, HandleModifyWhileHiddenDefersStateUntilShown)
+{
+    miral::WindowSpecification spec;
+    spec.state() = mir_window_state_fullscreen;
+
+    // While the workspace is hidden the state must NOT be applied to the live window...
+    EXPECT_CALL(*window_controller, change_state(_, _)).Times(0);
+    container_with_border->handle_modify(spec, true);
+
+    // ...it is applied via the restore mechanism when the container is next shown.
+    EXPECT_CALL(*window_controller, show(window, Field(&RestoreResult::state, mir_window_state_fullscreen))).Times(1);
+    container_with_border->show();
 }
 
 // ---- workspace ----

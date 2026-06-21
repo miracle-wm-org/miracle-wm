@@ -178,13 +178,28 @@ void FreestyleWindowContainer::handle_ready()
     window_controller->select_active_window(window_sync.lock()->window_);
 }
 
-void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& specification)
+void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& specification, bool hidden)
 {
     auto const w = window_sync.lock()->window_;
     auto mods = specification;
     if (mods.state().is_set())
     {
-        window_controller->change_state(w, mods.state().value());
+        if (hidden)
+        {
+            // This container's workspace is not being rendered. Defer the state change
+            // until the container is shown again (via restore_result) so the workspace
+            // stays hidden; non-state modifications below are still applied immediately.
+            auto s = sync.lock();
+            if (s->restore_result)
+                s->restore_result->state = mods.state().value();
+            else
+                s->restore_result = RestoreResult { mods.state().value(), w.top_left() };
+            mods.state().consume();
+        }
+        else
+        {
+            window_controller->change_state(w, mods.state().value());
+        }
     }
     window_controller->modify(w, mods);
 }

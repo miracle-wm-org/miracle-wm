@@ -46,7 +46,7 @@ namespace test
         MOCK_METHOD(size_t, get_min_height, (), (const, override));
         MOCK_METHOD(size_t, get_min_width, (), (const, override));
         MOCK_METHOD(void, handle_ready, (), (override));
-        MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&), (override));
+        MOCK_METHOD(void, handle_modify, (miral::WindowSpecification const&, bool), (override));
         MOCK_METHOD(void, handle_request_move, (MirInputEvent const*), (override));
         MOCK_METHOD(void, handle_raise, (), (override));
         MOCK_METHOD(bool, resize, (Direction, int), (override));
