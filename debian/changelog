@@ -1,4 +1,4 @@
-miracle-wm (0.9.1-local) UNRELEASED; urgency=medium
+miracle-wm (0.10.0-local) UNRELEASED; urgency=medium
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -65,8 +65,14 @@ miracle-wm (0.9.1-local) UNRELEASED; urgency=medium
   * * task: update CI to 26.04 (#869)
   * * feature: implement e2e tests with screenshots (#868)
   * * task: bump version to 0.9.1
+  * Release version 0.10.0
+  * Recent changes:
+  * * task: bump version to 0.10.0
+  * * task: bump miracle-plugin-rs to 0.1.0
+  * * bugfix: fix long-standing bugfix where window state was not being
+    propagated when a window was not on the focused workspace (#923)
 
- -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Mon, 27 Apr 2026 07:18:21 -0400
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Mon, 22 Jun 2026 07:25:36 -0400
 
 miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
   * Release version 0.8.2
