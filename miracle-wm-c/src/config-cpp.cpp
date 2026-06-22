@@ -286,12 +286,15 @@ T try_parse_string_to_optional_value(
 }
 
 template <typename T>
-T try_parse_string_to_optional_value(YAML::Node const& root, const char* key, std::function<T(std::string const&, ParsingContext& context)> const& parse, ParsingContext& context)
+T try_parse_string_to_optional_value(YAML::Node const& root, const char* key, std::function<T(std::string const&, ParsingContext& context)> const& parse, ParsingContext& context, bool optional = false)
 {
     if (!root[key])
     {
-        context.builder << "Missing key in value: " << key;
-        create_error(root, context);
+        if (!optional)
+        {
+            context.builder << "Missing key in value: " << key;
+            create_error(root, context);
+        }
         return std::nullopt;
     }
 
@@ -977,7 +980,8 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
         node,
         "handedness",
         from_string_handedness,
-        context);
+        context,
+        true);
     mouse_configuration.handedness(handedness);
 
     double vscroll_speed;
@@ -999,7 +1003,8 @@ void read_mouse(YAML::Node const& node, ParsingContext& context)
         node,
         "acceleration",
         from_string_acceleration,
-        context);
+        context,
+        true);
     mouse_configuration.acceleration(acceleration);
 
     context.result.config.mouse_configuration = mouse_configuration;
@@ -1033,7 +1038,8 @@ void read_touchpad(YAML::Node const& node, ParsingContext& context)
         node,
         "click_mode",
         from_string_touchpad_click_mode,
-        context);
+        context,
+        true);
     if (click_mode.has_value())
         touchpad_config.click_mode = click_mode.value();
 
@@ -1041,7 +1047,8 @@ void read_touchpad(YAML::Node const& node, ParsingContext& context)
         node,
         "scroll_mode",
         from_string_touchpad_scroll_mode,
-        context);
+        context,
+        true);
     if (scroll_mode.has_value())
         touchpad_config.scroll_mode = scroll_mode.value();
 
@@ -1146,7 +1153,7 @@ void read_cursor(YAML::Node const& node, ParsingContext& context)
 {
     miracle::CursorConfiguration cursor;
     try_parse_value(node, "scale", cursor.scale, context, true);
-    if (auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context))
+    if (auto mode = try_parse_string_to_optional_value<std::optional<miracle::CursorFocusMode>>(node, "focus_mode", from_string_cursor_focus_mode, context, true))
         cursor.focus_mode = mode.value();
 
     std::string theme;
