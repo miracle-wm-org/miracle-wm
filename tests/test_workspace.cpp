@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "compositor_state.h"
 #include "leaf_container.h"
 #include "mock_container.h"
