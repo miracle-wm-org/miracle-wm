@@ -325,8 +325,7 @@ void WindowManagerToolsWindowController::invoke_under_lock(std::function<void()>
 RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& window)
 {
     RestoreResult result {
-        .state = get_state(window),
-        .position = window.top_left()
+        .state = get_state(window)
     };
     move_to_offscreen_workspace(window);
     change_state(window, mir_window_state_hidden);
@@ -336,9 +335,6 @@ RestoreResult WindowManagerToolsWindowController::hide(miral::Window const& wind
 void WindowManagerToolsWindowController::show(miral::Window const& window, RestoreResult const& result)
 {
     move_to_onscreen_workspace(window);
-    miral::WindowSpecification spec;
-    spec.top_left() = result.position;
-    tools.modify_window(window, spec);
     auto const restore_state = result.state == mir_window_state_hidden
         ? mir_window_state_restored
         : result.state;

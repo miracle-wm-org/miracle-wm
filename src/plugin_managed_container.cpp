@@ -70,8 +70,6 @@ void PluginManagedContainer::show()
     sync.lock()->restore_result.reset();
     if (restore)
         window_controller->show(w, restore.value());
-    else
-        window_controller->show(w, { mir_window_state_restored, w.top_left() });
 }
 
 void PluginManagedContainer::hide()
@@ -213,7 +211,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
             if (s->restore_result)
                 s->restore_result->state = resolved_state;
             else
-                s->restore_result = RestoreResult { resolved_state, w.top_left() };
+                s->restore_result = RestoreResult { resolved_state };
         }
         else
         {

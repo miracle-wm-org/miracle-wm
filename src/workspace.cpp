@@ -219,6 +219,11 @@ void Workspace::show(geom::Point const& origin)
 {
     if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
+        // No animation will run to settle these to their final shown values,
+        // so reset them now. Otherwise stale state from a prior animated hide
+        // (alpha_=0, offscreen transform) keeps the windows invisible.
+        transform(glm::mat4(1.f));
+        alpha(1.f);
         on_animation_start(false);
         return;
     }
