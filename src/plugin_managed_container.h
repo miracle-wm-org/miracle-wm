@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container_effect.h"
 #include "render_data_manager.h"
-#include "synchronized_recursive.h"
 #include "window_container.h"
 #include "window_controller.h"
 
@@ -112,24 +111,19 @@ public:
     std::optional<PluginHandle> plugin_handle() const override;
 
 private:
-    struct State
-    {
-        std::optional<RestoreResult> restore_result;
-        std::optional<MirWindowState> next_state;
-        std::optional<geom::Rectangle> pre_fullscreen_area;
-        std::optional<MirDepthLayer> next_depth_layer;
-        std::weak_ptr<AbstractWorkspace> workspace_;
-        uint32_t handle_ = 0;
-        bool is_focused_ = false;
-    };
-
     void restore_from_maximize();
 
     PluginHandle plugin_handle_;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<Config> config;
-    SynchronisedRecursive<State> sync;
+    std::optional<RestoreResult> restore_result_;
+    std::optional<MirWindowState> next_state_;
+    std::optional<geom::Rectangle> pre_fullscreen_area_;
+    std::optional<MirDepthLayer> next_depth_layer_;
+    std::weak_ptr<AbstractWorkspace> workspace_;
+    uint32_t handle_ = 0;
+    bool is_focused_ = false;
 };
 }
 

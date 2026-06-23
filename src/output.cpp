@@ -57,11 +57,9 @@ Output::Output(
     window_controller { window_controller },
     animator { animator },
     plugin_manager { plugin_manager },
-    sync(State {
-        id,
-        std::move(name),
-        area,
-    })
+    id_ { id },
+    name_ { std::move(name) },
+    area_ { area }
 {
 }
 
@@ -69,11 +67,10 @@ Output::~Output() = default;
 
 std::shared_ptr<AbstractWorkspace> Output::active() const
 {
-    auto const lock = sync.lock();
-    if (lock->active_workspace.expired())
+    if (active_workspace_.expired())
         return nullptr;
 
-    return lock->active_workspace.lock();
+    return active_workspace_.lock();
 }
 
 std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
@@ -95,11 +92,10 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
     // Mir returned a window on an inactive workspace. Fall back to a geometry scan
     // over the active workspace's windows so that floating windows on other workspaces
     // cannot create unclickable dead zones.
-    auto const lock = sync.lock();
-    if (lock->active_workspace.expired())
+    if (active_workspace_.expired())
         return nullptr;
 
-    auto const active_ws = lock->active_workspace.lock().get();
+    auto const active_ws = active_workspace_.lock().get();
     std::shared_ptr<WindowContainer> result = nullptr;
     active_ws->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
@@ -120,14 +116,13 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
 
 std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
 {
-    auto const lock = sync.lock();
-    if (lock->active_workspace.expired())
+    if (active_workspace_.expired())
     {
         mir::log_error("intersect_leaf: there is no active workspace");
         return nullptr;
     }
 
-    auto const workspace = lock->active_workspace.lock().get();
+    auto const workspace = active_workspace_.lock().get();
     std::shared_ptr<WindowContainer> result = nullptr;
     workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
     {
@@ -157,8 +152,7 @@ void Output::delete_container(std::shared_ptr<Container> const& container)
 
 void Output::insert_workspace_sorted(std::shared_ptr<AbstractWorkspace> const& new_workspace)
 {
-    auto const lock = sync.lock();
-    insert_sorted(lock->workspaces, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
+    insert_sorted(workspaces_, new_workspace, [](std::shared_ptr<AbstractWorkspace> const& a, std::shared_ptr<AbstractWorkspace> const& b)
     {
         if (a->num() && b->num())
             return a->num().value() < b->num().value();
@@ -191,12 +185,11 @@ void Output::advise_new_workspace(WorkspaceCreationData const&& data)
 
 void Output::advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id)
 {
-    auto const lock = sync.lock();
-    for (auto it = lock->workspaces.begin(); it != lock->workspaces.end(); it++)
+    for (auto it = workspaces_.begin(); it != workspaces_.end(); it++)
     {
         if (it->get()->id() == id)
         {
-            lock->workspaces.erase(it);
+            workspaces_.erase(it);
             return;
         }
     }
@@ -234,7 +227,7 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWork
     }
 
     // Next, move the workspace to this output and remove it focus it
-    mir::log_info("Moving workspace %d to output %d", workspace->id(), sync.lock()->id_);
+    mir::log_info("Moving workspace %d to output %d", workspace->id(), id_);
     insert_workspace_sorted(to_add);
     to_add->set_output(shared_from_this());
     workspace_manager.request_focus(to_add->id());
@@ -249,17 +242,16 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // When the workspace becomes active, we try to move this output to the new
     // workspace transform, which may involve an animation.
     mir::log_info("advise_workspace_active: %d", id);
-    auto const lock = sync.lock();
 
     // First, we find where we're coming from and where we're going to.
     std::shared_ptr<AbstractWorkspace> from = nullptr;
     std::shared_ptr<AbstractWorkspace> to = nullptr;
     size_t from_index = 0;
     size_t to_index = 0;
-    for (size_t i = 0; i < lock->workspaces.size(); i++)
+    for (size_t i = 0; i < workspaces_.size(); i++)
     {
-        auto const& workspace = lock->workspaces[i];
-        if (!lock->active_workspace.expired() && workspace == lock->active_workspace.lock())
+        auto const& workspace = workspaces_[i];
+        if (!active_workspace_.expired() && workspace == active_workspace_.lock())
         {
             from = workspace;
             from_index = i;
@@ -288,15 +280,15 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // If we're not coming from anywhere, then we can immediately jump to our destination.
     if (!from)
     {
-        lock->active_workspace = to;
+        active_workspace_ = to;
         to->show(geom::Point(0, 0));
         return true;
     }
 
     // It is very important that [active_workspace] be modified before notifications are sent out.
-    lock->active_workspace = to;
+    active_workspace_ = to;
 
-    auto const area = lock->area;
+    auto const area = area_;
     auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
     auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
     to->show(to_start);
@@ -311,12 +303,11 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
 
 void Output::advise_application_zone_create(miral::Zone const& application_zone)
 {
-    auto const lock = sync.lock();
-    auto const area = lock->area;
+    auto const area = area_;
     if (application_zone.extents().contains(area))
     {
         application_zone_list.push_back(application_zone);
-        for (auto& workspace : lock->workspaces)
+        for (auto& workspace : workspaces_)
             workspace->recalculate_area();
     }
 }
@@ -327,7 +318,7 @@ void Output::advise_application_zone_update(miral::Zone const& updated, miral::Z
         if (zone == original)
         {
             zone = updated;
-            for (auto const& workspace : sync.lock()->workspaces)
+            for (auto const& workspace : workspaces_)
                 workspace->recalculate_area();
             break;
         }
@@ -340,22 +331,20 @@ void Output::advise_application_zone_delete(miral::Zone const& application_zone)
 
     if (application_zone_list.size() != original_size)
     {
-        for (auto const& workspace : sync.lock()->workspaces)
+        for (auto const& workspace : workspaces_)
             workspace->recalculate_area();
     }
 }
 
 bool Output::point_is_in_output(int x, int y)
 {
-    auto const area = sync.lock()->area;
-    return area.contains(geom::Point(x, y));
+    return area_.contains(geom::Point(x, y));
 }
 
 void Output::update_area(geom::Rectangle const& new_area)
 {
-    auto const lock = sync.lock();
-    lock->area = new_area;
-    for (auto const& workspace : lock->workspaces)
+    area_ = new_area;
+    for (auto const& workspace : workspaces_)
         workspace->recalculate_area();
 }
 
@@ -366,7 +355,7 @@ void Output::graft(std::shared_ptr<Container> const& container)
 
 [[nodiscard]] AbstractWorkspace const* Output::workspace(uint32_t id) const
 {
-    for (auto const& workspace : sync.lock()->workspaces)
+    for (auto const& workspace : workspaces_)
     {
         if (workspace->id() == id)
             return workspace.get();
@@ -377,38 +366,35 @@ void Output::graft(std::shared_ptr<Container> const& container)
 
 glm::mat4 Output::get_transform() const
 {
-    auto const transform = sync.lock()->transform;
-    return transform;
+    return transform_;
 }
 
 void Output::set_transform(glm::mat4 const& in)
 {
-    sync.lock()->transform = in;
+    transform_ = in;
 }
 
 void Output::set_info(int next_id, std::string next_name)
 {
-    auto const lock = sync.lock();
-    lock->id_ = next_id;
-    lock->name_ = std::move(next_name);
+    id_ = next_id;
+    name_ = std::move(next_name);
 }
 
 void Output::set_defunct()
 {
-    sync.lock()->is_defunct_ = true;
+    is_defunct_ = true;
 }
 
 void Output::unset_defunct()
 {
-    sync.lock()->is_defunct_ = false;
+    is_defunct_ = false;
 }
 
 nlohmann::json Output::to_json(bool is_focused) const
 {
-    auto const lock = sync.lock();
     auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
-    for (auto const& workspace : lock->workspaces)
+    for (auto const& workspace : workspaces_)
     {
         if (workspace)
             nodes.push_back(workspace->to_json(is_focused));
@@ -455,7 +441,7 @@ nlohmann::json Output::to_json(bool is_focused) const
 
     return {
         { "id",                   reinterpret_cast<std::uintptr_t>(this)        },
-        { "name",                 lock->name_                                   },
+        { "name",                 name_                                         },
         { "active",               active                                        },
         { "dpms",                 output_config.power_mode == mir_power_mode_on },
         { "scale",                output_config.scale                           },
@@ -492,10 +478,10 @@ nlohmann::json Output::to_json(bool is_focused) const
                           { "height", 0 },
                       }                                    },
         { "rect",                 {
-                      { "x", lock->area.top_left.x.as_int() },
-                      { "y", lock->area.top_left.y.as_int() },
-                      { "width", lock->area.size.width.as_int() },
-                      { "height", lock->area.size.height.as_int() },
+                      { "x", area_.top_left.x.as_int() },
+                      { "y", area_.top_left.y.as_int() },
+                      { "width", area_.size.width.as_int() },
+                      { "height", area_.size.height.as_int() },
                   }                                            },
         { "nodes",                nodes                                         },
         { "modes",                modes_node                                    },
@@ -505,7 +491,6 @@ nlohmann::json Output::to_json(bool is_focused) const
 
 nlohmann::json Output::get_outputs_json(bool) const
 {
-    auto const lock = sync.lock();
     auto active_workspace = active();
     nlohmann::json workspace;
 
@@ -560,7 +545,7 @@ nlohmann::json Output::get_outputs_json(bool) const
     auto const serial = output_config.display_info.serial.value_or("Unknown");
 
     return {
-        { "name",             lock->name_                                   },
+        { "name",             name_                                         },
         { "make",             make                                          },
         { "model",            model                                         },
         { "serial",           serial                                        },
@@ -572,10 +557,10 @@ nlohmann::json Output::get_outputs_json(bool) const
         { "subpixel_hinting", subpixel_hinting                              },
         workspace,
         { "rect",             {
-                      { "x", lock->area.top_left.x.as_int() },
-                      { "y", lock->area.top_left.y.as_int() },
-                      { "width", lock->area.size.width.as_int() },
-                      { "height", lock->area.size.height.as_int() },
+                      { "x", area_.top_left.x.as_int() },
+                      { "y", area_.top_left.y.as_int() },
+                      { "width", area_.size.width.as_int() },
+                      { "height", area_.size.height.as_int() },
                   }                                        },
         { "modes",            modes_node                                    },
         { "current_mode",     current_mode_node                             },

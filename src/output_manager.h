@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "direction.h"
 #include "output_factory_interface.h"
-#include "synchronized_recursive.h"
 
 #include <memory>
 #include <mir/geometry/rectangle.h>
@@ -65,16 +64,11 @@ public:
 
 private:
     std::unique_ptr<OutputFactoryInterface> output_factory;
-    struct State
-    {
-        std::vector<std::shared_ptr<AbstractOutput>> outputs_;
-        std::weak_ptr<AbstractOutput> focused_;
-    };
+    std::vector<std::shared_ptr<AbstractOutput>> outputs_;
+    std::weak_ptr<AbstractOutput> focused_;
 
-    SynchronisedRecursive<State> state;
-
-    bool focus_internal(State& view, int id);
-    bool unfocus_internal(State& view, int id);
+    bool focus_internal(int id);
+    bool unfocus_internal(int id);
 };
 
 }

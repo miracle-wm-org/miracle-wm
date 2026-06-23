@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "container.h"
 #include "container_effect.h"
-#include "synchronized_recursive.h"
 #include <optional>
 
 namespace miracle
@@ -89,8 +88,8 @@ public:
     /// \param window to associate
     void associate_to_window(miral::Window const& window);
 
-    [[nodiscard]] std::optional<miral::Window> window() const override { return window_sync.lock()->window_; }
-    [[nodiscard]] bool has_render_data() const { return window_sync.lock()->render_id.has_value(); }
+    [[nodiscard]] std::optional<miral::Window> window() const override { return window_; }
+    [[nodiscard]] bool has_render_data() const { return render_id_.has_value(); }
 
     /// Push this container's current output area into its render data.
     ///
@@ -134,22 +133,18 @@ public:
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
 
-    struct State
-    {
-        miral::Window window_;
-        bool resizable_ = true;
-        bool movable_ = true;
-        std::optional<uint32_t> render_id;
-        uint32_t animation_handle_;
-        ContainerEffect workspace_effect;
-        ContainerEffect window_effect;
-        ContainerEffect animation_effect;
-    };
-
     void rerender();
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
-    SynchronisedRecursive<State> window_sync;
+
+    miral::Window window_;
+    bool resizable_ = true;
+    bool movable_ = true;
+    std::optional<uint32_t> render_id_;
+    uint32_t animation_handle_;
+    ContainerEffect workspace_effect;
+    ContainerEffect window_effect;
+    ContainerEffect animation_effect;
 
 private:
     bool enable_render_data_ = true;

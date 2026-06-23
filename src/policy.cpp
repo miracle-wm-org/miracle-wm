@@ -168,13 +168,17 @@ public:
 
     void on_config_changed(Config const& config) override
     {
-        // Note: We need to grab the lock because this notification comes from
-        // a different thread.
-        for (auto const& output : policy.output_manager->outputs())
+        // Output/workspace/container state is serialized by the Mir window-manager
+        // lock. This notification can arrive from a non-Mir thread, so take the
+        // lock before walking outputs.
+        policy.window_controller->invoke_under_lock([this]
         {
-            for (auto const& workspace : output->get_workspaces())
-                workspace->recalculate_area();
-        }
+            for (auto const& output : policy.output_manager->outputs())
+            {
+                for (auto const& workspace : output->get_workspaces())
+                    workspace->recalculate_area();
+            }
+        });
 
         if (!has_loaded_once)
         {
