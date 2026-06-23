@@ -307,7 +307,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
             if (s->restore_result)
                 s->restore_result->state = mods.state().value();
             else
-                s->restore_result = RestoreResult { mods.state().value(), visible_area.top_left };
+                s->restore_result = RestoreResult { mods.state().value() };
             mods.state().consume();
         }
         else

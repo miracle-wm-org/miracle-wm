@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "window_controller.h"
 #include "workspace.h"
 #include "workspace_observer.h"
+#include <glm/gtx/transform.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -446,4 +447,21 @@ TEST_F(WorkspaceTest, ToJson_OtherContainerAppearsInFloatingNodes)
     auto const j = workspace->to_json(false);
     EXPECT_EQ(j["floating_nodes"].size(), 1u);
     EXPECT_TRUE(j["nodes"].empty());
+}
+
+TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)
+{
+    create_leaf();
+
+    // Simulate the state a workspace is left in after an animated hide:
+    // fully transparent and translated offscreen.
+    workspace->alpha(0.f);
+    workspace->transform(glm::translate(glm::mat4(1.f), glm::vec3(OUTPUT_WIDTH, 0, 0)));
+
+    // Animations are disabled (StubConfiguration), so this takes the instant
+    // path and must settle alpha/transform to their final shown values.
+    workspace->show(geom::Point(OUTPUT_WIDTH, 0));
+
+    EXPECT_EQ(workspace->alpha(), 1.f);
+    EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
 }
