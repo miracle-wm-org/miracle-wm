@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "layout_scheme.h"
 #include "scratchpad_state.h"
-#include "synchronized_recursive.h"
 #include "window_container.h"
 #include "window_controller.h"
 
@@ -109,26 +108,22 @@ public:
     static MirDepthLayer get_depth_layer(bool is_fullscreen);
 
 private:
-    struct State
-    {
-        std::weak_ptr<AbstractWorkspace> workspace;
-        geom::Rectangle logical_area;
-        std::optional<geom::Rectangle> next_logical_area;
-        bool next_with_animations = true;
-        std::weak_ptr<ParentContainer> parent;
-        std::optional<RestoreResult> restore_result;
-        std::optional<MirWindowState> next_state;
-        std::optional<MirDepthLayer> next_depth_layer;
-        bool is_dragging_ = false;
-        geom::Point dragged_position;
-    };
-
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
-    SynchronisedRecursive<State> sync;
 
-    // Cache for visible area calculation (excluded from sync: requires mutable access in const methods)
+    std::weak_ptr<AbstractWorkspace> workspace_;
+    geom::Rectangle logical_area_;
+    std::optional<geom::Rectangle> next_logical_area_;
+    bool next_with_animations_ = true;
+    std::weak_ptr<ParentContainer> parent_;
+    std::optional<RestoreResult> restore_result_;
+    std::optional<MirWindowState> next_state_;
+    std::optional<MirDepthLayer> next_depth_layer_;
+    bool is_dragging_ = false;
+    geom::Point dragged_position_;
+
+    // Cache for visible area calculation (mutable: requires mutation in const methods)
     mutable std::optional<geom::Rectangle> cached_visible_area;
     mutable bool visible_area_dirty = true;
 

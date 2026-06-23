@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "abstract_output.h"
 #include "display_config.h"
-#include "synchronized_recursive.h"
 
 namespace miracle
 {
@@ -62,12 +61,12 @@ public:
     void unset_defunct() override;
 
     [[nodiscard]] std::shared_ptr<AbstractWorkspace> active() const override;
-    [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> get_workspaces() const override { return sync.lock()->workspaces; }
-    [[nodiscard]] geom::Rectangle const& get_area() const override { return sync.lock()->area; }
+    [[nodiscard]] std::vector<std::shared_ptr<AbstractWorkspace>> get_workspaces() const override { return workspaces_; }
+    [[nodiscard]] geom::Rectangle const& get_area() const override { return area_; }
     [[nodiscard]] std::vector<miral::Zone> const& get_app_zones() const override { return application_zone_list; }
-    [[nodiscard]] std::string const& name() const override { return sync.lock()->name_; }
-    [[nodiscard]] bool is_defunct() const override { return sync.lock()->is_defunct_; }
-    [[nodiscard]] int id() const override { return sync.lock()->id_; }
+    [[nodiscard]] std::string const& name() const override { return name_; }
+    [[nodiscard]] bool is_defunct() const override { return is_defunct_; }
+    [[nodiscard]] int id() const override { return id_; }
     [[nodiscard]] glm::mat4 get_transform() const override;
     [[nodiscard]] AbstractWorkspace const* workspace(uint32_t id) const override;
     [[nodiscard]] nlohmann::json to_json(bool is_focused) const override;
@@ -86,23 +85,18 @@ private:
     std::vector<miral::Zone> application_zone_list;
     std::shared_ptr<PluginManager> plugin_manager;
 
-    struct State
-    {
-        int id_;
-        std::string name_;
-        geom::Rectangle area;
+    int id_;
+    std::string name_;
+    geom::Rectangle area_;
 
-        /// The transform applied to the entire output.
-        glm::mat4 transform = glm::mat4(1.f);
+    /// The transform applied to the entire output.
+    glm::mat4 transform_ = glm::mat4(1.f);
 
-        bool is_defunct_ = false;
+    bool is_defunct_ = false;
 
-        std::weak_ptr<AbstractWorkspace> active_workspace;
+    std::weak_ptr<AbstractWorkspace> active_workspace_;
 
-        std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
-    };
-
-    SynchronisedRecursive<State> sync;
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces_;
 };
 }
 

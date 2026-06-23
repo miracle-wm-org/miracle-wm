@@ -168,8 +168,6 @@ public:
 
     void on_config_changed(Config const& config) override
     {
-        // Note: We need to grab the lock because this notification comes from
-        // a different thread.
         for (auto const& output : policy.output_manager->outputs())
         {
             for (auto const& workspace : output->get_workspaces())

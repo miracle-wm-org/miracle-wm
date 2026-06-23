@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_FREESTYLE_WINDOW_CONTAINER_H
 #define MIRACLE_FREESTYLE_WINDOW_CONTAINER_H
 
-#include "synchronized_recursive.h"
 #include "window_container.h"
 #include "window_controller.h"
 
@@ -101,27 +100,22 @@ public:
     nlohmann::json to_json(bool is_workspace_visible) const override;
 
 private:
-    struct State
-    {
-        std::weak_ptr<AbstractWorkspace> workspace_;
-        std::optional<RestoreResult> restore_result;
-        std::optional<MirWindowState> next_state;
-        std::optional<geom::Rectangle> pre_fullscreen_area;
-        std::optional<MirDepthLayer> next_depth_layer;
-        uint32_t handle_ = 0;
-        bool is_focused_ = false;
-        bool is_dragging_ = false;
-        bool pinned = false;
-        geom::Point dragged_position;
-    };
-
     void restore_from_maximize();
 
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<Config> config;
     bool has_border_;
-    SynchronisedRecursive<State> sync;
+    std::weak_ptr<AbstractWorkspace> workspace_;
+    std::optional<RestoreResult> restore_result_;
+    std::optional<MirWindowState> next_state_;
+    std::optional<geom::Rectangle> pre_fullscreen_area_;
+    std::optional<MirDepthLayer> next_depth_layer_;
+    uint32_t handle_ = 0;
+    bool is_focused_ = false;
+    bool is_dragging_ = false;
+    bool pinned_ = false;
+    geom::Point dragged_position_;
 };
 }
 
