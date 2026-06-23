@@ -278,8 +278,15 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
         return false;
     }
 
+    // If the requested workspace is already active on this output, there is
+    // nothing to do. Re-showing it would walk every container and call show(),
+    // which clobbers state for windows that were never hidden (e.g. unmaximizes
+    // a maximized floating window on cursor cross-output focus change).
+    if (to == from)
+        return true;
+
     // If we're not coming from anywhere, then we can immediately jump to our destination.
-    if (!from || to == from)
+    if (!from)
     {
         lock->active_workspace = to;
         to->show(geom::Point(0, 0));
