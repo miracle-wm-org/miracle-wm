@@ -51,8 +51,6 @@ void FreestyleWindowContainer::show()
     sync.lock()->restore_result.reset();
     if (restore)
         window_controller->show(w, restore.value());
-    else
-        window_controller->show(w, { mir_window_state_restored, w.top_left() });
 }
 
 void FreestyleWindowContainer::hide()
