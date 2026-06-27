@@ -35,10 +35,12 @@ namespace test
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, default_surface, (), (const, override));
         MOCK_METHOD(void, hide, (), (override));
         MOCK_METHOD(void, show, (), (override));
+#ifndef MIR_VERSION_2_29_OR_GREATER
         MOCK_METHOD(void, start_prompt_session, (), (override));
         MOCK_METHOD(void, stop_prompt_session, (), (override));
         MOCK_METHOD(void, suspend_prompt_session, (), (override));
         MOCK_METHOD(void, resume_prompt_session, (), (override));
+#endif
 #ifdef MIR_VERSION_2_24_OR_GREATER
         MOCK_METHOD(std::shared_ptr<mir::scene::Surface>, create_surface,
             (std::shared_ptr<Session> const& session,
