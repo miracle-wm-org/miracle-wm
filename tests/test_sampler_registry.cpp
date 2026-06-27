@@ -109,6 +109,58 @@ TEST_F(SamplerRegistryTest, IdsStayMonotonicAfterRemoval)
     ASSERT_EQ(id1, 6);
 }
 
+TEST_F(SamplerRegistryTest, RegisterGeometryShaderStoresSource)
+{
+    auto const src = std::string("#version 320 es\n// geometry\n");
+    auto id = registry.register_window_geometry_shader(src);
+    ASSERT_EQ(registry.geometry_entries.size(), 1u);
+    ASSERT_EQ(registry.geometry_entries[0].id, id);
+    ASSERT_EQ(registry.geometry_entries[0].source, src);
+}
+
+TEST_F(SamplerRegistryTest, GeometryShaderSourceLookup)
+{
+    auto const src = std::string("#version 320 es\nvoid main() {}\n");
+    auto id = registry.register_window_geometry_shader(src);
+
+    auto found = registry.geometry_shader_source(id);
+    ASSERT_TRUE(found.has_value());
+    ASSERT_EQ(*found, src);
+
+    // An unknown id yields nothing.
+    ASSERT_FALSE(registry.geometry_shader_source(static_cast<uint8_t>(id + 1)).has_value());
+}
+
+TEST_F(SamplerRegistryTest, GeometryAndFragmentShadersShareIdSpace)
+{
+    // Sharing the id counter guarantees a window's fragment shader_id and
+    // geometry_shader_id can never collide.
+    auto frag = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" });
+    auto geom = registry.register_window_geometry_shader("#version 320 es\n");
+    auto frag2 = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(0); }" });
+    ASSERT_EQ(frag, 5);
+    ASSERT_EQ(geom, 6);
+    ASSERT_EQ(frag2, 7);
+}
+
+TEST_F(SamplerRegistryTest, RemoveShadersForPluginRemovesGeometryShaders)
+{
+    auto frag = registry.register_window_shader({ "vec4 sample_to_rgba(vec2 tc) { return vec4(1); }" }, 1u);
+    auto geom = registry.register_window_geometry_shader("#version 320 es\n", 1u);
+    auto geom_other = registry.register_window_geometry_shader("#version 320 es\n", 2u);
+
+    auto removed = registry.remove_shaders_for_plugin(1u);
+
+    ASSERT_EQ(removed.size(), 2u);
+    ASSERT_NE(std::find(removed.begin(), removed.end(), frag), removed.end());
+    ASSERT_NE(std::find(removed.begin(), removed.end(), geom), removed.end());
+    ASSERT_EQ(registry.geometry_entries.size(), 1u);
+    ASSERT_EQ(registry.geometry_entries[0].id, geom_other);
+    // The fragment shader owned by plugin 1 is gone; plugin 2's geometry shader stays.
+    ASSERT_TRUE(registry.entries.empty());
+    ASSERT_TRUE(registry.geometry_shader_source(geom_other).has_value());
+}
+
 TEST_F(SamplerRegistryTest, ScreenShaderIsEmptyByDefault)
 {
     auto state = registry.screen_shader_state();

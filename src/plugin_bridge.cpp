@@ -191,6 +191,11 @@ uint8_t PluginBridge::register_window_shader(std::vector<std::string> passes, st
     return sampler_registry_->register_window_shader(std::move(passes), plugin_handle);
 }
 
+uint8_t PluginBridge::register_window_geometry_shader(std::string source, std::optional<uint32_t> plugin_handle)
+{
+    return sampler_registry_->register_window_geometry_shader(std::move(source), plugin_handle);
+}
+
 int32_t PluginBridge::set_screen_shader(uint32_t plugin_handle, std::optional<std::vector<std::string>> passes)
 {
     sampler_registry_->set_screen_shader(std::move(passes), plugin_handle);
@@ -676,6 +681,23 @@ int32_t PluginBridge::window_set_shader_id(uint64_t window_internal, int32_t sha
         ? std::nullopt
         : std::optional<uint8_t>(static_cast<uint8_t>(shader_id_param));
     container->set_window_shader_id(shader_id);
+    return 0;
+}
+
+int32_t PluginBridge::window_set_geometry_shader_id(uint64_t window_internal, int32_t geometry_shader_id_param)
+{
+    auto it = window_id_map->find(window_internal);
+    if (it == window_id_map->end())
+        return -1;
+
+    auto const container = window_controller->get_window_container(it->second);
+    if (!container)
+        return -1;
+
+    std::optional<uint8_t> geometry_shader_id = (geometry_shader_id_param < 0)
+        ? std::nullopt
+        : std::optional<uint8_t>(static_cast<uint8_t>(geometry_shader_id_param));
+    container->set_window_geometry_shader_id(geometry_shader_id);
     return 0;
 }
 

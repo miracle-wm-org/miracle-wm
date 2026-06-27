@@ -24,10 +24,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "render_data_manager.h"
 
 #include <GLES2/gl2.h>
+#include <chrono>
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
 #include <miral/window_manager_tools.h>
+#include <unordered_map>
 #include <vector>
 
 namespace mir
@@ -200,6 +202,19 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<SamplerRegistry> sampler_registry;
+
+    /// Per-window state used to derive the `u_velocity` uniform fed to geometry
+    /// shaders (e.g. wobbly windows): the window's last screen-space center and the
+    /// time it was sampled. Keyed by RenderData id. Only populated while a window
+    /// has an active geometry shader.
+    struct VelocitySample
+    {
+        float cx = 0.f;
+        float cy = 0.f;
+        double t = 0.0;
+    };
+    mutable std::unordered_map<RenderDataManagerId, VelocitySample> velocity_samples;
+    std::chrono::steady_clock::time_point const start_time = std::chrono::steady_clock::now();
 };
 
 }

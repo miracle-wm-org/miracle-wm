@@ -148,6 +148,18 @@ void miracle::WindowContainer::set_window_shader_id(std::optional<uint8_t> shade
     rerender();
 }
 
+void miracle::WindowContainer::set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id)
+{
+    if (render_id_.has_value())
+    {
+        if (auto const rdm_locked = rdm.lock())
+        {
+            rdm_locked->geometry_shader_id_change(render_id_.value(), geometry_shader_id);
+        }
+    }
+    rerender();
+}
+
 bool miracle::WindowContainer::can_animate()
 {
     return true;

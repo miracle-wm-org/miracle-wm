@@ -117,6 +117,11 @@ unsafe extern "C" {
     /// Returns 0 on success, -1 on error.
     pub fn miracle_window_set_shader_id(window_internal: i64, shader_id: i32) -> i32;
 
+    /// Set the per-window geometry shader applied to a window.
+    /// Pass -1 as `geometry_shader_id` to clear any geometry shader.
+    /// Returns 0 on success, -1 on error.
+    pub fn miracle_window_set_geometry_shader_id(window_internal: i64, geometry_shader_id: i32) -> i32;
+
     /// Request a workspace by optional number and/or name.
     ///
     /// If a workspace with the given number or name already exists, it is returned.
@@ -168,6 +173,18 @@ unsafe extern "C" {
     ///
     /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
     pub fn miracle_register_window_sample_to_rgba(plugin_handle: i32, passes_ptr: i32, num_passes: i32) -> i32;
+
+    /// Register a per-window geometry shader for use in window rendering.
+    ///
+    /// `plugin_handle` is the registering plugin's handle (from
+    /// `miracle_get_plugin_handle()`); the host uses it to remove the shader when
+    /// the plugin unloads.
+    ///
+    /// `source_ptr`/`source_len` point at the UTF-8 GLSL ES 3.20 geometry shader
+    /// source in WASM linear memory (a single shader, not a multi-pass array).
+    ///
+    /// Returns the unique shader ID (a `u8` value ≥ 5) cast to `i32`, or -1 on error.
+    pub fn miracle_register_window_geometry_shader(plugin_handle: i32, source_ptr: i32, source_len: i32) -> i32;
 
     /// Set or clear the full-screen (output) shader.
     ///

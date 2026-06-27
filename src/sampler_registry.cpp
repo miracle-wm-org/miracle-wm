@@ -29,6 +29,27 @@ uint8_t miracle::SamplerRegistry::register_window_shader(
     return next_id;
 }
 
+uint8_t miracle::SamplerRegistry::register_window_geometry_shader(
+    std::string source,
+    std::optional<uint32_t> plugin_handle)
+{
+    std::lock_guard lock { mutex };
+    auto const next_id = id++;
+    geometry_entries.push_back(GeometryEntry { next_id, std::move(source), plugin_handle });
+    return next_id;
+}
+
+std::optional<std::string> miracle::SamplerRegistry::geometry_shader_source(uint8_t id)
+{
+    std::lock_guard lock { mutex };
+    for (auto const& entry : geometry_entries)
+    {
+        if (entry.id == id)
+            return entry.source;
+    }
+    return std::nullopt;
+}
+
 std::vector<uint8_t> miracle::SamplerRegistry::remove_shaders_for_plugin(uint32_t plugin_handle)
 {
     std::lock_guard lock { mutex };
@@ -43,6 +64,17 @@ std::vector<uint8_t> miracle::SamplerRegistry::remove_shaders_for_plugin(uint32_
         return false;
     });
     entries.erase(new_end, entries.end());
+
+    auto const geom_end = std::remove_if(geometry_entries.begin(), geometry_entries.end(), [&](GeometryEntry const& entry)
+    {
+        if (entry.plugin_handle == plugin_handle)
+        {
+            removed.push_back(entry.id);
+            return true;
+        }
+        return false;
+    });
+    geometry_entries.erase(geom_end, geometry_entries.end());
 
     if (screen_shader_plugin_handle == plugin_handle)
     {

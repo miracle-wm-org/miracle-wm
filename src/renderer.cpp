@@ -389,9 +389,11 @@ private:
 
     static CompiledPass compile_pass(GLchar const* src)
     {
-        const GLchar* vertex_src = "attribute vec2 position;\n"
-                                   "attribute vec2 texcoord;\n"
-                                   "varying vec2 v_texcoord;\n"
+        const GLchar* vertex_src = "#version 320 es\n"
+                                   "precision highp float;\n"
+                                   "in vec2 position;\n"
+                                   "in vec2 texcoord;\n"
+                                   "out vec2 v_texcoord;\n"
                                    "void main() {\n"
                                    "   gl_Position = vec4(position, 0, 1); \n"
                                    "   v_texcoord = texcoord;\n"
@@ -401,9 +403,11 @@ private:
 
         std::stringstream fragment_src;
         fragment_src
-            << "#ifdef GL_ES\n"
+            // `#version` must lead; `#define texture2D texture` keeps GLSL ES 1.00
+            // style output-filter snippets compiling under GLSL ES 3.20.
+            << "#version 320 es\n"
+               "#define texture2D texture\n"
                "precision mediump float;\n"
-               "#endif\n"
             << "\n"
             // The same shader contract as window shaders: `tex` is this pass's
             // input (pass 0 = original screen), `tex_source` is always the
@@ -419,9 +423,10 @@ private:
             << "\n"
             << src
             << "\n"
-            << "varying vec2 v_texcoord;\n"
+            << "in vec2 v_texcoord;\n"
+               "out vec4 fragColor;\n"
                "void main() {\n"
-               "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+               "    fragColor = sample_to_rgba(v_texcoord);\n"
                "}\n";
 
         ShaderHandle fragment_shader { compile_shader(GL_FRAGMENT_SHADER, fragment_src.str().c_str()) };
@@ -931,6 +936,16 @@ void Renderer::draw(
     // shader was removed), fall back to the default window shader instead of throwing.
     auto const* const prog = [&]() -> ProgramData const*
     {
+        // A per-window geometry shader (e.g. wobbly windows) runs on the single-pass
+        // path, combined with any fragment shader the window also has. On
+        // unsupported contexts / lookup failure this returns null and we fall back.
+        if (!is_multipass && data.data.geometry_shader_id)
+        {
+            if (auto* const p = program_factory->resolve_geometry_program(
+                    data.data.shader_id, *data.data.geometry_shader_id))
+                return &p->data;
+        }
+
         if (is_multipass)
         {
             auto variant = program_factory->resolve_custom_pass(
@@ -984,6 +999,34 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
+
+    // Feed animation inputs to geometry shaders (wobbly windows etc.). Only the
+    // geometry programs declare these uniforms; for everything else the locations
+    // are -1 and we skip the work (and the per-window velocity bookkeeping).
+    if (prog->time_uniform >= 0 || prog->velocity_uniform >= 0)
+    {
+        double const now = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - start_time)
+                               .count();
+
+        glm::vec2 velocity { 0.f, 0.f };
+        auto const it = velocity_samples.find(data.data.id);
+        if (it != velocity_samples.end())
+        {
+            double const dt = now - it->second.t;
+            if (dt > 1e-4)
+                velocity = {
+                    static_cast<float>((centerx - it->second.cx) / dt),
+                    static_cast<float>((centery - it->second.cy) / dt)
+                };
+        }
+        velocity_samples[data.data.id] = { centerx, centery, now };
+
+        if (prog->time_uniform >= 0)
+            glUniform1f(prog->time_uniform, static_cast<GLfloat>(now));
+        if (prog->velocity_uniform >= 0)
+            glUniform2f(prog->velocity_uniform, velocity.x, velocity.y);
+    }
 
     glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));

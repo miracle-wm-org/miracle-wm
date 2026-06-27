@@ -701,6 +701,20 @@ WasmEdge_Result host_miracle_window_set_shader_id(
     return WasmEdge_Result_Success;
 }
 
+WasmEdge_Result host_miracle_window_set_geometry_shader_id(
+    void* data,
+    WasmEdge_CallingFrameContext const*,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int64_t const window_internal = WasmEdge_ValueGetI64(params[0]);
+    int32_t const geometry_shader_id = WasmEdge_ValueGetI32(params[1]);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->window_set_geometry_shader_id(static_cast<uint64_t>(window_internal), geometry_shader_id));
+    return WasmEdge_Result_Success;
+}
+
 WasmEdge_Result host_miracle_get_plugin_userdata(
     void* data,
     WasmEdge_CallingFrameContext const* frame,
@@ -825,6 +839,28 @@ WasmEdge_Result host_miracle_register_window_sample_to_rgba(
 
     auto passes = read_string_array(memory, passes_ptr, num_passes);
     auto const id = bridge->register_window_shader(std::move(passes), static_cast<uint32_t>(plugin_handle));
+    returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_register_window_geometry_shader(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const source_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const source_len = WasmEdge_ValueGetI32(params[2]);
+
+    auto* memory = get_memory_from_frame(frame, "host_miracle_register_window_geometry_shader");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    std::string source(reinterpret_cast<char const*>(mem_base + source_ptr), source_len);
+    auto const id = bridge->register_window_geometry_shader(std::move(source), static_cast<uint32_t>(plugin_handle));
     returns[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(id));
     return WasmEdge_Result_Success;
 }
@@ -1022,6 +1058,9 @@ void PluginManagerImpl::Self::create_host_module()
     add_host_function(module, "miracle_window_set_shader_id",
         create_func_type({ i64, i32 }, { i32 }),
         host_miracle_window_set_shader_id, bridge.get());
+    add_host_function(module, "miracle_window_set_geometry_shader_id",
+        create_func_type({ i64, i32 }, { i32 }),
+        host_miracle_window_set_geometry_shader_id, bridge.get());
 
     add_host_function(module, "miracle_get_plugin_userdata",
         create_func_type({ i32, i32, i32 }, { i32 }),
@@ -1035,6 +1074,10 @@ void PluginManagerImpl::Self::create_host_module()
     add_host_function(module, "miracle_register_window_sample_to_rgba",
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_register_window_sample_to_rgba, bridge.get());
+
+    add_host_function(module, "miracle_register_window_geometry_shader",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_register_window_geometry_shader, bridge.get());
 
     add_host_function(module, "miracle_set_screen_shader",
         create_func_type({ i32, i32, i32 }, { i32 }),

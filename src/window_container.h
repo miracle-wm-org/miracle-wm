@@ -118,6 +118,7 @@ public:
     /// \param alpha
     virtual void set_window_alpha(float alpha);
     virtual void set_window_shader_id(std::optional<uint8_t> shader_id);
+    virtual void set_window_geometry_shader_id(std::optional<uint8_t> geometry_shader_id);
 
     /// Retrieve the visible area of the container.
     ///

@@ -91,6 +91,10 @@ struct ProgramData
     GLint border_color_uniform = -1;
     GLint border_width_uniform = -1;
     GLint border_radius_uniform = -1;
+    /// Optional uniforms used by per-window geometry shaders (wobbly windows etc.).
+    /// -1 when the program has no geometry stage that declares them.
+    GLint time_uniform = -1;
+    GLint velocity_uniform = -1;
     mutable long long last_used_frameno = 0;
 
     ProgramData(GLuint program_id);
@@ -149,6 +153,19 @@ public:
     /// Returns the number of passes registered for the given shader id.
     size_t pass_count(uint8_t id) const;
 
+    /// Whether the current GL context supports geometry shaders (GLSL ES >= 3.20).
+    bool geometry_shaders_supported() const { return geometry_shaders_supported_; }
+
+    /// Resolve (compiling and caching on first use) a program that runs the
+    /// registered geometry shader \p geom_id between the standard vertex stage and
+    /// the fragment stage. \p frag_id selects the fragment sampler: a registered
+    /// window fragment shader, or std::nullopt for the default texture passthrough.
+    ///
+    /// Returns nullptr (and logs a single warning per id) when geometry shaders are
+    /// unsupported, the geometry shader is not registered, or compilation fails — in
+    /// which case the caller should fall back to the non-geometry program.
+    Program* resolve_geometry_program(std::optional<uint8_t> frag_id, uint8_t geom_id);
+
     /// Retrieves the border shader
     Program const& border() const { return border_program; }
 
@@ -162,7 +179,12 @@ private:
 
     PassProgram& compile_intermediate_pass(void const* key, char const* sampler_glsl);
 
+    /// Detects geometry-shader support from the current GL context. Called once at
+    /// construction (which happens with a current context).
+    static bool detect_geometry_support();
+
     std::shared_ptr<SamplerRegistry> sampler_registry_;
+    bool const geometry_shaders_supported_;
     ShaderHandle const vertex_shader;
     ShaderHandle const pass_vertex_shader;
     ShaderHandle const border_vertex_shader;
@@ -171,6 +193,14 @@ private:
     Program const border_program;
     std::vector<std::pair<void const*, std::unique_ptr<Program>>> programs;
     std::vector<std::pair<void const*, std::unique_ptr<PassProgram>>> pass_programs;
+    /// Cached geometry programs, keyed by (geom_id << 8) | frag_id (frag_id 0xFF =
+    /// default fragment). Geometry shaders registered by a plugin live for the
+    /// plugin's lifetime; we don't currently evict these on unload (the registry
+    /// lookup simply fails afterwards and we fall back).
+    std::vector<std::pair<uint16_t, std::unique_ptr<Program>>> geometry_programs;
+    /// Geometry ids we've already logged an "unsupported" warning for, so the log
+    /// isn't spammed every frame.
+    std::vector<uint8_t> warned_geometry_ids;
     // GL requires us to synchronise multi-threaded access to the shader APIs.
     std::mutex compilation_mutex;
 };
