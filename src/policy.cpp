@@ -274,7 +274,8 @@ Policy::Policy(
         config,
         animator,
         plugin_manager,
-        window_controller)),
+        window_controller,
+        output_manager)),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry));

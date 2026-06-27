@@ -23,10 +23,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_container.h"
 #include "mock_main_loop.h"
 #include "mock_output.h"
+#include "mock_output_factory.h"
 #include "mock_session.h"
 #include "mock_surface.h"
 #include "mock_surface_stack.h"
 #include "mock_window_controller.h"
+#include "output_manager.h"
 #include "plugin_bridge.h"
 #include <miral/window_info.h>
 
@@ -45,13 +47,15 @@ public:
         config(std::make_shared<test::MockConfig>()),
         animator(std::make_shared<Animator>()),
         window_controller(std::make_shared<test::MockWindowController>()),
+        output_manager(std::make_shared<OutputManager>(std::unique_ptr<test::MockOutputFactory>(output_factory))),
         dying_surface_manager(
             surface_stack,
             compositor_state,
             config,
             animator,
             make_null_plugin_manager(),
-            window_controller)
+            window_controller,
+            output_manager)
     {
     }
 
@@ -60,6 +64,8 @@ public:
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<Animator> animator;
     std::shared_ptr<test::MockWindowController> window_controller;
+    test::MockOutputFactory* output_factory = new test::MockOutputFactory();
+    std::shared_ptr<OutputManager> output_manager;
     DyingSurfaceManager dying_surface_manager;
 };
 
