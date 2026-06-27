@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "forwarding_surface.h"
+#include "output_manager.h"
 #include "plugin_bridge.h"
 #include "window_controller.h"
 #include <mir/shell/surface_stack.h>
@@ -32,13 +33,15 @@ DyingSurfaceManager::DyingSurfaceManager(
     std::shared_ptr<Config> const& config,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<PluginManager> const& plugin_manager,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<OutputManager> const& output_manager) :
     surface_stack(surface_stack),
     compositor_state(compositor_state),
     config(config),
     animator(animator),
     plugin_manager(plugin_manager),
-    window_controller(window_controller)
+    window_controller(window_controller),
+    output_manager(output_manager)
 {
 }
 
@@ -57,7 +60,15 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     if (!win)
         return;
 
-    auto const output_area = container->get_output()->get_area();
+    // A pinned floating window has no workspace, so get_output() is null. Fall
+    // back to the focused output for the cull area.
+    auto output = container->get_output();
+    if (!output)
+        output = output_manager->focused();
+    if (!output)
+        return;
+
+    auto const output_area = output->get_area();
     auto surface = win->operator std::shared_ptr<mir::scene::Surface>();
     auto animating_surface = std::make_shared<ForwardingSurface>(surface);
     auto const handle = animator->register_animateable();
