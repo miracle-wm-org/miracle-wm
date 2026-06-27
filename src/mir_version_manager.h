@@ -33,4 +33,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_COMPILING_AGAINST_DEV
 #endif
 
+#if ((MIR_SERVER_MAJOR_VERSION > 2) || (MIR_SERVER_MAJOR_VERSION == 2 && MIR_SERVER_MINOR_VERSION >= 29)) || COMPILING_AGAINST_DEV
+#define MIR_VERSION_2_29_OR_GREATER
+#endif
+
 #endif // MIRACLE_MIR_VERSION_MANAGER_H
