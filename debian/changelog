@@ -1,4 +1,4 @@
-miracle-wm (0.10.0-local) UNRELEASED; urgency=medium
+miracle-wm (0.10.1-local) UNRELEASED; urgency=medium
   * Release version 0.8.3
   * Recent changes:
   * * Update to v0.8.3
@@ -71,8 +71,13 @@ miracle-wm (0.10.0-local) UNRELEASED; urgency=medium
   * * task: bump miracle-plugin-rs to 0.1.0
   * * bugfix: fix long-standing bugfix where window state was not being
     propagated when a window was not on the focused workspace (#923)
+  * Release version 0.10.1
+  * Recent changes:
+  * * task: version bump
+  * * bugfix: pinned, floating windows should not crash on close (#929)
+  * * task: update session per next Mir version breakages (#928)
 
- -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Mon, 22 Jun 2026 07:25:36 -0400
+ -- Matthew Kosarek <matthew@matthewkosarek.xyz>  Tue, 30 Jun 2026 07:42:27 -0400
 
 miracle-wm (0.8.2-local) UNRELEASED; urgency=medium
   * Release version 0.8.2
