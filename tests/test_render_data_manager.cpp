@@ -173,7 +173,7 @@ TEST_F(RenderDataManagerTest, CanChangeGeometryShaderId)
 
 TEST_F(RenderDataManagerTest, ResetShadersClearsBothFragmentAndGeometryIds)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    render_data_manager.add({ .surface = nullptr,
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
         .shader_id = std::optional<uint8_t> { 5 },
         .geometry_shader_id = std::optional<uint8_t> { 6 } });
