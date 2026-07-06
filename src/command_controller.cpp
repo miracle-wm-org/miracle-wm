@@ -940,7 +940,7 @@ bool CommandController::move_container_to_workspace(
     if (auto const target = request())
     {
         target->graft(container);
-        if (container->window().value())
+        if (container->window())
             window_controller->select_active_window(container->window().value());
         return true;
     }
