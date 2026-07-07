@@ -43,6 +43,8 @@ the value that users will send from the client when they want to send the corres
 - [SEND_TICK (10)](send_tick.md)
 - [SYNC (11)](sync.md)
 - [GET_BINDING_STATE (12)](get_binding_state.md)
+- [GET_DEBUG_STATE (200)](get_debug_state.md)
+- [PLUGIN_COMMAND (201)](plugin_command.md)
 
 For those familiar with sway, miracle will always lack support for particular messages
 such as:
@@ -63,6 +65,8 @@ The following are unimplemented, but may be implemented in the future:
 - [binding (0x80000005)](./events/binding.md)
 - [shutdown (0x80000006)](./events/shutdown.md)
 - [tick (0x80000007)](./events/tick.md)
+- [config_errors (0x80000016)](./events/config_errors.md)
+- [plugin (0x80000017)](./events/plugin.md)
 
 ## Commands
 - [exec](./commands/exec.md)

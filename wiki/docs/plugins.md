@@ -15,6 +15,7 @@ Full API documentation is available at [docs.miracle-wm.org/miracle_plugin/](htt
 - **Animations** — trigger custom animations at any lifecycle event
 - **Workspace and output events** — react to workspace creation, deletion, and switching
 - **Configuration** — programmatically specify the configuration as a plugin data at runtime
+- **IPC** — handle custom commands from, and publish events to, IPC clients (see [IPC integration](#ipc-integration))
 
 ### Getting started
 
@@ -36,6 +37,56 @@ cargo build --target wasm32-wasip2 --release
 ```
 
 The resulting `.wasm` file is what you load in your miracle-wm configuration.
+
+## IPC integration
+
+A plugin can expose itself over miracle-wm's [IPC socket](ipc/index.md) under a **namespace** it
+owns. This gives IPC clients a bidirectional, plugin-defined JSON channel: clients send commands
+to the plugin, and the plugin publishes events back to interested clients.
+
+- A namespace is a plain string. Each namespace is owned by at most one plugin, and each plugin
+  may own at most one namespace. Registering a namespace that is already taken, or registering a
+  second namespace from the same plugin, fails.
+- Only [PLUGIN_COMMAND](ipc/plugin_command.md) messages whose `plugin` field matches the
+  registered namespace are routed to the plugin.
+- Only clients subscribed to the [plugin](ipc/events/plugin.md) event **for that namespace**
+  receive the events the plugin publishes.
+
+### Registering a namespace
+
+Claim a namespace once (typically from `init`):
+
+```rust
+use miracle_plugin::plugin::register_namespace;
+
+register_namespace("my-plugin").expect("namespace already taken");
+```
+
+### Handling commands
+
+Implement `handle_command` on your `Plugin`. It receives the raw JSON string sent by the client
+under the command's `payload` field, and returns `Some(response_json)` to reply, or `None` to
+decline (the client receives `success: false`):
+
+```rust
+fn handle_command(&mut self, payload: &str) -> Option<String> {
+    // ...parse payload, do work...
+    Some(r#"{"ok": true}"#.to_string())
+}
+```
+
+### Publishing events
+
+Push an arbitrary JSON payload to every client subscribed to your namespace:
+
+```rust
+use miracle_plugin::plugin::publish_event;
+
+publish_event(r#"{"state": "connected"}"#).ok();
+```
+
+Clients receive it as a [plugin](ipc/events/plugin.md) event wrapped as
+`{ "plugin": "my-plugin", "payload": { "state": "connected" } }`.
 
 ## Examples
 

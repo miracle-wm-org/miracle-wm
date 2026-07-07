@@ -14,11 +14,24 @@ table:
 | 0x80000006 | shutdown | sent when the compositor is about to shutdown |
 | 0x80000007 | tick | sent when an ipc client sends a [SEND_TICK](send_tick.md) message |
 | 0x80000015 | input | sent when something related to input changes |
+| 0x80000016 | config_errors | sent when the configuration is (re)loaded, carrying any parse errors (See [config_errors](events/config_errors.md)) |
+| 0x80000017 | plugin | sent when a plugin publishes an event on a subscribed namespace (See [plugin](events/plugin.md)) |
 
 ### Example
 
 ```json
 [ "workspace", "mode" ]
+```
+
+## Plugin namespace subscriptions
+The [plugin](events/plugin.md) event is subscribed to **per namespace** rather than by a plain
+name. Instead of a string, pass an object of the form `{ "plugin": <namespace> }`. Only plugin
+events published on that namespace are delivered to the connection. Namespace objects may be
+mixed freely with the ordinary event-name strings.
+
+### Example
+```json
+[ "workspace", { "plugin": "my-plugin" }, { "plugin": "other-plugin" } ]
 ```
 
 ## Reply
