@@ -192,6 +192,17 @@ public:
     /// Call the configure() export on every loaded plugin and merge all of their
     /// results into a single PluginConfigData.
     virtual PluginConfigData configure() = 0;
+
+    /// Route an IPC command to the plugin that owns \p ns.
+    ///
+    /// The plugin handles the arbitrary JSON \p payload_json and may return an arbitrary
+    /// JSON response.
+    ///
+    /// \returns the plugin's JSON response, or std::nullopt if no plugin owns \p ns (or
+    ///          the owning plugin does not implement the handler).
+    virtual std::optional<std::string> handle_plugin_command(
+        std::string const& ns, std::string const& payload_json)
+        = 0;
 };
 
 /// Returns a no-op PluginManager. Used when the plugin feature is disabled at

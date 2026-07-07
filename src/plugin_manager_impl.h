@@ -63,6 +63,8 @@ public:
     bool handle_keyboard_event(MirKeyboardEvent const& event) override;
     bool handle_pointer_event(MirPointerEvent const& event) override;
     PluginConfigData configure() override;
+    std::optional<std::string> handle_plugin_command(
+        std::string const& ns, std::string const& payload_json) override;
 
     /// Data passed to host functions that need both the bridge and the manager.
     struct HostFunctionData

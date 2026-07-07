@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "command_controller.h"
 #include "config.h"
 #include "ipc_command_executor.h"
+#include "plugin_manager.h"
 #include "version.h"
 #include "window_controller.h"
 #include <mir/log.h>
@@ -32,11 +33,13 @@ using namespace miracle;
 IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<AbstractIpcCommandExecutor> const& ipc_command_executor,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     command_controller { command_controller },
     ipc_command_executor { ipc_command_executor },
     config { config },
-    window_controller { window_controller }
+    window_controller { window_controller },
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -112,6 +115,18 @@ MessageHandlerResult IpcMessageHandler::process_msg(
         MessageHandlerResult result = { .type = payload_type };
         for (auto const& i : j)
         {
+            // A plugin-event subscription is expressed as an object carrying the plugin
+            // namespace, e.g. {"plugin": "myns"}, so a client can subscribe to specific
+            // namespaces alongside the ordinary string event names.
+            if (i.is_object() && i.contains("plugin"))
+            {
+                auto const ns = i["plugin"].template get<std::string>();
+                mir::log_debug("Received plugin-event subscription for namespace: %s", ns.c_str());
+                result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_PLUGIN);
+                result.subscribed_plugin_namespaces.push_back(ns);
+                continue;
+            }
+
             auto const event_type = i.template get<std::string>();
             mir::log_debug("Received subscription request from IPC client for event: %s", event_type.c_str());
             if (event_type == "workspace")
@@ -152,6 +167,7 @@ MessageHandlerResult IpcMessageHandler::process_msg(
                 { "error",   error }
             };
             result.subscribed_events = 0;
+            result.subscribed_plugin_namespaces.clear();
             result.payload = to_string(response);
         }
         return result;
@@ -226,6 +242,40 @@ MessageHandlerResult IpcMessageHandler::process_msg(
         return {
             .type = payload_type,
             .payload = "{\"name\": \"default\"}",
+        };
+    }
+    case IpcType::IPC_PLUGIN_COMMAND:
+    {
+        json response;
+        try
+        {
+            json const request = json::parse(payload);
+            auto const plugin = request.at("plugin").get<std::string>();
+            auto const& command_payload = request.at("payload");
+
+            auto const result = plugin_manager
+                ? plugin_manager->handle_plugin_command(plugin, command_payload.dump())
+                : std::nullopt;
+            if (result)
+            {
+                response["success"] = true;
+                response["response"] = json::parse(*result);
+            }
+            else
+            {
+                response["success"] = false;
+                response["error"] = "No plugin is registered for namespace: " + plugin;
+            }
+        }
+        catch (json::exception const& e)
+        {
+            response["success"] = false;
+            response["error"] = std::string("Invalid plugin command: ") + e.what();
+        }
+
+        return {
+            .type = payload_type,
+            .payload = to_string(response)
         };
     }
     default:

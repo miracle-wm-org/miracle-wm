@@ -38,6 +38,7 @@ namespace miracle
 class AbstractCommandController;
 class BindingEvent;
 class WindowController;
+class PluginManager;
 
 /// Manages IPC connections and routes requests to the [IpcMessageHandler].
 class IpcConnectionManager : public virtual WorkspaceObserver,
@@ -53,7 +54,8 @@ public:
         std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<IpcCommandExecutor> const&,
         std::shared_ptr<Config> const&,
-        std::shared_ptr<WindowController> const&);
+        std::shared_ptr<WindowController> const&,
+        std::shared_ptr<PluginManager> const&);
     ~IpcConnectionManager() override;
     void on_workspace_created(uint32_t id) override;
     void on_workspace_empty(uint32_t id) override;
@@ -76,6 +78,9 @@ public:
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
     void on_binding_event(BindingEvent const& binding_event) override;
 
+    /// Publish a plugin event on \p ns to every client subscribed to that namespace.
+    void on_plugin_event(std::string const& ns, std::string const& payload_json);
+
 private:
     struct IpcClient
     {
@@ -85,6 +90,7 @@ private:
         std::vector<char> buffer;
         uint32_t write_buffer_len = 0;
         int subscribed_events = 0;
+        std::vector<std::string> subscribed_plugin_namespaces;
     };
 
     std::shared_ptr<mir::MainLoop> main_loop;

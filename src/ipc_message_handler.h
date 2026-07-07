@@ -30,6 +30,7 @@ namespace miracle
 class AbstractCommandController;
 class Config;
 class WindowController;
+class PluginManager;
 
 /// This it taken directly from sway
 enum class IpcType
@@ -55,6 +56,7 @@ enum class IpcType
 
     // miracle-specific command types
     IPC_GET_DEBUG_STATE = 200,
+    IPC_PLUGIN_COMMAND = 201,
 
     // Events sent from sway to clients. Events have the highest bits set.
     IPC_EVENT_WORKSPACE = ((1 << 31) | 0),
@@ -72,6 +74,7 @@ enum class IpcType
 
     // miracle-specific event types
     IPC_EVENT_CONFIG_ERRORS = ((1 << 31) | 22),
+    IPC_EVENT_PLUGIN = ((1 << 31) | 23),
 };
 
 struct MessageHandlerResult
@@ -81,6 +84,7 @@ struct MessageHandlerResult
     std::string payload = "";
     int subscribed_events = 0;
     bool send_tick_event = false;
+    std::vector<std::string> subscribed_plugin_namespaces;
 };
 
 class IpcMessageHandler
@@ -89,7 +93,8 @@ public:
     IpcMessageHandler(std::shared_ptr<AbstractCommandController> const&,
         std::shared_ptr<AbstractIpcCommandExecutor> const&,
         std::shared_ptr<Config> const&,
-        std::shared_ptr<WindowController> const&);
+        std::shared_ptr<WindowController> const&,
+        std::shared_ptr<PluginManager> const&);
     MessageHandlerResult handle_msg(IpcType payload_type,
         const char* payload,
         uint32_t payload_length);
@@ -99,6 +104,7 @@ private:
     std::shared_ptr<AbstractIpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<Config> config;
     std::shared_ptr<WindowController> window_controller;
+    std::shared_ptr<PluginManager> plugin_manager;
 
     MessageHandlerResult process_msg(IpcType payload_type, const char* payload, uint32_t payload_length);
     std::vector<IpcValidationResult> process_ipc_command(const char* command);
