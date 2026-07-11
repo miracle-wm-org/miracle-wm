@@ -80,6 +80,12 @@ void FilesystemConfiguration::operator()(mir::Server& server)
         "If specified, the configuration file will not be loaded",
         false);
 
+    const char* no_plugins_option = "no-plugins";
+    server.add_configuration_option(
+        no_plugins_option,
+        "If specified, plugins in the config's `plugins` folder will not be auto-loaded",
+        false);
+
     const char* exec_option = "exec";
     server.add_configuration_option(
         exec_option,
@@ -93,10 +99,11 @@ void FilesystemConfiguration::operator()(mir::Server& server)
         "If specified, this script will setup the systemd session before any apps are run",
         "");
 
-    server.add_pre_init_callback([this, config_file_name_option, no_config_option, exec_option, systemd_session_configure_option, &server]
+    server.add_pre_init_callback([this, config_file_name_option, no_config_option, no_plugins_option, exec_option, systemd_session_configure_option, &server]
     {
         auto const server_opts = server.get_options();
         no_config = server_opts->get<bool>(no_config_option);
+        no_plugins = server_opts->get<bool>(no_plugins_option);
         config_path = server_opts->get<std::string>(config_file_name_option);
         std::optional<StartupApp> systemd_app = std::nullopt;
         std::optional<StartupApp> exec_app = std::nullopt;
@@ -213,13 +220,16 @@ void FilesystemConfiguration::reload()
         for (auto& plugin : *options.plugins)
             plugin.path = expand_tilde_getenv(plugin.path);
 
-        auto const plugins_dir = std::filesystem::path(config_path).parent_path() / "plugins";
-        if (std::filesystem::exists(plugins_dir) && std::filesystem::is_directory(plugins_dir))
+        if (!no_plugins)
         {
-            for (auto const& entry : std::filesystem::directory_iterator(plugins_dir))
+            auto const plugins_dir = std::filesystem::path(config_path).parent_path() / "plugins";
+            if (std::filesystem::exists(plugins_dir) && std::filesystem::is_directory(plugins_dir))
             {
-                if (entry.is_regular_file() && entry.path().extension() == ".wasm")
-                    options.plugins->push_back(PluginConfiguration { entry.path().string(), "" });
+                for (auto const& entry : std::filesystem::directory_iterator(plugins_dir))
+                {
+                    if (entry.is_regular_file() && entry.path().extension() == ".wasm")
+                        options.plugins->push_back(PluginConfiguration { entry.path().string(), "" });
+                }
             }
         }
 
