@@ -156,6 +156,7 @@ private:
     std::string default_config_path;
     std::string config_path;
     bool no_config = false;
+    bool no_plugins = false;
     std::mutex mutable mutex;
     bool is_loaded_ = false;
     ConfigData options;
