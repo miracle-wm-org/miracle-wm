@@ -174,7 +174,7 @@ void WindowManagerToolsWindowController::clip(miral::Window const& window, geom:
 void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 {
     auto& window_info = tools.info_for(window);
-    window_info.clip_area(mir::optional_value<geom::Rectangle>());
+    window_info.clip_area({});
 }
 
 void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)

@@ -254,7 +254,7 @@ TEST_F(FreestyleWindowContainerTest, MoveToCallsModifyWithCorrectTopLeft)
 {
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value() == geom::Point { 50, 75 };
     }))).Times(1);
 
@@ -268,7 +268,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByRightIncreasesX)
     // window is at (100, 200), moving right by 30 → (130, 200)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 130
             && spec.top_left().value().y.as_int() == 200;
     }))).Times(AtLeast(1));
@@ -281,7 +281,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByLeftDecreasesX)
     // window is at (100, 200), moving left by 30 → (70, 200)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 70
             && spec.top_left().value().y.as_int() == 200;
     }))).Times(AtLeast(1));
@@ -294,7 +294,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByDownIncreasesY)
     // window is at (100, 200), moving down by 20 → (100, 220)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 100
             && spec.top_left().value().y.as_int() == 220;
     }))).Times(AtLeast(1));
@@ -307,7 +307,7 @@ TEST_F(FreestyleWindowContainerTest, MoveByUpDecreasesY)
     // window is at (100, 200), moving up by 20 → (100, 180)
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value().x.as_int() == 100
             && spec.top_left().value().y.as_int() == 180;
     }))).Times(AtLeast(1));
@@ -429,7 +429,7 @@ TEST_F(FreestyleWindowContainerTest, DragMovesWindow)
 
     EXPECT_CALL(*window_controller, modify(window, Truly([](miral::WindowSpecification const& spec)
     {
-        return spec.top_left().is_set()
+        return spec.top_left()
             && spec.top_left().value() == geom::Point { 150, 250 };
     }))).Times(1);
 
