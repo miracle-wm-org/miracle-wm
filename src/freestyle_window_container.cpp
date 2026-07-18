@@ -187,7 +187,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
                 restore_result_->state = mods.state().value();
             else
                 restore_result_ = RestoreResult { mods.state().value() };
-            mods.state().reset();
+            mods.state() = {};
         }
         else
         {
