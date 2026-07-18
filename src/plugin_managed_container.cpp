@@ -211,7 +211,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
             window_controller->change_state(w, resolved_state);
             constrain();
         }
-        mods.state().reset();
+        mods.state() = {};
     }
     window_controller->modify(w, mods);
 }
