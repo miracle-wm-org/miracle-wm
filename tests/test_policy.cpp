@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/graphics/default_display_configuration_policy.h>
 #include <mir_test_framework/window_management_test_harness.h>
+#include <miral/output.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 #include <filesystem>
@@ -258,6 +259,70 @@ TEST_F(DoubleWindowPolicyTest, DISABLED_CanRemoveALlOutputsAndReAddOne)
                                                    { 0,   0   },
                                                    { 400, 300 }
     }));
+}
+
+TEST_F(DoubleWindowPolicyTest, DISABLED_shell_window_without_output_is_placed_on_focused_output)
+{
+    // The two outputs declared in DoubleWindowPolicyTest::get_initial_output_configs().
+    mir::geometry::Rectangle const left_output_area { { 0, 0 },   { 800, 600 } };
+    mir::geometry::Rectangle const right_output_area { { 800, 0 }, { 1000, 600 } };
+
+    // Mir assigns the output ids, so resolve them from their extents rather than hard-coding.
+    auto const output_id_for_area = [&](mir::geometry::Rectangle const& area) -> std::optional<int>
+    {
+        std::optional<int> result;
+        for_each_output([&](miral::Output const& output)
+        {
+            if (output.extents() == area)
+                result = output.id();
+        });
+        return result;
+    };
+
+    // Focus the output whose rectangle contains \p position by moving the pointer into it.
+    // Policy::handle_pointer_event focuses whichever output the cursor is over.
+    auto const focus_output_at = [&](geom::PointF const& position)
+    {
+        auto const move_event = mir::events::make_pointer_event(
+            0,
+            std::chrono::system_clock::now().time_since_epoch(),
+            mir_input_event_modifier_none,
+            mir_pointer_action_motion,
+            MirPointerButtons { 0 },
+            position,
+            {},
+            mir_pointer_axis_source_none,
+            {},
+            {});
+        publish_event(*move_event);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    };
+
+    // A shell window is one with an exclusive rect / attached edges / attached state and no
+    // preferred output. This mirrors a layer-shell panel anchored to the top of the screen.
+    auto const create_shell_window = [&](miral::Application const& app)
+    {
+        miral::WindowSpecification spec;
+        spec.state() = mir_window_state_attached;
+        spec.attached_edges() = mir_placement_gravity_north;
+        spec.exclusive_rect() = mir::geometry::Rectangle { { 0, 0 }, { 800, 20 } };
+        return create_window(app, spec);
+    };
+
+    auto const app = open_application("test");
+
+    // Focus the right (non-default) output, then create a shell window with no preferred output.
+    // It should be pinned to the right output.
+    focus_output_at(geom::PointF { 900, 100 });
+    auto const right_window = create_shell_window(app);
+    ASSERT_TRUE(tools().info_for(right_window).has_output_id());
+    EXPECT_THAT(tools().info_for(right_window).output_id(), Eq(*output_id_for_area(right_output_area)));
+
+    // Now focus the left output and create another shell window; it should follow the focus.
+    focus_output_at(geom::PointF { 100, 100 });
+    auto const left_window = create_shell_window(app);
+    ASSERT_TRUE(tools().info_for(left_window).has_output_id());
+    EXPECT_THAT(tools().info_for(left_window).output_id(), Eq(*output_id_for_area(left_output_area)));
 }
 
 TEST_F(SingleWindowPolicyTest, DISABLED_can_move_container_to_workspace_that_doesnt_have_containers)
