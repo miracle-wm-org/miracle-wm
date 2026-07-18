@@ -176,7 +176,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
 {
     auto const w = window_;
     auto mods = specification;
-    if (mods.state().is_set())
+    if (mods.state())
     {
         if (hidden)
         {
@@ -187,7 +187,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
                 restore_result_->state = mods.state().value();
             else
                 restore_result_ = RestoreResult { mods.state().value() };
-            mods.state().consume();
+            mods.state().reset();
         }
         else
         {

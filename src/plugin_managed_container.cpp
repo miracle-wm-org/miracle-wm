@@ -185,7 +185,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
 {
     auto const w = window_;
     auto mods = specification;
-    if (mods.state().is_set())
+    if (mods.state())
     {
         auto const new_state = mods.state().value();
         bool const is_resize_state = new_state == mir_window_state_maximized
@@ -211,7 +211,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
             window_controller->change_state(w, resolved_state);
             constrain();
         }
-        mods.state().consume();
+        mods.state().reset();
     }
     window_controller->modify(w, mods);
 }

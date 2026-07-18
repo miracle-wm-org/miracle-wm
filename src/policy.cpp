@@ -606,8 +606,8 @@ auto Policy::place_new_window(
     }
     else
     {
-        auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-        auto const is_attached = requested_specification.attached_edges().is_set();
+        auto const has_exclusive_rect = requested_specification.exclusive_rect();
+        auto const is_attached = requested_specification.attached_edges();
         if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
             hint.container_type = AllocationType::shell;
         else

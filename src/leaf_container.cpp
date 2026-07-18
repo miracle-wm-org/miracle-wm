@@ -278,7 +278,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     auto mods = modifications;
     auto visible_area = get_visible_area();
     auto cur_state = window_controller->get_state(w);
-    if (mods.state().is_set())
+    if (mods.state())
     {
         // We will not respect any request for a maximized window. Only fullscreen is valid.
         switch (mods.state().value())
@@ -303,7 +303,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
                 restore_result_->state = mods.state().value();
             else
                 restore_result_ = RestoreResult { mods.state().value() };
-            mods.state().consume();
+            mods.state().reset();
         }
         else
         {
@@ -336,10 +336,10 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 
     if (cur_state == mir_window_state_restored)
     {
-        if (mods.size().is_set() && mods.size().value() != visible_area.size)
-            mods.size().consume();
-        if (mods.top_left().is_set() && mods.top_left().value() != visible_area.top_left)
-            mods.top_left().consume();
+        if (mods.size() && mods.size().value() != visible_area.size)
+            mods.size().reset();
+        if (mods.top_left() && mods.top_left().value() != visible_area.top_left)
+            mods.top_left().reset();
     }
 
     window_controller->modify(w, mods);
