@@ -660,6 +660,14 @@ auto Policy::place_new_window(
         }
     }
 
+    // If we're placing a shell window, try and set the output to the focused output.
+    // Only do this if the window does not already want to be placed on a specific output.
+    if (hint.container_type == AllocationType::shell && !new_spec.output_id())
+    {
+        if (auto const focused = output_manager->focused())
+            new_spec.output_id() = focused->id();
+    }
+
     pending_allocation = hint;
     return new_spec;
 }
