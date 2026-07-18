@@ -167,7 +167,7 @@ geom::Rectangle ParentContainer::create_space(std::optional<size_t> index)
     else if (scheme_ == LayoutScheme::tabbing || scheme_ == LayoutScheme::stacking)
         pending_logical_rect = placement_area;
     else
-        mir::fatal_error("Invalid scheme during create_space");
+        mir::log_error("Invalid scheme during create_space");
 
     return pending_logical_rect;
 }
@@ -200,7 +200,7 @@ miral::WindowSpecification ParentContainer::place_new_window(
     new_spec.size() = rect.size;
     new_spec.top_left() = rect.top_left;
 
-    if (new_spec.state().is_set())
+    if (new_spec.state())
     {
         // We will not respect any request for a maximized window. Only fullscreen is valid.
         switch (new_spec.state().value())
@@ -217,7 +217,7 @@ miral::WindowSpecification ParentContainer::place_new_window(
     }
 
     new_spec.depth_layer() = LeafContainer::get_depth_layer(
-        new_spec.state().is_set() && new_spec.state() == mir_window_state_fullscreen);
+        new_spec.state() && new_spec.state() == mir_window_state_fullscreen);
 
     return new_spec;
 }
@@ -267,7 +267,7 @@ std::shared_ptr<ParentContainer> ParentContainer::convert_to_parent(std::shared_
     auto const index = get_index_of_node(container);
     if (!index.has_value())
     {
-        mir::fatal_error("Attempting to convert a node to lane with an incorrect parent");
+        mir::log_error("Attempting to convert a node to lane with an incorrect parent");
         return nullptr;
     }
 

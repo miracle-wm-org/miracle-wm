@@ -606,8 +606,8 @@ auto Policy::place_new_window(
     }
     else
     {
-        auto const has_exclusive_rect = requested_specification.exclusive_rect().is_set();
-        auto const is_attached = requested_specification.attached_edges().is_set();
+        auto const has_exclusive_rect = requested_specification.exclusive_rect();
+        auto const is_attached = requested_specification.attached_edges();
         if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
             hint.container_type = AllocationType::shell;
         else
@@ -658,6 +658,14 @@ auto Policy::place_new_window(
             new_spec = parent->place_new_window(new_spec, index);
             hint.parent = parent;
         }
+    }
+
+    // If we're placing a shell window, try and set the output to the focused output.
+    // Only do this if the window does not already want to be placed on a specific output.
+    if (hint.container_type == AllocationType::shell && !new_spec.output_id())
+    {
+        if (auto const focused = output_manager->focused())
+            new_spec.output_id() = focused->id();
     }
 
     pending_allocation = hint;

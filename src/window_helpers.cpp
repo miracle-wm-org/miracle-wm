@@ -39,9 +39,9 @@ miral::WindowSpecification miracle::window_helpers::copy_from(miral::WindowInfo 
     spec.shell_chrome() = info.shell_chrome();
     spec.userdata() = info.userdata();
     spec.attached_edges() = info.attached_edges();
-    if (info.exclusive_rect().is_set())
+    if (info.exclusive_rect())
     {
-        spec.exclusive_rect() = mir::optional_value<mir::optional_value<geom::Rectangle>>(info.exclusive_rect());
+        spec.exclusive_rect() = info.exclusive_rect();
     }
     spec.application_id() = info.application_id();
     spec.focus_mode() = info.focus_mode();

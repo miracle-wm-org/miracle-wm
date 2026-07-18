@@ -2354,7 +2354,7 @@ nlohmann::json CommandController::mode_to_json() const
         };
     default:
     {
-        mir::fatal_error("handle_command: unknown binding state: %d", (int)state->mode());
+        mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());
         return {};
     }
     }
