@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container_listener.h"
 #include "direction.h"
 #include "window_controller.h"
+#include "window_helpers.h"
 #include <mir/scene/surface.h>
 
 using namespace miracle;
@@ -187,7 +188,7 @@ void FreestyleWindowContainer::handle_modify(miral::WindowSpecification const& s
                 restore_result_->state = mods.state().value();
             else
                 restore_result_ = RestoreResult { mods.state().value() };
-            mods.state() = {};
+            window_helpers::reset_optional(mods.state());
         }
         else
         {

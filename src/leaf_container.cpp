@@ -303,7 +303,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
                 restore_result_->state = mods.state().value();
             else
                 restore_result_ = RestoreResult { mods.state().value() };
-            mods.state() = {};
+            window_helpers::reset_optional(mods.state());
         }
         else
         {
@@ -337,9 +337,9 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
     if (cur_state == mir_window_state_restored)
     {
         if (mods.size() && mods.size().value() != visible_area.size)
-            mods.size() = {};
+            window_helpers::reset_optional(mods.size());
         if (mods.top_left() && mods.top_left().value() != visible_area.top_left)
-            mods.top_left() = {};
+            window_helpers::reset_optional(mods.top_left());
     }
 
     window_controller->modify(w, mods);

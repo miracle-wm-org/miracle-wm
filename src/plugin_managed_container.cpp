@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "container_listener.h"
 #include "window_controller.h"
+#include "window_helpers.h"
 #include <mir/scene/surface.h>
 
 using namespace miracle;
@@ -211,7 +212,7 @@ void PluginManagedContainer::handle_modify(miral::WindowSpecification const& spe
             window_controller->change_state(w, resolved_state);
             constrain();
         }
-        mods.state() = {};
+        window_helpers::reset_optional(mods.state());
     }
     window_controller->modify(w, mods);
 }
