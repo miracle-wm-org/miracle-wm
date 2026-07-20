@@ -236,28 +236,12 @@ int main(int argc, char const* argv[])
     auto const error_reporter_controller = std::make_shared<miracle::ErrorReporterController>(external_client_launcher, config);
     config_observer_registrar->register_interest(error_reporter_controller);
 
-    WaylandExtensions wayland_extensions = WaylandExtensions {}
-                                               .enable(WaylandExtensions::zwlr_layer_shell_v1)
-                                               .enable(WaylandExtensions::zwlr_foreign_toplevel_manager_v1)
-                                               .enable(WaylandExtensions::zxdg_output_manager_v1)
-                                               .enable(WaylandExtensions::zwp_virtual_keyboard_manager_v1)
-                                               .enable(WaylandExtensions::zwlr_virtual_pointer_manager_v1)
-                                               .enable(WaylandExtensions::zwp_input_method_manager_v2)
-                                               .enable(WaylandExtensions::zwlr_screencopy_manager_v1)
-                                               .enable(WaylandExtensions::ext_session_lock_manager_v1)
-                                               .enable(WaylandExtensions::zwp_input_method_v1);
-
-#if MIRAL_VERSION >= MIR_VERSION_NUMBER(5, 6, 0)
-    // Allows clients like wl-clipboard to access the clipboard without the
-    // focus-stealing popup-surface fallback (#691).
-    wayland_extensions.enable(WaylandExtensions::ext_data_control_manager_v1);
-    wayland_extensions.enable(WaylandExtensions::ext_image_copy_capture_manager_v1);
-    wayland_extensions.enable(WaylandExtensions::ext_output_image_capture_source_manager_v1);
-    wayland_extensions.enable(WaylandExtensions::ext_foreign_toplevel_list_v1);
-#endif
-
-    for (auto const& extension : { "zwp_pointer_constraints_v1", "zwp_relative_pointer_manager_v1" })
+    // TODO: Come up with a reasonable security filter for supporting Wayland extensiona cce
+    WaylandExtensions wayland_extensions;
+    for (auto const& extension : WaylandExtensions::supported())
+    {
         wayland_extensions.enable(extension);
+    }
 
     wayland_extensions.add_extension({ .name = mir::wayland::OutputManagerV1::interface_name,
         .build = [output_listener = output_listener, display_config = display_config](WaylandExtensions::Context const* context)
