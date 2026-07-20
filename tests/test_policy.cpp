@@ -264,8 +264,14 @@ TEST_F(DoubleWindowPolicyTest, DISABLED_CanRemoveALlOutputsAndReAddOne)
 TEST_F(DoubleWindowPolicyTest, DISABLED_shell_window_without_output_is_placed_on_focused_output)
 {
     // The two outputs declared in DoubleWindowPolicyTest::get_initial_output_configs().
-    mir::geometry::Rectangle const left_output_area { { 0, 0 },   { 800, 600 } };
-    mir::geometry::Rectangle const right_output_area { { 800, 0 }, { 1000, 600 } };
+    mir::geometry::Rectangle const left_output_area {
+        { 0,   0   },
+        { 800, 600 }
+    };
+    mir::geometry::Rectangle const right_output_area {
+        { 800,  0   },
+        { 1000, 600 }
+    };
 
     // Mir assigns the output ids, so resolve them from their extents rather than hard-coding.
     auto const output_id_for_area = [&](mir::geometry::Rectangle const& area) -> std::optional<int>
@@ -305,7 +311,10 @@ TEST_F(DoubleWindowPolicyTest, DISABLED_shell_window_without_output_is_placed_on
         miral::WindowSpecification spec;
         spec.state() = mir_window_state_attached;
         spec.attached_edges() = mir_placement_gravity_north;
-        spec.exclusive_rect() = mir::geometry::Rectangle { { 0, 0 }, { 800, 20 } };
+        spec.exclusive_rect() = mir::geometry::Rectangle {
+            { 0,   0  },
+            { 800, 20 }
+        };
         return create_window(app, spec);
     };
 
