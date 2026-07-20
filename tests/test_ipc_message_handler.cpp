@@ -37,7 +37,8 @@ public:
             command_controller,
             std::unique_ptr<test::MockIpcCommandExecutor>(ipc_command_executor),
             config,
-            window_controller)
+            window_controller,
+            std::shared_ptr<PluginManager>())
     {
         ON_CALL(*window_controller, invoke_under_lock)
             .WillByDefault([](std::function<void()> const& f)

@@ -281,9 +281,9 @@ Policy::Policy(
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
         [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)
-        {
-            icm->on_plugin_event(ns, payload);
-        }));
+    {
+        icm->on_plugin_event(ns, payload);
+    }));
     config->set_plugin_configure_hook([pm = plugin_manager]()
     {
         return pm->configure();
