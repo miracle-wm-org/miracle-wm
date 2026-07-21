@@ -100,7 +100,11 @@ public:
     void advise_output_update(miral::Output const& updated, miral::Output const& original) override;
     void advise_output_delete(miral::Output const& output) override;
     void handle_modify_window(miral::WindowInfo& window_info, const miral::WindowSpecification& modifications) override;
+#ifdef MIR_VERSION_2_29_OR_GREATER
     void handle_activate_window(miral::WindowInfo& window_info) override;
+#else
+    void handle_raise_window(miral::WindowInfo& window_info) override;
+#endif
     auto confirm_placement_on_display(
         const miral::WindowInfo& window_info,
         MirWindowState new_state,

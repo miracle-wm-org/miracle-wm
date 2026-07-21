@@ -925,7 +925,11 @@ void Policy::handle_modify_window(
     container->handle_modify(modifications, hidden);
 }
 
+#ifdef MIR_VERSION_2_29_OR_GREATER
 void Policy::handle_activate_window(miral::WindowInfo& window_info)
+#else
+void Policy::handle_raise_window(miral::WindowInfo& window_info)
+#endif
 {
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
