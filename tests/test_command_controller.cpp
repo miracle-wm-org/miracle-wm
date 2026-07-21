@@ -446,8 +446,14 @@ public:
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
     std::shared_ptr<Animator> animator = std::make_shared<Animator>();
     std::shared_ptr<WindowObserverRegistrar> window_observer_registrar = std::make_shared<WindowObserverRegistrar>();
-    geom::Rectangle output1_area { { 0, 0 }, { 1280, 720 } };
-    geom::Rectangle output2_area { { 1280, 0 }, { 1280, 720 } };
+    geom::Rectangle output1_area {
+        { 0,    0   },
+        { 1280, 720 }
+    };
+    geom::Rectangle output2_area {
+        { 1280, 0   },
+        { 1280, 720 }
+    };
     BorderConfig border_config {};
     std::shared_ptr<test::MockSession> session;
     std::shared_ptr<test::MockSurface> surface;
