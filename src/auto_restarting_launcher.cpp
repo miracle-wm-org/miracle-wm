@@ -60,7 +60,7 @@ void AutoRestartingLauncher::launch(miracle::StartupApp const& cmd)
     pid_t pid;
     if (cmd.in_systemd_scope)
     {
-        std::vector<std::string> result = { "systemd-run", "--user" };
+        std::vector<std::string> result = { "systemd-run", "--user", "--scope" };
         if (cmd.restart_on_death)
         {
             result.push_back("--property");

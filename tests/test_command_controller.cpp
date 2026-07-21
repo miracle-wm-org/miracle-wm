@@ -15,21 +15,27 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "animator.h"
 #include "command_controller.h"
 #include "drag_and_drop_service.h"
 #include "mock_configuration.h"
 #include "mock_container.h"
 #include "mock_output.h"
 #include "mock_output_factory.h"
+#include "mock_session.h"
+#include "mock_surface.h"
 #include "mock_window_controller.h"
 #include "mock_workspace.h"
 #include "mode_observer.h"
 #include "output_manager.h"
 #include "scratchpad.h"
+#include "window_observer.h"
 #include "workspace_manager.h"
 #include "workspace_observer.h"
 #include <gtest/gtest.h>
 #include <memory>
+#include <miral/window_info.h>
+#include <miral/window_specification.h>
 #include <mutex>
 
 using namespace miracle;
@@ -344,7 +350,12 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
 class TwoOutputCommandControllerTest : public Test
 {
 public:
-    TwoOutputCommandControllerTest()
+    TwoOutputCommandControllerTest() :
+        session(std::make_shared<NiceMock<test::MockSession>>()),
+        surface(std::make_shared<NiceMock<test::MockSurface>>()),
+        app(session),
+        window(app, surface),
+        stub_info(window, miral::WindowSpecification {})
     {
         Mock::AllowLeak(output1.get());
         Mock::AllowLeak(output2.get());
@@ -373,6 +384,15 @@ public:
         ON_CALL(*output1, advise_workspace_active(_, _)).WillByDefault(Return(true));
         ON_CALL(*output2, advise_workspace_active(_, _)).WillByDefault(Return(true));
 
+        // Wiring needed when a container is actually constructed (create_container ->
+        // FreestyleWindowContainer -> associate_to_window reads the output geometry/transform).
+        ON_CALL(*output1, get_area()).WillByDefault(ReturnRef(output1_area));
+        ON_CALL(*output2, get_area()).WillByDefault(ReturnRef(output2_area));
+        ON_CALL(*output1, get_transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*output2, get_transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*workspace1, transform()).WillByDefault(Return(glm::mat4(1.f)));
+        ON_CALL(*workspace2, transform()).WillByDefault(Return(glm::mat4(1.f)));
+
         auto factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
         EXPECT_CALL(*factory, create)
             .WillOnce(Return(output1))
@@ -384,6 +404,12 @@ public:
         workspace_registry = std::make_shared<WorkspaceObserverRegistrar>();
         workspace_manager = std::make_shared<WorkspaceManager>(workspace_registry, config, output_manager);
         scratchpad = std::make_shared<Scratchpad>(window_controller, output_manager);
+
+        // Needed by create_container when it actually constructs a FreestyleWindowContainer.
+        ON_CALL(*config, get_border_config()).WillByDefault(ReturnRef(border_config));
+        ON_CALL(*window_controller, info_for(An<miral::Window const&>()))
+            .WillByDefault(ReturnRef(stub_info));
+
         command_controller = std::make_shared<CommandController>(
             config,
             state,
@@ -393,9 +419,9 @@ public:
             std::make_unique<StubCommandControllerInterface>(),
             scratchpad,
             output_manager,
+            animator,
             nullptr,
-            nullptr,
-            nullptr,
+            window_observer_registrar,
             nullptr,
             nullptr);
 
@@ -418,6 +444,22 @@ public:
     std::shared_ptr<Scratchpad> scratchpad;
     std::shared_ptr<ModeObserverRegistrar> mode_observer_registrar = std::make_shared<ModeObserverRegistrar>();
     std::shared_ptr<CompositorState> state = std::make_shared<CompositorState>();
+    std::shared_ptr<Animator> animator = std::make_shared<Animator>();
+    std::shared_ptr<WindowObserverRegistrar> window_observer_registrar = std::make_shared<WindowObserverRegistrar>();
+    geom::Rectangle output1_area {
+        { 0,    0   },
+        { 1280, 720 }
+    };
+    geom::Rectangle output2_area {
+        { 1280, 0   },
+        { 1280, 720 }
+    };
+    BorderConfig border_config {};
+    std::shared_ptr<test::MockSession> session;
+    std::shared_ptr<test::MockSurface> surface;
+    miral::Application app;
+    miral::Window window;
+    miral::WindowInfo stub_info;
     std::shared_ptr<CommandController> command_controller;
 };
 
@@ -437,6 +479,55 @@ TEST_F(TwoOutputCommandControllerTest, MoveContainerToWorkspaceOnDifferentOutput
     EXPECT_CALL(*output2, graft(base_container));
 
     ASSERT_TRUE(command_controller->try_move_to_workspace({}, 2, false));
+}
+
+// ---- create_container: window is placed on its requested output ----
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowIsPlacedOnRequestedOutput)
+{
+    miral::WindowSpecification spec;
+    spec.output_id() = 2;
+    miral::WindowInfo info(window, spec);
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    // The window asked for output 2, so it must land on output 2's active workspace,
+    // not on the focused output (output 1).
+    EXPECT_CALL(*workspace2, add_other_container(_, _));
+    EXPECT_CALL(*workspace1, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
+}
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowWithUnknownOutputFallsBackToFocusedOutput)
+{
+    miral::WindowSpecification spec;
+    spec.output_id() = 999; // no live output has this id
+    miral::WindowInfo info(window, spec);
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    // The requested output does not exist, so we fall back to the focused output
+    // (output 1) instead of dereferencing a null output.
+    EXPECT_CALL(*workspace1, add_other_container(_, _));
+    EXPECT_CALL(*workspace2, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
+}
+
+TEST_F(TwoOutputCommandControllerTest, FreestyleWindowWithoutRequestedOutputUsesFocusedOutput)
+{
+    miral::WindowInfo info(window, miral::WindowSpecification {}); // no requested output
+
+    AllocationHint hint;
+    hint.container_type = AllocationType::freestyle;
+
+    EXPECT_CALL(*workspace1, add_other_container(_, _));
+    EXPECT_CALL(*workspace2, add_other_container(_, _)).Times(0);
+
+    ASSERT_NE(command_controller->create_container(info, hint), nullptr);
 }
 
 // ---- try_toggle_fullscreen ----

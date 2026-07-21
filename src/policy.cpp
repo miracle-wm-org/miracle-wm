@@ -15,9 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
+#include "abstract_output.h"
+#include <memory>
 #define MIR_LOG_COMPONENT "miracle"
 
-#include "policy.h"
 #include "animator_loop.h"
 #include "binding_event.h"
 #include "config.h"
@@ -37,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugin_bridge.h"
 #include "plugin_managed_container.h"
 #include "plugin_manager.h"
+#include "policy.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
 #include "window_container.h"
@@ -630,7 +632,18 @@ auto Policy::place_new_window(
 
         if (hint.container_type != AllocationType::shell && hint.container_type != AllocationType::freestyle)
         {
-            auto parent = output_manager->focused()->active()->get_layout_container();
+            // We respect the desired output of the window is one is set.
+            std::shared_ptr<AbstractOutput> output;
+            if (new_spec.output_id())
+            {
+                output = output_manager->from(new_spec.output_id().value());
+                if (!output)
+                    output = output_manager->focused();
+            }
+            else
+                output = output_manager->focused();
+
+            auto parent = output->active()->get_layout_container();
             std::optional<size_t> index;
 
             // If the plugin placement is tiled, then we're going to try and either:
@@ -912,12 +925,16 @@ void Policy::handle_modify_window(
     container->handle_modify(modifications, hidden);
 }
 
+#ifdef MIR_VERSION_2_29_OR_GREATER
+void Policy::handle_activate_window(miral::WindowInfo& window_info)
+#else
 void Policy::handle_raise_window(miral::WindowInfo& window_info)
+#endif
 {
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
-        mir::log_error("handle_raise_window: container is not provided");
+        mir::log_error("handle_activate_window: container is not provided");
         return;
     }
 
