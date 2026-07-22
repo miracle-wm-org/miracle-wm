@@ -115,16 +115,12 @@ MessageHandlerResult IpcMessageHandler::process_msg(
         MessageHandlerResult result = { .type = payload_type };
         for (auto const& i : j)
         {
-            // A plugin-event subscription is expressed as an object carrying the plugin
-            // namespace, e.g. {"plugin": "myns"}, so a client can subscribe to specific
-            // namespaces alongside the ordinary string event names.
-            if (i.is_object() && i.contains("plugin"))
+            if (!i.is_string())
             {
-                auto const ns = i["plugin"].template get<std::string>();
-                mir::log_debug("Received plugin-event subscription for namespace: %s", ns.c_str());
-                result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_PLUGIN);
-                result.subscribed_plugin_namespaces.push_back(ns);
-                continue;
+                mir::log_warning("Cannot process IPC subscription event that is not a string: %s", i.dump().c_str());
+                error = "Invalid IPC subscription event: " + i.dump();
+                success = false;
+                break;
             }
 
             auto const event_type = i.template get<std::string>();
@@ -149,10 +145,12 @@ MessageHandlerResult IpcMessageHandler::process_msg(
                 result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_CONFIG_ERRORS);
             else
             {
-                mir::log_warning("Cannot process IPC subscription event for event_type: %s", event_type.c_str());
-                error = "Invalid IPC subscription event: " + event_type;
-                success = false;
-                break;
+                // Any string that is not one of the preset event names above is a plugin
+                // namespace. Preset names are matched first, so a namespace can never
+                // shadow a reserved event string.
+                mir::log_debug("Received plugin-event subscription for namespace: %s", event_type.c_str());
+                result.subscribed_events |= ipc_event_mask(IpcType::IPC_EVENT_PLUGIN);
+                result.subscribed_plugin_namespaces.push_back(event_type);
             }
         }
 

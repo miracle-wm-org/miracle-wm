@@ -24,14 +24,15 @@ table:
 ```
 
 ## Plugin namespace subscriptions
-The [plugin](events/plugin.md) event is subscribed to **per namespace** rather than by a plain
-name. Instead of a string, pass an object of the form `{ "plugin": <namespace> }`. Only plugin
-events published on that namespace are delivered to the connection. Namespace objects may be
-mixed freely with the ordinary event-name strings.
+The [plugin](events/plugin.md) event is subscribed to **per namespace**. A plugin namespace is
+passed as a plain string, exactly like the ordinary event names above, and only plugin events
+published on that namespace are delivered to the connection. A namespace must not be one of the
+preset event names in the table above; any string that is not a preset event name is treated as
+a plugin namespace. Namespaces may be mixed freely with the ordinary event-name strings.
 
 ### Example
 ```json
-[ "workspace", { "plugin": "my-plugin" }, { "plugin": "other-plugin" } ]
+[ "workspace", "my-plugin", "other-plugin" ]
 ```
 
 ## Reply

@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_command_controller.h"
 #include "mock_configuration.h"
 #include "mock_ipc_command_executor.h"
+#include "mock_plugin_manager.h"
 #include "mock_window_controller.h"
 #include "version.h"
 
@@ -38,7 +39,7 @@ public:
             std::unique_ptr<test::MockIpcCommandExecutor>(ipc_command_executor),
             config,
             window_controller,
-            std::shared_ptr<PluginManager>())
+            plugin_manager)
     {
         ON_CALL(*window_controller, invoke_under_lock)
             .WillByDefault([](std::function<void()> const& f)
@@ -48,6 +49,7 @@ public:
     std::shared_ptr<test::MockCommandController> command_controller = std::make_shared<NiceMock<test::MockCommandController>>();
     std::shared_ptr<test::MockConfig> config = std::make_shared<NiceMock<test::MockConfig>>();
     std::shared_ptr<NiceMock<test::MockWindowController>> window_controller = std::make_shared<NiceMock<test::MockWindowController>>();
+    std::shared_ptr<NiceMock<test::MockPluginManager>> plugin_manager = std::make_shared<NiceMock<test::MockPluginManager>>();
     test::MockIpcCommandExecutor* ipc_command_executor;
     IpcMessageHandler message_handler;
 };
@@ -136,17 +138,66 @@ INSTANTIATE_TEST_SUITE_P(
         SubscriptionTestParams("binding", IpcType::IPC_EVENT_BINDING),
         SubscriptionTestParams("output", IpcType::IPC_EVENT_OUTPUT)));
 
+TEST_F(IpcMessageHandlerTest, CanSubscribeToPluginNamespace)
+{
+    nlohmann::json subscription;
+    subscription.push_back("my-plugin");
+
+    auto const payload = to_string(subscription);
+    auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), static_cast<uint32_t>(payload.size()));
+    EXPECT_THAT(result.subscribed_events == ipc_event_mask(IpcType::IPC_EVENT_PLUGIN), Eq(true));
+    EXPECT_THAT(result.subscribed_plugin_namespaces, ElementsAre("my-plugin"));
+    nlohmann::json result_json = nlohmann::json::parse(result.payload);
+    EXPECT_THAT(result_json["success"], Eq(true));
+}
+
 TEST_F(IpcMessageHandlerTest, CanFailToSubscribeToEvent)
 {
     nlohmann::json subscription;
-    subscription.push_back("meow");
+    subscription.push_back(42);
 
     auto const payload = to_string(subscription);
     auto const result = message_handler.handle_msg(IpcType::IPC_SUBSCRIBE, payload.c_str(), static_cast<uint32_t>(payload.size()));
     EXPECT_THAT(result.subscribed_events, Eq(0));
     nlohmann::json result_json = nlohmann::json::parse(result.payload);
     EXPECT_THAT(result_json["success"], Eq(false));
-    EXPECT_THAT(result_json["error"], Eq("Invalid IPC subscription event: meow"));
+    EXPECT_THAT(result_json["error"], Eq("Invalid IPC subscription event: 42"));
+}
+
+TEST_F(IpcMessageHandlerTest, RoutesPluginCommandToPluginManager)
+{
+    EXPECT_CALL(*plugin_manager, handle_plugin_command("my-plugin", _))
+        .WillOnce(Return(std::optional<std::string>(R"({"pong":true})")));
+
+    nlohmann::json const request = {
+        { "plugin",  "my-plugin"          },
+        { "payload", { { "ping", true } } }
+    };
+    auto const payload = to_string(request);
+    auto const result = message_handler.handle_msg(IpcType::IPC_PLUGIN_COMMAND, payload.c_str(), static_cast<uint32_t>(payload.size()));
+
+    nlohmann::json result_json = nlohmann::json::parse(result.payload);
+    EXPECT_THAT(result_json["success"], Eq(true));
+    EXPECT_THAT(result_json["response"], Eq(nlohmann::json({
+                                             { "pong", true }
+    })));
+}
+
+TEST_F(IpcMessageHandlerTest, PluginCommandFailsWhenNoPluginRegistered)
+{
+    EXPECT_CALL(*plugin_manager, handle_plugin_command("my-plugin", _))
+        .WillOnce(Return(std::nullopt));
+
+    nlohmann::json const request = {
+        { "plugin",  "my-plugin"          },
+        { "payload", { { "ping", true } } }
+    };
+    auto const payload = to_string(request);
+    auto const result = message_handler.handle_msg(IpcType::IPC_PLUGIN_COMMAND, payload.c_str(), static_cast<uint32_t>(payload.size()));
+
+    nlohmann::json result_json = nlohmann::json::parse(result.payload);
+    EXPECT_THAT(result_json["success"], Eq(false));
+    EXPECT_THAT(result_json["error"], Eq("No plugin is registered for namespace: my-plugin"));
 }
 
 TEST_F(IpcMessageHandlerTest, CanGetTree)
