@@ -92,6 +92,7 @@ nav:
     - ipc/sync.md
     - ipc/get_binding_state.md
     - ipc/get_debug_state.md
+    - ipc/plugin_command.md
     - Commands:
       - ipc/commands/exec.md
       - ipc/commands/split.md
@@ -117,6 +118,7 @@ nav:
       - ipc/events/shutdown.md
       - ipc/events/tick.md
       - ipc/events/config_errors.md
+      - ipc/events/plugin.md
   - Plugins: plugins.md
   - Display Configuration: configuration/display_configuration.md
   - Screen Sharing: screenshare.md

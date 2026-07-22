@@ -21,6 +21,7 @@ set(SOURCES
     mock_configuration.h
     mock_container.h
     mock_ipc_command_executor.h
+    mock_plugin_manager.h
     mock_output.h
     mock_output_factory.h
     mock_surface_stack.h

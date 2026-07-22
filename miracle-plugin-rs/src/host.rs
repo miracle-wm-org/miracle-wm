@@ -183,4 +183,24 @@ unsafe extern "C" {
     ///
     /// Returns 0 on success, -1 on error.
     pub fn miracle_set_screen_shader(plugin_handle: i32, passes_ptr: i32, num_passes: i32) -> i32;
+
+    /// Register a namespace this plugin owns for IPC commands and events.
+    ///
+    /// `plugin_handle` is the registering plugin's handle (from
+    /// `miracle_get_plugin_handle()`). `ns_ptr`/`ns_len` describe the namespace's UTF-8
+    /// bytes in WASM linear memory.
+    ///
+    /// A plugin may own at most one namespace, and each namespace may be owned by at most
+    /// one plugin. Returns 0 on success, -1 if this plugin already owns a namespace or the
+    /// namespace is already taken.
+    pub fn miracle_plugin_register_namespace(plugin_handle: i32, ns_ptr: i32, ns_len: i32) -> i32;
+
+    /// Publish an event on this plugin's registered namespace.
+    ///
+    /// `plugin_handle` is the publishing plugin's handle (from
+    /// `miracle_get_plugin_handle()`). `payload_ptr`/`payload_len` describe the JSON
+    /// payload's UTF-8 bytes in WASM linear memory.
+    ///
+    /// Returns 0 on success, -1 if this plugin owns no namespace.
+    pub fn miracle_plugin_publish_event(plugin_handle: i32, payload_ptr: i32, payload_len: i32) -> i32;
 }

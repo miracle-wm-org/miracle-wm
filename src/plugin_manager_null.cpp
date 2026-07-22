@@ -60,6 +60,11 @@ namespace
         bool handle_keyboard_event(MirKeyboardEvent const&) override { return false; }
         bool handle_pointer_event(MirPointerEvent const&) override { return false; }
         PluginConfigData configure() override { return PluginConfigData {}; }
+        std::optional<std::string> handle_plugin_command(
+            std::string const&, std::string const&) override
+        {
+            return std::nullopt;
+        }
     };
 }
 

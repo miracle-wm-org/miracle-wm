@@ -104,11 +104,12 @@ IpcConnectionManager::IpcConnectionManager(
     std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<IpcCommandExecutor> const& command_executor,
     std::shared_ptr<Config> const& config,
-    std::shared_ptr<WindowController> const& window_controller) :
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<PluginManager> const& plugin_manager) :
     main_loop(main_loop_),
     command_controller(command_controller),
     config(config),
-    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller))
+    ipc_message_handler(std::make_unique<IpcMessageHandler>(command_controller, command_executor, config, window_controller, plugin_manager))
 {
     auto const ipc_socket_raw = socket(AF_UNIX, SOCK_STREAM, 0);
     if (ipc_socket_raw == -1)
@@ -501,6 +502,35 @@ void IpcConnectionManager::on_binding_event(BindingEvent const& binding_event)
     }
 }
 
+void IpcConnectionManager::on_plugin_event(std::string const& ns, std::string const& payload_json)
+{
+    json j;
+    j["plugin"] = ns;
+    try
+    {
+        j["payload"] = json::parse(payload_json);
+    }
+    catch (json::exception const&)
+    {
+        // Fall back to the raw string if the plugin published a non-JSON payload.
+        j["payload"] = payload_json;
+    }
+    auto const str = to_string(j);
+
+    std::lock_guard lock(clients_mutex);
+    for (auto& client : clients)
+    {
+        if ((client->subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_PLUGIN)) == 0)
+            continue;
+
+        auto const& namespaces = client->subscribed_plugin_namespaces;
+        if (std::ranges::find(namespaces, ns) == namespaces.end())
+            continue;
+
+        send_reply(*client, IpcType::IPC_EVENT_PLUGIN, str);
+    }
+}
+
 void IpcConnectionManager::on_window_created(Container const& container)
 {
     send_window_event("new", container);
@@ -592,6 +622,10 @@ void IpcConnectionManager::handle_command(IpcClient& client, uint32_t payload_le
         send_reply(client, result.type, result.payload);
 
     client.subscribed_events |= result.subscribed_events;
+    client.subscribed_plugin_namespaces.insert(
+        client.subscribed_plugin_namespaces.end(),
+        result.subscribed_plugin_namespaces.begin(),
+        result.subscribed_plugin_namespaces.end());
     if (result.subscribed_events & ipc_event_mask(IpcType::IPC_EVENT_TICK))
     {
         json const response = {

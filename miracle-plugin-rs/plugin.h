@@ -599,6 +599,38 @@ extern "C"
     int32_t miracle_set_screen_shader(
         int32_t plugin_handle, const miracle_shader_pass_t* passes, int32_t num_passes);
 
+    /// Register a namespace this plugin owns for IPC commands and events.
+    ///
+    /// A plugin may own at most one namespace, and each namespace may be owned by at most
+    /// one plugin. IPC clients address commands to `{ "plugin": <namespace>, "payload": ... }`
+    /// and subscribe to this plugin's events by that namespace.
+    ///
+    /// \param plugin_handle the registering plugin's handle (from `miracle_get_plugin_handle()`)
+    /// \param ns   pointer to the namespace string bytes (not NUL-terminated)
+    /// \param len  byte length of the namespace string
+    /// \returns 0 on success, -1 if this plugin already owns a namespace or \p ns is taken
+    int32_t miracle_plugin_register_namespace(int32_t plugin_handle, const char* ns, int32_t len);
+
+    /// Publish an event on this plugin's registered namespace.
+    ///
+    /// The \p payload is delivered verbatim to every IPC client subscribed to this
+    /// plugin's namespace, wrapped as `{ "plugin": <namespace>, "payload": <payload> }`.
+    ///
+    /// \param plugin_handle the publishing plugin's handle (from `miracle_get_plugin_handle()`)
+    /// \param payload pointer to the JSON payload bytes (not NUL-terminated)
+    /// \param len     byte length of the payload
+    /// \returns 0 on success, -1 if this plugin owns no namespace
+    int32_t miracle_plugin_publish_event(int32_t plugin_handle, const char* payload, int32_t len);
+
+    /// Optional plugin export: handle an IPC command addressed to this plugin's namespace.
+    ///
+    /// The host writes the request payload's JSON bytes into WASM memory at \p buf_ptr
+    /// (\p in_len bytes). The plugin reads them, and writes its JSON response back into the
+    /// same buffer (capacity \p buf_cap bytes), returning the number of response bytes
+    /// written. Return -1 to decline the command (the client receives success:false).
+    ///
+    /// int32_t handle_plugin_command(int32_t buf_ptr, int32_t in_len, int32_t buf_cap);
+
 #ifdef __cplusplus
 }
 #endif

@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "container.h"
 #include "plugin_bridge.h"
 
+#include <algorithm>
 #include <cstring>
 #include <mir/log.h>
 #include <miral/toolkit_event.h>
@@ -855,6 +856,57 @@ WasmEdge_Result host_miracle_set_screen_shader(
     return WasmEdge_Result_Success;
 }
 
+// Read a single UTF-8 string of `len` bytes at `ptr` from WASM memory.
+std::string read_string(WasmEdge_MemoryInstanceContext* memory, int32_t ptr, int32_t len)
+{
+    if (len <= 0)
+        return {};
+    uint8_t* mem_base = WasmEdge_MemoryInstanceGetPointer(memory, 0, 0);
+    return std::string(reinterpret_cast<char const*>(mem_base + ptr), static_cast<size_t>(len));
+}
+
+WasmEdge_Result host_miracle_plugin_register_namespace(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const ns_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const ns_len = WasmEdge_ValueGetI32(params[2]);
+
+    auto* memory = get_memory_from_frame(frame, "host_miracle_plugin_register_namespace");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto ns = read_string(memory, ns_ptr, ns_len);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->register_plugin_namespace(static_cast<uint32_t>(plugin_handle), std::move(ns)));
+    return WasmEdge_Result_Success;
+}
+
+WasmEdge_Result host_miracle_plugin_publish_event(
+    void* data,
+    WasmEdge_CallingFrameContext const* frame,
+    WasmEdge_Value const* params,
+    WasmEdge_Value* returns)
+{
+    auto const bridge = static_cast<PluginBridge*>(data);
+    int32_t const plugin_handle = WasmEdge_ValueGetI32(params[0]);
+    int32_t const payload_ptr = WasmEdge_ValueGetI32(params[1]);
+    int32_t const payload_len = WasmEdge_ValueGetI32(params[2]);
+
+    auto* memory = get_memory_from_frame(frame, "host_miracle_plugin_publish_event");
+    if (!memory)
+        return WasmEdge_Result_Fail;
+
+    auto payload = read_string(memory, payload_ptr, payload_len);
+    returns[0] = WasmEdge_ValueGenI32(
+        bridge->publish_plugin_event(static_cast<uint32_t>(plugin_handle), std::move(payload)));
+    return WasmEdge_Result_Success;
+}
+
 // Helper to add a host function to a module
 void add_host_function(
     WasmEdge_ModuleInstanceContext* module,
@@ -1040,6 +1092,14 @@ void PluginManagerImpl::Self::create_host_module()
         create_func_type({ i32, i32, i32 }, { i32 }),
         host_miracle_set_screen_shader, bridge.get());
 
+    add_host_function(module, "miracle_plugin_register_namespace",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_plugin_register_namespace, bridge.get());
+
+    add_host_function(module, "miracle_plugin_publish_event",
+        create_func_type({ i32, i32, i32 }, { i32 }),
+        host_miracle_plugin_publish_event, bridge.get());
+
     // Register the host module with the executor
     auto const r = WasmEdge_ExecutorRegisterImport(executor_context.get(), store_context.get(), module);
     if (!WasmEdge_ResultOK(r))
@@ -1050,7 +1110,7 @@ void PluginManagerImpl::Self::create_host_module()
     }
 
     host_module.reset(module);
-    mir::log_info("Host module 'env' registered with %d functions", 24);
+    mir::log_info("Host module 'env' registered with %d functions", 26);
 }
 
 PluginLoadResult PluginManagerImpl::load_wasm_module(std::string const& path, std::string const& userdata_json)
@@ -2103,6 +2163,92 @@ miracle::PluginConfigData PluginManagerImpl::configure()
     result.magnifier = accumulated.magnifier;
     result.workspace_back_and_forth = accumulated.workspace_back_and_forth;
     return result;
+}
+
+std::optional<std::string> PluginManagerImpl::handle_plugin_command(
+    std::string const& ns, std::string const& payload_json)
+{
+    std::lock_guard lock(mutex_);
+
+    auto const handle = self->bridge->handle_for_namespace(ns);
+    if (!handle)
+        return std::nullopt;
+
+    auto const it = std::ranges::find_if(self->loaded_modules, [&](auto const& module)
+    {
+        return module.handle == *handle;
+    });
+    if (it == self->loaded_modules.end())
+        return std::nullopt;
+
+    // Single shared scratch window: the host writes the request payload at buf_ptr,
+    // the plugin reads it, then writes its JSON response back to the same buffer and
+    // returns the number of bytes written (or -1 if it does not handle the command).
+    // This mirrors the configure() export convention.
+    constexpr uint32_t BUF_SIZE = 65536;
+    constexpr uint32_t buf_ptr = 8;
+
+    if (payload_json.size() > BUF_SIZE)
+    {
+        mir::log_error("handle_plugin_command: payload for namespace '%s' too large (%zu > %u)",
+            ns.c_str(), payload_json.size(), BUF_SIZE);
+        return std::nullopt;
+    }
+
+    auto const memory_name = WasmEdge_StringCreateByCString("memory");
+    auto const memory_context = WasmEdge_ModuleInstanceFindMemory(it->module_context.get(), memory_name);
+    WasmEdge_StringDelete(memory_name);
+    if (memory_context == nullptr)
+    {
+        mir::log_error("handle_plugin_command: memory not found in module '%s'", it->name.c_str());
+        return std::nullopt;
+    }
+
+    auto const func_name = WasmEdge_StringCreateByCString("handle_plugin_command");
+    auto const func_context = WasmEdge_ModuleInstanceFindFunction(it->module_context.get(), func_name);
+    WasmEdge_StringDelete(func_name);
+    if (func_context == nullptr)
+        return std::nullopt; // plugin owns the namespace but implements no handler
+
+    auto r = WasmEdge_MemoryInstanceSetData(
+        memory_context,
+        reinterpret_cast<uint8_t const*>(payload_json.data()),
+        buf_ptr,
+        static_cast<uint32_t>(payload_json.size()));
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("handle_plugin_command: failed to write payload to WASM memory: %s",
+            WasmEdge_ResultGetMessage(r));
+        return std::nullopt;
+    }
+
+    WasmEdge_Value params[3];
+    params[0] = WasmEdge_ValueGenI32(static_cast<int32_t>(buf_ptr));
+    params[1] = WasmEdge_ValueGenI32(static_cast<int32_t>(payload_json.size()));
+    params[2] = WasmEdge_ValueGenI32(static_cast<int32_t>(BUF_SIZE));
+
+    WasmEdge_Value returns[1];
+    r = WasmEdge_ExecutorInvoke(self->executor_context.get(), func_context, params, 3, returns, 1);
+    if (!WasmEdge_ResultOK(r))
+    {
+        mir::log_error("handle_plugin_command: invocation failed for namespace '%s': %s",
+            ns.c_str(), WasmEdge_ResultGetMessage(r));
+        return std::nullopt;
+    }
+
+    int32_t const bytes_written = WasmEdge_ValueGetI32(returns[0]);
+    if (bytes_written < 0)
+        return std::nullopt; // plugin declined to handle the command
+    if (static_cast<uint32_t>(bytes_written) > BUF_SIZE)
+    {
+        mir::log_error("handle_plugin_command: plugin '%s' reported %d bytes but buffer is only %u",
+            it->name.c_str(), bytes_written, BUF_SIZE);
+        return std::nullopt;
+    }
+
+    uint8_t* const mem_base = WasmEdge_MemoryInstanceGetPointer(memory_context, 0, 0);
+    return std::string(reinterpret_cast<char const*>(mem_base + buf_ptr),
+        static_cast<size_t>(bytes_written));
 }
 
 PluginWindowPlacement PluginManagerImpl::from_c(miracle_placement_t placement, PluginHandle plugin_handle)

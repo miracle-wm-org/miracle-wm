@@ -109,6 +109,13 @@ public:
         std::string name;
     };
 
+    /// Sink invoked when a plugin publishes an event on its namespace.
+    ///
+    /// Arguments are (namespace, payload_json). Kept as a plain std::function so the
+    /// bridge (which may live in the isolated plugin module) has no dependency on the
+    /// IPC types in the main binary.
+    using PluginEventSink = std::function<void(std::string const&, std::string const&)>;
+
     PluginBridge(
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<WindowController> const& window_controller,
@@ -118,7 +125,8 @@ public:
         std::shared_ptr<ApplicationIdMap> const& application_id_map,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<mir::ServerActionQueue> const& server_action_queue,
-        std::shared_ptr<SamplerRegistry> const& sampler_registry);
+        std::shared_ptr<SamplerRegistry> const& sampler_registry,
+        PluginEventSink plugin_event_sink = {});
 
     miracle_application_info_t application_from_window(uint64_t window_id);
     WorkspaceResult workspace_from_window(uint64_t window_id);
@@ -161,6 +169,21 @@ public:
     void set_plugin_userdata(uint32_t handle, std::string const& userdata_json);
     std::string const* get_plugin_userdata(uint32_t handle) const;
 
+    /// Register \p ns as owned by \p handle for plugin IPC commands/events.
+    ///
+    /// A plugin may own at most one namespace, and a namespace may be owned by at most
+    /// one plugin. \returns 0 on success, -1 if \p handle already owns a namespace or
+    /// \p ns is already owned by another plugin.
+    int32_t register_plugin_namespace(uint32_t handle, std::string ns);
+
+    /// \returns the handle owning \p ns, or std::nullopt if the namespace is unregistered.
+    std::optional<uint32_t> handle_for_namespace(std::string const& ns) const;
+
+    /// Publish an event on the namespace owned by \p handle.
+    ///
+    /// \returns 0 on success, -1 if \p handle owns no namespace or no sink is wired.
+    int32_t publish_plugin_event(uint32_t handle, std::string payload_json);
+
     /// Look up a workspace by its ID and return its plugin representation.
     WorkspaceResult workspace_by_id(uint32_t id);
 
@@ -199,6 +222,8 @@ private:
     uint32_t next_animation_id = 1;
     std::vector<std::shared_ptr<PluginWindowInfo>> plugin_window_infos;
     std::unordered_map<uint32_t, std::string> plugin_userdata_map;
+    std::unordered_map<std::string, uint32_t> namespace_to_handle_;
+    PluginEventSink plugin_event_sink_;
 };
 
 inline miracle_point_t from_point(mir::geometry::Point const& point)

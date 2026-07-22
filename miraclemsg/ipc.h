@@ -46,6 +46,7 @@ enum ipc_command_type
 
     // miracle-specific command types
     IPC_GET_DEBUG_STATE = 200,
+    IPC_PLUGIN_COMMAND = 201,
 
     // Events sent from sway to clients. Events have the highest bits set.
     IPC_EVENT_WORKSPACE = ((1 << 31) | 0),
@@ -63,6 +64,7 @@ enum ipc_command_type
 
     // miracle-specific event types
     IPC_EVENT_CONFIG_ERRORS = ((1 << 31) | 22),
+    IPC_EVENT_PLUGIN = ((1 << 31) | 23),
 };
 
 #endif
