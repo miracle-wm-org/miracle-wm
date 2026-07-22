@@ -182,7 +182,7 @@ namespace
 {
 bool has_restored_state(miral::WindowSpecification const& spec)
 {
-    return spec.state().is_set() && spec.state().value() == mir_window_state_restored;
+    return spec.state() && spec.state().value() == mir_window_state_restored;
 }
 }
 

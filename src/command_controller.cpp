@@ -238,7 +238,19 @@ std::shared_ptr<WindowContainer> CommandController::create_container(miral::Wind
     break;
     case AllocationType::freestyle:
     {
-        std::shared_ptr<AbstractWorkspace> workspace = output_manager->focused()->active();
+        // Determine the workspace for the window. If the window has an output ID, use that, otherwise use the focused output.
+        // If the requested output has no matching live output, fall back to the focused output.
+        std::shared_ptr<AbstractWorkspace> workspace;
+        if (window_info.has_output_id())
+        {
+            if (auto const output = output_manager->from(window_info.output_id()))
+                workspace = output->active();
+            else
+                workspace = output_manager->focused()->active();
+        }
+        else
+            workspace = output_manager->focused()->active();
+
         if (window_info.parent())
         {
             if (auto const parent_container = window_controller->get_window_container(window_info.parent()))
@@ -2354,7 +2366,7 @@ nlohmann::json CommandController::mode_to_json() const
         };
     default:
     {
-        mir::fatal_error("handle_command: unknown binding state: %d", (int)state->mode());
+        mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());
         return {};
     }
     }
