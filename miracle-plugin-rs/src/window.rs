@@ -428,6 +428,17 @@ impl Window {
         let r = unsafe { miracle_window_set_shader_id(self.internal as i64, id) };
         if r == 0 { Ok(()) } else { Err(()) }
     }
+
+    /// Set the per-window geometry shader applied to this window.
+    ///
+    /// Pass `Some(id)` with the ID returned by
+    /// [`crate::register_window_geometry_shader`] to activate the geometry shader,
+    /// or `None` to clear it and revert to normal geometry.
+    pub fn set_geometry_shader(&self, geometry_shader_id: Option<u8>) -> Result<(), ()> {
+        let id = geometry_shader_id.map(|id| id as i32).unwrap_or(-1);
+        let r = unsafe { miracle_window_set_geometry_shader_id(self.internal as i64, id) };
+        if r == 0 { Ok(()) } else { Err(()) }
+    }
 }
 
 impl PartialEq for Window {

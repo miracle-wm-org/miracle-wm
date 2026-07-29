@@ -114,6 +114,19 @@ void RenderDataManager::shader_id_change(RenderDataManagerId id, std::optional<u
     }
 }
 
+void RenderDataManager::geometry_shader_id_change(RenderDataManagerId id, std::optional<uint8_t> geometry_shader_id)
+{
+    std::lock_guard lock(mutex);
+    for (auto& data : render_data)
+    {
+        if (data.id == id)
+        {
+            data.geometry_shader_id = geometry_shader_id;
+            return;
+        }
+    }
+}
+
 void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
 {
     std::lock_guard lock(mutex);
@@ -121,6 +134,8 @@ void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
     {
         if (data.shader_id && std::find(ids.begin(), ids.end(), *data.shader_id) != ids.end())
             data.shader_id = std::nullopt;
+        if (data.geometry_shader_id && std::find(ids.begin(), ids.end(), *data.geometry_shader_id) != ids.end())
+            data.geometry_shader_id = std::nullopt;
     }
 }
 

@@ -147,5 +147,6 @@ pub mod __private {
 pub use config::{BindingAction, Key, Modifier};
 pub use plugin::{
     get_active_workspace, get_output_at, get_outputs, get_userdata_json, managed_windows,
-    num_outputs, queue_custom_animation, request_workspace,
+    num_outputs, queue_custom_animation, register_window_geometry_shader, register_window_shader,
+    request_workspace, set_screen_shader,
 };

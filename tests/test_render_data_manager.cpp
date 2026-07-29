@@ -157,6 +157,37 @@ INSTANTIATE_TEST_SUITE_P(
     RenderDataManagerParameterizedTest,
     ::testing::Values(1, 2, 8, 64, 128, 256, 512, 1024));
 
+TEST_F(RenderDataManagerTest, CanChangeGeometryShaderId)
+{
+    auto id = render_data_manager.add({ .surface = nullptr,
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
+        .shader_id = std::nullopt,
+        .geometry_shader_id = std::nullopt });
+
+    render_data_manager.geometry_shader_id_change(id, std::optional<uint8_t> { 7 });
+    ASSERT_EQ(render_data_manager.get()[0].geometry_shader_id, std::optional<uint8_t> { 7 });
+
+    render_data_manager.geometry_shader_id_change(id, std::nullopt);
+    ASSERT_EQ(render_data_manager.get()[0].geometry_shader_id, std::nullopt);
+}
+
+TEST_F(RenderDataManagerTest, ResetShadersClearsBothFragmentAndGeometryIds)
+{
+    render_data_manager.add({ .surface = nullptr,
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
+        .shader_id = std::optional<uint8_t> { 5 },
+        .geometry_shader_id = std::optional<uint8_t> { 6 } });
+
+    // Removing only id 6 clears the geometry shader but leaves the fragment shader.
+    render_data_manager.reset_shaders({ 6 });
+    ASSERT_EQ(render_data_manager.get()[0].shader_id, std::optional<uint8_t> { 5 });
+    ASSERT_EQ(render_data_manager.get()[0].geometry_shader_id, std::nullopt);
+
+    // Removing id 5 then clears the fragment shader too.
+    render_data_manager.reset_shaders({ 5 });
+    ASSERT_EQ(render_data_manager.get()[0].shader_id, std::nullopt);
+}
+
 TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
 {
     auto id = render_data_manager.add({ .surface = nullptr,

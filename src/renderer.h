@@ -24,10 +24,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "render_data_manager.h"
 
 #include <GLES2/gl2.h>
+#include <chrono>
 #include <mir/geometry/rectangle.h>
 #include <mir/graphics/renderable.h>
 #include <mir/renderer/renderer.h>
 #include <miral/window_manager_tools.h>
+#include <unordered_map>
 #include <vector>
 
 namespace mir
@@ -152,16 +154,55 @@ private:
         GLuint texture_id = 0;
         GLuint framebuffer_id = 0;
 
+        GLenum filter = GL_NEAREST;
+
         ~PassTarget();
-        /// Ensures the target is allocated at least as large as `requested`.
-        /// Reallocates only when requested exceeds the current size.
-        void ensure(mir::geometry::Size requested);
+        /// Ensures the target is allocated at least as large as `requested`, using the
+        /// given magnification/minification filter. Reallocates when `requested` exceeds
+        /// the current size or the requested filter differs from the current one.
+        void ensure(mir::geometry::Size requested, GLenum filter = GL_NEAREST);
+    };
+
+    /// Optional override of the global projection uniforms, used when a renderable is
+    /// drawn into an off-screen target (the geometry-shader composite) in a local
+    /// coordinate space rather than directly to the output.
+    struct TransformOverride
+    {
+        glm::mat4 screen_to_gl;
+        glm::mat4 display;
     };
 
     DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;
-    /// Draws the current renderable and returns a follow-up draw if required.
-    void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
+    /// Draws the current renderable. When \p ovr is set, the global display/
+    /// screen_to_gl_coords uniforms use the override (and the per-frame uniform cache is
+    /// bypassed) so the caller can redirect the draw into an off-screen buffer.
+    void draw(mir::graphics::Renderable const& renderable, DrawData const& data,
+        TransformOverride const* ovr = nullptr) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
+
+    /// Core border-ring draw shared by draw_border() and the geometry composite; renders
+    /// the border model with the supplied transforms and uniforms.
+    void draw_border_core(
+        glm::mat4 const& border_transform,
+        glm::vec4 const& color,
+        float radius,
+        float width,
+        float alpha,
+        glm::vec2 surface_size_px,
+        glm::mat4 const& screen_to_gl,
+        glm::mat4 const& display,
+        glm::mat4 const& workspace,
+        glm::mat4 const& transform,
+        glm::vec2 center) const;
+
+    /// Renders a window's content + border into an off-screen texture, then draws that
+    /// combined texture as a single quad through the window's geometry shader so border
+    /// and content deform together. Used only when the window has both a geometry shader
+    /// and a border on a geometry-capable context.
+    void draw_geometry_composite(
+        mir::graphics::Renderable const& renderable,
+        mir::scene::Surface const& surface,
+        DrawData const& data) const;
     void update_gl_viewport();
 
     /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
@@ -177,6 +218,10 @@ private:
     class OutputFilter;
     std::unique_ptr<OutputFilter> const output_surface;
     mutable PassTarget pass_targets[2];
+    /// Off-screen target holding a window's composited content + border, deformed as a
+    /// single quad by the geometry shader (see draw_geometry_composite). Kept separate
+    /// from pass_targets[] which are live during multipass content shaders.
+    mutable PassTarget composite_target;
 
     GLfloat clear_color[4];
     mutable long long frameno = 0;
@@ -200,6 +245,19 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<SamplerRegistry> sampler_registry;
+
+    /// Per-window state used to derive the `u_velocity` uniform fed to geometry
+    /// shaders (e.g. wobbly windows): the window's last screen-space center and the
+    /// time it was sampled. Keyed by RenderData id. Only populated while a window
+    /// has an active geometry shader.
+    struct VelocitySample
+    {
+        float cx = 0.f;
+        float cy = 0.f;
+        double t = 0.0;
+    };
+    mutable std::unordered_map<RenderDataManagerId, VelocitySample> velocity_samples;
+    std::chrono::steady_clock::time_point const start_time = std::chrono::steady_clock::now();
 };
 
 }

@@ -39,10 +39,24 @@ struct SamplerRegistry
         std::optional<uint32_t> plugin_handle;
     };
 
+    /// A registered per-window geometry shader. Unlike fragment shaders these
+    /// are single-source (not multi-pass): the geometry stage runs once between
+    /// the vertex and fragment stages. `source` is a complete GLSL ES 3.20
+    /// geometry shader.
+    struct GeometryEntry
+    {
+        uint8_t id;
+        std::string source;
+        std::optional<uint32_t> plugin_handle;
+    };
+
     // TODO: This relies on non-local knowledge that Mir internally never
     //  claims identifiers above 1.
     uint8_t id = 5;
     std::vector<Entry> entries;
+    /// Geometry-shader registrations. These share the `id` counter above so a
+    /// window's fragment `shader_id` and `geometry_shader_id` never collide.
+    std::vector<GeometryEntry> geometry_entries;
     std::mutex mutex;
 
     /// The single, global full-screen (output) shader, if any. Unlike window
@@ -60,8 +74,18 @@ struct SamplerRegistry
         std::vector<std::string> passes,
         std::optional<uint32_t> plugin_handle = std::nullopt);
 
-    /// Remove all shaders registered by the given plugin and return their ids.
-    /// Also clears the screen shader if the given plugin owns it.
+    /// Register a per-window geometry shader and return its unique id.
+    uint8_t register_window_geometry_shader(
+        std::string source,
+        std::optional<uint32_t> plugin_handle = std::nullopt);
+
+    /// Return the GLSL source for the geometry shader with the given id, or
+    /// std::nullopt if no such shader is registered.
+    std::optional<std::string> geometry_shader_source(uint8_t id);
+
+    /// Remove all shaders (fragment and geometry) registered by the given plugin
+    /// and return their ids. Also clears the screen shader if the given plugin
+    /// owns it.
     std::vector<uint8_t> remove_shaders_for_plugin(uint32_t plugin_handle);
 
     /// Set (or, with std::nullopt, clear) the global full-screen shader.

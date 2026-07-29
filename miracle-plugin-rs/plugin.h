@@ -540,6 +540,16 @@ extern "C"
     /// \returns 0 on success, -1 on error
     int32_t miracle_window_set_shader_id(int64_t window_internal, int32_t shader_id);
 
+    /// Set the per-window geometry shader applied to a plugin-managed window.
+    ///
+    /// Pass the ID returned by #miracle_register_window_geometry_shader to activate
+    /// the geometry shader, or pass -1 to clear it and revert to normal geometry.
+    ///
+    /// \param window_internal the internal pointer from #miracle_window_info_t::internal
+    /// \param geometry_shader_id the ID from #miracle_register_window_geometry_shader, or -1 to clear
+    /// \returns 0 on success, -1 on error
+    int32_t miracle_window_set_geometry_shader_id(int64_t window_internal, int32_t geometry_shader_id);
+
     /// Queue a custom per-frame animation.
     ///
     /// The compositor will call the plugin's `custom_animate` WASM export each frame
@@ -576,6 +586,26 @@ extern "C"
     /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
     int32_t miracle_register_window_sample_to_rgba(
         int32_t plugin_handle, const miracle_shader_pass_t* passes, int32_t num_passes);
+
+    /// Register a per-window geometry shader for use in window rendering.
+    ///
+    /// `source`/`source_len` give a single complete GLSL ES 3.20 geometry shader
+    /// (not a multi-pass array). It runs between the compositor's vertex and
+    /// fragment stages; see the Rust `register_window_geometry_shader` docs for the
+    /// required `in vec2 v_texcoord[]` / `out vec2 g_texcoord` interface and the
+    /// optional `u_time` / `u_velocity` / `surfaceSize` uniforms.
+    ///
+    /// Requires a GLSL ES 3.20 (OpenGL ES 3.2) context; on systems without
+    /// geometry-shader support the compositor logs a warning and renders normally.
+    ///
+    /// \param plugin_handle the registering plugin's handle (from
+    ///                      `miracle_get_plugin_handle()`); the host uses it to remove
+    ///                      the shader when the plugin unloads
+    /// \param source     pointer to the GLSL geometry-shader source bytes
+    /// \param source_len byte length of the source
+    /// \returns unique uint8_t identifier (≥ 5) for the registered shader, cast to int32_t
+    int32_t miracle_register_window_geometry_shader(
+        int32_t plugin_handle, const char* source, int32_t source_len);
 
     /// Set or clear the full-screen (output) shader.
     ///

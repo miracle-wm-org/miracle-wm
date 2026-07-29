@@ -472,6 +472,51 @@ pub fn register_window_shader(passes: &[&str]) -> Option<u8> {
     }
 }
 
+/// Register a per-window geometry shader.
+///
+/// `source` is a complete GLSL ES 3.20 geometry shader. It runs between the
+/// compositor's vertex and fragment stages and must follow this interface:
+///
+/// ```glsl
+/// #version 320 es
+/// layout(triangles) in;
+/// layout(triangle_strip, max_vertices = /* N */) out;
+///
+/// in vec2 v_texcoord[];   // from the vertex stage (per input vertex)
+/// out vec2 g_texcoord;    // to the fragment stage (must be named g_texcoord)
+///
+/// // Optional built-in uniforms supplied by the compositor:
+/// uniform float u_time;       // seconds since the compositor started
+/// uniform vec2  u_velocity;   // window center velocity in px/s
+/// uniform vec2  surfaceSize;  // window size in pixels
+/// ```
+///
+/// Read input positions from `gl_in[i].gl_Position`, write `gl_Position` and
+/// `g_texcoord`, then `EmitVertex()` / `EndPrimitive()`.
+///
+/// Geometry shaders require a GLSL ES 3.20 (OpenGL ES 3.2) context. On systems
+/// without geometry-shader support the compositor logs a warning and renders the
+/// window normally (the shader is a no-op).
+///
+/// Returns the shader ID on success (pass to
+/// [`crate::window::Window::set_geometry_shader`]), or `None` if registration failed.
+pub fn register_window_geometry_shader(source: &str) -> Option<u8> {
+    let handle = unsafe { miracle_get_plugin_handle() };
+    // In wasm32 Rust pointers are linear-memory offsets, so casting to i32 is correct.
+    let result = unsafe {
+        crate::host::miracle_register_window_geometry_shader(
+            handle as i32,
+            source.as_ptr() as i32,
+            source.len() as i32,
+        )
+    };
+    if result >= 0 {
+        Some(result as u8)
+    } else {
+        None
+    }
+}
+
 /// Set or clear the full-screen (output) shader.
 ///
 /// Each element of `passes` is a complete `vec4 sample_to_rgba(in vec2 texcoord)`

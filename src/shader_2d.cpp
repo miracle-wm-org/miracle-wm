@@ -22,15 +22,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace miracle;
 
 // Vertex shader as a string literal
-const char* vertexShaderSource = R"(
-attribute vec2 aPos;
-attribute vec4 aColor;
+const char* vertexShaderSource = R"(#version 320 es
+precision highp float;
+
+in vec2 aPos;
+in vec4 aColor;
 
 uniform mat4 uProjection;
 uniform mat4 uModel;
 uniform mat4 uMesh;
 
-varying vec4 vertexColor;
+out vec4 vertexColor;
 
 void main() {
     gl_Position = uProjection * uModel * uMesh * vec4(aPos, 0.0, 1.0);
@@ -39,14 +41,13 @@ void main() {
 )";
 
 // Fragment shader as a string literal
-const char* fragmentShaderSource = R"(
-#ifdef GL_ES
+const char* fragmentShaderSource = R"(#version 320 es
 precision mediump float;
-#endif
-varying vec4 vertexColor;
+in vec4 vertexColor;
+out vec4 fragColor;
 
 void main() {
-    gl_FragColor = vertexColor;
+    fragColor = vertexColor;
 }
 )";
 

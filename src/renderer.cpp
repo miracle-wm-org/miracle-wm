@@ -389,9 +389,11 @@ private:
 
     static CompiledPass compile_pass(GLchar const* src)
     {
-        const GLchar* vertex_src = "attribute vec2 position;\n"
-                                   "attribute vec2 texcoord;\n"
-                                   "varying vec2 v_texcoord;\n"
+        const GLchar* vertex_src = "#version 320 es\n"
+                                   "precision highp float;\n"
+                                   "in vec2 position;\n"
+                                   "in vec2 texcoord;\n"
+                                   "out vec2 v_texcoord;\n"
                                    "void main() {\n"
                                    "   gl_Position = vec4(position, 0, 1); \n"
                                    "   v_texcoord = texcoord;\n"
@@ -401,9 +403,11 @@ private:
 
         std::stringstream fragment_src;
         fragment_src
-            << "#ifdef GL_ES\n"
+            // `#version` must lead; `#define texture2D texture` keeps GLSL ES 1.00
+            // style output-filter snippets compiling under GLSL ES 3.20.
+            << "#version 320 es\n"
+               "#define texture2D texture\n"
                "precision mediump float;\n"
-               "#endif\n"
             << "\n"
             // The same shader contract as window shaders: `tex` is this pass's
             // input (pass 0 = original screen), `tex_source` is always the
@@ -419,9 +423,10 @@ private:
             << "\n"
             << src
             << "\n"
-            << "varying vec2 v_texcoord;\n"
+            << "in vec2 v_texcoord;\n"
+               "out vec4 fragColor;\n"
                "void main() {\n"
-               "    gl_FragColor = sample_to_rgba(v_texcoord);\n"
+               "    fragColor = sample_to_rgba(v_texcoord);\n"
                "}\n";
 
         ShaderHandle fragment_shader { compile_shader(GL_FRAGMENT_SHADER, fragment_src.str().c_str()) };
@@ -506,9 +511,10 @@ Renderer::PassTarget::~PassTarget()
         glDeleteTextures(1, &texture_id);
 }
 
-void Renderer::PassTarget::ensure(mir::geometry::Size requested)
+void Renderer::PassTarget::ensure(mir::geometry::Size requested, GLenum requested_filter)
 {
-    if (requested.width.as_int() <= size.width.as_int() && requested.height.as_int() <= size.height.as_int())
+    if (requested.width.as_int() <= size.width.as_int() && requested.height.as_int() <= size.height.as_int()
+        && requested_filter == filter)
         return;
 
     if (framebuffer_id)
@@ -517,6 +523,7 @@ void Renderer::PassTarget::ensure(mir::geometry::Size requested)
         glDeleteTextures(1, &texture_id);
 
     size = requested;
+    filter = requested_filter;
 
     glGenTextures(1, &texture_id);
     glActiveTexture(GL_TEXTURE0);
@@ -524,8 +531,8 @@ void Renderer::PassTarget::ensure(mir::geometry::Size requested)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
         size.width.as_int(), size.height.as_int(), 0,
         GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
 
     glGenFramebuffers(1, &framebuffer_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer_id);
@@ -802,6 +809,27 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         if (!data.enabled)
             continue;
 
+        // A window with both a geometry shader and a border takes a combined path:
+        // content + border are composited into an off-screen texture and then deformed
+        // together as a single quad. Only on a geometry-capable context, for single-pass
+        // content shaders, and not mid resize/reveal (clip_area). One composite per
+        // surface — trailing renderables of the same surface fall through to the normal
+        // draw() below (undeformed, no duplicate border). Everything else is unchanged.
+        if (auto const surface = r->surface_if_any())
+        {
+            bool const want_composite = data.data.geometry_shader_id
+                && data.data.needs_outline
+                && program_factory->geometry_shaders_supported()
+                && !r->clip_area()
+                && (!data.data.shader_id || program_factory->pass_count(*data.data.shader_id) == 1);
+            if (want_composite && last_surface != surface.value())
+            {
+                last_surface = surface.value();
+                draw_geometry_composite(*r, *surface.value(), data);
+                continue;
+            }
+        }
+
         draw(*r, data);
 
         if (data.data.needs_outline)
@@ -828,7 +856,8 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
 
 void Renderer::draw(
     mg::Renderable const& renderable,
-    DrawData const& data) const
+    DrawData const& data,
+    TransformOverride const* ovr) const
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
     auto const clip_area = renderable.clip_area();
@@ -931,6 +960,16 @@ void Renderer::draw(
     // shader was removed), fall back to the default window shader instead of throwing.
     auto const* const prog = [&]() -> ProgramData const*
     {
+        // A per-window geometry shader (e.g. wobbly windows) runs on the single-pass
+        // path, combined with any fragment shader the window also has. On
+        // unsupported contexts / lookup failure this returns null and we fall back.
+        if (!is_multipass && data.data.geometry_shader_id)
+        {
+            if (auto* const p = program_factory->resolve_geometry_program(
+                    data.data.shader_id, *data.data.geometry_shader_id))
+                return &p->data;
+        }
+
         if (is_multipass)
         {
             auto variant = program_factory->resolve_custom_pass(
@@ -947,7 +986,22 @@ void Renderer::draw(
     }();
 
     glUseProgram(prog->id);
-    if (prog->last_used_frameno != frameno)
+    if (ovr)
+    {
+        // Off-screen draw with an overridden projection (geometry composite). Bypass the
+        // per-frame uniform cache and upload the override matrices directly; the tail of
+        // this function resets last_used_frameno so a later normal draw of this (possibly
+        // shared) program re-uploads the true screen globals.
+        for (auto i = 0u; i < prog->tex_uniforms.size(); ++i)
+            if (prog->tex_uniforms[i] != -1)
+                glUniform1i(prog->tex_uniforms[i], (int)i);
+
+        glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
+            glm::value_ptr(ovr->display));
+        glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
+            glm::value_ptr(ovr->screen_to_gl));
+    }
+    else if (prog->last_used_frameno != frameno)
     { // Avoid reloading the screen-global uniforms on every renderable
         // TODO: We actually only need to bind these *once*, right? Not once per frame?
         prog->last_used_frameno = frameno;
@@ -984,6 +1038,34 @@ void Renderer::draw(
 
     glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(data.data.workspace_transform));
+
+    // Feed animation inputs to geometry shaders (wobbly windows etc.). Only the
+    // geometry programs declare these uniforms; for everything else the locations
+    // are -1 and we skip the work (and the per-window velocity bookkeeping).
+    if (prog->time_uniform >= 0 || prog->velocity_uniform >= 0)
+    {
+        double const now = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - start_time)
+                               .count();
+
+        glm::vec2 velocity { 0.f, 0.f };
+        auto const it = velocity_samples.find(data.data.id);
+        if (it != velocity_samples.end())
+        {
+            double const dt = now - it->second.t;
+            if (dt > 1e-4)
+                velocity = {
+                    static_cast<float>((centerx - it->second.cx) / dt),
+                    static_cast<float>((centery - it->second.cy) / dt)
+                };
+        }
+        velocity_samples[data.data.id] = { centerx, centery, now };
+
+        if (prog->time_uniform >= 0)
+            glUniform1f(prog->time_uniform, static_cast<GLfloat>(now));
+        if (prog->velocity_uniform >= 0)
+            glUniform2f(prog->velocity_uniform, velocity.x, velocity.y);
+    }
 
     glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
@@ -1098,64 +1180,46 @@ void Renderer::draw(
     {
         glDisable(GL_SCISSOR_TEST);
     }
+
+    // We overrode this program's cached screen globals for an off-screen draw; force the
+    // next normal draw of the same (possibly shared) program to re-upload the real ones.
+    if (ovr)
+        prog->last_used_frameno = 0;
 }
 
-void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
+void Renderer::draw_border_core(
+    glm::mat4 const& border_transform,
+    glm::vec4 const& color,
+    float radius,
+    float width,
+    float alpha,
+    glm::vec2 surface_size_px,
+    glm::mat4 const& screen_to_gl,
+    glm::mat4 const& display,
+    glm::mat4 const& workspace,
+    glm::mat4 const& transform,
+    glm::vec2 center) const
 {
-    auto clip_area_opt = surface.clip_area();
-    if (!clip_area_opt)
-        clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
-
-    // First, we select the border shader as our shader
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
         GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     auto const* const prog = &program_factory->border().data;
     glUseProgram(prog->id);
 
-    // Next, we use the clip area as our rendering size
-    auto const border_config = config->get_border_config();
-    auto const border_rect = geom::Rectangle(
-        geom::Point(
-            clip_area_opt.value().top_left.x.as_value() * x_scale,
-            clip_area_opt.value().top_left.y.as_value() * y_scale),
-        geom::Size(
-            clip_area_opt.value().size.width.as_value() * x_scale,
-            clip_area_opt.value().size.height.as_value() * y_scale));
+    glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE, glm::value_ptr(display));
+    glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE, glm::value_ptr(screen_to_gl));
+    glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE, glm::value_ptr(workspace));
 
-    // Next, we update the uniforms for the context, including global transforms
-    glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(display_transform));
-    glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE,
-        glm::value_ptr(screen_to_gl_coords));
-    glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(data.data.workspace_transform));
-
-    auto const color = data.data.is_focused ? border_config.focus_color : border_config.color;
     glUniform4f(prog->border_color_uniform, color.r, color.g, color.b, color.a);
-    glUniform1f(prog->border_radius_uniform, border_config.radius);
-    glUniform1f(prog->border_width_uniform, static_cast<float>(border_config.size));
+    glUniform1f(prog->border_radius_uniform, radius);
+    glUniform1f(prog->border_width_uniform, width);
 
-    // Next, we set model-specific transforms
-    using namespace miracle::geometry_helpers;
-    float const alpha = data.alpha;
-    glm::mat4 border_transform = glm::scale(
-        glm::translate(
-            glm::mat4(1.0),
-            glm::vec3(gl::x(border_rect.top_left), gl::y(border_rect.top_left), 0)),
-        glm::vec3(gl::width(border_rect.size), gl::height(border_rect.size), 1));
-
-    auto const centerx = gl::x(border_rect.top_left) + gl::width(border_rect.size) / 2.0f;
-    auto const centery = gl::y(border_rect.top_left) + gl::height(border_rect.size) / 2.0f;
-    glUniform2f(prog->center_uniform, centerx, centery);
-    glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(data.data.transform));
-    glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(border_transform));
+    glUniform2f(prog->center_uniform, center.x, center.y);
+    glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE, glm::value_ptr(transform));
+    glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE, glm::value_ptr(border_transform));
     glUniform1f(prog->alpha_uniform, alpha);
-    glUniform2f(prog->surface_size_uniform, static_cast<GLfloat>(gl::width_value(border_rect.size)), static_cast<GLfloat>(gl::height_value(border_rect.size)));
+    glUniform2f(prog->surface_size_uniform, surface_size_px.x, surface_size_px.y);
 
-    // Now we can render our model. This should be as easy
     glBindBuffer(GL_ARRAY_BUFFER, border_model.vbo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, border_model.ebo);
 
@@ -1173,6 +1237,230 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
+{
+    auto clip_area_opt = surface.clip_area();
+    if (!clip_area_opt)
+        clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
+
+    // We use the clip area (scaled to framebuffer pixels) as our rendering size.
+    auto const border_config = config->get_border_config();
+    auto const border_rect = geom::Rectangle(
+        geom::Point(
+            clip_area_opt.value().top_left.x.as_value() * x_scale,
+            clip_area_opt.value().top_left.y.as_value() * y_scale),
+        geom::Size(
+            clip_area_opt.value().size.width.as_value() * x_scale,
+            clip_area_opt.value().size.height.as_value() * y_scale));
+
+    using namespace miracle::geometry_helpers;
+    glm::mat4 const border_transform = glm::scale(
+        glm::translate(
+            glm::mat4(1.0),
+            glm::vec3(gl::x(border_rect.top_left), gl::y(border_rect.top_left), 0)),
+        glm::vec3(gl::width(border_rect.size), gl::height(border_rect.size), 1));
+
+    auto const centerx = gl::x(border_rect.top_left) + gl::width(border_rect.size) / 2.0f;
+    auto const centery = gl::y(border_rect.top_left) + gl::height(border_rect.size) / 2.0f;
+
+    auto const color = data.data.is_focused ? border_config.focus_color : border_config.color;
+
+    draw_border_core(
+        border_transform,
+        color,
+        border_config.radius,
+        static_cast<float>(border_config.size),
+        data.alpha,
+        glm::vec2(static_cast<GLfloat>(gl::width_value(border_rect.size)),
+            static_cast<GLfloat>(gl::height_value(border_rect.size))),
+        screen_to_gl_coords,
+        display_transform,
+        data.data.workspace_transform,
+        data.data.transform,
+        glm::vec2(centerx, centery));
+}
+
+void Renderer::draw_geometry_composite(
+    mg::Renderable const& renderable,
+    ms::Surface const& surface,
+    DrawData const& data) const
+{
+    if (!data.data.geometry_shader_id)
+        return;
+
+    auto* const geom_program = program_factory->resolve_geometry_program(
+        std::nullopt, *data.data.geometry_shader_id);
+    if (!geom_program)
+    {
+        // Geometry unsupported / shader missing: fall back to the normal path so the
+        // window still renders (border rigid, content undeformed).
+        draw(renderable, data);
+        draw_border(surface, data);
+        return;
+    }
+
+    using namespace miracle::geometry_helpers::gl;
+
+    // Outer rect (content + border) in logical screen coordinates.
+    auto clip_area_opt = surface.clip_area();
+    if (!clip_area_opt)
+        clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
+    auto const outer = clip_area_opt.value();
+    float const ox = x(outer.top_left);
+    float const oy = y(outer.top_left);
+    float const ow = width(outer.size);
+    float const oh = height(outer.size);
+    if (ow <= 0.f || oh <= 0.f)
+        return;
+
+    int const w_px = std::max(1, static_cast<int>(std::lround(ow * x_scale)));
+    int const h_px = std::max(1, static_cast<int>(std::lround(oh * y_scale)));
+    composite_target.ensure(geom::Size { w_px, h_px }, GL_LINEAR);
+
+    // Save GL state the off-screen composite will clobber (mirrors run_offscreen_passes).
+    GLint saved_fbo = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved_fbo);
+    GLint saved_vp[4];
+    glGetIntegerv(GL_VIEWPORT, saved_vp);
+    GLboolean const scissor_was_enabled = glIsEnabled(GL_SCISSOR_TEST);
+    GLboolean const blend_was_enabled = glIsEnabled(GL_BLEND);
+
+    // Bind the offscreen target and clear it transparent.
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, composite_target.framebuffer_id);
+    glViewport(0, 0, w_px, h_px);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(0.f, 0.f, 0.f, 0.f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Local orthographic projection mapping the outer rect (absolute logical coords) into
+    // the FBO: screen-top (y=oy) -> ndc_y=-1 -> framebuffer row 0 -> texel v=0. It is a
+    // pure affine map (w=1, z=0) so there is no perspective divide.
+    glm::mat4 const ortho =
+        glm::translate(glm::mat4(1.f), glm::vec3(-1.f, -1.f, 0.f))
+        * glm::scale(glm::mat4(1.f), glm::vec3(2.f / ow, 2.f / oh, 1.f))
+        * glm::translate(glm::mat4(1.f), glm::vec3(-ox, -oy, 0.f));
+    glm::mat4 const identity(1.f);
+    TransformOverride const ovr { ortho, identity };
+
+    // --- Content into the FBO ---
+    // Resolve the *normal* content program (custom fragment still applies) by clearing the
+    // geometry id on a copy of the draw data, and identity out the window/workspace
+    // transforms (they are applied later, on the combined quad).
+    DrawData composite_data = data;
+    composite_data.data.geometry_shader_id = std::nullopt;
+    composite_data.data.transform = identity;
+    composite_data.data.workspace_transform = identity;
+    draw(renderable, composite_data, &ovr);
+
+    // --- Border into the FBO ---
+    glm::mat4 const border_transform = glm::scale(
+        glm::translate(glm::mat4(1.f), glm::vec3(ox, oy, 0.f)),
+        glm::vec3(ow, oh, 1.f));
+    auto const border_config = config->get_border_config();
+    auto const border_color = data.data.is_focused ? border_config.focus_color : border_config.color;
+    draw_border_core(
+        border_transform,
+        border_color,
+        border_config.radius,
+        static_cast<float>(border_config.size),
+        data.alpha,
+        glm::vec2(static_cast<float>(w_px), static_cast<float>(h_px)),
+        ortho,
+        identity,
+        identity,
+        identity,
+        glm::vec2(ox + ow / 2.f, oy + oh / 2.f));
+
+    // Restore the real render target and viewport/scissor.
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(saved_fbo));
+    glViewport(saved_vp[0], saved_vp[1], saved_vp[2], saved_vp[3]);
+    if (scissor_was_enabled)
+        glEnable(GL_SCISSOR_TEST);
+    else
+        glDisable(GL_SCISSOR_TEST);
+
+    // --- Deform pass: draw the combined texture as one quad through the geometry shader ---
+    auto const* const prog = &geom_program->data;
+    glUseProgram(prog->id);
+
+    for (auto i = 0u; i < prog->tex_uniforms.size(); ++i)
+        if (prog->tex_uniforms[i] != -1)
+            glUniform1i(prog->tex_uniforms[i], (int)i);
+
+    glUniformMatrix4fv(prog->display_transform_uniform, 1, GL_FALSE, glm::value_ptr(display_transform));
+    glUniformMatrix4fv(prog->screen_to_gl_coords_uniform, 1, GL_FALSE, glm::value_ptr(screen_to_gl_coords));
+    glUniformMatrix4fv(prog->workspace_transform_uniform, 1, GL_FALSE, glm::value_ptr(data.data.workspace_transform));
+    glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE, glm::value_ptr(data.data.transform));
+
+    float const cx = ox + ow / 2.f;
+    float const cy = oy + oh / 2.f;
+    glUniform2f(prog->center_uniform, cx, cy);
+    glUniform1f(prog->border_radius_uniform, 0.f); // rounding already baked into the texture
+    glUniform1f(prog->alpha_uniform, 1.f);         // window alpha already applied in the FBO
+    glUniform2f(prog->surface_size_uniform, ow, oh);
+
+    // Animation inputs for the geometry stage (wobbly windows etc.). This is the only place
+    // velocity_samples updates for a composited window (the FBO content draw uses a
+    // non-geometry program whose time/velocity uniforms are absent).
+    if (prog->time_uniform >= 0 || prog->velocity_uniform >= 0)
+    {
+        double const now = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - start_time)
+                               .count();
+        glm::vec2 velocity { 0.f, 0.f };
+        auto const it = velocity_samples.find(data.data.id);
+        if (it != velocity_samples.end())
+        {
+            double const dt = now - it->second.t;
+            if (dt > 1e-4)
+                velocity = {
+                    static_cast<float>((cx - it->second.cx) / dt),
+                    static_cast<float>((cy - it->second.cy) / dt)
+                };
+        }
+        velocity_samples[data.data.id] = { cx, cy, now };
+        if (prog->time_uniform >= 0)
+            glUniform1f(prog->time_uniform, static_cast<GLfloat>(now));
+        if (prog->velocity_uniform >= 0)
+            glUniform2f(prog->velocity_uniform, velocity.x, velocity.y);
+    }
+
+    // The grow-only target may be larger than (w_px, h_px); sample only the valid region.
+    float const u_max = static_cast<float>(w_px) / static_cast<float>(composite_target.size.width.as_int());
+    float const v_max = static_cast<float>(h_px) / static_cast<float>(composite_target.size.height.as_int());
+
+    // Combined outer-rect quad. Texcoords use is_flipped=false convention: window-top
+    // (y=oy) samples v=0, matching the ortho above; the real display_transform applies any
+    // output flip/rotation to the positions.
+    mgl::Primitive quad;
+    quad.type = GL_TRIANGLE_STRIP;
+    quad.nvertices = 4;
+    float const l = ox, r = ox + ow, t = oy, b = oy + oh;
+    quad.vertices[0] = { { l, t, 0.f }, { 0.f, 0.f } };
+    quad.vertices[1] = { { l, b, 0.f }, { 0.f, v_max } };
+    quad.vertices[2] = { { r, t, 0.f }, { u_max, 0.f } };
+    quad.vertices[3] = { { r, b, 0.f }, { u_max, v_max } };
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, composite_target.texture_id);
+
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+    glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
+    glVertexAttribPointer(static_cast<GLuint>(prog->position_attr), 3, GL_FLOAT, GL_FALSE,
+        sizeof(mgl::Vertex), &quad.vertices[0].position);
+    glVertexAttribPointer(static_cast<GLuint>(prog->texcoord_attr), 2, GL_FLOAT, GL_FALSE,
+        sizeof(mgl::Vertex), &quad.vertices[0].texcoord);
+    glDrawArrays(quad.type, 0, quad.nvertices);
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
+    glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+
+    if (!blend_was_enabled)
+        glDisable(GL_BLEND);
 }
 
 void Renderer::set_viewport(mir::geometry::Rectangle const& rect)
