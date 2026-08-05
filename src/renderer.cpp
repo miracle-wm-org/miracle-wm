@@ -745,29 +745,33 @@ void Renderer::tessellate(
     primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped);
 }
 
+RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface) const
+{
+    if (!surface)
+        return nullptr;
+
+    for (auto const& item : render_data_cache)
+    {
+        if (item.surface == surface)
+            return &item;
+    }
+
+    return nullptr;
+}
+
 Renderer::DrawData Renderer::get_draw_data(
     mir::graphics::Renderable const& renderable,
-    std::vector<RenderData> const& data) const
+    mir::scene::Surface const* surface,
+    RenderData const* tracked) const
 {
     DrawData result = {
-        true, renderable.alpha(), RenderData { .surface = nullptr, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
+        true, renderable.alpha(), RenderData { .surface = surface, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
     };
-    if (auto const surface = renderable.surface_if_any())
+    if (tracked)
     {
-        result.data.surface = surface.value();
-        for (auto const& item : data)
-        {
-            if (item.surface == surface.value())
-            {
-                result.data = item;
-                if (item.output_area && !item.output_area->overlaps(viewport))
-                {
-                    result.enabled = false;
-                    return result;
-                }
-                break;
-            }
-        }
+        result.data = *tracked;
+        if (tracked->output_area && !tracked->output_area->overlaps(viewport))
+            result.enabled = false;
     }
 
     return result;
@@ -790,31 +794,36 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
 
     ++frameno;
 
-    auto const& render_data = compositor_state->render_data_manager()->get();
+    compositor_state->render_data_manager()->copy_if_changed(render_data_generation, render_data_cache);
 
-    mir::scene::Surface const* last_surface = nullptr;
+    // Renderables are guaranteed to be grouped on a per-surface basis, so the tracked
+    // render data is looked up once per surface group and reused for the renderables
+    // that follow. The first renderable of a group also draws the border, if needed.
+    mir::scene::Surface const* group_surface = nullptr;
+    RenderData const* group_data = nullptr;
+    bool first_renderable = true;
     for (auto const& r : renderables)
     {
-        // Renderables are guaranteed to be grouped on a per-surface basis. With this in mind, we will
-        // check the first renderable in a group for its surface. We will use that surface to figure
-        // out if the renderable needs to draw a border, and we will draw that first if that is the case.
-        auto const data = get_draw_data(*r, render_data);
+        mir::scene::Surface const* surface = nullptr;
+        if (auto const s = r->surface_if_any())
+            surface = s.value();
+
+        bool const new_group = first_renderable || surface != group_surface;
+        first_renderable = false;
+        if (new_group)
+        {
+            group_surface = surface;
+            group_data = find_render_data(surface);
+        }
+
+        auto const data = get_draw_data(*r, surface, group_data);
         if (!data.enabled)
             continue;
 
         draw(*r, data);
 
-        if (data.data.needs_outline)
-        {
-            if (auto const surface = r->surface_if_any())
-            {
-                if (last_surface != surface.value())
-                {
-                    last_surface = surface.value();
-                    draw_border(*surface.value(), data);
-                }
-            }
-        }
+        if (new_group && data.data.needs_outline && surface)
+            draw_border(*surface, data);
     }
 
     auto output = output_surface->commit();

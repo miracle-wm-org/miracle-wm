@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLEWM_SURFACE_TRACKER_H
 #define MIRACLEWM_SURFACE_TRACKER_H
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
 #include <mutex>
@@ -56,13 +57,18 @@ public:
     /// Reset every RenderData whose shader_id is in \p ids back to the default
     /// shader (std::nullopt). Used when the shaders are removed (e.g. on plugin unload).
     void reset_shaders(std::vector<uint8_t> const& ids);
-    std::vector<RenderData> const& get();
+    /// Copies the current render data into \p out and updates \p seen_generation,
+    /// or does nothing if no data has changed since \p seen_generation. Callers on
+    /// different threads must each provide their own \p seen_generation and \p out.
+    void copy_if_changed(uint64_t& seen_generation, std::vector<RenderData>& out);
 
 private:
     RenderDataManagerId next_id = 0;
+    uint64_t generation = 1;
     std::mutex mutex;
+    /// Sorted by ascending id: add() assigns monotonically increasing ids
+    /// and remove() preserves order.
     std::vector<RenderData> render_data;
-    std::vector<RenderData> copy_for_renderer;
 };
 
 } // miracle
