@@ -146,8 +146,13 @@ TEST_F(LeafContainerTest, SetsAndGetsTreeCorrectly)
 
     leaf_container->set_workspace(new_workspace);
     ASSERT_EQ(leaf_container->get_workspace(), new_workspace);
-    EXPECT_THAT(state->render_data_manager()->get()[0].output_area, testing::Eq(parent_area));
-    EXPECT_THAT(state->render_data_manager()->get()[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
+
+    uint64_t seen_generation = 0;
+    std::vector<RenderData> render_data;
+    state->render_data_manager()->copy_if_changed(seen_generation, render_data);
+    ASSERT_EQ(render_data.size(), 1);
+    EXPECT_THAT(render_data[0].output_area, testing::Eq(parent_area));
+    EXPECT_THAT(render_data[0].workspace_transform, testing::Eq(glm::mat4(2.f)));
 }
 
 TEST_F(LeafContainerTest, CorrectlyReportsIfFocused)

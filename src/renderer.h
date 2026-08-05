@@ -158,7 +158,11 @@ private:
         void ensure(mir::geometry::Size requested);
     };
 
-    DrawData get_draw_data(mir::graphics::Renderable const&, std::vector<RenderData> const& data) const;
+    /// Finds the [RenderData] tracked for \p surface in [render_data_cache], if any.
+    RenderData const* find_render_data(mir::scene::Surface const* surface) const;
+    DrawData get_draw_data(mir::graphics::Renderable const&,
+        mir::scene::Surface const* surface,
+        RenderData const* tracked) const;
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
@@ -200,6 +204,10 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<SamplerRegistry> sampler_registry;
+    /// Per-renderer copy of the shared render data, refreshed in render()
+    /// only when the manager's generation has advanced since the last frame.
+    mutable std::vector<RenderData> render_data_cache;
+    mutable uint64_t render_data_generation = 0;
 };
 
 }
