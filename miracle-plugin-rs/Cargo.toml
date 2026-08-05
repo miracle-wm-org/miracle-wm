@@ -17,6 +17,8 @@ crate-type = ["rlib"]
 [features]
 default = ["configure"]
 configure = ["dep:serde_json"]
+# Regenerate src/bindings.rs from plugin.h. Requires libclang and Mir's development headers.
+regen-bindings = ["dep:bindgen"]
 
 [dependencies]
 bitflags = "2"
@@ -25,4 +27,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", optional = true }
 
 [build-dependencies]
-bindgen = "0.71"
+bindgen = { version = "0.71", optional = true }

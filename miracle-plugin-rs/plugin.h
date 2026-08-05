@@ -72,10 +72,10 @@ extern "C"
     typedef struct
     {
         /// The type of this window.
-        MirWindowType window_type;
+        enum MirWindowType window_type;
 
         /// The state of the window.
-        MirWindowState state;
+        enum MirWindowState state;
 
         /// The position of the window.
         ///
@@ -86,7 +86,7 @@ extern "C"
         miracle_size_t size;
 
         /// The depth layer of the window.
-        MirDepthLayer depth_layer;
+        enum MirDepthLayer depth_layer;
 
         /// Pointer to internal data.
         ///
