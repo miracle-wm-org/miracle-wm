@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "spread_layout.h"
+#include "window_container.h"
 #include "window_controller.h"
 
 #include <algorithm>
@@ -70,6 +71,27 @@ bool miracle::is_modifier_keysym(MirInputEventModifier modifier, unsigned int ke
     default:
         return false;
     }
+}
+
+bool miracle::is_spreadable(
+    std::shared_ptr<WindowContainer> const& container,
+    WindowController& window_controller)
+{
+    if (!container || !container->window())
+        return false;
+
+    if (!container->get_workspace())
+        return false;
+
+    if (container->anchored())
+        return true;
+
+    auto const& info = window_controller.info_for(container->window().value());
+    if (info.parent())
+        return false;
+
+    auto const type = info.type();
+    return type == mir_window_type_normal || type == mir_window_type_freestyle;
 }
 
 SpreadSceneOverride::SpreadSceneOverride(

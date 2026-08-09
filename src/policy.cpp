@@ -82,33 +82,6 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
 
-/// True when \p container should get a tile in the spread.
-///
-/// Shell components (panels, docks) and scratchpad-parked windows have no
-/// workspace and never spread. Tiled leaves always spread. Floating and
-/// plugin-managed windows spread only when they are toplevel, so that dialogs,
-/// menus and tooltips stay visually attached to whatever spawned them instead
-/// of flying off as tiles of their own.
-bool is_spreadable(
-    std::shared_ptr<WindowContainer> const& container,
-    WindowController& window_controller)
-{
-    if (!container || !container->window())
-        return false;
-
-    if (!container->get_workspace())
-        return false;
-
-    if (container->anchored())
-        return true;
-
-    auto const& info = window_controller.info_for(container->window().value());
-    if (info.parent())
-        return false;
-
-    auto const type = info.type();
-    return type == mir_window_type_normal || type == mir_window_type_freestyle;
-}
 }
 
 class Policy::Self : public virtual WorkspaceObserver,

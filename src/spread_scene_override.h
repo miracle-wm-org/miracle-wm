@@ -38,11 +38,23 @@ namespace miracle
 class Animator;
 class CompositorState;
 class Config;
+class WindowContainer;
 class WindowController;
 
 /// Returns true when \p keysym is one of the keys that produce \p modifier
 /// (e.g. Super_L/Super_R for meta).
 bool is_modifier_keysym(MirInputEventModifier modifier, unsigned int keysym);
+
+/// True when \p container should get a tile in the spread.
+///
+/// Shell components (panels, docks) and scratchpad-parked windows have no
+/// workspace and never spread. Tiled leaves always spread. Floating and
+/// plugin-managed windows spread only when they are toplevel, so that dialogs,
+/// menus and tooltips stay visually attached to whatever spawned them instead
+/// of flying off as tiles of their own.
+bool is_spreadable(
+    std::shared_ptr<WindowContainer> const& container,
+    WindowController& window_controller);
 
 /// An exposé-style scene override: every window on the workspace is spread
 /// radially outward so they can all be seen at once. Hovering a window focuses
