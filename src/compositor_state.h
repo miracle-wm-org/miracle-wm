@@ -55,6 +55,7 @@ class CompositorState
 {
 public:
     CompositorState();
+    ~CompositorState();
     mir::geometry::Point cursor_position;
 
     [[nodiscard]] std::shared_ptr<Container> focused_container() const;
@@ -95,7 +96,10 @@ public:
     WindowManagerMode mode();
     void mode(WindowManagerMode);
     std::shared_ptr<RenderDataManager> const& render_data_manager() const;
-    std::shared_ptr<SceneOverrideManager> const& scene_override_manager() const;
+
+    /// The manager is owned by (and outlives every user of) this object, so a
+    /// raw pointer is returned rather than a shared reference.
+    [[nodiscard]] SceneOverrideManager* scene_override_manager() const;
 
     /// Returns the next unique container ID, then increments the counter.
     uint64_t next_container_id();
@@ -112,7 +116,7 @@ private:
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::shared_ptr<RenderDataManager> render_data_manager_;
-    std::shared_ptr<SceneOverrideManager> scene_override_manager_;
+    std::unique_ptr<SceneOverrideManager> scene_override_manager_;
     std::atomic<uint64_t> next_container_id_ { 0 };
 };
 }

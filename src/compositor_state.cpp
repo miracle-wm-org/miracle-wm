@@ -25,9 +25,11 @@ using namespace miracle;
 
 CompositorState::CompositorState() :
     render_data_manager_(std::make_shared<RenderDataManager>()),
-    scene_override_manager_(std::make_shared<SceneOverrideManager>())
+    scene_override_manager_(std::make_unique<SceneOverrideManager>())
 {
 }
+
+CompositorState::~CompositorState() = default;
 
 std::shared_ptr<Container> CompositorState::focused_container() const
 {
@@ -124,9 +126,9 @@ std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager()
     return render_data_manager_;
 }
 
-std::shared_ptr<SceneOverrideManager> const& CompositorState::scene_override_manager() const
+SceneOverrideManager* CompositorState::scene_override_manager() const
 {
-    return scene_override_manager_;
+    return scene_override_manager_.get();
 }
 
 uint64_t CompositorState::next_container_id()
