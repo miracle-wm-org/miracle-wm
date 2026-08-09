@@ -18,12 +18,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "compositor_state"
 
 #include "compositor_state.h"
+#include "scene_override.h"
 #include <mir/log.h>
 
 using namespace miracle;
 
 CompositorState::CompositorState() :
-    render_data_manager_(std::make_shared<RenderDataManager>())
+    render_data_manager_(std::make_shared<RenderDataManager>()),
+    scene_override_manager_(std::make_shared<SceneOverrideManager>())
 {
 }
 
@@ -120,6 +122,11 @@ void CompositorState::mode(WindowManagerMode next)
 std::shared_ptr<RenderDataManager> const& CompositorState::render_data_manager() const
 {
     return render_data_manager_;
+}
+
+std::shared_ptr<SceneOverrideManager> const& CompositorState::scene_override_manager() const
+{
+    return scene_override_manager_;
 }
 
 uint64_t CompositorState::next_container_id()

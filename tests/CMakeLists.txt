@@ -34,6 +34,8 @@ set(SOURCES
     test_drag_and_drop_service.cpp
     test_resize_service.cpp
     test_render_data_manager.cpp
+    test_scene_override_manager.cpp
+    test_spread_layout.cpp
     test_sampler_registry.cpp
     test_output_manager.cpp
     test_output.cpp

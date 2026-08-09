@@ -130,6 +130,9 @@ public:
 private:
     class Self;
 
+    /// Enters the spread scene override for the focused output, if possible.
+    void try_start_spread();
+
     miral::WindowManagerTools tools;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
@@ -166,6 +169,13 @@ private:
     bool is_starting_ = true;
     AllocationHint pending_allocation;
     uint64_t next_application_id_ = 0;
+
+    /// Token of the active spread override (0 = none). Atomic because the
+    /// override's completion callback runs on the animator thread.
+    std::atomic<uint32_t> spread_token_ { 0 };
+    /// True while the primary action modifier is held down without any other
+    /// key or button press in between; releasing it then triggers the spread.
+    bool primary_tap_latched_ = false;
 };
 }
 

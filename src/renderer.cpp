@@ -752,7 +752,7 @@ RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface)
 
     for (auto const& item : render_data_cache)
     {
-        if (item.surface == surface)
+        if (item.window.operator std::shared_ptr<mir::scene::Surface>().get() == surface)
             return &item;
     }
 
@@ -762,15 +762,31 @@ RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface)
 Renderer::DrawData Renderer::get_draw_data(
     mir::graphics::Renderable const& renderable,
     mir::scene::Surface const* surface,
-    RenderData const* tracked) const
+    RenderData const* tracked,
+    std::optional<SceneOverridePlacement> const& placement,
+    mir::geometry::Rectangle const& placement_real) const
 {
+    (void)surface;
     DrawData result = {
-        true, renderable.alpha(), RenderData { .surface = surface, .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
+        true, renderable.alpha(), RenderData { .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
     };
     if (tracked)
     {
         result.data = *tracked;
-        if (tracked->output_area && !tracked->output_area->overlaps(viewport))
+        if (placement)
+        {
+            result.placement = placement;
+            result.override_real = placement_real;
+            // The override may draw the surface far from its tracked output
+            // area, so cull against the placement rectangle instead.
+            geom::Rectangle const placement_rect {
+                geom::Point { static_cast<int>(placement->position.x), static_cast<int>(placement->position.y) },
+                geom::Size { static_cast<int>(placement->size.x), static_cast<int>(placement->size.y) }
+            };
+            if (!placement_rect.overlaps(viewport))
+                result.enabled = false;
+        }
+        else if (tracked->output_area && !tracked->output_area->overlaps(viewport))
             result.enabled = false;
     }
 
@@ -796,11 +812,17 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
 
     compositor_state->render_data_manager()->copy_if_changed(render_data_generation, render_data_cache);
 
+    // Resolving the override once pins it for the whole frame, so a concurrent
+    // release on another thread cannot destroy it mid-render.
+    auto const scene_override = compositor_state->scene_override_manager()->try_resolve();
+
     // Renderables are guaranteed to be grouped on a per-surface basis, so the tracked
     // render data is looked up once per surface group and reused for the renderables
     // that follow. The first renderable of a group also draws the border, if needed.
     mir::scene::Surface const* group_surface = nullptr;
     RenderData const* group_data = nullptr;
+    std::optional<SceneOverridePlacement> group_placement;
+    geom::Rectangle group_real;
     bool first_renderable = true;
     for (auto const& r : renderables)
     {
@@ -814,9 +836,15 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         {
             group_surface = surface;
             group_data = find_render_data(surface);
+            group_placement = std::nullopt;
+            if (scene_override && group_data && group_data->window)
+            {
+                group_placement = scene_override->place(group_data->window);
+                group_real = r->screen_position();
+            }
         }
 
-        auto const data = get_draw_data(*r, surface, group_data);
+        auto const data = get_draw_data(*r, surface, group_data, group_placement, group_real);
         if (!data.enabled)
             continue;
 
@@ -840,7 +868,44 @@ void Renderer::draw(
     DrawData const& data) const
 {
     auto const texture = gl_interface->as_texture(renderable.buffer());
-    auto const clip_area = renderable.clip_area();
+    auto clip_area = renderable.clip_area();
+
+    // When the scene override supplies a placement, the surface is drawn at the
+    // placement rectangle instead of its real position. The mapping is a
+    // translate+scale from the real rect onto the placement rect, applied about
+    // the placement center via the existing 'center' + 'transform' uniforms.
+    glm::vec2 placement_center, placement_ratio, real_center;
+    if (data.placement)
+    {
+        auto const& p = *data.placement;
+        auto const real_w = std::max(data.override_real.size.width.as_value(), 1);
+        auto const real_h = std::max(data.override_real.size.height.as_value(), 1);
+        placement_center = p.position + p.size / 2.f;
+        placement_ratio = { p.size.x / static_cast<float>(real_w), p.size.y / static_cast<float>(real_h) };
+        real_center = {
+            static_cast<float>(data.override_real.top_left.x.as_value()) + static_cast<float>(real_w) / 2.f,
+            static_cast<float>(data.override_real.top_left.y.as_value()) + static_cast<float>(real_h) / 2.f
+        };
+
+        if (clip_area)
+        {
+            // Remap the clip rect through the same (axis-aligned) mapping so the
+            // scissor follows the placement. placement.transformation rotation is
+            // not reflected in scissors; overrides that rotate clipped surfaces
+            // are unsupported.
+            glm::vec2 const tl {
+                placement_center.x + placement_ratio.x * (static_cast<float>(clip_area->top_left.x.as_value()) - real_center.x),
+                placement_center.y + placement_ratio.y * (static_cast<float>(clip_area->top_left.y.as_value()) - real_center.y)
+            };
+            clip_area = geom::Rectangle {
+                geom::Point { static_cast<int>(tl.x), static_cast<int>(tl.y) },
+                geom::Size {
+                             static_cast<int>(placement_ratio.x * static_cast<float>(clip_area->size.width.as_value())),
+                             static_cast<int>(placement_ratio.y * static_cast<float>(clip_area->size.height.as_value())) }
+            };
+        }
+    }
+
     if (clip_area)
     {
         // First, we compute the intersection of the clip area with the viewport.
@@ -907,8 +972,13 @@ void Renderer::draw(
             static_cast<GLint>(fb_w * x_scale),
             static_cast<GLint>(fb_h * y_scale));
     }
-    auto const surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
-    auto const surface_size = clip_area.value_or(renderable.screen_position()).size;
+    auto surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
+    auto surface_size = clip_area.value_or(renderable.screen_position()).size;
+    if (data.placement)
+    {
+        surface_pos = geom::Point { static_cast<int>(data.placement->position.x), static_cast<int>(data.placement->position.y) };
+        surface_size = geom::Size { static_cast<int>(data.placement->size.x), static_cast<int>(data.placement->size.y) };
+    }
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
@@ -977,12 +1047,31 @@ void Renderer::draw(
     glActiveTexture(GL_TEXTURE0);
 
     using namespace miracle::geometry_helpers::gl;
-    auto const centerx = x(surface_pos) + width(surface_size) / 2.0f;
-    auto const centery = y(surface_pos) + height(surface_size) / 2.0f;
-    glUniform2f(prog->center_uniform, centerx, centery);
+    if (data.placement)
+    {
+        // The exact (unrounded) placement center is the pivot the override
+        // mapping below is derived about.
+        glUniform2f(prog->center_uniform, placement_center.x, placement_center.y);
 
-    glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(data.data.transform));
+        // Maps the real rect onto the placement rect, then applies the
+        // override's transformation about the placement center. The policy's
+        // own transform is intentionally not composed in: the override owns
+        // the window's presentation while active.
+        glm::mat4 const override_transform = data.placement->transformation
+            * glm::scale(glm::mat4(1.f), glm::vec3(placement_ratio, 1.f))
+            * glm::translate(glm::mat4(1.f), glm::vec3(placement_center - real_center, 0.f));
+        glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
+            glm::value_ptr(override_transform));
+    }
+    else
+    {
+        auto const centerx = x(surface_pos) + width(surface_size) / 2.0f;
+        auto const centery = y(surface_pos) + height(surface_size) / 2.0f;
+        glUniform2f(prog->center_uniform, centerx, centery);
+
+        glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
+            glm::value_ptr(data.data.transform));
+    }
 
     auto const border_config = config->get_border_config();
     auto const content_radius = data.data.needs_outline ? std::max(border_config.radius - static_cast<GLfloat>(border_config.size), 0.f) : 0.f;
@@ -1115,6 +1204,17 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     if (!clip_area_opt)
         clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
 
+    // A scene override placement replaces the border rectangle wholesale; the
+    // border is then drawn directly at the placement, so only the placement's
+    // own transformation applies below.
+    if (data.placement)
+    {
+        clip_area_opt = geom::Rectangle {
+            geom::Point { static_cast<int>(data.placement->position.x), static_cast<int>(data.placement->position.y) },
+            geom::Size { static_cast<int>(data.placement->size.x), static_cast<int>(data.placement->size.y) }
+        };
+    }
+
     // First, we select the border shader as our shader
     glEnable(GL_BLEND);
     glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA,
@@ -1158,7 +1258,7 @@ void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) con
     auto const centery = gl::y(border_rect.top_left) + gl::height(border_rect.size) / 2.0f;
     glUniform2f(prog->center_uniform, centerx, centery);
     glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
-        glm::value_ptr(data.data.transform));
+        glm::value_ptr(data.placement ? data.placement->transformation : data.data.transform));
     glUniformMatrix4fv(prog->border_transform_uniform, 1, GL_FALSE,
         glm::value_ptr(border_transform));
     glUniform1f(prog->alpha_uniform, alpha);

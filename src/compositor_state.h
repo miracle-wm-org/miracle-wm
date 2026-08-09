@@ -29,6 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class SceneOverrideManager;
+
 enum class WindowManagerMode
 {
     normal = 0,
@@ -93,6 +95,7 @@ public:
     WindowManagerMode mode();
     void mode(WindowManagerMode);
     std::shared_ptr<RenderDataManager> const& render_data_manager() const;
+    std::shared_ptr<SceneOverrideManager> const& scene_override_manager() const;
 
     /// Returns the next unique container ID, then increments the counter.
     uint64_t next_container_id();
@@ -109,6 +112,7 @@ private:
     std::vector<std::weak_ptr<WindowContainer>> focus_order;
     WindowManagerMode mode_ = WindowManagerMode::normal;
     std::shared_ptr<RenderDataManager> render_data_manager_;
+    std::shared_ptr<SceneOverrideManager> scene_override_manager_;
     std::atomic<uint64_t> next_container_id_ { 0 };
 };
 }

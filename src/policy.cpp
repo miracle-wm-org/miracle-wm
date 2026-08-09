@@ -41,6 +41,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
+#include "spread_layout.h"
+#include "spread_scene_override.h"
 #include "window_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -54,6 +56,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
+#include <miral/zone.h>
 #include <mutex>
 
 using namespace miracle;
@@ -327,6 +330,25 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
 
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        primary_tap_latched_ = false;
+        scene_override->handle_keyboard_event(event);
+        return true;
+    }
+
+    // Detect a "tap" of the primary action modifier: pressed and released with
+    // no other key or pointer button in between. Neither event is consumed, so
+    // clients keep a consistent modifier state.
+    bool const is_primary_key = is_modifier_keysym(config->get_input_event_modifier(), keysym);
+    if (action == mir_keyboard_action_down)
+        primary_tap_latched_ = is_primary_key && modifiers == (static_cast<uint>(config->get_input_event_modifier()) & MODIFIER_MASK);
+    else if (action == mir_keyboard_action_up && is_primary_key && primary_tap_latched_)
+    {
+        primary_tap_latched_ = false;
+        try_start_spread();
+    }
+
     if (plugin_manager->handle_keyboard_event(*event))
         return true;
 
@@ -510,6 +532,16 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     auto const buttons = mir_pointer_event_buttons(event);
     state->cursor_position = { x, y };
 
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        primary_tap_latched_ = false;
+        scene_override->handle_pointer_event(event);
+        return true;
+    }
+
+    if (action == mir_pointer_action_button_down)
+        primary_tap_latched_ = false;
+
     // Select the output first
     auto const focused = output_manager->focused();
     for (auto const& output : output_manager->outputs())
@@ -568,6 +600,107 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     }
 
     return plugin_manager->handle_pointer_event(*event);
+}
+
+void Policy::try_start_spread()
+{
+    if (state->mode() != WindowManagerMode::normal)
+        return;
+
+    // Every output spreads its own active workspace within its own bounds.
+    std::vector<geom::Rectangle> bounds_list;
+    std::vector<SpreadSceneOverride::Entry> entries;
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->is_defunct())
+            continue;
+
+        auto const workspace = output->active();
+        if (!workspace)
+            continue;
+
+        // Prefer the application zone so spread windows avoid panels and docks.
+        auto bounds = output->get_area();
+        if (!output->get_app_zones().empty())
+            bounds = output->get_app_zones().front().extents();
+
+        size_t const group = bounds_list.size();
+        bounds_list.push_back(bounds);
+
+        workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+        {
+            if (auto const window = container->window())
+            {
+                entries.push_back(SpreadSceneOverride::Entry {
+                    .window = window.value(),
+                    .surface = window.value(),
+                    .real = geom::Rectangle { window->top_left(), window->size() },
+                    .group = group });
+            }
+            return false;
+        });
+    }
+
+    if (entries.empty())
+        return;
+
+    // Order entries most-recently-used first so that the spread hit-tests
+    // resolve overlapping in-flight windows in favor of the recent one.
+    std::vector<miral::Window> mru;
+    for (auto const& weak : state->windows())
+    {
+        if (auto const container = weak.lock())
+            if (auto const window = container->window())
+                mru.push_back(window.value());
+    }
+    auto const mru_index = [&mru](miral::Window const& window)
+    {
+        auto const it = std::find(mru.begin(), mru.end(), window);
+        return static_cast<size_t>(it - mru.begin());
+    };
+    std::stable_sort(entries.begin(), entries.end(), [&](auto const& a, auto const& b)
+    {
+        return mru_index(a.window) < mru_index(b.window);
+    });
+
+    for (size_t group = 0; group < bounds_list.size(); ++group)
+    {
+        std::vector<size_t> indices;
+        std::vector<geom::Rectangle> reals;
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            if (entries[i].group == group)
+            {
+                indices.push_back(i);
+                reals.push_back(entries[i].real);
+            }
+        }
+
+        auto const targets = spread_layout::compute(bounds_list[group], reals);
+        for (size_t i = 0; i < indices.size(); ++i)
+            entries[indices[i]].target = targets[i];
+    }
+
+    auto scene_override = std::make_unique<SpreadSceneOverride>(
+        std::move(entries),
+        std::move(bounds_list),
+        animator,
+        window_controller,
+        state,
+        config,
+        [this]
+    {
+        // Runs on the animator thread when the outro completes; only touches
+        // the (thread-safe) manager and the atomic token.
+        if (auto const token = spread_token_.exchange(0))
+            state->scene_override_manager()->try_release_override(token);
+    });
+    auto* const raw = scene_override.get();
+    if (auto const token = state->scene_override_manager()->try_override(std::move(scene_override)))
+    {
+        spread_token_.store(*token);
+        raw->start();
+    }
 }
 
 auto Policy::place_new_window(
@@ -701,6 +834,9 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     auto const container = command_controller->create_container(window_info, pending_allocation);
     (*window_id_map_)[container->id()] = window_info.window();
     pending_allocation.container_type = AllocationType::none;
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_window_added(window_info.window());
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)
@@ -822,6 +958,9 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_window_closed(window_info.window());
+
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
@@ -883,6 +1022,9 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 
 void Policy::advise_output_create(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
@@ -890,12 +1032,18 @@ void Policy::advise_output_create(miral::Output const& output)
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
 }
@@ -948,7 +1096,9 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
 {
-    return false;
+    // Swallow touch input while a scene override is active, consistent with
+    // keyboard and pointer handling.
+    return state->scene_override_manager()->try_resolve() != nullptr;
 }
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)
