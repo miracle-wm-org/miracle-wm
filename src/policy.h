@@ -130,7 +130,8 @@ public:
 private:
     class Self;
 
-    /// Enters the spread scene override for the focused output, if possible.
+    /// Enters the spread scene override, if possible. Every output spreads the
+    /// windows on its own active workspace.
     void try_start_spread();
 
     miral::WindowManagerTools tools;
