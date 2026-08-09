@@ -24,9 +24,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 namespace miracle::spread_layout
 {
 
-/// Computes non-overlapping, exposé-style placements for \p windows inside
-/// \p bounds by pushing the windows radially outward from the center of the
-/// bounds and uniformly scaling them down until they all fit.
+/// Computes exposé-style placements for \p windows inside \p bounds by laying
+/// them out in rows down the screen. The number of rows is chosen so that the
+/// windows cover as much of \p bounds as possible, and every row is centered
+/// horizontally; the last row therefore holds the remainder. Five windows on a
+/// 16:9 output become three on top and two centered beneath them.
+///
+/// Each window is scaled uniformly so its aspect ratio is preserved, and it is
+/// never scaled up past its real size.
+///
+/// The placements are guaranteed to be non-overlapping, separated by at least
+/// \p gap, and contained by \p bounds.
 ///
 /// Deterministic: the same input always yields the same output.
 ///

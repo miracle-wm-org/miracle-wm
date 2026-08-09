@@ -49,7 +49,7 @@ geom::Rectangle lerp_rect(geom::Rectangle const& from, geom::Rectangle const& to
     return geom::Rectangle {
         geom::Point {
                      lerp(from.top_left.x.as_value(), to.top_left.x.as_value()),
-                     lerp(from.top_left.y.as_value(), to.top_left.y.as_value()) },
+                     lerp(from.top_left.y.as_value(),  to.top_left.y.as_value())  },
         geom::Size {
                      lerp(from.size.width.as_value(), to.size.width.as_value()),
                      lerp(from.size.height.as_value(), to.size.height.as_value()) }
@@ -150,7 +150,8 @@ std::unique_ptr<SpreadSceneOverride> SpreadSceneOverride::create(
             .window = window,
             .surface = window,
             .real = geom::Rectangle { window.top_left(), window.size() },
-            .group = it->second });
+            .group = it->second
+        });
     }
 
     if (entries.empty())
@@ -252,35 +253,35 @@ void SpreadSceneOverride::animate(std::function<void()> on_complete)
     animator->append(CustomAnimation {
         animation_handle,
         [weak = std::weak_ptr(state), definition = definition, on_complete = std::move(on_complete)](float dt) -> bool
+    {
+        auto const s = weak.lock();
+        if (!s)
+            return true;
+
+        std::vector<std::shared_ptr<mir::scene::Surface>> to_nudge;
+        bool done = false;
         {
-            auto const s = weak.lock();
-            if (!s)
-                return true;
-
-            std::vector<std::shared_ptr<mir::scene::Surface>> to_nudge;
-            bool done = false;
+            std::lock_guard lock(s->mutex);
+            s->t = std::min(s->t + dt, definition.duration_seconds);
+            float const p = ease(definition.data[0], s->t / definition.duration_seconds);
+            for (auto& [key, entry] : s->entries)
             {
-                std::lock_guard lock(s->mutex);
-                s->t = std::min(s->t + dt, definition.duration_seconds);
-                float const p = ease(definition.data[0], s->t / definition.duration_seconds);
-                for (auto& [key, entry] : s->entries)
-                {
-                    entry.current = lerp_rect(entry.from, entry.target, p);
-                    if (auto const surface = entry.surface.lock())
-                        to_nudge.push_back(surface);
-                }
-                done = s->t >= definition.duration_seconds;
+                entry.current = lerp_rect(entry.from, entry.target, p);
+                if (auto const surface = entry.surface.lock())
+                    to_nudge.push_back(surface);
             }
+            done = s->t >= definition.duration_seconds;
+        }
 
-            // Re-applying the surfaces' own transformations marks the scene as
-            // damaged so the compositor redraws with the new placements.
-            for (auto const& surface : to_nudge)
-                nudge(surface);
+        // Re-applying the surfaces' own transformations marks the scene as
+        // damaged so the compositor redraws with the new placements.
+        for (auto const& surface : to_nudge)
+            nudge(surface);
 
-            if (done)
-                on_complete();
-            return done;
-        } });
+        if (done)
+            on_complete();
+        return done;
+    } });
 }
 
 void SpreadSceneOverride::nudge(std::shared_ptr<mir::scene::Surface> const& surface)

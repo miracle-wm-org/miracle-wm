@@ -790,9 +790,10 @@ Renderer::DrawData Renderer::get_draw_data(
             glm::vec2 min = center, max = center;
             for (auto const& corner : {
                      placement->position,
-                     glm::vec2 { placement->position.x + size.x, placement->position.y },
-                     glm::vec2 { placement->position.x, placement->position.y + size.y },
-                     placement->position + size })
+                     glm::vec2 { placement->position.x + size.x, placement->position.y          },
+                     glm::vec2 { placement->position.x,          placement->position.y + size.y },
+                     placement->position + size
+            })
             {
                 glm::vec2 const transformed = glm::vec2(placement->transformation * glm::vec4(corner - center, 0.f, 1.f)) + center;
                 min = glm::min(min, transformed);
@@ -800,7 +801,7 @@ Renderer::DrawData Renderer::get_draw_data(
             }
 
             geom::Rectangle const placement_rect {
-                geom::Point { static_cast<int>(min.x), static_cast<int>(min.y) },
+                geom::Point { static_cast<int>(min.x),         static_cast<int>(min.y)         },
                 geom::Size { static_cast<int>(max.x - min.x), static_cast<int>(max.y - min.y) }
             };
             if (!placement_rect.overlaps(viewport))

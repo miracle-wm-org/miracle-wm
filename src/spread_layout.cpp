@@ -19,58 +19,100 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
+#include <optional>
 
 namespace geom = mir::geometry;
 
 namespace
 {
-geom::DisplacementF half_extent(geom::RectangleF const& r)
+/// The cell that a single window is fitted into for a candidate row count.
+struct Cell
 {
-    return { r.size.width.as_value() / 2.f, r.size.height.as_value() / 2.f };
+    float width;
+    float height;
+};
+
+/// Largest uniform scale that fits \p window into \p cell without enlarging it.
+float scale_into(Cell const& cell, geom::SizeF const& window)
+{
+    return std::min({ 1.f,
+        cell.width / std::max(window.width.as_value(), 1.f),
+        cell.height / std::max(window.height.as_value(), 1.f) });
 }
 
-geom::PointF center_of(geom::RectangleF const& r)
+/// The cell every window gets when \p n windows are laid out over \p rows rows.
+/// Empty if the rows cannot fit inside \p usable at all.
+std::optional<Cell> cell_for(geom::SizeF const& usable, size_t n, size_t rows, float gap)
 {
-    return r.top_left + half_extent(r);
+    size_t const columns = (n + rows - 1) / rows;
+    Cell const cell {
+        (usable.width.as_value() - static_cast<float>(columns - 1) * gap) / static_cast<float>(columns),
+        (usable.height.as_value() - static_cast<float>(rows - 1) * gap) / static_cast<float>(rows)
+    };
+    if (cell.width < 1.f || cell.height < 1.f)
+        return std::nullopt;
+
+    return cell;
 }
 
-void move_center_to(geom::RectangleF& r, geom::PointF const& center)
+/// Picks the row count that leaves the windows covering the most screen area.
+/// Ties break toward fewer rows, which is what makes five 16:9 windows land as
+/// three-then-two rather than as three rows of two.
+size_t best_row_count(geom::SizeF const& usable, std::vector<geom::SizeF> const& windows, float gap)
 {
-    r.top_left = center - half_extent(r);
+    size_t best_rows = 1;
+    float best_score = -1.f;
+    for (size_t rows = 1; rows <= windows.size(); ++rows)
+    {
+        auto const cell = cell_for(usable, windows.size(), rows, gap);
+        if (!cell)
+            continue;
+
+        float score = 0.f;
+        for (auto const& window : windows)
+        {
+            float const scale = scale_into(*cell, window);
+            score += scale * scale * window.width.as_value() * window.height.as_value();
+        }
+
+        if (score > best_score)
+        {
+            best_score = score;
+            best_rows = rows;
+        }
+    }
+
+    return best_rows;
 }
 
-void scale_about_center(geom::RectangleF& r, float scale)
+/// Distributes \p n windows over \p rows rows, handing the remainder to the
+/// earlier rows so that five windows over two rows is three then two.
+std::vector<size_t> distribute(size_t n, size_t rows)
 {
-    auto const center = center_of(r);
-    r.size = { r.size.width.as_value() * scale, r.size.height.as_value() * scale };
-    move_center_to(r, center);
+    std::vector<size_t> counts(rows, n / rows);
+    for (size_t i = 0; i < n % rows; ++i)
+        counts[i]++;
+    return counts;
 }
 
-bool overlaps(geom::RectangleF const& a, geom::RectangleF const& b, float gap)
+geom::Rectangle to_int_rect(geom::PointF const& top_left, geom::SizeF const& size, geom::Rectangle const& bounds)
 {
-    return a.left().as_value() < b.right().as_value() + gap
-        && b.left().as_value() < a.right().as_value() + gap
-        && a.top().as_value() < b.bottom().as_value() + gap
-        && b.top().as_value() < a.bottom().as_value() + gap;
-}
+    geom::Size const rounded {
+        std::max(static_cast<int>(std::round(size.width.as_value())), 1),
+        std::max(static_cast<int>(std::round(size.height.as_value())), 1)
+    };
 
-void clamp_into(geom::RectangleF& r, geom::RectangleF const& bounds)
-{
-    float const half_w = std::min(r.size.width.as_value(), bounds.size.width.as_value()) / 2.f;
-    float const half_h = std::min(r.size.height.as_value(), bounds.size.height.as_value()) / 2.f;
-    auto const center = center_of(r);
-    move_center_to(r, geom::PointF {
-                          std::clamp(center.x.as_value(), bounds.left().as_value() + half_w, bounds.right().as_value() - half_w),
-                          std::clamp(center.y.as_value(), bounds.top().as_value() + half_h, bounds.bottom().as_value() - half_h) });
-}
-
-/// Direction used when two rects share a center (or a window sits exactly on
-/// the spread origin): derived from the index so it is deterministic.
-std::pair<float, float> direction_for_index(size_t i, size_t n)
-{
-    float const angle = 2.f * std::numbers::pi_v<float> * static_cast<float>(i) / static_cast<float>(std::max<size_t>(n, 1));
-    return { std::cos(angle), std::sin(angle) };
+    // Rounding can nudge a tile a pixel past the edge: keep it inside.
+    return {
+        geom::Point {
+                     std::clamp(static_cast<int>(std::round(top_left.x.as_value())),
+                     bounds.top_left.x.as_value(),
+                     std::max(bounds.right().as_value() - rounded.width.as_value(), bounds.top_left.x.as_value())),
+                     std::clamp(static_cast<int>(std::round(top_left.y.as_value())),
+                     bounds.top_left.y.as_value(),
+                     std::max(bounds.bottom().as_value() - rounded.height.as_value(), bounds.top_left.y.as_value())) },
+        rounded
+    };
 }
 }
 
@@ -84,113 +126,67 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
         return {};
 
     float const fgap = static_cast<float>(gap);
-    geom::RectangleF fbounds {
-        {},
-        geom::SizeF { std::max(static_cast<float>(bounds.size.width.as_value()) - 2.f * fgap, 1.f),
-                     std::max(static_cast<float>(bounds.size.height.as_value()) - 2.f * fgap, 1.f) }
+    geom::PointF const usable_top_left {
+        static_cast<float>(bounds.top_left.x.as_value()) + fgap,
+        static_cast<float>(bounds.top_left.y.as_value()) + fgap
     };
-    move_center_to(fbounds, geom::PointF { static_cast<float>(bounds.top_left.x.as_value()) + static_cast<float>(bounds.size.width.as_value()) / 2.f,
-                                static_cast<float>(bounds.top_left.y.as_value()) + static_cast<float>(bounds.size.height.as_value()) / 2.f });
+    geom::SizeF const usable {
+        std::max(static_cast<float>(bounds.size.width.as_value()) - 2.f * fgap, 1.f),
+        std::max(static_cast<float>(bounds.size.height.as_value()) - 2.f * fgap, 1.f)
+    };
 
-    // Radial pre-spread: push every window center outward from the bounds
-    // center so the spread visibly moves even for already non-overlapping
-    // layouts.
-    auto const bounds_center = center_of(fbounds);
-    float const diagonal = std::hypot(fbounds.size.width.as_value(), fbounds.size.height.as_value());
-    std::vector<geom::RectangleF> pre(n);
-    for (size_t i = 0; i < n; ++i)
+    std::vector<geom::SizeF> sizes;
+    sizes.reserve(n);
+    for (auto const& w : windows)
+        sizes.emplace_back(static_cast<float>(w.size.width.as_value()), static_cast<float>(w.size.height.as_value()));
+
+    size_t const rows = best_row_count(usable, sizes, fgap);
+    auto const counts = distribute(n, rows);
+
+    // Every candidate row count that reached this point had a cell, and the
+    // winner is one of them.
+    auto const cell = *cell_for(usable, n, rows, fgap);
+
+    // Scale each window into the cell, preserving its aspect ratio.
+    std::vector<geom::SizeF> scaled;
+    scaled.reserve(n);
+    for (auto const& size : sizes)
     {
-        auto const& w = windows[i];
-        geom::RectangleF r {
-            geom::PointF { static_cast<float>(w.top_left.x.as_value()), static_cast<float>(w.top_left.y.as_value()) },
-            geom::SizeF { static_cast<float>(w.size.width.as_value()), static_cast<float>(w.size.height.as_value()) }
-        };
-
-        auto const center = center_of(r);
-        float dx = center.x.as_value() - bounds_center.x.as_value();
-        float dy = center.y.as_value() - bounds_center.y.as_value();
-        if (std::abs(dx) < 1.f && std::abs(dy) < 1.f)
-        {
-            auto const [ux, uy] = direction_for_index(i, n);
-            dx = ux * diagonal / 8.f;
-            dy = uy * diagonal / 8.f;
-        }
-        else
-        {
-            dx *= 0.15f;
-            dy *= 0.15f;
-        }
-
-        move_center_to(r, center + geom::DisplacementF { dx, dy });
-        pre[i] = r;
+        float const scale = scale_into(cell, size);
+        scaled.emplace_back(size.width.as_value() * scale, size.height.as_value() * scale);
     }
 
-    float scale = 1.f;
-    std::vector<geom::RectangleF> best;
-    for (int attempt = 0; attempt < 8; ++attempt)
+    // Rows are as tall as their tallest window rather than a fixed cell height,
+    // and the whole stack is centered vertically, so wide windows do not leave
+    // dead space above and below.
+    std::vector<float> row_heights(rows, 0.f);
+    float total_height = static_cast<float>(rows - 1) * fgap;
+    for (size_t row = 0, i = 0; row < rows; i += counts[row], ++row)
     {
-        std::vector<geom::RectangleF> rects = pre;
-        for (auto& r : rects)
-        {
-            scale_about_center(r, scale);
-            clamp_into(r, fbounds);
-        }
-
-        bool settled = false;
-        for (int iteration = 0; iteration < 300 && !settled; ++iteration)
-        {
-            settled = true;
-            for (size_t i = 0; i < n; ++i)
-            {
-                for (size_t j = i + 1; j < n; ++j)
-                {
-                    if (!overlaps(rects[i], rects[j], fgap))
-                        continue;
-
-                    auto const center_i = center_of(rects[i]);
-                    auto const center_j = center_of(rects[j]);
-                    float dx = center_j.x.as_value() - center_i.x.as_value();
-                    float dy = center_j.y.as_value() - center_i.y.as_value();
-                    float length = std::hypot(dx, dy);
-                    if (length < 1.f)
-                    {
-                        auto const [ux, uy] = direction_for_index(j, n);
-                        dx = ux;
-                        dy = uy;
-                        length = 1.f;
-                    }
-
-                    float const overlap_x = (rects[i].size.width.as_value() + rects[j].size.width.as_value()) / 2.f + fgap
-                        - std::abs(center_j.x.as_value() - center_i.x.as_value());
-                    float const overlap_y = (rects[i].size.height.as_value() + rects[j].size.height.as_value()) / 2.f + fgap
-                        - std::abs(center_j.y.as_value() - center_i.y.as_value());
-                    float const push = std::min(overlap_x, overlap_y) / 2.f + 1.f;
-
-                    geom::DisplacementF const offset { dx / length * push, dy / length * push };
-                    move_center_to(rects[i], center_i - offset);
-                    move_center_to(rects[j], center_j + offset);
-                    clamp_into(rects[i], fbounds);
-                    clamp_into(rects[j], fbounds);
-                    settled = false;
-                }
-            }
-        }
-
-        best = rects;
-        if (settled)
-            break;
-
-        scale *= 0.85f;
+        for (size_t k = 0; k < counts[row]; ++k)
+            row_heights[row] = std::max(row_heights[row], scaled[i + k].height.as_value());
+        total_height += row_heights[row];
     }
 
     std::vector<geom::Rectangle> result;
     result.reserve(n);
-    for (auto const& r : best)
+    float y = usable_top_left.y.as_value() + (usable.height.as_value() - total_height) / 2.f;
+    for (size_t row = 0, i = 0; row < rows; i += counts[row], ++row)
     {
-        result.emplace_back(
-            geom::Point { static_cast<int>(std::round(r.left().as_value())), static_cast<int>(std::round(r.top().as_value())) },
-            geom::Size { std::max(static_cast<int>(std::round(r.size.width.as_value())), 1),
-                std::max(static_cast<int>(std::round(r.size.height.as_value())), 1) });
+        float row_width = static_cast<float>(counts[row] - 1) * fgap;
+        for (size_t k = 0; k < counts[row]; ++k)
+            row_width += scaled[i + k].width.as_value();
+
+        float x = usable_top_left.x.as_value() + (usable.width.as_value() - row_width) / 2.f;
+        for (size_t k = 0; k < counts[row]; ++k)
+        {
+            auto const& size = scaled[i + k];
+            geom::PointF const top_left { x, y + (row_heights[row] - size.height.as_value()) / 2.f };
+            result.push_back(to_int_rect(top_left, size, bounds));
+            x += size.width.as_value() + fgap;
+        }
+
+        y += row_heights[row] + fgap;
     }
 
     return result;

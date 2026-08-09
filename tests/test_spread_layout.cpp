@@ -24,7 +24,10 @@ namespace geom = mir::geometry;
 
 namespace
 {
-geom::Rectangle const BOUNDS { { 0, 0 }, { 1920, 1080 } };
+geom::Rectangle const BOUNDS {
+    { 0,    0    },
+    { 1920, 1080 }
+};
 
 bool within(geom::Rectangle const& inner, geom::Rectangle const& outer)
 {
@@ -42,7 +45,9 @@ TEST(SpreadLayoutTest, EmptyInputYieldsEmptyOutput)
 
 TEST(SpreadLayoutTest, SingleWindowStaysInBounds)
 {
-    auto const result = spread_layout::compute(BOUNDS, { geom::Rectangle { { 700, 400 }, { 500, 300 } } });
+    auto const result = spread_layout::compute(BOUNDS, {
+                                                           geom::Rectangle { { 700, 400 }, { 500, 300 } }
+    });
     ASSERT_EQ(result.size(), 1u);
     EXPECT_TRUE(within(result[0], BOUNDS));
 }
@@ -50,9 +55,9 @@ TEST(SpreadLayoutTest, SingleWindowStaysInBounds)
 TEST(SpreadLayoutTest, ReturnsOneRectanglePerInputInOrder)
 {
     std::vector<geom::Rectangle> const windows {
-        geom::Rectangle { { 0, 0 }, { 960, 1080 } },
-        geom::Rectangle { { 960, 0 }, { 960, 540 } },
-        geom::Rectangle { { 960, 540 }, { 960, 540 } },
+        geom::Rectangle { { 0, 0 },     { 960, 1080 } },
+        geom::Rectangle { { 960, 0 },   { 960, 540 }  },
+        geom::Rectangle { { 960, 540 }, { 960, 540 }  },
     };
     auto const result = spread_layout::compute(BOUNDS, windows);
     ASSERT_EQ(result.size(), windows.size());
@@ -61,7 +66,10 @@ TEST(SpreadLayoutTest, ReturnsOneRectanglePerInputInOrder)
 TEST(SpreadLayoutTest, OverlappingWindowsAreSeparated)
 {
     // Five identical windows stacked at the same position.
-    std::vector<geom::Rectangle> const windows(5, geom::Rectangle { { 500, 300 }, { 600, 400 } });
+    std::vector<geom::Rectangle> const windows(5, geom::Rectangle {
+                                                      { 500, 300 },
+                                                      { 600, 400 }
+    });
     int const gap = 16;
     auto const result = spread_layout::compute(BOUNDS, windows, gap);
     ASSERT_EQ(result.size(), windows.size());
@@ -88,22 +96,99 @@ TEST(SpreadLayoutTest, IsDeterministic)
 
 TEST(SpreadLayoutTest, ManyWindowsOnSmallBoundsTerminatesAndStaysInBounds)
 {
-    geom::Rectangle const small_bounds { { 0, 0 }, { 800, 600 } };
-    std::vector<geom::Rectangle> const windows(20, geom::Rectangle { { 100, 100 }, { 400, 300 } });
+    geom::Rectangle const small_bounds {
+        { 0,   0   },
+        { 800, 600 }
+    };
+    std::vector<geom::Rectangle> const windows(20, geom::Rectangle {
+                                                       { 100, 100 },
+                                                       { 400, 300 }
+    });
     auto const result = spread_layout::compute(small_bounds, windows);
     ASSERT_EQ(result.size(), windows.size());
     for (size_t i = 0; i < result.size(); ++i)
         EXPECT_TRUE(within(result[i], small_bounds)) << "window " << i << " escaped the bounds";
 }
 
-TEST(SpreadLayoutTest, NonOverlappingWindowsStillMoveOutward)
+TEST(SpreadLayoutTest, FiveWindowsFormTwoCenteredRows)
 {
-    // Two windows on either side of the center: the radial pre-spread should
-    // push them further apart, not leave them exactly in place.
-    geom::Rectangle const left { { 200, 400 }, { 400, 300 } };
-    geom::Rectangle const right { { 1300, 400 }, { 400, 300 } };
-    auto const result = spread_layout::compute(BOUNDS, { left, right });
-    ASSERT_EQ(result.size(), 2u);
-    EXPECT_LT(result[0].top_left.x.as_value(), left.top_left.x.as_value());
-    EXPECT_GT(result[1].top_left.x.as_value(), right.top_left.x.as_value());
+    std::vector<geom::Rectangle> const windows(5, geom::Rectangle {
+                                                      { 0,   0   },
+                                                      { 960, 540 }
+    });
+    auto const result = spread_layout::compute(BOUNDS, windows);
+    ASSERT_EQ(result.size(), 5u);
+
+    // Three on top, two beneath them.
+    EXPECT_EQ(result[0].top_left.y, result[1].top_left.y);
+    EXPECT_EQ(result[1].top_left.y, result[2].top_left.y);
+    EXPECT_EQ(result[3].top_left.y, result[4].top_left.y);
+    EXPECT_GT(result[3].top_left.y, result[0].top_left.y);
+
+    // Both rows are centered on the bounds.
+    int const center = (BOUNDS.top_left.x.as_value() + BOUNDS.right().as_value()) / 2;
+    int const top_center = (result[0].top_left.x.as_value() + result[2].right().as_value()) / 2;
+    int const bottom_center = (result[3].top_left.x.as_value() + result[4].right().as_value()) / 2;
+    EXPECT_NEAR(top_center, center, 2);
+    EXPECT_NEAR(bottom_center, center, 2);
+}
+
+TEST(SpreadLayoutTest, AspectRatioIsPreserved)
+{
+    std::vector<geom::Rectangle> const windows {
+        geom::Rectangle { { 0, 0 }, { 1600, 900 } },
+        geom::Rectangle { { 0, 0 }, { 400, 1000 } },
+        geom::Rectangle { { 0, 0 }, { 700, 700 }  },
+        geom::Rectangle { { 0, 0 }, { 1200, 300 } },
+    };
+    auto const result = spread_layout::compute(BOUNDS, windows);
+    ASSERT_EQ(result.size(), windows.size());
+
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        double const expected = static_cast<double>(windows[i].size.width.as_value()) / windows[i].size.height.as_value();
+        double const actual = static_cast<double>(result[i].size.width.as_value()) / result[i].size.height.as_value();
+        EXPECT_NEAR(actual, expected, 0.02) << "window " << i << " was distorted";
+    }
+}
+
+TEST(SpreadLayoutTest, NeverUpscalesWindows)
+{
+    std::vector<geom::Rectangle> const windows {
+        geom::Rectangle { { 0, 0 }, { 320, 200 } },
+        geom::Rectangle { { 0, 0 }, { 100, 400 } },
+        geom::Rectangle { { 0, 0 }, { 640, 480 } },
+    };
+    auto const result = spread_layout::compute(BOUNDS, windows);
+    ASSERT_EQ(result.size(), windows.size());
+
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        EXPECT_LE(result[i].size.width, windows[i].size.width) << "window " << i << " grew";
+        EXPECT_LE(result[i].size.height, windows[i].size.height) << "window " << i << " grew";
+    }
+}
+
+TEST(SpreadLayoutTest, TilesAreSeparatedByAtLeastTheGap)
+{
+    int const gap = 16;
+    std::vector<geom::Rectangle> const windows(7, geom::Rectangle {
+                                                      { 0,   0   },
+                                                      { 960, 540 }
+    });
+    auto const result = spread_layout::compute(BOUNDS, windows, gap);
+    ASSERT_EQ(result.size(), windows.size());
+
+    // One pixel of slack for the rounding to integer coordinates.
+    for (size_t i = 0; i < result.size(); ++i)
+    {
+        for (size_t j = i + 1; j < result.size(); ++j)
+        {
+            bool const clear_x = result[i].right().as_value() + gap - 1 <= result[j].top_left.x.as_value()
+                || result[j].right().as_value() + gap - 1 <= result[i].top_left.x.as_value();
+            bool const clear_y = result[i].bottom().as_value() + gap - 1 <= result[j].top_left.y.as_value()
+                || result[j].bottom().as_value() + gap - 1 <= result[i].top_left.y.as_value();
+            EXPECT_TRUE(clear_x || clear_y) << "windows " << i << " and " << j << " are closer than the gap";
+        }
+    }
 }
