@@ -25,31 +25,44 @@ namespace geom = mir::geometry;
 
 namespace
 {
-struct FloatRect
+geom::DisplacementF half_extent(geom::RectangleF const& r)
 {
-    float cx;
-    float cy;
-    float w;
-    float h;
-
-    float left() const { return cx - w / 2.f; }
-    float right() const { return cx + w / 2.f; }
-    float top() const { return cy - h / 2.f; }
-    float bottom() const { return cy + h / 2.f; }
-};
-
-bool overlaps(FloatRect const& a, FloatRect const& b, float gap)
-{
-    return a.left() < b.right() + gap && b.left() < a.right() + gap
-        && a.top() < b.bottom() + gap && b.top() < a.bottom() + gap;
+    return { r.size.width.as_value() / 2.f, r.size.height.as_value() / 2.f };
 }
 
-void clamp_into(FloatRect& r, FloatRect const& bounds)
+geom::PointF center_of(geom::RectangleF const& r)
 {
-    float const half_w = std::min(r.w, bounds.w) / 2.f;
-    float const half_h = std::min(r.h, bounds.h) / 2.f;
-    r.cx = std::clamp(r.cx, bounds.left() + half_w, bounds.right() - half_w);
-    r.cy = std::clamp(r.cy, bounds.top() + half_h, bounds.bottom() - half_h);
+    return r.top_left + half_extent(r);
+}
+
+void move_center_to(geom::RectangleF& r, geom::PointF const& center)
+{
+    r.top_left = center - half_extent(r);
+}
+
+void scale_about_center(geom::RectangleF& r, float scale)
+{
+    auto const center = center_of(r);
+    r.size = { r.size.width.as_value() * scale, r.size.height.as_value() * scale };
+    move_center_to(r, center);
+}
+
+bool overlaps(geom::RectangleF const& a, geom::RectangleF const& b, float gap)
+{
+    return a.left().as_value() < b.right().as_value() + gap
+        && b.left().as_value() < a.right().as_value() + gap
+        && a.top().as_value() < b.bottom().as_value() + gap
+        && b.top().as_value() < a.bottom().as_value() + gap;
+}
+
+void clamp_into(geom::RectangleF& r, geom::RectangleF const& bounds)
+{
+    float const half_w = std::min(r.size.width.as_value(), bounds.size.width.as_value()) / 2.f;
+    float const half_h = std::min(r.size.height.as_value(), bounds.size.height.as_value()) / 2.f;
+    auto const center = center_of(r);
+    move_center_to(r, geom::PointF {
+                          std::clamp(center.x.as_value(), bounds.left().as_value() + half_w, bounds.right().as_value() - half_w),
+                          std::clamp(center.y.as_value(), bounds.top().as_value() + half_h, bounds.bottom().as_value() - half_h) });
 }
 
 /// Direction used when two rects share a center (or a window sits exactly on
@@ -71,25 +84,31 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
         return {};
 
     float const fgap = static_cast<float>(gap);
-    FloatRect const fbounds {
-        static_cast<float>(bounds.top_left.x.as_value()) + static_cast<float>(bounds.size.width.as_value()) / 2.f,
-        static_cast<float>(bounds.top_left.y.as_value()) + static_cast<float>(bounds.size.height.as_value()) / 2.f,
-        std::max(static_cast<float>(bounds.size.width.as_value()) - 2.f * fgap, 1.f),
-        std::max(static_cast<float>(bounds.size.height.as_value()) - 2.f * fgap, 1.f)
+    geom::RectangleF fbounds {
+        {},
+        geom::SizeF { std::max(static_cast<float>(bounds.size.width.as_value()) - 2.f * fgap, 1.f),
+                     std::max(static_cast<float>(bounds.size.height.as_value()) - 2.f * fgap, 1.f) }
     };
+    move_center_to(fbounds, geom::PointF { static_cast<float>(bounds.top_left.x.as_value()) + static_cast<float>(bounds.size.width.as_value()) / 2.f,
+                                static_cast<float>(bounds.top_left.y.as_value()) + static_cast<float>(bounds.size.height.as_value()) / 2.f });
 
     // Radial pre-spread: push every window center outward from the bounds
     // center so the spread visibly moves even for already non-overlapping
     // layouts.
-    float const diagonal = std::hypot(fbounds.w, fbounds.h);
-    std::vector<FloatRect> pre(n);
+    auto const bounds_center = center_of(fbounds);
+    float const diagonal = std::hypot(fbounds.size.width.as_value(), fbounds.size.height.as_value());
+    std::vector<geom::RectangleF> pre(n);
     for (size_t i = 0; i < n; ++i)
     {
         auto const& w = windows[i];
-        float const cx = static_cast<float>(w.top_left.x.as_value()) + static_cast<float>(w.size.width.as_value()) / 2.f;
-        float const cy = static_cast<float>(w.top_left.y.as_value()) + static_cast<float>(w.size.height.as_value()) / 2.f;
-        float dx = cx - fbounds.cx;
-        float dy = cy - fbounds.cy;
+        geom::RectangleF r {
+            geom::PointF { static_cast<float>(w.top_left.x.as_value()), static_cast<float>(w.top_left.y.as_value()) },
+            geom::SizeF { static_cast<float>(w.size.width.as_value()), static_cast<float>(w.size.height.as_value()) }
+        };
+
+        auto const center = center_of(r);
+        float dx = center.x.as_value() - bounds_center.x.as_value();
+        float dy = center.y.as_value() - bounds_center.y.as_value();
         if (std::abs(dx) < 1.f && std::abs(dy) < 1.f)
         {
             auto const [ux, uy] = direction_for_index(i, n);
@@ -102,23 +121,18 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
             dy *= 0.15f;
         }
 
-        pre[i] = FloatRect {
-            cx + dx,
-            cy + dy,
-            static_cast<float>(w.size.width.as_value()),
-            static_cast<float>(w.size.height.as_value())
-        };
+        move_center_to(r, center + geom::DisplacementF { dx, dy });
+        pre[i] = r;
     }
 
     float scale = 1.f;
-    std::vector<FloatRect> best;
+    std::vector<geom::RectangleF> best;
     for (int attempt = 0; attempt < 8; ++attempt)
     {
-        std::vector<FloatRect> rects = pre;
+        std::vector<geom::RectangleF> rects = pre;
         for (auto& r : rects)
         {
-            r.w *= scale;
-            r.h *= scale;
+            scale_about_center(r, scale);
             clamp_into(r, fbounds);
         }
 
@@ -133,8 +147,10 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
                     if (!overlaps(rects[i], rects[j], fgap))
                         continue;
 
-                    float dx = rects[j].cx - rects[i].cx;
-                    float dy = rects[j].cy - rects[i].cy;
+                    auto const center_i = center_of(rects[i]);
+                    auto const center_j = center_of(rects[j]);
+                    float dx = center_j.x.as_value() - center_i.x.as_value();
+                    float dy = center_j.y.as_value() - center_i.y.as_value();
                     float length = std::hypot(dx, dy);
                     if (length < 1.f)
                     {
@@ -144,14 +160,15 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
                         length = 1.f;
                     }
 
-                    float const overlap_x = (rects[i].w + rects[j].w) / 2.f + fgap - std::abs(rects[j].cx - rects[i].cx);
-                    float const overlap_y = (rects[i].h + rects[j].h) / 2.f + fgap - std::abs(rects[j].cy - rects[i].cy);
+                    float const overlap_x = (rects[i].size.width.as_value() + rects[j].size.width.as_value()) / 2.f + fgap
+                        - std::abs(center_j.x.as_value() - center_i.x.as_value());
+                    float const overlap_y = (rects[i].size.height.as_value() + rects[j].size.height.as_value()) / 2.f + fgap
+                        - std::abs(center_j.y.as_value() - center_i.y.as_value());
                     float const push = std::min(overlap_x, overlap_y) / 2.f + 1.f;
 
-                    rects[i].cx -= dx / length * push;
-                    rects[i].cy -= dy / length * push;
-                    rects[j].cx += dx / length * push;
-                    rects[j].cy += dy / length * push;
+                    geom::DisplacementF const offset { dx / length * push, dy / length * push };
+                    move_center_to(rects[i], center_i - offset);
+                    move_center_to(rects[j], center_j + offset);
                     clamp_into(rects[i], fbounds);
                     clamp_into(rects[j], fbounds);
                     settled = false;
@@ -171,8 +188,9 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
     for (auto const& r : best)
     {
         result.emplace_back(
-            geom::Point { static_cast<int>(std::round(r.left())), static_cast<int>(std::round(r.top())) },
-            geom::Size { std::max(static_cast<int>(std::round(r.w)), 1), std::max(static_cast<int>(std::round(r.h)), 1) });
+            geom::Point { static_cast<int>(std::round(r.left().as_value())), static_cast<int>(std::round(r.top().as_value())) },
+            geom::Size { std::max(static_cast<int>(std::round(r.size.width.as_value())), 1),
+                std::max(static_cast<int>(std::round(r.size.height.as_value())), 1) });
     }
 
     return result;
