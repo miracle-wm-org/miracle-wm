@@ -65,6 +65,7 @@ class MagnifierWrapper;
 class PluginManager;
 class ShellApplicationManager;
 class DebugOverlayController;
+class SpreadController;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -130,10 +131,6 @@ public:
 private:
     class Self;
 
-    /// Enters the spread scene override, if possible. Every output spreads the
-    /// windows on its own active workspace.
-    void try_start_spread();
-
     miral::WindowManagerTools tools;
     std::shared_ptr<Config> config;
     std::shared_ptr<CompositorState> state;
@@ -166,17 +163,11 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<MagnifierWrapper> magnifier;
+    std::unique_ptr<SpreadController> spread_controller;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;
     uint64_t next_application_id_ = 0;
-
-    /// Token of the active spread override (0 = none). Atomic because the
-    /// override's completion callback runs on the animator thread.
-    std::atomic<uint32_t> spread_token_ { 0 };
-    /// True while the primary action modifier is held down without any other
-    /// key or button press in between; releasing it then triggers the spread.
-    bool primary_tap_latched_ = false;
 };
 }
 

@@ -42,7 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
-#include "spread_layout.h"
+#include "spread_controller.h"
 #include "spread_scene_override.h"
 #include "window_container.h"
 #include "window_observer.h"
@@ -285,7 +285,8 @@ Policy::Policy(
         plugin_manager,
         window_controller,
         output_manager)),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
+    spread_controller(std::make_unique<SpreadController>(state, output_manager, animator, window_controller, config))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
         [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)
@@ -335,22 +336,12 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
-        primary_tap_latched_ = false;
+        spread_controller->break_tap();
         scene_override->handle_keyboard_event(event);
         return true;
     }
 
-    // Detect a "tap" of the primary action modifier: pressed and released with
-    // no other key or pointer button in between. Neither event is consumed, so
-    // clients keep a consistent modifier state.
-    bool const is_primary_key = is_modifier_keysym(config->get_input_event_modifier(), keysym);
-    if (action == mir_keyboard_action_down)
-        primary_tap_latched_ = is_primary_key && modifiers == (static_cast<uint>(config->get_input_event_modifier()) & MODIFIER_MASK);
-    else if (action == mir_keyboard_action_up && is_primary_key && primary_tap_latched_)
-    {
-        primary_tap_latched_ = false;
-        try_start_spread();
-    }
+    spread_controller->handle_keyboard_event(event, modifiers);
 
     if (plugin_manager->handle_keyboard_event(*event))
         return true;
@@ -537,13 +528,13 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
-        primary_tap_latched_ = false;
+        spread_controller->break_tap();
         scene_override->handle_pointer_event(event);
         return true;
     }
 
     if (action == mir_pointer_action_button_down)
-        primary_tap_latched_ = false;
+        spread_controller->break_tap();
 
     // Select the output first
     auto const focused = output_manager->focused();
@@ -603,35 +594,6 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     }
 
     return plugin_manager->handle_pointer_event(*event);
-}
-
-void Policy::try_start_spread()
-{
-    if (state->mode() != WindowManagerMode::normal)
-        return;
-
-    auto scene_override = SpreadSceneOverride::create(
-        *output_manager,
-        animator,
-        window_controller,
-        state,
-        config,
-        [this]
-    {
-        // Runs on the animator thread when the outro completes; only touches
-        // the (thread-safe) manager and the atomic token.
-        if (auto const token = spread_token_.exchange(0))
-            state->scene_override_manager()->try_release_override(token);
-    });
-    if (!scene_override)
-        return;
-
-    auto* const raw = scene_override.get();
-    if (auto const token = state->scene_override_manager()->try_override(std::move(scene_override)))
-    {
-        spread_token_.store(*token);
-        raw->start();
-    }
 }
 
 auto Policy::place_new_window(
