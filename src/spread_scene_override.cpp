@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace.h"
 
 #include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
 #include <miral/zone.h>
@@ -405,14 +406,25 @@ std::optional<SceneOverridePlacement> SpreadSceneOverride::place(miral::Window c
         return std::nullopt;
 
     auto const& current = it->second.current;
+    auto const& real = it->second.real;
+
+    // The window is never resized to fit its tile: it is relocated so that its
+    // real rectangle is centered on the tile, and the shrink that makes it fit
+    // is carried by the transformation.
+    float const real_width = static_cast<float>(std::max(real.size.width.as_value(), 1));
+    float const real_height = static_cast<float>(std::max(real.size.height.as_value(), 1));
+    glm::vec2 const center {
+        static_cast<float>(current.top_left.x.as_value()) + static_cast<float>(current.size.width.as_value()) / 2.f,
+        static_cast<float>(current.top_left.y.as_value()) + static_cast<float>(current.size.height.as_value()) / 2.f
+    };
+    glm::vec2 const scale {
+        static_cast<float>(current.size.width.as_value()) / real_width,
+        static_cast<float>(current.size.height.as_value()) / real_height
+    };
+
     return SceneOverridePlacement {
-        .position = {
-                     static_cast<float>(current.top_left.x.as_value()),
-                     static_cast<float>(current.top_left.y.as_value()) },
-        .size = {
-                     static_cast<float>(current.size.width.as_value()),
-                     static_cast<float>(current.size.height.as_value()) },
-        .transformation = glm::mat4(1.f)
+        .position = { center.x - real_width / 2.f, center.y - real_height / 2.f },
+        .transformation = glm::scale(glm::mat4(1.f), glm::vec3(scale, 1.f))
     };
 }
 

@@ -70,15 +70,16 @@ private:
 
 struct SceneOverridePlacement
 {
-    /// Top-left corner in logical screen coordinates (the same space as
-    /// the window's real screen position).
+    /// Where the window's top-left corner is moved to, in logical screen
+    /// coordinates (the same space as the window's real screen position).
+    ///
+    /// The window keeps its real size: an override that wants it to appear
+    /// smaller or larger expresses that as a scale in [transformation], so the
+    /// surface is never clipped to fit.
     glm::vec2 position;
 
-    /// Size in logical screen coordinates.
-    glm::vec2 size;
-
-    /// Additional transformation, applied about the center of the placement
-    /// rectangle, exactly like the normal per-window transform.
+    /// Additional transformation, applied about the center of the relocated
+    /// window, exactly like the normal per-window transform.
     glm::mat4 transformation;
 };
 
@@ -90,7 +91,6 @@ struct SceneOverridePlacement
 /// to the windows and instead should be managed by the scene itself.
 ///
 /// The override placements will inherit the following from the window management policy:
-/// * Clip area
 /// * Output + workspace transform
 /// * Shader
 /// * Border
