@@ -610,75 +610,8 @@ void Policy::try_start_spread()
     if (state->mode() != WindowManagerMode::normal)
         return;
 
-    // Every output spreads its own active workspace within its own bounds.
-    std::vector<geom::Rectangle> bounds_list;
-    std::unordered_map<AbstractWorkspace const*, size_t> group_of_workspace;
-    for (auto const& output : output_manager->outputs())
-    {
-        if (output->is_defunct())
-            continue;
-
-        auto const workspace = output->active();
-        if (!workspace)
-            continue;
-
-        // Prefer the application zone so spread windows avoid panels and docks.
-        auto bounds = output->get_area();
-        if (!output->get_app_zones().empty())
-            bounds = output->get_app_zones().front().extents();
-
-        group_of_workspace[workspace.get()] = bounds_list.size();
-        bounds_list.push_back(bounds);
-    }
-
-    // The focus order is already most-recently-used first, which is the order
-    // the spread hit-test wants, and unlike [AbstractWorkspace::for_each_window]
-    // it does not filter out floating and plugin-managed windows.
-    std::vector<SpreadSceneOverride::Entry> entries;
-    for (auto const& weak : state->windows())
-    {
-        auto const container = weak.lock();
-        if (!is_spreadable(container, *window_controller))
-            continue;
-
-        // A miss means the window lives on a workspace that is not being
-        // spread (i.e. a background workspace).
-        auto const it = group_of_workspace.find(container->get_workspace().get());
-        if (it == group_of_workspace.end())
-            continue;
-
-        auto const window = container->window().value();
-        entries.push_back(SpreadSceneOverride::Entry {
-            .window = window,
-            .surface = window,
-            .real = geom::Rectangle { window.top_left(), window.size() },
-            .group = it->second });
-    }
-
-    if (entries.empty())
-        return;
-
-    for (size_t group = 0; group < bounds_list.size(); ++group)
-    {
-        std::vector<size_t> indices;
-        std::vector<geom::Rectangle> reals;
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            if (entries[i].group == group)
-            {
-                indices.push_back(i);
-                reals.push_back(entries[i].real);
-            }
-        }
-
-        auto const targets = spread_layout::compute(bounds_list[group], reals);
-        for (size_t i = 0; i < indices.size(); ++i)
-            entries[indices[i]].target = targets[i];
-    }
-
-    auto scene_override = std::make_unique<SpreadSceneOverride>(
-        std::move(entries),
-        std::move(bounds_list),
+    auto scene_override = SpreadSceneOverride::create(
+        *output_manager,
         animator,
         window_controller,
         state,
@@ -690,6 +623,9 @@ void Policy::try_start_spread()
         if (auto const token = spread_token_.exchange(0))
             state->scene_override_manager()->try_release_override(token);
     });
+    if (!scene_override)
+        return;
+
     auto* const raw = scene_override.get();
     if (auto const token = state->scene_override_manager()->try_override(std::move(scene_override)))
     {

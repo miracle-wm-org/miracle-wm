@@ -38,6 +38,7 @@ namespace miracle
 class Animator;
 class CompositorState;
 class Config;
+class OutputManager;
 class WindowContainer;
 class WindowController;
 
@@ -78,14 +79,18 @@ public:
         size_t group = 0;
     };
 
-    SpreadSceneOverride(
-        std::vector<Entry> entries,
-        std::vector<mir::geometry::Rectangle> bounds,
+    /// Builds a spread of every spreadable window on every output's active
+    /// workspace, laid out within that output's bounds.
+    ///
+    /// \returns the override, or nullptr if there is nothing to spread.
+    static std::unique_ptr<SpreadSceneOverride> create(
+        OutputManager& output_manager,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
         std::function<void()>&& on_done);
+
     ~SpreadSceneOverride() override;
 
     /// Begins the intro animation. Call once, after the override has been
@@ -100,6 +105,15 @@ public:
     void handle_output_changed() override;
 
 private:
+    SpreadSceneOverride(
+        std::vector<Entry> entries,
+        std::vector<mir::geometry::Rectangle> bounds,
+        std::shared_ptr<Animator> const& animator,
+        std::shared_ptr<WindowController> const& window_controller,
+        std::shared_ptr<CompositorState> const& compositor_state,
+        std::shared_ptr<Config> const& config,
+        std::function<void()>&& on_done);
+
     enum class Phase
     {
         intro,

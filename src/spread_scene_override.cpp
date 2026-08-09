@@ -20,13 +20,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "config.h"
+#include "output.h"
+#include "output_manager.h"
 #include "spread_layout.h"
 #include "window_container.h"
 #include "window_controller.h"
+#include "workspace.h"
 
 #include <algorithm>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
+#include <miral/zone.h>
+#include <unordered_map>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
@@ -92,6 +97,90 @@ bool miracle::is_spreadable(
 
     auto const type = info.type();
     return type == mir_window_type_normal || type == mir_window_type_freestyle;
+}
+
+std::unique_ptr<SpreadSceneOverride> SpreadSceneOverride::create(
+    OutputManager& output_manager,
+    std::shared_ptr<Animator> const& animator,
+    std::shared_ptr<WindowController> const& window_controller,
+    std::shared_ptr<CompositorState> const& compositor_state,
+    std::shared_ptr<Config> const& config,
+    std::function<void()>&& on_done)
+{
+    // Every output spreads its own active workspace within its own bounds.
+    std::vector<geom::Rectangle> bounds_list;
+    std::unordered_map<AbstractWorkspace const*, size_t> group_of_workspace;
+    for (auto const& output : output_manager.outputs())
+    {
+        if (output->is_defunct())
+            continue;
+
+        auto const workspace = output->active();
+        if (!workspace)
+            continue;
+
+        // Prefer the application zone so spread windows avoid panels and docks.
+        auto bounds = output->get_area();
+        if (!output->get_app_zones().empty())
+            bounds = output->get_app_zones().front().extents();
+
+        group_of_workspace[workspace.get()] = bounds_list.size();
+        bounds_list.push_back(bounds);
+    }
+
+    // The focus order is already most-recently-used first, which is the order
+    // the spread hit-test wants, and unlike [AbstractWorkspace::for_each_window]
+    // it does not filter out floating and plugin-managed windows.
+    std::vector<Entry> entries;
+    for (auto const& weak : compositor_state->windows())
+    {
+        auto const container = weak.lock();
+        if (!is_spreadable(container, *window_controller))
+            continue;
+
+        // A miss means the window lives on a workspace that is not being
+        // spread (i.e. a background workspace).
+        auto const it = group_of_workspace.find(container->get_workspace().get());
+        if (it == group_of_workspace.end())
+            continue;
+
+        auto const window = container->window().value();
+        entries.push_back(Entry {
+            .window = window,
+            .surface = window,
+            .real = geom::Rectangle { window.top_left(), window.size() },
+            .group = it->second });
+    }
+
+    if (entries.empty())
+        return nullptr;
+
+    for (size_t group = 0; group < bounds_list.size(); ++group)
+    {
+        std::vector<size_t> indices;
+        std::vector<geom::Rectangle> reals;
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            if (entries[i].group == group)
+            {
+                indices.push_back(i);
+                reals.push_back(entries[i].real);
+            }
+        }
+
+        auto const targets = spread_layout::compute(bounds_list[group], reals);
+        for (size_t i = 0; i < indices.size(); ++i)
+            entries[indices[i]].target = targets[i];
+    }
+
+    return std::unique_ptr<SpreadSceneOverride>(new SpreadSceneOverride(
+        std::move(entries),
+        std::move(bounds_list),
+        animator,
+        window_controller,
+        compositor_state,
+        config,
+        std::move(on_done)));
 }
 
 SpreadSceneOverride::SpreadSceneOverride(
