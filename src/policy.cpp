@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #define MIR_LOG_COMPONENT "miracle"
 
+#include "abstract_workspace.h"
 #include "animator_loop.h"
 #include "binding_event.h"
 #include "config.h"
@@ -54,6 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/server.h>
 #include <mir_toolkit/events/enums.h>
+#include <unordered_map>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
 #include <miral/zone.h>
@@ -79,6 +81,34 @@ public:
 private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
+
+/// True when \p container should get a tile in the spread.
+///
+/// Shell components (panels, docks) and scratchpad-parked windows have no
+/// workspace and never spread. Tiled leaves always spread. Floating and
+/// plugin-managed windows spread only when they are toplevel, so that dialogs,
+/// menus and tooltips stay visually attached to whatever spawned them instead
+/// of flying off as tiles of their own.
+bool is_spreadable(
+    std::shared_ptr<WindowContainer> const& container,
+    WindowController& window_controller)
+{
+    if (!container || !container->window())
+        return false;
+
+    if (!container->get_workspace())
+        return false;
+
+    if (container->anchored())
+        return true;
+
+    auto const& info = window_controller.info_for(container->window().value());
+    if (info.parent())
+        return false;
+
+    auto const type = info.type();
+    return type == mir_window_type_normal || type == mir_window_type_freestyle;
+}
 }
 
 class Policy::Self : public virtual WorkspaceObserver,
@@ -609,7 +639,7 @@ void Policy::try_start_spread()
 
     // Every output spreads its own active workspace within its own bounds.
     std::vector<geom::Rectangle> bounds_list;
-    std::vector<SpreadSceneOverride::Entry> entries;
+    std::unordered_map<AbstractWorkspace const*, size_t> group_of_workspace;
     for (auto const& output : output_manager->outputs())
     {
         if (output->is_defunct())
@@ -624,44 +654,36 @@ void Policy::try_start_spread()
         if (!output->get_app_zones().empty())
             bounds = output->get_app_zones().front().extents();
 
-        size_t const group = bounds_list.size();
+        group_of_workspace[workspace.get()] = bounds_list.size();
         bounds_list.push_back(bounds);
+    }
 
-        workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
-        {
-            if (auto const window = container->window())
-            {
-                entries.push_back(SpreadSceneOverride::Entry {
-                    .window = window.value(),
-                    .surface = window.value(),
-                    .real = geom::Rectangle { window->top_left(), window->size() },
-                    .group = group });
-            }
-            return false;
-        });
+    // The focus order is already most-recently-used first, which is the order
+    // the spread hit-test wants, and unlike [AbstractWorkspace::for_each_window]
+    // it does not filter out floating and plugin-managed windows.
+    std::vector<SpreadSceneOverride::Entry> entries;
+    for (auto const& weak : state->windows())
+    {
+        auto const container = weak.lock();
+        if (!is_spreadable(container, *window_controller))
+            continue;
+
+        // A miss means the window lives on a workspace that is not being
+        // spread (i.e. a background workspace).
+        auto const it = group_of_workspace.find(container->get_workspace().get());
+        if (it == group_of_workspace.end())
+            continue;
+
+        auto const window = container->window().value();
+        entries.push_back(SpreadSceneOverride::Entry {
+            .window = window,
+            .surface = window,
+            .real = geom::Rectangle { window.top_left(), window.size() },
+            .group = it->second });
     }
 
     if (entries.empty())
         return;
-
-    // Order entries most-recently-used first so that the spread hit-tests
-    // resolve overlapping in-flight windows in favor of the recent one.
-    std::vector<miral::Window> mru;
-    for (auto const& weak : state->windows())
-    {
-        if (auto const container = weak.lock())
-            if (auto const window = container->window())
-                mru.push_back(window.value());
-    }
-    auto const mru_index = [&mru](miral::Window const& window)
-    {
-        auto const it = std::find(mru.begin(), mru.end(), window);
-        return static_cast<size_t>(it - mru.begin());
-    };
-    std::stable_sort(entries.begin(), entries.end(), [&](auto const& a, auto const& b)
-    {
-        return mru_index(a.window) < mru_index(b.window);
-    });
 
     for (size_t group = 0; group < bounds_list.size(); ++group)
     {
@@ -836,7 +858,10 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     pending_allocation.container_type = AllocationType::none;
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
-        scene_override->handle_window_added(window_info.window());
+    {
+        if (is_spreadable(container, *window_controller))
+            scene_override->handle_window_added(window_info.window());
+    }
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)
