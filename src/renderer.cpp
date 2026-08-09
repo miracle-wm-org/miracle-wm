@@ -887,23 +887,11 @@ void Renderer::draw(
             static_cast<float>(data.override_real.top_left.y.as_value()) + static_cast<float>(real_h) / 2.f
         };
 
-        if (clip_area)
-        {
-            // Remap the clip rect through the same (axis-aligned) mapping so the
-            // scissor follows the placement. placement.transformation rotation is
-            // not reflected in scissors; overrides that rotate clipped surfaces
-            // are unsupported.
-            glm::vec2 const tl {
-                placement_center.x + placement_ratio.x * (static_cast<float>(clip_area->top_left.x.as_value()) - real_center.x),
-                placement_center.y + placement_ratio.y * (static_cast<float>(clip_area->top_left.y.as_value()) - real_center.y)
-            };
-            clip_area = geom::Rectangle {
-                geom::Point { static_cast<int>(tl.x), static_cast<int>(tl.y) },
-                geom::Size {
-                             static_cast<int>(placement_ratio.x * static_cast<float>(clip_area->size.width.as_value())),
-                             static_cast<int>(placement_ratio.y * static_cast<float>(clip_area->size.height.as_value())) }
-            };
-        }
+        // An overridden surface is never clipped. The clip rectangle describes
+        // where the window management policy wanted the window to sit, which is
+        // not where the override is drawing it, and the override already
+        // controls the size the surface appears at.
+        clip_area = std::nullopt;
     }
 
     if (clip_area)
@@ -1200,19 +1188,22 @@ void Renderer::draw(
 
 void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const
 {
-    auto clip_area_opt = surface.clip_area();
-    if (!clip_area_opt)
-        clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
-
-    // A scene override placement replaces the border rectangle wholesale; the
-    // border is then drawn directly at the placement, so only the placement's
-    // own transformation applies below.
+    std::optional<geom::Rectangle> clip_area_opt;
     if (data.placement)
     {
+        // An overridden surface is never clipped: the border is drawn directly
+        // around the placement, so only the placement's own transformation
+        // applies below.
         clip_area_opt = geom::Rectangle {
             geom::Point { static_cast<int>(data.placement->position.x), static_cast<int>(data.placement->position.y) },
             geom::Size { static_cast<int>(data.placement->size.x), static_cast<int>(data.placement->size.y) }
         };
+    }
+    else
+    {
+        clip_area_opt = surface.clip_area();
+        if (!clip_area_opt)
+            clip_area_opt = geom::Rectangle { surface.top_left(), surface.window_size() };
     }
 
     // First, we select the border shader as our shader
