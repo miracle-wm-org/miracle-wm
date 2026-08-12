@@ -106,6 +106,7 @@ std::unique_ptr<SpreadSceneOverride> SpreadSceneOverride::create(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
+    std::function<void()>&& on_exit_started,
     std::function<void()>&& on_done)
 {
     // Every output spreads its own active workspace within its own bounds.
@@ -182,6 +183,7 @@ std::unique_ptr<SpreadSceneOverride> SpreadSceneOverride::create(
         window_controller,
         compositor_state,
         config,
+        std::move(on_exit_started),
         std::move(on_done)));
 }
 
@@ -192,12 +194,14 @@ SpreadSceneOverride::SpreadSceneOverride(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
+    std::function<void()>&& on_exit_started,
     std::function<void()>&& on_done) :
     state { std::make_shared<State>() },
     bounds { std::move(bounds) },
     animator { animator },
     window_controller { window_controller },
     compositor_state { compositor_state },
+    on_exit_started { std::move(on_exit_started) },
     on_done { std::move(on_done) },
     animation_handle { animator->register_animateable() },
     primary_modifier { config->get_input_event_modifier() }
@@ -310,6 +314,10 @@ void SpreadSceneOverride::begin_exit()
             entry.target = geom::Rectangle { entry.window.top_left(), entry.window.size() };
         }
     }
+
+    // The spread no longer owns the desktop from here on, even though the outro
+    // is still playing. The phase guard above makes this fire exactly once.
+    on_exit_started();
 
     auto const s = state;
     auto const done = on_done;
@@ -509,13 +517,19 @@ void SpreadSceneOverride::handle_output_changed()
 
 void SpreadSceneOverride::cancel()
 {
+    bool was_exiting = false;
     {
         std::lock_guard lock(state->mutex);
         if (state->phase == Phase::done)
             return;
 
+        was_exiting = state->phase == Phase::outro;
         state->phase = Phase::done;
     }
+
+    // [begin_exit] has already announced the exit if the outro was running.
+    if (!was_exiting)
+        on_exit_started();
 
     animator->remove_by_animation_handle(animation_handle);
     on_done();

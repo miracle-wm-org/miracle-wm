@@ -82,6 +82,11 @@ public:
     /// Builds a spread of every spreadable window on every output's active
     /// workspace, laid out within that output's bounds.
     ///
+    /// \p on_exit_started runs on the calling (main) thread as soon as the
+    /// spread starts going away, whether or not an exit animation follows.
+    /// \p on_done runs when the override may be released, which for an animated
+    /// exit is on the animator thread.
+    ///
     /// \returns the override, or nullptr if there is nothing to spread.
     static std::unique_ptr<SpreadSceneOverride> create(
         OutputManager& output_manager,
@@ -89,6 +94,7 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
+        std::function<void()>&& on_exit_started,
         std::function<void()>&& on_done);
 
     ~SpreadSceneOverride() override;
@@ -112,6 +118,7 @@ private:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
+        std::function<void()>&& on_exit_started,
         std::function<void()>&& on_done);
 
     enum class Phase
@@ -149,6 +156,7 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
+    std::function<void()> on_exit_started;
     std::function<void()> on_done;
     AnimationHandle animation_handle;
     AnimationDefinition definition;

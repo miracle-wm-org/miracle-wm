@@ -25,13 +25,15 @@ namespace miracle::spread_layout
 {
 
 /// Computes exposé-style placements for \p windows inside \p bounds by laying
-/// them out in rows down the screen. The number of rows is chosen so that the
-/// windows cover as much of \p bounds as possible, and every row is centered
-/// horizontally; the last row therefore holds the remainder. Five windows on a
-/// 16:9 output become three on top and two centered beneath them.
+/// them out on a balanced grid of `ceil(sqrt(n))` columns, centered in
+/// \p bounds. Every window is centered in its own cell, and a short final row
+/// is centered horizontally: three windows become two on top and one beneath,
+/// five become three on top and two beneath.
 ///
 /// Each window is scaled uniformly so its aspect ratio is preserved, and it is
-/// never scaled up past its real size.
+/// always scaled down - a window that would fit its cell at full size is still
+/// shrunk, so the spread reads as an overview of the desktop rather than a
+/// rearrangement of it.
 ///
 /// The placements are guaranteed to be non-overlapping, separated by at least
 /// \p gap, and contained by \p bounds.

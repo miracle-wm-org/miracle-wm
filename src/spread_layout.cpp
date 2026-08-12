@@ -19,70 +19,51 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cmath>
-#include <optional>
 
 namespace geom = mir::geometry;
 
 namespace
 {
-/// The cell that a single window is fitted into for a candidate row count.
+/// The largest a window is ever drawn in the spread, as a fraction of its real
+/// size. The spread is a world overview rather than a rearrangement, so even a
+/// window with a cell to spare is shrunk: it makes the view read as a step back
+/// from the desktop, and it leaves room between the tiles for picking one.
+constexpr float MAX_SCALE = 0.75f;
+
+/// The cell that a single window is fitted into.
 struct Cell
 {
     float width;
     float height;
 };
 
-/// Largest uniform scale that fits \p window into \p cell without enlarging it.
+/// Largest uniform scale that fits \p window into \p cell, never exceeding
+/// [MAX_SCALE].
 float scale_into(Cell const& cell, geom::SizeF const& window)
 {
-    return std::min({ 1.f,
+    return std::min({ MAX_SCALE,
         cell.width / std::max(window.width.as_value(), 1.f),
         cell.height / std::max(window.height.as_value(), 1.f) });
 }
 
-/// The cell every window gets when \p n windows are laid out over \p rows rows.
-/// Empty if the rows cannot fit inside \p usable at all.
-std::optional<Cell> cell_for(geom::SizeF const& usable, size_t n, size_t rows, float gap)
+/// The cell every window gets in a \p columns by \p rows grid. Degenerate cells
+/// are clamped to a pixel so that a grid too dense for its bounds still produces
+/// placements instead of inverted rectangles.
+Cell cell_for(geom::SizeF const& usable, size_t columns, size_t rows, float gap)
 {
-    size_t const columns = (n + rows - 1) / rows;
-    Cell const cell {
-        (usable.width.as_value() - static_cast<float>(columns - 1) * gap) / static_cast<float>(columns),
-        (usable.height.as_value() - static_cast<float>(rows - 1) * gap) / static_cast<float>(rows)
+    return Cell {
+        std::max((usable.width.as_value() - static_cast<float>(columns - 1) * gap) / static_cast<float>(columns), 1.f),
+        std::max((usable.height.as_value() - static_cast<float>(rows - 1) * gap) / static_cast<float>(rows), 1.f)
     };
-    if (cell.width < 1.f || cell.height < 1.f)
-        return std::nullopt;
-
-    return cell;
 }
 
-/// Picks the row count that leaves the windows covering the most screen area.
-/// Ties break toward fewer rows, which is what makes five 16:9 windows land as
-/// three-then-two rather than as three rows of two.
-size_t best_row_count(geom::SizeF const& usable, std::vector<geom::SizeF> const& windows, float gap)
+/// The number of columns in the balanced grid that holds \p n windows. Squaring
+/// the grid rather than choosing the row count that covers the most area is what
+/// spreads the windows over the whole output: three side-by-side windows become
+/// two on top and one beneath instead of staying in one row at nearly full size.
+size_t column_count(size_t n)
 {
-    size_t best_rows = 1;
-    float best_score = -1.f;
-    for (size_t rows = 1; rows <= windows.size(); ++rows)
-    {
-        auto const cell = cell_for(usable, windows.size(), rows, gap);
-        if (!cell)
-            continue;
-
-        float score = 0.f;
-        for (auto const& window : windows)
-        {
-            float const scale = scale_into(*cell, window);
-            score += scale * scale * window.width.as_value() * window.height.as_value();
-        }
-
-        if (score > best_score)
-        {
-            best_score = score;
-            best_rows = rows;
-        }
-    }
-
-    return best_rows;
+    return static_cast<size_t>(std::ceil(std::sqrt(static_cast<double>(n))));
 }
 
 /// Distributes \p n windows over \p rows rows, handing the remainder to the
@@ -140,12 +121,10 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
     for (auto const& w : windows)
         sizes.emplace_back(static_cast<float>(w.size.width.as_value()), static_cast<float>(w.size.height.as_value()));
 
-    size_t const rows = best_row_count(usable, sizes, fgap);
+    size_t const columns = column_count(n);
+    size_t const rows = (n + columns - 1) / columns;
     auto const counts = distribute(n, rows);
-
-    // Every candidate row count that reached this point had a cell, and the
-    // winner is one of them.
-    auto const cell = *cell_for(usable, n, rows, fgap);
+    auto const cell = cell_for(usable, columns, rows, fgap);
 
     // Scale each window into the cell, preserving its aspect ratio.
     std::vector<geom::SizeF> scaled;
@@ -156,37 +135,31 @@ std::vector<geom::Rectangle> miracle::spread_layout::compute(
         scaled.emplace_back(size.width.as_value() * scale, size.height.as_value() * scale);
     }
 
-    // Rows are as tall as their tallest window rather than a fixed cell height,
-    // and the whole stack is centered vertically, so wide windows do not leave
-    // dead space above and below.
-    std::vector<float> row_heights(rows, 0.f);
-    float total_height = static_cast<float>(rows - 1) * fgap;
-    for (size_t row = 0, i = 0; row < rows; i += counts[row], ++row)
-    {
-        for (size_t k = 0; k < counts[row]; ++k)
-            row_heights[row] = std::max(row_heights[row], scaled[i + k].height.as_value());
-        total_height += row_heights[row];
-    }
+    // Every window sits at the center of its own cell, and the grid of cells is
+    // centered in the bounds. Spacing the tiles by the cell rather than packing
+    // them against one another is what spreads them across the output; a short
+    // final row is centered, so three windows read as two above one.
+    float const grid_height = static_cast<float>(rows) * cell.height + static_cast<float>(rows - 1) * fgap;
+    float const grid_top = usable_top_left.y.as_value() + (usable.height.as_value() - grid_height) / 2.f;
 
     std::vector<geom::Rectangle> result;
     result.reserve(n);
-    float y = usable_top_left.y.as_value() + (usable.height.as_value() - total_height) / 2.f;
     for (size_t row = 0, i = 0; row < rows; i += counts[row], ++row)
     {
-        float row_width = static_cast<float>(counts[row] - 1) * fgap;
-        for (size_t k = 0; k < counts[row]; ++k)
-            row_width += scaled[i + k].width.as_value();
+        float const row_width = static_cast<float>(counts[row]) * cell.width
+            + static_cast<float>(counts[row] - 1) * fgap;
+        float const row_left = usable_top_left.x.as_value() + (usable.width.as_value() - row_width) / 2.f;
+        float const row_top = grid_top + static_cast<float>(row) * (cell.height + fgap);
 
-        float x = usable_top_left.x.as_value() + (usable.width.as_value() - row_width) / 2.f;
         for (size_t k = 0; k < counts[row]; ++k)
         {
             auto const& size = scaled[i + k];
-            geom::PointF const top_left { x, y + (row_heights[row] - size.height.as_value()) / 2.f };
+            geom::PointF const top_left {
+                row_left + static_cast<float>(k) * (cell.width + fgap) + (cell.width - size.width.as_value()) / 2.f,
+                row_top + (cell.height - size.height.as_value()) / 2.f
+            };
             result.push_back(to_int_rect(top_left, size, bounds));
-            x += size.width.as_value() + fgap;
         }
-
-        y += row_heights[row] + fgap;
     }
 
     return result;

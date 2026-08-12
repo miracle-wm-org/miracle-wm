@@ -133,6 +133,45 @@ TEST(SpreadLayoutTest, FiveWindowsFormTwoCenteredRows)
     EXPECT_NEAR(bottom_center, center, 2);
 }
 
+TEST(SpreadLayoutTest, ThreeWindowsFormTwoThenOne)
+{
+    // Three windows tiled side by side across the output.
+    std::vector<geom::Rectangle> const windows {
+        geom::Rectangle { { 0, 0 },    { 640, 1080 } },
+        geom::Rectangle { { 640, 0 },  { 640, 1080 } },
+        geom::Rectangle { { 1280, 0 }, { 640, 1080 } },
+    };
+    auto const result = spread_layout::compute(BOUNDS, windows);
+    ASSERT_EQ(result.size(), 3u);
+
+    // Two on top, one beneath them.
+    EXPECT_EQ(result[0].top_left.y, result[1].top_left.y);
+    EXPECT_GT(result[2].top_left.y.as_value(), result[0].top_left.y.as_value());
+    EXPECT_LT(result[0].top_left.x.as_value(), result[1].top_left.x.as_value());
+
+    // The lone window in the last row is centered on the bounds.
+    int const center = (BOUNDS.top_left.x.as_value() + BOUNDS.right().as_value()) / 2;
+    int const last_center = (result[2].top_left.x.as_value() + result[2].right().as_value()) / 2;
+    EXPECT_NEAR(last_center, center, 2);
+}
+
+TEST(SpreadLayoutTest, SingleWindowIsShrunkAndCentered)
+{
+    // A window that already fits the bounds is still scaled down: the spread is
+    // an overview of the desktop, not a rearrangement of it.
+    auto const result = spread_layout::compute(BOUNDS, {
+                                                           geom::Rectangle { { 0, 0 }, { 1920, 1080 } }
+    });
+    ASSERT_EQ(result.size(), 1u);
+    EXPECT_LT(result[0].size.width.as_value(), BOUNDS.size.width.as_value());
+    EXPECT_LT(result[0].size.height.as_value(), BOUNDS.size.height.as_value());
+
+    int const center_x = (BOUNDS.top_left.x.as_value() + BOUNDS.right().as_value()) / 2;
+    int const center_y = (BOUNDS.top_left.y.as_value() + BOUNDS.bottom().as_value()) / 2;
+    EXPECT_NEAR((result[0].top_left.x.as_value() + result[0].right().as_value()) / 2, center_x, 2);
+    EXPECT_NEAR((result[0].top_left.y.as_value() + result[0].bottom().as_value()) / 2, center_y, 2);
+}
+
 TEST(SpreadLayoutTest, AspectRatioIsPreserved)
 {
     std::vector<geom::Rectangle> const windows {
@@ -152,8 +191,10 @@ TEST(SpreadLayoutTest, AspectRatioIsPreserved)
     }
 }
 
-TEST(SpreadLayoutTest, NeverUpscalesWindows)
+TEST(SpreadLayoutTest, AlwaysScalesWindowsDown)
 {
+    // None of these come close to filling their cell, so nothing forces them to
+    // shrink except the overview's own scale cap.
     std::vector<geom::Rectangle> const windows {
         geom::Rectangle { { 0, 0 }, { 320, 200 } },
         geom::Rectangle { { 0, 0 }, { 100, 400 } },
@@ -162,10 +203,14 @@ TEST(SpreadLayoutTest, NeverUpscalesWindows)
     auto const result = spread_layout::compute(BOUNDS, windows);
     ASSERT_EQ(result.size(), windows.size());
 
+    // Matches MAX_SCALE in spread_layout.cpp, with a pixel of rounding slack.
+    double const max_scale = 0.75;
     for (size_t i = 0; i < result.size(); ++i)
     {
-        EXPECT_LE(result[i].size.width, windows[i].size.width) << "window " << i << " grew";
-        EXPECT_LE(result[i].size.height, windows[i].size.height) << "window " << i << " grew";
+        EXPECT_LE(result[i].size.width.as_value(), max_scale * windows[i].size.width.as_value() + 1)
+            << "window " << i << " was not scaled down";
+        EXPECT_LE(result[i].size.height.as_value(), max_scale * windows[i].size.height.as_value() + 1)
+            << "window " << i << " was not scaled down";
     }
 }
 

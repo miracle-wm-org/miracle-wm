@@ -44,11 +44,17 @@ enum class WindowManagerMode
 
     moving,
 
+    /// The spread ("overview") scene override is on screen: every window on the
+    /// active workspace is shown scaled down so one can be picked. The override
+    /// owns input while this mode is set, so commands are refused as they are
+    /// in the other non-normal modes.
+    overview,
+
     max
 };
 
 constexpr std::array<std::string, static_cast<int>(WindowManagerMode::max)> BINDING_MODE_STRINGS = {
-    "default", "resize", "dragging", "moving"
+    "default", "resize", "dragging", "moving", "overview"
 };
 
 class CompositorState

@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "spread_controller.h"
 
+#include "abstract_command_controller.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
@@ -32,12 +33,14 @@ SpreadController::SpreadController(
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<Animator> const& animator,
     std::shared_ptr<WindowController> const& window_controller,
-    std::shared_ptr<Config> const& config) :
+    std::shared_ptr<Config> const& config,
+    std::shared_ptr<AbstractCommandController> const& command_controller) :
     compositor_state { compositor_state },
     output_manager { output_manager },
     animator { animator },
     window_controller { window_controller },
-    config { config }
+    config { config },
+    command_controller { command_controller }
 {
 }
 
@@ -75,6 +78,13 @@ void SpreadController::try_start()
         config,
         [this]
     {
+        // Runs on the main thread as soon as the spread begins going away, so
+        // that the mode is broadcast from the main loop and the rest of the
+        // compositor is usable again while the outro plays.
+        command_controller->set_mode(WindowManagerMode::normal);
+    },
+        [this]
+    {
         // Runs on the animator thread when the outro completes; only touches
         // the (thread-safe) manager and the atomic token.
         if (auto const released = token.exchange(0))
@@ -87,6 +97,7 @@ void SpreadController::try_start()
     if (auto const new_token = compositor_state->scene_override_manager()->try_override(std::move(scene_override)))
     {
         token.store(*new_token);
+        command_controller->set_mode(WindowManagerMode::overview);
         raw->start();
     }
 }

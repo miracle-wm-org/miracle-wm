@@ -2364,6 +2364,10 @@ nlohmann::json CommandController::mode_to_json() const
         return {
             { "name", "moving" }
         };
+    case WindowManagerMode::overview:
+        return {
+            { "name", "overview" }
+        };
     default:
     {
         mir::log_error("handle_command: unknown binding state: %d", (int)state->mode());

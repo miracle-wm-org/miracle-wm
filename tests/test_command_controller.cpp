@@ -346,6 +346,21 @@ TEST_F(CommandControllerTest, CanToggleResizeModeToNormal)
     EXPECT_THAT(state->mode(), Eq(WindowManagerMode::normal));
 }
 
+TEST_F(CommandControllerTest, ModeToJsonNamesEveryMode)
+{
+    // Every mode must have a name: an unhandled one makes GET_BINDING_STATE
+    // log an error and return an empty object.
+    for (size_t i = 0; i < static_cast<size_t>(WindowManagerMode::max); i++)
+    {
+        state->mode(static_cast<WindowManagerMode>(i));
+        EXPECT_THAT(command_controller->mode_to_json(),
+            Eq(nlohmann::json {
+                { "name", BINDING_MODE_STRINGS[i] }
+        }))
+            << "mode " << i << " has no name";
+    }
+}
+
 // Fixture with two outputs to test cross-output workspace transfers
 class TwoOutputCommandControllerTest : public Test
 {

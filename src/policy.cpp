@@ -286,7 +286,7 @@ Policy::Policy(
         window_controller,
         output_manager)),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
-    spread_controller(std::make_unique<SpreadController>(state, output_manager, animator, window_controller, config))
+    spread_controller(std::make_unique<SpreadController>(state, output_manager, animator, window_controller, config, command_controller))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
         [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)

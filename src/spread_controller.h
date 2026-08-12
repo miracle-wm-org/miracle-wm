@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace miracle
 {
+class AbstractCommandController;
 class Animator;
 class CompositorState;
 class Config;
@@ -41,7 +42,8 @@ public:
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<Animator> const& animator,
         std::shared_ptr<WindowController> const& window_controller,
-        std::shared_ptr<Config> const& config);
+        std::shared_ptr<Config> const& config,
+        std::shared_ptr<AbstractCommandController> const& command_controller);
 
     /// Watches for a "tap" of the primary action modifier - pressed and
     /// released with no other key or pointer button in between - and enters the
@@ -66,6 +68,7 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<Config> config;
+    std::shared_ptr<AbstractCommandController> command_controller;
 
     /// Token of the active spread override (0 = none). Atomic because the
     /// override's completion callback runs on the animator thread.
