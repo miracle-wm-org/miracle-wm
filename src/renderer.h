@@ -168,7 +168,6 @@ private:
     /// Finds the [RenderData] tracked for \p surface in [render_data_cache], if any.
     RenderData const* find_render_data(mir::scene::Surface const* surface) const;
     DrawData get_draw_data(mir::graphics::Renderable const&,
-        mir::scene::Surface const* surface,
         RenderData const* tracked,
         std::optional<SceneOverridePlacement> const& placement,
         mir::geometry::Rectangle const& placement_real) const;

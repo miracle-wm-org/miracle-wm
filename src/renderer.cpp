@@ -761,12 +761,10 @@ RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface)
 
 Renderer::DrawData Renderer::get_draw_data(
     mir::graphics::Renderable const& renderable,
-    mir::scene::Surface const* surface,
     RenderData const* tracked,
     std::optional<SceneOverridePlacement> const& placement,
     mir::geometry::Rectangle const& placement_real) const
 {
-    (void)surface;
     DrawData result = {
         true, renderable.alpha(), RenderData { .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
     };
@@ -866,7 +864,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             }
         }
 
-        auto const data = get_draw_data(*r, surface, group_data, group_placement, group_real);
+        auto const data = get_draw_data(*r, group_data, group_placement, group_real);
         if (!data.enabled)
             continue;
 
