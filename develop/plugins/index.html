@@ -2753,84 +2753,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Writing a Plugin">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#what-you-can-hook-into" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What you can hook into
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting started
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ipc-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IPC integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IPC integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registering-a-namespace" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registering a namespace
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#handling-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Handling commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#publishing-events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Publishing events
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -2845,10 +2767,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuring-plugins" class="md-nav__link">
+  <a href="#loading-plugins" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring Plugins
+        Loading Plugins
       
     </span>
   </a>
@@ -2979,84 +2901,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Writing a Plugin">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#what-you-can-hook-into" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What you can hook into
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting started
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ipc-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IPC integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IPC integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#registering-a-namespace" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Registering a namespace
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#handling-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Handling commands
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#publishing-events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Publishing events
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -3071,10 +2915,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuring-plugins" class="md-nav__link">
+  <a href="#loading-plugins" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring Plugins
+        Loading Plugins
       
     </span>
   </a>
@@ -3106,71 +2950,18 @@
 <h2 id="writing-a-plugin">Writing a Plugin<a class="headerlink" href="#writing-a-plugin" title="Permanent link">&para;</a></h2>
 <p>Plugins are written in <strong>Rust</strong> using the <a href="https://crates.io/crates/miracle-plugin"><code>miracle-plugin</code></a> crate. The crate provides macros and types for hooking into compositor lifecycle events. Other languages may be supported in the future in addition to Rust.</p>
 <p>Full API documentation is available at <a href="https://docs.miracle-wm.org/miracle_plugin/">docs.miracle-wm.org/miracle_plugin/</a>.</p>
-<h3 id="what-you-can-hook-into">What you can hook into<a class="headerlink" href="#what-you-can-hook-into" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Window placement</strong> — control where new windows are placed</li>
-<li><strong>Input events</strong> — intercept keystrokes and pointer events before the compositor handles them</li>
-<li><strong>Animations</strong> — trigger custom animations at any lifecycle event</li>
-<li><strong>Workspace and output events</strong> — react to workspace creation, deletion, and switching</li>
-<li><strong>Configuration</strong> — programmatically specify the configuration as a plugin data at runtime</li>
-<li><strong>IPC</strong> — handle custom commands from, and publish events to, IPC clients (see <a href="#ipc-integration">IPC integration</a>)</li>
-</ul>
-<h3 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
-<p>Add the crate to your <code>Cargo.toml</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="k">[dependencies]</span>
-<span class="n">miracle-plugin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"*"</span>
-
-<span class="k">[lib]</span>
-<span class="n">crate-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"cdylib"</span><span class="p">]</span>
-</code></pre></div>
-<p>Then compile to WebAssembly:</p>
-<div class="highlight"><pre><span></span><code>rustup<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>wasm32-wasip1<span class="w">  </span><span class="c1"># This should be done once</span>
-cargo<span class="w"> </span>build<span class="w"> </span>--target<span class="w"> </span>wasm32-wasip2<span class="w"> </span>--release
-</code></pre></div>
-<p>The resulting <code>.wasm</code> file is what you load in your miracle-wm configuration.</p>
-<h2 id="ipc-integration">IPC integration<a class="headerlink" href="#ipc-integration" title="Permanent link">&para;</a></h2>
-<p>A plugin can expose itself over miracle-wm's <a href="../ipc/">IPC socket</a> under a <strong>namespace</strong> it
-owns. This gives IPC clients a bidirectional, plugin-defined JSON channel: clients send commands
-to the plugin, and the plugin publishes events back to interested clients.</p>
-<ul>
-<li>A namespace is a plain string. Each namespace is owned by at most one plugin, and each plugin
-  may own at most one namespace. Registering a namespace that is already taken, or registering a
-  second namespace from the same plugin, fails.</li>
-<li>Only <a href="../ipc/plugin_command/">PLUGIN_COMMAND</a> messages whose <code>plugin</code> field matches the
-  registered namespace are routed to the plugin.</li>
-<li>Only clients subscribed to the <a href="../ipc/events/plugin/">plugin</a> event <strong>for that namespace</strong>
-  receive the events the plugin publishes.</li>
-</ul>
-<h3 id="registering-a-namespace">Registering a namespace<a class="headerlink" href="#registering-a-namespace" title="Permanent link">&para;</a></h3>
-<p>Claim a namespace once (typically from <code>init</code>):</p>
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">miracle_plugin</span><span class="p">::</span><span class="n">plugin</span><span class="p">::</span><span class="n">register_namespace</span><span class="p">;</span>
-
-<span class="n">register_namespace</span><span class="p">(</span><span class="s">"my-plugin"</span><span class="p">).</span><span class="n">expect</span><span class="p">(</span><span class="s">"namespace already taken"</span><span class="p">);</span>
-</code></pre></div>
-<h3 id="handling-commands">Handling commands<a class="headerlink" href="#handling-commands" title="Permanent link">&para;</a></h3>
-<p>Implement <code>handle_command</code> on your <code>Plugin</code>. It receives the raw JSON string sent by the client
-under the command's <code>payload</code> field, and returns <code>Some(response_json)</code> to reply, or <code>None</code> to
-decline (the client receives <code>success: false</code>):</p>
-<div class="highlight"><pre><span></span><code><span class="k">fn</span><span class="w"> </span><span class="nf">handle_command</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">payload</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Option</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// ...parse payload, do work...</span>
-<span class="w">    </span><span class="nb">Some</span><span class="p">(</span><span class="s">r#"{"ok": true}"#</span><span class="p">.</span><span class="n">to_string</span><span class="p">())</span>
-<span class="p">}</span>
-</code></pre></div>
-<h3 id="publishing-events">Publishing events<a class="headerlink" href="#publishing-events" title="Permanent link">&para;</a></h3>
-<p>Push an arbitrary JSON payload to every client subscribed to your namespace:</p>
-<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">miracle_plugin</span><span class="p">::</span><span class="n">plugin</span><span class="p">::</span><span class="n">publish_event</span><span class="p">;</span>
-
-<span class="n">publish_event</span><span class="p">(</span><span class="s">r#"{"state": "connected"}"#</span><span class="p">).</span><span class="n">ok</span><span class="p">();</span>
-</code></pre></div>
-<p>Clients receive it as a <a href="../ipc/events/plugin/">plugin</a> event wrapped as
-<code>{ "plugin": "my-plugin", "payload": { "state": "connected" } }</code>.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong><a href="https://github.com/miracle-wm-org/miri-plugin"><code>miri-plugin</code> crate</a></strong> — the Miri plugin that turns any Miracle compositor into a scrolling window manager</li>
+<li><strong><a href="https://github.com/miracle-wm-org/miri-plugin">miri</a></strong> — the Miri plugin that turns  Miracle into a scrolling window manager</li>
+<li><strong><a href="https://github.com/miracle-wm-org/focus-blur-plugin">focus-blur-plugin</a></strong> — a plugin that blurs unfocused windows</li>
+<li><strong><a href="https://github.com/miracle-wm-org/focus-blur-plugin">night-light-plugin</a></strong> — a plugin that applies an orange tint to your screen as the day progresses</li>
 <li><strong><a href="https://github.com/mattkae/dotfiles/tree/master/config/miracle-wm/matts-config">mattkae/dotfiles</a></strong> — a real-world plugin used in the author's personal setup</li>
 </ul>
-<h2 id="configuring-plugins">Configuring Plugins<a class="headerlink" href="#configuring-plugins" title="Permanent link">&para;</a></h2>
-<p>Plugins still need to be specified in your configuration before they are loaded into Miracle. See <a href="../configuration/plugins/">configuration/plugins.md</a> for how to load plugins and pass user data to them from your <code>miracle-wm/config.yaml</code>.</p>
+<h2 id="loading-plugins">Loading Plugins<a class="headerlink" href="#loading-plugins" title="Permanent link">&para;</a></h2>
+<p>To load your plugin, you can either specify them in your configuration
+(see <a href="../configuration/plugins/">plugins</a>).</p>
+<p>Alternatively, you can place the <code>.wasm</code> file directly into 
+<code>$XDG_CONFIG_HOME/miracle-wm/config/plugins</code> and they will be loaded directly.</p>
 
 
 
