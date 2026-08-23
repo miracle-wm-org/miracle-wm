@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_workspace.h"
 #include "animator_loop.h"
 #include "binding_event.h"
+#include "carousel_controller.h"
+#include "carousel_scene_override.h"
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
@@ -42,8 +44,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "shell_application_manager.h"
 #include "shell_component_container.h"
-#include "spread_controller.h"
-#include "spread_scene_override.h"
 #include "window_container.h"
 #include "window_observer.h"
 #include "workspace_manager.h"
@@ -286,7 +286,7 @@ Policy::Policy(
         window_controller,
         output_manager)),
     magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
-    spread_controller(std::make_unique<SpreadController>(state, output_manager, animator, window_controller, config, command_controller))
+    carousel_controller(std::make_unique<CarouselController>(state, output_manager, animator, window_controller, config, command_controller))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
         [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)
@@ -336,12 +336,12 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
-        spread_controller->break_tap();
+        carousel_controller->break_tap();
         scene_override->handle_keyboard_event(event);
         return true;
     }
 
-    spread_controller->handle_keyboard_event(event, modifiers);
+    carousel_controller->handle_keyboard_event(event, modifiers);
 
     if (plugin_manager->handle_keyboard_event(*event))
         return true;
@@ -528,13 +528,13 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
-        spread_controller->break_tap();
+        carousel_controller->break_tap();
         scene_override->handle_pointer_event(event);
         return true;
     }
 
     if (action == mir_pointer_action_button_down)
-        spread_controller->break_tap();
+        carousel_controller->break_tap();
 
     // Select the output first
     auto const focused = output_manager->focused();
@@ -730,7 +730,7 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
 
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
     {
-        if (is_spreadable(container, *window_controller))
+        if (is_carousel_window(container, *window_controller))
             scene_override->handle_window_added(window_info.window());
     }
 }

@@ -201,9 +201,9 @@ add_library(miracle-wm-implementation STATIC
         src/window_container.cpp src/window_container.h
         src/sampler_registry.h src/sampler_registry.cpp
         src/scene_override.cpp src/scene_override.h
-        src/spread_controller.cpp src/spread_controller.h
-        src/spread_layout.cpp src/spread_layout.h
-        src/spread_scene_override.cpp src/spread_scene_override.h
+        src/carousel_controller.cpp src/carousel_controller.h
+        src/carousel_layout.cpp src/carousel_layout.h
+        src/carousel_scene_override.cpp src/carousel_scene_override.h
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE

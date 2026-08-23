@@ -44,10 +44,10 @@ enum class WindowManagerMode
 
     moving,
 
-    /// The spread ("overview") scene override is on screen: every window on the
-    /// active workspace is shown scaled down so one can be picked. The override
-    /// owns input while this mode is set, so commands are refused as they are
-    /// in the other non-normal modes.
+    /// The carousel ("overview") scene override is on screen: the windows on
+    /// the active workspace are laid out side by side, scaled down, so one can
+    /// be picked. The override owns input while this mode is set, so commands
+    /// are refused as they are in the other non-normal modes.
     overview,
 
     max

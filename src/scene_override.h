@@ -81,6 +81,11 @@ struct SceneOverridePlacement
     /// Additional transformation, applied about the center of the relocated
     /// window, exactly like the normal per-window transform.
     glm::mat4 transformation;
+
+    /// Multiplied into the surface's own alpha while the override is active,
+    /// so that an override can dim a window without disturbing the container's
+    /// workspace, window and animation alpha layers.
+    float opacity = 1.f;
 };
 
 /// An override in how the scene is rendered.

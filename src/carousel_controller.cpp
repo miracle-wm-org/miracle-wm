@@ -15,20 +15,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "spread_controller.h"
+#include "carousel_controller.h"
 
 #include "abstract_command_controller.h"
+#include "carousel_scene_override.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
 #include "scene_override.h"
-#include "spread_scene_override.h"
 
 #include <miral/toolkit_event.h>
 
 using namespace miracle;
 
-SpreadController::SpreadController(
+CarouselController::CarouselController(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<Animator> const& animator,
@@ -44,12 +44,12 @@ SpreadController::SpreadController(
 {
 }
 
-void SpreadController::break_tap()
+void CarouselController::break_tap()
 {
     tap_latched = false;
 }
 
-void SpreadController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
+void CarouselController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
@@ -65,12 +65,12 @@ void SpreadController::handle_keyboard_event(MirKeyboardEvent const* event, unsi
     }
 }
 
-void SpreadController::try_start()
+void CarouselController::try_start()
 {
     if (compositor_state->mode() != WindowManagerMode::normal)
         return;
 
-    auto scene_override = SpreadSceneOverride::create(
+    auto scene_override = CarouselSceneOverride::create(
         *output_manager,
         animator,
         window_controller,
@@ -78,7 +78,7 @@ void SpreadController::try_start()
         config,
         [this]
     {
-        // Runs on the main thread as soon as the spread begins going away, so
+        // Runs on the main thread as soon as the carousel begins going away, so
         // that the mode is broadcast from the main loop and the rest of the
         // compositor is usable again while the outro plays.
         command_controller->set_mode(WindowManagerMode::normal);

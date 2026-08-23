@@ -777,6 +777,7 @@ Renderer::DrawData Renderer::get_draw_data(
         {
             result.placement = placement;
             result.override_real = placement_real;
+            result.alpha *= placement->opacity;
 
             // The override may draw the surface far from its tracked output
             // area, so cull against where the placement actually lands: the
