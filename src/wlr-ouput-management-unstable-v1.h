@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #include <mir/wayland/weak.h>
 #include <miral/output.h>
+#include <miral/wayland_extensions.h>
 
 namespace miracle
 {
@@ -33,7 +34,9 @@ class DisplayConfig;
 class WlrOutputManagementUnstableV1 : public mir::wayland::OutputManagerV1::Global, public OutputListener
 {
 public:
-    WlrOutputManagementUnstableV1(wl_display*, std::shared_ptr<DisplayConfig> const& config);
+    WlrOutputManagementUnstableV1(
+        miral::WaylandExtensions::Context const* context,
+        std::shared_ptr<DisplayConfig> const& config);
     void output_created(miral::Output const& output) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;
     void output_deleted(miral::Output const& output) override;
@@ -41,6 +44,9 @@ public:
 private:
     void bind(wl_resource* new_zwlr_output_manager_v1) override;
 
+    /// Used to marshal output changes from the window management thread onto the Wayland
+    /// thread, which is the only thread on which Wayland objects may be touched.
+    miral::WaylandExtensions::Context const* const context;
     std::vector<mir::wayland::Weak<WlrOutputManagerV1>> active_managers;
     std::shared_ptr<DisplayConfig> config;
     std::vector<miral::Output> outputs;
