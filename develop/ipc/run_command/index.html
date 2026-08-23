@@ -2994,9 +2994,9 @@
 command:</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;parse_error&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="err">?</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the command failed at parse time, most likely due to an unknown command</span>
-<span class="w">        </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g?</span><span class="w"> </span><span class="c1">// Human-readable error message</span>
+<span class="w">        </span><span class="nt">"success"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"parse_error"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="err">?</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the command failed at parse time, most likely due to an unknown command</span>
+<span class="w">        </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g?</span><span class="w"> </span><span class="c1">// Human-readable error message</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">]</span>
 </code></pre></div>
@@ -3008,12 +3008,12 @@ command:</p>
 <p>then they should see a reply that looks like this:</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="nt">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;success&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;parse_error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Unsupported command type: meow&quot;</span>
+<span class="w">        </span><span class="nt">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"parse_error"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Unsupported command type: meow"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">]</span>
 </code></pre></div>

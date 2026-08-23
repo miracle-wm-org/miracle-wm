@@ -2987,72 +2987,72 @@ represent individual windows.</p>
 contains other containers, or a window.</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">    </span><span class="c1">// A unique identifier for the node.</span>
-<span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w">      </span>
+<span class="w">    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w">      </span>
 
 <span class="w">    </span><span class="c1">// Name of the node.</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">     </span>
+<span class="w">    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">     </span>
 
 <span class="w">    </span><span class="c1">// The number of the workspace.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For workspaces nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;num&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w"> </span>
+<span class="w">    </span><span class="nt">"num"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w"> </span>
 
 <span class="w">    </span><span class="c1">// Type of the node.</span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;output&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;workspace&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;con&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;floating_con&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"output"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"workspace"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"con"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"floating_con"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Current layout scheme on the node.</span>
-<span class="w">    </span><span class="nt">&quot;layout&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;splith&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;splitv&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;stacking&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;tabbed&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"output"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"splith"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"splitv"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"stacking"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"tabbed"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Whether or not the node is visible.</span>
-<span class="w">    </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Whether or not the node is focused.</span>
-<span class="w">    </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
-<span class="w">    </span><span class="c1">// Whether or not the node is &quot;urgent&quot;.</span>
+<span class="w">    </span><span class="c1">// Whether or not the node is "urgent".</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// Urgent means that the node currently wants focus.</span>
-<span class="w">    </span><span class="c1">// This is always &#39;false&#39; as of now.</span>
-<span class="w">    </span><span class="nt">&quot;urgent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">// This is always 'false' as of now.</span>
+<span class="w">    </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The border style of the node.</span>
-<span class="w">    </span><span class="nt">&quot;border&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;normal&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;pixel&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"border"</span><span class="p">:</span><span class="w"> </span><span class="s2">"normal"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"none"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"pixel"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The size of the border if one exists.</span>
-<span class="w">    </span><span class="nt">&quot;current_border_width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"current_border_width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// An array of child nodes that are logically contained</span>
 <span class="w">    </span><span class="c1">// within this node. Each object in this tree will have</span>
 <span class="w">    </span><span class="c1">// the same shape as this JSON payload. </span>
-<span class="w">    </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">objec</span><span class="kc">t</span><span class="p">[],</span>
+<span class="w">    </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="err">objec</span><span class="kc">t</span><span class="p">[],</span>
 
 <span class="w">    </span><span class="c1">// The absolute display coordinates of the node.</span>
-<span class="w">    </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">    </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">},</span>
 
 <span class="w">    </span><span class="c1">// The rectangle of the window relative to its container.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// Only defined for nodes which contain a single window.</span>
-<span class="w">    </span><span class="nt">&quot;window_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">    </span><span class="nt">"window_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">},</span>
 
-<span class="w">    </span><span class="c1">// The rectangle of the window&#39;s decorations relative to its container.</span>
+<span class="w">    </span><span class="c1">// The rectangle of the window's decorations relative to its container.</span>
 <span class="w">    </span><span class="c1">// Decorations include both gaps and borders.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// Only defined for nodes which contain a single window.</span>
-<span class="w">    </span><span class="nt">&quot;deco_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">    </span><span class="nt">"deco_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">},</span>
 
 <span class="w">    </span><span class="c1">// The original geometry that the window specified before miracle</span>
@@ -3060,307 +3060,307 @@ contains other containers, or a window.</p>
 <span class="w">    </span><span class="c1">// mode.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// Only defined for nodes which contain a single window.</span>
-<span class="w">    </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">    </span><span class="nt">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">},</span>
 
 <span class="w">    </span><span class="c1">// ID of the window contained in this node.</span>
 <span class="w">    </span><span class="c1">//</span>
-<span class="w">    </span><span class="c1">// This is the same as the &quot;id&quot; field.</span>
+<span class="w">    </span><span class="c1">// This is the same as the "id" field.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// Only defined for nodes which contain a single window.</span>
-<span class="w">    </span><span class="nt">&quot;window&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"window"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Whether or not the node is powered on.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;active&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w">  </span>
+<span class="w">    </span><span class="nt">"active"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w">  </span>
 
 <span class="w">    </span><span class="c1">// Whether or not the output is on.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;dpkms&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"dpkms"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The scale of the output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;scale&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">fl</span><span class="err">oa</span><span class="kc">t</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"scale"</span><span class="p">:</span><span class="w"> </span><span class="kc">fl</span><span class="err">oa</span><span class="kc">t</span><span class="p">,</span>
 
-<span class="w">    </span><span class="c1">// Supplied but unused and always &#39;linear&#39;.</span>
+<span class="w">    </span><span class="c1">// Supplied but unused and always 'linear'.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For outputs nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;scale_filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"scale_filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"linear"</span><span class="p">,</span>
 
-<span class="w">    </span><span class="c1">// Supplied but unused and always &#39;false&#39;.</span>
+<span class="w">    </span><span class="c1">// Supplied but unused and always 'false'.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;adaptive_sync_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"adaptive_sync_status"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Make of the output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;make&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"make"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Model of the output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Serial number of the output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;serial&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"serial"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Transform of the output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;transform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;normal&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;90&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;180&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;270&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"transform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"normal"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"90"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"180"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"270"</span><span class="p">,</span>
 
-<span class="w">    </span><span class="c1">// Deprecated so always &quot;none&quot;.</span>
+<span class="w">    </span><span class="c1">// Deprecated so always "none".</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// List of available modes for this output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"modes"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
 
 <span class="w">        </span><span class="c1">// Refresh rate in millihertz</span>
-<span class="w">        </span><span class="nt">&quot;refresh&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">        </span><span class="nt">"refresh"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">}[],</span>
 
 <span class="w">    </span><span class="c1">// Current mode for this output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For output nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;current_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"current_mode"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
 
 <span class="w">        </span><span class="c1">// Refresh rate in millihertz</span>
-<span class="w">        </span><span class="nt">&quot;refresh&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">        </span><span class="nt">"refresh"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">    </span><span class="p">},</span>
 
 <span class="w">    </span><span class="c1">// Whether or not this node is stuck to the screen.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;sticky&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"sticky"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The scratchpad state of the container.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;scratchpad_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;fresh&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;changed&quot;</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"scratchpad_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"fresh"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"changed"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"unknown"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The shell that this container is runnign in. Always</span>
-<span class="w">    </span><span class="c1">// &#39;miracle-wm&#39; for now.</span>
+<span class="w">    </span><span class="c1">// 'miracle-wm' for now.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;miracle-wm&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"miracle-wm"</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Unused for now.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;inhibit_idle&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"inhibit_idle"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Unused for now.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;idle_inhibitors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;application&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;visible&quot;</span>
+<span class="w">    </span><span class="nt">"idle_inhibitors"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"application"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"visible"</span>
 <span class="w">    </span><span class="p">},</span>
 
 <span class="w">    </span><span class="c1">// Whether or not the container is fullscreen on its output.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;fullscreen_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"fullscreen_mode"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The percent of the parent node that this container takes.</span>
 <span class="w">    </span><span class="c1">// The value is always between [0, 1].</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">fl</span><span class="err">oa</span><span class="kc">t</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"percent"</span><span class="p">:</span><span class="w"> </span><span class="kc">fl</span><span class="err">oa</span><span class="kc">t</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// Arbitrary properties on a window. Unused for now and always empty.</span>
 <span class="w">    </span><span class="c1">//</span>
 <span class="w">    </span><span class="c1">// For container nodes only.</span>
-<span class="w">    </span><span class="nt">&quot;window_properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">objec</span><span class="kc">t</span>
+<span class="w">    </span><span class="nt">"window_properties"</span><span class="p">:</span><span class="w"> </span><span class="err">objec</span><span class="kc">t</span>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p>The following is a very simple example with the only running application
 being <code>kitty</code> in a hosted wayland session:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;active&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;adaptive_sync_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;border&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;current_border_width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;current_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;refresh&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">60000.0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span>
+<span class="w">      </span><span class="nt">"active"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"adaptive_sync_status"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"border"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"current_border_width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"current_mode"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"refresh"</span><span class="p">:</span><span class="w"> </span><span class="mf">60000.0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;deco_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">      </span><span class="nt">"deco_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;dpms&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">      </span><span class="nt">"dpms"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">101330841730944</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;layout&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;make&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Unknown&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Unknown&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;modes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">101330841730944</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"output"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"make"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Unknown"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"model"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Unknown"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"modes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">        </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;refresh&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">60000.0</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span>
+<span class="w">          </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"refresh"</span><span class="p">:</span><span class="w"> </span><span class="mf">60000.0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">      </span><span class="p">],</span>
-<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown-1&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown-1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">        </span><span class="p">{</span>
-<span class="w">          </span><span class="nt">&quot;border&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;current_border_width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;deco_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">          </span><span class="nt">"border"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"current_border_width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"deco_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">          </span><span class="p">},</span>
-<span class="w">          </span><span class="nt">&quot;floating_nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">          </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">          </span><span class="nt">"floating_nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">          </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">          </span><span class="p">},</span>
-<span class="w">          </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">101330847378496</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;layout&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;splith&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">101330847378496</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"splith"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">            </span><span class="p">{</span>
-<span class="w">              </span><span class="nt">&quot;app_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kitty&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;border&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;normal&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;current_border_width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;deco_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">              </span><span class="nt">"app_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"kitty"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"border"</span><span class="p">:</span><span class="w"> </span><span class="s2">"normal"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"current_border_width"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"deco_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">              </span><span class="p">},</span>
-<span class="w">              </span><span class="nt">&quot;floating_nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">              </span><span class="nt">&quot;focus&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">              </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;fullscreen_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;geometry&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">              </span><span class="nt">"floating_nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">              </span><span class="nt">"focus"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">              </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"fullscreen_mode"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"geometry"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">              </span><span class="p">},</span>
-<span class="w">              </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">133916745441920</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;idle_inhibitors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;application&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;visible&quot;</span>
+<span class="w">              </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">133916745441920</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"idle_inhibitors"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"application"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"visible"</span>
 <span class="w">              </span><span class="p">},</span>
-<span class="w">              </span><span class="nt">&quot;inhibit_idle&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;layout&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">              </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;percent&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15286</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">              </span><span class="nt">"inhibit_idle"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"nodes"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">              </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"percent"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"pid"</span><span class="p">:</span><span class="w"> </span><span class="mi">15286</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="w">              </span><span class="p">},</span>
-<span class="w">              </span><span class="nt">&quot;scratchpad_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;miracle-wm&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;sticky&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;con&quot;</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;urgent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;window&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">133916745441920</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">&quot;window_properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
-<span class="w">              </span><span class="nt">&quot;window_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1010</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1266</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
+<span class="w">              </span><span class="nt">"scratchpad_state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"miracle-wm"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"sticky"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"con"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"window"</span><span class="p">:</span><span class="w"> </span><span class="mi">133916745441920</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"window_properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">              </span><span class="nt">"window_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1010</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1266</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
 <span class="w">              </span><span class="p">}</span>
 <span class="w">            </span><span class="p">}</span>
 <span class="w">          </span><span class="p">],</span>
-<span class="w">          </span><span class="nt">&quot;num&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown-1&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">          </span><span class="nt">"num"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown-1"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="w">          </span><span class="p">},</span>
-<span class="w">          </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;workspace&quot;</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;urgent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;window&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">&quot;window_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">          </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"workspace"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"window"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"window_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">          </span><span class="p">}</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">      </span><span class="p">],</span>
-<span class="w">      </span><span class="nt">&quot;orientation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">      </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">      </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">&quot;scale&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;scale_filter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;serial&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Unknown&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;transform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;normal&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;output&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;urgent&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;window_rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">      </span><span class="nt">"scale"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"scale_filter"</span><span class="p">:</span><span class="w"> </span><span class="s2">"linear"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"serial"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Unknown"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"transform"</span><span class="p">:</span><span class="w"> </span><span class="s2">"normal"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"output"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"window_rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;root&quot;</span>
+<span class="w">  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"root"</span>
 <span class="p">}</span>
 </code></pre></div>
 

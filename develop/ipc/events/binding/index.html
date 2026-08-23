@@ -2959,27 +2959,27 @@
 mouse input.</p>
 <h2 id="payload">Payload<a class="headerlink" href="#payload" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;change&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// Always &#39;run&#39;</span>
-<span class="w">    </span><span class="nt">&quot;binding&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w">              </span><span class="c1">// Command that was run</span>
-<span class="w">        </span><span class="nt">&quot;event_state_mask&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string[]&quot;</span><span class="p">,</span><span class="w">   </span><span class="c1">// Moifiers being held</span>
-<span class="w">        </span><span class="nt">&quot;input_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integer&quot;</span><span class="p">,</span><span class="w">          </span><span class="c1">// Xkb keysym</span>
-<span class="w">        </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w">               </span><span class="c1">// Stringified keysym </span>
-<span class="w">        </span><span class="nt">&quot;input_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;keyboard | mouse&quot;</span><span class="w">  </span><span class="c1">// Input type</span>
+<span class="w">    </span><span class="nt">"change"</span><span class="p">:</span><span class="w"> </span><span class="s2">"run"</span><span class="p">,</span><span class="w"> </span><span class="c1">// Always 'run'</span>
+<span class="w">    </span><span class="nt">"binding"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w">              </span><span class="c1">// Command that was run</span>
+<span class="w">        </span><span class="nt">"event_state_mask"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string[]"</span><span class="p">,</span><span class="w">   </span><span class="c1">// Moifiers being held</span>
+<span class="w">        </span><span class="nt">"input_code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"integer"</span><span class="p">,</span><span class="w">          </span><span class="c1">// Xkb keysym</span>
+<span class="w">        </span><span class="nt">"symbol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w">               </span><span class="c1">// Stringified keysym </span>
+<span class="w">        </span><span class="nt">"input_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"keyboard | mouse"</span><span class="w">  </span><span class="c1">// Input type</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;change&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;binding&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;workspace 2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;event_state_mask&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;meta&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"change"</span><span class="p">:</span><span class="w"> </span><span class="s2">"run"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"binding"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"workspace 2"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"event_state_mask"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="s2">"meta"</span><span class="p">,</span>
 <span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;input_code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;input_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;keyboard&quot;</span>
+<span class="w">            </span><span class="nt">"input_code"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"symbol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"input_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"keyboard"</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>

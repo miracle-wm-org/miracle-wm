@@ -3161,7 +3161,7 @@
 <li><code>/usr/share/icons/</code></li>
 </ul>
 <p>Any directory in those locations that contains a <code>cursors/</code> subdirectory is a valid cursor theme. You can also list them with:</p>
-<div class="highlight"><pre><span></span><code>find<span class="w"> </span>/usr/share/icons<span class="w"> </span>~/.local/share/icons<span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">2</span><span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;cursors&quot;</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span><span class="s1">&#39;s|/cursors||&#39;</span>
+<div class="highlight"><pre><span></span><code>find<span class="w"> </span>/usr/share/icons<span class="w"> </span>~/.local/share/icons<span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">2</span><span class="w"> </span>-name<span class="w"> </span><span class="s2">"cursors"</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span><span class="s1">'s|/cursors||'</span>
 </code></pre></div>
 <h4 id="propagating-the-theme-to-x-clients">Propagating the theme to X clients<a class="headerlink" href="#propagating-the-theme-to-x-clients" title="Permanent link">&para;</a></h4>
 <p>miracle-wm sets the cursor theme for Wayland clients, but X clients (running via XWayland) read the theme from <code>~/.Xresources</code>. To keep them consistent, add the following to your <code>~/.Xresources</code>:</p>

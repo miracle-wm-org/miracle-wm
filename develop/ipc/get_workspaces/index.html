@@ -2994,17 +2994,17 @@
 <p>The reply is an array of objects corresponding to the following schema:</p>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;num&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w">     </span><span class="c1">// The workspace number, or -1 for workspaces without a number</span>
-<span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">     </span><span class="c1">// The name of the workspace</span>
-<span class="w">        </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the workspace is currently visible on an output, otherwise false</span>
-<span class="w">        </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the workspace is visible and its output is currently selected</span>
-<span class="w">        </span><span class="nt">&quot;urgent&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w">  </span><span class="c1">// Legacy, awlways false</span>
-<span class="w">        </span><span class="s2">&quot;output&quot;</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">    </span><span class="c1">// Name of the output that the workspace is on</span>
-<span class="w">        </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">           </span><span class="c1">// The rectangle defining this workspace</span>
-<span class="w">            </span><span class="s2">&quot;x&quot;</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
+<span class="w">        </span><span class="nt">"num"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span><span class="w">     </span><span class="c1">// The workspace number, or -1 for workspaces without a number</span>
+<span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">     </span><span class="c1">// The name of the workspace</span>
+<span class="w">        </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the workspace is currently visible on an output, otherwise false</span>
+<span class="w">        </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w"> </span><span class="c1">// True if the workspace is visible and its output is currently selected</span>
+<span class="w">        </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span><span class="w">  </span><span class="c1">// Legacy, awlways false</span>
+<span class="w">        </span><span class="s2">"output"</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="p">,</span><span class="w">    </span><span class="c1">// Name of the output that the workspace is on</span>
+<span class="w">        </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">           </span><span class="c1">// The rectangle defining this workspace</span>
+<span class="w">            </span><span class="s2">"x"</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="err">i</span><span class="kc">nte</span><span class="err">ger</span>
 <span class="w">        </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">]</span>
@@ -3012,16 +3012,16 @@
 <h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;num&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;visible&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;focused&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eDP-1&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rect&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;x&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;y&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">23</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1920</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1057</span>
+<span class="w">        </span><span class="nt">"num"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"focused"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eDP-1"</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">"x"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"y"</span><span class="p">:</span><span class="w"> </span><span class="mi">23</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1920</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1057</span>
 <span class="w">        </span><span class="p">},</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">]</span>

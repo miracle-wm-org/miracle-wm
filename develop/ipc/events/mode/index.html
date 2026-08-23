@@ -2956,16 +2956,19 @@
 
 <h1 id="mode-0x80000002">mode (0x80000002)<a class="headerlink" href="#mode-0x80000002" title="Permanent link">&para;</a></h1>
 <p>Send when the current mode of the compositor changes.</p>
+<p>The <code>change</code> field is one of the modes listed by
+<a href="../../get_binding_modes/">GET_BINDING_MODES</a>: <code>default</code>, <code>resize</code>, <code>dragging</code>,
+<code>moving</code>, or <code>overview</code> (the window overview/spread is on screen).</p>
 <h2 id="payload">Payload<a class="headerlink" href="#payload" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;change&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;pango_markup&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// Always true</span>
+<span class="w">    </span><span class="nt">"change"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"pango_markup"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">  </span><span class="c1">// Always true</span>
 <span class="p">}</span>
 </code></pre></div>
 <h2 id="eample">Eample<a class="headerlink" href="#eample" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;change&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;resize&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;pango_markup&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="nt">"change"</span><span class="p">:</span><span class="w"> </span><span class="s2">"resize"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"pango_markup"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </code></pre></div>
 
