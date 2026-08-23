@@ -37,7 +37,7 @@ public:
 
 TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
 {
-    render_data_manager.add({ .surface = nullptr,
+    render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -56,7 +56,7 @@ TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
 
 TEST_F(RenderDataManagerTest, CanChangeTransform)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -77,7 +77,7 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
 
 TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -98,7 +98,7 @@ TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 
 TEST_F(RenderDataManagerTest, CanChangeFocus)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -119,7 +119,7 @@ TEST_F(RenderDataManagerTest, CanChangeFocus)
 
 TEST_F(RenderDataManagerTest, CanChangeOutputArea)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -147,7 +147,7 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
     auto const value = GetParam();
     for (int i = 0; i < value; i++)
     {
-        render_data_manager.add({ .surface = nullptr,
+        render_data_manager.add({ .window = {},
             .needs_outline = true,
             .is_focused = true,
             .transform = glm::mat4(1.f),
@@ -167,7 +167,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = true,
         .is_focused = true,
         .transform = glm::mat4(1.f),
@@ -188,7 +188,7 @@ TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
 
 TEST_F(RenderDataManagerTest, CopyIsSkippedWhenNothingChanged)
 {
-    render_data_manager.add({ .surface = nullptr,
+    render_data_manager.add({ .window = {},
         .needs_outline = false,
         .is_focused = false,
         .transform = glm::mat4(1.f),
@@ -207,7 +207,7 @@ TEST_F(RenderDataManagerTest, CopyIsSkippedWhenNothingChanged)
 
 TEST_F(RenderDataManagerTest, CopyHappensAfterMutation)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = false,
         .is_focused = false,
         .transform = glm::mat4(1.f),
@@ -224,7 +224,7 @@ TEST_F(RenderDataManagerTest, CopyHappensAfterMutation)
 
 TEST_F(RenderDataManagerTest, MutationOfUnknownIdDoesNotTriggerCopy)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = false,
         .is_focused = false,
         .transform = glm::mat4(1.f),
@@ -241,7 +241,7 @@ TEST_F(RenderDataManagerTest, MutationOfUnknownIdDoesNotTriggerCopy)
 
 TEST_F(RenderDataManagerTest, ConcurrentCallersEachObserveChanges)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = false,
         .is_focused = false,
         .transform = glm::mat4(1.f),
@@ -266,7 +266,7 @@ TEST_F(RenderDataManagerTest, ConcurrentCallersEachObserveChanges)
 
 TEST_F(RenderDataManagerTest, RemoveTriggersCopy)
 {
-    auto id = render_data_manager.add({ .surface = nullptr,
+    auto id = render_data_manager.add({ .window = {},
         .needs_outline = false,
         .is_focused = false,
         .transform = glm::mat4(1.f),

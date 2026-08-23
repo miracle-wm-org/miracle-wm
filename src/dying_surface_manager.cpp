@@ -75,7 +75,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
     auto const transform = container->get_window_transform() * container->get_animation_transform();
     auto const alpha = container->get_alpha();
     auto const id = compositor_state->render_data_manager()->add(
-        { .surface = animating_surface.get(),
+        { .window = miral::Window(win->application(), animating_surface),
             .needs_outline = container->needs_outline(),
             .is_focused = false,
             .transform = transform,

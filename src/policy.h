@@ -65,6 +65,7 @@ class MagnifierWrapper;
 class PluginManager;
 class ShellApplicationManager;
 class DebugOverlayController;
+class CarouselController;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -162,6 +163,7 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop_;
     std::unique_ptr<DyingSurfaceManager> dying_surface_manager;
     std::unique_ptr<MagnifierWrapper> magnifier;
+    std::unique_ptr<CarouselController> carousel_controller;
 
     bool is_starting_ = true;
     AllocationHint pending_allocation;

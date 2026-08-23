@@ -56,7 +56,7 @@ void miracle::WindowContainer::associate_to_window(miral::Window const& window)
         {
             render_id_ = locked->add({
                 RenderData {
-                            .surface = window.operator std::shared_ptr<mir::scene::Surface>().get(),
+                            .window = window,
                             .needs_outline = needs_outline(),
                             .is_focused = is_focused(),
                             .transform = get_animation_transform(),

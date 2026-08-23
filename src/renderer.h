@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "primitive.h"
 #include "program_factory.h"
 #include "render_data_manager.h"
+#include "scene_override.h"
 
 #include <GLES2/gl2.h>
 #include <mir/geometry/rectangle.h>
@@ -79,6 +80,12 @@ private:
         bool enabled = false;
         float alpha = 1.f;
         RenderData data;
+        /// When set, the scene override wants the surface drawn at this
+        /// placement instead of its real position.
+        std::optional<SceneOverridePlacement> placement;
+        /// The real screen position of the surface group; only valid when
+        /// [placement] is set. Used to derive the mapping onto the placement.
+        mir::geometry::Rectangle override_real;
     };
 
     struct Vertex
@@ -161,8 +168,9 @@ private:
     /// Finds the [RenderData] tracked for \p surface in [render_data_cache], if any.
     RenderData const* find_render_data(mir::scene::Surface const* surface) const;
     DrawData get_draw_data(mir::graphics::Renderable const&,
-        mir::scene::Surface const* surface,
-        RenderData const* tracked) const;
+        RenderData const* tracked,
+        std::optional<SceneOverridePlacement> const& placement,
+        mir::geometry::Rectangle const& placement_real) const;
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;

@@ -19,8 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <memory>
 #define MIR_LOG_COMPONENT "miracle"
 
+#include "abstract_workspace.h"
 #include "animator_loop.h"
 #include "binding_event.h"
+#include "carousel_controller.h"
+#include "carousel_scene_override.h"
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
@@ -54,7 +57,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir_toolkit/events/enums.h>
 #include <miral/toolkit_event.h>
 #include <miral/window_specification.h>
+#include <miral/zone.h>
 #include <mutex>
+#include <unordered_map>
 
 using namespace miracle;
 
@@ -76,6 +81,7 @@ public:
 private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
+
 }
 
 class Policy::Self : public virtual WorkspaceObserver,
@@ -279,7 +285,8 @@ Policy::Policy(
         plugin_manager,
         window_controller,
         output_manager)),
-    magnifier(std::make_unique<MagnifierWrapper>(magnifier))
+    magnifier(std::make_unique<MagnifierWrapper>(magnifier)),
+    carousel_controller(std::make_unique<CarouselController>(state, output_manager, animator, window_controller, config, command_controller))
 {
     plugin_manager->initialize(std::make_unique<PluginBridge>(output_manager, window_controller, workspace_manager, state, window_id_map_, application_id_map_, animator, server.the_main_loop(), sampler_registry,
         [icm = ipc_connection_manager](std::string const& ns, std::string const& payload)
@@ -326,6 +333,15 @@ bool Policy::handle_keyboard_event(MirKeyboardEvent const* event)
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const modifiers = miral::toolkit::mir_keyboard_event_modifiers(event) & MODIFIER_MASK;
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        carousel_controller->break_tap();
+        scene_override->handle_keyboard_event(event);
+        return true;
+    }
+
+    carousel_controller->handle_keyboard_event(event, modifiers);
 
     if (plugin_manager->handle_keyboard_event(*event))
         return true;
@@ -509,6 +525,16 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
     auto const modifiers = miral::toolkit::mir_pointer_event_modifiers(event) & MODIFIER_MASK;
     auto const buttons = mir_pointer_event_buttons(event);
     state->cursor_position = { x, y };
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        carousel_controller->break_tap();
+        scene_override->handle_pointer_event(event);
+        return true;
+    }
+
+    if (action == mir_pointer_action_button_down)
+        carousel_controller->break_tap();
 
     // Select the output first
     auto const focused = output_manager->focused();
@@ -701,6 +727,12 @@ void Policy::advise_new_window(miral::WindowInfo const& window_info)
     auto const container = command_controller->create_container(window_info, pending_allocation);
     (*window_id_map_)[container->id()] = window_info.window();
     pending_allocation.container_type = AllocationType::none;
+
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+    {
+        if (is_carousel_window(container, *window_controller))
+            scene_override->handle_window_added(window_info.window());
+    }
 }
 
 void Policy::advise_new_app(miral::ApplicationInfo& app_info)
@@ -822,6 +854,9 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_window_closed(window_info.window());
+
     auto const container = window_controller->get_window_container(window_info.window());
     if (!container)
     {
@@ -883,6 +918,9 @@ void Policy::advise_resize(miral::WindowInfo const& window_info, geom::Size cons
 
 void Policy::advise_output_create(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     mir::log_info("Policy::advise_output_create: %s", output.name().c_str());
     output_manager->create(output.name(), output.id(), output.extents(), *workspace_manager);
     output_listener->output_created(output);
@@ -890,12 +928,18 @@ void Policy::advise_output_create(miral::Output const& output)
 
 void Policy::advise_output_update(miral::Output const& updated, miral::Output const& original)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->update(updated.id(), updated.extents());
     output_listener->output_updated(updated, original);
 }
 
 void Policy::advise_output_delete(miral::Output const& output)
 {
+    if (auto const scene_override = state->scene_override_manager()->try_resolve())
+        scene_override->handle_output_changed();
+
     output_manager->remove(output.id(), *workspace_manager);
     output_listener->output_deleted(output);
 }
@@ -948,7 +992,9 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
 
 bool Policy::handle_touch_event(const MirTouchEvent* event)
 {
-    return false;
+    // Swallow touch input while a scene override is active, consistent with
+    // keyboard and pointer handling.
+    return state->scene_override_manager()->try_resolve() != nullptr;
 }
 
 void Policy::handle_request_move(miral::WindowInfo& window_info, const MirInputEvent* input_event)

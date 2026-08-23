@@ -34,6 +34,9 @@ class PluginManager;
 /// Unique handle provided to track animators
 typedef uint32_t AnimationHandle;
 
+/// Evaluates \p definition's easing function at normalized time \p t in [0, 1].
+float ease(BuiltInAnimationDefinition const& definition, float t);
+
 struct AnimationData
 {
     AnimateableEvent event;

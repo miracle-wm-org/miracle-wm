@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <mir/scene/surface.h>
+#include <miral/window.h>
 #include <mutex>
 #include <vector>
 
@@ -33,7 +34,9 @@ typedef int RenderDataManagerId;
 struct RenderData
 {
     RenderDataManagerId id = 0;
-    mir::scene::Surface const* surface = nullptr;
+    /// The window whose surface this data describes. Holds the surface only
+    /// weakly, so it does not extend the surface's lifetime.
+    miral::Window window;
     bool needs_outline = false;
     bool is_focused = false;
     glm::mat4 transform = glm::mat4(1.f);

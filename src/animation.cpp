@@ -52,7 +52,9 @@ float ease_out_bounce(BuiltInAnimationDefinition const& defintion, float x)
     }
 }
 
-float ease(BuiltInAnimationDefinition const& defintion, float t)
+}
+
+float miracle::ease(BuiltInAnimationDefinition const& defintion, float t)
 {
     // https://easings.net/
     switch (defintion.function)
@@ -151,6 +153,8 @@ float ease(BuiltInAnimationDefinition const& defintion, float t)
     }
 }
 
+namespace
+{
 float interpolate_scale(float const p, float const start, float const end)
 {
     float const diff = end - start;

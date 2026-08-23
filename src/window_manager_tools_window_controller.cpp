@@ -179,7 +179,9 @@ void WindowManagerToolsWindowController::noclip(miral::Window const& window)
 
 void WindowManagerToolsWindowController::select_active_window(miral::Window const& window)
 {
-    if (state->mode() != WindowManagerMode::normal)
+    // The carousel focuses whatever is centered when it is dismissed, so
+    // [overview] selects just like [normal] does.
+    if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::overview)
         return;
 
     tools.select_active_window(window);

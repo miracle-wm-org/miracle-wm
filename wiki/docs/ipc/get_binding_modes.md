@@ -16,8 +16,8 @@ Empty
 [
     "default",
     "resize",
-    "selecting",
     "dragging",
-    "moving"
+    "moving",
+    "overview"
 ]
 ```
