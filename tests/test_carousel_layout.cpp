@@ -180,10 +180,14 @@ TEST(CarouselLayout, WindowsAStepOrMoreFromTheCenterAreDimmed)
 {
     carousel_layout::Options const options;
     auto const input = windows(5);
-    auto const result = carousel_layout::compute(BOUNDS, input, 0.f);
+    auto const result = carousel_layout::compute(BOUNDS, input, 2.f);
 
-    for (size_t i = 1; i < result.size(); i++)
+    for (size_t i = 0; i < result.size(); i++)
+    {
+        if (i == 2)
+            continue;
         EXPECT_NEAR(options.dim, result[i].opacity, 0.001f) << "at index " << i;
+    }
 }
 
 TEST(CarouselLayout, DimmingIsInterpolatedWhileScrolling)
@@ -197,27 +201,25 @@ TEST(CarouselLayout, DimmingIsInterpolatedWhileScrolling)
     EXPECT_NEAR(expected, result[1].opacity, 0.001f);
 }
 
-TEST(CarouselLayout, WrapsAroundAfterAFullRevolution)
-{
-    auto const input = windows(5);
-    auto const first = carousel_layout::compute(BOUNDS, input, 0.f);
-    auto const wrapped = carousel_layout::compute(BOUNDS, input, static_cast<float>(input.size()));
-
-    ASSERT_EQ(first.size(), wrapped.size());
-    for (size_t i = 0; i < first.size(); i++)
-    {
-        EXPECT_NEAR(first[i].x, wrapped[i].x, 0.001f) << "at index " << i;
-        EXPECT_NEAR(first[i].width, wrapped[i].width, 0.001f) << "at index " << i;
-    }
-}
-
-TEST(CarouselLayout, TheLastWindowComesAroundToTheLeftOfTheFirst)
+TEST(CarouselLayout, TheStripHasEndsRatherThanWrapping)
 {
     auto const input = windows(5);
     auto const result = carousel_layout::compute(BOUNDS, input, 0.f);
 
-    EXPECT_LT(center_x(result[4]), center_x(result[0]));
-    EXPECT_GT(center_x(result[1]), center_x(result[0]));
+    // With the first window centered there is nothing to its left: the rest of
+    // the strip runs off to the right, in order.
+    for (size_t i = 1; i < result.size(); i++)
+        EXPECT_GT(center_x(result[i]), center_x(result[i - 1])) << "at index " << i;
+}
+
+TEST(CarouselLayout, WindowsBeforeThePositionSitToItsLeft)
+{
+    auto const input = windows(5);
+    auto const result = carousel_layout::compute(BOUNDS, input, 3.f);
+
+    EXPECT_LT(center_x(result[0]), center_x(result[2]));
+    EXPECT_LT(center_x(result[2]), center_x(result[3]));
+    EXPECT_GT(center_x(result[4]), center_x(result[3]));
 }
 
 TEST(CarouselLayout, ASingleWindowSitsInTheMiddle)
@@ -232,20 +234,20 @@ TEST(CarouselLayout, ASingleWindowSitsInTheMiddle)
 TEST(CarouselLayout, TheOutermostWindowsHangOffTheEdgesOfTheBounds)
 {
     auto const input = uniform_windows(5);
-    auto const result = carousel_layout::compute(BOUNDS, input, 0.f);
+    auto const result = carousel_layout::compute(BOUNDS, input, 2.f);
 
     // Three windows are wholly on screen...
-    for (auto const index : { 0u, 1u, 4u })
+    for (auto const index : { 1u, 2u, 3u })
     {
         EXPECT_GE(result[index].x, 0.f) << "at index " << index;
         EXPECT_LE(result[index].x + result[index].width, 1920.f) << "at index " << index;
     }
 
     // ...and the pair beyond them straddles an edge.
-    EXPECT_LT(result[3].x, 0.f);
-    EXPECT_GT(result[3].x + result[3].width, 0.f);
-    EXPECT_LT(result[2].x, 1920.f);
-    EXPECT_GT(result[2].x + result[2].width, 1920.f);
+    EXPECT_LT(result[0].x, 0.f);
+    EXPECT_GT(result[0].x + result[0].width, 0.f);
+    EXPECT_LT(result[4].x, 1920.f);
+    EXPECT_GT(result[4].x + result[4].width, 1920.f);
 }
 
 TEST(CarouselLayout, IsDeterministic)

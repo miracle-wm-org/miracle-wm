@@ -55,6 +55,27 @@ carousel_layout::Placement placement_of(geom::Rectangle const& rectangle)
     };
 }
 
+/// The vertical scroll in \p event, measured in whole carousel steps.
+///
+/// A wheel reports high-resolution 120ths of a click, older ones report whole
+/// clicks, and touchpads report a continuous tick count. Only one of the three
+/// axes is populated for any given device, so they are tried in that order.
+float vertical_scroll(MirPointerEvent const* event)
+{
+    auto const axis = [event](MirPointerAxis which)
+    {
+        return miral::toolkit::mir_pointer_event_axis_value(event, which);
+    };
+
+    if (auto const value120 = axis(mir_pointer_axis_vscroll_value120); value120 != 0.f)
+        return value120 / 120.f;
+
+    if (auto const discrete = axis(mir_pointer_axis_vscroll_discrete); discrete != 0.f)
+        return discrete;
+
+    return axis(mir_pointer_axis_vscroll);
+}
+
 mir::scene::Surface const* surface_key(miral::Window const& window)
 {
     return window.operator std::shared_ptr<mir::scene::Surface>().get();
@@ -288,6 +309,50 @@ void CarouselSceneOverride::retarget(size_t group)
         state->entries.at(keys[i]).target = targets[i];
 }
 
+bool CarouselSceneOverride::advance(size_t group, int delta)
+{
+    auto& carousel = state->groups[group];
+    if (carousel.count == 0)
+        return false;
+
+    // The strip has ends: running off either one simply stops there.
+    auto const last = static_cast<long>(carousel.count) - 1;
+    auto const next = std::clamp(static_cast<long>(carousel.position) + delta, 0L, last);
+    if (next == static_cast<long>(carousel.position))
+        return false;
+
+    carousel.position = static_cast<size_t>(next);
+    retarget(group);
+    return true;
+}
+
+void CarouselSceneOverride::step(int delta)
+{
+    {
+        std::lock_guard lock(state->mutex);
+        if (state->phase == Phase::outro || state->phase == Phase::done)
+            return;
+
+        if (!advance(state->active_group, delta))
+            return;
+    }
+
+    settle();
+}
+
+void CarouselSceneOverride::settle()
+{
+    auto const s = state;
+    animate(
+        [s]
+    {
+        std::lock_guard lock(s->mutex);
+        if (s->phase == Phase::intro)
+            s->phase = Phase::idle;
+    },
+        RETARGET_DURATION_SECONDS);
+}
+
 void CarouselSceneOverride::start()
 {
     auto const s = state;
@@ -416,6 +481,16 @@ void CarouselSceneOverride::handle_keyboard_event(MirKeyboardEvent const* event)
         return;
     }
 
+    // The arrow keys walk the carousel along, exactly as the scroll wheel does.
+    // Repeats count, so holding an arrow down runs along the strip.
+    if ((action == mir_keyboard_action_down || action == mir_keyboard_action_repeat)
+        && (keysym == XKB_KEY_Left || keysym == XKB_KEY_Right))
+    {
+        primary_tap_latched = false;
+        step(keysym == XKB_KEY_Right ? 1 : -1);
+        return;
+    }
+
     // Tapping the primary action modifier again dismisses the carousel the same
     // way that clicking the centered window does.
     bool const is_primary = is_modifier_keysym(primary_modifier, keysym);
@@ -432,7 +507,7 @@ void CarouselSceneOverride::handle_pointer_event(MirPointerEvent const* event)
 {
     float const x = miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_x);
     float const y = miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_y);
-    float const vscroll = miral::toolkit::mir_pointer_event_axis_value(event, mir_pointer_axis_vscroll);
+    float const vscroll = vertical_scroll(event);
     auto const action = miral::toolkit::mir_pointer_event_action(event);
 
     if (action == mir_pointer_action_button_down)
@@ -456,7 +531,7 @@ void CarouselSceneOverride::handle_pointer_event(MirPointerEvent const* event)
         }
 
         auto& active = state->groups[state->active_group];
-        if (vscroll != 0.f && active.count > 0)
+        if (vscroll != 0.f)
         {
             active.scroll_accumulator += vscroll;
             auto const steps = static_cast<int>(active.scroll_accumulator);
@@ -466,14 +541,7 @@ void CarouselSceneOverride::handle_pointer_event(MirPointerEvent const* event)
 
                 // A positive vertical scroll is a scroll down, which advances
                 // the carousel to the next window.
-                auto const count = static_cast<long>(active.count);
-                auto next = (static_cast<long>(active.position) + steps) % count;
-                if (next < 0)
-                    next += count;
-
-                active.position = static_cast<size_t>(next);
-                retarget(state->active_group);
-                needs_animation = true;
+                needs_animation |= advance(state->active_group, steps);
             }
         }
 
@@ -500,10 +568,9 @@ void CarouselSceneOverride::handle_pointer_event(MirPointerEvent const* event)
             {
                 // A window off to one side was picked: bring it front and
                 // center rather than dismissing.
-                group.position = hit->index;
                 group.scroll_accumulator = 0.f;
-                retarget(state->active_group);
-                needs_animation = true;
+                needs_animation |= advance(
+                    state->active_group, static_cast<int>(hit->index) - static_cast<int>(group.position));
             }
             else
             {
@@ -520,15 +587,7 @@ void CarouselSceneOverride::handle_pointer_event(MirPointerEvent const* event)
     }
 
     if (needs_animation)
-    {
-        auto const s = state;
-        animate([s]
-        {
-            std::lock_guard lock(s->mutex);
-            if (s->phase == Phase::intro)
-                s->phase = Phase::idle;
-        }, RETARGET_DURATION_SECONDS);
-    }
+        settle();
 }
 
 std::optional<SceneOverridePlacement> CarouselSceneOverride::place(miral::Window const& window)
@@ -599,7 +658,7 @@ void CarouselSceneOverride::handle_window_added(miral::Window const& window)
         state->entries.emplace(key, Entry { .window = window, .real = real, .from = placement, .target = placement, .current = placement, .group = group, .index = 0 });
         state->order.insert(state->order.begin(), key);
         state->groups[group].count++;
-        state->groups[group].position = (state->groups[group].position + 1) % state->groups[group].count;
+        state->groups[group].position++;
 
         // Recompute the affected output's carousel so the new window glides in
         // and the existing windows shuffle around it. Other outputs keep their
@@ -674,7 +733,7 @@ void CarouselSceneOverride::handle_window_closed(miral::Window const& window)
         if (carousel.count == 0)
             carousel.position = 0;
         else if (carousel.position > index || carousel.position >= carousel.count)
-            carousel.position = (carousel.position - 1) % carousel.count;
+            carousel.position--;
 
         empty = state->entries.empty();
         if (!empty)

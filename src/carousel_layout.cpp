@@ -24,24 +24,6 @@ namespace geom = mir::geometry;
 
 namespace
 {
-/// The signed number of slots that the window at \p index sits away from
-/// \p position, taking the shorter way around a carousel of \p count windows.
-///
-/// The result lies in (-count/2, count/2], so a window that has fallen off one
-/// end comes back around the other. Ties break towards the right, which keeps
-/// the layout stable as [position] sweeps past the half-way mark.
-float wrapped_distance(size_t index, float position, size_t count)
-{
-    auto const n = static_cast<float>(count);
-    auto const half = n / 2.f;
-
-    float d = std::fmod(static_cast<float>(index) - position, n);
-    if (d < 0.f)
-        d += n;
-
-    return d > half ? d - n : d;
-}
-
 float clamp01(float value)
 {
     return std::clamp(value, 0.f, 1.f);
@@ -100,7 +82,7 @@ std::vector<miracle::carousel_layout::Placement> miracle::carousel_layout::compu
     result.reserve(windows.size());
     for (size_t i = 0; i < windows.size(); ++i)
     {
-        auto const distance = wrapped_distance(i, position, windows.size());
+        auto const distance = static_cast<float>(i) - position;
         auto const falloff = std::pow(options.side_scale, std::abs(distance));
 
         auto const window_width = static_cast<float>(std::max(windows[i].size.width.as_value(), 1));

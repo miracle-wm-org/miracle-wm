@@ -65,10 +65,9 @@ struct Options
 /// Lays \p windows out on a horizontal carousel inside \p bounds, with the
 /// window at the (possibly fractional) index \p position front and center.
 ///
-/// The carousel wraps, so scrolling never hits a wall: the windows furthest
-/// "after" \p position come back around in front of it. Each window still
-/// occupies exactly one slot no matter how many windows there are, so a window
-/// never appears twice.
+/// The strip has ends rather than wrapping: the windows before \p position run
+/// off to the left and the ones after it run off to the right, and there is
+/// nothing beyond either end.
 ///
 /// Every window is scaled uniformly so its aspect ratio is preserved, fitted
 /// into its slot's box, and never blown up past \p Options::max_scale. Slot

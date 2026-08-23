@@ -63,10 +63,11 @@ bool is_carousel_window(
 /// neighbours progressively smaller and dimmer as they run off both edges of
 /// the screen.
 ///
-/// Scrolling rotates the carousel, and clicking a window that is off to one
-/// side brings it to the center. Clicking the centered window (or pressing
-/// Escape, or tapping the primary action modifier again) focuses whatever is
-/// centered and dismisses the carousel.
+/// Scrolling and the left/right arrow keys move the carousel along, stopping
+/// at either end, and clicking a window that is off to one side brings it to
+/// the center. Clicking the centered window (or pressing Escape, or tapping the
+/// primary action modifier again) focuses whatever is centered and dismisses
+/// the carousel.
 class CarouselSceneOverride : public SceneOverride
 {
 public:
@@ -178,6 +179,23 @@ private:
     ///
     /// The caller must hold `state->mutex`, and must run [animate] afterwards.
     void retarget(size_t group);
+
+    /// Moves the active carousel \p delta windows along, stopping at either
+    /// end, and animates it there.
+    void step(int delta);
+
+    /// Moves \p group's position \p delta windows along, clamped to the ends,
+    /// and retargets it if it actually moved.
+    ///
+    /// The caller must hold `state->mutex`, and must run [settle] afterwards
+    /// when this returns true.
+    ///
+    /// \returns whether the carousel moved.
+    bool advance(size_t group, int delta);
+
+    /// Runs the short animation that settles the carousel after it has been
+    /// moved by a scroll, an arrow key or a click.
+    void settle();
 
     /// The keys of \p group's entries, ordered by [Entry::index].
     ///
