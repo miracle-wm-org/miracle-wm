@@ -174,7 +174,20 @@ geom::Rectangle Workspace::area() const
 
 void Workspace::recalculate_area()
 {
-    if (auto const sh_output = output.lock())
+    auto const sh_output = output.lock();
+
+    // A workspace that isn't being shown has all of its containers hidden, so resizing
+    // them now would push geometry at unmapped clients (and the windows may drift from
+    // their containers in the meantime). Instead, we note that a recalculation is pending
+    // and apply it the moment that this workspace is shown again.
+    if (sh_output && sh_output->active().get() != this)
+    {
+        needs_area_recalculation_ = true;
+        return;
+    }
+
+    needs_area_recalculation_ = false;
+    if (sh_output)
     {
         root()->set_logical_area(get_output_area(sh_output), true);
         root()->commit_changes();
@@ -217,6 +230,11 @@ void Workspace::advise_focus_gained(std::shared_ptr<Container> const& container)
 
 void Workspace::show(geom::Point const& origin)
 {
+    // The output area may have changed while we were hidden, in which case the
+    // recalculation was deferred until now.
+    if (needs_area_recalculation_)
+        recalculate_area();
+
     if (!config->are_animations_enabled() || origin == geom::Point(0, 0))
     {
         // No animation will run to settle these to their final shown values,

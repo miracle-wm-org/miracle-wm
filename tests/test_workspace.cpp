@@ -49,6 +49,11 @@ const geom::Rectangle OUTPUT_SIZE {
     geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT)
 };
 
+const geom::Rectangle RESIZED_OUTPUT_SIZE {
+    geom::Point(0, 0),
+    geom::Size(800, 600)
+};
+
 const geom::Rectangle OTHER_OUTPUT_SIZE {
     geom::Point(OUTPUT_WIDTH, OUTPUT_HEIGHT),
     geom::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT)
@@ -448,6 +453,50 @@ TEST_F(WorkspaceTest, ToJson_OtherContainerAppearsInFloatingNodes)
     auto const j = workspace->to_json(false);
     EXPECT_EQ(j["floating_nodes"].size(), 1u);
     EXPECT_TRUE(j["nodes"].empty());
+}
+
+TEST_F(WorkspaceTest, RecalculateAreaIsDeferredWhileWorkspaceIsNotShown)
+{
+    create_leaf();
+
+    // The workspace is not the active workspace on its output.
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
+}
+
+TEST_F(WorkspaceTest, DeferredAreaChangeIsAppliedWhenWorkspaceIsShown)
+{
+    auto leaf = create_leaf();
+
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    // The output makes us the active workspace before showing us.
+    ON_CALL(*output, active())
+        .WillByDefault(Return(workspace));
+    workspace->show(geom::Point(0, 0));
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(leaf->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(window_controller->get_window_data(leaf).rectangle, leaf->get_visible_area());
+}
+
+TEST_F(WorkspaceTest, RecalculateAreaAppliesImmediatelyWhenWorkspaceIsShown)
+{
+    auto leaf = create_leaf();
+
+    ON_CALL(*output, active())
+        .WillByDefault(Return(workspace));
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    ASSERT_EQ(window_controller->get_window_data(leaf).rectangle, leaf->get_visible_area());
 }
 
 TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)

@@ -114,6 +114,10 @@ private:
     std::weak_ptr<AbstractOutput> output;
     uint32_t id_;
     mutable std::shared_ptr<ParentContainer> root_;
+
+    /// Set when [recalculate_area] is called while this workspace is not being shown.
+    /// The recalculation is applied the next time that the workspace is shown.
+    bool needs_area_recalculation_ = false;
     std::vector<std::weak_ptr<Container>> other_containers;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> state;
