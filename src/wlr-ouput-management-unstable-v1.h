@@ -18,28 +18,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIRACLE_WM_WLR_OUPUT_MANAGEMENT_UNSTABLE_V1_H
 #define MIRACLE_WM_WLR_OUPUT_MANAGEMENT_UNSTABLE_V1_H
 
-#include "output_listener.h"
+#include "display_config.h"
 #include "wlr-output-management-unstable-v1_wrapper.h"
 
 #include <memory>
 #include <mir/wayland/weak.h>
-#include <miral/output.h>
 #include <miral/wayland_extensions.h>
 
 namespace miracle
 {
 class WlrOutputManagerV1;
-class DisplayConfig;
 
-class WlrOutputManagementUnstableV1 : public mir::wayland::OutputManagerV1::Global, public OutputListener
+/// Note that the heads are driven by the display configuration rather than by
+/// [miral::Output], because miral only reports outputs that are switched on while the
+/// protocol requires that a switched off head remains advertised with "enabled: 0".
+class WlrOutputManagementUnstableV1 : public mir::wayland::OutputManagerV1::Global, public DisplayConfigListener
 {
 public:
     WlrOutputManagementUnstableV1(
         miral::WaylandExtensions::Context const* context,
         std::shared_ptr<DisplayConfig> const& config);
-    void output_created(miral::Output const& output) override;
-    void output_updated(miral::Output const& updated, miral::Output const& original) override;
-    void output_deleted(miral::Output const& output) override;
+    void display_configuration_changed(OutputConfigDetailList const& configuration) override;
 
 private:
     void bind(wl_resource* new_zwlr_output_manager_v1) override;
@@ -49,7 +48,8 @@ private:
     miral::WaylandExtensions::Context const* const context;
     std::vector<mir::wayland::Weak<WlrOutputManagerV1>> active_managers;
     std::shared_ptr<DisplayConfig> config;
-    std::vector<miral::Output> outputs;
+    /// The connected outputs as of the last configuration change, switched on or not.
+    OutputConfigDetailList outputs;
 };
 
 }

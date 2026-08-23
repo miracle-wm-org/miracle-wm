@@ -25,8 +25,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <mir/graphics/display_configuration_policy.h>
+#include <mir/graphics/null_display_configuration_observer.h>
 #include <mir/log.h>
 #include <mir/main_loop.h>
+#include <mir/observer_registrar.h>
 #include <mir/options/option.h>
 #include <mir/server.h>
 #include <mir/shell/display_configuration_controller.h>
@@ -186,39 +188,82 @@ public:
             apply_internal(conf, configs);
         else
             apply_default(conf);
+
+        update_cache(conf);
     }
 
     /// Override from [mg::DisplayConfigurationPolicy]
     void confirm(mg::DisplayConfiguration const& conf) override
     {
-        std::lock_guard lock(mutex);
-
-        cached.clear();
-        conf.for_each_output([&](mg::DisplayConfigurationOutput const& output)
-        {
-            auto const current_mode_index = select_mode_index(output.current_mode_index, output.modes);
-            cached.push_back(OutputConfigDetails {
-                output.name,
-                output.card_id,
-                output.physical_size_mm,
-                output.top_left,
-                output.scale,
-                output.orientation,
-                output.logical_group_id,
-                output.modes,
-                current_mode_index,
-                output.used,
-                output.power_mode,
-                output.current_format,
-                output.custom_attribute.contains("primary")
-                    ? output.custom_attribute.at("primary") == "true"
-                    : false,
-                output.display_info });
-        });
+        update_cache(conf);
 
         auto copy = conf.clone();
         if (!has_config_file())
             try_create_default(*copy);
+    }
+
+    /// Snapshots [conf] - including the outputs that are switched off - and hands the
+    /// snapshot to everyone who registered an interest in it.
+    void update_cache(mg::DisplayConfiguration const& conf)
+    {
+        OutputConfigDetailList new_cache;
+        conf.for_each_output([&](mg::DisplayConfigurationOutput const& output)
+        {
+            OutputConfigDetails details;
+            details.name = output.name;
+            details.id = output.id.as_value();
+            details.card_id = output.card_id;
+            details.physical_size_mm = output.physical_size_mm;
+            details.position = output.top_left;
+            details.scale = output.scale;
+            details.orientation = output.orientation;
+            details.group_id = output.logical_group_id;
+            details.modes = output.modes;
+            details.current_mode_index = select_mode_index(output.current_mode_index, output.modes);
+            details.connected = output.connected;
+            details.used = output.used;
+            details.power_mode = output.power_mode;
+            details.current_format = output.current_format;
+            details.is_primary = output.custom_attribute.contains("primary")
+                ? output.custom_attribute.at("primary") == "true"
+                : false;
+            details.display_info = output.display_info;
+            new_cache.push_back(details);
+        });
+
+        std::vector<std::shared_ptr<DisplayConfigListener>> to_notify;
+        {
+            std::lock_guard lock(mutex);
+            cached = new_cache;
+            std::erase_if(listeners, [](std::weak_ptr<DisplayConfigListener> const& listener)
+            {
+                return listener.expired();
+            });
+
+            for (auto const& listener : listeners)
+            {
+                if (auto const locked = listener.lock())
+                    to_notify.push_back(locked);
+            }
+        }
+
+        // Deliberately outside of the lock: listeners are free to call back into us.
+        for (auto const& listener : to_notify)
+            listener->display_configuration_changed(new_cache);
+    }
+
+    void register_listener(std::weak_ptr<DisplayConfigListener> const& listener)
+    {
+        OutputConfigDetailList current;
+        {
+            std::lock_guard lock(mutex);
+            listeners.push_back(listener);
+            current = cached;
+        }
+
+        // Bring the new listener up to date with whatever we know right now.
+        if (auto const locked = listener.lock())
+            locked->display_configuration_changed(current);
     }
 
     /// Attempts to write the default configuration to [path] if it does not exist.
@@ -370,6 +415,7 @@ public:
 private:
     std::vector<OutputConfig> configs;
     OutputConfigDetailList cached;
+    std::vector<std::weak_ptr<DisplayConfigListener>> listeners;
     mg::DisplayConfigurationLogicalGroupId const empty_group_id = mg::DisplayConfigurationLogicalGroupId(0);
 
     void apply_default(mg::DisplayConfiguration& conf) const
@@ -436,6 +482,7 @@ private:
         // Pre-pass: find the rightmost right-edge of all configured outputs so that
         // any unconfigured (newly plugged-in) monitors can be placed after them.
         int rightmost_x = 0;
+        int enabled_count = 0;
         conf.for_each_output([&](mg::UserDisplayConfigurationOutput const& output)
         {
             if (!output.connected || output.modes.empty())
@@ -445,7 +492,14 @@ private:
                 return card.name == output.name;
             });
             if (config_it == configs.end())
+            {
+                // Outputs that we have no configuration for are always enabled.
+                enabled_count++;
                 return;
+            }
+
+            if (config_it->enabled)
+                enabled_count++;
 
             int x = config_it->position ? config_it->position->x.as_int() : 0;
             int width = 0;
@@ -460,6 +514,12 @@ private:
             rightmost_x = std::max(rightmost_x, x + width);
         });
         int next_unconfigured_x = rightmost_x;
+
+        // Disabling every output would leave the user with no way to interact with the
+        // system, so we refuse to honor the request and keep everything enabled instead.
+        bool const honor_disabled = enabled_count > 0;
+        if (!honor_disabled)
+            mir::log_warning("Display configuration would disable every output, so we are refusing to disable any");
 
         bool has_had_primary = false;
         bool has_applied_any = false;
@@ -495,6 +555,17 @@ private:
 
             mir::log_info("Applying output with name and ID: %s, %d", output.name.c_str(), output.card_id.as_value());
             auto const& card = *config_it;
+            if (!card.enabled && honor_disabled)
+            {
+                mir::log_info("Output '%s' is disabled in the display configuration", output.name.c_str());
+                output.used = false;
+                output.power_mode = mir_power_mode_off;
+                // A deliberate disable counts as an applied configuration, otherwise we would
+                // fall back to the default configuration and turn the output straight back on.
+                has_applied_any = true;
+                return;
+            }
+
             output.used = true;
             output.power_mode = mir_power_mode_on;
             output.orientation = mir_orientation_normal;
@@ -574,6 +645,32 @@ private:
     }
 };
 
+/// Mir only tells the window management layer about outputs that are switched on, so we
+/// watch the display configuration directly to learn about the ones that are switched off.
+class miracle::DisplayConfig::ConfigObserver : public mg::NullDisplayConfigurationObserver
+{
+public:
+    explicit ConfigObserver(std::shared_ptr<Self> const& self) :
+        self { self }
+    {
+    }
+
+private:
+    void initial_configuration(std::shared_ptr<mg::DisplayConfiguration const> const& config) override
+    {
+        if (config)
+            self->update_cache(*config);
+    }
+
+    void configuration_applied(std::shared_ptr<mg::DisplayConfiguration const> const& config) override
+    {
+        if (config)
+            self->update_cache(*config);
+    }
+
+    std::shared_ptr<Self> const self;
+};
+
 miracle::DisplayConfig::DisplayConfig() :
     DisplayConfig(get_display_config_path())
 {
@@ -628,6 +725,11 @@ miracle::OutputConfigDetailList miracle::DisplayConfig::configuration() const
     return self->configuration();
 }
 
+void miracle::DisplayConfig::register_listener(std::weak_ptr<DisplayConfigListener> const& listener)
+{
+    self->register_listener(listener);
+}
+
 void miracle::DisplayConfig::operator()(mir::Server& server)
 {
     auto constexpr config_file_name_option = "display-config-path";
@@ -649,6 +751,9 @@ void miracle::DisplayConfig::operator()(mir::Server& server)
 
     server.add_init_callback([this, &server]
     {
+        observer = std::make_shared<ConfigObserver>(self);
+        server.the_display_configuration_observer_registrar()->register_interest(observer);
+
         main_loop = server.the_main_loop();
         if (main_loop != nullptr)
         {

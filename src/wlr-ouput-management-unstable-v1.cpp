@@ -119,18 +119,16 @@ class WlrOutputHeadV1 : public mir::wayland::OutputHeadV1
 {
 public:
     WlrOutputHeadV1(
-        miral::Output const& output,
         mir::wayland::OutputManagerV1 const& parent,
         OutputConfigDetails const& config);
     ~WlrOutputHeadV1() override;
     void send_initial();
-    void update(miral::Output const& updated, OutputConfigDetails const& updated_config);
+    void update(OutputConfigDetails const& updated_config);
     /// Announce that this head is no longer available. The head becomes inert but stays alive
     /// until the client releases it. Safe to call more than once.
     void send_finished();
     std::string name() const;
 
-    miral::Output output;
     OutputConfigDetails config;
     std::vector<mir::wayland::Weak<WlrOutputModeV1>> modes;
 
@@ -150,17 +148,17 @@ class WlrOutputManagerV1 : public mir::wayland::OutputManagerV1
 public:
     explicit WlrOutputManagerV1(wl_resource* resource,
         std::shared_ptr<DisplayConfig> const& config,
-        std::vector<miral::Output> const& outputs);
+        OutputConfigDetailList const& outputs);
     ~WlrOutputManagerV1() override;
     WlrOutputHeadV1* head(wl_resource* resource);
-    void advise_output_create(miral::Output const& output);
-    void advise_output_update(miral::Output const& updated, miral::Output const& original);
-    void advise_output_delete(miral::Output const& output);
+    void advise_output_create(OutputConfigDetails const& output);
+    void advise_output_update(OutputConfigDetails const& updated);
+    void advise_output_delete(OutputConfigDetails const& output);
 
     std::shared_ptr<DisplayConfig> const config;
 
 private:
-    WlrOutputHeadV1* create_output_internal(miral::Output const& output);
+    WlrOutputHeadV1* create_output_internal(OutputConfigDetails const& output);
     void create_configuration(struct wl_resource* id, uint32_t serial) override;
     void stop() override;
     /// Drops handles to heads that the client has released out from under us.
@@ -209,6 +207,8 @@ private:
 
     mir::wayland::Weak<WlrOutputManagerV1> manager;
     std::vector<mir::wayland::Weak<WlrOutputConfigurationHeadV1>> heads;
+    /// Names of the heads that the client explicitly asked us to disable.
+    std::vector<std::string> disabled_heads;
 
 private:
     void discard_changes();
@@ -238,20 +238,26 @@ void WlrOutputConfigurationV1::enable_head(struct wl_resource* id, struct wl_res
 
 void WlrOutputConfigurationV1::disable_head(struct wl_resource* head)
 {
+    if (!manager)
+        return;
+
+    auto const head_object = manager.value().head(head);
+    if (!head_object)
+    {
+        mir::log_error("Unable to disable_head because it cannot be found");
+        return;
+    }
+
+    // The client is expected to configure each head exactly once, but if it enabled this
+    // head first then the disable wins. Dropping the handle does not destroy the object.
     auto const it = std::find_if(this->heads.begin(), this->heads.end(), [&](mw::Weak<WlrOutputConfigurationHeadV1> const& other)
     {
         return other && other.value().head && other.value().head.value().resource == head;
     });
     if (it != heads.end())
-    {
-        // Dropping the handle does not destroy the object: [create_configs] treats a head with
-        // no entry in [heads] as disabled.
         heads.erase(it);
-    }
-    else
-    {
-        mir::log_error("Unable to disable_head because it cannot be found");
-    }
+
+    disabled_heads.push_back(head_object->name());
 }
 
 void WlrOutputConfigurationV1::apply()
@@ -284,7 +290,7 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
         if (!head_config.head)
             return;
         auto& head = head_config.head.value();
-        card.name = head.output.name();
+        card.name = head.name();
         card.enabled = true;
         if (head_config.position)
             card.position = *head_config.position;
@@ -365,29 +371,24 @@ std::vector<DisplayConfig::OutputConfig> WlrOutputConfigurationV1::create_config
         }
     }
 
-    /// Next, iterate over the existing configurations. If a head doesn't exist for the existing config,
-    /// this means that the user disabled it. In that case, mark it as disabled and push it to the new list.
-    for (auto const& output_config : existing_configs)
+    /// Next, mark every head that the client explicitly disabled. If we have an existing
+    /// configuration for it then we keep the rest of its properties, so that re-enabling it
+    /// later restores the position, mode and scale that it had.
+    for (auto const& name : disabled_heads)
     {
-        bool found = false;
-        for (auto const& wlr_output_config_head : heads)
+        auto const it = std::ranges::find_if(existing_configs, [&](DisplayConfig::OutputConfig const& config)
         {
-            if (!wlr_output_config_head)
-                continue;
-            auto const& head_config = wlr_output_config_head.value();
-            if (head_config.head && output_config.name == head_config.head.value().name())
-            {
-                found = true;
-                break;
-            }
-        }
+            return config.name == name;
+        });
 
-        if (!found)
-        {
-            auto new_output_config = output_config;
-            new_output_config.enabled = false;
-            new_outputs.push_back(new_output_config);
-        }
+        DisplayConfig::OutputConfig new_output_config;
+        if (it != existing_configs.end())
+            new_output_config = *it;
+        else
+            new_output_config.name = name;
+
+        new_output_config.enabled = false;
+        new_outputs.push_back(new_output_config);
     }
 
     return new_outputs;
@@ -407,6 +408,7 @@ void WlrOutputConfigurationV1::destroy()
 
 void WlrOutputConfigurationV1::discard_changes()
 {
+    disabled_heads.clear();
     for (auto const& head : heads)
     {
         if (!head)
@@ -423,7 +425,7 @@ void WlrOutputConfigurationV1::discard_changes()
 WlrOutputManagerV1::WlrOutputManagerV1(
     wl_resource* resource,
     std::shared_ptr<DisplayConfig> const& config,
-    std::vector<miral::Output> const& outputs) :
+    OutputConfigDetailList const& outputs) :
     OutputManagerV1(resource, Version<4>()),
     config(config)
 {
@@ -466,23 +468,16 @@ WlrOutputHeadV1* WlrOutputManagerV1::head(wl_resource* resource)
     return nullptr;
 }
 
-WlrOutputHeadV1* WlrOutputManagerV1::create_output_internal(miral::Output const& output)
+WlrOutputHeadV1* WlrOutputManagerV1::create_output_internal(OutputConfigDetails const& output)
 {
-    OutputConfigDetails output_config;
-    for (auto const& other_output_config : config->configuration())
-    {
-        if (other_output_config.name == output.name())
-            output_config = other_output_config;
-    }
-
     // The head is owned by its wl_resource, so we only track a weak handle.
-    auto* const head = new WlrOutputHeadV1(output, *this, output_config);
+    auto* const head = new WlrOutputHeadV1(*this, output);
     heads.push_back(mw::make_weak(head));
     send_head_event(head->resource);
     return head;
 }
 
-void WlrOutputManagerV1::advise_output_create(miral::Output const& output)
+void WlrOutputManagerV1::advise_output_create(OutputConfigDetails const& output)
 {
     prune_heads();
     auto* const head = create_output_internal(output);
@@ -490,7 +485,7 @@ void WlrOutputManagerV1::advise_output_create(miral::Output const& output)
     head->send_initial();
 }
 
-void WlrOutputManagerV1::advise_output_update(miral::Output const& updated, miral::Output const& original)
+void WlrOutputManagerV1::advise_output_update(OutputConfigDetails const& updated)
 {
     prune_heads();
     for (auto const& head : heads)
@@ -498,28 +493,21 @@ void WlrOutputManagerV1::advise_output_update(miral::Output const& updated, mira
         if (!head)
             continue;
 
-        if (head.value().output.id() == original.id())
+        if (head.value().config.name == updated.name)
         {
-            OutputConfigDetails output_config;
-            for (auto const& other_output_config : config->configuration())
-            {
-                if (other_output_config.name == updated.name())
-                    output_config = other_output_config;
-            }
-
-            head.value().update(updated, output_config);
+            head.value().update(updated);
             break;
         }
     }
     send_done_event(serial++);
 }
 
-void WlrOutputManagerV1::advise_output_delete(miral::Output const& output)
+void WlrOutputManagerV1::advise_output_delete(OutputConfigDetails const& output)
 {
     prune_heads();
     auto const it = std::find_if(heads.begin(), heads.end(), [&](mw::Weak<WlrOutputHeadV1> const& head)
     {
-        return head && head.value().output.id() == output.id();
+        return head && head.value().config.name == output.name;
     });
     if (it != heads.end())
     {
@@ -543,11 +531,9 @@ void WlrOutputManagerV1::stop()
 }
 
 WlrOutputHeadV1::WlrOutputHeadV1(
-    miral::Output const& output,
     mir::wayland::OutputManagerV1 const& parent,
     OutputConfigDetails const& config) :
     OutputHeadV1(parent),
-    output { output },
     config { config }
 {
 }
@@ -605,7 +591,7 @@ void WlrOutputHeadV1::send_current_mode(OutputConfigDetails const& from)
     {
         mir::log_warning(
             "Current mode index %zu is out of range for head '%s', which has %zu modes",
-            index, output.name().c_str(), modes.size());
+            index, config.name.c_str(), modes.size());
         return;
     }
 
@@ -628,30 +614,39 @@ void WlrOutputHeadV1::send_initial()
             mode.value().send_inital();
     }
 
-    send_name_event(output.name());
+    send_name_event(config.name);
     send_description_event("");
-    send_physical_size_event(output.physical_size_mm().width, output.physical_size_mm().height);
-    send_enabled_event(output.used());
+    send_physical_size_event(config.physical_size_mm.width.as_int(), config.physical_size_mm.height.as_int());
+    // A head that is switched off stays advertised: the protocol expects "enabled: 0" here,
+    // and only a head that has physically disappeared is finished.
+    send_enabled_event(config.used);
     send_current_mode(config);
-    send_position_event(output.extents().top_left.x.as_int(), output.extents().top_left.y.as_int());
+    send_position_event(config.position.x.as_int(), config.position.y.as_int());
     // TODO: Send the transform event via send_transform_event()
-    send_scale_event(output.scale());
+    send_scale_event(config.scale);
     // TODO: Send the make event via send_make_event()
     // TODO: Send the model event via send_model_event()
     // TODO: Send the serial_number event via send_serial_number_event()
     // TODO: Send the adapative_sync_event via send_adapative_sync_event
 }
 
-void WlrOutputHeadV1::update(miral::Output const& updated, OutputConfigDetails const& updated_config)
+void WlrOutputHeadV1::update(OutputConfigDetails const& updated_config)
 {
     if (is_defunct)
         return;
 
-    if (output.name() != updated.name())
-        send_name_event(updated.name());
+    if (config.name != updated_config.name)
+        send_name_event(updated_config.name);
 
-    if (output.used() != updated.used())
-        send_enabled_event(updated.used());
+    if (config.physical_size_mm != updated_config.physical_size_mm)
+    {
+        send_physical_size_event(
+            updated_config.physical_size_mm.width.as_int(),
+            updated_config.physical_size_mm.height.as_int());
+    }
+
+    if (config.used != updated_config.used)
+        send_enabled_event(updated_config.used);
 
     // [modes] holds the mode list we last broadcasted. If the list itself changed we have to
     // re-broadcast it, otherwise [current_mode_index] would index into a stale vector.
@@ -669,19 +664,18 @@ void WlrOutputHeadV1::update(miral::Output const& updated, OutputConfigDetails c
     if (modes_changed || config.current_mode_index != updated_config.current_mode_index)
         send_current_mode(updated_config);
 
-    if (output.extents() != updated.extents())
-        send_position_event(updated.extents().top_left.x.as_int(), updated.extents().top_left.y.as_int());
+    if (config.position != updated_config.position)
+        send_position_event(updated_config.position.x.as_int(), updated_config.position.y.as_int());
 
-    if (output.scale() != updated.scale())
-        send_scale_event(updated.scale());
+    if (config.scale != updated_config.scale)
+        send_scale_event(updated_config.scale);
 
-    output = updated;
     config = updated_config;
 }
 
 std::string WlrOutputHeadV1::name() const
 {
-    return output.name();
+    return config.name;
 }
 
 void WlrOutputHeadV1::release()
@@ -709,49 +703,59 @@ void WlrOutputManagementUnstableV1::bind(wl_resource* new_zwlr_output_manager_v1
         new WlrOutputManagerV1(new_zwlr_output_manager_v1, config, outputs) });
 }
 
-// The output_* methods below are called on the window management thread, but everything they
-// touch - wl_resource_post_event, and mir::wayland::Weak itself - is only safe on the Wayland
-// thread. Hop over before doing any work.
+// [display_configuration_changed] is called on whichever thread applied the display
+// configuration, but everything it touches - wl_resource_post_event, and mir::wayland::Weak
+// itself - is only safe on the Wayland thread. Hop over before doing any work.
 
-void WlrOutputManagementUnstableV1::output_created(miral::Output const& output)
+void WlrOutputManagementUnstableV1::display_configuration_changed(OutputConfigDetailList const& configuration)
 {
-    context->run_on_wayland_mainloop([this, output]
+    // A head is advertised for as long as a display is physically attached to the output,
+    // whether or not that output is switched on. Only the ones that are gone are dropped.
+    OutputConfigDetailList connected;
+    for (auto const& details : configuration)
+    {
+        if (details.connected)
+            connected.push_back(details);
+    }
+
+    context->run_on_wayland_mainloop([this, connected]
     {
         std::erase_if(active_managers, [](auto const& m)
         { return !m; });
-        outputs.push_back(output);
-        for (auto const& manager : active_managers)
-            manager.value().advise_output_create(output);
-    });
-}
 
-void WlrOutputManagementUnstableV1::output_updated(miral::Output const& updated, miral::Output const& original)
-{
-    context->run_on_wayland_mainloop([this, updated, original]
-    {
-        std::erase_if(active_managers, [](auto const& m)
-        { return !m; });
-        std::ranges::replace_if(outputs, [&](miral::Output const& output)
+        for (auto const& previous : outputs)
         {
-            return output.is_same_output(original);
-        }, updated);
-        for (auto const& manager : active_managers)
-            manager.value().advise_output_update(updated, original);
-    });
-}
+            auto const it = std::ranges::find_if(connected, [&](OutputConfigDetails const& other)
+            {
+                return other.name == previous.name;
+            });
 
-void WlrOutputManagementUnstableV1::output_deleted(miral::Output const& output)
-{
-    context->run_on_wayland_mainloop([this, output]
-    {
-        std::erase_if(active_managers, [](auto const& m)
-        { return !m; });
-        std::erase_if(outputs, [&](miral::Output const& other)
+            if (it == connected.end())
+            {
+                for (auto const& manager : active_managers)
+                    manager.value().advise_output_delete(previous);
+            }
+        }
+
+        for (auto const& details : connected)
         {
-            return other.is_same_output(output);
-        });
-        for (auto const& manager : active_managers)
-            manager.value().advise_output_delete(output);
+            auto const it = std::ranges::find_if(outputs, [&](OutputConfigDetails const& other)
+            {
+                return other.name == details.name;
+            });
+
+            for (auto const& manager : active_managers)
+            {
+                if (it == outputs.end())
+                    manager.value().advise_output_create(details);
+                else
+                    // The head works out which properties actually changed and only
+                    // broadcasts those, so it is fine to hand it everything.
+                    manager.value().advise_output_update(details);
+            }
+        }
+
+        outputs = connected;
     });
 }
 

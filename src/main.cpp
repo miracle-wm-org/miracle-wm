@@ -244,10 +244,10 @@ int main(int argc, char const* argv[])
     }
 
     wayland_extensions.add_extension({ .name = mir::wayland::OutputManagerV1::interface_name,
-        .build = [output_listener = output_listener, display_config = display_config](WaylandExtensions::Context const* context)
+        .build = [display_config = display_config](WaylandExtensions::Context const* context)
     {
         auto extension = std::make_shared<miracle::WlrOutputManagementUnstableV1>(context, display_config);
-        output_listener->register_listener(extension);
+        display_config->register_listener(extension);
         return extension;
     } });
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
