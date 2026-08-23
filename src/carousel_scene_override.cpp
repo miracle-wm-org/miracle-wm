@@ -22,11 +22,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "output.h"
 #include "output_manager.h"
+#include "shell_component_container.h"
 #include "window_container.h"
 #include "window_controller.h"
 #include "workspace.h"
 
 #include <algorithm>
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <mir/scene/surface.h>
 #include <miral/toolkit_event.h>
@@ -43,6 +45,15 @@ namespace
 /// snappier than the configured window animation, so that a run of scroll
 /// events does not lag behind the wheel.
 constexpr float RETARGET_DURATION_SECONDS = 0.18f;
+
+/// How far the desktop background shrinks while the carousel is open.
+constexpr float BACKGROUND_SCALE = 0.75f;
+
+/// Every edge of the output. A surface attached to all four of them covers the
+/// whole output, which is what makes it a background rather than a panel.
+constexpr auto ALL_EDGES = static_cast<MirPlacementGravity>(
+    mir_placement_gravity_north | mir_placement_gravity_south
+    | mir_placement_gravity_east | mir_placement_gravity_west);
 
 carousel_layout::Placement placement_of(geom::Rectangle const& rectangle)
 {
@@ -120,6 +131,23 @@ bool miracle::is_carousel_window(
     return type == mir_window_type_normal || type == mir_window_type_freestyle;
 }
 
+bool miracle::is_background_window(
+    std::shared_ptr<WindowContainer> const& container,
+    WindowController& window_controller)
+{
+    if (!container || !container->window())
+        return false;
+
+    // Backgrounds arrive as layer-shell surfaces, which the policy always
+    // allocates as shell components.
+    if (!dynamic_cast<ShellComponentContainer const*>(container.get()))
+        return false;
+
+    auto const& info = window_controller.info_for(container->window().value());
+    return info.depth_layer() < mir_depth_layer_application
+        && (info.attached_edges() & ALL_EDGES) == ALL_EDGES;
+}
+
 std::unique_ptr<CarouselSceneOverride> CarouselSceneOverride::create(
     OutputManager& output_manager,
     std::shared_ptr<Animator> const& animator,
@@ -162,10 +190,20 @@ std::unique_ptr<CarouselSceneOverride> CarouselSceneOverride::create(
     // [AbstractWorkspace::for_each_window] it does not filter out floating and
     // plugin-managed windows.
     std::vector<Entry> entries;
+    std::vector<miral::Window> backgrounds;
     std::vector<size_t> next_index(bounds_list.size(), 0);
     for (auto const& weak : compositor_state->windows())
     {
         auto const container = weak.lock();
+
+        // Backgrounds are not part of the carousel: they stay where they are and
+        // are simply scaled down behind it.
+        if (is_background_window(container, *window_controller))
+        {
+            backgrounds.push_back(container->window().value());
+            continue;
+        }
+
         if (!is_carousel_window(container, *window_controller))
             continue;
 
@@ -189,6 +227,7 @@ std::unique_ptr<CarouselSceneOverride> CarouselSceneOverride::create(
 
     return std::unique_ptr<CarouselSceneOverride>(new CarouselSceneOverride(
         std::move(entries),
+        std::move(backgrounds),
         std::move(bounds_list),
         active_group,
         animator,
@@ -201,6 +240,7 @@ std::unique_ptr<CarouselSceneOverride> CarouselSceneOverride::create(
 
 CarouselSceneOverride::CarouselSceneOverride(
     std::vector<Entry> entries,
+    std::vector<miral::Window> backgrounds,
     std::vector<geom::Rectangle> bounds,
     size_t active_group,
     std::shared_ptr<Animator> const& animator,
@@ -237,6 +277,9 @@ CarouselSceneOverride::CarouselSceneOverride(
 
     state->groups.resize(this->bounds.size());
     state->active_group = active_group;
+    state->backgrounds = std::move(backgrounds);
+    // The intro shrinks the desktop behind the carousel; the outro undoes it.
+    state->background_target = BACKGROUND_SCALE;
     for (auto& entry : entries)
     {
         // The intro slides each window in from wherever it really is.
@@ -304,6 +347,7 @@ void CarouselSceneOverride::retarget(size_t group)
     // that the other groups may still be part way through.
     for (auto& [key, entry] : state->entries)
         entry.from = entry.current;
+    state->background_from = state->background_current;
 
     for (size_t i = 0; i < keys.size(); ++i)
         state->entries.at(keys[i]).target = targets[i];
@@ -383,6 +427,8 @@ void CarouselSceneOverride::animate(std::function<void()> on_complete, std::opti
             return true;
 
         std::vector<miral::Window> to_nudge;
+        std::vector<miral::Window> backgrounds;
+        float background_scale = 1.f;
         bool done = false;
         {
             std::lock_guard lock(s->mutex);
@@ -393,6 +439,9 @@ void CarouselSceneOverride::animate(std::function<void()> on_complete, std::opti
                 entry.current = carousel_layout::lerp(entry.from, entry.target, p);
                 to_nudge.push_back(entry.window);
             }
+            s->background_current = std::lerp(s->background_from, s->background_target, p);
+            background_scale = s->background_current;
+            backgrounds = s->backgrounds;
             done = s->t >= definition.duration_seconds;
         }
 
@@ -400,6 +449,8 @@ void CarouselSceneOverride::animate(std::function<void()> on_complete, std::opti
         // damaged so the compositor redraws with the new placements.
         for (auto const& window : to_nudge)
             nudge(window);
+
+        scale_backgrounds(backgrounds, background_scale);
 
         if (done)
             on_complete();
@@ -415,6 +466,22 @@ void CarouselSceneOverride::nudge(miral::Window const& window)
     // transformation, so alpha is the value-preserving choice.)
     if (auto const surface = window.operator std::shared_ptr<mir::scene::Surface>())
         surface->set_alpha(surface->alpha());
+}
+
+void CarouselSceneOverride::scale_backgrounds(std::vector<miral::Window> const& backgrounds, float scale)
+{
+    // Backgrounds deliberately have no render data, so there is nothing for
+    // [place] to drive. The renderer falls back to the surface's own
+    // transformation for untracked surfaces, and pivots it about the surface's
+    // center - which for a background is the center of its output.
+    auto const transform = glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, 1.f));
+    for (auto const& window : backgrounds)
+    {
+        if (auto const surface = window.operator std::shared_ptr<mir::scene::Surface>())
+            surface->set_transformation(transform);
+
+        nudge(window);
+    }
 }
 
 void CarouselSceneOverride::commit_and_exit()
@@ -451,6 +518,9 @@ void CarouselSceneOverride::begin_exit()
             // they settle.
             entry.target = placement_of(geom::Rectangle { entry.window.top_left(), entry.window.size() });
         }
+
+        state->background_from = state->background_current;
+        state->background_target = 1.f;
     }
 
     // The carousel no longer owns the desktop from here on, even though the
@@ -462,10 +532,17 @@ void CarouselSceneOverride::begin_exit()
     auto const done = on_done;
     animate([s, done]
     {
+        std::vector<miral::Window> backgrounds;
         {
             std::lock_guard lock(s->mutex);
             s->phase = Phase::done;
+            s->background_current = 1.f;
+            backgrounds = s->backgrounds;
         }
+
+        // Land exactly on the identity transform rather than on whatever the
+        // final eased step happened to produce.
+        scale_backgrounds(backgrounds, 1.f);
         done();
     });
 }
@@ -684,6 +761,7 @@ void CarouselSceneOverride::handle_output_changed()
 void CarouselSceneOverride::cancel()
 {
     bool was_exiting = false;
+    std::vector<miral::Window> backgrounds;
     {
         std::lock_guard lock(state->mutex);
         if (state->phase == Phase::done)
@@ -691,7 +769,12 @@ void CarouselSceneOverride::cancel()
 
         was_exiting = state->phase == Phase::outro;
         state->phase = Phase::done;
+        state->background_current = 1.f;
+        backgrounds = state->backgrounds;
     }
+
+    // There is no outro to animate the desktop back up, so undo the shrink now.
+    scale_backgrounds(backgrounds, 1.f);
 
     // [begin_exit] has already announced the exit if the outro was running.
     if (!was_exiting)
@@ -711,6 +794,8 @@ void CarouselSceneOverride::handle_window_closed(miral::Window const& window)
             return;
 
         auto const* key = surface_key(window);
+        std::erase(state->backgrounds, window);
+
         auto const it = state->entries.find(key);
         if (it == state->entries.end())
             return;

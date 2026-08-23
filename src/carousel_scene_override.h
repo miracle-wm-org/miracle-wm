@@ -58,6 +58,15 @@ bool is_carousel_window(
     std::shared_ptr<WindowContainer> const& container,
     WindowController& window_controller);
 
+/// True when \p container is a desktop background: a shell component that sits
+/// below the application depth layer and is attached on all four edges.
+///
+/// Backgrounds have no render data of their own, so the carousel shrinks them by
+/// writing straight to their surface transformation rather than by placing them.
+bool is_background_window(
+    std::shared_ptr<WindowContainer> const& container,
+    WindowController& window_controller);
+
 /// A carousel-style scene override: the windows on the workspace are laid out
 /// side by side, with the focused one front and center at full opacity and its
 /// neighbours progressively smaller and dimmer as they run off both edges of
@@ -132,6 +141,7 @@ public:
 private:
     CarouselSceneOverride(
         std::vector<Entry> entries,
+        std::vector<miral::Window> backgrounds,
         std::vector<mir::geometry::Rectangle> bounds,
         size_t active_group,
         std::shared_ptr<Animator> const& animator,
@@ -160,6 +170,15 @@ private:
         /// Hit-test order: most recently used first.
         std::vector<mir::scene::Surface const*> order;
         std::unordered_map<mir::scene::Surface const*, Entry> entries;
+        /// The desktop backgrounds, which shrink while the carousel is open.
+        /// Held as [miral::Window] - a weak reference to the surface - so a
+        /// background that goes away mid-carousel simply stops resolving.
+        std::vector<miral::Window> backgrounds;
+        /// Where the background scale is animating from / to, and what the
+        /// animation tick currently serves.
+        float background_from = 1.f;
+        float background_target = 1.f;
+        float background_current = 1.f;
         /// One carousel per output, indexed by [Entry::group].
         std::vector<Group> groups;
         /// The carousel that scrolling and dismissal act on.
@@ -213,6 +232,12 @@ private:
     /// Tears the override down immediately, without an exit animation.
     void cancel();
     static void nudge(miral::Window const& window);
+    /// Writes \p scale to every background's surface transformation and marks
+    /// them damaged.
+    ///
+    /// Static, and taking the state by pointer, so that the animation callbacks
+    /// can reach it without capturing `this`.
+    static void scale_backgrounds(std::vector<miral::Window> const& backgrounds, float scale);
 
     std::shared_ptr<State> state;
     /// One carousel bounds rectangle per output, indexed by [Entry::group].
