@@ -45,7 +45,7 @@ nav:
     - getting_started/building.md
     - getting_started/logs.md
     - getting_started/what_is_a_wayland_compositor.md
-  - Configuration: 
+  - Configuration:
     - configuration/introduction.md
     - configuration/action_key.md
     - configuration/includes.md
@@ -123,7 +123,6 @@ nav:
   - Display Configuration: configuration/display_configuration.md
   - Screen Sharing: screenshare.md
   - Mir's Built-in Configuration: configuration/mir.md
-  - Roadmap: roadmap.md
 extra:
   version:
     provider: mike
