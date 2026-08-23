@@ -49,13 +49,13 @@ bool contains(Placement const& placement, float x, float y);
 struct Options
 {
     /// Width of the center slot's box, as a fraction of the bounds.
-    float center_width_fraction = 0.30f;
+    float center_width_fraction = 0.50f;
     /// Height of the center slot's box, as a fraction of the bounds.
-    float center_height_fraction = 0.62f;
+    float center_height_fraction = 0.82f;
     /// Every step away from the center multiplies the slot box by this.
-    float side_scale = 0.78f;
+    float side_scale = 0.65f;
     /// Opacity of a window a full step (or more) away from the center.
-    float dim = 0.65f;
+    float dim = 0.75f;
     /// Minimum horizontal gap between neighbouring windows.
     float gap = 16.f;
     /// A window is never drawn larger than this fraction of its real size.
