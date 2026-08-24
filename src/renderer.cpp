@@ -860,7 +860,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             if (scene_override && group_data && group_data->window)
             {
                 group_placement = scene_override->place(group_data->window);
-                group_real = r->screen_position();
+                group_real = geom::Rectangle { surface->top_left(), surface->window_size() };
             }
         }
 
