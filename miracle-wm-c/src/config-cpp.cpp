@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "miracle/cpp/gaps.h"
 #include "miracle/cpp/keyboard.h"
 #include "miracle/cpp/touchpad.h"
+#include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -425,6 +427,91 @@ bool try_parse_color(YAML::Node const& node, glm::vec4& color, ParsingContext& c
     a = std::clamp(a, 0.f, 1.f);
 
     color = { r, g, b, a };
+    return true;
+}
+
+/// Parses a color that is always fully opaque. Accepts the same shapes as
+/// [try_parse_color] minus the alpha component: a map of {r, g, b}, a sequence
+/// of [r, g, b] (a fourth entry is accepted but ignored), or a hex string of
+/// the form RRGGBB (RRGGBBAA is accepted, with the alpha discarded).
+bool try_parse_solid_color(YAML::Node const& node, glm::vec3& color, ParsingContext& context)
+{
+    constexpr float MAX_COLOR_VALUE = 255;
+    float r, g, b;
+    if (node.IsMap())
+    {
+        if (!try_parse_value(node, "r", r, context))
+            return false;
+
+        if (!try_parse_value(node, "g", g, context))
+            return false;
+
+        if (!try_parse_value(node, "b", b, context))
+            return false;
+
+        r = r / MAX_COLOR_VALUE;
+        g = g / MAX_COLOR_VALUE;
+        b = b / MAX_COLOR_VALUE;
+    }
+    else if (node.IsSequence())
+    {
+        if (node.size() != 3 && node.size() != 4)
+        {
+            context.builder << "Expected color values to be an array of size 3";
+            create_error(node, context);
+            return false;
+        }
+
+        // Parse as [r, g, b] array. A trailing alpha is tolerated but ignored.
+        r = node[0].as<float>() / MAX_COLOR_VALUE;
+        g = node[1].as<float>() / MAX_COLOR_VALUE;
+        b = node[2].as<float>() / MAX_COLOR_VALUE;
+    }
+    else
+    {
+        // Parse as hex color
+        std::string value;
+        if (!try_parse_value(node, value, context))
+            return false;
+
+        std::string digits = value;
+        if (digits.starts_with("0x") || digits.starts_with("0X"))
+            digits = digits.substr(2);
+        else if (digits.starts_with("#"))
+            digits = digits.substr(1);
+
+        if (digits.size() != 6 && digits.size() != 8)
+        {
+            context.builder << "Expected a hex color of the form RRGGBB or RRGGBBAA";
+            create_error(node, context);
+            return false;
+        }
+
+        try
+        {
+            unsigned long i = std::stoul(digits, nullptr, 16);
+
+            // Drop the alpha component of an RRGGBBAA value; the color is always opaque.
+            if (digits.size() == 8)
+                i >>= 8;
+
+            r = static_cast<float>(((i >> 16) & 0xFF)) / MAX_COLOR_VALUE;
+            g = static_cast<float>(((i >> 8) & 0xFF)) / MAX_COLOR_VALUE;
+            b = static_cast<float>((i & 0xFF)) / MAX_COLOR_VALUE;
+        }
+        catch (std::invalid_argument const&)
+        {
+            context.builder << "Invalid argument for hex value";
+            create_error(node, context);
+            return false;
+        }
+    }
+
+    r = std::clamp(r, 0.f, 1.f);
+    g = std::clamp(g, 0.f, 1.f);
+    b = std::clamp(b, 0.f, 1.f);
+
+    color = { r, g, b };
     return true;
 }
 
@@ -1197,6 +1284,13 @@ void read_workspace_back_and_forth(YAML::Node const& node, ParsingContext& conte
     if (try_parse_value(node, workspace_back_and_forth, context))
         context.result.config.workspace_back_and_forth = workspace_back_and_forth;
 }
+
+void read_background_color(YAML::Node const& node, ParsingContext& context)
+{
+    glm::vec3 background_color;
+    if (try_parse_solid_color(node, background_color, context))
+        context.result.config.background_color = background_color;
+}
 }
 
 miracle::ConfigData::ConfigData() :
@@ -1267,6 +1361,8 @@ miracle::ConfigLoadResult miracle::load_config(std::string const& path)
             read_magnifier(config["magnifier"], context);
         if (config["workspace_back_and_forth"])
             read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
+        if (config["background_color"])
+            read_background_color(config["background_color"], context);
         if (config["wm_clients"])
             read_wm_clients(config["wm_clients"], context);
     }
@@ -1364,6 +1460,8 @@ miracle::PluginConfigLoadResult miracle::load_plugin_config_from_string(std::str
             read_magnifier(config["magnifier"], context);
         if (config["workspace_back_and_forth"])
             read_workspace_back_and_forth(config["workspace_back_and_forth"], context);
+        if (config["background_color"])
+            read_background_color(config["background_color"], context);
     }
     catch (YAML::Exception const& e)
     {
@@ -1425,6 +1523,7 @@ miracle::PluginConfigLoadResult miracle::load_plugin_config_from_string(std::str
     plugin_config.touchpad = src.touchpad;
     plugin_config.magnifier = src.magnifier;
     plugin_config.workspace_back_and_forth = src.workspace_back_and_forth;
+    plugin_config.background_color = src.background_color;
 
     return { plugin_config, context.result.errors };
 }
@@ -1836,6 +1935,19 @@ miracle::ConfigSaveResult miracle::save_config(std::string const& path, ConfigDa
         out << YAML::Key << "workspace_back_and_forth" << YAML::Value << config.workspace_back_and_forth;
     }
 
+    if (!config.background_color.is_default_value)
+    {
+        // Emitted as a zero-padded string rather than with YAML::Hex, since the
+        // latter drops leading zeros and would not read back as a RRGGBB value.
+        glm::vec3 const& background_color = config.background_color;
+        char buffer[16];
+        std::snprintf(buffer, sizeof(buffer), "0x%02lX%02lX%02lX",
+            std::lround(background_color.r * 255),
+            std::lround(background_color.g * 255),
+            std::lround(background_color.b * 255));
+        out << YAML::Key << "background_color" << YAML::Value << std::string(buffer);
+    }
+
     // Closing line
     out << YAML::EndMap;
 
@@ -2012,6 +2124,7 @@ static miracle::ConfigData merge_config_fields(miracle::ConfigData& base, Other&
     result.sticky_keys = other.sticky_keys.is_set() ? other.sticky_keys : base.sticky_keys;
     result.magnifier = other.magnifier.is_set() ? other.magnifier : base.magnifier;
     result.workspace_back_and_forth = other.workspace_back_and_forth.is_set() ? other.workspace_back_and_forth : base.workspace_back_and_forth;
+    result.background_color = other.background_color.is_set() ? other.background_color : base.background_color;
     return result;
 }
 

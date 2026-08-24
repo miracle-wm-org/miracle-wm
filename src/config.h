@@ -90,6 +90,8 @@ public:
     [[nodiscard]] virtual StickyKeysConfiguration sticky_keys() const = 0;
     [[nodiscard]] virtual TouchpadConfiguration touchpad() const = 0;
     [[nodiscard]] virtual bool get_workspace_back_and_forth() const = 0;
+    /// The fully opaque color that the compositor clears the screen to.
+    [[nodiscard]] virtual glm::vec3 background_color() const = 0;
 
     /// Register a hook that is called during reload() to allow plugins to
     /// override configuration values. The hook is called after the file config
@@ -146,6 +148,7 @@ public:
     [[nodiscard]] StickyKeysConfiguration sticky_keys() const override;
     [[nodiscard]] TouchpadConfiguration touchpad() const override;
     [[nodiscard]] bool get_workspace_back_and_forth() const override;
+    [[nodiscard]] glm::vec3 background_color() const override;
     void set_plugin_configure_hook(std::function<PluginConfigData()>&& hook) override;
 
 private:

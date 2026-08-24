@@ -2162,6 +2162,7 @@ miracle::PluginConfigData PluginManagerImpl::configure()
     result.touchpad = accumulated.touchpad;
     result.magnifier = accumulated.magnifier;
     result.workspace_back_and_forth = accumulated.workspace_back_and_forth;
+    result.background_color = accumulated.background_color;
     return result;
 }
 

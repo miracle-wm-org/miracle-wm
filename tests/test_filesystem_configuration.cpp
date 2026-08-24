@@ -396,6 +396,86 @@ TEST_F(FilesystemConfigurationTest, EnvironmentVariableCanBeParsed)
     EXPECT_EQ(config.get_env_variables().size(), 1);
 }
 
+TEST_F(FilesystemConfigurationTest, BackgroundColorDefaultsToGrayWhenUnset)
+{
+    YAML::Node node;
+    node["resize_jump"] = 100;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 46.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 52.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 54.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromHex)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD89DD";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 221.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 137.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 221.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorIgnoresAlphaInHex)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD89DD00";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 221.f / 255.f);
+    EXPECT_EQ(config.background_color().g, 137.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 221.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromArray)
+{
+    YAML::Node color_node;
+    color_node.push_back(255);
+    color_node.push_back(155);
+    color_node.push_back(55);
+
+    YAML::Node node;
+    node["background_color"] = color_node;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 1.f);
+    EXPECT_EQ(config.background_color().g, 155.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 55.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, BackgroundColorCanBeParsedFromMap)
+{
+    YAML::Node color_node;
+    color_node["r"] = 255;
+    color_node["g"] = 155;
+    color_node["b"] = 55;
+
+    YAML::Node node;
+    node["background_color"] = color_node;
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_EQ(config.background_color().r, 1.f);
+    EXPECT_EQ(config.background_color().g, 155.f / 255.f);
+    EXPECT_EQ(config.background_color().b, 55.f / 255.f);
+}
+
+TEST_F(FilesystemConfigurationTest, MalformedBackgroundColorProducesAnError)
+{
+    YAML::Node node;
+    node["background_color"] = "0xDD8";
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    EXPECT_FALSE(config.get_config_errors().empty());
+}
+
 TEST_F(FilesystemConfigurationTest, BorderCanBeParsedWithArrayColors)
 {
     YAML::Node border;
