@@ -209,12 +209,20 @@ void Workspace::delete_container(std::shared_ptr<Container> const& container)
 {
     if (auto const leaf = Container::as_leaf(container))
     {
-        auto const parent = handle_remove_container(leaf);
-        parent->commit_changes();
+        if (auto const parent = handle_remove_container(leaf))
+            parent->commit_changes();
     }
     else
     {
         remove_other_container(container);
+    }
+
+    {
+        // The container is no longer ours, so we must not try to focus it when we
+        // are next shown.
+        auto const lock = sync.lock();
+        if (lock->last_selected_container.lock() == container)
+            lock->last_selected_container.reset();
     }
 
     if (is_empty())
@@ -420,8 +428,16 @@ bool Workspace::move_container(miracle::Direction direction, Container& containe
 
 bool Workspace::add_to_root(Container& to_move)
 {
-    root()->add_child(to_move.shared_from_this(), root()->num_children());
+    auto const container = to_move.shared_from_this();
+
+    // Detach from the previous parent first, otherwise the old tree keeps a reference
+    // to a container that it no longer owns.
+    if (auto const previous_parent = handle_remove_container(container))
+        previous_parent->commit_changes();
+
+    root()->add_child(container, root()->num_children());
     to_move.set_workspace(shared_from_this());
+    root()->commit_changes();
     return true;
 }
 

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "drag_and_drop_service"
 
 #include "drag_and_drop_service.h"
+#include "abstract_workspace.h"
 #include "command_controller.h"
 #include "compositor_state.h"
 #include "config.h"
@@ -167,8 +168,15 @@ void DragAndDropService::drag_to(
     std::shared_ptr<WindowContainer> const& dragging,
     AbstractWorkspace* workspace)
 {
-    if (dragging->get_workspace().get() == workspace)
+    auto const from = dragging->get_workspace();
+    if (from.get() == workspace)
         return;
 
-    workspace->add_to_root(*dragging);
+    // The container must be detached from its previous workspace before it is grafted
+    // onto the new one. Otherwise, the old workspace keeps a reference to the container
+    // in its tree and will continue to lay it out (and hide it on a workspace switch).
+    if (from)
+        from->delete_container(dragging);
+
+    workspace->graft(dragging);
 }

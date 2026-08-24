@@ -285,6 +285,10 @@ TEST_F(WorkspaceTest, CanMoveContainerToTree)
     ASSERT_TRUE(other->add_to_root(*leaf1));
     ASSERT_EQ(leaf1->get_workspace(), other);
     ASSERT_EQ(leaf1->get_logical_area(), OTHER_OUTPUT_SIZE);
+
+    // The container must no longer be part of the workspace that it came from.
+    ASSERT_EQ(workspace->get_root()->num_children(), 0);
+    ASSERT_TRUE(workspace->is_empty());
 }
 
 TEST_F(WorkspaceTest, DraggedWindowsDoNotChangeTheirPositionWhenANewWindowIsAdded)
