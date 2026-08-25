@@ -49,7 +49,14 @@ bool contains(Placement const& placement, float x, float y);
 struct Options
 {
     /// Width of the center slot's box, as a fraction of the bounds.
-    float center_width_fraction = 0.50f;
+    ///
+    /// Bounded from above by the strip that the carousel is meant to show:
+    /// the center window plus its two neighbours have to sit wholly inside
+    /// the bounds, and the pair beyond them has to still straddle an edge
+    /// rather than being pushed off screen entirely. Since slot spacing grows
+    /// with the box, widening the center slot walks the outer windows off the
+    /// edges; at the default side_scale and gap anything past ~0.33 does.
+    float center_width_fraction = 0.30f;
     /// Height of the center slot's box, as a fraction of the bounds.
     float center_height_fraction = 0.82f;
     /// Every step away from the center multiplies the slot box by this.
