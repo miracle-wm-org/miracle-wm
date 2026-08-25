@@ -79,6 +79,7 @@ namespace test
         MOCK_METHOD(StickyKeysConfiguration, sticky_keys, (), (const, override));
         MOCK_METHOD(TouchpadConfiguration, touchpad, (), (const, override));
         MOCK_METHOD(bool, get_workspace_back_and_forth, (), (const, override));
+        MOCK_METHOD(glm::vec3, background_color, (), (const, override));
     };
 }
 }

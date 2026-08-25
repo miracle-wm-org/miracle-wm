@@ -56,6 +56,7 @@ nav:
     - configuration/inner_gaps.md
     - configuration/outer_gaps.md
     - configuration/border.md
+    - configuration/background_color.md
     - configuration/enable_animations.md
     - configuration/animations.md
     - configuration/terminal.md

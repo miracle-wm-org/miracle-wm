@@ -891,6 +891,24 @@ TEST_F(CAPIWrapperTest, CanSetWorkspaceBackAndForth)
     EXPECT_THAT(miracle_config_get_workspace_back_and_forth(&wrapper->config), Eq(false));
 }
 
+TEST_F(CAPIWrapperTest, BackgroundColorDefaultsToGray)
+{
+    auto const background_color = miracle_config_get_background_color(&wrapper->config);
+    EXPECT_FLOAT_EQ(background_color.r, 46.f / 255.f);
+    EXPECT_FLOAT_EQ(background_color.g, 52.f / 255.f);
+    EXPECT_FLOAT_EQ(background_color.b, 54.f / 255.f);
+}
+
+TEST_F(CAPIWrapperTest, CanSetBackgroundColor)
+{
+    miracle_color_rgb_t const color = { 1.f, 0.f, 0.5f };
+    miracle_config_set_background_color(&wrapper->config, color);
+    auto const background_color = miracle_config_get_background_color(&wrapper->config);
+    EXPECT_FLOAT_EQ(background_color.r, 1.f);
+    EXPECT_FLOAT_EQ(background_color.g, 0.f);
+    EXPECT_FLOAT_EQ(background_color.b, 0.5f);
+}
+
 TEST_F(CAPIWrapperTest, CanSaveConfigToFile)
 {
     // Create a temp file path
@@ -1034,6 +1052,9 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     miracle_config_set_magnifier(&wrapper->config, magnifier);
     miracle_config_set_workspace_back_and_forth(&wrapper->config, false);
 
+    miracle_color_rgb_t const background_color = { 0.f, 155.f / 255.f, 1.f };
+    miracle_config_set_background_color(&wrapper->config, background_color);
+
     // Save the config
     auto save_result = miracle_config_save(temp_path, &wrapper->config);
     EXPECT_TRUE(save_result->success);
@@ -1131,6 +1152,11 @@ TEST_F(CAPIWrapperTest, CanRoundTripConfigThroughSaveAndLoad)
     EXPECT_EQ(magnifier_config.size_increment, 200);
 
     EXPECT_EQ(miracle_config_get_workspace_back_and_forth(&wrapper->config), false);
+
+    auto const loaded_background_color = miracle_config_get_background_color(loaded_config);
+    EXPECT_FLOAT_EQ(loaded_background_color.r, 0.f);
+    EXPECT_FLOAT_EQ(loaded_background_color.g, 155.f / 255.f);
+    EXPECT_FLOAT_EQ(loaded_background_color.b, 1.f);
 
     // Clean up
     miracle_config_free(load_result);

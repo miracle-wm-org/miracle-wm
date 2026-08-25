@@ -190,7 +190,6 @@ private:
     std::unique_ptr<OutputFilter> const output_surface;
     mutable PassTarget pass_targets[2];
 
-    GLfloat clear_color[4];
     mutable long long frameno = 0;
     std::unique_ptr<ProgramFactory> const program_factory;
     mir::geometry::Rectangle viewport;

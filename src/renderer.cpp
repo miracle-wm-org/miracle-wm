@@ -661,7 +661,6 @@ Renderer::Renderer(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<SamplerRegistry> const& sampler_registry) :
     output_surface { std::make_unique<OutputFilter>(make_output_current(std::move(output))) },
-    clear_color { 0.0f, 0.0f, 0.0f, 1.0f },
     program_factory { std::make_unique<ProgramFactory>(sampler_registry) },
     screen_to_gl_coords(1),
     display_transform(1),
@@ -824,7 +823,9 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     output_surface->make_current();
     output_surface->bind();
 
-    glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    // The background is always fully opaque, so only the RGB components are configurable.
+    auto const background_color = config->background_color();
+    glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glClear(GL_COLOR_BUFFER_BIT);
 

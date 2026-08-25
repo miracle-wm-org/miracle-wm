@@ -236,6 +236,9 @@ struct MIRACLE_WM_CONFIG_API ConfigData
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth = true;
+
+    /// The color that the compositor clears the screen to. Always fully opaque.
+    miracle::WithDefaultFlag<glm::vec3> background_color = glm::vec3(46.f / 255.f, 52.f / 255.f, 54.f / 255.f);
     miracle::WithDefaultFlag<std::vector<PluginConfiguration>> plugins;
     miracle::WithDefaultFlag<WmClientsConfig> wm_clients;
 
@@ -281,6 +284,7 @@ struct MIRACLE_WM_CONFIG_API PluginConfigData
     miracle::WithDefaultFlag<TouchpadConfiguration> touchpad;
     miracle::WithDefaultFlag<MagnifierConfiguration> magnifier;
     miracle::WithDefaultFlag<bool> workspace_back_and_forth;
+    miracle::WithDefaultFlag<glm::vec3> background_color;
 };
 
 enum class ErrorLevel

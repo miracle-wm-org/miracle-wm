@@ -353,6 +353,12 @@ bool FilesystemConfiguration::get_workspace_back_and_forth() const
     return options.workspace_back_and_forth;
 }
 
+glm::vec3 FilesystemConfiguration::background_color() const
+{
+    std::lock_guard lock(mutex);
+    return options.background_color;
+}
+
 MagnifierConfiguration FilesystemConfiguration::magnifier() const
 {
     std::lock_guard lock(mutex);
