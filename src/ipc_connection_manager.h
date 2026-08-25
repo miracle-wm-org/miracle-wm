@@ -25,7 +25,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "output_listener.h"
 #include "window_observer.h"
 #include "workspace_observer.h"
+#include <functional>
+#include <memory>
 #include <mir/fd.h>
+#include <mutex>
+#include <string>
 #include <vector>
 
 namespace mir
@@ -94,6 +98,9 @@ private:
     };
 
     std::shared_ptr<mir::MainLoop> main_loop;
+
+    /// Guards [clients] only. It must never be held while sending to a client, because
+    /// [send_reply] may disconnect that client, which erases it from [clients].
     std::mutex clients_mutex;
     std::shared_ptr<AbstractCommandController> command_controller;
     std::shared_ptr<Config> config;
@@ -101,6 +108,22 @@ private:
     mir::Fd ipc_socket;
     sockaddr_un* ipc_sockaddr = nullptr;
     std::vector<std::shared_ptr<IpcClient>> clients;
+
+    /// Reset in the destructor so that actions still sitting on the main loop queue
+    /// can detect that this manager is gone.
+    std::shared_ptr<bool> alive = std::make_shared<bool>(true);
+
+    /// Runs \p action on the main loop thread. Every mutation of a client's write buffer
+    /// must happen there, otherwise events broadcast from the window management thread
+    /// race with the IPC socket's read handler.
+    void run_on_main_loop(std::function<void()> action);
+
+    /// Returns a copy of [clients] so that callers may iterate without holding
+    /// [clients_mutex] and without risking elements being erased mid-iteration.
+    std::vector<std::shared_ptr<IpcClient>> snapshot_clients();
+
+    /// Sends \p payload to every client subscribed to \p type, on the main loop thread.
+    void broadcast(IpcType type, std::string payload);
 
     /// Disconnects the provided client.
     void disconnect(IpcClient& client);
