@@ -3098,7 +3098,7 @@
 
 
 <h1 id="default-keybinds">Default Keybinds<a class="headerlink" href="#default-keybinds" title="Permanent link">&para;</a></h1>
-<p>The compositors comes ships with a number of built-in commands. By default, these
+<p>The compositors ships with a number of built-in commands. By default, these
 commands are bound to preset keybinds, but the user may change them to whatever
 they want. These commands may be overridden more than once and will respond to multiple key combinations as a result. Defining at least one override disables the default action.</p>
 <p>The default commands defined in the compositor are described in this table:</p>
@@ -3122,33 +3122,33 @@ they want. These commands may be overridden more than once and will respond to m
 <td><code>❖ Super + Shift + R</code></td>
 </tr>
 <tr>
-<td><code>request_vertical</code></td>
-<td>Requests that the current window layout future windows vertially</td>
+<td><code>request_vertical_layout</code></td>
+<td>Requests that the current window layout future windows vertically</td>
 <td><code>❖ Super + v</code></td>
 </tr>
 <tr>
-<td><code>request_horizontal</code></td>
+<td><code>request_horizontal_layout</code></td>
 <td>Requests that the current window layout future windows horizontaly</td>
 <td><code>❖ Super + h</code></td>
 </tr>
 <tr>
 <td><code>select_up</code></td>
-<td>Select the window above currently selected window</td>
+<td>Select the window above the currently selected window</td>
 <td><code>❖ Super + ↑</code></td>
 </tr>
 <tr>
 <td><code>select_down</code></td>
-<td>Select the window above currently selected window</td>
+<td>Select the window below the currently selected window</td>
 <td><code>❖ Super + ↓</code></td>
 </tr>
 <tr>
 <td><code>select_left</code></td>
-<td>Select the window above currently selected window</td>
+<td>Select the window left to the currently selected window</td>
 <td><code>❖ Super + ←</code></td>
 </tr>
 <tr>
 <td><code>select_right</code></td>
-<td>Select the window above currently selected window</td>
+<td>Select the window right to the currently selected window</td>
 <td><code>❖ Super + →</code></td>
 </tr>
 <tr>
@@ -3192,7 +3192,7 @@ they want. These commands may be overridden more than once and will respond to m
 <td><code>❖ Super + ←</code> (only in resize mode)</td>
 </tr>
 <tr>
-<td><code>resize_down</code></td>
+<td><code>resize_right</code></td>
 <td>When resize mode is toggled on, this will increase the size of the window horizontally</td>
 <td><code>❖ Super + →</code> (only in resize mode)</td>
 </tr>
@@ -3207,7 +3207,7 @@ they want. These commands may be overridden more than once and will respond to m
 <td><code>❖ Super + ⇧ Shift + Q</code></td>
 </tr>
 <tr>
-<td><code>quit_compostior</code></td>
+<td><code>quit_compositor</code></td>
 <td>Exit the compositor</td>
 <td><code>❖ Super + ⇧ Shift + E</code></td>
 </tr>
@@ -3217,7 +3217,7 @@ they want. These commands may be overridden more than once and will respond to m
 <td><code>❖ Super + [0-9]</code></td>
 </tr>
 <tr>
-<td><code>select_workspace_[0-9]</code></td>
+<td><code>move_to_workspace_[0-9]</code></td>
 <td>Move the currently selected window to the workspace between 0-9</td>
 <td><code>❖ Super + ⇧ Shift + [0-9]</code></td>
 </tr>
@@ -3243,11 +3243,6 @@ they want. These commands may be overridden more than once and will respond to m
 </tr>
 <tr>
 <td><code>magnifier_on</code></td>
-<td>Toggle whether the magnifier accessibility feature is enabled</td>
-<td><code>❖ Super + Shift + =</code></td>
-</tr>
-<tr>
-<td><code>magnifier_off</code></td>
 <td>Enable the magnifier accessibility feature</td>
 <td><code>❖ Super + Esc</code></td>
 </tr>
