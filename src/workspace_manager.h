@@ -94,7 +94,9 @@ public:
     bool delete_workspace(uint32_t id);
 
     /// Focuses the workspace with the provided id
-    bool request_focus(uint32_t id);
+    /// \param animate whether the switch should slide; false when the caller has
+    ///                already brought the workspace on screen itself.
+    bool request_focus(uint32_t id, bool animate = true);
 
     /// Returns the workspace with the provided [id], if any.
     AbstractWorkspace* workspace(uint32_t id) const;

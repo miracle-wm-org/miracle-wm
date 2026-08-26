@@ -40,9 +40,11 @@ public:
 
     void handle_keyboard_event(MirKeyboardEvent const*) override { }
     void handle_pointer_event(MirPointerEvent const*) override { }
-    std::optional<SceneOverridePlacement> place(miral::Window const&) override
+    void place(
+        mir::scene::Surface const&,
+        mir::geometry::Rectangle const&,
+        std::vector<SceneOverridePlacement>&) override
     {
-        return std::nullopt;
     }
     void handle_output_changed() override { }
 
@@ -159,12 +161,15 @@ TEST(SceneOverrideManagerTest, ConcurrentResolveAndReleaseIsSafe)
     SceneOverrideManager manager;
     auto const token = manager.try_override(std::make_unique<StubSceneOverride>());
 
-    std::thread resolver([&manager]
+    // [place] never dereferences the surface; it is only ever a key.
+    auto const surface = reinterpret_cast<mir::scene::Surface const*>(&manager);
+    std::thread resolver([&manager, surface]
     {
         for (int i = 0; i < 1000; ++i)
         {
+            std::vector<SceneOverridePlacement> placements;
             if (auto const resolved = manager.try_resolve())
-                resolved->place(miral::Window {});
+                resolved->place(*surface, mir::geometry::Rectangle {}, placements);
         }
     });
     std::thread releaser([&manager, token]

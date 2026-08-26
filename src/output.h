@@ -47,7 +47,7 @@ public:
     void delete_container(std::shared_ptr<Container> const& container) override;
     void advise_new_workspace(WorkspaceCreationData const&&) override;
     void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) override;
-    bool advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id) override;
+    bool advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id, bool animate) override;
     void advise_application_zone_create(miral::Zone const& application_zone) override;
     void advise_application_zone_update(miral::Zone const& updated, miral::Zone const& original) override;
     void advise_application_zone_delete(miral::Zone const& application_zone) override;

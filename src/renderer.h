@@ -216,6 +216,9 @@ private:
     /// only when the manager's generation has advanced since the last frame.
     mutable std::vector<RenderData> render_data_cache;
     mutable uint64_t render_data_generation = 0;
+    /// Scratch buffer that [SceneOverride::place] fills, reused between frames
+    /// so that asking for placements costs no allocation in the steady state.
+    mutable std::vector<SceneOverridePlacement> group_placements;
 };
 
 }

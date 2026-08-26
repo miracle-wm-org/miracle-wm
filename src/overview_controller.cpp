@@ -15,10 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "carousel_controller.h"
+#include "overview_controller.h"
 
 #include "abstract_command_controller.h"
-#include "carousel_scene_override.h"
+#include "overview_scene_override.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
-CarouselController::CarouselController(
+OverviewController::OverviewController(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<Animator> const& animator,
@@ -44,12 +44,12 @@ CarouselController::CarouselController(
 {
 }
 
-void CarouselController::break_tap()
+void OverviewController::break_tap()
 {
     tap_latched = false;
 }
 
-void CarouselController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
+void OverviewController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
@@ -65,12 +65,12 @@ void CarouselController::handle_keyboard_event(MirKeyboardEvent const* event, un
     }
 }
 
-void CarouselController::try_start()
+void OverviewController::try_start()
 {
     if (compositor_state->mode() != WindowManagerMode::normal)
         return;
 
-    auto scene_override = CarouselSceneOverride::create(
+    auto scene_override = OverviewSceneOverride::create(
         *output_manager,
         animator,
         window_controller,
@@ -78,10 +78,16 @@ void CarouselController::try_start()
         config,
         [this]
     {
-        // Runs on the main thread as soon as the carousel begins going away, so
+        // Runs on the main thread as soon as the overview begins going away, so
         // that the mode is broadcast from the main loop and the rest of the
         // compositor is usable again while the outro plays.
         command_controller->set_mode(WindowManagerMode::normal);
+    },
+        [this](uint32_t workspace_id)
+    {
+        // Runs when the overview's zoom has finished bringing this workspace up
+        // to fill the output, so the switch itself must not animate.
+        command_controller->select_workspace_by_id(workspace_id, false);
     },
         [this]
     {

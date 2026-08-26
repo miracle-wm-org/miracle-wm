@@ -83,6 +83,7 @@ public:
     bool quit() override;
     bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) override;
     bool select_workspace(int number, bool allow_back_and_forth) override;
+    bool select_workspace_by_id(uint32_t id, bool animate) override;
     bool select_workspace(std::string const& name, bool allow_back_and_forth) override;
     bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) override;
     bool next_workspace() override;

@@ -235,7 +235,7 @@ bool WorkspaceManager::delete_workspace(uint32_t id)
     return true;
 }
 
-bool WorkspaceManager::request_focus(uint32_t id)
+bool WorkspaceManager::request_focus(uint32_t id, bool animate)
 {
     auto const& existing = workspace(id);
     if (!existing)
@@ -259,7 +259,7 @@ bool WorkspaceManager::request_focus(uint32_t id)
     if (active_screen != nullptr && !last_selected.expired())
         previous_id = last_selected.lock()->id();
 
-    existing->get_output()->advise_workspace_active(*this, id);
+    existing->get_output()->advise_workspace_active(*this, id, animate);
 
     // Note: the focus event is sent AFTER activation so that IPC clients
     // receive the EMPTY event for the deleted old workspace before the

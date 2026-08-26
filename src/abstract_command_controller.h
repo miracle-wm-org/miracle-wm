@@ -115,6 +115,15 @@ public:
     virtual bool quit() = 0;
     virtual bool try_toggle_fullscreen(std::vector<ContainerScope> const& scope) = 0;
     virtual bool select_workspace(int number, bool allow_back_and_forth) = 0;
+    /// Focus the workspace with the given \p id, wherever it lives.
+    ///
+    /// Named apart from the other overloads so that a [uint32_t] id cannot be
+    /// mistaken for a workspace number. Permitted while the overview is up,
+    /// because that is where a workspace gets picked by hand.
+    ///
+    /// \param animate whether the switch should slide; false when the caller has
+    ///                already brought the workspace on screen itself.
+    virtual bool select_workspace_by_id(uint32_t id, bool animate = true) = 0;
     virtual bool select_workspace(std::string const& name, bool allow_back_and_forth) = 0;
     virtual bool select_workspace_with_scope(std::vector<ContainerScope> const& scope) = 0;
     virtual bool next_workspace() = 0;

@@ -21,9 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
+#include <mir/geometry/rectangle.h>
 #include <miral/window.h>
 #include <mutex>
 #include <optional>
+#include <vector>
+
+namespace mir::scene
+{
+class Surface;
+}
 
 namespace miracle
 {
@@ -120,21 +127,34 @@ public:
     /// This is called on the input thread under the scene lock.
     virtual void handle_pointer_event(MirPointerEvent const* event) = 0;
 
-    /// Retrieve the placement for the \p window.
+    /// Fill \p out with the placements at which \p surface should be drawn this
+    /// frame.
     ///
-    /// This is called on the render thread, so be careful!
+    /// Leaving \p out empty means that the override does not manage this
+    /// surface and it should be rendered exactly as normal. More than one
+    /// placement draws the surface once per placement, which is how a single
+    /// panel or wallpaper surface - there is only ever one of each per output -
+    /// can appear on every tile of a workspace overview.
     ///
-    /// This placement will be called each time we render the window, so this
-    /// should be a lightweight (ideally cached!) operation.
+    /// \p out is a scratch buffer owned by the renderer and reused between
+    /// frames, so filling it costs no allocation in the steady state. It is
+    /// cleared before the call.
+    ///
+    /// This is called on the render thread, so be careful! It runs once per
+    /// surface group per frame, so it should be a lightweight (ideally cached!)
+    /// operation.
     ///
     /// For example, if the [Animator] is busy updating the position, this call
     /// should simply grab the cached position that the animator created, rather
     /// than calling the animation itself.
     ///
-    /// \returns the placement that it should be rendered at, or std::nullopt if
-    ///          the override does not manage this window and it should be
-    ///          rendered exactly as normal.
-    virtual std::optional<SceneOverridePlacement> place(miral::Window const& window) = 0;
+    /// \param surface the surface about to be drawn
+    /// \param real    where the surface really is, in logical screen coordinates
+    virtual void place(
+        mir::scene::Surface const& surface,
+        mir::geometry::Rectangle const& real,
+        std::vector<SceneOverridePlacement>& out)
+        = 0;
 
     /// Called on the window management thread when a new window appears in the
     /// scene, so that the override can decide how to place it.

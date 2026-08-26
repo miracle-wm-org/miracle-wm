@@ -46,6 +46,18 @@ Placement lerp(Placement const& from, Placement const& to, float p);
 /// True when (\p x, \p y) falls inside \p placement.
 bool contains(Placement const& placement, float x, float y);
 
+/// Maps \p rect out of \p source and into \p tile, preserving relative position
+/// and aspect, and inheriting \p tile's opacity.
+///
+/// This is what turns a window's real screen rectangle into its place inside a
+/// scaled-down picture of the workspace it lives on: \p source is the area that
+/// the tile is a picture of (an output), and \p tile is where that picture has
+/// been laid out.
+Placement fit(
+    mir::geometry::Rectangle const& source,
+    Placement const& tile,
+    mir::geometry::Rectangle const& rect);
+
 struct Options
 {
     /// Width of the center slot's box, as a fraction of the bounds.
@@ -67,6 +79,22 @@ struct Options
     float gap = 16.f;
     /// A window is never drawn larger than this fraction of its real size.
     float max_scale = 1.f;
+};
+
+/// The strip of workspace tiles that the overview's second level uses.
+///
+/// A tile is a picture of a whole output rather than of a single window, so the
+/// center slot is wide enough to hold one comfortably and the neighbours are
+/// meant to be cut off by the edges of the screen rather than shrunk away to
+/// nothing: they are barely scaled down, and they advertise that there is more
+/// of the desktop off to either side.
+inline constexpr Options workspace_options {
+    .center_width_fraction = 0.62f,
+    .center_height_fraction = 0.62f,
+    .side_scale = 0.85f,
+    .dim = 0.55f,
+    .gap = 24.f,
+    .max_scale = 1.f
 };
 
 /// Lays \p windows out on a horizontal carousel inside \p bounds, with the

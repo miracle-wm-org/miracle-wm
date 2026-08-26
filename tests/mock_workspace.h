@@ -38,6 +38,8 @@ namespace test
         MOCK_METHOD(bool, move_container, (Direction direction, Container&), (override));
         MOCK_METHOD(void, show, (geom::Point const&), (override));
         MOCK_METHOD(void, hide, (geom::Point const&), (override));
+        MOCK_METHOD(bool, begin_preview, (), (override));
+        MOCK_METHOD(void, end_preview, (), (override));
         MOCK_METHOD(bool, add_to_root, (Container&), (override));
 
         MOCK_METHOD(bool, for_each_window,

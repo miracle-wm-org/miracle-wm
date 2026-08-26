@@ -237,7 +237,7 @@ void Output::move_workspace_to(WorkspaceManager& workspace_manager, AbstractWork
         workspace_manager.request_first_available_workspace(old_output.get());
 }
 
-bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id)
+bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32_t id, bool animate)
 {
     // When the workspace becomes active, we try to move this output to the new
     // workspace transform, which may involve an animation.
@@ -288,9 +288,15 @@ bool Output::advise_workspace_active(WorkspaceManager& workspace_manager, uint32
     // It is very important that [active_workspace] be modified before notifications are sent out.
     active_workspace_ = to;
 
+    // An origin of (0, 0) is the "no slide" case at both ends, which is what a
+    // caller that has animated the switch itself asks for.
     auto const area = area_;
-    auto const from_end = to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0);
-    auto const to_start = to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0);
+    auto const from_end = !animate
+        ? geom::Point(0, 0)
+        : (to_index > from_index ? geom::Point(-area.size.width.as_int(), 0) : geom::Point(area.size.width.as_int(), 0));
+    auto const to_start = !animate
+        ? geom::Point(0, 0)
+        : (to_index > from_index ? geom::Point(area.size.width.as_int(), 0) : geom::Point(-area.size.width.as_int(), 0));
     to->show(to_start);
 
     // If [from] is empty, we can delete the workspace.

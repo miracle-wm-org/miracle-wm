@@ -289,3 +289,132 @@ TEST(CarouselLayout, ContainsHitTestsThePlacementRectangle)
     EXPECT_FALSE(carousel_layout::contains(placement, 110.f, 70.f));
     EXPECT_FALSE(carousel_layout::contains(placement, 9.f, 40.f));
 }
+
+// -----------------------------------------------------------------------------
+// fit
+// -----------------------------------------------------------------------------
+
+TEST(CarouselLayout, FitIsTheIdentityWhenTheTileMatchesTheSource)
+{
+    carousel_layout::Placement const tile {
+        .x = 0.f, .y = 0.f, .width = 1920.f, .height = 1080.f, .opacity = 1.f
+    };
+    geom::Rectangle const window {
+        { 100, 200 },
+        { 400, 300 }
+    };
+
+    auto const fitted = carousel_layout::fit(BOUNDS, tile, window);
+    EXPECT_FLOAT_EQ(fitted.x, 100.f);
+    EXPECT_FLOAT_EQ(fitted.y, 200.f);
+    EXPECT_FLOAT_EQ(fitted.width, 400.f);
+    EXPECT_FLOAT_EQ(fitted.height, 300.f);
+}
+
+TEST(CarouselLayout, FitScalesAndOffsetsIntoAHalfSizeTile)
+{
+    carousel_layout::Placement const tile {
+        .x = 500.f, .y = 40.f, .width = 960.f, .height = 540.f, .opacity = 1.f
+    };
+    geom::Rectangle const window {
+        { 100, 200 },
+        { 400, 300 }
+    };
+
+    auto const fitted = carousel_layout::fit(BOUNDS, tile, window);
+    EXPECT_FLOAT_EQ(fitted.x, 500.f + 50.f);
+    EXPECT_FLOAT_EQ(fitted.y, 40.f + 100.f);
+    EXPECT_FLOAT_EQ(fitted.width, 200.f);
+    EXPECT_FLOAT_EQ(fitted.height, 150.f);
+}
+
+TEST(CarouselLayout, FitIsRelativeToTheSourceOrigin)
+{
+    geom::Rectangle const source {
+        { 1920, 0    },
+        { 1920, 1080 }
+    };
+    carousel_layout::Placement const tile {
+        .x = 0.f, .y = 0.f, .width = 960.f, .height = 540.f, .opacity = 1.f
+    };
+    geom::Rectangle const window {
+        { 1920 + 200, 100 },
+        { 400,        300 }
+    };
+
+    auto const fitted = carousel_layout::fit(source, tile, window);
+    EXPECT_FLOAT_EQ(fitted.x, 100.f);
+    EXPECT_FLOAT_EQ(fitted.y, 50.f);
+}
+
+TEST(CarouselLayout, FitInheritsTheTileOpacity)
+{
+    carousel_layout::Placement const tile {
+        .x = 0.f, .y = 0.f, .width = 960.f, .height = 540.f, .opacity = 0.55f
+    };
+
+    auto const fitted = carousel_layout::fit(BOUNDS, tile, window_of(0));
+    EXPECT_FLOAT_EQ(fitted.opacity, 0.55f);
+}
+
+// -----------------------------------------------------------------------------
+// workspace_options
+// -----------------------------------------------------------------------------
+
+namespace
+{
+/// The workspace strip lays out one tile per workspace, each a picture of the
+/// whole output.
+std::vector<carousel_layout::Placement> workspace_strip(size_t count, float position)
+{
+    std::vector<geom::Rectangle> const sources(count, BOUNDS);
+    return carousel_layout::compute(BOUNDS, sources, position, carousel_layout::workspace_options);
+}
+}
+
+TEST(CarouselLayout, WorkspaceStripKeepsTheCenteredTileWhollyOnScreen)
+{
+    for (size_t count : { 1u, 2u, 5u })
+    {
+        for (size_t position = 0; position < count; position++)
+        {
+            auto const tiles = workspace_strip(count, static_cast<float>(position));
+            auto const& centered = tiles[position];
+            EXPECT_GE(centered.x, 0.f) << "count " << count << " position " << position;
+            EXPECT_LE(centered.x + centered.width, 1920.f) << "count " << count << " position " << position;
+            EXPECT_GE(centered.y, 0.f);
+            EXPECT_LE(centered.y + centered.height, 1080.f);
+        }
+    }
+}
+
+TEST(CarouselLayout, WorkspaceStripLeavesTheNeighboursStraddlingTheEdges)
+{
+    auto const tiles = workspace_strip(5, 2.f);
+
+    // The tile on either side of the centered one is partly on screen and partly
+    // off it, which is what advertises that there is more desktop over there.
+    for (size_t neighbour : { 1u, 3u })
+    {
+        EXPECT_LT(tiles[neighbour].x, 1920.f);
+        EXPECT_GT(tiles[neighbour].x + tiles[neighbour].width, 0.f);
+        bool const straddles = tiles[neighbour].x < 0.f
+            || tiles[neighbour].x + tiles[neighbour].width > 1920.f;
+        EXPECT_TRUE(straddles) << "neighbour " << neighbour;
+    }
+}
+
+TEST(CarouselLayout, WorkspaceStripDimsEverythingButTheCenteredTile)
+{
+    auto const tiles = workspace_strip(3, 1.f);
+    EXPECT_FLOAT_EQ(tiles[1].opacity, 1.f);
+    EXPECT_FLOAT_EQ(tiles[0].opacity, carousel_layout::workspace_options.dim);
+    EXPECT_FLOAT_EQ(tiles[2].opacity, carousel_layout::workspace_options.dim);
+}
+
+TEST(CarouselLayout, WorkspaceStripTilesDoNotOverlap)
+{
+    auto const tiles = workspace_strip(5, 2.f);
+    for (size_t i = 0; i + 1 < tiles.size(); i++)
+        EXPECT_FALSE(overlaps(tiles[i], tiles[i + 1])) << "tiles " << i << " and " << i + 1;
+}

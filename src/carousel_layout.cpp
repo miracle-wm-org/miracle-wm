@@ -54,6 +54,31 @@ bool miracle::carousel_layout::contains(Placement const& placement, float x, flo
         && y < placement.y + placement.height;
 }
 
+miracle::carousel_layout::Placement miracle::carousel_layout::fit(
+    geom::Rectangle const& source,
+    Placement const& tile,
+    geom::Rectangle const& rect)
+{
+    auto const source_width = static_cast<float>(std::max(source.size.width.as_value(), 1));
+    auto const source_height = static_cast<float>(std::max(source.size.height.as_value(), 1));
+
+    // The tile was fitted to the source with a single uniform scale, so one
+    // ratio describes both axes; averaging the two guards against a tile whose
+    // aspect drifted by a pixel of rounding.
+    auto const scale = (tile.width / source_width + tile.height / source_height) / 2.f;
+
+    auto const offset_x = static_cast<float>(rect.top_left.x.as_value() - source.top_left.x.as_value());
+    auto const offset_y = static_cast<float>(rect.top_left.y.as_value() - source.top_left.y.as_value());
+
+    return Placement {
+        .x = tile.x + offset_x * scale,
+        .y = tile.y + offset_y * scale,
+        .width = static_cast<float>(std::max(rect.size.width.as_value(), 1)) * scale,
+        .height = static_cast<float>(std::max(rect.size.height.as_value(), 1)) * scale,
+        .opacity = tile.opacity
+    };
+}
+
 std::vector<miracle::carousel_layout::Placement> miracle::carousel_layout::compute(
     geom::Rectangle const& bounds,
     std::vector<geom::Rectangle> const& windows,

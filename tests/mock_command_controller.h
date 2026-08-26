@@ -58,6 +58,7 @@ namespace test
         MOCK_METHOD(bool, quit, (), (override));
         MOCK_METHOD(bool, try_toggle_fullscreen, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, select_workspace, (int, bool), (override));
+        MOCK_METHOD(bool, select_workspace_by_id, (uint32_t, bool), (override));
         MOCK_METHOD(bool, select_workspace, (std::string const&, bool), (override));
         MOCK_METHOD(bool, select_workspace_with_scope, (std::vector<ContainerScope> const&), (override));
         MOCK_METHOD(bool, next_workspace, (), (override));

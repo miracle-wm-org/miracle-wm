@@ -65,6 +65,8 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
+    bool begin_preview() override;
+    void end_preview() override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
     [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
@@ -137,11 +139,20 @@ private:
         std::optional<Gaps> workspace_inner_gaps;
         glm::mat4 transform_ = glm::mat4(1.f);
         float alpha_ = 1.f;
+        /// Set between [begin_preview] and [end_preview], along with the
+        /// transform and alpha that have to be put back afterwards.
+        bool is_previewing = false;
+        glm::mat4 preview_transform = glm::mat4(1.f);
+        float preview_alpha = 1.f;
     };
 
     mir::Synchronised<State> sync;
 
     void on_animation_start(bool is_hiding);
+
+    /// Shows or hides every container on the workspace, without any of the
+    /// focus handling that a real workspace switch performs.
+    void set_containers_shown(bool shown);
 
     /// From the provided node, find the next node in the provided direction.
     /// This method is guaranteed to return a Window node, not a Lane.

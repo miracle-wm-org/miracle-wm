@@ -847,6 +847,17 @@ bool CommandController::select_workspace(int number, bool allow_back_and_forth)
     return true;
 }
 
+bool CommandController::select_workspace_by_id(uint32_t id, bool animate)
+{
+    // The overview is allowed through: picking a workspace out of it is the
+    // whole point, and it hands the desktop back immediately afterwards.
+    if (state->mode() != WindowManagerMode::normal && state->mode() != WindowManagerMode::overview)
+        return false;
+
+    mir::log_info("select_workspace_by_id: %u", id);
+    return workspace_manager->request_focus(id, animate);
+}
+
 bool CommandController::select_workspace(std::string const& name, bool allow_back_and_forth)
 {
     if (state->mode() != WindowManagerMode::normal)

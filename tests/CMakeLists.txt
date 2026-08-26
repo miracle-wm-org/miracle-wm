@@ -36,6 +36,8 @@ set(SOURCES
     test_render_data_manager.cpp
     test_scene_override_manager.cpp
     test_carousel_layout.cpp
+    test_workspace_preview.cpp
+    mock_workspace.h
     test_sampler_registry.cpp
     test_output_manager.cpp
     test_output.cpp
