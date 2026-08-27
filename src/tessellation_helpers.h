@@ -18,7 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIR_GL_TESSELLATION_HELPERS_H_
 #define MIR_GL_TESSELLATION_HELPERS_H_
 #include "mir/geometry/displacement.h"
+#include "mir/geometry/rectangle.h"
 #include "primitive.h"
+
+#include <optional>
 
 namespace mir
 {
@@ -29,8 +32,14 @@ namespace graphics
 namespace gl
 {
 
+    /// Builds the quad for \p renderable. When \p clip_area is set, the quad is cut down to
+    /// that sub-rectangle of the window and the texture coordinates are narrowed to the
+    /// matching fraction of the source, so the clipped-away region is never sampled.
     Primitive tessellate_renderable_into_rectangle(
-        graphics::Renderable const& renderable, geometry::Displacement const& offset, bool const is_flipped);
+        graphics::Renderable const& renderable,
+        geometry::Displacement const& offset,
+        bool const is_flipped,
+        std::optional<geometry::Rectangle> const& clip_area);
 
 }
 }

@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "geometry_helpers.h"
-#include "math_helpers.h"
 #include "program_factory.h"
 #include "tessellation_helpers.h"
 
@@ -546,7 +545,6 @@ int Renderer::run_offscreen_passes(
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved_fbo);
     GLint saved_vp[4];
     glGetIntegerv(GL_VIEWPORT, saved_vp);
-    GLboolean scissor_was_enabled = glIsEnabled(GL_SCISSOR_TEST);
     GLboolean blend_was_enabled = glIsEnabled(GL_BLEND);
 
     int const w = buf_size.width.as_int();
@@ -556,7 +554,6 @@ int Renderer::run_offscreen_passes(
     pass_targets[1].ensure(buf_size);
 
     glViewport(0, 0, w, h);
-    glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
 
     // Fullscreen triangle positions (NDC) and two sets of texcoords.
@@ -645,8 +642,6 @@ int Renderer::run_offscreen_passes(
     // Restore GL state.
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(saved_fbo));
     glViewport(saved_vp[0], saved_vp[1], saved_vp[2], saved_vp[3]);
-    if (scissor_was_enabled)
-        glEnable(GL_SCISSOR_TEST);
     if (blend_was_enabled)
         glEnable(GL_BLEND);
 
@@ -738,10 +733,11 @@ Renderer::~Renderer()
 void Renderer::tessellate(
     std::vector<mgl::Primitive>& primitives,
     mg::Renderable const& renderable,
-    bool const is_flipped)
+    bool const is_flipped,
+    std::optional<geom::Rectangle> const& clip_area)
 {
     primitives.resize(1);
-    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped);
+    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped, clip_area);
 }
 
 RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface) const
@@ -916,74 +912,18 @@ void Renderer::draw(
         clip_area = std::nullopt;
     }
 
-    if (clip_area)
-    {
-        // First, we compute the intersection of the clip area with the viewport.
-        auto const intersection = intersect(*clip_area, viewport);
-        if (!intersection)
-        {
-            glDisable(GL_SCISSOR_TEST);
-            return;
-        }
+    // An empty clip area means nothing of the surface is visible; skip it entirely rather
+    // than emitting a degenerate quad. Everything else about the clip is handled by
+    // tessellate(), which cuts the quad down and narrows the sampled texture range to match.
+    if (clip_area && (clip_area->size.width.as_int() <= 0 || clip_area->size.height.as_int() <= 0))
+        return;
 
-        // Next, we map the viewport-relative clip rectangle to framebuffer pixel coordinates,
-        // accounting for output rotation and surface layout.
-        using namespace miracle::geometry_helpers::gl;
-        int const rel_x = x_int(intersection->top_left) - x_int(viewport.top_left);
-        int const rel_y = y_int(intersection->top_left) - y_int(viewport.top_left);
-        int const rel_w = width_int(intersection->size);
-        int const rel_h = height_int(intersection->size);
-        int const vp_w = width_int(viewport.size);
-        int const vp_h = height_int(viewport.size);
-
-        float fb_x, fb_y, fb_w, fb_h;
-        bool const top_row_first = (output_surface->layout() == mir::graphics::gl::OutputSurface::Layout::TopRowFirst);
-
-        switch (output_rotation)
-        {
-        case OutputRotation::normal:
-            fb_w = rel_w;
-            fb_h = rel_h;
-            fb_x = rel_x;
-            fb_y = top_row_first ? rel_y : (vp_h - rel_y - rel_h);
-            break;
-        case OutputRotation::left_90:
-            fb_w = rel_h;
-            fb_h = rel_w;
-            fb_x = rel_y;
-            fb_y = top_row_first ? (vp_w - rel_x - rel_w) : rel_x;
-            break;
-        case OutputRotation::inverted_180:
-            fb_w = rel_w;
-            fb_h = rel_h;
-            fb_x = vp_w - rel_x - rel_w;
-            fb_y = top_row_first ? (vp_h - rel_y - rel_h) : rel_y;
-            break;
-        case OutputRotation::right_270:
-            fb_w = rel_h;
-            fb_h = rel_w;
-            fb_x = vp_h - rel_y - rel_h;
-            fb_y = top_row_first ? rel_x : (vp_w - rel_x - rel_w);
-            break;
-        }
-
-        // Apply the workspace transform to the scissor position and size.
-        glm::vec4 scissor_pos = data.data.workspace_transform * glm::vec4(fb_x, fb_y, 0, 1);
-        glm::vec4 scissor_size = data.data.workspace_transform * glm::vec4(fb_w, fb_h, 0, 0);
-        fb_x = scissor_pos.x;
-        fb_y = scissor_pos.y;
-        fb_w = scissor_size.x;
-        fb_h = scissor_size.y;
-
-        glEnable(GL_SCISSOR_TEST);
-        glScissor(
-            static_cast<GLint>(fb_x * x_scale),
-            static_cast<GLint>(fb_y * y_scale),
-            static_cast<GLint>(fb_w * x_scale),
-            static_cast<GLint>(fb_h * y_scale));
-    }
-    auto surface_pos = clip_area.value_or(renderable.screen_position()).top_left;
-    auto surface_size = clip_area.value_or(renderable.screen_position()).size;
+    // The whole window, not the clip area: the clipped quad carries texcoords that are a
+    // fraction of the window, so both the transform pivot ('center') and 'surfaceSize' -
+    // which the fragment shader turns back into window-space pixels for the rounded-corner
+    // SDF - have to describe the full window for that fraction to mean anything.
+    auto surface_pos = renderable.screen_position().top_left;
+    auto surface_size = renderable.screen_position().size;
     if (data.placement)
     {
         surface_pos = geom::Point { static_cast<int>(data.placement->position.x), static_cast<int>(data.placement->position.y) };
@@ -1098,7 +1038,7 @@ void Renderer::draw(
     primitives.clear();
     // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
     // so tessellate with is_flipped=false regardless of the original Mir texture layout.
-    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst));
+    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst), clip_area);
 
     // The pass_targets use a grow-only allocation: a previously large window may have left
     // the textures bigger than the current buf_size. Scale the UV coords so the final pass
@@ -1201,10 +1141,6 @@ void Renderer::draw(
 
     glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
     glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
-    if (clip_area)
-    {
-        glDisable(GL_SCISSOR_TEST);
-    }
 }
 
 void Renderer::draw_border(ms::Surface const& surface, DrawData const& data) const

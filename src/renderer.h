@@ -73,7 +73,8 @@ public:
 private:
     static void tessellate(std::vector<mir::gl::Primitive>& primitives,
         mir::graphics::Renderable const& renderable,
-        bool const is_flipped);
+        bool const is_flipped,
+        std::optional<mir::geometry::Rectangle> const& clip_area);
 
     struct DrawData
     {
