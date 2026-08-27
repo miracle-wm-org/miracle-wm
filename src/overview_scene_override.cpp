@@ -111,8 +111,14 @@ mir::scene::Surface const* surface_key(miral::Window const& window)
 /// resized to fit its slot, it is relocated so that its real rectangle is
 /// centered on the slot, and the shrink that makes it fit is carried by the
 /// transformation.
+///
+/// \p clip is the output the placement rides on, so that a strip whose ends run
+/// off the edges of one output stays on that output instead of spilling onto
+/// the next one along.
 SceneOverridePlacement to_scene_placement(
-    carousel_layout::Placement const& current, geom::Rectangle const& real)
+    carousel_layout::Placement const& current,
+    geom::Rectangle const& real,
+    geom::Rectangle const& clip)
 {
     float const real_width = static_cast<float>(std::max(real.size.width.as_value(), 1));
     float const real_height = static_cast<float>(std::max(real.size.height.as_value(), 1));
@@ -122,7 +128,8 @@ SceneOverridePlacement to_scene_placement(
                      current.y + (current.height - real_height) / 2.f },
         .transformation = glm::scale(
             glm::mat4(1.f), glm::vec3(current.width / real_width, current.height / real_height, 1.f)),
-        .opacity = current.opacity
+        .opacity = current.opacity,
+        .clip = clip
     };
 }
 }
@@ -1105,16 +1112,21 @@ void OverviewSceneOverride::place(
     if (state->phase == Phase::done)
         return;
 
+    // Every placement is clipped to the output its group describes: the strips
+    // deliberately run their ends off the edges of that output, and without the
+    // clip the overflow would be drawn a second time by the neighbouring
+    // output's renderer.
     if (auto const it = state->entries.find(key); it != state->entries.end())
     {
-        out.push_back(to_scene_placement(it->second.current, real));
+        out.push_back(to_scene_placement(it->second.current, real, groups[it->second.group].source));
         return;
     }
 
     if (auto const it = state->shell_entries.find(key); it != state->shell_entries.end())
     {
+        auto const& clip = groups[it->second.group].source;
         for (auto const& placement : it->second.current)
-            out.push_back(to_scene_placement(placement, real));
+            out.push_back(to_scene_placement(placement, real, clip));
     }
 }
 

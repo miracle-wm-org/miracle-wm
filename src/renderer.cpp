@@ -809,7 +809,15 @@ Renderer::DrawData Renderer::get_draw_data(
             geom::Point { static_cast<int>(min.x),         static_cast<int>(min.y)         },
             geom::Size { static_cast<int>(max.x - min.x), static_cast<int>(max.y - min.y) }
         };
-        if (!placement_rect.overlaps(viewport))
+        // The override may lay a placement out so that it runs off the edge of
+        // the output it belongs to - a carousel hangs its neighbours past both
+        // sides on purpose - and only the part inside that output is real. Cull
+        // against that, so a placement never appears on the output next door;
+        // whatever hangs off the edge is clipped by the framebuffer anyway.
+        auto const visible = placement->clip
+            ? mir::geometry::generic::intersection_of(placement_rect, *placement->clip)
+            : placement_rect;
+        if (!visible.overlaps(viewport))
             result.enabled = false;
     }
     else if (tracked && tracked->output_area && !tracked->output_area->overlaps(viewport))

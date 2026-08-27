@@ -93,6 +93,18 @@ struct SceneOverridePlacement
     /// so that an override can dim a window without disturbing the container's
     /// workspace, window and animation alpha layers.
     float opacity = 1.f;
+
+    /// The output this placement belongs to, in logical screen coordinates.
+    ///
+    /// The placement is never drawn on any other output, so an override whose
+    /// layout deliberately runs off the edges of one output - a carousel with
+    /// its neighbours hanging past both sides - does not spill onto the next
+    /// output along. Whatever hangs off the edge is clipped by that output's
+    /// own framebuffer, so the result is exact.
+    ///
+    /// nullopt draws the placement wherever it lands, on every output it
+    /// touches.
+    std::optional<mir::geometry::Rectangle> clip;
 };
 
 /// An override in how the scene is rendered.
@@ -135,6 +147,11 @@ public:
     /// placement draws the surface once per placement, which is how a single
     /// panel or wallpaper surface - there is only ever one of each per output -
     /// can appear on every tile of a workspace overview.
+    ///
+    /// An override that lays surfaces out per output should set
+    /// [SceneOverridePlacement::clip] on every placement it produces, so that a
+    /// layout which deliberately overflows one output does not bleed onto the
+    /// one beside it.
     ///
     /// \p out is a scratch buffer owned by the renderer and reused between
     /// frames, so filling it costs no allocation in the steady state. It is
