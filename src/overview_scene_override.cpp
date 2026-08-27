@@ -410,6 +410,29 @@ OverviewSceneOverride::OverviewSceneOverride(
 
     for (size_t group = 0; group < this->groups.size(); ++group)
         retarget(group);
+
+    // The window strip draws one desktop. Everything the other workspaces own -
+    // their copies of the furniture, and the windows that live on them - starts
+    // parked where the workspace strip will pick it up, invisible, rather than
+    // flying out of the desktop and fading as it goes. The workspace strip fades
+    // it in from there.
+    //
+    // This only applies to the intro: a later move to a zero opacity target is a
+    // fade out, and [retarget] rebasing `from` on `current` is what carries it.
+    for (auto& [key, entry] : state->entries)
+    {
+        if (entry.target.opacity == 0.f)
+            entry.from = entry.current = entry.target;
+    }
+
+    for (auto& [key, entry] : state->shell_entries)
+    {
+        for (size_t i = 0; i < entry.target.size() && i < entry.from.size(); ++i)
+        {
+            if (entry.target[i].opacity == 0.f)
+                entry.from[i] = entry.current[i] = entry.target[i];
+        }
+    }
 }
 
 OverviewSceneOverride::~OverviewSceneOverride()
@@ -1165,7 +1188,17 @@ void OverviewSceneOverride::handle_window_added(miral::Window const& window)
             state->groups[group].windows.position++;
         }
 
-        auto const placement = placement_of(real);
+        // A window on the active workspace slides in from where it really is. One
+        // on any other workspace starts invisible in its own tile instead, so
+        // that the window strip never shows it and the workspace strip fades it
+        // in from the right place.
+        auto placement = placement_of(real);
+        if (!on_active_workspace)
+        {
+            placement = carousel_layout::fit(groups[group].source, tiles_of(group)[workspace], real);
+            placement.opacity = 0.f;
+        }
+
         state->entries.emplace(key, Entry { .window = window, .real = real, .from = placement, .target = placement, .current = placement, .group = group, .workspace = workspace, .window_index = on_active_workspace ? std::optional<size_t>(0) : std::nullopt });
         state->order.insert(state->order.begin(), key);
 
