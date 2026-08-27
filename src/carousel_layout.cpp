@@ -96,15 +96,12 @@ std::vector<miracle::carousel_layout::Placement> miracle::carousel_layout::compu
     auto const box_width = options.center_width_fraction * bounds_width;
     auto const box_height = options.center_height_fraction * bounds_height;
 
-    // Neighbouring slots are always exactly one step apart, so spacing them by
-    // the half-box of the center slot plus the half-box of its neighbour plus
-    // the gap is what makes overlap impossible. That pair is the tightest one:
-    // every slot further out is smaller still, and a window fitted into its box
-    // is never wider than the box.
-    auto const step = box_width * (1.f + options.side_scale) / 2.f + options.gap;
-
-    std::vector<Placement> result;
-    result.reserve(windows.size());
+    // Pass 1: the size every window is actually drawn at. Spacing is derived
+    // from these rather than from the slot boxes they were fitted into, because
+    // a window rarely fills its box: max_scale or the box's height usually
+    // binds first, and spacing by the box would leave that slack as dead air.
+    std::vector<float> widths(windows.size());
+    std::vector<float> heights(windows.size());
     for (size_t i = 0; i < windows.size(); ++i)
     {
         auto const distance = static_cast<float>(i) - position;
@@ -117,14 +114,37 @@ std::vector<miracle::carousel_layout::Placement> miracle::carousel_layout::compu
         auto const scale = std::min({ box_width * falloff / window_width,
             box_height * falloff / window_height,
             options.max_scale });
-        auto const width = window_width * scale;
-        auto const height = window_height * scale;
+        widths[i] = window_width * scale;
+        heights[i] = window_height * scale;
+    }
 
+    // Pass 2: chain the slots up edge to edge, so neighbours sit exactly the
+    // gap apart. Neighbours are the tightest pair in the strip, so at a spacing
+    // of one that also makes overlap impossible anywhere else.
+    std::vector<float> offsets(windows.size(), 0.f);
+    for (size_t i = 1; i < windows.size(); ++i)
+        offsets[i] = offsets[i - 1] + (widths[i - 1] + widths[i]) / 2.f * options.spacing + options.gap;
+
+    // The centered slot is at a fractional index, so the point that gets pinned
+    // to the middle of the bounds is interpolated between the two offsets it
+    // lies between. Widths vary continuously with position and so, therefore,
+    // do the offsets: the strip slides rather than jumping between slots.
+    auto const clamped = std::clamp(position, 0.f, static_cast<float>(windows.size() - 1));
+    auto const lower = static_cast<size_t>(std::floor(clamped));
+    auto const upper = std::min(lower + 1, windows.size() - 1);
+    auto const anchor = offsets[lower]
+        + (offsets[upper] - offsets[lower]) * (clamped - static_cast<float>(lower));
+
+    std::vector<Placement> result;
+    result.reserve(windows.size());
+    for (size_t i = 0; i < windows.size(); ++i)
+    {
+        auto const distance = static_cast<float>(i) - position;
         result.push_back(Placement {
-            .x = center_x + distance * step - width / 2.f,
-            .y = center_y - height / 2.f,
-            .width = width,
-            .height = height,
+            .x = center_x + offsets[i] - anchor - widths[i] / 2.f,
+            .y = center_y - heights[i] / 2.f,
+            .width = widths[i],
+            .height = heights[i],
             .opacity = options.dim + (1.f - options.dim) * clamp01(1.f - std::abs(distance)) });
     }
 

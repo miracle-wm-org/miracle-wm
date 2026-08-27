@@ -236,18 +236,50 @@ TEST(CarouselLayout, TheOutermostWindowsHangOffTheEdgesOfTheBounds)
     auto const input = uniform_windows(5);
     auto const result = carousel_layout::compute(BOUNDS, input, 2.f);
 
-    // Three windows are wholly on screen...
-    for (auto const index : { 1u, 2u, 3u })
-    {
-        EXPECT_GE(result[index].x, 0.f) << "at index " << index;
-        EXPECT_LE(result[index].x + result[index].width, 1920.f) << "at index " << index;
-    }
+    // The centered window is wholly on screen...
+    EXPECT_GE(result[2].x, 0.f);
+    EXPECT_LE(result[2].x + result[2].width, 1920.f);
 
-    // ...and the pair beyond them straddles an edge.
-    EXPECT_LT(result[0].x, 0.f);
-    EXPECT_GT(result[0].x + result[0].width, 0.f);
-    EXPECT_LT(result[4].x, 1920.f);
-    EXPECT_GT(result[4].x + result[4].width, 1920.f);
+    // ...the pair beside it straddles an edge...
+    EXPECT_LT(result[1].x, 0.f);
+    EXPECT_GT(result[1].x + result[1].width, 0.f);
+    EXPECT_LT(result[3].x, 1920.f);
+    EXPECT_GT(result[3].x + result[3].width, 1920.f);
+
+    // ...and the pair beyond that is off screen entirely, for the renderer to
+    // cull.
+    EXPECT_LE(result[0].x + result[0].width, 0.f);
+    EXPECT_GE(result[4].x, 1920.f);
+}
+
+TEST(CarouselLayout, NeighbouringWindowsSitExactlyTheGapApart)
+{
+    carousel_layout::Options const options;
+    auto const input = windows(5);
+
+    // Spacing follows the sizes the windows are actually drawn at, so it holds
+    // mid-scroll too, when no window is at its full slot size.
+    for (auto const position : { 0.f, 2.f, 2.5f, 4.f })
+    {
+        auto const result = carousel_layout::compute(BOUNDS, input, position);
+        for (size_t i = 1; i < result.size(); i++)
+        {
+            auto const distance = result[i].x - (result[i - 1].x + result[i - 1].width);
+            EXPECT_NEAR(options.gap, distance, 0.001f)
+                << "between " << i - 1 << " and " << i << " at position " << position;
+        }
+    }
+}
+
+TEST(CarouselLayout, ASpacingBelowOneOverlapsNeighbours)
+{
+    carousel_layout::Options options;
+    options.spacing = 0.5f;
+    options.gap = 0.f;
+
+    auto const result = carousel_layout::compute(BOUNDS, uniform_windows(3), 1.f, options);
+    EXPECT_TRUE(overlaps(result[0], result[1]));
+    EXPECT_TRUE(overlaps(result[1], result[2]));
 }
 
 TEST(CarouselLayout, IsDeterministic)
