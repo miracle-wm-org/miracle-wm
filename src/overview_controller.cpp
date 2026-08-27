@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "overview_controller.h"
 
 #include "abstract_command_controller.h"
-#include "overview_scene_override.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
+#include "overview_scene_override.h"
 #include "scene_override.h"
 
 #include <miral/toolkit_event.h>

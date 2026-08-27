@@ -287,7 +287,8 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
                 .window = window,
                 .real = geom::Rectangle { window.top_left(), window.size() },
                 .group = static_cast<size_t>(std::distance(groups.begin(), it)),
-                .is_background = is_background });
+                .is_background = is_background
+            });
             continue;
         }
 
@@ -309,7 +310,8 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
             .workspace = workspace,
             .window_index = workspace == groups[group].active_workspace
                 ? std::optional<size_t>(next_index[group]++)
-                : std::nullopt });
+                : std::nullopt
+        });
     }
 
     if (entries.empty())
