@@ -918,17 +918,18 @@ void Renderer::draw(
     if (clip_area && (clip_area->size.width.as_int() <= 0 || clip_area->size.height.as_int() <= 0))
         return;
 
-    // The whole window, not the clip area: the clipped quad carries texcoords that are a
-    // fraction of the window, so both the transform pivot ('center') and 'surfaceSize' -
-    // which the fragment shader turns back into window-space pixels for the rounded-corner
-    // SDF - have to describe the full window for that fraction to mean anything.
-    auto surface_pos = renderable.screen_position().top_left;
+    // 'surfaceSize' describes the whole window: the clipped quad carries texcoords that are
+    // a fraction of the window, and the fragment shader turns those back into window-space
+    // pixels for the rounded-corner SDF, so the fraction only means something against the
+    // full size.
     auto surface_size = renderable.screen_position().size;
+
+    // The transform pivot, in contrast, is the center of what is actually drawn, so it
+    // follows the clip area whenever there is one. Only the non-placement path uses it; an
+    // override pivots about placement_center instead.
+    auto const pivot_rect = clip_area.value_or(renderable.screen_position());
     if (data.placement)
-    {
-        surface_pos = geom::Point { static_cast<int>(data.placement->position.x), static_cast<int>(data.placement->position.y) };
         surface_size = data.override_real.size;
-    }
 
     // All the programs are held by program_factory through its lifetime. Using pointers avoids
     // -Wdangling-reference.
@@ -1014,8 +1015,8 @@ void Renderer::draw(
     }
     else
     {
-        auto const centerx = x(surface_pos) + width(surface_size) / 2.0f;
-        auto const centery = y(surface_pos) + height(surface_size) / 2.0f;
+        auto const centerx = x(pivot_rect.top_left) + width(pivot_rect.size) / 2.0f;
+        auto const centery = y(pivot_rect.top_left) + height(pivot_rect.size) / 2.0f;
         glUniform2f(prog->center_uniform, centerx, centery);
 
         glUniformMatrix4fv(prog->transform_uniform, 1, GL_FALSE,
