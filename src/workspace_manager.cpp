@@ -64,6 +64,15 @@ bool WorkspaceManager::request_workspace(
     int num,
     bool allow_back_and_forth)
 {
+    return request_workspace(output_hint, num, allow_back_and_forth, true);
+}
+
+bool WorkspaceManager::request_workspace(
+    AbstractOutput* output_hint,
+    int num,
+    bool allow_back_and_forth,
+    bool focus_output)
+{
     if (auto const& existing = workspace(num))
     {
         const bool back_and_forth = allow_back_and_forth ? config->get_workspace_back_and_forth() : false;
@@ -77,7 +86,7 @@ bool WorkspaceManager::request_workspace(
         .num = num,
         .name = workspace_config.name,
         .registrar = registry });
-    request_focus(id);
+    request_focus(id, focus_output);
     registry->advise_created(id);
     return true;
 }
@@ -111,13 +120,13 @@ int WorkspaceManager::request_first_available_workspace(AbstractOutput* output)
         if (workspace(i))
             continue;
 
-        request_workspace(output, i, true);
+        request_workspace(output, i, true, false);
         return i;
     }
 
     if (workspace(0) == nullptr)
     {
-        request_workspace(output, 0, true);
+        request_workspace(output, 0, true, false);
         return 0;
     }
 
@@ -237,6 +246,11 @@ bool WorkspaceManager::delete_workspace(uint32_t id)
 
 bool WorkspaceManager::request_focus(uint32_t id)
 {
+    return request_focus(id, true);
+}
+
+bool WorkspaceManager::request_focus(uint32_t id, bool focus_output)
+{
     auto const& existing = workspace(id);
     if (!existing)
     {
@@ -259,7 +273,25 @@ bool WorkspaceManager::request_focus(uint32_t id)
     if (active_screen != nullptr && !last_selected.expired())
         previous_id = last_selected.lock()->id();
 
-    existing->get_output()->advise_workspace_active(*this, id);
+    // The output must be focused before the workspace is activated: showing a
+    // workspace selects a window on it, and [Policy::advise_focus_gained]
+    // refuses containers that are not on the focused output's active workspace.
+    auto const output = existing->get_output();
+    if (focus_output && output_manager->focused() != output)
+    {
+        if (auto const previously_focused = output_manager->focused())
+            output_manager->unfocus(previously_focused->id());
+        output_manager->focus(output->id());
+    }
+
+    if (output->advise_workspace_active(*this, id))
+    {
+        // Selecting a workspace must always leave focus on that workspace,
+        // regardless of the user's [cursor.focus_mode]. This cannot be left to
+        // [Workspace::show] because the workspace may already be the active one
+        // on its output, in which case it is never re-shown.
+        existing->select_window();
+    }
 
     // Note: the focus event is sent AFTER activation so that IPC clients
     // receive the EMPTY event for the deleted old workspace before the

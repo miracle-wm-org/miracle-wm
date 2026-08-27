@@ -31,11 +31,19 @@ using namespace testing;
 
 namespace
 {
-std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(std::shared_ptr<AbstractOutput> const& output)
+/// Hands out the provided outputs in order, one per [create] call.
+std::unique_ptr<NiceMock<test::MockOutputFactory>> create_output_factory(
+    std::vector<std::shared_ptr<AbstractOutput>> const& outputs)
 {
     auto output_factory = std::make_unique<NiceMock<test::MockOutputFactory>>();
+    auto next = std::make_shared<size_t>(0);
     ON_CALL(*output_factory, create)
-        .WillByDefault(Return(output));
+        .WillByDefault(Invoke([&outputs, next](std::string, int, geom::Rectangle) -> std::shared_ptr<AbstractOutput>
+    {
+        if (*next >= outputs.size())
+            return nullptr;
+        return outputs[(*next)++];
+    }));
     return output_factory;
 }
 }
@@ -46,33 +54,45 @@ public:
     WorkspaceManagerTest() :
         workspace_registry(std::make_shared<WorkspaceObserverRegistrar>()),
         config(std::make_shared<NiceMock<test::MockConfig>>()),
-        output_manager(std::make_shared<OutputManager>(create_output_factory(output))),
+        output_manager(std::make_shared<OutputManager>(create_output_factory(outputs_to_create))),
         workspace_manager(workspace_registry, config, output_manager)
     {
-        ON_CALL(*output, active).WillByDefault(Invoke([this]
-        { return active_workspace; }));
+        setup_output(output, 1, workspaces, active_workspace);
+        setup_output(second_output, 2, second_workspaces, second_active_workspace);
+    }
 
-        ON_CALL(*output, get_workspaces)
-            .WillByDefault(Invoke([this]()
-        { return workspaces; }));
+    void setup_output(
+        std::shared_ptr<NiceMock<test::MockOutput>> const& target,
+        int id,
+        std::vector<std::shared_ptr<AbstractWorkspace>>& target_workspaces,
+        std::shared_ptr<AbstractWorkspace>& target_active)
+    {
+        ON_CALL(*target, id()).WillByDefault(Return(id));
 
-        ON_CALL(*output, advise_new_workspace)
-            .WillByDefault(Invoke([this](WorkspaceCreationData const& data)
+        ON_CALL(*target, active).WillByDefault(Invoke([&target_active]
+        { return target_active; }));
+
+        ON_CALL(*target, get_workspaces)
+            .WillByDefault(Invoke([&target_workspaces]()
+        { return target_workspaces; }));
+
+        ON_CALL(*target, advise_new_workspace)
+            .WillByDefault(Invoke([this, target](WorkspaceCreationData const& data)
         {
-            add_new_workspace(data);
+            add_new_workspace(data, target);
         }));
 
-        ON_CALL(*output, advise_workspace_active)
-            .WillByDefault(Invoke([this](WorkspaceManager& manager, uint32_t id) -> bool
+        ON_CALL(*target, advise_workspace_active)
+            .WillByDefault(Invoke([&target_workspaces, &target_active](WorkspaceManager& manager, uint32_t id) -> bool
         {
-            auto iter = std::ranges::find_if(workspaces, [id](const auto& workspace)
+            auto iter = std::ranges::find_if(target_workspaces, [id](const auto& workspace)
             {
                 return workspace->id() == id;
             });
 
-            if (iter != workspaces.end())
+            if (iter != target_workspaces.end())
             {
-                active_workspace = *iter;
+                target_active = *iter;
                 return true;
             }
 
@@ -80,7 +100,9 @@ public:
         }));
     }
 
-    void add_new_workspace(WorkspaceCreationData const& data)
+    void add_new_workspace(
+        WorkspaceCreationData const& data,
+        std::shared_ptr<NiceMock<test::MockOutput>> const& target)
     {
         auto created_workspace = std::make_shared<testing::NiceMock<test::MockWorkspace>>();
         ON_CALL(*created_workspace, id())
@@ -88,8 +110,11 @@ public:
         ON_CALL(*created_workspace, num())
             .WillByDefault(::testing::Return(data.num));
         ON_CALL(*created_workspace, get_output)
-            .WillByDefault(::testing::Return(output));
-        workspaces.push_back(created_workspace);
+            .WillByDefault(::testing::Return(target));
+        if (target == output)
+            workspaces.push_back(created_workspace);
+        else
+            second_workspaces.push_back(created_workspace);
     }
 
     void create_output()
@@ -101,9 +126,22 @@ public:
             workspace_manager);
     }
 
+    void create_second_output()
+    {
+        output_manager->create("Output2", 2, {
+                                                 { 1920, 0    },
+                                                 { 1920, 1080 }
+        },
+            workspace_manager);
+    }
+
     std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
     std::shared_ptr<AbstractWorkspace> active_workspace;
+    std::vector<std::shared_ptr<AbstractWorkspace>> second_workspaces;
+    std::shared_ptr<AbstractWorkspace> second_active_workspace;
     std::shared_ptr<NiceMock<test::MockOutput>> output = std::make_shared<NiceMock<test::MockOutput>>();
+    std::shared_ptr<NiceMock<test::MockOutput>> second_output = std::make_shared<NiceMock<test::MockOutput>>();
+    std::vector<std::shared_ptr<AbstractOutput>> outputs_to_create { output, second_output };
     std::shared_ptr<WorkspaceObserverRegistrar> workspace_registry;
     std::shared_ptr<test::MockConfig> config;
     std::shared_ptr<OutputManager> output_manager;
@@ -226,4 +264,36 @@ TEST_F(WorkspaceManagerTest, RequestWorkspaceBackAndForthDisabled)
     EXPECT_CALL(*config, get_workspace_back_and_forth).WillOnce(Return(false));
     workspace_manager.request_workspace(output.get(), 1);
     EXPECT_TRUE(active_workspace->num() == 1);
+}
+
+TEST_F(WorkspaceManagerTest, RequestFocusSelectsAWindowOnTheAlreadyActiveWorkspace)
+{
+    create_output();
+    ASSERT_EQ(workspaces.size(), 1);
+
+    // The workspace is already the active one on its output, so it is never
+    // re-shown. It must still be given focus.
+    auto const active = std::dynamic_pointer_cast<NiceMock<test::MockWorkspace>>(active_workspace);
+    ASSERT_NE(active, nullptr);
+    EXPECT_CALL(*active, select_window()).Times(1);
+
+    workspace_manager.request_focus(active->id());
+}
+
+TEST_F(WorkspaceManagerTest, RequestFocusOnAnotherOutputMovesOutputFocusAndSelectsAWindow)
+{
+    create_output();
+    create_second_output();
+
+    // Creating an output must not steal focus from the already focused one.
+    ASSERT_EQ(output_manager->focused(), output);
+    ASSERT_EQ(second_workspaces.size(), 1);
+
+    auto const target = std::dynamic_pointer_cast<NiceMock<test::MockWorkspace>>(second_workspaces[0]);
+    ASSERT_NE(target, nullptr);
+    EXPECT_CALL(*target, select_window()).Times(1);
+
+    workspace_manager.request_focus(target->id());
+
+    EXPECT_EQ(output_manager->focused(), second_output);
 }
