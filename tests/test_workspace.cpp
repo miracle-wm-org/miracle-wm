@@ -519,3 +519,35 @@ TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)
     EXPECT_EQ(workspace->alpha(), 1.f);
     EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
 }
+
+TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    workspace->advise_focus_gained(first);
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowFallsBackToTheFirstWindowWhenNothingWasSelected)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowClearsFocusWhenTheWorkspaceIsEmpty)
+{
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(miral::Window()));
+}

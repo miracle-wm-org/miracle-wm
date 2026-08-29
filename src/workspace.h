@@ -67,6 +67,7 @@ public:
     void hide(mir::geometry::Point const& end) override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
+    void select_window() override;
     [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
     void set_output(std::shared_ptr<AbstractOutput> const&) override;
     [[nodiscard]] bool is_empty() const override;

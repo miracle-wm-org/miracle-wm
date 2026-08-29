@@ -595,26 +595,31 @@ void Workspace::on_animation_start(bool is_hiding)
         });
         sync.lock()->is_showing = false;
 
-        if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
+        select_window();
+    }
+}
+
+void Workspace::select_window()
+{
+    if (auto const sh_last_selected = sync.lock()->last_selected_container.lock())
+    {
+        if (sh_last_selected->window().has_value())
+            window_controller->select_active_window(sh_last_selected->window().value());
+        return;
+    }
+
+    if (!for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+    {
+        if (container->window().has_value())
         {
-            if (sh_last_selected->window().has_value())
-                window_controller->select_active_window(sh_last_selected->window().value());
-            return;
+            window_controller->select_active_window(container->window().value());
+            return true;
         }
 
-        if (!for_each_window([&](std::shared_ptr<WindowContainer> const& container)
-        {
-            if (container->window().has_value())
-            {
-                window_controller->select_active_window(container->window().value());
-                return true;
-            }
-
-            return false;
-        }))
-        {
-            window_controller->select_active_window({});
-        }
+        return false;
+    }))
+    {
+        window_controller->select_active_window({});
     }
 }
 
