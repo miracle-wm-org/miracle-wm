@@ -57,9 +57,7 @@ public:
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
-    /// Focus a window on this workspace: the last selected container if it still
-    /// exists, otherwise the first window in tree order. If the workspace has no
-    /// windows, focus is cleared.
+    /// Focuses a window on this workspace.
     virtual void select_window() = 0;
 
     [[nodiscard]] virtual std::shared_ptr<AbstractOutput> get_output() const = 0;

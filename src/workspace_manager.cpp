@@ -273,9 +273,7 @@ bool WorkspaceManager::request_focus(uint32_t id, bool focus_output)
     if (active_screen != nullptr && !last_selected.expired())
         previous_id = last_selected.lock()->id();
 
-    // The output must be focused before the workspace is activated: showing a
-    // workspace selects a window on it, and [Policy::advise_focus_gained]
-    // refuses containers that are not on the focused output's active workspace.
+    // Important: the output must be focused BEFORE the workspace is activated.
     auto const output = existing->get_output();
     if (focus_output && output_manager->focused() != output)
     {
@@ -286,10 +284,6 @@ bool WorkspaceManager::request_focus(uint32_t id, bool focus_output)
 
     if (output->advise_workspace_active(*this, id))
     {
-        // Selecting a workspace must always leave focus on that workspace,
-        // regardless of the user's [cursor.focus_mode]. This cannot be left to
-        // [Workspace::show] because the workspace may already be the active one
-        // on its output, in which case it is never re-shown.
         existing->select_window();
     }
 
