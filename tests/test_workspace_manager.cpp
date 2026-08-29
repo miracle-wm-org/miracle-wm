@@ -76,10 +76,13 @@ public:
             .WillByDefault(Invoke([&target_workspaces]()
         { return target_workspaces; }));
 
+        // Note: the action is stored on the mock itself, so it must not capture a
+        // [shared_ptr] to that same mock or the mock will never be destroyed.
         ON_CALL(*target, advise_new_workspace)
-            .WillByDefault(Invoke([this, target](WorkspaceCreationData const& data)
+            .WillByDefault(Invoke([this, weak_target = std::weak_ptr<NiceMock<test::MockOutput>>(target)](
+                                      WorkspaceCreationData const& data)
         {
-            add_new_workspace(data, target);
+            add_new_workspace(data, weak_target.lock());
         }));
 
         ON_CALL(*target, advise_workspace_active)
