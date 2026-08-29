@@ -78,6 +78,9 @@ public:
 
     virtual void advise_focus_gained(std::shared_ptr<Container> const& container) = 0;
 
+    /// Focuses a window on this workspace.
+    virtual void select_window() = 0;
+
     [[nodiscard]] virtual std::shared_ptr<AbstractOutput> get_output() const = 0;
 
     virtual void set_output(std::shared_ptr<AbstractOutput> const&) = 0;

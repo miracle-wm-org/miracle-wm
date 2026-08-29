@@ -71,7 +71,14 @@ public:
         get_window_data(window)->clip = std::nullopt;
     }
 
-    void select_active_window(miral::Window const&) override { }
+    void select_active_window(miral::Window const& window) override
+    {
+        selected_windows.push_back(window);
+    }
+
+    /// Every window passed to [select_active_window], in order. A default
+    /// constructed [miral::Window] means that focus was cleared.
+    std::vector<miral::Window> selected_windows;
 
     std::shared_ptr<Container> get_container(miral::Window const& window)
     {

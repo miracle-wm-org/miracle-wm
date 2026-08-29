@@ -645,3 +645,35 @@ TEST_F(WorkspaceTest, EndPreviewLeavesAWorkspaceThatBecameActiveInTheScene)
     EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
     EXPECT_EQ(workspace->alpha(), 1.f);
 }
+
+TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    workspace->advise_focus_gained(first);
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowFallsBackToTheFirstWindowWhenNothingWasSelected)
+{
+    auto const first = create_leaf();
+    create_leaf();
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(first->window().value()));
+}
+
+TEST_F(WorkspaceTest, SelectWindowClearsFocusWhenTheWorkspaceIsEmpty)
+{
+    window_controller->selected_windows.clear();
+
+    workspace->select_window();
+
+    ASSERT_THAT(window_controller->selected_windows, ElementsAre(miral::Window()));
+}

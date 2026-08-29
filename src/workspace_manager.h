@@ -134,6 +134,20 @@ public:
 private:
     bool focus_existing(AbstractWorkspace const*, bool back_and_forth);
 
+    /// As [request_workspace], but [focus_output] may be false to activate the
+    /// workspace without moving output focus onto it. Used when a workspace is
+    /// created for bookkeeping reasons (e.g. a new output was plugged in)
+    /// rather than because the user asked for it.
+    bool request_workspace(
+        AbstractOutput* output_hint,
+        int key,
+        bool allow_back_and_forth,
+        bool focus_output);
+
+    /// As [request_focus], but [focus_output] may be false to activate the
+    /// workspace without moving output focus onto it.
+    bool request_focus(uint32_t id, bool animate, bool focus_output);
+
     // Note: `0` is a special workspace number meaning "no workspace" in some contexts.
     uint32_t next_id = 1;
 
