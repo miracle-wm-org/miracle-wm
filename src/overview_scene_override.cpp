@@ -216,6 +216,7 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
     std::shared_ptr<Config> const& config,
     std::function<void()>&& on_exit_started,
     std::function<void(uint32_t)>&& on_workspace_selected,
+    std::function<void(int)>&& on_output_selected,
     std::function<void()>&& on_done)
 {
     // Every output runs strips of its own, within its own bounds.
@@ -237,7 +238,7 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
         if (!output->get_app_zones().empty())
             bounds = output->get_app_zones().front().extents();
 
-        GroupInfo info { .bounds = bounds, .source = output->get_area() };
+        GroupInfo info { .bounds = bounds, .source = output->get_area(), .output_id = output->id() };
         auto const group = groups.size();
         for (auto const& workspace : output->get_workspaces())
         {
@@ -335,6 +336,7 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
         config,
         std::move(on_exit_started),
         std::move(on_workspace_selected),
+        std::move(on_output_selected),
         std::move(on_done)));
 }
 
@@ -349,6 +351,7 @@ OverviewSceneOverride::OverviewSceneOverride(
     std::shared_ptr<Config> const& config,
     std::function<void()>&& on_exit_started,
     std::function<void(uint32_t)>&& on_workspace_selected,
+    std::function<void(int)>&& on_output_selected,
     std::function<void()>&& on_done) :
     state { std::make_shared<State>() },
     groups { std::move(groups) },
@@ -358,6 +361,7 @@ OverviewSceneOverride::OverviewSceneOverride(
     preview { std::make_shared<WorkspacePreview>() },
     on_exit_started { std::move(on_exit_started) },
     on_workspace_selected { std::move(on_workspace_selected) },
+    on_output_selected { std::move(on_output_selected) },
     on_done { std::move(on_done) },
     animation_handle { animator->register_animateable() },
     primary_modifier { config->get_input_event_modifier() }
@@ -828,13 +832,20 @@ void OverviewSceneOverride::return_to_windows()
 void OverviewSceneOverride::commit_and_exit()
 {
     std::optional<miral::Window> centered;
+    size_t group = 0;
     {
         std::lock_guard lock(state->mutex);
         if (state->phase == Phase::outro || state->phase == Phase::done)
             return;
 
-        centered = centered_window(state->active_group);
+        group = state->active_group;
+        centered = centered_window(group);
     }
+
+    // Before the selection, not after: the focus check in
+    // [Policy::advise_focus_gained] reads the focused output, and would drop a
+    // window that lives on any other one.
+    on_output_selected(groups[group].output_id);
 
     if (centered)
         window_controller->select_active_window(*centered);
@@ -844,12 +855,13 @@ void OverviewSceneOverride::commit_and_exit()
 
 void OverviewSceneOverride::commit_workspace_and_exit()
 {
+    size_t group = 0;
     {
         std::lock_guard lock(state->mutex);
         if (state->phase == Phase::outro || state->phase == Phase::done)
             return;
 
-        auto const group = state->active_group;
+        group = state->active_group;
         auto const position = state->groups[group].workspaces.position;
         if (position >= groups[group].workspaces.size())
             return;
@@ -860,6 +872,10 @@ void OverviewSceneOverride::commit_workspace_and_exit()
         state->groups[group].exit_workspace = position;
         selected_workspace = groups[group].workspaces[position].id;
     }
+
+    // The chosen workspace is adopted at the end of the outro, and adopting it
+    // has to happen with its own output focused.
+    on_output_selected(groups[group].output_id);
 
     begin_exit();
 }

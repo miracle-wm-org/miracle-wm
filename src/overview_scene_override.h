@@ -160,6 +160,9 @@ public:
         mir::geometry::Rectangle source;
         std::vector<WorkspaceSlot> workspaces;
         size_t active_workspace = 0;
+        /// Identity of the output this group describes, so that dismissing the
+        /// overview can hand the output focus over to it.
+        int output_id = -1;
     };
 
     /// The mutable position of one strip.
@@ -193,6 +196,8 @@ public:
     /// overview starts going away, whether or not an exit animation follows.
     /// \p on_workspace_selected runs on the main thread when the user picks a
     /// workspace out of [Level::workspaces].
+    /// \p on_output_selected runs on the main thread when the overview is
+    /// dismissed, with the id of the output the dismissal acted on.
     /// \p on_done runs when the override may be released, which for an animated
     /// exit is on the animator thread.
     ///
@@ -205,6 +210,7 @@ public:
         std::shared_ptr<Config> const& config,
         std::function<void()>&& on_exit_started,
         std::function<void(uint32_t)>&& on_workspace_selected,
+        std::function<void(int)>&& on_output_selected,
         std::function<void()>&& on_done);
 
     ~OverviewSceneOverride() override;
@@ -235,6 +241,7 @@ private:
         std::shared_ptr<Config> const& config,
         std::function<void()>&& on_exit_started,
         std::function<void(uint32_t)>&& on_workspace_selected,
+        std::function<void(int)>&& on_output_selected,
         std::function<void()>&& on_done);
 
     enum class Phase
@@ -373,6 +380,7 @@ private:
     std::shared_ptr<WorkspacePreview> preview;
     std::function<void()> on_exit_started;
     std::function<void(uint32_t)> on_workspace_selected;
+    std::function<void(int)> on_output_selected;
     std::function<void()> on_done;
     AnimationHandle animation_handle;
     AnimationDefinition definition;

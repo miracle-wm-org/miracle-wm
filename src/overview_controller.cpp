@@ -18,9 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "overview_controller.h"
 
 #include "abstract_command_controller.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
+#include "output_manager.h"
 #include "overview_scene_override.h"
 #include "scene_override.h"
 
@@ -88,6 +91,35 @@ void OverviewController::try_start()
         // Runs when the overview's zoom has finished bringing this workspace up
         // to fill the output, so the switch itself must not animate.
         command_controller->select_workspace_by_id(workspace_id, false);
+    },
+        [this](int output_id)
+    {
+        // The overview's active group follows the cursor across outputs, but the
+        // policy hands every pointer event straight to the override, so the
+        // focused output has not moved with it. Dismissal has to bring the
+        // output focus along, or [Policy::advise_focus_gained] drops the
+        // selection as "not on the active workspace".
+        auto const focused = output_manager->focused();
+        if (focused && focused->id() == output_id)
+            return;
+
+        if (focused)
+            output_manager->unfocus(focused->id());
+        output_manager->focus(output_id);
+
+        // The same thing the pointer path in [Policy::handle_pointer_event]
+        // does after crossing to another output. The workspace is already
+        // active there, so this only republishes the focus to the observers,
+        // and the switch must not animate.
+        for (auto const& output : output_manager->outputs())
+        {
+            if (output->id() != output_id)
+                continue;
+
+            if (auto const active = output->active())
+                command_controller->select_workspace_by_id(active->id(), false);
+            break;
+        }
     },
         [this]
     {
