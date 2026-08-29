@@ -1,0 +1,125 @@
+name: Integration Tests (Arch)
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+  BUILD_TYPE: Debug
+  CONTAINER: miracle-visual-arch
+
+jobs:
+
+  visual-tests:
+    runs-on: ubuntu-latest
+    name: Visual Integration Tests (Arch)
+    timeout-minutes: 90
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install podman
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y podman
+
+    - name: Start Arch Linux container
+      run: |
+        podman run -d --name ${{ env.CONTAINER }} \
+          -v ${{ github.workspace }}:/workspace:z \
+          --workdir /workspace \
+          archlinux:latest \
+          sleep infinity
+
+    - name: Base setup
+      run: |
+        podman exec ${{ env.CONTAINER }} bash -c "
+          set -e
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            base-devel git sudo cmake ninja python python-pip \
+            nlohmann-json glm boost libnotify \
+            grim xorg-xwayland gedit gnome-chess
+          # makepkg / AUR helpers refuse to run as root
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chmod 0440 /etc/sudoers.d/builder
+        "
+
+    - name: Bootstrap paru (AUR helper)
+      run: |
+        podman exec -u builder ${{ env.CONTAINER }} bash -c "
+          set -e
+          cd /home/builder
+          git clone https://aur.archlinux.org/paru-bin.git
+          cd paru-bin
+          makepkg -si --noconfirm
+        "
+
+    - name: Install Mir and wasmedge from AUR
+      run: |
+        podman exec -u builder ${{ env.CONTAINER }} bash -c "
+          set -e
+          paru -S --noconfirm --needed mir wasmedge
+        "
+
+    - name: Configure CMake
+      run: |
+        podman exec ${{ env.CONTAINER }} \
+          cmake -B /workspace/build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DEND_TO_END_TESTS=1 \
+            -DENABLE_TESTS=OFF
+
+    - name: Build
+      run: podman exec ${{ env.CONTAINER }} cmake --build /workspace/build --config ${{ env.BUILD_TYPE }}
+
+    - name: Install
+      run: |
+        podman exec ${{ env.CONTAINER }} cmake --install /workspace/build --config ${{ env.BUILD_TYPE }}
+        podman exec ${{ env.CONTAINER }} ldconfig
+
+    - name: Install Python e2e test deps
+      run: |
+        podman exec ${{ env.CONTAINER }} bash -c "
+          set -e
+          cd /workspace/e2e
+          python3 -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+        "
+
+    - name: Run e2e tests
+      run: |
+        podman exec \
+          -e XDG_RUNTIME_DIR=/tmp/miracle-e2e \
+          -e MIRACLE_VISUAL_TEST_BIN=/usr/local/bin/miracle-wm \
+          -e MIRACLE_SCREENSHOT_DIR=/workspace/screenshots \
+          -e MIRACLE_PLATFORM_DISPLAY_LIBS=mir:virtual \
+          -e MIR_SERVER_VIRTUAL_OUTPUT=800x600 \
+          ${{ env.CONTAINER }} bash -c "
+            set -eo pipefail
+            mkdir -p /tmp/miracle-e2e
+            chmod 700 /tmp/miracle-e2e
+            mkdir -p /workspace/screenshots
+            cd /workspace/e2e
+            . venv/bin/activate
+            pytest visual/ -v --tb=short 2>&1 | tee /workspace/screenshots/test-output.txt
+          "
+
+    - name: Upload screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: visual-test-screenshots-arch-${{ github.run_number }}
+        path: ${{ github.workspace }}/screenshots/
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Stop container
+      if: always()
+      run: |
+        podman stop ${{ env.CONTAINER }} || true
+        podman rm ${{ env.CONTAINER }} || true
