@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "output.h"
 #include "output_manager.h"
+#include "overview_scene_override_delegate.h"
 #include "shell_component_container.h"
 #include "window_container.h"
 #include "window_controller.h"
@@ -214,10 +215,7 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
-    std::function<void()>&& on_exit_started,
-    std::function<void(uint32_t)>&& on_workspace_selected,
-    std::function<void(int)>&& on_output_selected,
-    std::function<void()>&& on_done)
+    OverviewSceneOverrideDelegate& delegate)
 {
     // Every output runs strips of its own, within its own bounds.
     std::vector<GroupInfo> groups;
@@ -334,10 +332,7 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
         window_controller,
         compositor_state,
         config,
-        std::move(on_exit_started),
-        std::move(on_workspace_selected),
-        std::move(on_output_selected),
-        std::move(on_done)));
+        delegate));
 }
 
 OverviewSceneOverride::OverviewSceneOverride(
@@ -349,20 +344,14 @@ OverviewSceneOverride::OverviewSceneOverride(
     std::shared_ptr<WindowController> const& window_controller,
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<Config> const& config,
-    std::function<void()>&& on_exit_started,
-    std::function<void(uint32_t)>&& on_workspace_selected,
-    std::function<void(int)>&& on_output_selected,
-    std::function<void()>&& on_done) :
+    OverviewSceneOverrideDelegate& delegate) :
     state { std::make_shared<State>() },
     groups { std::move(groups) },
     animator { animator },
     window_controller { window_controller },
     compositor_state { compositor_state },
     preview { std::make_shared<WorkspacePreview>() },
-    on_exit_started { std::move(on_exit_started) },
-    on_workspace_selected { std::move(on_workspace_selected) },
-    on_output_selected { std::move(on_output_selected) },
-    on_done { std::move(on_done) },
+    delegate { &delegate },
     animation_handle { animator->register_animateable() },
     primary_modifier { config->get_input_event_modifier() }
 {
@@ -842,10 +831,7 @@ void OverviewSceneOverride::commit_and_exit()
         centered = centered_window(group);
     }
 
-    // Before the selection, not after: the focus check in
-    // [Policy::advise_focus_gained] reads the focused output, and would drop a
-    // window that lives on any other one.
-    on_output_selected(groups[group].output_id);
+    delegate->on_output_selected(groups[group].output_id);
 
     if (centered)
         window_controller->select_active_window(*centered);
@@ -873,10 +859,7 @@ void OverviewSceneOverride::commit_workspace_and_exit()
         selected_workspace = groups[group].workspaces[position].id;
     }
 
-    // The chosen workspace is adopted at the end of the outro, and adopting it
-    // has to happen with its own output focused.
-    on_output_selected(groups[group].output_id);
-
+    delegate->on_output_selected(groups[group].output_id);
     begin_exit();
 }
 
@@ -892,9 +875,6 @@ void OverviewSceneOverride::begin_exit()
         {
             entry.from = entry.current;
 
-            // A window on a workspace the overview is not landing on is about
-            // to be hidden, so it fades out where it is rather than flying home
-            // across the workspace that is growing to fill the screen.
             if (entry.workspace != state->groups[entry.group].exit_workspace)
             {
                 entry.target = entry.current;
@@ -902,10 +882,6 @@ void OverviewSceneOverride::begin_exit()
                 continue;
             }
 
-            // The WM kept managing windows while the overview was open, so
-            // re-read the live geometry as the outro target for a seamless
-            // landing. Opacity goes back to 1 so the dimmed windows brighten as
-            // they settle.
             entry.target = placement_of(geom::Rectangle { entry.window.top_left(), entry.window.size() });
         }
 
@@ -921,51 +897,32 @@ void OverviewSceneOverride::begin_exit()
         }
     }
 
-    // The overview no longer owns the desktop from here on, even though the
-    // outro is still playing. The phase guard above makes this fire exactly
-    // once.
-    on_exit_started();
+    delegate->on_exit_started();
 
     auto const s = state;
-    auto const done = on_done;
+    auto* const d = delegate;
     auto const held_preview = preview;
     auto const controller = window_controller;
     auto const selected = selected_workspace;
-    auto const select = on_workspace_selected;
-    animate([s, done, held_preview, controller, selected, select]
+    animate([s, d, held_preview, controller, selected]
     {
-        // This runs on the animator thread, and both adopting and concealing a
-        // workspace are window management, so they go back through the window
-        // management lock.
-        controller->invoke_under_lock([s, held_preview, selected, select]
+        controller->invoke_under_lock([s, d, held_preview, selected]
         {
             {
-                // [cancel] may have torn the overview down while this callback
-                // was waiting for the window management lock, in which case the
-                // workspaces have already been put away and switching now would
-                // act on a decision the user no longer has on screen.
                 std::lock_guard lock(s->mutex);
                 if (s->phase == Phase::done)
                     return;
             }
 
-            // The zoom has already brought the chosen workspace up to fill the
-            // output, so the switch must not animate: it only has to adopt what
-            // is on screen, and it takes the focus with it.
             if (selected)
-                select(*selected);
+                d->on_workspace_selected(*selected);
 
-            // Whatever was just adopted is the active workspace now, so it stays
-            // in the scene and only the rest goes back into hiding.
             held_preview->release();
 
-            // Held until here so that the final outro placements keep serving
-            // while the switch happens: dropping them any earlier would flash a
-            // frame of the old desktop at full opacity.
             std::lock_guard lock(s->mutex);
             s->phase = Phase::done;
         });
-        done();
+        d->on_done();
     });
 }
 
@@ -1257,10 +1214,10 @@ void OverviewSceneOverride::cancel()
 
     // [begin_exit] has already announced the exit if the outro was running.
     if (!was_exiting)
-        on_exit_started();
+        delegate->on_exit_started();
 
     animator->remove_by_animation_handle(animation_handle);
-    on_done();
+    delegate->on_done();
 }
 
 void OverviewSceneOverride::handle_window_closed(miral::Window const& window)

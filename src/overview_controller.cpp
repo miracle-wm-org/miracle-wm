@@ -79,55 +79,7 @@ void OverviewController::try_start()
         window_controller,
         compositor_state,
         config,
-        [this]
-    {
-        // Runs on the main thread as soon as the overview begins going away, so
-        // that the mode is broadcast from the main loop and the rest of the
-        // compositor is usable again while the outro plays.
-        command_controller->set_mode(WindowManagerMode::normal);
-    },
-        [this](uint32_t workspace_id)
-    {
-        // Runs when the overview's zoom has finished bringing this workspace up
-        // to fill the output, so the switch itself must not animate.
-        command_controller->select_workspace_by_id(workspace_id, false);
-    },
-        [this](int output_id)
-    {
-        // The overview's active group follows the cursor across outputs, but the
-        // policy hands every pointer event straight to the override, so the
-        // focused output has not moved with it. Dismissal has to bring the
-        // output focus along, or [Policy::advise_focus_gained] drops the
-        // selection as "not on the active workspace".
-        auto const focused = output_manager->focused();
-        if (focused && focused->id() == output_id)
-            return;
-
-        if (focused)
-            output_manager->unfocus(focused->id());
-        output_manager->focus(output_id);
-
-        // The same thing the pointer path in [Policy::handle_pointer_event]
-        // does after crossing to another output. The workspace is already
-        // active there, so this only republishes the focus to the observers,
-        // and the switch must not animate.
-        for (auto const& output : output_manager->outputs())
-        {
-            if (output->id() != output_id)
-                continue;
-
-            if (auto const active = output->active())
-                command_controller->select_workspace_by_id(active->id(), false);
-            break;
-        }
-    },
-        [this]
-    {
-        // Runs on the animator thread when the outro completes; only touches
-        // the (thread-safe) manager and the atomic token.
-        if (auto const released = token.exchange(0))
-            compositor_state->scene_override_manager()->try_release_override(released);
-    });
+        *this);
     if (!scene_override)
         return;
 
@@ -138,4 +90,41 @@ void OverviewController::try_start()
         command_controller->set_mode(WindowManagerMode::overview);
         raw->start();
     }
+}
+
+void OverviewController::on_exit_started()
+{
+    command_controller->set_mode(WindowManagerMode::normal);
+}
+
+void OverviewController::on_workspace_selected(uint32_t workspace_id)
+{
+    command_controller->select_workspace_by_id(workspace_id, false);
+}
+
+void OverviewController::on_output_selected(int output_id)
+{
+    auto const focused = output_manager->focused();
+    if (focused && focused->id() == output_id)
+        return;
+
+    if (focused)
+        output_manager->unfocus(focused->id());
+    output_manager->focus(output_id);
+
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->id() != output_id)
+            continue;
+
+        if (auto const active = output->active())
+            command_controller->select_workspace_by_id(active->id(), false);
+        break;
+    }
+}
+
+void OverviewController::on_done()
+{
+    if (auto const released = token.exchange(0))
+        compositor_state->scene_override_manager()->try_release_override(released);
 }

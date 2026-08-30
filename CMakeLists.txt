@@ -204,6 +204,7 @@ add_library(miracle-wm-implementation STATIC
         src/overview_controller.cpp src/overview_controller.h
         src/carousel_layout.cpp src/carousel_layout.h
         src/overview_scene_override.cpp src/overview_scene_override.h
+        src/overview_scene_override_delegate.h
         src/workspace_preview.cpp src/workspace_preview.h
 )
 

@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OVERVIEW_CONTROLLER_H
 #define OVERVIEW_CONTROLLER_H
 
+#include "overview_scene_override_delegate.h"
+
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -34,7 +36,7 @@ class WindowController;
 
 /// Owns the window management side of the overview scene override: the token of
 /// the active override, and the gesture that enters it.
-class OverviewController
+class OverviewController : public OverviewSceneOverrideDelegate
 {
 public:
     OverviewController(
@@ -62,6 +64,11 @@ private:
     /// Enters the overview scene override, if possible. Every output overviews
     /// the windows on its own active workspace.
     void try_start();
+
+    void on_exit_started() override;
+    void on_workspace_selected(uint32_t workspace_id) override;
+    void on_output_selected(int output_id) override;
+    void on_done() override;
 
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<OutputManager> output_manager;

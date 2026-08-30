@@ -41,6 +41,7 @@ class Animator;
 class CompositorState;
 class Config;
 class OutputManager;
+class OverviewSceneOverrideDelegate;
 class WindowContainer;
 class WindowController;
 class WorkspacePreview;
@@ -192,14 +193,8 @@ public:
     /// Builds an overview of every eligible window on every output's active
     /// workspace, laid out within that output's bounds.
     ///
-    /// \p on_exit_started runs on the calling (main) thread as soon as the
-    /// overview starts going away, whether or not an exit animation follows.
-    /// \p on_workspace_selected runs on the main thread when the user picks a
-    /// workspace out of [Level::workspaces].
-    /// \p on_output_selected runs on the main thread when the overview is
-    /// dismissed, with the id of the output the dismissal acted on.
-    /// \p on_done runs when the override may be released, which for an animated
-    /// exit is on the animator thread.
+    /// \p delegate is what the overview acts on the desktop through, and must
+    /// outlive the override.
     ///
     /// \returns the override, or nullptr if there is nothing to show.
     static std::unique_ptr<OverviewSceneOverride> create(
@@ -208,10 +203,7 @@ public:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
-        std::function<void()>&& on_exit_started,
-        std::function<void(uint32_t)>&& on_workspace_selected,
-        std::function<void(int)>&& on_output_selected,
-        std::function<void()>&& on_done);
+        OverviewSceneOverrideDelegate& delegate);
 
     ~OverviewSceneOverride() override;
 
@@ -239,10 +231,7 @@ private:
         std::shared_ptr<WindowController> const& window_controller,
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<Config> const& config,
-        std::function<void()>&& on_exit_started,
-        std::function<void(uint32_t)>&& on_workspace_selected,
-        std::function<void(int)>&& on_output_selected,
-        std::function<void()>&& on_done);
+        OverviewSceneOverrideDelegate& delegate);
 
     enum class Phase
     {
@@ -374,26 +363,13 @@ private:
     std::shared_ptr<Animator> animator;
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
-    /// Shared so that the exit animation's completion callback can hold the
-    /// preview alive long enough to release it, even though releasing the
-    /// override destroys this object.
     std::shared_ptr<WorkspacePreview> preview;
-    std::function<void()> on_exit_started;
-    std::function<void(uint32_t)> on_workspace_selected;
-    std::function<void(int)> on_output_selected;
-    std::function<void()> on_done;
+    OverviewSceneOverrideDelegate* delegate;
     AnimationHandle animation_handle;
     AnimationDefinition definition;
     MirInputEventModifier primary_modifier;
     bool primary_tap_latched = false;
-    /// What had focus before the workspaces were revealed. Un-hiding a window is
-    /// a window management operation that miral may hand focus to, so backing
-    /// out of the workspace strip has to put it back.
-    ///
-    /// Only touched on the window management thread.
     std::optional<miral::Window> focus_before_reveal;
-    /// The workspace the outro is landing on, when it is not the one that was
-    /// active all along. Adopted once the zoom has finished.
     std::optional<uint32_t> selected_workspace;
 };
 }
