@@ -46,27 +46,59 @@ Placement lerp(Placement const& from, Placement const& to, float p);
 /// True when (\p x, \p y) falls inside \p placement.
 bool contains(Placement const& placement, float x, float y);
 
+/// Maps \p rect out of \p source and into \p tile, preserving relative position
+/// and aspect, and inheriting \p tile's opacity.
+///
+/// This is what turns a window's real screen rectangle into its place inside a
+/// scaled-down picture of the workspace it lives on: \p source is the area that
+/// the tile is a picture of (an output), and \p tile is where that picture has
+/// been laid out.
+Placement fit(
+    mir::geometry::Rectangle const& source,
+    Placement const& tile,
+    mir::geometry::Rectangle const& rect);
+
 struct Options
 {
     /// Width of the center slot's box, as a fraction of the bounds.
     ///
-    /// Bounded from above by the strip that the carousel is meant to show:
-    /// the center window plus its two neighbours have to sit wholly inside
-    /// the bounds, and the pair beyond them has to still straddle an edge
-    /// rather than being pushed off screen entirely. Since slot spacing grows
-    /// with the box, widening the center slot walks the outer windows off the
-    /// edges; at the default side_scale and gap anything past ~0.33 does.
-    float center_width_fraction = 0.30f;
+    /// This is a ceiling on the drawn size rather than a slot the strip is
+    /// spaced by: windows are packed against their neighbours' real edges, so
+    /// widening the center slot makes the front window bigger without pushing
+    /// the ones beside it any further out. Past 1.0 the center window starts
+    /// hanging off the edges of the bounds itself.
+    float center_width_fraction = 0.82f;
     /// Height of the center slot's box, as a fraction of the bounds.
     float center_height_fraction = 0.82f;
     /// Every step away from the center multiplies the slot box by this.
     float side_scale = 0.65f;
     /// Opacity of a window a full step (or more) away from the center.
     float dim = 0.75f;
-    /// Minimum horizontal gap between neighbouring windows.
+    /// Horizontal gap between the facing edges of neighbouring windows.
     float gap = 16.f;
+    /// Multiplier on the edge-to-edge distance between neighbours. One packs
+    /// them exactly \p gap apart; below one they overlap, and the renderer has
+    /// to paint the strip outside-in for the center window to land on top.
+    float spacing = 1.f;
     /// A window is never drawn larger than this fraction of its real size.
     float max_scale = 1.f;
+};
+
+/// The strip of workspace tiles that the overview's second level uses.
+///
+/// A tile is a picture of a whole output rather than of a single window, so the
+/// center slot is wide enough to hold one comfortably and the neighbours are
+/// meant to be cut off by the edges of the screen rather than shrunk away to
+/// nothing: they are barely scaled down, and they advertise that there is more
+/// of the desktop off to either side.
+inline constexpr Options workspace_options {
+    .center_width_fraction = 0.62f,
+    .center_height_fraction = 0.62f,
+    .side_scale = 0.85f,
+    .dim = 0.55f,
+    .gap = 24.f,
+    .spacing = 1.f,
+    .max_scale = 1.f
 };
 
 /// Lays \p windows out on a horizontal carousel inside \p bounds, with the
@@ -77,9 +109,10 @@ struct Options
 /// nothing beyond either end.
 ///
 /// Every window is scaled uniformly so its aspect ratio is preserved, fitted
-/// into its slot's box, and never blown up past \p Options::max_scale. Slot
-/// spacing is derived from the slot boxes rather than from the fitted window
-/// sizes, which guarantees that no two placements overlap at any \p position.
+/// into its slot's box, and never blown up past \p Options::max_scale. The
+/// strip is then packed from those fitted sizes, each window sitting exactly
+/// \p Options::gap from the edge of the one beside it, so no two placements
+/// overlap at any \p position as long as \p Options::spacing is at least one.
 ///
 /// Windows several steps from the center land entirely outside \p bounds and
 /// are left there for the renderer to cull; callers do not need to trim the

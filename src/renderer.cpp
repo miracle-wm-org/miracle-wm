@@ -764,46 +764,64 @@ Renderer::DrawData Renderer::get_draw_data(
         true, renderable.alpha(), RenderData { .transform = renderable.transformation(), .workspace_transform = glm::mat4(1.0), .output_area = viewport }
     };
     if (tracked)
-    {
         result.data = *tracked;
-        if (placement)
+
+    // A placement applies whether or not the surface is tracked: panels and
+    // wallpapers deliberately have no render data of their own, but an override
+    // still needs to be able to relocate them.
+    if (placement)
+    {
+        result.placement = placement;
+        result.override_real = placement_real;
+        result.alpha *= placement->opacity;
+
+        // A placement that has faded out entirely - the other levels of an
+        // overview, say - costs nothing to skip.
+        if (result.alpha <= 0.001f)
         {
-            result.placement = placement;
-            result.override_real = placement_real;
-            result.alpha *= placement->opacity;
-
-            // The override may draw the surface far from its tracked output
-            // area, so cull against where the placement actually lands: the
-            // real rectangle moved to the placement position, then transformed
-            // about its center.
-            glm::vec2 const size {
-                static_cast<float>(std::max(placement_real.size.width.as_value(), 1)),
-                static_cast<float>(std::max(placement_real.size.height.as_value(), 1))
-            };
-            glm::vec2 const center = placement->position + size / 2.f;
-            glm::vec2 min = center, max = center;
-            for (auto const& corner : {
-                     placement->position,
-                     glm::vec2 { placement->position.x + size.x, placement->position.y          },
-                     glm::vec2 { placement->position.x,          placement->position.y + size.y },
-                     placement->position + size
-            })
-            {
-                glm::vec2 const transformed = glm::vec2(placement->transformation * glm::vec4(corner - center, 0.f, 1.f)) + center;
-                min = glm::min(min, transformed);
-                max = glm::max(max, transformed);
-            }
-
-            geom::Rectangle const placement_rect {
-                geom::Point { static_cast<int>(min.x),         static_cast<int>(min.y)         },
-                geom::Size { static_cast<int>(max.x - min.x), static_cast<int>(max.y - min.y) }
-            };
-            if (!placement_rect.overlaps(viewport))
-                result.enabled = false;
+            result.enabled = false;
+            return result;
         }
-        else if (tracked->output_area && !tracked->output_area->overlaps(viewport))
+
+        // The override may draw the surface far from its tracked output
+        // area, so cull against where the placement actually lands: the
+        // real rectangle moved to the placement position, then transformed
+        // about its center.
+        glm::vec2 const size {
+            static_cast<float>(std::max(placement_real.size.width.as_value(), 1)),
+            static_cast<float>(std::max(placement_real.size.height.as_value(), 1))
+        };
+        glm::vec2 const center = placement->position + size / 2.f;
+        glm::vec2 min = center, max = center;
+        for (auto const& corner : {
+                 placement->position,
+                 glm::vec2 { placement->position.x + size.x, placement->position.y          },
+                 glm::vec2 { placement->position.x,          placement->position.y + size.y },
+                 placement->position + size
+        })
+        {
+            glm::vec2 const transformed = glm::vec2(placement->transformation * glm::vec4(corner - center, 0.f, 1.f)) + center;
+            min = glm::min(min, transformed);
+            max = glm::max(max, transformed);
+        }
+
+        geom::Rectangle const placement_rect {
+            geom::Point { static_cast<int>(min.x),         static_cast<int>(min.y)         },
+            geom::Size { static_cast<int>(max.x - min.x), static_cast<int>(max.y - min.y) }
+        };
+        // The override may lay a placement out so that it runs off the edge of
+        // the output it belongs to - a carousel hangs its neighbours past both
+        // sides on purpose - and only the part inside that output is real. Cull
+        // against that, so a placement never appears on the output next door;
+        // whatever hangs off the edge is clipped by the framebuffer anyway.
+        auto const visible = placement->clip
+            ? mir::geometry::generic::intersection_of(placement_rect, *placement->clip)
+            : placement_rect;
+        if (!visible.overlaps(viewport))
             result.enabled = false;
     }
+    else if (tracked && tracked->output_area && !tracked->output_area->overlaps(viewport))
+        result.enabled = false;
 
     return result;
 }
@@ -838,7 +856,6 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
     // that follow. The first renderable of a group also draws the border, if needed.
     mir::scene::Surface const* group_surface = nullptr;
     RenderData const* group_data = nullptr;
-    std::optional<SceneOverridePlacement> group_placement;
     geom::Rectangle group_real;
     bool first_renderable = true;
     for (auto const& r : renderables)
@@ -853,22 +870,36 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
         {
             group_surface = surface;
             group_data = find_render_data(surface);
-            group_placement = std::nullopt;
-            if (scene_override && group_data && group_data->window)
+            group_placements.clear();
+            if (scene_override && surface)
             {
-                group_placement = scene_override->place(group_data->window);
                 group_real = geom::Rectangle { surface->top_left(), surface->window_size() };
+                scene_override->place(*surface, group_real, group_placements);
             }
         }
 
-        auto const data = get_draw_data(*r, group_data, group_placement, group_real);
-        if (!data.enabled)
+        auto const draw_once = [&](std::optional<SceneOverridePlacement> const& placement)
+        {
+            auto const data = get_draw_data(*r, group_data, placement, group_real);
+            if (!data.enabled)
+                return;
+
+            draw(*r, data);
+
+            if (new_group && data.data.needs_outline && surface)
+                draw_border(*surface, data);
+        };
+
+        if (group_placements.empty())
+        {
+            draw_once(std::nullopt);
             continue;
+        }
 
-        draw(*r, data);
-
-        if (new_group && data.data.needs_outline && surface)
-            draw_border(*surface, data);
+        // More than one placement means the override wants this surface cloned:
+        // the same panel or wallpaper drawn once per workspace tile.
+        for (auto const& placement : group_placements)
+            draw_once(placement);
     }
 
     auto output = output_surface->commit();

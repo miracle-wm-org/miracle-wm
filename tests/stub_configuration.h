@@ -90,8 +90,13 @@ namespace test
 
         [[nodiscard]] bool are_animations_enabled() const override
         {
-            return false;
+            return animations_enabled;
         }
+
+        /// Off by default, because most tests want the instant code paths.
+        /// Flip it when the thing under test is the difference between an
+        /// animated and an immediate transition.
+        bool animations_enabled = false;
 
         [[nodiscard]] WorkspaceConfig get_workspace_config(std::optional<int> const& num, std::optional<std::string> const& name) const override
         {

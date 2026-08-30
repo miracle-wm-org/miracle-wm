@@ -15,20 +15,23 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include "carousel_controller.h"
+#include "overview_controller.h"
 
 #include "abstract_command_controller.h"
-#include "carousel_scene_override.h"
+#include "abstract_output.h"
+#include "abstract_workspace.h"
 #include "compositor_state.h"
 #include "config.h"
 #include "constants.h"
+#include "output_manager.h"
+#include "overview_scene_override.h"
 #include "scene_override.h"
 
 #include <miral/toolkit_event.h>
 
 using namespace miracle;
 
-CarouselController::CarouselController(
+OverviewController::OverviewController(
     std::shared_ptr<CompositorState> const& compositor_state,
     std::shared_ptr<OutputManager> const& output_manager,
     std::shared_ptr<Animator> const& animator,
@@ -44,12 +47,12 @@ CarouselController::CarouselController(
 {
 }
 
-void CarouselController::break_tap()
+void OverviewController::break_tap()
 {
     tap_latched = false;
 }
 
-void CarouselController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
+void OverviewController::handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers)
 {
     auto const action = miral::toolkit::mir_keyboard_event_action(event);
     auto const keysym = miral::toolkit::mir_keyboard_event_keysym(event);
@@ -65,31 +68,18 @@ void CarouselController::handle_keyboard_event(MirKeyboardEvent const* event, un
     }
 }
 
-void CarouselController::try_start()
+void OverviewController::try_start()
 {
     if (compositor_state->mode() != WindowManagerMode::normal)
         return;
 
-    auto scene_override = CarouselSceneOverride::create(
+    auto scene_override = OverviewSceneOverride::create(
         *output_manager,
         animator,
         window_controller,
         compositor_state,
         config,
-        [this]
-    {
-        // Runs on the main thread as soon as the carousel begins going away, so
-        // that the mode is broadcast from the main loop and the rest of the
-        // compositor is usable again while the outro plays.
-        command_controller->set_mode(WindowManagerMode::normal);
-    },
-        [this]
-    {
-        // Runs on the animator thread when the outro completes; only touches
-        // the (thread-safe) manager and the atomic token.
-        if (auto const released = token.exchange(0))
-            compositor_state->scene_override_manager()->try_release_override(released);
-    });
+        *this);
     if (!scene_override)
         return;
 
@@ -100,4 +90,41 @@ void CarouselController::try_start()
         command_controller->set_mode(WindowManagerMode::overview);
         raw->start();
     }
+}
+
+void OverviewController::on_exit_started()
+{
+    command_controller->set_mode(WindowManagerMode::normal);
+}
+
+void OverviewController::on_workspace_selected(uint32_t workspace_id)
+{
+    command_controller->select_workspace_by_id(workspace_id, false);
+}
+
+void OverviewController::on_output_selected(int output_id)
+{
+    auto const focused = output_manager->focused();
+    if (focused && focused->id() == output_id)
+        return;
+
+    if (focused)
+        output_manager->unfocus(focused->id());
+    output_manager->focus(output_id);
+
+    for (auto const& output : output_manager->outputs())
+    {
+        if (output->id() != output_id)
+            continue;
+
+        if (auto const active = output->active())
+            command_controller->select_workspace_by_id(active->id(), false);
+        break;
+    }
+}
+
+void OverviewController::on_done()
+{
+    if (auto const released = token.exchange(0))
+        compositor_state->scene_override_manager()->try_release_override(released);
 }

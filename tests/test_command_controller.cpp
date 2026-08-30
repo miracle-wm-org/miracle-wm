@@ -396,8 +396,8 @@ public:
         ON_CALL(*output2, get_workspaces()).WillByDefault(Return(workspaces2));
         ON_CALL(*output1, active()).WillByDefault(Return(workspace1));
         ON_CALL(*output2, active()).WillByDefault(Return(workspace2));
-        ON_CALL(*output1, advise_workspace_active(_, _)).WillByDefault(Return(true));
-        ON_CALL(*output2, advise_workspace_active(_, _)).WillByDefault(Return(true));
+        ON_CALL(*output1, advise_workspace_active(_, _, _)).WillByDefault(Return(true));
+        ON_CALL(*output2, advise_workspace_active(_, _, _)).WillByDefault(Return(true));
 
         // Wiring needed when a container is actually constructed (create_container ->
         // FreestyleWindowContainer -> associate_to_window reads the output geometry/transform).

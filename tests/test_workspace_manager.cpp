@@ -86,7 +86,7 @@ public:
         }));
 
         ON_CALL(*target, advise_workspace_active)
-            .WillByDefault(Invoke([&target_workspaces, &target_active](WorkspaceManager& manager, uint32_t id) -> bool
+            .WillByDefault(Invoke([&target_workspaces, &target_active](WorkspaceManager& manager, uint32_t id, bool) -> bool
         {
             auto iter = std::ranges::find_if(target_workspaces, [id](const auto& workspace)
             {
@@ -267,6 +267,26 @@ TEST_F(WorkspaceManagerTest, RequestWorkspaceBackAndForthDisabled)
     EXPECT_CALL(*config, get_workspace_back_and_forth).WillOnce(Return(false));
     workspace_manager.request_workspace(output.get(), 1);
     EXPECT_TRUE(active_workspace->num() == 1);
+}
+
+TEST_F(WorkspaceManagerTest, RequestFocusAnimatesTheSwitchByDefault)
+{
+    create_output();
+    auto const id = workspaces.front()->id();
+
+    EXPECT_CALL(*output, advise_workspace_active(_, id, true));
+    workspace_manager.request_focus(id);
+}
+
+TEST_F(WorkspaceManagerTest, RequestFocusPassesTheAnimateFlagThrough)
+{
+    create_output();
+    auto const id = workspaces.front()->id();
+
+    // An effect that has already brought the workspace on screen itself asks for
+    // a silent switch, so that the slide does not play over the top of it.
+    EXPECT_CALL(*output, advise_workspace_active(_, id, false));
+    workspace_manager.request_focus(id, false);
 }
 
 TEST_F(WorkspaceManagerTest, RequestFocusSelectsAWindowOnTheAlreadyActiveWorkspace)

@@ -152,8 +152,18 @@ public:
 
     void move_to_offscreen_workspace(miral::Window const&) override { }
     void move_to_onscreen_workspace(miral::Window const&) override { }
-    miracle::RestoreResult hide(miral::Window const&) override { return { mir_window_state_restored }; }
-    void show(miral::Window const&, miracle::RestoreResult const&) override { }
+    miracle::RestoreResult hide(miral::Window const& window) override
+    {
+        miracle::RestoreResult const result { .state = get_state(window) };
+        change_state(window, mir_window_state_hidden);
+        return result;
+    }
+
+    void show(miral::Window const& window, miracle::RestoreResult const& result) override
+    {
+        change_state(window,
+            result.state == mir_window_state_hidden ? mir_window_state_restored : result.state);
+    }
 
 private:
     std::vector<StubWindowData>& pairs;

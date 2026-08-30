@@ -180,7 +180,10 @@ void Workspace::recalculate_area()
     // them now would push geometry at unmapped clients (and the windows may drift from
     // their containers in the meantime). Instead, we note that a recalculation is pending
     // and apply it the moment that this workspace is shown again.
-    if (sh_output && sh_output->active().get() != this)
+    //
+    // A workspace that an effect has forced into the scene is not the active one,
+    // but its containers are shown, so it can be resized like any other.
+    if (sh_output && sh_output->active().get() != this && !sync.lock()->containers_shown)
     {
         needs_area_recalculation_ = true;
         return;
@@ -303,7 +306,10 @@ void Workspace::show(geom::Point const& origin)
 
 void Workspace::hide(geom::Point const& end)
 {
-    if (!config->are_animations_enabled())
+    // An end of (0, 0) means "do not slide anywhere", which is how a caller that
+    // has already animated this workspace off screen itself asks to simply have
+    // it put away. Mirrors the same convention in [show].
+    if (!config->are_animations_enabled() || end == geom::Point(0, 0))
     {
         on_animation_end(true);
         return;
@@ -579,21 +585,41 @@ float Workspace::alpha() const
     return sync.lock()->alpha_;
 }
 
+void Workspace::set_containers_shown(bool shown)
+{
+    sync.lock()->containers_shown = shown;
+    if (!shown)
+    {
+        for_each_container([](auto const& container)
+        {
+            container->hide();
+        });
+        return;
+    }
+
+    // The windows are entering the scene, so a geometry change that was deferred
+    // while they were out of it applies now.
+    if (needs_area_recalculation_)
+        recalculate_area();
+
+    // HACK: miral will try to select a newly visible window if none is currently
+    // selected. In most instances, we do not want this, as we would rather
+    // select our [last_selected_container] instead. To work around this, we set
+    // a flag that tells miral not to select the last focused container while we
+    // are in the process of becoming visible.
+    sync.lock()->is_showing = true;
+    for_each_container([](auto const& container)
+    {
+        container->show();
+    });
+    sync.lock()->is_showing = false;
+}
+
 void Workspace::on_animation_start(bool is_hiding)
 {
     if (!is_hiding)
     {
-        // HACK: miral will try to select a newly visible window if none is currently
-        // selected. In most instances, we do not want this, as we would rather
-        // select our [last_selected_container] instead. To work around this, we set
-        // a flag that tells miral not to select the last focused container while we
-        // are in the process of becoming visible.
-        sync.lock()->is_showing = true;
-        for_each_container([](auto const& container)
-        {
-            container->show();
-        });
-        sync.lock()->is_showing = false;
+        set_containers_shown(true);
 
         select_window();
     }
@@ -626,12 +652,7 @@ void Workspace::select_window()
 void Workspace::on_animation_end(bool is_hiding)
 {
     if (is_hiding)
-    {
-        for_each_container([](auto const& container)
-        {
-            container->hide();
-        });
-    }
+        set_containers_shown(false);
 }
 
 ParentContainer* Workspace::get_layout_container() const

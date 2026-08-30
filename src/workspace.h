@@ -65,6 +65,7 @@ public:
     bool add_to_root(Container& to_move) override;
     void show(mir::geometry::Point const& origin) override;
     void hide(mir::geometry::Point const& end) override;
+    void set_containers_shown(bool shown) override;
     bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const override;
     void advise_focus_gained(std::shared_ptr<Container> const& container) override;
     void select_window() override;
@@ -138,6 +139,10 @@ private:
         std::optional<Gaps> workspace_inner_gaps;
         glm::mat4 transform_ = glm::mat4(1.f);
         float alpha_ = 1.f;
+        /// Whether the windows of this workspace are currently in the scene.
+        /// True for the active workspace, and for one that an effect has forced
+        /// into the scene via [set_containers_shown].
+        bool containers_shown = false;
     };
 
     mir::Synchronised<State> sync;

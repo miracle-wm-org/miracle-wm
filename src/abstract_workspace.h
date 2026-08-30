@@ -51,6 +51,16 @@ public:
     /// \param end the position that the workspace will end up at.
     virtual void hide(mir::geometry::Point const& end) = 0;
 
+    /// Shows or hides every container on the workspace, without any of the
+    /// focus handling or animation that a real workspace switch performs.
+    ///
+    /// This is how a workspace that is not the active one is forced into the
+    /// scene so that an effect can render it. Prefer holding a
+    /// [WorkspacePreview] over calling this directly, so that the reveal is
+    /// undone exactly once, along with the transform and alpha that the
+    /// workspace was left with.
+    virtual void set_containers_shown(bool shown) = 0;
+
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.
     virtual bool for_each_window(std::function<bool(std::shared_ptr<WindowContainer>)> const&) const = 0;

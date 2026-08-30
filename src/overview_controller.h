@@ -15,8 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#ifndef CAROUSEL_CONTROLLER_H
-#define CAROUSEL_CONTROLLER_H
+#ifndef OVERVIEW_CONTROLLER_H
+#define OVERVIEW_CONTROLLER_H
+
+#include "overview_scene_override_delegate.h"
 
 #include <atomic>
 #include <cstdint>
@@ -32,12 +34,12 @@ class Config;
 class OutputManager;
 class WindowController;
 
-/// Owns the window management side of the carousel scene override: the token of
+/// Owns the window management side of the overview scene override: the token of
 /// the active override, and the gesture that enters it.
-class CarouselController
+class OverviewController : public OverviewSceneOverrideDelegate
 {
 public:
-    CarouselController(
+    OverviewController(
         std::shared_ptr<CompositorState> const& compositor_state,
         std::shared_ptr<OutputManager> const& output_manager,
         std::shared_ptr<Animator> const& animator,
@@ -47,7 +49,7 @@ public:
 
     /// Watches for a "tap" of the primary action modifier - pressed and
     /// released with no other key or pointer button in between - and enters the
-    /// carousel when one completes.
+    /// overview when one completes.
     ///
     /// \p modifiers is the event's modifier mask, already reduced by
     /// [MODIFIER_MASK]. The event is never consumed, so clients keep a
@@ -55,13 +57,18 @@ public:
     void handle_keyboard_event(MirKeyboardEvent const* event, unsigned int modifiers);
 
     /// Breaks the pending tap, so that the next modifier release does not enter
-    /// the carousel. Called for any input that is not part of the gesture.
+    /// the overview. Called for any input that is not part of the gesture.
     void break_tap();
 
 private:
-    /// Enters the carousel scene override, if possible. Every output carousels
+    /// Enters the overview scene override, if possible. Every output overviews
     /// the windows on its own active workspace.
     void try_start();
+
+    void on_exit_started() override;
+    void on_workspace_selected(uint32_t workspace_id) override;
+    void on_output_selected(int output_id) override;
+    void on_done() override;
 
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<OutputManager> output_manager;
@@ -70,12 +77,12 @@ private:
     std::shared_ptr<Config> config;
     std::shared_ptr<AbstractCommandController> command_controller;
 
-    /// Token of the active carousel override (0 = none). Atomic because the
+    /// Token of the active overview override (0 = none). Atomic because the
     /// override's completion callback runs on the animator thread.
     std::atomic<uint32_t> token { 0 };
 
     /// True while the primary action modifier is held down without any other
-    /// key or button press in between; releasing it then triggers the carousel.
+    /// key or button press in between; releasing it then triggers the overview.
     bool tap_latched = false;
 };
 }

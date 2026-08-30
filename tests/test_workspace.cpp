@@ -90,7 +90,7 @@ public:
             0,
             0,
             "0",
-            std::make_shared<test::StubConfiguration>(),
+            config,
             window_controller,
             state,
             registry,
@@ -130,6 +130,7 @@ public:
     std::shared_ptr<test::MockOutput> output;
     std::shared_ptr<StubWindowController> window_controller;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
+    std::shared_ptr<test::StubConfiguration> config = std::make_shared<test::StubConfiguration>();
     std::shared_ptr<WorkspaceObserverRegistrar> registry = std::make_shared<WorkspaceObserverRegistrar>();
     std::shared_ptr<Animator> animator = std::make_shared<Animator>();
     std::shared_ptr<PluginManager> plugin_manager = make_null_plugin_manager();
@@ -518,6 +519,64 @@ TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)
 
     EXPECT_EQ(workspace->alpha(), 1.f);
     EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
+}
+
+TEST_F(WorkspaceTest, ShowingContainersPutsTheWindowsOfAHiddenWorkspaceBackIntoTheScene)
+{
+    auto leaf = create_leaf();
+    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
+    ASSERT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+
+    // How an effect forces a workspace that is not the active one into the
+    // scene, without any of the focus handling of a real workspace switch.
+    workspace->set_containers_shown(true);
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
+
+    workspace->set_containers_shown(false);
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+}
+
+TEST_F(WorkspaceTest, ShowingContainersAppliesADeferredAreaRecalculation)
+{
+    auto leaf = create_leaf();
+    workspace->set_containers_shown(false);
+
+    // The workspace is not the active one and its windows are out of the scene,
+    // so the recalculation is deferred rather than pushed at hidden clients.
+    ON_CALL(*output, get_area())
+        .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
+    workspace->recalculate_area();
+    ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
+
+    workspace->set_containers_shown(true);
+    EXPECT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
+    EXPECT_EQ(leaf->get_logical_area(), RESIZED_OUTPUT_SIZE);
+}
+
+TEST_F(WorkspaceTest, HideWithNoEndPointIsInstantEvenWhenAnimationsAreEnabled)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    // An end of (0, 0) means "do not slide anywhere", which is how a caller that
+    // has already animated this workspace off screen itself asks to have it put
+    // away. The same convention [show] uses for its origin.
+    workspace->hide(geom::Point(0, 0));
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
+}
+
+TEST_F(WorkspaceTest, HideWithAnEndPointAnimatesWhenAnimationsAreEnabled)
+{
+    config->animations_enabled = true;
+    auto leaf = create_leaf();
+
+    // Nothing drives the animator in this fixture, so an animated hide leaves
+    // the windows exactly where they are: the containers are only hidden once
+    // the animation completes.
+    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
+
+    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
 }
 
 TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)

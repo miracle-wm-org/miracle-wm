@@ -86,7 +86,7 @@ bool WorkspaceManager::request_workspace(
         .num = num,
         .name = workspace_config.name,
         .registrar = registry });
-    request_focus(id, focus_output);
+    request_focus(id, true, focus_output);
     registry->advise_created(id);
     return true;
 }
@@ -244,12 +244,12 @@ bool WorkspaceManager::delete_workspace(uint32_t id)
     return true;
 }
 
-bool WorkspaceManager::request_focus(uint32_t id)
+bool WorkspaceManager::request_focus(uint32_t id, bool animate)
 {
-    return request_focus(id, true);
+    return request_focus(id, animate, true);
 }
 
-bool WorkspaceManager::request_focus(uint32_t id, bool focus_output)
+bool WorkspaceManager::request_focus(uint32_t id, bool animate, bool focus_output)
 {
     auto const& existing = workspace(id);
     if (!existing)
@@ -282,7 +282,7 @@ bool WorkspaceManager::request_focus(uint32_t id, bool focus_output)
         output_manager->focus(output->id());
     }
 
-    if (output->advise_workspace_active(*this, id))
+    if (output->advise_workspace_active(*this, id, animate))
     {
         existing->select_window();
     }
