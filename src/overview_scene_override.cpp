@@ -319,7 +319,10 @@ std::unique_ptr<OverviewSceneOverride> OverviewSceneOverride::create(
         });
     }
 
-    if (entries.empty())
+    // A desktop with no windows is still worth an overview: its workspaces and its
+    // furniture are what the workspace strip is made of. Only a scene with nothing
+    // in it at all has nothing to draw at any level.
+    if (entries.empty() && shell_entries.empty())
         return nullptr;
 
     return std::unique_ptr<OverviewSceneOverride>(new OverviewSceneOverride(
@@ -724,9 +727,16 @@ void OverviewSceneOverride::enter_workspaces()
 
     if (needs_reveal)
     {
-        // Un-hiding a window can hand it the focus, so remember what had it.
+        // Un-hiding a window can hand it the focus, so remember what had it -
+        // including nothing at all, which is the case on a desktop with no windows.
+        // A default constructed window is miral's "focus nothing", so the restore
+        // works the same either way.
+        focus_before_reveal = miral::Window {};
         if (auto const focused = compositor_state->focused_container())
-            focus_before_reveal = focused->window();
+        {
+            if (auto const window = focused->window())
+                focus_before_reveal = *window;
+        }
 
         std::vector<std::shared_ptr<AbstractWorkspace>> to_reveal;
         for (auto const& info : groups)
@@ -834,6 +844,12 @@ void OverviewSceneOverride::commit_and_exit()
 
     if (centered)
         window_controller->select_active_window(*centered);
+    else if (focus_before_reveal)
+    {
+        // Nothing to hand the focus to, and the reveal may have handed it to a
+        // window that is about to go back into hiding.
+        window_controller->select_active_window(*focus_before_reveal);
+    }
 
     begin_exit();
 }
@@ -848,14 +864,17 @@ void OverviewSceneOverride::commit_workspace_and_exit()
 
         group = state->active_group;
         auto const position = state->groups[group].workspaces.position;
-        if (position >= groups[group].workspaces.size())
-            return;
 
         // The outro grows this tile until it fills the output, so this is where
         // every entry on this output has to land - and everything that is not on
-        // it fades away instead of flying home.
-        state->groups[group].exit_workspace = position;
-        selected_workspace = groups[group].workspaces[position].id;
+        // it fades away instead of flying home. A position that points at no
+        // workspace still exits, back to whatever was already active, rather than
+        // leaving the overview up with nothing to show for the input.
+        if (position < groups[group].workspaces.size())
+        {
+            state->groups[group].exit_workspace = position;
+            selected_workspace = groups[group].workspaces[position].id;
+        }
     }
 
     delegate->on_output_selected(groups[group].output_id);
@@ -1229,43 +1248,58 @@ void OverviewSceneOverride::handle_window_closed(miral::Window const& window)
             return;
 
         auto const* key = surface_key(window);
-        state->shell_entries.erase(key);
 
-        auto const it = state->entries.find(key);
-        if (it == state->entries.end())
-            return;
-
-        group = it->second.group;
-        auto const index = it->second.window_index;
-        state->entries.erase(it);
-        std::erase(state->order, key);
-
-        if (index)
+        // The group comes from whichever kind of entry the surface was, so that
+        // losing a panel retargets the output it belonged to rather than the first.
+        bool was_shell = false;
+        if (auto const it = state->shell_entries.find(key); it != state->shell_entries.end())
         {
-            // Close the gap the window left behind, and keep the position
-            // pointing at a window that still exists.
-            for (auto& [k, e] : state->entries)
-            {
-                if (e.group == group && e.window_index && *e.window_index > *index)
-                    --*e.window_index;
-            }
-
-            auto& strip = state->groups[group].windows;
-            strip.count--;
-            if (strip.count == 0)
-                strip.position = 0;
-            else if (strip.position > *index || strip.position >= strip.count)
-                strip.position--;
+            was_shell = true;
+            group = it->second.group;
+            state->shell_entries.erase(it);
         }
 
-        empty = state->entries.empty();
+        auto const it = state->entries.find(key);
+        if (it == state->entries.end() && !was_shell)
+            return;
+
+        if (it != state->entries.end())
+        {
+            group = it->second.group;
+            auto const index = it->second.window_index;
+            state->entries.erase(it);
+            std::erase(state->order, key);
+
+            if (index)
+            {
+                // Close the gap the window left behind, and keep the position
+                // pointing at a window that still exists.
+                for (auto& [k, e] : state->entries)
+                {
+                    if (e.group == group && e.window_index && *e.window_index > *index)
+                        --*e.window_index;
+                }
+
+                auto& strip = state->groups[group].windows;
+                strip.count--;
+                if (strip.count == 0)
+                    strip.position = 0;
+                else if (strip.position > *index || strip.position >= strip.count)
+                    strip.position--;
+            }
+        }
+
+        // An empty window strip is a perfectly good overview - the workspace strip
+        // is still there to be reached - so the same test that decides whether the
+        // overview is worth opening decides whether it is worth keeping.
+        empty = state->entries.empty() && state->shell_entries.empty();
         if (!empty)
             retarget(group);
     }
 
     if (empty)
     {
-        // Nothing left to show.
+        // Nothing left to draw at any level.
         cancel();
         return;
     }

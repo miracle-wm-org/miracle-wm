@@ -196,7 +196,9 @@ public:
     /// \p delegate is what the overview acts on the desktop through, and must
     /// outlive the override.
     ///
-    /// \returns the override, or nullptr if there is nothing to show.
+    /// \returns the override, or nullptr if no output carries a workspace, or the
+    ///          scene is empty - no windows and no furniture - and so there would
+    ///          be nothing to draw at any level.
     static std::unique_ptr<OverviewSceneOverride> create(
         OutputManager& output_manager,
         std::shared_ptr<Animator> const& animator,
