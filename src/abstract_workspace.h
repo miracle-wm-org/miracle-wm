@@ -51,26 +51,15 @@ public:
     /// \param end the position that the workspace will end up at.
     virtual void hide(mir::geometry::Point const& end) = 0;
 
-    /// Force every window on this workspace into the scene without making it
-    /// the output's active workspace, so that an effect can render it.
+    /// Shows or hides every container on the workspace, without any of the
+    /// focus handling or animation that a real workspace switch performs.
     ///
-    /// Unlike [show], no animation runs and no focus selection happens: the
-    /// workspace transform and alpha are snapped to their shown values and
-    /// every container is un-hidden. A workspace that is already in the scene -
-    /// because it is the active one, or because it is already being previewed -
-    /// is left alone.
-    ///
-    /// Prefer holding a [WorkspacePreview] over calling this directly, so that
-    /// the reveal is guaranteed to be undone exactly once.
-    ///
-    /// \returns whether this call is what revealed the workspace
-    virtual bool begin_preview() = 0;
-
-    /// Undo [begin_preview], restoring the visibility, transform and alpha that
-    /// the workspace had beforehand.
-    ///
-    /// A no-op on a workspace that is not currently being previewed.
-    virtual void end_preview() = 0;
+    /// This is how a workspace that is not the active one is forced into the
+    /// scene so that an effect can render it. Prefer holding a
+    /// [WorkspacePreview] over calling this directly, so that the reveal is
+    /// undone exactly once, along with the transform and alpha that the
+    /// workspace was left with.
+    virtual void set_containers_shown(bool shown) = 0;
 
     /// Iterates all containers on this workspace that represent a window until the predicate is satisfied.
     /// Returns true if the predicate returned true.

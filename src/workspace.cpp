@@ -181,9 +181,9 @@ void Workspace::recalculate_area()
     // their containers in the meantime). Instead, we note that a recalculation is pending
     // and apply it the moment that this workspace is shown again.
     //
-    // A workspace that is being previewed is not the active one, but its
-    // containers are shown, so it can be resized like any other.
-    if (sh_output && sh_output->active().get() != this && !sync.lock()->is_previewing)
+    // A workspace that an effect has forced into the scene is not the active one,
+    // but its containers are shown, so it can be resized like any other.
+    if (sh_output && sh_output->active().get() != this && !sync.lock()->containers_shown)
     {
         needs_area_recalculation_ = true;
         return;
@@ -587,6 +587,7 @@ float Workspace::alpha() const
 
 void Workspace::set_containers_shown(bool shown)
 {
+    sync.lock()->containers_shown = shown;
     if (!shown)
     {
         for_each_container([](auto const& container)
@@ -595,6 +596,11 @@ void Workspace::set_containers_shown(bool shown)
         });
         return;
     }
+
+    // The windows are entering the scene, so a geometry change that was deferred
+    // while they were out of it applies now.
+    if (needs_area_recalculation_)
+        recalculate_area();
 
     // HACK: miral will try to select a newly visible window if none is currently
     // selected. In most instances, we do not want this, as we would rather
@@ -647,65 +653,6 @@ void Workspace::on_animation_end(bool is_hiding)
 {
     if (is_hiding)
         set_containers_shown(false);
-}
-
-bool Workspace::begin_preview()
-{
-    if (sync.lock()->is_previewing)
-        return false;
-
-    // The active workspace is already in the scene. Previewing it would walk
-    // every container and call show(), which clobbers the state of windows that
-    // were never hidden in the first place.
-    auto const sh_output = output.lock();
-    if (sh_output && sh_output->active().get() == this)
-        return false;
-
-    {
-        auto const lock = sync.lock();
-        lock->is_previewing = true;
-        lock->preview_transform = lock->transform_;
-        lock->preview_alpha = lock->alpha_;
-    }
-
-    // The output area may have changed while we were hidden, in which case the
-    // recalculation was deferred until we became visible again - which is now.
-    // [is_previewing] is already set, so this is no longer deferred.
-    if (needs_area_recalculation_)
-        recalculate_area();
-
-    // A hidden workspace was left translated off screen and fully transparent by
-    // its hide animation, so snap it back before un-hiding its windows.
-    transform(glm::mat4(1.f));
-    alpha(1.f);
-    set_containers_shown(true);
-    return true;
-}
-
-void Workspace::end_preview()
-{
-    glm::mat4 transform_to_restore(1.f);
-    float alpha_to_restore = 1.f;
-    {
-        auto const lock = sync.lock();
-        if (!lock->is_previewing)
-            return;
-
-        lock->is_previewing = false;
-        transform_to_restore = lock->preview_transform;
-        alpha_to_restore = lock->preview_alpha;
-    }
-
-    // A workspace that became the active one while it was being previewed is
-    // legitimately in the scene now, so the preview state is simply dropped:
-    // hiding it again would undo the switch that adopted it.
-    auto const sh_output = output.lock();
-    if (sh_output && sh_output->active().get() == this)
-        return;
-
-    set_containers_shown(false);
-    transform(transform_to_restore);
-    alpha(alpha_to_restore);
 }
 
 ParentContainer* Workspace::get_layout_container() const

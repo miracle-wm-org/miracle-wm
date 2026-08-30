@@ -16,8 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
 #include "workspace_preview.h"
-
+#include "abstract_output.h"
 #include "abstract_workspace.h"
+
+#include <algorithm>
 
 using namespace miracle;
 
@@ -33,24 +35,51 @@ void WorkspacePreview::acquire(std::vector<std::shared_ptr<AbstractWorkspace>> c
         if (!workspace)
             continue;
 
-        // [begin_preview] refuses workspaces that are already in the scene, so
-        // only the ones we are actually responsible for end up on the list.
-        if (workspace->begin_preview())
-            revealed.push_back(workspace);
+        // The active workspace is already in the scene, and revealing it would
+        // clobber the state of windows that were never hidden in the first place.
+        auto const sh_output = workspace->get_output();
+        if (sh_output && sh_output->active() == workspace)
+            continue;
+
+        auto const already_acquired = std::ranges::find_if(revealed, [&](auto const& r)
+        {
+            return workspace == r.workspace.lock();
+        }) != revealed.end();
+
+        if (already_acquired)
+            continue;
+
+        revealed.push_back({ workspace, workspace->transform(), workspace->alpha() });
+
+        // A hidden workspace was left translated off screen and fully transparent
+        // by its hide animation, so snap it back before un-hiding its windows.
+        workspace->transform(glm::mat4(1.f));
+        workspace->alpha(1.f);
+        workspace->set_containers_shown(true);
     }
 }
 
 void WorkspacePreview::release()
 {
-    // Moved out first so that a re-entrant release - or one that runs while a
-    // workspace is being deleted - has nothing left to do.
     auto const to_conceal = std::move(revealed);
     revealed.clear();
 
-    for (auto const& weak : to_conceal)
+    for (auto const& entry : to_conceal)
     {
-        if (auto const workspace = weak.lock())
-            workspace->end_preview();
+        auto const workspace = entry.workspace.lock();
+        if (!workspace)
+            continue;
+
+        // A workspace that became the active one while it was being previewed is
+        // legitimately in the scene now, so the reveal is simply dropped: hiding
+        // it again would undo the switch that adopted it.
+        auto const sh_output = workspace->get_output();
+        if (sh_output && sh_output->active() == workspace)
+            continue;
+
+        workspace->set_containers_shown(false);
+        workspace->transform(entry.transform);
+        workspace->alpha(entry.alpha);
     }
 }
 

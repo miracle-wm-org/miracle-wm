@@ -521,84 +521,34 @@ TEST_F(WorkspaceTest, ShowWithAnimationsDisabledResetsAlphaAndTransform)
     EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
 }
 
-TEST_F(WorkspaceTest, BeginPreviewRefusesTheActiveWorkspace)
-{
-    create_leaf();
-    ON_CALL(*output, active())
-        .WillByDefault(Return(workspace));
-
-    // The active workspace is already in the scene, and showing it again would
-    // clobber the state of windows that were never hidden.
-    EXPECT_FALSE(workspace->begin_preview());
-}
-
-TEST_F(WorkspaceTest, BeginPreviewPutsTheWindowsOfAHiddenWorkspaceBackIntoTheScene)
+TEST_F(WorkspaceTest, ShowingContainersPutsTheWindowsOfAHiddenWorkspaceBackIntoTheScene)
 {
     auto leaf = create_leaf();
     workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
     ASSERT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
 
-    EXPECT_TRUE(workspace->begin_preview());
+    // How an effect forces a workspace that is not the active one into the
+    // scene, without any of the focus handling of a real workspace switch.
+    workspace->set_containers_shown(true);
     EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
-}
 
-TEST_F(WorkspaceTest, BeginPreviewResetsAlphaAndTransform)
-{
-    create_leaf();
-
-    // The state a workspace is left in after an animated hide: fully
-    // transparent and translated offscreen.
-    workspace->alpha(0.f);
-    workspace->transform(glm::translate(glm::mat4(1.f), glm::vec3(OUTPUT_WIDTH, 0, 0)));
-
-    ASSERT_TRUE(workspace->begin_preview());
-    EXPECT_EQ(workspace->alpha(), 1.f);
-    EXPECT_EQ(workspace->transform(), glm::mat4(1.f));
-}
-
-TEST_F(WorkspaceTest, EndPreviewHidesTheWindowsAgainAndPutsAlphaAndTransformBack)
-{
-    auto leaf = create_leaf();
-    auto const hidden_transform = glm::translate(glm::mat4(1.f), glm::vec3(OUTPUT_WIDTH, 0, 0));
-    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
-    workspace->alpha(0.f);
-    workspace->transform(hidden_transform);
-
-    ASSERT_TRUE(workspace->begin_preview());
-    workspace->end_preview();
-
+    workspace->set_containers_shown(false);
     EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_hidden);
-    EXPECT_EQ(workspace->alpha(), 0.f);
-    EXPECT_EQ(workspace->transform(), hidden_transform);
 }
 
-TEST_F(WorkspaceTest, BeginPreviewIsIdempotent)
-{
-    create_leaf();
-
-    EXPECT_TRUE(workspace->begin_preview());
-    EXPECT_FALSE(workspace->begin_preview());
-}
-
-TEST_F(WorkspaceTest, EndPreviewIsANoOpWhenNotPreviewing)
+TEST_F(WorkspaceTest, ShowingContainersAppliesADeferredAreaRecalculation)
 {
     auto leaf = create_leaf();
+    workspace->set_containers_shown(false);
 
-    workspace->end_preview();
-    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
-    EXPECT_EQ(workspace->alpha(), 1.f);
-}
-
-TEST_F(WorkspaceTest, BeginPreviewAppliesADeferredAreaRecalculation)
-{
-    auto leaf = create_leaf();
-
+    // The workspace is not the active one and its windows are out of the scene,
+    // so the recalculation is deferred rather than pushed at hidden clients.
     ON_CALL(*output, get_area())
         .WillByDefault(ReturnRef(RESIZED_OUTPUT_SIZE));
     workspace->recalculate_area();
     ASSERT_EQ(workspace->get_root()->get_logical_area(), OUTPUT_SIZE);
 
-    ASSERT_TRUE(workspace->begin_preview());
+    workspace->set_containers_shown(true);
     EXPECT_EQ(workspace->get_root()->get_logical_area(), RESIZED_OUTPUT_SIZE);
     EXPECT_EQ(leaf->get_logical_area(), RESIZED_OUTPUT_SIZE);
 }
@@ -627,23 +577,6 @@ TEST_F(WorkspaceTest, HideWithAnEndPointAnimatesWhenAnimationsAreEnabled)
     workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
 
     EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
-}
-
-TEST_F(WorkspaceTest, EndPreviewLeavesAWorkspaceThatBecameActiveInTheScene)
-{
-    auto leaf = create_leaf();
-    workspace->hide(geom::Point(OUTPUT_WIDTH, 0));
-    workspace->alpha(0.f);
-    ASSERT_TRUE(workspace->begin_preview());
-
-    // An effect that ends by adopting the workspace it was previewing leaves it
-    // as the active one. Putting the preview away must not undo that.
-    ON_CALL(*output, active())
-        .WillByDefault(Return(workspace));
-    workspace->end_preview();
-
-    EXPECT_EQ(window_controller->get_window_data(leaf).state, mir_window_state_restored);
-    EXPECT_EQ(workspace->alpha(), 1.f);
 }
 
 TEST_F(WorkspaceTest, SelectWindowPrefersTheLastSelectedContainer)

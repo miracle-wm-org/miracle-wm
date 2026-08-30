@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef WORKSPACE_PREVIEW_H
 #define WORKSPACE_PREVIEW_H
 
+#include <glm/glm.hpp>
 #include <memory>
 #include <vector>
 
@@ -31,9 +32,10 @@ class AbstractWorkspace;
 /// Workspaces remove their windows from the scene entirely when they are
 /// switched away from, so an effect that wants to draw one - an output
 /// overview, a workspace switcher, a wall of thumbnails - has to ask for it
-/// back first. Holding one of these instead of calling
-/// [AbstractWorkspace::begin_preview] directly means the reveal is always
-/// undone exactly once, for exactly the workspaces that were revealed.
+/// back first. Holding one of these instead of driving
+/// [AbstractWorkspace::set_containers_shown] directly means the reveal is
+/// always undone exactly once, for exactly the workspaces that were revealed,
+/// and that each one gets the transform and alpha it had beforehand back.
 ///
 /// Every method must be called on the window management thread. An effect whose
 /// teardown runs elsewhere (the animator thread, say) should hand the release
@@ -51,6 +53,11 @@ public:
     /// Reveals every workspace in \p workspaces that is not already in the
     /// scene, remembering the ones it revealed.
     ///
+    /// A hidden workspace was left translated off screen and fully transparent
+    /// by its hide animation, so its transform and alpha are snapped to their
+    /// shown values - and remembered for [release] - before its windows go back
+    /// into the scene. No animation runs and no focus selection happens.
+    ///
     /// Workspaces that are already visible - the active one on each output, and
     /// anything a previous [acquire] already revealed - are skipped, so calling
     /// this more than once is safe and additive.
@@ -63,9 +70,19 @@ public:
     [[nodiscard]] bool held() const;
 
 private:
-    /// Held weakly: a workspace that is deleted mid-preview simply stops
-    /// resolving, and there is nothing left to conceal.
-    std::vector<std::weak_ptr<AbstractWorkspace>> revealed;
+    struct Revealed
+    {
+        /// Held weakly: a workspace that is deleted mid-preview simply stops
+        /// resolving, and there is nothing left to conceal.
+        std::weak_ptr<AbstractWorkspace> workspace;
+
+        /// What the workspace looked like before it was revealed, to be put
+        /// back by [release].
+        glm::mat4 transform;
+        float alpha;
+    };
+
+    std::vector<Revealed> revealed;
 };
 }
 
