@@ -3012,9 +3012,12 @@ contains other containers, or a window.</p>
 
 <span class="w">    </span><span class="c1">// Whether or not the node is "urgent".</span>
 <span class="w">    </span><span class="c1">//</span>
-<span class="w">    </span><span class="c1">// Urgent means that the node currently wants focus.</span>
-<span class="w">    </span><span class="c1">// This is always 'false' as of now.</span>
-<span class="w">    </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">// Urgent means that the node currently wants focus. A window becomes urgent</span>
+<span class="w">    </span><span class="c1">// when it asks to be raised while it is not on screen, and stops being</span>
+<span class="w">    </span><span class="c1">// urgent once it is focused. A node that is not a window is urgent when any</span>
+<span class="w">    </span><span class="c1">// node beneath it is urgent, so urgency propagates up to the workspace and</span>
+<span class="w">    </span><span class="c1">// the output.</span>
+<span class="w">    </span><span class="nt">"urgent"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">// The border style of the node.</span>
 <span class="w">    </span><span class="nt">"border"</span><span class="p">:</span><span class="w"> </span><span class="s2">"normal"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"none"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"pixel"</span><span class="p">,</span>
