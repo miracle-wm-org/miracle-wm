@@ -82,6 +82,18 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
 
+/// A container may only take focus when it is on the workspace that its own
+/// output is currently displaying. A container with a null workspace (e.g. a
+/// shell component) is always focusable.
+bool can_be_focused(std::shared_ptr<AbstractWorkspace> const& workspace)
+{
+    if (!workspace)
+        return true;
+
+    auto const output = workspace->get_output();
+    return output == nullptr || output->active() == workspace;
+}
+
 }
 
 class Policy::Self : public virtual WorkspaceObserver,
@@ -793,21 +805,17 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     }
 
     auto const workspace = container->get_workspace();
-    // If the container has a null workspace, it is always selectable. Otherwise
-    // it needs to be on the active workspace.
-    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-    {
-        // TODO: In this scenario, we may want to navigate to the focused workspace.
-        //  This was removed because it breaks workspace animations.
-        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+
+    if (!can_be_focused(workspace))
         return;
-    }
 
     state->focus_container(container);
     container->on_focus_gained();
     if (workspace)
         workspace->advise_focus_gained(container);
     window_observer_registrar->advise_window_focused(*container);
+    if (container->set_urgent(false))
+        window_observer_registrar->advise_urgency_changed(*container);
 
     // Warning: This must be enqueued because the plugin itself could have
     // triggered the focus, leading to a reentry on the plugin.
@@ -984,6 +992,20 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
     if (!container)
     {
         mir::log_error("handle_activate_window: container is not provided");
+        return;
+    }
+
+    // A window that is not on screen must not steal focus. Flag it as urgent
+    // instead so that the bar (and the tree) can advertise that it wants attention.
+    // See handle_modify_window for the definition of "hidden".
+    auto const workspace = container->get_workspace();
+    bool const hidden = workspace
+        ? !can_be_focused(workspace)
+        : scratchpad_->contains(container) && !scratchpad_->is_showing(container);
+    if (hidden)
+    {
+        if (container->set_urgent(true))
+            window_observer_registrar->advise_urgency_changed(*container);
         return;
     }
 

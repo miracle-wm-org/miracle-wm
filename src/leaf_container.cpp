@@ -347,6 +347,7 @@ void LeafContainer::handle_modify(miral::WindowSpecification const& modification
 
 void LeafContainer::handle_raise()
 {
+    window_controller->select_active_window(window_);
 }
 
 bool LeafContainer::resize(Direction direction, int pixels)
@@ -1091,7 +1092,7 @@ nlohmann::json LeafContainer::to_json(bool is_workspace_visible) const
                           { "height", logical_area.size.height.as_int() },
                       }                                     },
         { "window",               reinterpret_cast<std::uintptr_t>(this)         },
-        { "urgent",               false                                          },
+        { "urgent",               urgent()                                       },
         { "floating_nodes",       std::vector<int>()                             },
         { "sticky",               false                                          },
         { "type",                 "con"                                          },

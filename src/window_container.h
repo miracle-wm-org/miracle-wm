@@ -130,6 +130,17 @@ public:
     /// Check if animations are turned on for this type of window.
     virtual bool can_animate();
 
+    /// Change the urgency of the window.
+    ///
+    /// \param urgent new urgency
+    /// \returns `true` if the urgency changed, otherwise `false`
+    bool set_urgent(bool urgent);
+
+    /// The urgency of the window.
+    ///
+    /// \returns the window's urgency
+    bool urgent() const;
+
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
 
@@ -148,6 +159,7 @@ protected:
 
 private:
     bool enable_render_data_ = true;
+    bool urgent_ = false;
 };
 
 } // namespace miracle

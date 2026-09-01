@@ -203,3 +203,50 @@ TEST_F(ParentContainerSwapTest, SwapContainersBetweenParentsOnDifferentWorkspace
         second_parent_data.parent,
         0);
 }
+
+// ---- urgency ----
+
+TEST_F(ParentContainerTest, ToJsonIsNotUrgentWhenNoChildIsUrgent)
+{
+    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
+    auto const child = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*child, to_json(_)).WillByDefault(Return(nlohmann::json({
+        { "urgent", false }
+    })));
+    parent_data.parent->add_child(child, 0);
+    Mock::AllowLeak(child.get());
+
+    EXPECT_FALSE(parent_data.parent->to_json(true)["urgent"]);
+}
+
+TEST_F(ParentContainerTest, ToJsonIsUrgentWhenAnyChildIsUrgent)
+{
+    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
+    auto const quiet = std::make_shared<NiceMock<test::MockContainer>>();
+    auto const urgent = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*quiet, to_json(_)).WillByDefault(Return(nlohmann::json({
+        { "urgent", false }
+    })));
+    ON_CALL(*urgent, to_json(_)).WillByDefault(Return(nlohmann::json({
+        { "urgent", true }
+    })));
+    parent_data.parent->add_child(quiet, 0);
+    parent_data.parent->add_child(urgent, 1);
+    Mock::AllowLeak(quiet.get());
+    Mock::AllowLeak(urgent.get());
+
+    EXPECT_TRUE(parent_data.parent->to_json(true)["urgent"]);
+}
+
+/// A child is not obliged to report urgency at all, so the aggregation must not
+/// index a key that may be missing.
+TEST_F(ParentContainerTest, ToJsonIsNotUrgentWhenAChildOmitsTheUrgentKey)
+{
+    ParentContainerData const parent_data = make_parent(geom::Rectangle({ 0, 0 }, { 800, 800 }));
+    auto const child = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*child, to_json(_)).WillByDefault(Return(nlohmann::json::object()));
+    parent_data.parent->add_child(child, 0);
+    Mock::AllowLeak(child.get());
+
+    EXPECT_FALSE(parent_data.parent->to_json(true)["urgent"]);
+}

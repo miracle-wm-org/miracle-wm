@@ -238,3 +238,17 @@ void miracle::WindowContainer::on_open()
     if (window_controller_)
         window_controller_->open(window_);
 }
+
+bool miracle::WindowContainer::set_urgent(bool next)
+{
+    if (urgent_ == next)
+        return false;
+
+    urgent_ = next;
+    return true;
+}
+
+bool miracle::WindowContainer::urgent() const
+{
+    return urgent_;
+}

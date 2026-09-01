@@ -610,3 +610,92 @@ TEST_F(WorkspaceTest, SelectWindowClearsFocusWhenTheWorkspaceIsEmpty)
 
     ASSERT_THAT(window_controller->selected_windows, ElementsAre(miral::Window()));
 }
+
+// ---- urgency ----
+
+TEST_F(WorkspaceTest, UrgentIsFalseWhenNothingWantsAttention)
+{
+    create_leaf();
+    EXPECT_FALSE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, UrgentIsTrueWhenATiledWindowIsUrgent)
+{
+    create_leaf();
+    auto const leaf = create_leaf();
+
+    leaf->set_urgent(true);
+    EXPECT_TRUE(workspace->urgent());
+
+    leaf->set_urgent(false);
+    EXPECT_FALSE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, UrgentIsTrueWhenAFloatingWindowIsUrgent)
+{
+    auto const floating = std::make_shared<LeafContainer>(
+        workspace,
+        window_controller,
+        geom::Rectangle {
+            { 0,   0   },
+            { 100, 100 }
+    },
+        config,
+        workspace->get_root(),
+        state);
+
+    auto const surface = std::make_shared<test::StubSurface>();
+    surfaces.push_back(surface);
+    miral::Window const window(nullptr, surface);
+    floating->associate_to_window(window);
+    pairs.push_back({ window, floating, geom::Rectangle(), mir_window_state_restored, std::nullopt });
+
+    workspace->add_other_container(floating, false);
+
+    EXPECT_FALSE(workspace->urgent());
+
+    floating->set_urgent(true);
+    EXPECT_TRUE(workspace->urgent());
+}
+
+TEST_F(WorkspaceTest, ToJsonReportsUrgencyOfAFloatingContainer)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json({
+        { "urgent", true }
+    })));
+    workspace->add_other_container(container, false);
+
+    EXPECT_TRUE(workspace->to_json(false)["urgent"]);
+}
+
+/// A container is not obliged to report urgency at all, so the aggregation must
+/// not index a key that may be missing.
+TEST_F(WorkspaceTest, ToJsonIsNotUrgentWhenAContainerOmitsTheUrgentKey)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(_)).WillByDefault(Return(nlohmann::json::object()));
+    workspace->add_other_container(container, false);
+
+    EXPECT_FALSE(workspace->to_json(false)["urgent"]);
+}
+
+/// GET_WORKSPACES does not build the container tree, so it has to gather urgency
+/// by walking the workspace instead of aggregating out of the child json.
+TEST_F(WorkspaceTest, GetWorkspacesJsonReportsUrgency)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    auto const leaf = create_leaf();
+    EXPECT_FALSE(workspace->get_workspaces_json(false)["urgent"]);
+
+    leaf->set_urgent(true);
+    EXPECT_TRUE(workspace->get_workspaces_json(false)["urgent"]);
+}

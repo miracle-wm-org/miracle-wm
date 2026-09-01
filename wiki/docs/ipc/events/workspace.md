@@ -22,6 +22,7 @@ The `change` string is one of the following:
 | move   | The workspace was moved to a different output                                                 |
 | rename | The workspace was renamed                                                                     |
 | reload | The configuration file has been reloaded                                                      |
+| urgent | A window on the workspace has started or stopped wanting attention                            |
 
 ## Example
 ```json

@@ -72,6 +72,7 @@ public:
     [[nodiscard]] std::shared_ptr<AbstractOutput> get_output() const override;
     void set_output(std::shared_ptr<AbstractOutput> const&) override;
     [[nodiscard]] bool is_empty() const override;
+    [[nodiscard]] bool urgent() const override;
     void graft(std::shared_ptr<Container> const&) override;
     void on_animation_end(bool is_hiding);
     [[nodiscard]] uint32_t id() const override { return id_; }

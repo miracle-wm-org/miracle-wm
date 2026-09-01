@@ -53,6 +53,7 @@ namespace test
         MOCK_METHOD(void, set_output, (std::shared_ptr<AbstractOutput> const&), (override));
 
         MOCK_METHOD(bool, is_empty, (), (const, override));
+        MOCK_METHOD(bool, urgent, (), (const, override));
         MOCK_METHOD(void, graft, (std::shared_ptr<Container> const&), (override));
 
         MOCK_METHOD(uint32_t, id, (), (const, override));

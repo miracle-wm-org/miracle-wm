@@ -77,6 +77,7 @@ public:
     void on_window_move(Container const&) override;
     void on_window_float(Container const&) override;
     void on_window_marked(Container const&) override;
+    void on_urgency_changed(Container const&) override;
     void output_created(miral::Output const&) override;
     void output_deleted(miral::Output const&) override;
     void output_updated(miral::Output const& updated, miral::Output const& original) override;

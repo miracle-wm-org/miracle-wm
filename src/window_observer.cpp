@@ -81,3 +81,12 @@ void WindowObserverRegistrar::advise_window_marked(Container const& container) c
             lock->on_window_marked(container);
     }
 }
+
+void WindowObserverRegistrar::advise_urgency_changed(Container const& container) const
+{
+    for (auto const& observer : observers)
+    {
+        if (auto const lock = observer.lock())
+            lock->on_urgency_changed(container);
+    }
+}

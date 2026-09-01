@@ -888,3 +888,34 @@ TEST_F(LeafContainerTest, CommitChangesCallsSetRectangleWhenNotDragging)
 
     leaf_container->commit_changes();
 }
+
+// ---- urgency ----
+
+TEST_F(LeafContainerTest, UrgencyIsFalseByDefault)
+{
+    EXPECT_FALSE(leaf_container->urgent());
+}
+
+TEST_F(LeafContainerTest, SetUrgentOnlyReportsAChangeWhenTheValueActuallyChanges)
+{
+    EXPECT_TRUE(leaf_container->set_urgent(true));
+    EXPECT_TRUE(leaf_container->urgent());
+
+    // Setting the same value again is not a change, so observers must not be told.
+    EXPECT_FALSE(leaf_container->set_urgent(true));
+    EXPECT_TRUE(leaf_container->urgent());
+
+    EXPECT_TRUE(leaf_container->set_urgent(false));
+    EXPECT_FALSE(leaf_container->urgent());
+
+    EXPECT_FALSE(leaf_container->set_urgent(false));
+    EXPECT_FALSE(leaf_container->urgent());
+}
+
+TEST_F(LeafContainerTest, ToJsonReportsUrgency)
+{
+    EXPECT_FALSE(leaf_container->to_json(true)["urgent"]);
+
+    leaf_container->set_urgent(true);
+    EXPECT_TRUE(leaf_container->to_json(true)["urgent"]);
+}

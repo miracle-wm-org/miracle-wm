@@ -43,6 +43,24 @@ using namespace miracle;
 
 namespace
 {
+/// Walks the container tree looking for a window that wants attention.
+bool has_urgent_container(std::shared_ptr<Container> const& container)
+{
+    if (auto const window = Container::as_window_container(container))
+        return window->urgent();
+
+    if (auto const parent = Container::as_parent(container))
+    {
+        for (auto const& child : parent->children())
+        {
+            if (has_urgent_container(child))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 std::shared_ptr<ParentContainer> handle_remove_container(std::shared_ptr<Container> const& container)
 {
     auto parent = Container::as_parent(container->get_parent().lock());
@@ -721,6 +739,20 @@ std::string Workspace::display_name() const
     return ss.str();
 }
 
+bool Workspace::urgent() const
+{
+    if (has_urgent_container(root()))
+        return true;
+
+    for (auto const& container : other_containers)
+    {
+        if (auto const locked = container.lock(); locked && has_urgent_container(locked))
+            return true;
+    }
+
+    return false;
+}
+
 nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
 {
     auto const sh_output = output.lock();
@@ -741,7 +773,7 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
         { "name", workspace_name },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", urgent() },
         { "output", output_name },
         { "rect", {
                       { "x", area.top_left.x.as_int() },
@@ -764,13 +796,20 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
 
     nlohmann::json floating_nodes = nlohmann::json::array();
     nlohmann::json nodes = nlohmann::json::array();
+    bool is_urgent = false;
     for (auto const& container : root()->children())
+    {
         nodes.push_back(container->to_json(is_active_on_output));
+        is_urgent = is_urgent || nodes.back().value("urgent", false);
+    }
 
     for (auto const& container : other_containers)
     {
         if (auto const locked = container.lock())
+        {
             floating_nodes.push_back(locked->to_json(is_active_on_output));
+            is_urgent = is_urgent || floating_nodes.back().value("urgent", false);
+        }
     }
 
     auto const num_ = sync.lock()->num_;
@@ -784,7 +823,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "name", display_name() },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", is_urgent },
         { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },

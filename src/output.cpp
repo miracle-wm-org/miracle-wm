@@ -399,10 +399,14 @@ nlohmann::json Output::to_json(bool is_focused) const
 {
     auto active = output_config.used;
     nlohmann::json nodes = nlohmann::json::array();
+    bool urgent = false;
     for (auto const& workspace : workspaces_)
     {
         if (workspace)
+        {
             nodes.push_back(workspace->to_json(is_focused));
+            urgent = urgent || nodes.back().value("urgent", false);
+        }
     }
 
     nlohmann::json modes_node;
@@ -461,7 +465,7 @@ nlohmann::json Output::to_json(bool is_focused) const
         { "orientation",          "none"                                        },
         { "visible",              true                                          },
         { "focused",              is_focused                                    },
-        { "urgent",               false                                         },
+        { "urgent",               urgent                                        },
         { "border",               "none"                                        },
         { "current_border_width", 0                                             },
         { "window_rect",          {
