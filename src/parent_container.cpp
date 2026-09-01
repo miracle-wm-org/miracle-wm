@@ -860,8 +860,14 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
     auto const logical_area = get_logical_area();
     auto const container_list = container_list_;
     nlohmann::json containers_json;
+    bool urgent = false;
     for (auto const& container : container_list)
-        containers_json.push_back(container->to_json(is_workspace_visible));
+    {
+        auto const json = container->to_json(is_workspace_visible);
+        if (json["urgent"])
+            urgent = true;
+        containers_json.push_back(json);
+    }
 
     auto locked_parent = parent_.lock();
     auto const scheme = scheme_;
@@ -909,7 +915,7 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
                           { "height", logical_area.size.height.as_int() },
                       }                                                                                                                                                                                                                                         },
         { "window",               nullptr                                                                                                                                                                                                                                            }, // TODO
-        { "urgent",               false                                                                                                                                                                                                                                              },
+        { "urgent",               urgent                                                                                                                                                                                                                                             },
         { "floating_nodes",       std::vector<int>()                                                                                                                                                                                                                                 },
         { "sticky",               false                                                                                                                                                                                                                                              },
         { "type",                 "con"                                                                                                                                                                                                                                              },

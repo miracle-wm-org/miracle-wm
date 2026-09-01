@@ -783,6 +783,13 @@ Policy::confirm_placement_on_display(
     return container->confirm_placement(new_state, new_placement);
 }
 
+inline bool can_be_focused(OutputManager& output_manager, std::shared_ptr<AbstractWorkspace> const& workspace)
+{
+    // If the container has a null workspace, it is always selectable. Otherwise
+    // it needs to be on the active workspace.
+    return !output_manager.focused() || workspace == nullptr || workspace == output_manager.focused()->active();
+}
+
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto const container = window_controller->get_window_container(window_info.window());
@@ -793,21 +800,17 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
     }
 
     auto const workspace = container->get_workspace();
-    // If the container has a null workspace, it is always selectable. Otherwise
-    // it needs to be on the active workspace.
-    if (output_manager->focused() && workspace != nullptr && workspace != output_manager->focused()->active())
-    {
-        // TODO: In this scenario, we may want to navigate to the focused workspace.
-        //  This was removed because it breaks workspace animations.
-        mir::log_warning("Policy::advise_focus_gained: not selecting a container on an inactive workspace");
+
+    if (!can_be_focused(*output_manager, workspace))
         return;
-    }
 
     state->focus_container(container);
     container->on_focus_gained();
     if (workspace)
         workspace->advise_focus_gained(container);
     window_observer_registrar->advise_window_focused(*container);
+    if (container->set_urgent(false))
+        window_observer_registrar->advise_urgency_changed(*container);
 
     // Warning: This must be enqueued because the plugin itself could have
     // triggered the focus, leading to a reentry on the plugin.
@@ -984,6 +987,15 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
     if (!container)
     {
         mir::log_error("handle_activate_window: container is not provided");
+        return;
+    }
+
+    // Change the urgency of the window if it is on a hidden workspace.
+    auto const workspace = container->get_workspace();
+    if (!can_be_focused(*output_manager, workspace))
+    {
+        if (container->set_urgent(true))
+            window_observer_registrar->advise_urgency_changed(*container);
         return;
     }
 

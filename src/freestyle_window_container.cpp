@@ -558,7 +558,7 @@ nlohmann::json FreestyleWindowContainer::to_json(bool) const
                           { "height", logical_area.size.height.as_int() },
                       }                             },
         { "window",               0                                      },
-        { "urgent",               false                                  },
+        { "urgent",               urgent()                               },
         { "floating_nodes",       std::vector<int>()                     },
         { "sticky",               false                                  },
         { "type",                 "floating_con"                         },

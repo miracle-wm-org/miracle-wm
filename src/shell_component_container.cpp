@@ -276,7 +276,7 @@ nlohmann::json ShellComponentContainer::to_json(bool is_workspace_visible) const
                           { "height", logical_area.size.height.as_int() },
                       }                                                                                                                                                                               },
         { "window",               0                                                                                                                                                                                        }, // TODO
-        { "urgent",               false                                                                                                                                                                                    },
+        { "urgent",               urgent()                                                                                                                                                                                 },
         { "floating_nodes",       std::vector<int>()                                                                                                                                                                       },
         { "sticky",               false                                                                                                                                                                                    },
         { "type",                 "dockarea"                                                                                                                                                                               },

@@ -506,6 +506,11 @@ void IpcConnectionManager::on_window_marked(Container const& container)
     send_window_event("mark", container);
 }
 
+void IpcConnectionManager::on_urgency_changed(Container const& container)
+{
+    send_window_event("urgent", container);
+}
+
 void IpcConnectionManager::disconnect(IpcClient& client)
 {
     std::shared_ptr<IpcClient> removed;

@@ -764,13 +764,24 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
 
     nlohmann::json floating_nodes = nlohmann::json::array();
     nlohmann::json nodes = nlohmann::json::array();
+    bool urgent = false;
     for (auto const& container : root()->children())
-        nodes.push_back(container->to_json(is_active_on_output));
+    {
+        auto const json = container->to_json(is_active_on_output);
+        if (json["urgent"])
+            urgent = true;
+        nodes.push_back(json);
+    }
 
     for (auto const& container : other_containers)
     {
         if (auto const locked = container.lock())
-            floating_nodes.push_back(locked->to_json(is_active_on_output));
+        {
+            auto const json = locked->to_json(is_active_on_output);
+            if (json["urgent"])
+                urgent = true;
+            floating_nodes.push_back(json);
+        }
     }
 
     auto const num_ = sync.lock()->num_;
@@ -784,7 +795,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "name", display_name() },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", urgent },
         { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },
