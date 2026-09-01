@@ -304,3 +304,22 @@ TEST_F(OutputTest, OutputToJsonWithInvalidCurrentMode)
                                                             { "refresh", 0 }
     })));
 }
+// ---- urgency ----
+
+TEST_F(OutputIntersectTest, ToJsonIsNotUrgentWhenNoWorkspaceIsUrgent)
+{
+    EXPECT_FALSE(output->to_json(false)["urgent"]);
+}
+
+TEST_F(OutputIntersectTest, ToJsonIsUrgentWhenAWorkspaceIsUrgent)
+{
+    auto const container = std::make_shared<NiceMock<test::MockContainer>>();
+    ON_CALL(*container, to_json(testing::_))
+        .WillByDefault(Return(nlohmann::json({
+            { "urgent", true }
+    })));
+    output->get_workspaces()[0]->add_other_container(container, false);
+    testing::Mock::AllowLeak(container.get());
+
+    EXPECT_TRUE(output->to_json(false)["urgent"]);
+}
