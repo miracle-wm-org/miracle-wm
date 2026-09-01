@@ -75,6 +75,15 @@ public:
     virtual void set_output(std::shared_ptr<AbstractOutput> const&) = 0;
 
     [[nodiscard]] virtual bool is_empty() const = 0;
+
+    /// Whether any window on this workspace is requesting attention.
+    ///
+    /// This walks every container on the workspace, so prefer aggregating the
+    /// "urgent" key out of the child json when the container tree is already
+    /// being built.
+    ///
+    /// \returns `true` if any window on the workspace is urgent
+    [[nodiscard]] virtual bool urgent() const = 0;
     virtual void graft(std::shared_ptr<Container> const&) = 0;
 
     [[nodiscard]] virtual uint32_t id() const = 0;

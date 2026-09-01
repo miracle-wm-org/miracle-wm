@@ -44,10 +44,6 @@ using namespace miracle;
 namespace
 {
 /// Walks the container tree looking for a window that wants attention.
-///
-/// This is only for GET_WORKSPACES, which does not build the container json and
-/// so has nothing to aggregate urgency out of. Every other caller reads the
-/// "urgent" key off of the child json it has already built.
 bool has_urgent_container(std::shared_ptr<Container> const& container)
 {
     if (auto const window = Container::as_window_container(container))
@@ -743,7 +739,7 @@ std::string Workspace::display_name() const
     return ss.str();
 }
 
-bool Workspace::is_urgent() const
+bool Workspace::urgent() const
 {
     if (has_urgent_container(root()))
         return true;
@@ -777,7 +773,7 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
         { "name", workspace_name },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", is_urgent() },
+        { "urgent", urgent() },
         { "output", output_name },
         { "rect", {
                       { "x", area.top_left.x.as_int() },
@@ -800,11 +796,11 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
 
     nlohmann::json floating_nodes = nlohmann::json::array();
     nlohmann::json nodes = nlohmann::json::array();
-    bool urgent = false;
+    bool is_urgent = false;
     for (auto const& container : root()->children())
     {
         nodes.push_back(container->to_json(is_active_on_output));
-        urgent = urgent || nodes.back().value("urgent", false);
+        is_urgent = is_urgent || nodes.back().value("urgent", false);
     }
 
     for (auto const& container : other_containers)
@@ -812,7 +808,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         if (auto const locked = container.lock())
         {
             floating_nodes.push_back(locked->to_json(is_active_on_output));
-            urgent = urgent || floating_nodes.back().value("urgent", false);
+            is_urgent = is_urgent || floating_nodes.back().value("urgent", false);
         }
     }
 
@@ -827,7 +823,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "name", display_name() },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", urgent },
+        { "urgent", is_urgent },
         { "output", sh_output ? sh_output->name() : "N/A" },
         { "border", "none" },
         { "current_border_width", 0 },

@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIR_LOG_COMPONENT "ipc_connection_manager"
 
 #include "ipc_connection_manager.h"
+#include "abstract_workspace.h"
 #include "binding_event.h"
 #include "command_controller.h"
 #include "config.h"
@@ -509,6 +510,20 @@ void IpcConnectionManager::on_window_marked(Container const& container)
 void IpcConnectionManager::on_urgency_changed(Container const& container)
 {
     send_window_event("urgent", container);
+
+    // The workspace inherits the urgency of its windows, so bars that watch
+    // workspaces rather than windows need to be told that it changed too.
+    auto const workspace = container.get_workspace();
+    if (!workspace)
+        return;
+
+    json const j = {
+        { "change",  "urgent"                                               },
+        { "old",     nullptr                                                },
+        { "current", command_controller->workspace_to_json(workspace->id()) }
+    };
+
+    broadcast(IpcType::IPC_EVENT_WORKSPACE, to_string(j));
 }
 
 void IpcConnectionManager::disconnect(IpcClient& client)
