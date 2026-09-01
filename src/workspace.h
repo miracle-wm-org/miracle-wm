@@ -112,6 +112,12 @@ private:
 
     void for_each_container(std::function<void(std::shared_ptr<Container> const&)> const&);
     std::shared_ptr<ParentContainer> root() const;
+
+    /// \returns `true` if any container on this workspace is requesting attention.
+    ///
+    /// Only for GET_WORKSPACES. Prefer aggregating the "urgent" key out of the
+    /// child json when the container tree is already being built.
+    [[nodiscard]] bool is_urgent() const;
     std::shared_ptr<ShellApplicationManager> shell_application_manager;
     std::weak_ptr<AbstractOutput> output;
     uint32_t id_;

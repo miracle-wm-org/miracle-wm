@@ -43,6 +43,28 @@ using namespace miracle;
 
 namespace
 {
+/// Walks the container tree looking for a window that wants attention.
+///
+/// This is only for GET_WORKSPACES, which does not build the container json and
+/// so has nothing to aggregate urgency out of. Every other caller reads the
+/// "urgent" key off of the child json it has already built.
+bool has_urgent_container(std::shared_ptr<Container> const& container)
+{
+    if (auto const window = Container::as_window_container(container))
+        return window->urgent();
+
+    if (auto const parent = Container::as_parent(container))
+    {
+        for (auto const& child : parent->children())
+        {
+            if (has_urgent_container(child))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 std::shared_ptr<ParentContainer> handle_remove_container(std::shared_ptr<Container> const& container)
 {
     auto parent = Container::as_parent(container->get_parent().lock());
@@ -721,6 +743,20 @@ std::string Workspace::display_name() const
     return ss.str();
 }
 
+bool Workspace::is_urgent() const
+{
+    if (has_urgent_container(root()))
+        return true;
+
+    for (auto const& container : other_containers)
+    {
+        if (auto const locked = container.lock(); locked && has_urgent_container(locked))
+            return true;
+    }
+
+    return false;
+}
+
 nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
 {
     auto const sh_output = output.lock();
@@ -741,7 +777,7 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
         { "name", workspace_name },
         { "visible", is_active_on_output },
         { "focused", is_output_focused && is_active_on_output },
-        { "urgent", false },
+        { "urgent", is_urgent() },
         { "output", output_name },
         { "rect", {
                       { "x", area.top_left.x.as_int() },
@@ -767,20 +803,16 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
     bool urgent = false;
     for (auto const& container : root()->children())
     {
-        auto const json = container->to_json(is_active_on_output);
-        if (json["urgent"])
-            urgent = true;
-        nodes.push_back(json);
+        nodes.push_back(container->to_json(is_active_on_output));
+        urgent = urgent || nodes.back().value("urgent", false);
     }
 
     for (auto const& container : other_containers)
     {
         if (auto const locked = container.lock())
         {
-            auto const json = locked->to_json(is_active_on_output);
-            if (json["urgent"])
-                urgent = true;
-            floating_nodes.push_back(json);
+            floating_nodes.push_back(locked->to_json(is_active_on_output));
+            urgent = urgent || floating_nodes.back().value("urgent", false);
         }
     }
 

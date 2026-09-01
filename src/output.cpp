@@ -404,10 +404,8 @@ nlohmann::json Output::to_json(bool is_focused) const
     {
         if (workspace)
         {
-            auto const json = workspace->to_json(is_focused);
-            if (json["urgent"])
-                urgent = true;
-            nodes.push_back(json);
+            nodes.push_back(workspace->to_json(is_focused));
+            urgent = urgent || nodes.back().value("urgent", false);
         }
     }
 

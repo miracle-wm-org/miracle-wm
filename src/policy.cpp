@@ -82,6 +82,18 @@ private:
     std::shared_ptr<mir::MainLoop> main_loop;
 };
 
+/// A container may only take focus when it is on the workspace that its own
+/// output is currently displaying. A container with a null workspace (e.g. a
+/// shell component) is always focusable.
+bool can_be_focused(std::shared_ptr<AbstractWorkspace> const& workspace)
+{
+    if (!workspace)
+        return true;
+
+    auto const output = workspace->get_output();
+    return output == nullptr || output->active() == workspace;
+}
+
 }
 
 class Policy::Self : public virtual WorkspaceObserver,
@@ -783,13 +795,6 @@ Policy::confirm_placement_on_display(
     return container->confirm_placement(new_state, new_placement);
 }
 
-inline bool can_be_focused(OutputManager& output_manager, std::shared_ptr<AbstractWorkspace> const& workspace)
-{
-    // If the container has a null workspace, it is always selectable. Otherwise
-    // it needs to be on the active workspace.
-    return !output_manager.focused() || workspace == nullptr || workspace == output_manager.focused()->active();
-}
-
 void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 {
     auto const container = window_controller->get_window_container(window_info.window());
@@ -801,7 +806,7 @@ void Policy::advise_focus_gained(const miral::WindowInfo& window_info)
 
     auto const workspace = container->get_workspace();
 
-    if (!can_be_focused(*output_manager, workspace))
+    if (!can_be_focused(workspace))
         return;
 
     state->focus_container(container);
@@ -990,9 +995,14 @@ void Policy::handle_raise_window(miral::WindowInfo& window_info)
         return;
     }
 
-    // Change the urgency of the window if it is on a hidden workspace.
+    // A window that is not on screen must not steal focus. Flag it as urgent
+    // instead so that the bar (and the tree) can advertise that it wants attention.
+    // See handle_modify_window for the definition of "hidden".
     auto const workspace = container->get_workspace();
-    if (!can_be_focused(*output_manager, workspace))
+    bool const hidden = workspace
+        ? !can_be_focused(workspace)
+        : scratchpad_->contains(container) && !scratchpad_->is_showing(container);
+    if (hidden)
     {
         if (container->set_urgent(true))
             window_observer_registrar->advise_urgency_changed(*container);

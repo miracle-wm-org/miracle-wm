@@ -863,10 +863,8 @@ nlohmann::json ParentContainer::to_json(bool is_workspace_visible) const
     bool urgent = false;
     for (auto const& container : container_list)
     {
-        auto const json = container->to_json(is_workspace_visible);
-        if (json["urgent"])
-            urgent = true;
-        containers_json.push_back(json);
+        containers_json.push_back(container->to_json(is_workspace_visible));
+        urgent = urgent || containers_json.back().value("urgent", false);
     }
 
     auto locked_parent = parent_.lock();
