@@ -40,9 +40,12 @@ contains other containers, or a window.
 
     // Whether or not the node is "urgent".
     //
-    // Urgent means that the node currently wants focus.
-    // This is always 'false' as of now.
-    "urgent": false,
+    // Urgent means that the node currently wants focus. A window becomes urgent
+    // when it asks to be raised while it is not on screen, and stops being
+    // urgent once it is focused. A node that is not a window is urgent when any
+    // node beneath it is urgent, so urgency propagates up to the workspace and
+    // the output.
+    "urgent": boolean,
 
     // The border style of the node.
     "border": "normal" | "none" | "pixel",

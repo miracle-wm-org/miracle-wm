@@ -14,7 +14,7 @@ The reply is an array of objects corresponding to the following schema:
         "name": string,     // The name of the workspace
         "visible": boolean, // True if the workspace is currently visible on an output, otherwise false
         "focused": boolean, // True if the workspace is visible and its output is currently selected
-        "urgent": boolean,  // Legacy, awlways false
+        "urgent": boolean,  // True if a window on the workspace wants attention
         "output" string,    // Name of the output that the workspace is on
         "rect": {           // The rectangle defining this workspace
             "x" integer,
