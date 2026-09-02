@@ -45,6 +45,11 @@ namespace test
             return false;
         }
 
+        [[nodiscard]] std::vector<KeyBindingInfo> describe_key_bindings() const override
+        {
+            return {};
+        }
+
         [[nodiscard]] Gaps get_inner_gaps() const override
         {
             return Gaps {};

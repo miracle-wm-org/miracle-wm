@@ -25,10 +25,94 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "version.h"
 #include "window_controller.h"
 #include <mir/log.h>
+#include <miracle/cpp/keyboard.h>
+#include <miracle/cpp/modifiers.h>
 #include <nlohmann/json.hpp>
+#include <xkbcommon/xkbcommon.h>
+
+// Only defined by libxkbcommon >= 1.11. Same fallback as miracle-wm-c/src/config-cpp.cpp.
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
 
 using json = nlohmann::json;
 using namespace miracle;
+
+namespace
+{
+/// Renders a MirInputEventModifier bitfield as the same modifier names that the
+/// configuration file accepts, so that they round-trip. This is deliberately not
+/// `modifiers_to_array` from binding_event.cpp: that one emits sway's exact
+/// nine-name `event_state_mask` vocabulary for the wire-compatible `binding`
+/// event, and must not drift towards miracle's own naming.
+json modifier_names(uint mask)
+{
+    json array = json::array();
+    for (auto const& [name, value] : mir_input_event_modifier_opts)
+    {
+        if (mask & value)
+            array.push_back(name);
+    }
+    return array;
+}
+
+/// The spelling that xkb_keysym_from_name() accepts back.
+json keysym_name(uint keysym)
+{
+    char buf[XKB_KEYSYM_NAME_MAX_SIZE];
+    int const n = xkb_keysym_get_name(static_cast<xkb_keysym_t>(keysym), buf, sizeof(buf));
+    return n < 0 ? json("NoSymbol") : json(buf);
+}
+
+/// "down" / "up" / "repeat". mir_keyboard_action_modifiers has no name in the
+/// table and is never configurable, so it falls back to the numeric value.
+json keyboard_action_name(MirKeyboardAction action)
+{
+    auto const index = static_cast<size_t>(action);
+    if (index >= mir_keyboard_actions_strings.size())
+        return json(static_cast<int>(action));
+    return json(mir_keyboard_actions_strings[index].first);
+}
+
+json key_bindings_to_json(Config const& config)
+{
+    json keybinds = json::array();
+    for (auto const& info : config.describe_key_bindings())
+    {
+        char const* source = "built_in_default";
+        switch (info.source)
+        {
+        case KeyBindingSource::built_in_override:
+            source = "built_in_override";
+            break;
+        case KeyBindingSource::custom:
+            source = "custom";
+            break;
+        case KeyBindingSource::built_in_default:
+            break;
+        }
+
+        bool const is_custom = info.source == KeyBindingSource::custom;
+        keybinds.push_back({
+            { "source",               source                                                                                                    },
+            { "action",               is_custom ? json(nullptr) : json(default_key_command_strings[static_cast<int>(info.default_key_command)]) },
+            { "command",              is_custom ? json(info.command) : json(nullptr)                                                            },
+            { "keyboard_action",      keyboard_action_name(info.action)                                                                         },
+            { "modifiers",            modifier_names(info.modifiers)                                                                            },
+            { "modifier_mask",        info.modifiers                                                                                            },
+            { "configured_modifiers", modifier_names(info.configured_modifiers)                                                                 },
+            { "xkb_keysym",           info.keysym                                                                                               },
+            { "xkb_keysym_name",      keysym_name(info.keysym)                                                                                  },
+        });
+    }
+
+    auto const primary = config.get_primary_modifier();
+    return {
+        { "primary_modifier", { { "modifiers", modifier_names(primary) }, { "modifier_mask", primary } } },
+        { "keybinds",         keybinds                                                                   }
+    };
+}
+}
 
 IpcMessageHandler::IpcMessageHandler(std::shared_ptr<AbstractCommandController> const& command_controller,
     std::shared_ptr<AbstractIpcCommandExecutor> const& ipc_command_executor,
@@ -182,6 +266,13 @@ MessageHandlerResult IpcMessageHandler::process_msg(
         return {
             .type = payload_type,
             .payload = to_string(command_controller->debug_state_to_json())
+        };
+    }
+    case IpcType::IPC_GET_KEYBINDS:
+    {
+        return {
+            .type = payload_type,
+            .payload = to_string(key_bindings_to_json(*config))
         };
     }
     case IpcType::IPC_GET_MARKS:
