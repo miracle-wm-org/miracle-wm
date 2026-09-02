@@ -512,8 +512,13 @@ bool FreestyleWindowContainer::matches(ContainerScope const&) const
 
 bool FreestyleWindowContainer::can_animate()
 {
+    // Transient surfaces (popups, tooltips, dialogs, satellites) must not animate.
+    // Native wayland popups arrive typed menu/tip, but xwayland popups arrive as
+    // parented normal/freestyle windows, so the parent check is load-bearing.
     auto const& info = window_controller->info_for(window_);
-    return info.type() == mir_window_type_dialog || info.type() == mir_window_type_freestyle || info.type() == mir_window_type_normal || info.type() == mir_window_type_satellite;
+    if (info.parent())
+        return false;
+    return info.type() == mir_window_type_freestyle || info.type() == mir_window_type_normal;
 }
 
 nlohmann::json FreestyleWindowContainer::to_json(bool) const

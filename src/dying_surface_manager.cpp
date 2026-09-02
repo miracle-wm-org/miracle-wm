@@ -99,7 +99,7 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
         handle,
         config->get_animation_definition(AnimateableEvent::window_close),
         std::move(anim_data),
-        [compositor_state = compositor_state, surface_stack = surface_stack, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
+        [compositor_state = compositor_state, surface_stack = surface_stack, window_controller = window_controller, animating_surface, id = id, alpha = alpha, transform = transform](AnimationFrameResult const& result)
     {
         if (result.transform)
         {
@@ -122,8 +122,17 @@ void DyingSurfaceManager::animate_dying_surface(std::shared_ptr<WindowContainer>
 
         if (result.is_complete)
         {
-            compositor_state->render_data_manager()->remove(id);
-            surface_stack->remove_surface(animating_surface);
+            // remove_surface blocks in Surface::unregister_interest until in-flight
+            // observer callbacks drain, while holding the scene write lock. Calling it
+            // from the animator thread can deadlock against the WM thread (which takes
+            // the same locks in the opposite order via depth-layer changes), so it must
+            // be serialized under the window-management lock like every other shell
+            // scene operation.
+            window_controller->invoke_under_lock([compositor_state, surface_stack, animating_surface, id]
+            {
+                compositor_state->render_data_manager()->remove(id);
+                surface_stack->remove_surface(animating_surface);
+            });
         }
     }, plugin_manager));
 }
