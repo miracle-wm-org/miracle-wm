@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 #include "config_observer.h"
 #include "yaml-cpp/yaml.h"
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -25,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <miracle/cpp/animation_definition.h>
+#include <miracle/cpp/modifiers.h>
 #include <miral/runner.h>
 #include <vector>
 #include <xkbcommon/xkbcommon-keysyms.h>
@@ -194,6 +196,117 @@ TEST_F(FilesystemConfigurationTest, CanCreateCustomAction)
     EXPECT_EQ(custom_action->command, "echo Hi");
     EXPECT_EQ(custom_action->key, XKB_KEY_x);
     EXPECT_EQ(custom_action->action, mir_keyboard_action_down);
+}
+
+TEST_F(FilesystemConfigurationTest, DefaultKeyBindingsAreReported)
+{
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX));
+
+    auto const terminal = std::find_if(bindings.begin(), bindings.end(), [](KeyBindingInfo const& info)
+    {
+        return info.default_key_command == DefaultKeyCommand::Terminal;
+    });
+    ASSERT_NE(terminal, bindings.end());
+    EXPECT_EQ(terminal->source, KeyBindingSource::built_in_default);
+    EXPECT_EQ(terminal->keysym, XKB_KEY_Return);
+    EXPECT_EQ(terminal->action, mir_keyboard_action_down);
+    EXPECT_EQ(terminal->modifiers, static_cast<uint>(mir_input_event_modifier_meta));
+    EXPECT_TRUE(terminal->command.empty());
+}
+
+TEST_F(FilesystemConfigurationTest, CustomKeyBindingsAreReported)
+{
+    YAML::Node node;
+    YAML::Node custom_action_node;
+    custom_action_node["command"] = "echo Hi";
+    custom_action_node["action"] = "down";
+    custom_action_node["modifiers"].push_back("primary");
+    custom_action_node["key"] = "x";
+    node["custom_actions"].push_back(custom_action_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX) + 1);
+
+    // Custom actions are attempted first, so they are emitted first.
+    EXPECT_EQ(bindings[0].source, KeyBindingSource::custom);
+    EXPECT_EQ(bindings[0].command, "echo Hi");
+    EXPECT_EQ(bindings[0].keysym, XKB_KEY_x);
+    EXPECT_EQ(bindings[0].action, mir_keyboard_action_down);
+    EXPECT_EQ(bindings[0].default_key_command, DefaultKeyCommand::MAX);
+    EXPECT_EQ(bindings[0].modifiers, static_cast<uint>(mir_input_event_modifier_meta));
+}
+
+TEST_F(FilesystemConfigurationTest, BuiltInOverridesAreAdditiveInKeyBindings)
+{
+    YAML::Node node;
+    YAML::Node action_override_node;
+    action_override_node["name"] = "terminal";
+    action_override_node["action"] = "down";
+    action_override_node["modifiers"].push_back("primary");
+    action_override_node["key"] = "Escape";
+    node["default_action_overrides"].push_back(action_override_node);
+    write_yaml_node(node);
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_EQ(bindings.size(), static_cast<size_t>(DefaultKeyCommand::MAX) + 1);
+
+    // matches_key_command tries the overrides and then the *whole* default table,
+    // so the original default binding still fires. Both must be reported.
+    std::vector<KeyBindingInfo> terminals;
+    for (auto const& info : bindings)
+    {
+        if (info.default_key_command == DefaultKeyCommand::Terminal)
+            terminals.push_back(info);
+    }
+    ASSERT_EQ(terminals.size(), 2u);
+    EXPECT_EQ(terminals[0].source, KeyBindingSource::built_in_override);
+    EXPECT_EQ(terminals[0].keysym, XKB_KEY_Escape);
+    EXPECT_EQ(terminals[1].source, KeyBindingSource::built_in_default);
+    EXPECT_EQ(terminals[1].keysym, XKB_KEY_Return);
+}
+
+TEST_F(FilesystemConfigurationTest, PrimaryModifierIsResolvedInKeyBindings)
+{
+    write_kvp("action_key", "alt");
+
+    FilesystemConfiguration config(registrar, path, true);
+    auto const bindings = config.describe_key_bindings();
+    ASSERT_FALSE(bindings.empty());
+
+    auto const terminal = std::find_if(bindings.begin(), bindings.end(), [](KeyBindingInfo const& info)
+    {
+        return info.default_key_command == DefaultKeyCommand::Terminal;
+    });
+    ASSERT_NE(terminal, bindings.end());
+    EXPECT_EQ(terminal->modifiers, static_cast<uint>(mir_input_event_modifier_alt));
+    EXPECT_TRUE(terminal->configured_modifiers & miracle_input_event_modifier_default);
+    EXPECT_FALSE(terminal->modifiers & miracle_input_event_modifier_default);
+}
+
+TEST_F(FilesystemConfigurationTest, KeyBindingsDoNotDeadlock)
+{
+    FilesystemConfiguration config(registrar, path, true);
+
+    // matches_key_command invokes the callback without holding the mutex, but
+    // describe_key_bindings must not reintroduce a lock-under-lock path either.
+    // If it does, this hangs until the ctest timeout.
+    bool called = false;
+    config.matches_key_command(
+        mir_keyboard_action_down,
+        XKB_KEY_Return,
+        mir_input_event_modifier_meta,
+        [&](DefaultKeyCommand)
+    {
+        called = true;
+        EXPECT_FALSE(config.describe_key_bindings().empty());
+        return true;
+    });
+    EXPECT_TRUE(called);
 }
 
 TEST_F(FilesystemConfigurationTest, CustomActionsInSnapIncludeUnsnapCommand)
