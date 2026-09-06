@@ -3032,6 +3032,11 @@ contains other containers, or a window.</p>
 <span class="w">    </span><span class="c1">// Current layout scheme on the node.</span>
 <span class="w">    </span><span class="nt">"layout"</span><span class="p">:</span><span class="w"> </span><span class="s2">"output"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"splith"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"splitv"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"stacking"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"tabbed"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
 
+<span class="w">    </span><span class="c1">// How windows that are newly opened on the workspace are placed.</span>
+<span class="w">    </span><span class="c1">//</span>
+<span class="w">    </span><span class="c1">// For workspace nodes only.</span>
+<span class="w">    </span><span class="nt">"policy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tile"</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="s2">"float"</span><span class="p">,</span>
+
 <span class="w">    </span><span class="c1">// Whether or not the node is visible.</span>
 <span class="w">    </span><span class="nt">"visible"</span><span class="p">:</span><span class="w"> </span><span class="err">boolea</span><span class="kc">n</span><span class="p">,</span>
 
@@ -3346,6 +3351,7 @@ being <code>kitty</code> in a hosted wayland session:</p>
 <span class="w">          </span><span class="nt">"num"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">          </span><span class="nt">"orientation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="p">,</span>
 <span class="w">          </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown-1"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"policy"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tile"</span><span class="p">,</span>
 <span class="w">          </span><span class="nt">"rect"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">            </span><span class="nt">"height"</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
 <span class="w">            </span><span class="nt">"width"</span><span class="p">:</span><span class="w"> </span><span class="mi">1270</span><span class="p">,</span>

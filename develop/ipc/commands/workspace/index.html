@@ -2984,7 +2984,8 @@
 
 
 <h1 id="workspace">workspace<a class="headerlink" href="#workspace" title="Permanent link">&para;</a></h1>
-<p>Change the name of a workspace or change focus to a specific workspace.</p>
+<p>Change the name of a workspace, change focus to a specific workspace, or change
+how a workspace places new windows.</p>
 <h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Sets the name on the workspace to &lt;name&gt;.</span>
 workspace<span class="w"> </span>&lt;name&gt;
@@ -3008,12 +3009,27 @@ workspace<span class="w"> </span><span class="o">[</span>--no-auto-back-and-fort
 <span class="c1"># `workspace [--no-auto-back-and-forth] number &lt;name&gt;` focuses a workspace by name</span>
 <span class="c1"># and number.</span>
 workspace<span class="w"> </span><span class="o">[</span>--no-auto-back-and-forth<span class="o">]</span><span class="w"> </span>number<span class="w"> </span>&lt;name&gt;
+
+<span class="c1"># Sets the window placement policy of a workspace. Windows that are opened on a</span>
+<span class="c1"># `tile` workspace are added to the tiling grid, while windows opened on a</span>
+<span class="c1"># `float` workspace are floated over it. Windows that are already open are left</span>
+<span class="c1"># where they are.</span>
+<span class="c1">#</span>
+<span class="c1"># If &lt;num&gt; or &lt;name&gt; is provided, the policy is applied to that workspace,</span>
+<span class="c1"># otherwise it is applied to the currently focused workspace. The target may</span>
+<span class="c1"># also be given in the `&lt;num&gt;: &lt;name&gt;` form, in which case it must be quoted.</span>
+workspace<span class="w"> </span><span class="o">[</span>&lt;num&gt;<span class="p">|</span>&lt;name&gt;<span class="o">]</span><span class="w"> </span>policy<span class="w"> </span>float<span class="p">|</span>tile
 </code></pre></div>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>miraclemsg<span class="w"> </span>workspace<span class="w"> </span>hello<span class="w"> </span><span class="c1"># Change the name of the current workspace to 'hello'</span>
 miraclemsg<span class="w"> </span>workspace<span class="w"> </span><span class="m">1</span><span class="w">     </span><span class="c1"># Focus workspace 1</span>
 miraclemsg<span class="w"> </span>workspace<span class="w"> </span>next<span class="w">  </span><span class="c1"># Focus workspace after 1 (e.g. if workspace 3 exists, 3 would be focused)</span>
 miraclemsg<span class="w"> </span>workspace<span class="w"> </span>hi<span class="w">    </span><span class="c1"># Focus non-numeric workspace named "hi"</span>
+
+miraclemsg<span class="w"> </span>workspace<span class="w"> </span>policy<span class="w"> </span>float<span class="w">      </span><span class="c1"># New windows on the current workspace will float</span>
+miraclemsg<span class="w"> </span>workspace<span class="w"> </span><span class="m">2</span><span class="w"> </span>policy<span class="w"> </span>float<span class="w">    </span><span class="c1"># New windows on workspace 2 will float</span>
+miraclemsg<span class="w"> </span>workspace<span class="w"> </span>hi<span class="w"> </span>policy<span class="w"> </span>tile<span class="w">    </span><span class="c1"># New windows on the workspace named "hi" will tile</span>
+miraclemsg<span class="w"> </span>workspace<span class="w"> </span><span class="s2">"2: web"</span><span class="w"> </span>policy<span class="w"> </span>float<span class="w"> </span><span class="c1"># Target a workspace by number and name</span>
 </code></pre></div>
 
 
