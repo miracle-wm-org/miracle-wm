@@ -141,10 +141,11 @@ public:
     /// \returns the window's urgency
     bool urgent() const;
 
+    void rerender() override;
+
 protected:
     void update_window_margins(int border_size, bool entering_fullscreen);
 
-    void rerender();
     std::weak_ptr<RenderDataManager> rdm;
     std::shared_ptr<WindowController> window_controller_;
 

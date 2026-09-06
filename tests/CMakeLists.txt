@@ -35,6 +35,7 @@ set(SOURCES
     test_resize_service.cpp
     test_render_data_manager.cpp
     test_scene_override_manager.cpp
+    test_scene_override_compositor.cpp
     test_carousel_layout.cpp
     test_overview_scene_override.cpp
     test_workspace_preview.cpp

@@ -352,7 +352,21 @@ private:
     ///
     /// Must run on the window management thread.
     void conceal_workspaces();
-    static void nudge(miral::Window const& window);
+
+    /// Marks \p window's surface as damaged by handing it \p transform, which
+    /// is also the transformation the renderer draws it with while the override
+    /// is active.
+    static void nudge(miral::Window const& window, glm::mat4 const& transform);
+
+    /// Undo [nudge]: hand every surface the override touched back to the window
+    /// management policy's own transform. Must run on the window management thread.
+    ///
+    /// Static, and takes what it needs, so that the outro completion - which runs
+    /// on the animator thread and must not assume the override is still alive -
+    /// can call it through the handles it already holds.
+    static void restore_scene_transforms(
+        std::shared_ptr<State> const& state,
+        std::shared_ptr<WindowController> const& window_controller);
 
     /// Which group and workspace \p container belongs to, or nullopt when it is
     /// on a workspace that this overview does not cover.

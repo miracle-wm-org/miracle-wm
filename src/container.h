@@ -123,6 +123,12 @@ public:
     ///
     /// \param alpha
     virtual void set_animation_alpha(float const alpha) = 0;
+
+    /// Re-applies the container's own transformation and alpha to its surface,
+    /// which both restores whatever an effect had temporarily written there and
+    /// marks the scene as damaged.
+    virtual void rerender() { }
+
     virtual uint32_t animation_handle() const = 0;
     virtual void animation_handle(uint32_t) = 0;
     virtual bool is_focused() const = 0;

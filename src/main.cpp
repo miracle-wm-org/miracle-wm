@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "policy.h"
 #include "renderer.h"
 #include "sampler_registry.h"
+#include "scene_override_compositor.h"
 #include "version.h"
 #include "wlr-ouput-management-unstable-v1.h"
 #include "wlr-output-management-unstable-v1_wrapper.h"
@@ -280,6 +281,7 @@ int main(int argc, char const* argv[])
             slow_keys,
             sticky_keys,
             Decorations::always_csd(),
+            miracle::SceneOverrideCompositor { compositor_state },
             CustomRenderer([&](std::unique_ptr<mir::graphics::gl::OutputSurface> surface, std::shared_ptr<mir::graphics::GLRenderingProvider> rendering_provider)
     {
         return std::make_unique<miracle::Renderer>(std::move(rendering_provider), std::move(surface), config, compositor_state, sampler_registry);

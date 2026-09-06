@@ -132,6 +132,28 @@ SceneOverridePlacement to_scene_placement(
         .clip = clip
     };
 }
+
+/// The transformation the renderer actually draws the placement with: the real
+/// rect translated to the placement position, then the placement's own scale
+/// about that rect's center.
+///
+/// Mirroring this onto the surface keeps Mir's occlusion pass honest. Mir culls a
+/// renderable that an opaque, *untransformed* surface completely covers before the
+/// renderer is ever handed the frame (mir::compositor::split_occluded_and_visible),
+/// and it judges coverage by screen_position() - which, while an override is
+/// active, is not where the window is drawn. A fullscreen window would otherwise
+/// claim the whole output and take every other surface in the overview with it.
+glm::mat4 effective_transform(carousel_layout::Placement const& current, geom::Rectangle const& real)
+{
+    auto const placement = to_scene_placement(current, real, real);
+    glm::vec2 const real_top_left {
+        static_cast<float>(real.top_left.x.as_value()),
+        static_cast<float>(real.top_left.y.as_value())
+    };
+
+    return placement.transformation
+        * glm::translate(glm::mat4(1.f), glm::vec3(placement.position - real_top_left, 0.f));
+}
 }
 
 bool miracle::is_modifier_keysym(MirInputEventModifier modifier, unsigned int keysym)
@@ -626,19 +648,28 @@ void OverviewSceneOverride::animate(std::function<void()> on_complete, std::opti
     if (duration)
         scoped.duration_seconds = std::min(*duration, definition.duration_seconds);
 
+    // A shell entry carries one placement per workspace tile; the one that
+    // stands in for the whole surface is the tile of the group's own active
+    // workspace.
+    std::vector<size_t> active_workspaces;
+    active_workspaces.reserve(groups.size());
+    for (auto const& group : groups)
+        active_workspaces.push_back(group.active_workspace);
+
     {
         std::lock_guard lock(state->mutex);
         state->t = 0.f;
     }
     animator->append(CustomAnimation {
         animation_handle,
-        [weak = std::weak_ptr(state), definition = scoped, on_complete = std::move(on_complete)](float dt) -> bool
+        [weak = std::weak_ptr(state), definition = scoped, on_complete = std::move(on_complete),
+            active_workspaces = std::move(active_workspaces)](float dt) -> bool
     {
         auto const s = weak.lock();
         if (!s)
             return true;
 
-        std::vector<miral::Window> to_nudge;
+        std::vector<std::pair<miral::Window, glm::mat4>> to_nudge;
         bool done = false;
         {
             std::lock_guard lock(s->mutex);
@@ -647,7 +678,7 @@ void OverviewSceneOverride::animate(std::function<void()> on_complete, std::opti
             for (auto& [key, entry] : s->entries)
             {
                 entry.current = carousel_layout::lerp(entry.from, entry.target, p);
-                to_nudge.push_back(entry.window);
+                to_nudge.emplace_back(entry.window, effective_transform(entry.current, entry.real));
             }
 
             for (auto& [key, entry] : s->shell_entries)
@@ -655,16 +686,27 @@ void OverviewSceneOverride::animate(std::function<void()> on_complete, std::opti
                 entry.current.resize(entry.target.size());
                 for (size_t i = 0; i < entry.target.size() && i < entry.from.size(); ++i)
                     entry.current[i] = carousel_layout::lerp(entry.from[i], entry.target[i], p);
-                to_nudge.push_back(entry.window);
+
+                if (entry.current.empty())
+                    continue;
+
+                size_t const active = entry.group < active_workspaces.size()
+                    ? active_workspaces[entry.group]
+                    : 0;
+                auto const& placement = active < entry.current.size()
+                    ? entry.current[active]
+                    : entry.current.front();
+                to_nudge.emplace_back(entry.window, effective_transform(placement, entry.real));
             }
 
             done = s->t >= definition.duration_seconds;
         }
 
-        // Re-applying the surfaces' own transformations marks the scene as
-        // damaged so the compositor redraws with the new placements.
-        for (auto const& window : to_nudge)
-            nudge(window);
+        // Handing the surfaces the transformation they are drawn with marks the
+        // scene as damaged so the compositor redraws with the new placements,
+        // and keeps them out of Mir's occlusion pass.
+        for (auto const& [window, transform] : to_nudge)
+            nudge(window, transform);
 
         if (done)
             on_complete();
@@ -672,14 +714,37 @@ void OverviewSceneOverride::animate(std::function<void()> on_complete, std::opti
     } });
 }
 
-void OverviewSceneOverride::nudge(miral::Window const& window)
+void OverviewSceneOverride::nudge(miral::Window const& window, glm::mat4 const& transform)
 {
-    // Re-applying the current alpha notifies the surface observers
-    // unconditionally, which marks the scene as damaged so the compositor
-    // redraws with the new placements. (There is no way to query the current
-    // transformation, so alpha is the value-preserving choice.)
+    // Setting the transformation notifies the surface observers unconditionally,
+    // which marks the scene as damaged so the compositor redraws with the new
+    // placements, and it tells Mir the truth about where the surface is drawn so
+    // that it neither occludes nor is occluded by anything else in the overview.
     if (auto const surface = window.operator std::shared_ptr<mir::scene::Surface>())
-        surface->set_alpha(surface->alpha());
+        surface->set_transformation(transform);
+}
+
+void OverviewSceneOverride::restore_scene_transforms(
+    std::shared_ptr<State> const& state,
+    std::shared_ptr<WindowController> const& window_controller)
+{
+    auto const restore = [&window_controller](miral::Window const& window)
+    {
+        if (auto const container = window_controller->get_window_container(window))
+        {
+            container->rerender();
+            return;
+        }
+
+        if (auto const surface = window.operator std::shared_ptr<mir::scene::Surface>())
+            surface->set_transformation(glm::mat4(1.f));
+    };
+
+    std::lock_guard lock(state->mutex);
+    for (auto const& [key, entry] : state->entries)
+        restore(entry.window);
+    for (auto const& [key, entry] : state->shell_entries)
+        restore(entry.window);
 }
 
 std::optional<std::pair<size_t, size_t>> OverviewSceneOverride::locate(
@@ -924,7 +989,7 @@ void OverviewSceneOverride::begin_exit()
     auto const selected = selected_workspace;
     animate([s, d, held_preview, controller, selected]
     {
-        controller->invoke_under_lock([s, d, held_preview, selected]
+        controller->invoke_under_lock([s, d, held_preview, controller, selected]
         {
             {
                 std::lock_guard lock(s->mutex);
@@ -936,6 +1001,7 @@ void OverviewSceneOverride::begin_exit()
                 d->on_workspace_selected(*selected);
 
             held_preview->release();
+            restore_scene_transforms(s, controller);
 
             std::lock_guard lock(s->mutex);
             s->phase = Phase::done;
@@ -1229,6 +1295,10 @@ void OverviewSceneOverride::cancel()
     // There is no outro to hand the workspaces back at the end of, so put them
     // away now. Cancellation always reaches us on the window management thread.
     conceal_workspaces();
+
+    // Nor is there an outro to land the surfaces back on their own transforms,
+    // so whatever the animation last wrote has to be undone by hand.
+    restore_scene_transforms(state, window_controller);
 
     // [begin_exit] has already announced the exit if the outro was running.
     if (!was_exiting)
