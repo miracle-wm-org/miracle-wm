@@ -34,9 +34,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "workspace_observer.h"
 #include <gtest/gtest.h>
 #include <memory>
+#include <miracle/cpp/modifiers.h>
 #include <miral/window_info.h>
 #include <miral/window_specification.h>
 #include <mutex>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
 using namespace testing;
@@ -572,4 +574,70 @@ TEST_F(CommandControllerTest, TryToggleFullscreen_ReturnsFalse_WhenNotInNormalMo
 
     EXPECT_CALL(*container, toggle_fullscreen()).Times(0);
     EXPECT_FALSE(command_controller->try_toggle_fullscreen({}));
+}
+
+TEST_F(CommandControllerTest, KeyBindingsJson)
+{
+    std::vector<KeyBindingInfo> const bindings = {
+        { .source = KeyBindingSource::custom,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_x,
+         .default_key_command = DefaultKeyCommand::MAX,
+         .command = "echo Hi" },
+        { .source = KeyBindingSource::built_in_override,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_Escape,
+         .default_key_command = DefaultKeyCommand::Terminal,
+         .command = ""        },
+        { .source = KeyBindingSource::built_in_default,
+         .action = mir_keyboard_action_down,
+         .configured_modifiers = miracle_input_event_modifier_default,
+         .modifiers = mir_input_event_modifier_meta,
+         .keysym = XKB_KEY_Return,
+         .default_key_command = DefaultKeyCommand::Terminal,
+         .command = ""        }
+    };
+    EXPECT_CALL(*config, describe_key_bindings)
+        .WillOnce(Return(bindings));
+    EXPECT_CALL(*config, get_primary_modifier)
+        .WillRepeatedly(Return(mir_input_event_modifier_meta));
+
+    auto const result_json = command_controller->key_bindings_json();
+    EXPECT_THAT(result_json["primary_modifier"]["modifiers"], Eq(nlohmann::json::array({ "meta" })));
+    EXPECT_THAT(result_json["primary_modifier"]["modifier_mask"], Eq(mir_input_event_modifier_meta));
+
+    auto const& keybinds = result_json["keybinds"];
+    ASSERT_THAT(keybinds.size(), Eq(3u));
+
+    // Emitted in match-attempt order: custom, then override, then default. Exactly
+    // one of `action` / `command` is non-null on every entry; which of the three
+    // internal tables a binding came from is not reported.
+    EXPECT_THAT(keybinds[0]["command"], Eq("echo Hi"));
+    EXPECT_TRUE(keybinds[0]["action"].is_null());
+    EXPECT_THAT(keybinds[0]["xkb_keysym"], Eq(XKB_KEY_x));
+    EXPECT_THAT(keybinds[0]["xkb_keysym_name"], Eq("x"));
+    EXPECT_THAT(keybinds[0]["keyboard_action"], Eq("down"));
+
+    EXPECT_THAT(keybinds[1]["action"], Eq("terminal"));
+    EXPECT_TRUE(keybinds[1]["command"].is_null());
+    EXPECT_THAT(keybinds[1]["xkb_keysym_name"], Eq("Escape"));
+
+    EXPECT_THAT(keybinds[2]["action"], Eq("terminal"));
+    EXPECT_TRUE(keybinds[2]["command"].is_null());
+    EXPECT_THAT(keybinds[2]["xkb_keysym_name"], Eq("Return"));
+
+    // The resolved modifiers are what the user physically holds; the configured
+    // ones are what the config file said. Getting these backwards would emit
+    // ["primary"] with the real meta bit missing.
+    for (auto const& keybind : keybinds)
+    {
+        EXPECT_FALSE(keybind.contains("source"));
+        EXPECT_THAT(keybind["modifiers"], Eq(nlohmann::json::array({ "meta" })));
+        EXPECT_THAT(keybind["modifier_mask"], Eq(mir_input_event_modifier_meta));
+        EXPECT_THAT(keybind["configured_modifiers"], Eq(nlohmann::json::array({ "primary" })));
+    }
 }

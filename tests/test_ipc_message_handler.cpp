@@ -24,9 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "version.h"
 
 #include <gtest/gtest.h>
-#include <miracle/cpp/modifiers.h>
 #include <nlohmann/json.hpp>
-#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
 using namespace testing;
@@ -204,72 +202,12 @@ TEST_F(IpcMessageHandlerTest, PluginCommandFailsWhenNoPluginRegistered)
 
 TEST_F(IpcMessageHandlerTest, CanGetKeybinds)
 {
-    std::vector<KeyBindingInfo> const bindings = {
-        { .source = KeyBindingSource::custom,
-         .action = mir_keyboard_action_down,
-         .configured_modifiers = miracle_input_event_modifier_default,
-         .modifiers = mir_input_event_modifier_meta,
-         .keysym = XKB_KEY_x,
-         .default_key_command = DefaultKeyCommand::MAX,
-         .command = "echo Hi" },
-        { .source = KeyBindingSource::built_in_override,
-         .action = mir_keyboard_action_down,
-         .configured_modifiers = miracle_input_event_modifier_default,
-         .modifiers = mir_input_event_modifier_meta,
-         .keysym = XKB_KEY_Escape,
-         .default_key_command = DefaultKeyCommand::Terminal,
-         .command = ""        },
-        { .source = KeyBindingSource::built_in_default,
-         .action = mir_keyboard_action_down,
-         .configured_modifiers = miracle_input_event_modifier_default,
-         .modifiers = mir_input_event_modifier_meta,
-         .keysym = XKB_KEY_Return,
-         .default_key_command = DefaultKeyCommand::Terminal,
-         .command = ""        }
-    };
-    EXPECT_CALL(*config, describe_key_bindings)
-        .WillOnce(Return(bindings));
-    EXPECT_CALL(*config, get_primary_modifier)
-        .WillRepeatedly(Return(mir_input_event_modifier_meta));
-
+    nlohmann::json const throwaway_json = { { "keybinds", nlohmann::json::array() } };
+    EXPECT_CALL(*command_controller, key_bindings_json)
+        .WillOnce(Return(throwaway_json));
     auto const result = message_handler.handle_msg(IpcType::IPC_GET_KEYBINDS, "", 0);
     EXPECT_THAT(result.type, Eq(IpcType::IPC_GET_KEYBINDS));
-
-    nlohmann::json const result_json = nlohmann::json::parse(result.payload);
-    EXPECT_THAT(result_json["primary_modifier"]["modifiers"], Eq(nlohmann::json::array({ "meta" })));
-    EXPECT_THAT(result_json["primary_modifier"]["modifier_mask"], Eq(mir_input_event_modifier_meta));
-
-    auto const& keybinds = result_json["keybinds"];
-    ASSERT_THAT(keybinds.size(), Eq(3u));
-
-    // Emitted in match-attempt order: custom, then override, then default.
-    EXPECT_THAT(keybinds[0]["source"], Eq("custom"));
-    EXPECT_THAT(keybinds[1]["source"], Eq("built_in_override"));
-    EXPECT_THAT(keybinds[2]["source"], Eq("built_in_default"));
-
-    EXPECT_THAT(keybinds[0]["command"], Eq("echo Hi"));
-    EXPECT_TRUE(keybinds[0]["action"].is_null());
-    EXPECT_THAT(keybinds[0]["xkb_keysym"], Eq(XKB_KEY_x));
-    EXPECT_THAT(keybinds[0]["xkb_keysym_name"], Eq("x"));
-    EXPECT_THAT(keybinds[0]["keyboard_action"], Eq("down"));
-
-    EXPECT_THAT(keybinds[1]["action"], Eq("terminal"));
-    EXPECT_TRUE(keybinds[1]["command"].is_null());
-    EXPECT_THAT(keybinds[1]["xkb_keysym_name"], Eq("Escape"));
-
-    EXPECT_THAT(keybinds[2]["action"], Eq("terminal"));
-    EXPECT_TRUE(keybinds[2]["command"].is_null());
-    EXPECT_THAT(keybinds[2]["xkb_keysym_name"], Eq("Return"));
-
-    // The resolved modifiers are what the user physically holds; the configured
-    // ones are what the config file said. Getting these backwards would emit
-    // ["primary"] with the real meta bit missing.
-    for (auto const& keybind : keybinds)
-    {
-        EXPECT_THAT(keybind["modifiers"], Eq(nlohmann::json::array({ "meta" })));
-        EXPECT_THAT(keybind["modifier_mask"], Eq(mir_input_event_modifier_meta));
-        EXPECT_THAT(keybind["configured_modifiers"], Eq(nlohmann::json::array({ "primary" })));
-    }
+    EXPECT_THAT(nlohmann::json::parse(result.payload), Eq(throwaway_json));
 }
 
 TEST_F(IpcMessageHandlerTest, CanGetTree)

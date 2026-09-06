@@ -639,10 +639,6 @@ bool FilesystemConfiguration::matches_key_command(
 
 std::vector<KeyBindingInfo> FilesystemConfiguration::describe_key_bindings() const
 {
-    // Everything that this function needs is snapshotted under a single lock and
-    // resolved afterwards. Neither process_modifier() nor get_input_event_modifier()
-    // may be called from here: process_modifier() calls the virtual
-    // get_input_event_modifier(), which takes this same non-recursive mutex.
     std::vector<CustomKeyCommand> customs;
     std::vector<BuiltInKeyCommandOverride> overrides;
     uint primary = 0;
@@ -663,11 +659,6 @@ std::vector<KeyBindingInfo> FilesystemConfiguration::describe_key_bindings() con
     std::vector<KeyBindingInfo> result;
     result.reserve(customs.size() + overrides.size() + static_cast<size_t>(DefaultKeyCommand::MAX));
 
-    // Emitted in the order that the input path attempts them: custom actions first
-    // (see Policy::handle_keyboard_event), then overrides, then the whole default
-    // table. Note that overrides are *additive*: matches_key_command falls through
-    // to every default entry, so an override leaves the original default in place
-    // unless it happens to reuse the same key and modifiers.
     for (auto const& command : customs)
     {
         result.push_back({ .source = KeyBindingSource::custom,
