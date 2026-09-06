@@ -202,7 +202,9 @@ TEST_F(IpcMessageHandlerTest, PluginCommandFailsWhenNoPluginRegistered)
 
 TEST_F(IpcMessageHandlerTest, CanGetKeybinds)
 {
-    nlohmann::json const throwaway_json = { { "keybinds", nlohmann::json::array() } };
+    nlohmann::json const throwaway_json = {
+        { "keybinds", nlohmann::json::array() }
+    };
     EXPECT_CALL(*command_controller, key_bindings_json)
         .WillOnce(Return(throwaway_json));
     auto const result = message_handler.handle_msg(IpcType::IPC_GET_KEYBINDS, "", 0);
