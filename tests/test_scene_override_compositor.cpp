@@ -174,14 +174,14 @@ TEST_F(SceneOverrideCompositorTest, TheExemptTransformDoesNotMoveAnythingOnScree
     // and w are zero and whose vertices all have z == 0.
     for (auto const& center : {
              glm::vec2 { 0.f,    0.f   },
-              glm::vec2 { 640.f,  360.f },
-              glm::vec2 { -12.5f, 7.25f }
+             glm::vec2 { 640.f,  360.f },
+             glm::vec2 { -12.5f, 7.25f }
     })
     {
         for (auto const& position : {
                  glm::vec3 { 0.f,    0.f,    0.f },
-                  glm::vec3 { 1920.f, 1080.f, 0.f },
-                  glm::vec3 { -3.5f,  4.75f,  0.f }
+                 glm::vec3 { 1920.f, 1080.f, 0.f },
+                 glm::vec3 { -3.5f,  4.75f,  0.f }
         })
         {
             glm::vec4 const p { center, 0.f, 0.f };
