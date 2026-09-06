@@ -148,6 +148,31 @@ TEST_F(IpcCommandParserTest, CanParseThreeCommands)
     ASSERT_EQ(commands.commands[2].arguments[0], "splitv");
 }
 
+TEST_F(IpcCommandParserTest, CanParseWorkspacePolicyCommand)
+{
+    const char* v = "workspace policy float";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 1);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::workspace);
+    ASSERT_EQ(commands.commands[0].arguments.size(), 2);
+    ASSERT_EQ(commands.commands[0].arguments[0], "policy");
+    ASSERT_EQ(commands.commands[0].arguments[1], "float");
+}
+
+TEST_F(IpcCommandParserTest, CanParseWorkspacePolicyCommandWithTarget)
+{
+    const char* v = "workspace 2 policy tile";
+    IpcCommandParser parser(v);
+    auto commands = parser.parse();
+    ASSERT_EQ(commands.commands.size(), 1);
+    ASSERT_EQ(commands.commands[0].type, IpcCommandType::workspace);
+    ASSERT_EQ(commands.commands[0].arguments.size(), 3);
+    ASSERT_EQ(commands.commands[0].arguments[0], "2");
+    ASSERT_EQ(commands.commands[0].arguments[1], "policy");
+    ASSERT_EQ(commands.commands[0].arguments[2], "tile");
+}
+
 TEST_F(IpcCommandParserTest, InvlaidCommandIsNone)
 {
     const char* v = "meow 5";

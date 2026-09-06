@@ -102,6 +102,7 @@ namespace test
         MOCK_METHOD(std::unordered_set<std::string>, get_all_marks, (), (const, override));
         MOCK_METHOD(bool, rename_selected_workspace, (WorkspaceIdentifier const&), (override));
         MOCK_METHOD(bool, rename_existing_workspace, (WorkspaceIdentifier const&, WorkspaceIdentifier const&), (override));
+        MOCK_METHOD(bool, set_workspace_placement_policy, (std::optional<WorkspaceIdentifier> const&, WindowPlacementPolicy), (override));
         MOCK_METHOD(bool, set_inner_gaps, (uint32_t px, GapsChangeType type, bool current_workspace_only), (override));
         MOCK_METHOD(bool, set_outer_gaps, (uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only), (override));
         MOCK_METHOD(bool, try_move_workspace_to_output, (OutputSelection), (override));

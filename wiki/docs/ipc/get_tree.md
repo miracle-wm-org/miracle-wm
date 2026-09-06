@@ -32,6 +32,11 @@ contains other containers, or a window.
     // Current layout scheme on the node.
     "layout": "output" | "splith" | "splitv" | "stacking" | "tabbed" | "none",
 
+    // How windows that are newly opened on the workspace are placed.
+    //
+    // For workspace nodes only.
+    "policy": "tile" | "float",
+
     // Whether or not the node is visible.
     "visible": boolean,
 
@@ -349,6 +354,7 @@ being `kitty` in a hosted wayland session:
           "num": 1,
           "orientation": "none",
           "output": "unknown-1",
+          "policy": "tile",
           "rect": {
             "height": 1014,
             "width": 1270,

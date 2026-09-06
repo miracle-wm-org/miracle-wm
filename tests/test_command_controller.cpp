@@ -312,6 +312,101 @@ TEST_F(CommandControllerTest, CanRenameExistingWorkspace)
             .name = "hi" });
 }
 
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfTheFocusedWorkspace)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(workspace));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::floating));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(std::nullopt, WindowPlacementPolicy::floating));
+}
+
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfAWorkspaceByNumber)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, num())
+        .WillRepeatedly(Return(1));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    // The name is not part of the identifier, so it must not take part in the match.
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::floating));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = 1, .name = std::nullopt },
+        WindowPlacementPolicy::floating));
+}
+
+TEST_F(CommandControllerTest, CanSetThePlacementPolicyOfAWorkspaceByName)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    std::optional<std::string> name = "hello";
+    EXPECT_CALL(*workspace, name())
+        .WillRepeatedly(ReturnRef(name));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(WindowPlacementPolicy::tile));
+    EXPECT_TRUE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = std::nullopt, .name = "hello" },
+        WindowPlacementPolicy::tile));
+}
+
+TEST_F(CommandControllerTest, SetPlacementPolicyFailsWhenTheWorkspaceIsNotFound)
+{
+    std::vector<std::shared_ptr<AbstractWorkspace>> workspaces;
+    EXPECT_CALL(*output, get_workspaces)
+        .WillRepeatedly(Invoke([&workspaces]()
+    { return workspaces; }));
+    output_manager->create("hello", 1, geom::Rectangle({ 0, 0 }, { 1280, 920 }), *workspace_manager);
+
+    auto const workspace = std::make_shared<NiceMock<test::MockWorkspace>>();
+    Mock::AllowLeak(workspace.get());
+    EXPECT_CALL(*workspace, num())
+        .WillRepeatedly(Return(1));
+    EXPECT_CALL(*workspace, get_output())
+        .WillRepeatedly(Return(output));
+    EXPECT_CALL(*output, active())
+        .WillRepeatedly(Return(nullptr));
+    workspaces.push_back(workspace);
+
+    EXPECT_CALL(*workspace, placement_policy(_))
+        .Times(0);
+    EXPECT_FALSE(command_controller->set_workspace_placement_policy(
+        WorkspaceIdentifier { .number = 7, .name = std::nullopt },
+        WindowPlacementPolicy::floating));
+}
+
 TEST_F(CommandControllerTest, CannotResizeWhileNotInNormalOrResizingState)
 {
     state->mode(WindowManagerMode::moving);

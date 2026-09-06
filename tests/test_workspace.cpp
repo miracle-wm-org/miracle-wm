@@ -364,10 +364,43 @@ TEST_F(WorkspaceTest, GetWorkspaceJson)
     EXPECT_THAT(json["focused"], Eq(true));
     EXPECT_THAT(json["urgent"], Eq(false));
     EXPECT_THAT(json["output"], Eq("test"));
+    EXPECT_THAT(json["policy"], Eq("tile"));
     EXPECT_THAT(json["rect"]["x"], Eq(0));
     EXPECT_THAT(json["rect"]["y"], Eq(0));
     EXPECT_THAT(json["rect"]["width"], Eq(OUTPUT_WIDTH));
     EXPECT_THAT(json["rect"]["height"], Eq(OUTPUT_HEIGHT));
+}
+
+TEST_F(WorkspaceTest, PlacementPolicyDefaultsToTile)
+{
+    EXPECT_THAT(workspace->placement_policy(), Eq(WindowPlacementPolicy::tile));
+}
+
+TEST_F(WorkspaceTest, CanSetPlacementPolicy)
+{
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->placement_policy(), Eq(WindowPlacementPolicy::floating));
+}
+
+TEST_F(WorkspaceTest, GetWorkspaceJsonReportsTheFloatingPolicy)
+{
+    std::string const output_name = "test";
+    EXPECT_CALL(*output, name)
+        .WillOnce(ReturnRef(output_name));
+    EXPECT_CALL(*output, active)
+        .WillOnce(Return(workspace));
+
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->get_workspaces_json(true)["policy"], Eq("float"));
+}
+
+TEST_F(WorkspaceTest, ToJsonReportsThePlacementPolicy)
+{
+    std::string const output_name = "test-output";
+    ON_CALL(*output, name()).WillByDefault(ReturnRef(output_name));
+
+    workspace->placement_policy(WindowPlacementPolicy::floating);
+    EXPECT_THAT(workspace->to_json(false)["policy"], Eq("float"));
 }
 
 TEST_F(WorkspaceTest, CanSetNum)

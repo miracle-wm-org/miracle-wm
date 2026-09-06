@@ -16,6 +16,7 @@ The reply is an array of objects corresponding to the following schema:
         "focused": boolean, // True if the workspace is visible and its output is currently selected
         "urgent": boolean,  // True if a window on the workspace wants attention
         "output" string,    // Name of the output that the workspace is on
+        "policy": string,   // How new windows on this workspace are placed: "tile" or "float"
         "rect": {           // The rectangle defining this workspace
             "x" integer,
             "y": integer,
@@ -35,6 +36,7 @@ The reply is an array of objects corresponding to the following schema:
         "visible": true,
         "focused": true,
         "output": "eDP-1",
+        "policy": "tile",
         "rect": {
             "x": 0,
             "y": 23,
