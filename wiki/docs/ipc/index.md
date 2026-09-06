@@ -45,6 +45,7 @@ the value that users will send from the client when they want to send the corres
 - [GET_BINDING_STATE (12)](get_binding_state.md)
 - [GET_DEBUG_STATE (200)](get_debug_state.md)
 - [PLUGIN_COMMAND (201)](plugin_command.md)
+- [GET_KEYBINDS (202)](get_keybinds.md)
 
 For those familiar with sway, miracle will always lack support for particular messages
 such as:

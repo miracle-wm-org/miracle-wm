@@ -94,6 +94,7 @@ nav:
     - ipc/get_binding_state.md
     - ipc/get_debug_state.md
     - ipc/plugin_command.md
+    - ipc/get_keybinds.md
     - Commands:
       - ipc/commands/exec.md
       - ipc/commands/split.md

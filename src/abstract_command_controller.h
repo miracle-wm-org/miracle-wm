@@ -189,6 +189,10 @@ public:
     /// position, the id of the window under the cursor, and a flat list of every
     /// window (with geometry, clip area, visibility, ...) across all outputs.
     [[nodiscard]] virtual nlohmann::json debug_state_to_json() const = 0;
+
+    /// The effective key binding set, for GET_KEYBINDS. See
+    /// [Config::describe_key_bindings] for the ordering contract.
+    [[nodiscard]] virtual nlohmann::json key_bindings_json() const = 0;
 };
 
 class CommandControllerInterface

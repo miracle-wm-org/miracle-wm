@@ -36,9 +36,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/scene/surface.h>
 #include <mir_toolkit/common.h>
+#include <miracle/cpp/keyboard.h>
+#include <miracle/cpp/modifiers.h>
 #include <miral/runner.h>
+#include <xkbcommon/xkbcommon.h>
+
+#ifndef XKB_KEYSYM_NAME_MAX_SIZE
+#define XKB_KEYSYM_NAME_MAX_SIZE 64
+#endif
 
 using namespace miracle;
+
+namespace
+{
+nlohmann::json modifier_names(uint mask)
+{
+    nlohmann::json array = nlohmann::json::array();
+    for (auto const& [name, value] : mir_input_event_modifier_opts)
+    {
+        if (mask & value)
+            array.push_back(name);
+    }
+    return array;
+}
+
+nlohmann::json keysym_name(uint keysym)
+{
+    char buf[XKB_KEYSYM_NAME_MAX_SIZE];
+    int const n = xkb_keysym_get_name(static_cast<xkb_keysym_t>(keysym), buf, sizeof(buf));
+    return n < 0 ? nlohmann::json("NoSymbol") : nlohmann::json(buf);
+}
+
+nlohmann::json keyboard_action_name(MirKeyboardAction action)
+{
+    auto const index = static_cast<size_t>(action);
+    if (index >= mir_keyboard_actions_strings.size())
+        return nlohmann::json(static_cast<int>(action));
+    return nlohmann::json(mir_keyboard_actions_strings[index].first);
+}
+}
 
 CommandController::CommandController(
     std::shared_ptr<Config> const& config,
@@ -2385,4 +2421,30 @@ nlohmann::json CommandController::mode_to_json() const
         return {};
     }
     }
+}
+
+nlohmann::json CommandController::key_bindings_json() const
+{
+    using json = nlohmann::json;
+    json keybinds = json::array();
+    for (auto const& info : config->describe_key_bindings())
+    {
+        bool const is_custom = info.source == KeyBindingSource::custom;
+        keybinds.push_back({
+            { "action",               is_custom ? json(nullptr) : json(default_key_command_strings[static_cast<int>(info.default_key_command)]) },
+            { "command",              is_custom ? json(info.command) : json(nullptr)                                                            },
+            { "keyboard_action",      keyboard_action_name(info.action)                                                                         },
+            { "modifiers",            modifier_names(info.modifiers)                                                                            },
+            { "modifier_mask",        info.modifiers                                                                                            },
+            { "configured_modifiers", modifier_names(info.configured_modifiers)                                                                 },
+            { "xkb_keysym",           info.keysym                                                                                               },
+            { "xkb_keysym_name",      keysym_name(info.keysym)                                                                                  },
+        });
+    }
+
+    auto const primary = config->get_primary_modifier();
+    return {
+        { "primary_modifier", { { "modifiers", modifier_names(primary) }, { "modifier_mask", primary } } },
+        { "keybinds",         keybinds                                                                   }
+    };
 }

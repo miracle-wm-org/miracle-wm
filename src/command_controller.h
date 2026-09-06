@@ -143,6 +143,7 @@ public:
     [[nodiscard]] nlohmann::json workspace_to_json(uint32_t) const override;
     [[nodiscard]] nlohmann::json mode_to_json() const override;
     [[nodiscard]] nlohmann::json debug_state_to_json() const override;
+    [[nodiscard]] nlohmann::json key_bindings_json() const override;
 
 private:
     std::shared_ptr<Config> config;

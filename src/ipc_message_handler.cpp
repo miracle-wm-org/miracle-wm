@@ -184,6 +184,13 @@ MessageHandlerResult IpcMessageHandler::process_msg(
             .payload = to_string(command_controller->debug_state_to_json())
         };
     }
+    case IpcType::IPC_GET_KEYBINDS:
+    {
+        return {
+            .type = payload_type,
+            .payload = to_string(command_controller->key_bindings_json())
+        };
+    }
     case IpcType::IPC_GET_MARKS:
     {
         auto const marks = command_controller->get_all_marks();

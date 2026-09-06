@@ -200,6 +200,18 @@ TEST_F(IpcMessageHandlerTest, PluginCommandFailsWhenNoPluginRegistered)
     EXPECT_THAT(result_json["error"], Eq("No plugin is registered for namespace: my-plugin"));
 }
 
+TEST_F(IpcMessageHandlerTest, CanGetKeybinds)
+{
+    nlohmann::json const throwaway_json = {
+        { "keybinds", nlohmann::json::array() }
+    };
+    EXPECT_CALL(*command_controller, key_bindings_json)
+        .WillOnce(Return(throwaway_json));
+    auto const result = message_handler.handle_msg(IpcType::IPC_GET_KEYBINDS, "", 0);
+    EXPECT_THAT(result.type, Eq(IpcType::IPC_GET_KEYBINDS));
+    EXPECT_THAT(nlohmann::json::parse(result.payload), Eq(throwaway_json));
+}
+
 TEST_F(IpcMessageHandlerTest, CanGetTree)
 {
     nlohmann::json throwaway_json;

@@ -39,6 +39,26 @@ namespace miracle
 {
 class ConfigObserverRegistrar;
 
+/// Where a key binding in a [KeyBindingInfo] snapshot came from.
+enum class KeyBindingSource
+{
+    built_in_default,
+    built_in_override,
+    custom
+};
+
+/// A read-only view of a single key binding, for viewing and serialization only.
+struct KeyBindingInfo
+{
+    KeyBindingSource source;
+    MirKeyboardAction action = mir_keyboard_action_down;
+    uint configured_modifiers = 0;
+    uint modifiers = 0;
+    uint keysym = 0;
+    DefaultKeyCommand default_key_command = DefaultKeyCommand::MAX;
+    std::string command;
+};
+
 class Config
 {
 public:
@@ -58,6 +78,8 @@ public:
     [[nodiscard]] virtual MirInputEventModifier get_input_event_modifier() const = 0;
     [[nodiscard]] virtual CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const = 0;
     virtual bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const = 0;
+    /// A snapshot of every effective key binding, in the order that [matches_custom_key_command] and [matches_key_command] attempt them.
+    [[nodiscard]] virtual std::vector<KeyBindingInfo> describe_key_bindings() const = 0;
     [[nodiscard]] virtual Gaps get_inner_gaps() const = 0;
     virtual void override_inner_gaps(Gaps const&) = 0;
     [[nodiscard]] virtual Gaps get_outer_gaps() const = 0;
@@ -117,6 +139,7 @@ public:
     [[nodiscard]] MirInputEventModifier get_input_event_modifier() const override;
     [[nodiscard]] CustomKeyCommand const* matches_custom_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers) const override;
     bool matches_key_command(MirKeyboardAction action, uint32_t keysym, unsigned int modifiers, std::function<bool(DefaultKeyCommand)> const& f) const override;
+    [[nodiscard]] std::vector<KeyBindingInfo> describe_key_bindings() const override;
     [[nodiscard]] Gaps get_inner_gaps() const override;
     void override_inner_gaps(Gaps const&) override;
     [[nodiscard]] Gaps get_outer_gaps() const override;
