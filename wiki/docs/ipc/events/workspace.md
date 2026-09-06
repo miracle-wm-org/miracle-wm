@@ -23,11 +23,7 @@ The `change` string is one of the following:
 | rename | The workspace was renamed                                                                     |
 | reload | The configuration file has been reloaded                                                      |
 | urgent | A window on the workspace has started or stopped wanting attention                            |
-
-The `policy` key on the workspace object is its current window placement policy,
-either `"tile"` or `"float"`. It reports how windows that are newly opened on the
-workspace are placed, and is changed with the
-[workspace](../commands/workspace.md) command.
+| policy | The current window placement policy, either `"tile"` or `"float"`                             |
 
 ## Example
 ```json
