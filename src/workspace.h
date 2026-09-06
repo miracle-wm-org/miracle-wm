@@ -85,6 +85,8 @@ public:
     void outer_gaps(std::optional<Gaps> const& gaps) override;
     [[nodiscard]] std::optional<Gaps> inner_gaps() const override;
     void inner_gaps(std::optional<Gaps> const& gaps) override;
+    [[nodiscard]] WindowPlacementPolicy placement_policy() const override;
+    void placement_policy(WindowPlacementPolicy) override;
     void transform(glm::mat4 const&) override;
     glm::mat4 transform() const override;
     void alpha(float) override;
@@ -138,6 +140,7 @@ private:
         std::weak_ptr<Container> last_selected_container;
         std::optional<Gaps> workspace_outer_gaps;
         std::optional<Gaps> workspace_inner_gaps;
+        WindowPlacementPolicy placement_policy_ = WindowPlacementPolicy::tile;
         glm::mat4 transform_ = glm::mat4(1.f);
         float alpha_ = 1.f;
         /// Whether the windows of this workspace are currently in the scene.

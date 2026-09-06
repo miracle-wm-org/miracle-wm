@@ -74,6 +74,9 @@ namespace test
         MOCK_METHOD(std::optional<Gaps>, inner_gaps, (), (const, override));
         MOCK_METHOD(void, inner_gaps, (std::optional<Gaps> const&), (override));
 
+        MOCK_METHOD(WindowPlacementPolicy, placement_policy, (), (const, override));
+        MOCK_METHOD(void, placement_policy, (WindowPlacementPolicy), (override));
+
         MOCK_METHOD(void, transform, (glm::mat4 const&), (override));
         MOCK_METHOD(glm::mat4, transform, (), (const, override));
 

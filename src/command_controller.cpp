@@ -1950,6 +1950,48 @@ bool CommandController::rename_existing_workspace(
     return false;
 }
 
+bool CommandController::set_workspace_placement_policy(
+    std::optional<WorkspaceIdentifier> const& identifier,
+    WindowPlacementPolicy policy)
+{
+    if (!identifier)
+    {
+        auto const output = output_manager->focused();
+        if (!output)
+        {
+            mir::log_error("set_workspace_placement_policy: no focused output");
+            return false;
+        }
+
+        auto const selected_workspace = output->active();
+        if (!selected_workspace)
+        {
+            mir::log_error("set_workspace_placement_policy: could not find selected workspace");
+            return false;
+        }
+
+        selected_workspace->placement_policy(policy);
+        return true;
+    }
+
+    // Only the components that the identifier actually provides take part in the
+    // match, so that "workspace 2 policy float" finds a workspace named "2: web".
+    for (auto const& workspace : workspace_manager->workspaces())
+    {
+        if (identifier->number && workspace->num() != identifier->number)
+            continue;
+
+        if (identifier->name && workspace->name() != identifier->name)
+            continue;
+
+        workspace->placement_policy(policy);
+        return true;
+    }
+
+    mir::log_error("set_workspace_placement_policy: could not find requested workspace");
+    return false;
+}
+
 bool CommandController::set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only)
 {
     auto const gaps_opt = [&]() -> std::optional<Gaps>

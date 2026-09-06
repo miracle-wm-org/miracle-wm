@@ -651,6 +651,19 @@ auto Policy::place_new_window(
     }
     else
     {
+        // We respect the desired output of the window if one is set.
+        std::shared_ptr<AbstractOutput> output;
+        if (new_spec.output_id())
+        {
+            output = output_manager->from(new_spec.output_id().value());
+            if (!output)
+                output = output_manager->focused();
+        }
+        else
+            output = output_manager->focused();
+
+        auto const target_workspace = output->active();
+
         auto const has_exclusive_rect = requested_specification.exclusive_rect();
         auto const is_attached = requested_specification.attached_edges();
         if (has_exclusive_rect || is_attached || requested_specification.state() == mir_window_state_attached)
@@ -671,21 +684,30 @@ auto Policy::place_new_window(
                 hint.container_type = AllocationType::grid;
             else
                 hint.container_type = AllocationType::freestyle;
+
+            // The workspace may ask that everything opened on it floats instead of tiling.
+            if (hint.container_type == AllocationType::grid
+                && target_workspace
+                && target_workspace->placement_policy() == WindowPlacementPolicy::floating)
+            {
+                hint.container_type = AllocationType::freestyle;
+
+                // Nothing is going to lay this window out, so centre the size that the client
+                // asked for within the workspace, as we do for child windows.
+                auto const area = target_workspace->area();
+                auto const size = new_spec.size().value_or(geom::Size {});
+                if (size.width.as_int() > 0 && size.height.as_int() > 0)
+                {
+                    new_spec.top_left() = geom::Point {
+                        area.top_left.x.as_int() + (area.size.width.as_int() - size.width.as_int()) / 2,
+                        area.top_left.y.as_int() + (area.size.height.as_int() - size.height.as_int()) / 2
+                    };
+                }
+            }
         }
 
         if (hint.container_type != AllocationType::shell && hint.container_type != AllocationType::freestyle)
         {
-            // We respect the desired output of the window is one is set.
-            std::shared_ptr<AbstractOutput> output;
-            if (new_spec.output_id())
-            {
-                output = output_manager->from(new_spec.output_id().value());
-                if (!output)
-                    output = output_manager->focused();
-            }
-            else
-                output = output_manager->focused();
-
             auto parent = output->active()->get_layout_container();
             std::optional<size_t> index;
 

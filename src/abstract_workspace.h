@@ -23,12 +23,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <miracle/cpp/gaps.h>
+#include <optional>
+#include <string>
 
 namespace miracle
 {
 class AbstractOutput;
 class Container;
 class ParentContainer;
+
+/// How a workspace places the new windows that are opened on it.
+enum class WindowPlacementPolicy
+{
+    /// New windows are added to the tiling grid.
+    tile,
+
+    /// New windows are floated over the workspace.
+    floating
+};
+
+/// \returns the IPC name of the policy, either "tile" or "float"
+std::string to_string(WindowPlacementPolicy);
+
+/// \returns the policy matching "tile" or "float", otherwise nullopt
+std::optional<WindowPlacementPolicy> window_placement_policy_from_string(std::string const&);
 
 class AbstractWorkspace : public std::enable_shared_from_this<AbstractWorkspace>
 {
@@ -100,6 +118,10 @@ public:
 
     [[nodiscard]] virtual std::optional<Gaps> inner_gaps() const = 0;
     virtual void inner_gaps(std::optional<Gaps> const& gaps) = 0;
+
+    /// How windows that are newly opened on this workspace are placed.
+    [[nodiscard]] virtual WindowPlacementPolicy placement_policy() const = 0;
+    virtual void placement_policy(WindowPlacementPolicy) = 0;
 
     /// Sets the transformation for this workspace.
     virtual void transform(glm::mat4 const&) = 0;

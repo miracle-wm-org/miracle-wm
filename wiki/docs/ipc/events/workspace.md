@@ -24,6 +24,11 @@ The `change` string is one of the following:
 | reload | The configuration file has been reloaded                                                      |
 | urgent | A window on the workspace has started or stopped wanting attention                            |
 
+The `policy` key on the workspace object is its current window placement policy,
+either `"tile"` or `"float"`. It reports how windows that are newly opened on the
+workspace are placed, and is changed with the
+[workspace](../commands/workspace.md) command.
+
 ## Example
 ```json
 
@@ -45,6 +50,7 @@ The `change` string is one of the following:
             "border": "none",
             "current_border_width": 0,
             "layout": "splith",
+            "policy": "tile",
             "percent": null,
             "window_rect": {
                 "x": 0,

@@ -41,6 +41,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using namespace miracle;
 
+namespace miracle
+{
+std::string to_string(WindowPlacementPolicy policy)
+{
+    switch (policy)
+    {
+    case WindowPlacementPolicy::floating:
+        return "float";
+    case WindowPlacementPolicy::tile:
+    default:
+        return "tile";
+    }
+}
+
+std::optional<WindowPlacementPolicy> window_placement_policy_from_string(std::string const& str)
+{
+    if (str == "float")
+        return WindowPlacementPolicy::floating;
+    if (str == "tile")
+        return WindowPlacementPolicy::tile;
+
+    return std::nullopt;
+}
+}
+
 namespace
 {
 /// Walks the container tree looking for a window that wants attention.
@@ -575,6 +600,16 @@ void Workspace::inner_gaps(std::optional<Gaps> const& gaps)
     recalculate_area();
 }
 
+WindowPlacementPolicy Workspace::placement_policy() const
+{
+    return sync.lock()->placement_policy_;
+}
+
+void Workspace::placement_policy(WindowPlacementPolicy policy)
+{
+    sync.lock()->placement_policy_ = policy;
+}
+
 void Workspace::transform(glm::mat4 const& transform)
 {
     sync.lock()->transform_ = transform;
@@ -775,6 +810,7 @@ nlohmann::json Workspace::get_workspaces_json(bool is_output_focused) const
         { "focused", is_output_focused && is_active_on_output },
         { "urgent", urgent() },
         { "output", output_name },
+        { "policy", to_string(lock->placement_policy_) },
         { "rect", {
                       { "x", area.top_left.x.as_int() },
                       { "y", area.top_left.y.as_int() },
@@ -828,6 +864,7 @@ nlohmann::json Workspace::to_json(bool is_output_focused) const
         { "border", "none" },
         { "current_border_width", 0 },
         { "layout", to_string(root()->get_scheme()) },
+        { "policy", to_string(placement_policy()) },
         { "orientation", "none" },
         { "window_rect", {
                              { "x", 0 },

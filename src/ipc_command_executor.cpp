@@ -814,11 +814,71 @@ IpcValidationResult IpcCommandExecutor::process_input(IpcCommand const& command,
     return IpcValidationResult::create_success();
 }
 
+namespace
+{
+
+std::optional<WorkspaceIdentifier> split_and_trim_workspace_name(const std::string& input)
+{
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string item;
+
+    while (std::getline(ss, item, ':'))
+    {
+        trim(item);
+        result.push_back(item);
+    }
+
+    if (result.size() == 1)
+    {
+        try
+        {
+            return WorkspaceIdentifier { std::stoi(result[0]), std::nullopt };
+        }
+        catch (...)
+        {
+            return WorkspaceIdentifier { std::nullopt, result[0] };
+        }
+    }
+    else if (result.size() == 2)
+    {
+        try
+        {
+            int val = std::stoi(result[0]);
+            return WorkspaceIdentifier { val, result[1] };
+        }
+        catch (...)
+        {
+            mir::log_error("Failed to parse integer from: '%s'", result[0].c_str());
+            return std::nullopt;
+        }
+    }
+    else
+    {
+        mir::log_error("Invalid number of components: %lu", result.size());
+        return std::nullopt;
+    }
+}
+}
+
 IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& command, IpcParseResult const&) const
 {
     ArgumentsIndexer indexer(command);
     if (!indexer.has_current())
         return IpcValidationResult::create_failure("Expected arguments for 'workspace' command", true);
+
+    /// Applies the policy named by the token that the indexer is sitting on.
+    auto const apply_policy = [&](std::string const& prefix, std::optional<WorkspaceIdentifier> const& identifier)
+    {
+        auto const policy = window_placement_policy_from_string(indexer.current());
+        if (!policy)
+            return IpcValidationResult::create_failure("'" + prefix + "' expected 'float|tile'", true);
+
+        if (!command_controller->set_workspace_placement_policy(identifier, policy.value()))
+            return IpcValidationResult::create_failure("'" + prefix + "' could not find the requested workspace", false);
+
+        return IpcValidationResult::create_success();
+    };
 
     std::string const& arg0 = indexer.current();
     if (arg0 == "next")
@@ -850,8 +910,37 @@ IpcValidationResult IpcCommandExecutor::process_workspace(IpcCommand const& comm
         command_controller->back_and_forth_workspace();
         return IpcValidationResult::create_success();
     }
+    else if (arg0 == "policy")
+    {
+        // "workspace policy float|tile" applies to the focused workspace.
+        if (!indexer.next())
+            return IpcValidationResult::create_failure("'workspace policy' expected 'float|tile'", true);
+
+        return apply_policy("workspace policy", std::nullopt);
+    }
 
     auto const allow_back_and_forth = !std::ranges::contains(command.options, "--no-auto-back-and-forth");
+
+    // Peek ahead for "workspace <num/name> policy float|tile". This has to happen before the
+    // focus handling below, because `try_get_number` accepts trailing junk such as "3:" and
+    // would otherwise treat "policy" as the workspace name.
+    if (indexer.next())
+    {
+        if (indexer.current() == "policy")
+        {
+            auto const identifier = split_and_trim_workspace_name(arg0);
+            if (!identifier)
+                return IpcValidationResult::create_failure("'workspace <num/name> policy' received an invalid workspace", true);
+
+            if (!indexer.next())
+                return IpcValidationResult::create_failure("'workspace <num/name> policy' expected 'float|tile'", true);
+
+            return apply_policy("workspace <num/name> policy", identifier);
+        }
+    }
+
+    // Rewind the peek so that the focus handling below sees the arguments untouched.
+    indexer.prev();
 
     if (int number; try_get_number(arg0, number))
     {
@@ -1154,53 +1243,6 @@ IpcValidationResult IpcCommandExecutor::process_unmark(IpcCommand const& command
     else
         command_controller->unmark_all(parse_result.scope);
     return IpcValidationResult::create_success();
-}
-
-namespace
-{
-
-std::optional<WorkspaceIdentifier> split_and_trim_workspace_name(const std::string& input)
-{
-    std::vector<std::string> result;
-    std::stringstream ss(input);
-    std::string item;
-
-    while (std::getline(ss, item, ':'))
-    {
-        trim(item);
-        result.push_back(item);
-    }
-
-    if (result.size() == 1)
-    {
-        try
-        {
-            return WorkspaceIdentifier { std::stoi(result[0]), std::nullopt };
-        }
-        catch (...)
-        {
-            return WorkspaceIdentifier { std::nullopt, result[0] };
-        }
-    }
-    else if (result.size() == 2)
-    {
-        try
-        {
-            int val = std::stoi(result[0]);
-            return WorkspaceIdentifier { val, result[1] };
-        }
-        catch (...)
-        {
-            mir::log_error("Failed to parse integer from: '%s'", result[0].c_str());
-            return std::nullopt;
-        }
-    }
-    else
-    {
-        mir::log_error("Invalid number of components: %lu", result.size());
-        return std::nullopt;
-    }
-}
 }
 
 IpcValidationResult IpcCommandExecutor::process_rename(IpcCommand const& command, IpcParseResult const& parse_result) const

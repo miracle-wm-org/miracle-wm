@@ -175,6 +175,16 @@ public:
     virtual std::unordered_set<std::string> get_all_marks() const = 0;
     virtual bool rename_selected_workspace(WorkspaceIdentifier const& new_identifier) = 0;
     virtual bool rename_existing_workspace(WorkspaceIdentifier const& existing_identifier, WorkspaceIdentifier const& new_identifier) = 0;
+
+    /// Sets the policy that new windows opened on a workspace are placed with.
+    ///
+    /// \param identifier the workspace to change, or nullopt for the focused workspace
+    /// \param policy the placement policy to apply
+    /// \returns true if a matching workspace was found, otherwise false
+    virtual bool set_workspace_placement_policy(
+        std::optional<WorkspaceIdentifier> const& identifier,
+        WindowPlacementPolicy policy)
+        = 0;
     virtual bool set_inner_gaps(uint32_t px, GapsChangeType type, bool current_workspace_only) = 0;
     virtual bool set_outer_gaps(uint32_t px, OuterGapsChange outer_gaps_change, GapsChangeType, bool current_workspace_only) = 0;
     virtual bool try_move_workspace_to_output(OutputSelection selection) = 0;
