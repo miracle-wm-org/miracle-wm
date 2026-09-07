@@ -22,10 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "abstract_workspace.h"
 #include "animator_loop.h"
 #include "binding_event.h"
+#include "border_resize_service.h"
 #include "config.h"
 #include "config_observer.h"
 #include "constants.h"
 #include "container_listener.h"
+#include "cursor_override.h"
 #include "debug_overlay_controller.h"
 #include "dying_surface_manager.h"
 #include "freestyle_window_container.h"
@@ -241,7 +243,8 @@ Policy::Policy(
     std::shared_ptr<DisplayConfig> const& display_config,
     std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
     miral::Magnifier const& magnifier,
-    std::shared_ptr<SamplerRegistry> const& sampler_registry) :
+    std::shared_ptr<SamplerRegistry> const& sampler_registry,
+    std::shared_ptr<CursorOverrideController> const& cursor_override) :
     tools { tools },
     config { config },
     state { state },
@@ -277,6 +280,8 @@ Policy::Policy(
     drag_and_drop_service(std::make_unique<DragAndDropService>(command_controller, config, output_manager)),
     move_service(std::make_unique<MoveService>(command_controller, config, output_manager)),
     resize_service(std::make_unique<ResizeService>(command_controller, config, state, output_manager)),
+    border_resize_service(std::make_unique<BorderResizeService>(
+        config, state, output_manager, window_controller, cursor_override, *resize_service)),
     debug_overlay_controller(std::make_shared<DebugOverlayController>(external_client_launcher, config)),
     ipc_command_executor(std::make_shared<IpcCommandExecutor>(command_controller, launcher, debug_overlay_controller)),
     ipc_connection_manager(std::make_shared<IpcConnectionManager>(
@@ -579,6 +584,9 @@ bool Policy::handle_pointer_event(MirPointerEvent const* event)
         return true;
 
     if (drag_and_drop_service->handle_pointer_event(*state, x, y, action, modifiers, buttons))
+        return true;
+
+    if (border_resize_service->handle_pointer_event(x, y, action, buttons))
         return true;
 
     if (output_manager->focused() && state->mode() != WindowManagerMode::resizing)
@@ -884,6 +892,10 @@ void Policy::advise_focus_lost(const miral::WindowInfo& window_info)
 
 void Policy::advise_delete_window(const miral::WindowInfo& window_info)
 {
+    // The window under the pointer is going away, so any resize cursor we forced for
+    // its border must go with it.
+    border_resize_service->clear();
+
     if (auto const scene_override = state->scene_override_manager()->try_resolve())
         scene_override->handle_window_closed(window_info.window());
 

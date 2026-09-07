@@ -71,6 +71,15 @@ public:
     /// [ignore_selected] is true, then the active window will not be intersected.
     virtual std::shared_ptr<WindowContainer> intersect_leaf(float x, float y, bool ignore_selected) = 0;
 
+    /// Like [intersect], but matches against logical areas rather than visible ones,
+    /// so that a point sitting in the gap between two windows still resolves to the
+    /// container that owns that half of the gap.
+    ///
+    /// \param x
+    /// \param y
+    /// \returns the container whose logical area covers the point, if any
+    virtual std::shared_ptr<WindowContainer> intersect_border(float x, float y) = 0;
+
     virtual void delete_container(std::shared_ptr<Container> const& container) = 0;
     virtual void advise_new_workspace(WorkspaceCreationData const&&) = 0;
     virtual void advise_workspace_deleted(WorkspaceManager& workspace_manager, uint32_t id) = 0;

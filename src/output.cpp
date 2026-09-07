@@ -114,6 +114,31 @@ std::shared_ptr<WindowContainer> Output::intersect(float x, float y)
     return result;
 }
 
+std::shared_ptr<WindowContainer> Output::intersect_border(float x, float y)
+{
+    if (active_workspace_.expired())
+        return nullptr;
+
+    auto const workspace = active_workspace_.lock().get();
+    std::shared_ptr<WindowContainer> result = nullptr;
+    workspace->for_each_window([&](std::shared_ptr<WindowContainer> const& container)
+    {
+        if (container->get_logical_area().contains(geom::Point(x, y)))
+        {
+            result = container;
+            return true;
+        }
+
+        return false;
+    });
+
+    // Animating windows CANNOT be intersected.
+    if (result && animator->is_animating(result->animation_handle()))
+        return nullptr;
+
+    return result;
+}
+
 std::shared_ptr<WindowContainer> Output::intersect_leaf(float x, float y, bool ignore_selected)
 {
     if (active_workspace_.expired())

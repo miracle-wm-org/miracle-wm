@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "compositor_state.h"
 #include "config.h"
 #include "config_observer.h"
+#include "cursor_override.h"
 #include "display_config.h"
 #include "error_reporter_controller.h"
 #include "output_listener.h"
@@ -34,7 +35,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/log.h>
 #include <mir/renderer/gl/gl_surface.h>
 #include <miral/cursor_scale.h>
-#include <miral/cursor_theme.h>
 #include <miral/custom_renderer.h>
 #include <miral/decorations.h>
 #include <miral/external_client.h>
@@ -64,7 +64,8 @@ public:
         std::shared_ptr<miracle::DisplayConfig> const& display_config,
         std::shared_ptr<miracle::ConfigObserverRegistrar> const& config_observer_registrar,
         Magnifier const& magnifier,
-        std::shared_ptr<miracle::SamplerRegistry> const& sampler_registry) :
+        std::shared_ptr<miracle::SamplerRegistry> const& sampler_registry,
+        std::shared_ptr<miracle::CursorOverrideController> const& cursor_override) :
         launcher(launcher),
         config(config),
         compositor_state(compositor_state),
@@ -72,7 +73,8 @@ public:
         display_config(display_config),
         config_observer_registrar(config_observer_registrar),
         magnifier(magnifier),
-        sampler_registry(sampler_registry)
+        sampler_registry(sampler_registry),
+        cursor_override(cursor_override)
     {
     }
 
@@ -80,7 +82,7 @@ public:
     {
         config->operator()(server);
         auto policy = add_window_manager_policy<miracle::Policy>(
-            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry);
+            "tiling", server, launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry, cursor_override);
         options = std::make_shared<WindowManagerOptions>(std::initializer_list<WindowManagerOption> { policy });
         options->operator()(server);
     }
@@ -95,6 +97,7 @@ private:
     std::shared_ptr<miracle::ConfigObserverRegistrar> config_observer_registrar;
     Magnifier magnifier;
     std::shared_ptr<miracle::SamplerRegistry> sampler_registry;
+    std::shared_ptr<miracle::CursorOverrideController> cursor_override;
 };
 
 int main(int argc, char const* argv[])
@@ -117,10 +120,6 @@ int main(int argc, char const* argv[])
 
     auto config_observer_registrar = std::make_shared<miracle::ConfigObserverRegistrar>();
     auto config = std::make_shared<miracle::FilesystemConfiguration>(config_observer_registrar);
-    // Read cursor theme early, before run_with(), because miral::CursorTheme is immutable
-    // and must be constructed at startup. We read from the default config path here.
-    // Note: if --config is passed, that custom path is not used for this early read.
-    auto const early_cursor_theme = miracle::read_cursor_theme_from_file(miracle::get_config_path());
     for (auto const& env : config->get_env_variables())
     {
         setenv(env.key.c_str(), env.value.c_str(), 1);
@@ -252,18 +251,13 @@ int main(int argc, char const* argv[])
     } });
     wayland_extensions.enable(mir::wayland::OutputManagerV1::interface_name);
 
-    struct OptionalCursorTheme
-    {
-        std::optional<miral::CursorTheme> theme;
-        void operator()(mir::Server& server) const
-        {
-            if (theme)
-                theme->operator()(server);
-        }
-    };
+    // miracle installs its own cursor stack rather than using miral::CursorTheme, so
+    // that the theme loader can be kept around for looking up the resize cursors that
+    // the window borders show on hover.
+    auto cursor_override = std::make_shared<miracle::CursorOverrideService>(config);
 
     return runner.run_with(
-        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry),
+        { PolicyLoader(external_client_launcher, config, compositor_state, output_listener, display_config, config_observer_registrar, magnifier, sampler_registry, cursor_override),
             wayland_extensions,
             X11Support {}.default_to_enabled(),
             keymap,
@@ -274,9 +268,8 @@ int main(int argc, char const* argv[])
             hover_click,
             simulated_secondary_click,
             cursor_scale,
-            OptionalCursorTheme { early_cursor_theme
-                    ? std::make_optional(miral::CursorTheme { *early_cursor_theme })
-                    : std::nullopt },
+            [cursor_override](mir::Server& server)
+    { (*cursor_override)(server); },
             slow_keys,
             sticky_keys,
             Decorations::always_csd(),

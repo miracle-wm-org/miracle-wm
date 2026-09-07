@@ -77,6 +77,7 @@ parts:
       - libfreetype6-dev
       - libwayland-dev
       - libxkbcommon-dev
+      - libxcursor-dev
       - g++
       - make
       - git
@@ -111,6 +112,7 @@ parts:
       - libgl1-mesa-dri
       - libdrm-nouveau2
       - libwasmedge0
+      - libxcursor1
       # miracle-wm-basic-error-reporter (GTK4 client) runtime
       - libgtk-4-1
       - libgtk4-layer-shell0

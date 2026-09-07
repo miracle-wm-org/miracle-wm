@@ -66,6 +66,8 @@ class PluginManager;
 class ShellApplicationManager;
 class DebugOverlayController;
 class OverviewController;
+class BorderResizeService;
+class CursorOverrideController;
 
 class Policy : public miral::WindowManagementPolicy
 {
@@ -80,7 +82,8 @@ public:
         std::shared_ptr<DisplayConfig> const& display_config,
         std::shared_ptr<ConfigObserverRegistrar> const& config_observer_registrar,
         miral::Magnifier const& magnifier,
-        std::shared_ptr<SamplerRegistry> const& sampler_registry);
+        std::shared_ptr<SamplerRegistry> const& sampler_registry,
+        std::shared_ptr<CursorOverrideController> const& cursor_override);
     ~Policy() override;
 
     bool handle_keyboard_event(MirKeyboardEvent const* event) override;
@@ -155,6 +158,7 @@ private:
     std::unique_ptr<DragAndDropService> drag_and_drop_service;
     std::unique_ptr<MoveService> move_service;
     std::unique_ptr<ResizeService> resize_service;
+    std::unique_ptr<BorderResizeService> border_resize_service;
     std::shared_ptr<DebugOverlayController> debug_overlay_controller;
     std::shared_ptr<IpcCommandExecutor> ipc_command_executor;
     std::shared_ptr<IpcConnectionManager> ipc_connection_manager;

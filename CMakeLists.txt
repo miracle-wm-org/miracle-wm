@@ -115,6 +115,7 @@ find_package(nlohmann_json 3.2.0 REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(GLESv2 REQUIRED IMPORTED_TARGET glesv2)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+pkg_check_modules(XCURSOR REQUIRED IMPORTED_TARGET xcursor)
 find_path(WASMEDGE_INCLUDE_DIR wasmedge/wasmedge.h)
 find_library(WASMEDGE_LIB wasmedge)
 
@@ -176,6 +177,9 @@ add_library(miracle-wm-implementation STATIC
         src/output_factory.cpp
         src/move_service.cpp
         src/resize_service.cpp
+        src/border_resize_service.h src/border_resize_service.cpp
+        src/cursor_override.h src/cursor_override.cpp
+        src/xcursor_images.h src/xcursor_images.cpp
         src/forwarding_surface.cpp
         src/dying_surface_manager.cpp
         src/shader_2d.cpp
@@ -277,6 +281,7 @@ target_link_libraries(miracle-wm-implementation
         nlohmann_json::nlohmann_json
         PkgConfig::EGL
         PkgConfig::GLESv2
+        PkgConfig::XCURSOR
         -lpcre2-8 -lpcre2-16 -lpcre2-32
         miracle-wm-c
         xdg-shell-protocol
