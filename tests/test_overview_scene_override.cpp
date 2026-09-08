@@ -37,7 +37,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <linux/input-event-codes.h>
+#include <mir/events/event_builders.h>
+#include <mir/scene/surface.h>
 #include <miral/window_specification.h>
+#include <unordered_map>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 using namespace miracle;
 using namespace testing;
@@ -118,6 +123,23 @@ public:
             std::make_shared<WorkspaceObserverRegistrar>(), config, output_manager);
         output_manager->create("Output1", 1, OUTPUT_AREA, *workspace_manager);
         output_manager->focus(1);
+
+        // The occlusion bypass reaches a window's container through the
+        // controller, so without this it silently flags nothing.
+        ON_CALL(*window_controller, get_window_container(_))
+            .WillByDefault(Invoke([this](miral::Window const& window)
+        {
+            auto const it = containers_by_surface.find(
+                window.operator std::shared_ptr<mir::scene::Surface>().get());
+            return it == containers_by_surface.end() ? nullptr : it->second;
+        }));
+
+        // The real one is synchronous, and the outro does its cleanup inside it.
+        ON_CALL(*window_controller, invoke_under_lock(_))
+            .WillByDefault(Invoke([](std::function<void()> const& f)
+        {
+            f();
+        }));
     }
 
     std::unique_ptr<OverviewSceneOverride> create()
@@ -143,7 +165,7 @@ public:
             compositor_state);
         leaf->associate_to_window(window);
         compositor_state->add(leaf);
-        containers.push_back(leaf);
+        remember(window, leaf);
         return window;
     }
 
@@ -174,11 +196,25 @@ public:
             output_manager,
             compositor_state);
         compositor_state->add(container);
-        containers.push_back(container);
+        remember(window, container);
         return window;
     }
 
+    /// The container the overview is expected to have flagged for \p window.
+    std::shared_ptr<WindowContainer> container_of(miral::Window const& window)
+    {
+        return containers_by_surface.at(
+            window.operator std::shared_ptr<mir::scene::Surface>().get());
+    }
+
 protected:
+    void remember(miral::Window const& window, std::shared_ptr<WindowContainer> const& container)
+    {
+        containers.push_back(container);
+        containers_by_surface.emplace(
+            window.operator std::shared_ptr<mir::scene::Surface>().get(), container);
+    }
+
     miral::Window make_window()
     {
         auto const surface = std::make_shared<NiceMock<test::MockSurface>>();
@@ -209,6 +245,7 @@ protected:
     std::vector<std::shared_ptr<test::MockSurface>> surfaces;
     /// The compositor state holds its windows weakly, so someone has to own them.
     std::vector<std::shared_ptr<WindowContainer>> containers;
+    std::unordered_map<mir::scene::Surface const*, std::shared_ptr<WindowContainer>> containers_by_surface;
     std::unique_ptr<miral::WindowInfo> background_info;
 };
 
@@ -261,4 +298,115 @@ TEST_F(OverviewSceneOverrideTest, ClosingTheLastSurfaceOfAnyKindTearsTheOverview
     // Nothing left to draw at any level, so the overview goes away.
     EXPECT_TRUE(delegate.done);
     EXPECT_TRUE(delegate.exit_started);
+}
+
+// ---- occlusion bypass ----
+
+namespace
+{
+/// An Escape key press, which backs out of the window strip and exits.
+mir::EventUPtr escape_press()
+{
+    return mir::events::make_key_event(
+        mir_input_event_type_key,
+        std::chrono::nanoseconds { 0 },
+        mir_keyboard_action_down,
+        XKB_KEY_Escape,
+        KEY_ESC,
+        mir_input_event_modifier_none);
+}
+}
+
+TEST_F(OverviewSceneOverrideTest, OpeningKeepsEverythingItDrawsOutOfTheOcclusionCull)
+{
+    report_windows_as_backgrounds();
+
+    auto const background = add_background();
+    auto const toplevel = add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+
+    // A window buried behind a maximised one, and the wallpaper behind
+    // everything, are both fully covered where they really are, so Mir would
+    // otherwise never hand them to the renderer.
+    EXPECT_TRUE(container_of(toplevel)->occlusion_bypass());
+    EXPECT_TRUE(container_of(background)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, CancellingPutsEverythingBackIntoTheOcclusionCull)
+{
+    report_windows_as_backgrounds();
+
+    auto const background = add_background();
+    auto const toplevel = add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+    ASSERT_TRUE(container_of(toplevel)->occlusion_bypass());
+    ASSERT_TRUE(container_of(background)->occlusion_bypass());
+
+    override_->handle_output_changed();
+
+    EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
+    EXPECT_FALSE(container_of(background)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, DestroyingAnOverrideThatWasNeverInstalledRestoresTheCull)
+{
+    report_windows_as_backgrounds();
+
+    auto const background = add_background();
+    auto const toplevel = add_toplevel();
+
+    // The scene override manager takes the override by value and destroys it
+    // where something else already holds the scene, so no exit path ever runs.
+    auto override_ = create();
+    ASSERT_NE(nullptr, override_);
+    ASSERT_TRUE(container_of(toplevel)->occlusion_bypass());
+
+    override_.reset();
+
+    EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
+    EXPECT_FALSE(container_of(background)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, AWindowThatAppearsWhileTheOverviewIsUpIsBypassedToo)
+{
+    report_windows_as_backgrounds();
+
+    add_background();
+    add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+
+    auto const joined = add_toplevel();
+    override_->handle_window_added(joined);
+
+    EXPECT_TRUE(container_of(joined)->occlusion_bypass());
+}
+
+TEST_F(OverviewSceneOverrideTest, ExitingPutsEverythingBackIntoTheOcclusionCull)
+{
+    report_windows_as_backgrounds();
+
+    auto const background = add_background();
+    auto const toplevel = add_toplevel();
+
+    auto const override_ = create();
+    ASSERT_NE(nullptr, override_);
+
+    ASSERT_TRUE(container_of(toplevel)->occlusion_bypass());
+    ASSERT_TRUE(container_of(background)->occlusion_bypass());
+
+    override_->handle_keyboard_event(mir_input_event_get_keyboard_event(
+        mir_event_get_input_event(escape_press().get())));
+
+    // The outro clears the bypass at the very end of the exit animation.
+    animator->tick(10.f);
+    animator->tick(10.f);
+
+    EXPECT_FALSE(container_of(toplevel)->occlusion_bypass());
+    EXPECT_FALSE(container_of(background)->occlusion_bypass());
 }

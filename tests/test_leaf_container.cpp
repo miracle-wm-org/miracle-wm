@@ -33,8 +33,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "mock_workspace.h"
 #include "stub_configuration.h"
 #include "gmock/gmock.h"
+#include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
 #include <memory>
+#include <vector>
 
 using namespace miracle;
 
@@ -918,4 +920,80 @@ TEST_F(LeafContainerTest, ToJsonReportsUrgency)
 
     leaf_container->set_urgent(true);
     EXPECT_TRUE(leaf_container->to_json(true)["urgent"]);
+}
+
+// ---- occlusion bypass ----
+
+TEST_F(LeafContainerTest, OcclusionBypassPutsANonIdentityTransformOnTheSurface)
+{
+    // Mir culls a fully covered surface before the renderer sees it, unless its
+    // transformation is something other than the identity.
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    EXPECT_FALSE(leaf_container->occlusion_bypass());
+    leaf_container->set_occlusion_bypass(true);
+
+    EXPECT_TRUE(leaf_container->occlusion_bypass());
+    EXPECT_NE(last, glm::mat4(1.f));
+}
+
+TEST_F(LeafContainerTest, OcclusionBypassSurvivesALaterEffectChange)
+{
+    // Every effect setter recomposes the surface's transform from scratch, so a
+    // bypass written straight to the surface would be wiped out by the next one.
+    auto const workspace_transform = glm::translate(glm::mat4(1.f), glm::vec3(100.f, 0.f, 0.f));
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    leaf_container->set_occlusion_bypass(true);
+    leaf_container->set_workspace_transform(workspace_transform);
+
+    EXPECT_EQ(last, workspace_transform * WindowContainer::occlusion_bypass_transform());
+    EXPECT_NE(last, glm::mat4(1.f));
+}
+
+TEST_F(LeafContainerTest, ClearingTheOcclusionBypassRestoresTheComposedTransform)
+{
+    auto const workspace_transform = glm::translate(glm::mat4(1.f), glm::vec3(100.f, 0.f, 0.f));
+    glm::mat4 last(1.f);
+    EXPECT_CALL(*surface, set_transformation(testing::_))
+        .WillRepeatedly(testing::SaveArg<0>(&last));
+
+    leaf_container->set_occlusion_bypass(true);
+    leaf_container->set_workspace_transform(workspace_transform);
+    leaf_container->set_occlusion_bypass(false);
+
+    EXPECT_FALSE(leaf_container->occlusion_bypass());
+    EXPECT_EQ(last, workspace_transform);
+}
+
+TEST_F(LeafContainerTest, TheOcclusionBypassTransformIsVisuallyInert)
+{
+    // Every vertex miracle tessellates has z == 0, so a scale in z moves nothing.
+    // This is the whole reason the bypass is free, and it must survive being
+    // composed with whatever the effects happen to be.
+    auto const bypass = WindowContainer::occlusion_bypass_transform();
+    ASSERT_NE(bypass, glm::mat4(1.f));
+
+    std::vector<glm::mat4> const matrices {
+        glm::mat4(1.f),
+        glm::translate(glm::mat4(1.f), glm::vec3(-320.f, 47.f, 0.f)),
+        glm::scale(glm::mat4(1.f), glm::vec3(0.4f, 0.4f, 1.f))
+    };
+
+    std::vector<glm::vec4> const corners {
+        { 0.f,   0.f,   0.f, 1.f },
+        { 400.f, 0.f,   0.f, 1.f },
+        { 0.f,   300.f, 0.f, 1.f },
+        { 400.f, 300.f, 0.f, 1.f }
+    };
+
+    for (auto const& matrix : matrices)
+    {
+        for (auto const& corner : corners)
+            EXPECT_EQ(matrix * bypass * corner, matrix * corner);
+    }
 }

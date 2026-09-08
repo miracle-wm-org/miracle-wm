@@ -40,6 +40,7 @@ class AbstractWorkspace;
 class Animator;
 class CompositorState;
 class Config;
+class OcclusionBypass;
 class OutputManager;
 class OverviewSceneOverrideDelegate;
 class WindowContainer;
@@ -327,6 +328,17 @@ private:
     /// that flipping between levels stays cheap.
     void return_to_windows();
 
+    /// Keeps \p windows out of the compositor's occlusion cull for as long as
+    /// the overview is up.
+    ///
+    /// A window that something else completely covers where it really is - one
+    /// buried behind a maximised window, or the wallpaper behind everything -
+    /// would otherwise never reach the renderer, and so would be missing from
+    /// the strip. Windows with no container are skipped.
+    ///
+    /// Must run on the window management thread, and outside `state->mutex`.
+    void bypass_occlusion(std::vector<miral::Window> const& windows);
+
     /// Focuses whatever is front and center on the active output's window
     /// strip, then exits.
     void commit_and_exit();
@@ -366,6 +378,7 @@ private:
     std::shared_ptr<WindowController> window_controller;
     std::shared_ptr<CompositorState> compositor_state;
     std::shared_ptr<WorkspacePreview> preview;
+    std::shared_ptr<OcclusionBypass> bypass;
     OverviewSceneOverrideDelegate* delegate;
     AnimationHandle animation_handle;
     AnimationDefinition definition;
