@@ -447,19 +447,6 @@ OverviewSceneOverride::OverviewSceneOverride(
 OverviewSceneOverride::~OverviewSceneOverride()
 {
     animator->remove_by_animation_handle(animation_handle);
-
-    // The preview is deliberately not released here: this destructor may run on
-    // the animator thread, and concealing a workspace is window management. Every
-    // exit path releases it on the window management thread before getting here.
-    //
-    // The occlusion bypass is not released here either, for the same reason -
-    // but its own destructor is load bearing rather than merely a safety net.
-    // [SceneOverrideManager::try_override] takes the override by value and
-    // destroys it inside itself when something else already holds the scene, on
-    // the window management thread: the constructor has applied the bypass by
-    // then and no exit path ever runs. On the ordinary outro the shared pointer
-    // has already been handed to the exit lambda, so there is nothing left here
-    // to undo.
 }
 
 std::vector<mir::scene::Surface const*> OverviewSceneOverride::window_strip_keys(size_t group) const

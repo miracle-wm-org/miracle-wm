@@ -33,12 +33,7 @@ class WindowContainer;
 /// Keeps windows that are covered up out of the compositor's occlusion cull for
 /// as long as the bypass is held.
 ///
-/// Mir drops a surface that something else completely covers before miracle's
-/// renderer ever sees it, so an effect that draws a window somewhere other than
-/// where it really is - an overview, a switcher, a wall of thumbnails - has to
-/// ask for it back first. Holding one of these instead of driving
-/// [WindowContainer::set_occlusion_bypass] directly means the bypass is always
-/// undone exactly once, for exactly the windows it was applied to.
+/// TODO: This is largely a hack for the wffects system.
 ///
 /// Every method must be called on the window management thread. An effect whose
 /// teardown runs elsewhere (the animator thread, say) should hand the release

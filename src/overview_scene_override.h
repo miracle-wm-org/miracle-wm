@@ -331,10 +331,7 @@ private:
     /// Keeps \p windows out of the compositor's occlusion cull for as long as
     /// the overview is up.
     ///
-    /// A window that something else completely covers where it really is - one
-    /// buried behind a maximised window, or the wallpaper behind everything -
-    /// would otherwise never reach the renderer, and so would be missing from
-    /// the strip. Windows with no container are skipped.
+    /// TODO: This is largely a hack for the wffects system.
     ///
     /// Must run on the window management thread, and outside `state->mutex`.
     void bypass_occlusion(std::vector<miral::Window> const& windows);

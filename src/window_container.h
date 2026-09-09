@@ -133,20 +133,7 @@ public:
     /// Keep this container's window in the render list even when something
     /// else completely covers it.
     ///
-    /// Mir's compositor drops fully occluded surfaces before miracle's renderer
-    /// ever sees them, so a window buried behind a maximised one - or the
-    /// wallpaper behind everything - cannot be drawn somewhere else. Its
-    /// occlusion test bails out early for any surface whose transformation is
-    /// not the identity, so a transform that changes nothing about how the
-    /// surface is drawn is enough to opt out of the culling. Windows that are
-    /// bypassed also keep producing frames, so an overview draws live content
-    /// rather than a stale buffer.
-    ///
-    /// The bypass is composed into the transform this container pushes to its
-    /// surface rather than written to the surface directly, because every
-    /// effect change recomposes that transform from scratch and would otherwise
-    /// wipe the bypass out. It is deliberately kept out of the render data, so
-    /// a tracked window's renderer state stays clean.
+    /// TODO: This is largely a hack for the wffects system.
     ///
     /// \param bypass whether to keep the window out of the occlusion cull
     void set_occlusion_bypass(bool bypass);
