@@ -38,11 +38,6 @@ typedef uint32_t AnimationHandle;
 /// Evaluates \p definition's easing function at normalized time \p t in [0, 1].
 float ease(BuiltInAnimationDefinition const& definition, float t);
 
-/// The fraction of a resize animation the pre-resize frame is cross-faded out over. It has
-/// to finish well before the animation does, so the last animated frames are pure live
-/// content and the hand-off to the un-animated frame after them is invisible.
-constexpr float kGhostFraction = 0.55f;
-
 /// What an in-flight resize wants drawn this frame. Present only while a resize animation
 /// is running and only when it actually changes the window's size.
 struct ResizeFrame
@@ -51,15 +46,6 @@ struct ResizeFrame
     /// content is drawn at comes from `clip_area`, clamped downstream to what the client
     /// can reach.
     mir::geometry::Size target;
-
-    /// Identifies the animation in flight. The renderer retains the frame a window was
-    /// showing when its resize began, and a changed generation is what tells it the
-    /// animation was replaced and the frame it holds is stale.
-    uint32_t generation = 0;
-
-    /// How much of the pre-resize frame is still showing. 1 on the first frame, reaching 0
-    /// well before the animation ends.
-    float content_fade = 0.f;
 };
 
 struct AnimationData
@@ -178,9 +164,6 @@ public:
     /// continues from what is on screen rather than snapping back to the caller's start.
     void retarget_from(State const& state);
 
-    /// Identifies this animation for the lifetime of the object; see ResizeFrame.
-    [[nodiscard]] uint32_t generation() const;
-
 private:
     AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
     AnimationFrameResult finish() const;
@@ -192,7 +175,6 @@ private:
     std::function<void(AnimationFrameResult const&)> on_tick;
     bool is_being_removed_ = false;
     std::shared_ptr<PluginManager> plugin_manager;
-    uint32_t generation_;
 };
 }
 

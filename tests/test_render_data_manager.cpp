@@ -87,17 +87,12 @@ TEST_F(RenderDataManagerTest, CanChangeStretch)
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
         .stretch = std::nullopt });
 
-    render_data_manager.stretch_change(id, ContentStretch {
-                                               { 300, 600 },
-                                               7, 0.5f
-    });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
 
     auto result = get();
     ASSERT_EQ(result.size(), 1);
     ASSERT_TRUE(result[0].stretch.has_value());
     ASSERT_EQ(result[0].stretch->size, mir::geometry::Size(300, 600));
-    ASSERT_EQ(result[0].stretch->generation, 7u);
-    ASSERT_FLOAT_EQ(result[0].stretch->fade, 0.5f);
 
     render_data_manager.stretch_change(id, std::nullopt);
 
@@ -119,25 +114,16 @@ TEST_F(RenderDataManagerTest, RestatingTheStretchDoesNotAdvanceTheGeneration)
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
         .stretch = std::nullopt });
 
-    render_data_manager.stretch_change(id, ContentStretch {
-                                               { 300, 600 },
-                                               7, 0.f
-    });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
     ASSERT_EQ(get().size(), 1);
 
     // Nothing changed, so nothing is copied out.
-    render_data_manager.stretch_change(id, ContentStretch {
-                                               { 300, 600 },
-                                               7, 0.f
-    });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
     copied.clear();
     ASSERT_TRUE(get().empty());
 
-    // A change to any field is still a change.
-    render_data_manager.stretch_change(id, ContentStretch {
-                                               { 300, 600 },
-                                               8, 0.f
-    });
+    // A different size is still a change.
+    render_data_manager.stretch_change(id, ContentStretch { { 301, 600 } });
     ASSERT_EQ(get().size(), 1);
 
     copied.clear();

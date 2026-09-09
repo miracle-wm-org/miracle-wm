@@ -166,33 +166,6 @@ private:
         GLuint ebo = 0;
     };
 
-    /// The buffer a window was showing when its resize animation began, kept alive so the
-    /// live surface can be cross-faded in over it. The stretch keeps the two layers on the
-    /// same rectangle, but it cannot make the *content* continuous: the client commits a
-    /// buffer at its new size some unbounded number of frames in, and at that instant the
-    /// same rectangle fills with different, re-laid-out content. Holding the old frame
-    /// underneath dissolves that swap instead of cutting it.
-    ///
-    /// Everything here is captured together and is only meaningful together: the buffer is
-    /// measured against [natural], and its offset from [screen_position] is the client's
-    /// own shadow margin or decoration inset at capture time.
-    struct Ghost
-    {
-        std::shared_ptr<mir::graphics::Buffer> buffer;
-        /// The window this ghost belongs to, so it can be pruned with that window.
-        RenderDataManagerId owner = 0;
-        /// The animation this ghost was captured for. Compared against the live stretch's
-        /// generation to notice a retarget, nothing else.
-        uint32_t generation = 0;
-        mir::geometry::Rectangle screen_position;
-        mir::geometry::RectangleD src_bounds;
-        /// The window rectangle this buffer corresponds to - the group_natural that was in
-        /// force when it was captured. Exact, so the ghost is scaled by the same rule the
-        /// live layer is and the two cannot slide against each other.
-        mir::geometry::Rectangle natural;
-        bool shaped = false;
-    };
-
     /// Offscreen framebuffer target for intermediate rendering passes.
     struct PassTarget
     {
@@ -216,9 +189,9 @@ private:
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
 
-    /// Uploads the uniforms that differ between the two layers of a cross-fade - texture,
-    /// alpha, and the size the rounded-corner SDF measures against - and draws
-    /// \p primitive. Everything else is uploaded once by draw() before this is called.
+    /// Uploads the uniforms that describe the layer being drawn - texture, alpha, and the
+    /// size the rounded-corner SDF measures against - and draws \p primitive. Everything
+    /// else is uploaded once by draw() before this is called.
     ///
     /// \p offscreen_result_target is the index into [pass_targets] holding the result of a
     /// multi-pass shader chain, or -1 when the texture is drawn directly.
@@ -231,10 +204,9 @@ private:
         bool shaped,
         int offscreen_result_target) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
-    /// Drops the retained state of windows that have gone away and of cross-fades that are
-    /// over. Checked against [render_data_cache] rather than a per-frame list of what was
-    /// drawn, so a window culled for a frame keeps the ghost it already captured instead of
-    /// capturing a fresh - and by then wrong - one on the next frame.
+    /// Drops the retained state of windows that have gone away. Checked against
+    /// [render_data_cache] rather than a per-frame list of what was drawn, so a window
+    /// culled for a frame keeps what has already been measured for it.
     void prune_retained_state() const;
     void update_gl_viewport();
 
@@ -280,11 +252,6 @@ private:
     /// Scratch buffer that [SceneOverride::place] fills, reused between frames
     /// so that asking for placements costs no allocation in the steady state.
     mutable std::vector<SceneOverridePlacement> group_placements;
-    /// The retained pre-resize frame of every layer currently cross-fading, keyed by
-    /// renderable so that a window drawing more than one buffer layer cross-fades each
-    /// against its own captured frame rather than all of them against the first's.
-    mutable std::unordered_map<mir::graphics::Renderable::ID, Ghost> ghosts;
-
     /// The remembered shadow_band of each CSD window, measured on every settled frame
     /// because it is not derivable during a resize.
     mutable std::unordered_map<RenderDataManagerId, mir::geometry::Displacement> shadow_bands;

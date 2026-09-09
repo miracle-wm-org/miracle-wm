@@ -720,59 +720,13 @@ TEST(TessellationHelpersTest, AnExactNaturalSizeKeepsAStaleBufferFillingTheClip)
     expect_tex(quad, 0.f, 0.f, 1.f, 1.f);
 }
 
-TEST(TessellationHelpersTest, TheRawOverloadReproducesTheRenderableOverload)
+TEST(TessellationHelpersTest, TheQuadDoesNotMoveWhenTheClientCatchesUp)
 {
-    // The two share one body so the layers of a cross-fade cannot drift apart. This pins
-    // the split itself: whatever the renderable overload reads off a renderable, the raw
-    // one must produce from the same three values spelled out.
-    geom::Rectangle const window {
-        { 10,  20  },
-        { 800, 600 }
-    };
-    geom::RectangleD const src {
-        { 0,   0   },
-        { 512, 512 }
-    };
-    StubRenderable renderable(window, { 1024, 1024 }, src);
-
-    struct Case
-    {
-        std::optional<geom::Rectangle> clip;
-        std::optional<mgl::Stretch> stretch;
-        bool flipped;
-    };
-
-    std::vector<Case> const cases {
-        { std::nullopt,                                 std::nullopt,                                     false },
-        { geom::Rectangle { { 10, 20 }, { 400, 600 } }, std::nullopt,                                     true  },
-        { geom::Rectangle { { 60, 20 }, { 300, 200 } }, mgl::Stretch { geom::Size { 300, 200 }, window }, false },
-        { geom::Rectangle { { 60, 20 }, { 900, 700 } }, mgl::Stretch { geom::Size { 900, 700 }, window }, true  },
-    };
-
-    for (auto const& c : cases)
-    {
-        auto const from_renderable = mgl::tessellate_renderable_into_rectangle(
-            renderable, geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch);
-        auto const raw = mgl::tessellate_into_rectangle(
-            window, geom::Size { 1024, 1024 }, src,
-            geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch);
-
-        for (int i = 0; i < from_renderable.nvertices; ++i)
-        {
-            EXPECT_FLOAT_EQ(raw.vertices[i].position[0], from_renderable.vertices[i].position[0]) << "vertex " << i;
-            EXPECT_FLOAT_EQ(raw.vertices[i].position[1], from_renderable.vertices[i].position[1]) << "vertex " << i;
-            EXPECT_FLOAT_EQ(raw.vertices[i].texcoord[0], from_renderable.vertices[i].texcoord[0]) << "vertex " << i;
-            EXPECT_FLOAT_EQ(raw.vertices[i].texcoord[1], from_renderable.vertices[i].texcoord[1]) << "vertex " << i;
-        }
-    }
-}
-
-TEST(TessellationHelpersTest, AGhostQuadRegistersWithTheLiveQuadOnBothSidesOfTheClientCatchingUp)
-{
-    // The cross-fade only works if the two layers occupy the same rectangle: a ghost that
-    // slid against the live surface would be worse than the pop it is there to hide. The
-    // ghost is built from values captured before the resize and has no live renderable to
-    // ask, so this is the check that the capture carries enough to land in the same place.
+    // The stretch is only worth anything if the drawn rectangle stays put across the frame
+    // the client commits its new buffer on - that commit is exactly where the pop used to
+    // be. Before it, the live layer is a stale buffer measured against its own natural
+    // rectangle; after it, a smaller buffer scaled up by more. Both have to land in the
+    // same place.
     //
     // A window shrinking 800 -> 400, with the animated clip - already clamped to what the
     // client can reach - passing through 600.
@@ -790,32 +744,21 @@ TEST(TessellationHelpersTest, AGhostQuadRegistersWithTheLiveQuadOnBothSidesOfThe
     };
     geom::Size const stretch { 600, 600 };
 
-    // The ghost's provenance is exact by construction: the natural rectangle was captured
-    // alongside the buffer, so it needs no guessing at all.
-    auto const ghost = mgl::tessellate_into_rectangle(
-        before, before.size, geom::RectangleD {
-                                 { 0,   0   },
-                                 { 800, 600 }
-    },
-        geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, before });
-
     // While the client still has not committed at its new size, the live layer is drawing
-    // the very same buffer measured the very same way, so the two are identical.
+    // the pre-resize buffer, measured against the pre-resize natural rectangle.
     StubRenderable stale(before, before.size);
     auto const live_stale = mgl::tessellate_renderable_into_rectangle(
         stale, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, before });
 
     // Once it has caught up, the live layer is a smaller buffer scaled up by more, which
-    // has to land on exactly the same rectangle - that is the frame the ghost is hiding.
+    // has to land on exactly the same rectangle.
     StubRenderable caught_up(after, after.size);
     auto const live_caught_up = mgl::tessellate_renderable_into_rectangle(
         caught_up, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, after });
 
-    for (int i = 0; i < ghost.nvertices; ++i)
+    for (int i = 0; i < live_stale.nvertices; ++i)
     {
-        EXPECT_FLOAT_EQ(live_stale.vertices[i].position[0], ghost.vertices[i].position[0]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(live_stale.vertices[i].position[1], ghost.vertices[i].position[1]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(live_caught_up.vertices[i].position[0], ghost.vertices[i].position[0]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(live_caught_up.vertices[i].position[1], ghost.vertices[i].position[1]) << "vertex " << i;
+        EXPECT_FLOAT_EQ(live_caught_up.vertices[i].position[0], live_stale.vertices[i].position[0]) << "vertex " << i;
+        EXPECT_FLOAT_EQ(live_caught_up.vertices[i].position[1], live_stale.vertices[i].position[1]) << "vertex " << i;
     }
 }

@@ -97,18 +97,6 @@ namespace gl
         std::optional<geometry::Rectangle> const& clip_area,
         std::optional<Stretch> const& stretch = std::nullopt);
 
-    /// The same geometry, spelled out rather than read off a renderable: a cross-fade draws
-    /// a buffer captured frames ago and has no live renderable to ask. Sharing one body
-    /// with the overload above is what keeps the two layers of a fade registered.
-    Primitive tessellate_into_rectangle(
-        geometry::Rectangle const& screen_position,
-        geometry::Size const& buffer_size,
-        geometry::RectangleD const& src_bounds,
-        geometry::Displacement const& offset,
-        bool const is_flipped,
-        std::optional<geometry::Rectangle> const& clip_area,
-        std::optional<Stretch> const& stretch = std::nullopt);
-
 }
 }
 #endif /* MIR_GL_TESSELLATION_HELPERS_H_ */

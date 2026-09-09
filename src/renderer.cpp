@@ -45,6 +45,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <mir/renderer/gl/gl_surface.h>
 #include <mir/scene/surface.h>
 #include <stdexcept>
+#include <unordered_set>
 
 namespace mg = mir::graphics;
 namespace ms = mir::scene;
@@ -1046,32 +1047,6 @@ void Renderer::draw(
         : 1;
     bool const is_multipass = num_passes > 1;
 
-    // Retain the frame that was on screen when the resize started, so the live surface can
-    // be cross-faded in over it; see Ghost. The controller sets the stretch *before*
-    // modify_window(), so the first compositor pass that sees one is still holding the
-    // pre-resize buffer. If no pass lands in that window the capture takes the new buffer
-    // instead and the fade degenerates to a no-op - never worse than the live surface
-    // alone. A multi-pass shader gets no ghost: the off-screen chain runs on the live
-    // texture into a single pair of ping-pong targets, so there is no pass output for a
-    // second layer. Such a window keeps the stretch and loses only the cross-fade.
-    Ghost const* ghost = nullptr;
-    if (stretch && data.data.stretch->fade > 0.f && !is_multipass)
-    {
-        auto& entry = ghosts[renderable.id()];
-
-        // Recapture whenever the animation was retargeted mid-flight: the frame being held
-        // is then no longer the one the user was looking at when the fade restarted.
-        if (!entry.buffer || entry.generation != data.data.stretch->generation)
-        {
-            entry = Ghost {
-                renderable.buffer(), data.data.id, data.data.stretch->generation,
-                renderable.screen_position(), renderable.src_bounds(),
-                data.group_natural, renderable.shaped()
-            };
-        }
-        ghost = &entry;
-    }
-
     // For multi-pass shaders, run intermediate off-screen passes first.
     int offscreen_result_target = -1;
     if (is_multipass)
@@ -1163,38 +1138,6 @@ void Renderer::draw(
     glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
-    // The retained frame goes down first, still opaque, and the live surface is faded in on
-    // top of it. That order - rather than fading the ghost out over a live layer - lets both
-    // draws reuse the existing blend paths with nothing changed but their alpha.
-    float const fade = ghost ? std::clamp(data.data.stretch->fade, 0.f, 1.f) : 0.f;
-    if (fade > 0.f)
-    {
-        // Re-derived each frame rather than cached: the texture is only a view onto the
-        // retained buffer, and the buffer is the thing we own.
-        auto const ghost_texture = gl_interface->as_texture(ghost->buffer);
-
-        // Mapped by the very same rule the live layer is, from a natural rectangle captured
-        // alongside its buffer rather than read off the live surface: its delta from the
-        // captured screen position is the right shadow margin or decoration inset, while
-        // the map anchors at the live clip and so tracks the animation. Same rule, same
-        // rectangle: the two layers cannot slide against each other mid-fade.
-        mgl::Stretch const ghost_stretch { stretch->target, ghost->natural };
-        auto const ghost_quad = mgl::tessellate_into_rectangle(
-            ghost->screen_position, ghost->buffer->size(), ghost->src_bounds,
-            geom::Displacement { 0, 0 },
-            ghost_texture->layout() == mg::gl::Texture::Layout::TopRowFirst,
-            clip_area, ghost_stretch);
-
-        // Scaled by the same rule the live layer's surface size is, so the rounded-corner
-        // SDF measures both layers against the same stretched rectangle.
-        auto ghost_size = miracle::geometry_helpers::to_glm(ghost->screen_position.size);
-        auto const [ghost_scale_x, ghost_scale_y] = mgl::stretch_scale(ghost->natural.size, ghost_stretch.target);
-        ghost_size.x *= ghost_scale_x;
-        ghost_size.y *= ghost_scale_y;
-
-        draw_layer(*prog, ghost_quad, *ghost_texture, ghost_size, alpha, ghost->shaped, -1);
-    }
-
     primitives.clear();
     // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
     // so tessellate with is_flipped=false regardless of the original Mir texture layout.
@@ -1223,13 +1166,8 @@ void Renderer::draw(
         }
     }
 
-    // While the ghost is still opaque there is nothing of the live surface left to show,
-    // so the whole draw is skipped rather than blended away to nothing.
-    if (1.f - fade >= 0.005f)
-    {
-        draw_layer(*prog, primitives[0], *texture, surface_size, alpha * (1.f - fade),
-            renderable.shaped(), is_multipass ? offscreen_result_target : -1);
-    }
+    draw_layer(*prog, primitives[0], *texture, surface_size, alpha,
+        renderable.shaped(), is_multipass ? offscreen_result_target : -1);
 
     glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
     glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
@@ -1237,22 +1175,17 @@ void Renderer::draw(
 
 void Renderer::prune_retained_state() const
 {
-    if (ghosts.empty() && shadow_bands.empty())
+    if (shadow_bands.empty())
         return;
 
-    // One pass over the tracked windows: present means still alive, true means still
-    // cross-fading. Ids are handed out monotonically and never reused, so an entry that
-    // outlives its window can only waste a little memory, never be mistaken for another's.
-    std::unordered_map<RenderDataManagerId, bool> live;
+    // One pass over the tracked windows. Ids are handed out monotonically and never reused,
+    // so an entry that outlives its window can only waste a little memory, never be
+    // mistaken for another's.
+    std::unordered_set<RenderDataManagerId> live;
     live.reserve(render_data_cache.size());
     for (auto const& data : render_data_cache)
-        live[data.id] = data.stretch && data.stretch->fade > 0.f;
+        live.insert(data.id);
 
-    std::erase_if(ghosts, [&](auto const& entry)
-    {
-        auto const it = live.find(entry.second.owner);
-        return it == live.end() || !it->second;
-    });
     std::erase_if(shadow_bands, [&](auto const& entry)
     { return !live.contains(entry.first); });
 }

@@ -94,26 +94,18 @@ auto mgl::natural_window_rect(
     };
 }
 
-mgl::Primitive mgl::tessellate_renderable_into_rectangle(
-    mg::Renderable const& renderable,
-    geom::Displacement const& offset,
-    bool const is_flipped,
-    std::optional<geom::Rectangle> const& clip_area,
-    std::optional<Stretch> const& stretch)
+namespace
 {
-    return tessellate_into_rectangle(
-        renderable.screen_position(), renderable.buffer()->size(), renderable.src_bounds(),
-        offset, is_flipped, clip_area, stretch);
-}
-
-mgl::Primitive mgl::tessellate_into_rectangle(
+/// The body of tessellate_renderable_into_rectangle, spelled out in the three values it
+/// reads off the renderable.
+mgl::Primitive tessellate_into_rectangle(
     geom::Rectangle const& screen_position,
     geom::Size const& buffer_size,
     geom::RectangleD const& src_bounds,
     geom::Displacement const& offset,
     bool const is_flipped,
     std::optional<geom::Rectangle> const& clip_area,
-    std::optional<Stretch> const& stretch)
+    std::optional<mgl::Stretch> const& stretch)
 {
     using namespace miracle::geometry_helpers::gl;
     auto const& rect = screen_position;
@@ -138,7 +130,7 @@ mgl::Primitive mgl::tessellate_into_rectangle(
          * along by that map. See Stretch for why the renderable keeps its own offset and
          * size; the crop below trims whatever ends up outside the clip.
          */
-        auto const [scale_x, scale_y] = stretch_scale(stretch->source.size, stretch->target);
+        auto const [scale_x, scale_y] = mgl::stretch_scale(stretch->source.size, stretch->target);
 
         window_left = clip_left + (x(rect.top_left) - x(stretch->source.top_left)) * scale_x;
         window_top = clip_top + (y(rect.top_left) - y(stretch->source.top_left)) * scale_y;
@@ -197,4 +189,17 @@ mgl::Primitive mgl::tessellate_into_rectangle(
         { tex_right, is_flipped ? 1.f - tex_bottom : tex_bottom }
     };
     return rectangle;
+}
+}
+
+mgl::Primitive mgl::tessellate_renderable_into_rectangle(
+    mg::Renderable const& renderable,
+    geom::Displacement const& offset,
+    bool const is_flipped,
+    std::optional<geom::Rectangle> const& clip_area,
+    std::optional<Stretch> const& stretch)
+{
+    return ::tessellate_into_rectangle(
+        renderable.screen_position(), renderable.buffer()->size(), renderable.src_bounds(),
+        offset, is_flipped, clip_area, stretch);
 }

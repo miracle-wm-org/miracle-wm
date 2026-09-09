@@ -204,10 +204,6 @@ TEST_F(AnimatorTest, ShrinkingSlideStillClipsToTheInterpolatedSize)
     EXPECT_EQ(first_frame->clip_area->size, mir::geometry::Size(700, 600));
     ASSERT_TRUE(first_frame->resize.has_value());
     EXPECT_EQ(first_frame->resize->target, mir::geometry::Size(400, 600));
-
-    // The renderer keys its retained pre-resize frame off this, so it has to name an
-    // animation rather than being left at the "no animation" default.
-    EXPECT_NE(first_frame->resize->generation, 0u);
 }
 
 TEST_F(AnimatorTest, CompletionClearsTheResizeFrame)
@@ -236,61 +232,10 @@ TEST_F(AnimatorTest, CompletionClearsTheResizeFrame)
     EXPECT_EQ(last_frame->rectangle.value(), mir::geometry::Rectangle({ 0, 0 }, { 400, 600 }));
 }
 
-TEST_F(AnimatorTest, TheContentFadeStartsOpaqueAndIsOverBeforeTheAnimationIs)
-{
-    // The retained pre-resize frame has to be fully opaque on the first frame - that frame
-    // must be pixel-identical to the one before the animation started - and gone well
-    // before the end, so the last animated frames are pure live content and the hand-off
-    // to the un-animated frame after them changes nothing.
-    Animator animator;
-    auto const handle = animator.register_animateable();
-    std::vector<AnimationFrameResult> frames;
-    animator.append(Animation(
-        handle,
-        linear_slide,
-        slide_data(
-            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
-            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
-        [&](AnimationFrameResult const& result)
-    {
-        frames.push_back(result);
-    },
-        std::shared_ptr<PluginManager>()));
-
-    // t = 0 exactly: nothing of the resize has happened yet.
-    animator.tick(0.f);
-    ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.front().resize.has_value());
-    EXPECT_FLOAT_EQ(frames.front().resize->content_fade, 1.f);
-
-    // Halfway through the fade, the ghost is partly dissolved but still there.
-    frames.clear();
-    animator.tick(kGhostFraction / 2.f);
-    ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().resize.has_value());
-    EXPECT_GT(frames.back().resize->content_fade, 0.f);
-    EXPECT_LT(frames.back().resize->content_fade, 1.f);
-
-    // At kGhostFraction the ghost is exactly gone, not merely close to it: anything left
-    // over would be released as a step rather than a fade.
-    frames.clear();
-    animator.tick(kGhostFraction / 2.f);
-    ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().resize.has_value());
-    EXPECT_FLOAT_EQ(frames.back().resize->content_fade, 0.f);
-
-    // ...and stays gone for the rest of the animation.
-    frames.clear();
-    animator.tick(0.2f);
-    ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().resize.has_value());
-    EXPECT_FLOAT_EQ(frames.back().resize->content_fade, 0.f);
-}
-
 TEST_F(AnimatorTest, APureMoveGetsNoResizeFrame)
 {
     // Nothing about the content changes when a window only moves, so there is nothing to
-    // stretch and nothing for a ghost to hide.
+    // stretch.
     Animator animator;
     auto const handle = animator.register_animateable();
     std::optional<AnimationFrameResult> first_frame;
@@ -311,78 +256,6 @@ TEST_F(AnimatorTest, APureMoveGetsNoResizeFrame)
 
     ASSERT_TRUE(first_frame.has_value());
     EXPECT_FALSE(first_frame->resize.has_value());
-}
-
-TEST_F(AnimatorTest, CompletionClearsTheContentFadeToo)
-{
-    Animator animator;
-    auto const handle = animator.register_animateable();
-    std::optional<AnimationFrameResult> last_frame;
-    animator.append(Animation(
-        handle,
-        linear_slide,
-        slide_data(
-            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
-            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
-        [&](AnimationFrameResult const& result)
-    {
-        last_frame = result;
-    },
-        std::shared_ptr<PluginManager>()));
-
-    animator.tick(1.f);
-
-    ASSERT_TRUE(last_frame.has_value());
-    EXPECT_TRUE(last_frame->is_complete);
-    EXPECT_FALSE(last_frame->resize.has_value());
-}
-
-TEST_F(AnimatorTest, ReplacingALiveResizeRestartsTheContentFade)
-{
-    // A second resize arriving mid-flight resets the animation's clock, so the fade starts
-    // over at 1. That is right rather than jarring: the renderer recaptures the ghost
-    // whenever the generation changes, so what is being faded is the content that is on
-    // screen right now, not the frame the first resize captured.
-    Animator animator;
-    auto const handle = animator.register_animateable();
-    std::optional<AnimationFrameResult> outgoing_last;
-    animator.append(Animation(
-        handle,
-        linear_slide,
-        slide_data(
-            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
-            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
-        [&](AnimationFrameResult const& result)
-    {
-        outgoing_last = result;
-    },
-        std::shared_ptr<PluginManager>()));
-
-    animator.tick(kGhostFraction);
-    ASSERT_TRUE(outgoing_last.has_value());
-    ASSERT_TRUE(outgoing_last->resize.has_value());
-    ASSERT_FLOAT_EQ(outgoing_last->resize->content_fade, 0.f);
-
-    std::optional<AnimationFrameResult> incoming_first;
-    animator.append(Animation(
-        handle,
-        linear_slide,
-        slide_data(
-            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 }),
-            mir::geometry::Rectangle({ 0, 0 }, { 900, 600 })),
-        [&](AnimationFrameResult const& result)
-    {
-        if (!incoming_first)
-            incoming_first = result;
-    },
-        std::shared_ptr<PluginManager>()));
-
-    animator.tick(0.f);
-
-    ASSERT_TRUE(incoming_first.has_value());
-    ASSERT_TRUE(incoming_first->resize.has_value());
-    EXPECT_FLOAT_EQ(incoming_first->resize->content_fade, 1.f);
-    EXPECT_NE(incoming_first->resize->generation, outgoing_last->resize->generation);
 }
 
 TEST_F(AnimatorTest, ReplacingALiveAnimationContinuesFromItsCurrentState)

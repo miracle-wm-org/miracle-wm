@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
 #include <algorithm>
-#include <atomic>
 #include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -229,15 +228,6 @@ bool CustomAnimation::tick(float dt)
     return on_tick_(dt);
 }
 
-namespace
-{
-uint32_t next_generation()
-{
-    static std::atomic<uint32_t> counter { 0 };
-    return counter.fetch_add(1, std::memory_order_relaxed) + 1;
-}
-}
-
 Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,
@@ -248,8 +238,7 @@ Animation::Animation(
     definition_ { definition },
     data_ { std::move(data) },
     on_tick { std::move(on_tick) },
-    plugin_manager { plugin_manager },
-    generation_ { next_generation() }
+    plugin_manager { plugin_manager }
 {
 }
 
@@ -300,11 +289,6 @@ void Animation::retarget_from(State const& state)
         data_.area_start = *state.area;
     data_.opacity_start = state.opacity;
     runtime_seconds = 0.f;
-}
-
-uint32_t Animation::generation() const
-{
-    return generation_;
 }
 
 bool Animation::tick(float dt)
@@ -398,27 +382,11 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
         };
-        // A resize swaps the window's content out from under the user: the client takes an
-        // unbounded number of frames to commit a buffer at its new size, and the instant it
-        // does, the same rectangle fills with different, re-laid-out content. Holding the
-        // pre-resize frame underneath and dissolving it turns that cut into a fade. A pure
-        // move shows the very same pixels throughout, so it needs neither the fade nor the
-        // stretch.
-        //
-        // The fade is driven by the raw t rather than the eased p, so it is the same length
-        // whatever easing curve is configured. Smoothstep is chosen for its flat ends: it
-        // holds near 1 through the client round trip, where the pop lives, and lands on 0
-        // without a visible cutoff.
+        // A pure move shows the very same pixels from the first frame to the last, so it
+        // needs no stretch at all. Only an animation that changes the window's size does.
         std::optional<ResizeFrame> resize;
         if (data_.area_start.size != data_.area_end.size)
-        {
-            float const u = std::clamp(t / kGhostFraction, 0.f, 1.f);
-            resize = ResizeFrame {
-                .target = data_.area_end.size,
-                .generation = generation_,
-                .content_fade = 1.f - u * u * (3.f - 2.f * u)
-            };
-        }
+            resize = ResizeFrame { .target = data_.area_end.size };
         return {
             .is_complete = false,
             .rectangle = window_rect,

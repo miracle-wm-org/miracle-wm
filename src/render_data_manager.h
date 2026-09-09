@@ -40,16 +40,6 @@ struct ContentStretch
     /// after it does, so switching the stretch off is invisible.
     mir::geometry::Size size;
 
-    /// Identifies the animation this stretch belongs to. The renderer retains the frame a
-    /// window was showing when its resize began so it can cross-fade the live surface in
-    /// over it; a changed generation says the animation was replaced mid-flight and the
-    /// frame it is holding is stale.
-    uint32_t generation = 0;
-
-    /// How much of the pre-resize frame the renderer should still be showing. 0 means the
-    /// live surface is drawn alone, which is every frame after the cross-fade has finished.
-    float fade = 0.f;
-
     friend bool operator==(ContentStretch const&, ContentStretch const&) = default;
 };
 
