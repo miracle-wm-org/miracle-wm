@@ -34,22 +34,20 @@ typedef int RenderDataManagerId;
 /// What an in-flight resize animation wants done to a window's drawn content.
 struct ContentStretch
 {
-    /// The size to draw the window's content at this frame. Never a size the client
-    /// cannot reach: once the animated clip passes the client's limit this freezes at
-    /// that limit and the clip crops the difference - which is exactly what the
-    /// un-animated frame after it does, so switching the stretch off is invisible.
+    /// The size to draw the window's content at this frame. Never a size the client cannot
+    /// reach: once the animated clip passes the client's limit this freezes at that limit
+    /// and the clip crops the difference - which is exactly what the un-animated frame
+    /// after it does, so switching the stretch off is invisible.
     mir::geometry::Size size;
 
-    /// The window size the animation started from - an identity token for the animation,
-    /// not a measurement. The renderer holds on to the frame a window was showing when
-    /// its resize began so it can cross-fade the live surface in over it, and a changed
-    /// [from] is what tells it the animation was retargeted mid-flight and the frame it
-    /// is holding is no longer the one the user was looking at.
-    mir::geometry::Size from;
+    /// Identifies the animation this stretch belongs to. The renderer retains the frame a
+    /// window was showing when its resize began so it can cross-fade the live surface in
+    /// over it; a changed generation says the animation was replaced mid-flight and the
+    /// frame it is holding is stale.
+    uint32_t generation = 0;
 
     /// How much of the pre-resize frame the renderer should still be showing. 0 means the
-    /// live surface is drawn alone, which is every frame of a pure move and every frame
-    /// after the cross-fade has finished.
+    /// live surface is drawn alone, which is every frame after the cross-fade has finished.
     float fade = 0.f;
 
     friend bool operator==(ContentStretch const&, ContentStretch const&) = default;

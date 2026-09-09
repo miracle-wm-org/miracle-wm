@@ -19,11 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MIRACLE_GEOMETRY_HELPERS_H
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <mir/geometry/point.h>
 #include <mir/geometry/rectangle.h>
 #include <mir/geometry/size.h>
-#include <optional>
 
 namespace miracle
 {

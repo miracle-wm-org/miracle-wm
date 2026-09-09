@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -228,6 +229,15 @@ bool CustomAnimation::tick(float dt)
     return on_tick_(dt);
 }
 
+namespace
+{
+uint32_t next_generation()
+{
+    static std::atomic<uint32_t> counter { 0 };
+    return counter.fetch_add(1, std::memory_order_relaxed) + 1;
+}
+}
+
 Animation::Animation(
     AnimationHandle handle,
     AnimationDefinition const& definition,
@@ -238,7 +248,8 @@ Animation::Animation(
     definition_ { definition },
     data_ { std::move(data) },
     on_tick { std::move(on_tick) },
-    plugin_manager { plugin_manager }
+    plugin_manager { plugin_manager },
+    generation_ { next_generation() }
 {
 }
 
@@ -257,45 +268,43 @@ bool Animation::is_being_removed() const
     return is_being_removed_;
 }
 
-std::optional<geom::Rectangle> Animation::current_area() const
+Animation::State Animation::current_state() const
 {
-    float const t = std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f);
+    // Guarded like tick(): a zero-duration definition is instantly over, not a division.
+    float const t = definition_.duration_seconds > 0.f
+        ? std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f)
+        : 1.f;
+
+    State state { std::nullopt, data_.opacity_start };
     for (auto const& builtin_def : definition_.data)
     {
-        if (builtin_def.type != BultInAnimationType::slide)
-            continue;
-
         auto const p = ease(builtin_def, t);
-        auto const [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
-        return geom::Rectangle {
-            geom::Point { position.x,       position.y       },
-            geom::Size { clip_area_size.x, clip_area_size.y }
-        };
+        if (builtin_def.type == BultInAnimationType::slide)
+        {
+            auto const [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
+            state.area = geom::Rectangle {
+                geom::Point { position.x,       position.y       },
+                geom::Size { clip_area_size.x, clip_area_size.y }
+            };
+        }
+        else if (builtin_def.type == BultInAnimationType::fade)
+            state.opacity = data_.opacity_start + (data_.opacity_end - data_.opacity_start) * p;
     }
 
-    return std::nullopt;
+    return state;
 }
 
-float Animation::current_opacity() const
+void Animation::retarget_from(State const& state)
 {
-    float const t = std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f);
-    for (auto const& builtin_def : definition_.data)
-    {
-        if (builtin_def.type != BultInAnimationType::fade)
-            continue;
-
-        float const opacity_diff = data_.opacity_end - data_.opacity_start;
-        return data_.opacity_start + opacity_diff * ease(builtin_def, t);
-    }
-
-    return data_.opacity_start;
-}
-
-void Animation::retarget_from(geom::Rectangle const& area, float opacity)
-{
-    data_.area_start = area;
-    data_.opacity_start = opacity;
+    if (state.area)
+        data_.area_start = *state.area;
+    data_.opacity_start = state.opacity;
     runtime_seconds = 0.f;
+}
+
+uint32_t Animation::generation() const
+{
+    return generation_;
 }
 
 bool Animation::tick(float dt)
@@ -382,31 +391,33 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
             data_.area_end.size
         };
         // clip_area carries the animated scissor size to reveal/conceal content gradually.
-        // It is still what bounds a client that lags behind, or refuses, the request above,
-        // and it is also the per-frame size the content is stretched to once it has been
-        // clamped to the client's own constraints. fit_target below only says that a
-        // stretch is in flight at all.
+        // It bounds a client that lags behind, or refuses, the request above, and - once
+        // clamped to the client's own constraints - it is also the size the content is
+        // stretched to each frame. `resize` below only says a stretch is in flight at all.
         auto const clip_rect = geom::Rectangle {
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
         };
-        // How much of the frame that was on screen when the resize started the renderer
-        // should still be showing. The client takes an unbounded number of frames to
-        // commit a buffer at its new size, and the instant it does, the same rectangle is
-        // suddenly filled with different, re-laid-out content: a swap no amount of
-        // geometric continuity can smooth over. Holding the old frame underneath and
-        // dissolving it turns that cut into a fade.
+        // A resize swaps the window's content out from under the user: the client takes an
+        // unbounded number of frames to commit a buffer at its new size, and the instant it
+        // does, the same rectangle fills with different, re-laid-out content. Holding the
+        // pre-resize frame underneath and dissolving it turns that cut into a fade. A pure
+        // move shows the very same pixels throughout, so it needs neither the fade nor the
+        // stretch.
         //
-        // Driven by the raw t rather than the eased p, so the fade is the same length
-        // whatever easing curve the animation is configured with. Smoothstep is chosen
-        // for its flat ends: it holds near 1 through the client round trip, where the pop
-        // lives, and lands on 0 without a visible cutoff. Only a resize gets one - a pure
-        // move shows the very same pixels throughout, so there is nothing to hide.
-        std::optional<float> content_fade;
+        // The fade is driven by the raw t rather than the eased p, so it is the same length
+        // whatever easing curve is configured. Smoothstep is chosen for its flat ends: it
+        // holds near 1 through the client round trip, where the pop lives, and lands on 0
+        // without a visible cutoff.
+        std::optional<ResizeFrame> resize;
         if (data_.area_start.size != data_.area_end.size)
         {
             float const u = std::clamp(t / kGhostFraction, 0.f, 1.f);
-            content_fade = 1.f - u * u * (3.f - 2.f * u);
+            resize = ResizeFrame {
+                .target = data_.area_end.size,
+                .generation = generation_,
+                .content_fade = 1.f - u * u * (3.f - 2.f * u)
+            };
         }
         return {
             .is_complete = false,
@@ -414,9 +425,7 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
             .transform = std::nullopt,
             .opacity = 1.f,
             .clip_area = clip_rect,
-            .fit_target = data_.area_end.size,
-            .fit_from = data_.area_start.size,
-            .content_fade = content_fade
+            .resize = resize
         };
     }
     case BultInAnimationType::grow:

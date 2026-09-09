@@ -117,13 +117,10 @@ public:
     virtual void set_animation_transform(glm::mat4 transform) = 0;
 
     /// Sets how an in-flight resize animation wants this container's drawn content
-    /// stretched this frame. Both sizes are already run through the client's live
-    /// constraints, so the stretch stops moving once the animated clip passes what the
-    /// client can reach and the clip crops the remainder. Nothing means draw the
-    /// content at its own size, which is what ends a stretch. Containers with no
-    /// render data ignore it entirely.
+    /// stretched this frame. Nothing means draw the content at its own size, which is what
+    /// ends a stretch. Containers with no render data ignore it entirely.
     ///
-    /// \param stretch the constrained sizes, or nothing to stop stretching
+    /// \param stretch the constrained stretch, or nothing to stop stretching
     virtual void set_animation_stretch_target(std::optional<ContentStretch> /*stretch*/) { }
 
     virtual void set_workspace_transform(glm::mat4 const& transform) = 0;

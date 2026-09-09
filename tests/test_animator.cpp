@@ -202,17 +202,15 @@ TEST_F(AnimatorTest, ShrinkingSlideStillClipsToTheInterpolatedSize)
     ASSERT_TRUE(first_frame->clip_area.has_value());
     // A quarter of the way from 800 to 400.
     EXPECT_EQ(first_frame->clip_area->size, mir::geometry::Size(700, 600));
-    ASSERT_TRUE(first_frame->fit_target.has_value());
-    EXPECT_EQ(first_frame->fit_target.value(), mir::geometry::Size(400, 600));
+    ASSERT_TRUE(first_frame->resize.has_value());
+    EXPECT_EQ(first_frame->resize->target, mir::geometry::Size(400, 600));
 
-    // The renderer needs the size the animation started from as well: for the first
-    // frames the client's committed buffer is still that size, not the one just
-    // requested above.
-    ASSERT_TRUE(first_frame->fit_from.has_value());
-    EXPECT_EQ(first_frame->fit_from.value(), mir::geometry::Size(800, 600));
+    // The renderer keys its retained pre-resize frame off this, so it has to name an
+    // animation rather than being left at the "no animation" default.
+    EXPECT_NE(first_frame->resize->generation, 0u);
 }
 
-TEST_F(AnimatorTest, CompletionClearsTheFitTarget)
+TEST_F(AnimatorTest, CompletionClearsTheResizeFrame)
 {
     Animator animator;
     auto const handle = animator.register_animateable();
@@ -233,8 +231,7 @@ TEST_F(AnimatorTest, CompletionClearsTheFitTarget)
 
     ASSERT_TRUE(last_frame.has_value());
     EXPECT_TRUE(last_frame->is_complete);
-    EXPECT_FALSE(last_frame->fit_target.has_value());
-    EXPECT_FALSE(last_frame->fit_from.has_value());
+    EXPECT_FALSE(last_frame->resize.has_value());
     ASSERT_TRUE(last_frame->rectangle.has_value());
     EXPECT_EQ(last_frame->rectangle.value(), mir::geometry::Rectangle({ 0, 0 }, { 400, 600 }));
 }
@@ -263,37 +260,37 @@ TEST_F(AnimatorTest, TheContentFadeStartsOpaqueAndIsOverBeforeTheAnimationIs)
     // t = 0 exactly: nothing of the resize has happened yet.
     animator.tick(0.f);
     ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.front().content_fade.has_value());
-    EXPECT_FLOAT_EQ(frames.front().content_fade.value(), 1.f);
+    ASSERT_TRUE(frames.front().resize.has_value());
+    EXPECT_FLOAT_EQ(frames.front().resize->content_fade, 1.f);
 
     // Halfway through the fade, the ghost is partly dissolved but still there.
     frames.clear();
     animator.tick(kGhostFraction / 2.f);
     ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().content_fade.has_value());
-    EXPECT_GT(frames.back().content_fade.value(), 0.f);
-    EXPECT_LT(frames.back().content_fade.value(), 1.f);
+    ASSERT_TRUE(frames.back().resize.has_value());
+    EXPECT_GT(frames.back().resize->content_fade, 0.f);
+    EXPECT_LT(frames.back().resize->content_fade, 1.f);
 
     // At kGhostFraction the ghost is exactly gone, not merely close to it: anything left
     // over would be released as a step rather than a fade.
     frames.clear();
     animator.tick(kGhostFraction / 2.f);
     ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().content_fade.has_value());
-    EXPECT_FLOAT_EQ(frames.back().content_fade.value(), 0.f);
+    ASSERT_TRUE(frames.back().resize.has_value());
+    EXPECT_FLOAT_EQ(frames.back().resize->content_fade, 0.f);
 
     // ...and stays gone for the rest of the animation.
     frames.clear();
     animator.tick(0.2f);
     ASSERT_FALSE(frames.empty());
-    ASSERT_TRUE(frames.back().content_fade.has_value());
-    EXPECT_FLOAT_EQ(frames.back().content_fade.value(), 0.f);
+    ASSERT_TRUE(frames.back().resize.has_value());
+    EXPECT_FLOAT_EQ(frames.back().resize->content_fade, 0.f);
 }
 
-TEST_F(AnimatorTest, APureMoveGetsNoContentFade)
+TEST_F(AnimatorTest, APureMoveGetsNoResizeFrame)
 {
-    // Nothing about the content changes when a window only moves, so there is nothing for
-    // a ghost to hide - and an unset fade is what keeps the renderer's dedup firing.
+    // Nothing about the content changes when a window only moves, so there is nothing to
+    // stretch and nothing for a ghost to hide.
     Animator animator;
     auto const handle = animator.register_animateable();
     std::optional<AnimationFrameResult> first_frame;
@@ -313,10 +310,10 @@ TEST_F(AnimatorTest, APureMoveGetsNoContentFade)
     animator.tick(0.25f);
 
     ASSERT_TRUE(first_frame.has_value());
-    EXPECT_FALSE(first_frame->content_fade.has_value());
+    EXPECT_FALSE(first_frame->resize.has_value());
 }
 
-TEST_F(AnimatorTest, CompletionClearsTheContentFade)
+TEST_F(AnimatorTest, CompletionClearsTheContentFadeToo)
 {
     Animator animator;
     auto const handle = animator.register_animateable();
@@ -337,15 +334,15 @@ TEST_F(AnimatorTest, CompletionClearsTheContentFade)
 
     ASSERT_TRUE(last_frame.has_value());
     EXPECT_TRUE(last_frame->is_complete);
-    EXPECT_FALSE(last_frame->content_fade.has_value());
+    EXPECT_FALSE(last_frame->resize.has_value());
 }
 
 TEST_F(AnimatorTest, ReplacingALiveResizeRestartsTheContentFade)
 {
     // A second resize arriving mid-flight resets the animation's clock, so the fade starts
     // over at 1. That is right rather than jarring: the renderer recaptures the ghost
-    // whenever the size the animation starts from changes, so what is being faded is the
-    // content that is on screen right now, not the frame the first resize captured.
+    // whenever the generation changes, so what is being faded is the content that is on
+    // screen right now, not the frame the first resize captured.
     Animator animator;
     auto const handle = animator.register_animateable();
     std::optional<AnimationFrameResult> outgoing_last;
@@ -363,8 +360,8 @@ TEST_F(AnimatorTest, ReplacingALiveResizeRestartsTheContentFade)
 
     animator.tick(kGhostFraction);
     ASSERT_TRUE(outgoing_last.has_value());
-    ASSERT_TRUE(outgoing_last->content_fade.has_value());
-    ASSERT_FLOAT_EQ(outgoing_last->content_fade.value(), 0.f);
+    ASSERT_TRUE(outgoing_last->resize.has_value());
+    ASSERT_FLOAT_EQ(outgoing_last->resize->content_fade, 0.f);
 
     std::optional<AnimationFrameResult> incoming_first;
     animator.append(Animation(
@@ -383,8 +380,9 @@ TEST_F(AnimatorTest, ReplacingALiveResizeRestartsTheContentFade)
     animator.tick(0.f);
 
     ASSERT_TRUE(incoming_first.has_value());
-    ASSERT_TRUE(incoming_first->content_fade.has_value());
-    EXPECT_FLOAT_EQ(incoming_first->content_fade.value(), 1.f);
+    ASSERT_TRUE(incoming_first->resize.has_value());
+    EXPECT_FLOAT_EQ(incoming_first->resize->content_fade, 1.f);
+    EXPECT_NE(incoming_first->resize->generation, outgoing_last->resize->generation);
 }
 
 TEST_F(AnimatorTest, ReplacingALiveAnimationContinuesFromItsCurrentState)

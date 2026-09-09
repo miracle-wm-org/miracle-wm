@@ -36,9 +36,7 @@ AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& oth
         .transform = transform ? *transform : other.transform,
         .opacity = opacity ? *opacity : other.opacity,
         .clip_area = clip_area ? *clip_area : other.clip_area,
-        .fit_target = fit_target ? *fit_target : other.fit_target,
-        .fit_from = fit_from ? *fit_from : other.fit_from,
-        .content_fade = content_fade ? *content_fade : other.content_fade
+        .resize = resize ? *resize : other.resize
     };
 }
 
@@ -100,8 +98,7 @@ void Animator::tick(float dt)
                 if (other.handle() != pending.handle() || other.is_being_removed())
                     continue;
 
-                if (auto const area = other.current_area())
-                    pending.retarget_from(area.value(), other.current_opacity());
+                pending.retarget_from(other.current_state());
                 other.mark_for_removal();
             }
         }
@@ -123,8 +120,7 @@ void Animator::tick(float dt)
                 continue;
             }
 
-            if (auto const area = it->current_area())
-                successor->retarget_from(area.value(), it->current_opacity());
+            successor->retarget_from(it->current_state());
             it = pending_active.erase(it);
             animation_count.fetch_sub(1, std::memory_order_release);
         }

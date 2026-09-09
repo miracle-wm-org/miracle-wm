@@ -117,10 +117,9 @@ void RenderDataManager::stretch_change(RenderDataManagerId id, std::optional<Con
     std::lock_guard lock(mutex);
     if (auto* const data = find_by_id(render_data, id))
     {
-        // This fires once per animated frame per window, and every generation bump
-        // costs the renderer a full copy of the vector. Most of those frames ask for
-        // the size that is already stored - the stretch has frozen at the client's
-        // limit - so say nothing when nothing changed.
+        // This fires once per animated frame per window, and every generation bump costs
+        // the renderer a full copy of the vector. Once the stretch freezes at the client's
+        // limit most of those frames ask for what is already stored, so say nothing.
         if (data->stretch == stretch)
             return;
 

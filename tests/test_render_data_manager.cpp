@@ -89,14 +89,15 @@ TEST_F(RenderDataManagerTest, CanChangeStretch)
 
     render_data_manager.stretch_change(id, ContentStretch {
                                                { 300, 600 },
-                                               { 800, 600 }
+                                               7, 0.5f
     });
 
     auto result = get();
     ASSERT_EQ(result.size(), 1);
     ASSERT_TRUE(result[0].stretch.has_value());
     ASSERT_EQ(result[0].stretch->size, mir::geometry::Size(300, 600));
-    ASSERT_EQ(result[0].stretch->from, mir::geometry::Size(800, 600));
+    ASSERT_EQ(result[0].stretch->generation, 7u);
+    ASSERT_FLOAT_EQ(result[0].stretch->fade, 0.5f);
 
     render_data_manager.stretch_change(id, std::nullopt);
 
@@ -120,22 +121,22 @@ TEST_F(RenderDataManagerTest, RestatingTheStretchDoesNotAdvanceTheGeneration)
 
     render_data_manager.stretch_change(id, ContentStretch {
                                                { 300, 600 },
-                                               { 800, 600 }
+                                               7, 0.f
     });
     ASSERT_EQ(get().size(), 1);
 
     // Nothing changed, so nothing is copied out.
     render_data_manager.stretch_change(id, ContentStretch {
                                                { 300, 600 },
-                                               { 800, 600 }
+                                               7, 0.f
     });
     copied.clear();
     ASSERT_TRUE(get().empty());
 
-    // A change to either half is still a change.
+    // A change to any field is still a change.
     render_data_manager.stretch_change(id, ContentStretch {
                                                { 300, 600 },
-                                               { 700, 600 }
+                                               8, 0.f
     });
     ASSERT_EQ(get().size(), 1);
 

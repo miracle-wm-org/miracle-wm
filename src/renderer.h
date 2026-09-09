@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "program_factory.h"
 #include "render_data_manager.h"
 #include "scene_override.h"
+#include "tessellation_helpers.h"
 
 #include <GLES2/gl2.h>
 #include <memory>
@@ -78,8 +79,7 @@ private:
         mir::graphics::Renderable const& renderable,
         bool const is_flipped,
         std::optional<mir::geometry::Rectangle> const& clip_area,
-        std::optional<mir::geometry::Size> const& stretch_size = std::nullopt,
-        std::optional<mir::geometry::Rectangle> const& source_rect = std::nullopt);
+        std::optional<mir::gl::Stretch> const& stretch = std::nullopt);
 
     struct DrawData
     {
@@ -92,18 +92,13 @@ private:
         /// The real screen position of the surface group; only valid when
         /// [placement] is set. Used to derive the mapping onto the placement.
         mir::geometry::Rectangle override_real;
-        /// The surface the renderable belongs to, if any. A stretch maps this
-        /// surface's natural rectangle onto the clip, which is the same
-        /// rectangle draw_border falls back to - so the content and the border
-        /// are derived from one source and cannot drift apart.
+        /// The surface the renderable belongs to, if any.
         mir::scene::Surface const* surface = nullptr;
-        /// The window rectangle the surface group's committed buffer corresponds
-        /// to: the first renderable of the group, less any CSD shadow band, plus
-        /// the margins miracle itself set. A stretch maps this onto the animated
-        /// size, which is what makes the content land on the presentation
-        /// rectangle by construction. Shared across the group so a subsurface is
-        /// scaled by its parent window's factor rather than by its own size. Only
-        /// meaningful when [surface] is set.
+        /// The window rectangle the surface group's committed buffer corresponds to; see
+        /// natural_window_rect. A stretch maps this onto the animated size, which is what
+        /// lands the content on the rectangle draw_border is sized from by construction.
+        /// Shared across the group so a subsurface is scaled by its parent window's factor
+        /// rather than by its own size. Only meaningful when [surface] is set.
         mir::geometry::Rectangle group_natural;
     };
 
@@ -179,16 +174,16 @@ private:
     /// underneath dissolves that swap instead of cutting it.
     ///
     /// Everything here is captured together and is only meaningful together: the buffer is
-    /// measured against [natural], and the offset between [screen_position] and
-    /// [natural]'s top-left is the client's own shadow margin or decoration inset at
-    /// capture time. [from] takes no part in the geometry; it is only the key that says
-    /// which animation this frame was captured for.
+    /// measured against [natural], and its offset from [screen_position] is the client's
+    /// own shadow margin or decoration inset at capture time.
     struct Ghost
     {
         std::shared_ptr<mir::graphics::Buffer> buffer;
-        /// The size the animation this ghost belongs to started from. Compared against the
-        /// live stretch's `from` to notice a retarget, nothing else.
-        mir::geometry::Size from;
+        /// The window this ghost belongs to, so it can be pruned with that window.
+        RenderDataManagerId owner = 0;
+        /// The animation this ghost was captured for. Compared against the live stretch's
+        /// generation to notice a retarget, nothing else.
+        uint32_t generation = 0;
         mir::geometry::Rectangle screen_position;
         mir::geometry::RectangleD src_bounds;
         /// The window rectangle this buffer corresponds to - the group_natural that was in
@@ -221,11 +216,9 @@ private:
     /// Draws the current renderable and returns a follow-up draw if required.
     void draw(mir::graphics::Renderable const& renderable, DrawData const& data) const;
 
-    /// Uploads the uniforms that differ between the two layers of a cross-fade and draws
-    /// \p primitive. Everything a layer does not own - the pivot, the transforms, the
-    /// corner radius - is uploaded once by draw() before this is called, so the ghost and
-    /// the live surface can only differ in the ways they are meant to: their texture,
-    /// their alpha and the size the rounded-corner SDF measures against.
+    /// Uploads the uniforms that differ between the two layers of a cross-fade - texture,
+    /// alpha, and the size the rounded-corner SDF measures against - and draws
+    /// \p primitive. Everything else is uploaded once by draw() before this is called.
     ///
     /// \p offscreen_result_target is the index into [pass_targets] holding the result of a
     /// multi-pass shader chain, or -1 when the texture is drawn directly.
@@ -238,6 +231,11 @@ private:
         bool shaped,
         int offscreen_result_target) const;
     void draw_border(mir::scene::Surface const& surface, DrawData const& data) const;
+    /// Drops the retained state of windows that have gone away and of cross-fades that are
+    /// over. Checked against [render_data_cache] rather than a per-frame list of what was
+    /// drawn, so a window culled for a frame keeps the ghost it already captured instead of
+    /// capturing a fresh - and by then wrong - one on the next frame.
+    void prune_retained_state() const;
     void update_gl_viewport();
 
     /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
@@ -282,17 +280,13 @@ private:
     /// Scratch buffer that [SceneOverride::place] fills, reused between frames
     /// so that asking for placements costs no allocation in the steady state.
     mutable std::vector<SceneOverridePlacement> group_placements;
-    /// The retained pre-resize frame of every window currently cross-fading, keyed by
-    /// render data id. Pruned at the end of each render() against [render_data_cache], so a
-    /// window that is culled for a frame keeps the ghost it already captured.
-    mutable std::unordered_map<RenderDataManagerId, Ghost> ghosts;
+    /// The retained pre-resize frame of every layer currently cross-fading, keyed by
+    /// renderable so that a window drawing more than one buffer layer cross-fades each
+    /// against its own captured frame rather than all of them against the first's.
+    mutable std::unordered_map<mir::graphics::Renderable::ID, Ghost> ghosts;
 
-    /// How far each tracked window's committed buffer overshoots the content size it was
-    /// given - a CSD client's drop shadow, zero for everything else. Constant while a
-    /// client keeps the same shadow, but not derivable *during* a resize: the two values
-    /// that reveal it sit on opposite sides of the client's ack latency for as long as the
-    /// animation lasts. So it is measured on every settled frame and remembered for the
-    /// animated ones. Pruned at the end of each render() against [render_data_cache].
+    /// The remembered shadow_band of each CSD window, measured on every settled frame
+    /// because it is not derivable during a resize.
     mutable std::unordered_map<RenderDataManagerId, mir::geometry::Displacement> shadow_bands;
 };
 

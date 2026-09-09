@@ -99,12 +99,11 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     geom::Displacement const& offset,
     bool const is_flipped,
     std::optional<geom::Rectangle> const& clip_area,
-    std::optional<geom::Size> const& stretch_size,
-    std::optional<geom::Rectangle> const& source_rect)
+    std::optional<Stretch> const& stretch)
 {
     return tessellate_into_rectangle(
         renderable.screen_position(), renderable.buffer()->size(), renderable.src_bounds(),
-        offset, is_flipped, clip_area, stretch_size, source_rect);
+        offset, is_flipped, clip_area, stretch);
 }
 
 mgl::Primitive mgl::tessellate_into_rectangle(
@@ -114,8 +113,7 @@ mgl::Primitive mgl::tessellate_into_rectangle(
     geom::Displacement const& offset,
     bool const is_flipped,
     std::optional<geom::Rectangle> const& clip_area,
-    std::optional<geom::Size> const& stretch_size,
-    std::optional<geom::Rectangle> const& source_rect)
+    std::optional<Stretch> const& stretch)
 {
     using namespace miracle::geometry_helpers::gl;
     auto const& rect = screen_position;
@@ -132,24 +130,18 @@ mgl::Primitive mgl::tessellate_into_rectangle(
         ? y(clip_area->top_left) - static_cast<GLfloat>(offset.dy.as_int())
         : 0.f;
 
-    if (stretch_size && clip_area)
+    if (stretch && clip_area)
     {
         /* A resize animation asks for the content at a size the client is not drawing at
-         * yet, so the natural window rectangle - the same one the border is sized from - is
-         * scaled to that size at the clip's top-left and the renderable is carried along by
-         * that map. Keeping the renderable's own offset and size means a buffer that is
-         * bigger than the window (a CSD shadow margin) or smaller (a decoration inset) stays
-         * in proportion instead of being smeared across the whole clip; the crop below then
-         * trims whatever ends up outside it. When the client can reach the clip's size the
-         * two are equal, the map takes an undecorated window exactly onto the clip, and the
-         * crop is a no-op; once the clip passes what the client can reach the stretch freezes
-         * and the crop takes over.
+         * yet, so the natural window rectangle - the same one the border is sized from -
+         * is scaled to that size at the clip's top-left and the renderable is carried
+         * along by that map. See Stretch for why the renderable keeps its own offset and
+         * size; the crop below trims whatever ends up outside the clip.
          */
-        auto const& natural = source_rect ? *source_rect : rect;
-        auto const [scale_x, scale_y] = stretch_scale(natural.size, *stretch_size);
+        auto const [scale_x, scale_y] = stretch_scale(stretch->source.size, stretch->target);
 
-        window_left = clip_left + (x(rect.top_left) - x(natural.top_left)) * scale_x;
-        window_top = clip_top + (y(rect.top_left) - y(natural.top_left)) * scale_y;
+        window_left = clip_left + (x(rect.top_left) - x(stretch->source.top_left)) * scale_x;
+        window_top = clip_top + (y(rect.top_left) - y(stretch->source.top_left)) * scale_y;
         window_width *= scale_x;
         window_height *= scale_y;
     }

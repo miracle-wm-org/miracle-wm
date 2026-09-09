@@ -736,11 +736,10 @@ void Renderer::tessellate(
     mg::Renderable const& renderable,
     bool const is_flipped,
     std::optional<geom::Rectangle> const& clip_area,
-    std::optional<geom::Size> const& stretch_size,
-    std::optional<geom::Rectangle> const& source_rect)
+    std::optional<mgl::Stretch> const& stretch)
 {
     primitives.resize(1);
-    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped, clip_area, stretch_size, source_rect);
+    primitives[0] = mgl::tessellate_renderable_into_rectangle(renderable, geom::Displacement { 0, 0 }, is_flipped, clip_area, stretch);
 }
 
 RenderData const* Renderer::find_render_data(mir::scene::Surface const* surface) const
@@ -884,43 +883,34 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             group_placements.clear();
 
             // The window rectangle the buffer this group has actually committed belongs
-            // to. window_size() is live and takes the new size the instant a resize is
-            // requested, but the renderable is a snapshot of the last buffer the client
-            // committed, which for a frame or more afterwards is still the old one - so
-            // neither on its own says what the buffer was drawn for. Their *difference*
-            // does: window_size() - content_size() is the margin miracle itself set, it
-            // does not change across a resize, and both come off the same live surface,
-            // so the two are mutually consistent whatever the client has done.
-            //
-            // Taken from the group's first renderable and reused for the rest, so a
-            // subsurface is scaled by its parent window's factor rather than by its own
-            // size.
+            // to; see natural_window_rect. Taken from the group's first renderable and
+            // reused for the rest, so a subsurface is scaled by its parent window's factor
+            // rather than by its own size.
             if (surface)
             {
                 auto const presented = r->screen_position().size;
                 auto const content = surface->content_size();
 
-                // A CSD client - GTK, so gnome-clocks - draws its drop shadow into the
-                // buffer and declares the inner rectangle its window, so its buffer is
-                // bigger than the content size it was given. That band has to come off
-                // before the buffer can be read as a window size, or the whole window is
-                // measured as larger than it is and the stretch scales it down by the
-                // ratio for the entire animation - the client visibly shrinking as its
-                // tile resizes, then snapping back at the end.
-                //
-                // The band is only measurable while the client is caught up; during a
-                // resize the buffer and the content size are on opposite sides of the ack
-                // latency and their difference is the animation delta instead. So it is
-                // measured on every settled frame and remembered for the animated ones,
-                // which also means a client that changes its shadow - GTK narrows it on
-                // focus loss - is picked up a frame after the change settles.
+                // A CSD client's drop shadow has to come off the buffer before it can be
+                // read as a window size, or the window measures larger than it is and the
+                // stretch scales it down by that ratio for the whole animation. The band
+                // is only measurable while the client is caught up (see shadow_band), so
+                // it is taken on every settled frame and remembered for the animated ones.
+                // Only CSD clients have one, so only those get an entry - and one that
+                // changes its shadow is picked up a frame after the change settles.
                 geom::Displacement shadow;
-                if (group_data)
+                if (group_data && group_data->stretch)
                 {
-                    auto& remembered = shadow_bands[group_data->id];
-                    if (!group_data->stretch)
-                        remembered = mgl::shadow_band(presented, content);
-                    shadow = remembered;
+                    if (auto const it = shadow_bands.find(group_data->id); it != shadow_bands.end())
+                        shadow = it->second;
+                }
+                else if (group_data)
+                {
+                    shadow = mgl::shadow_band(presented, content);
+                    if (shadow == geom::Displacement {})
+                        shadow_bands.erase(group_data->id);
+                    else
+                        shadow_bands[group_data->id] = shadow;
                 }
 
                 group_natural = mgl::natural_window_rect(
@@ -960,33 +950,7 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             draw_once(placement);
     }
 
-    // Release every retained pre-resize frame whose cross-fade is over, along with any
-    // whose window has gone away. Checked against render_data_cache rather than against a
-    // per-frame list of what was actually drawn, so a window culled for a frame by its
-    // output area keeps the ghost it already captured instead of losing it and capturing a
-    // fresh - and by then wrong - one on the next frame.
-    if (!ghosts.empty())
-    {
-        std::erase_if(ghosts, [this](auto const& entry)
-        {
-            auto const it = std::find_if(
-                render_data_cache.begin(), render_data_cache.end(),
-                [&](RenderData const& data)
-            { return data.id == entry.first; });
-            return it == render_data_cache.end() || !it->stretch || it->stretch->fade <= 0.f;
-        });
-    }
-
-    // Forget the remembered shadow band of any window that has gone away. Ids are handed
-    // out monotonically and never reused, so a stale entry can only ever waste a little
-    // memory - it can never be mistaken for a different window's.
-    std::erase_if(shadow_bands, [this](auto const& entry)
-    {
-        return std::none_of(
-            render_data_cache.begin(), render_data_cache.end(),
-            [&](RenderData const& data)
-        { return data.id == entry.first; });
-    });
+    prune_retained_state();
 
     auto output = output_surface->commit();
 
@@ -1038,56 +1002,14 @@ void Renderer::draw(
 
     // A resize animation sets the window's final size on its first frame and then
     // interpolates the clip, so the content would be progressively wiped rather than
-    // resized. Stretching it means asking tessellate() to first scale the window to the
-    // animated size and carry the renderable along, then crop as usual. Doing it in the
-    // quad rather than through the transform matters - the content then occupies exactly
-    // the rectangle draw_border is sized from, so the two move as one instead of drifting
-    // against each other. The size is the clip already run through the client's own
-    // constraints, so it stops shrinking where the client does.
-    // An override owns the window's presentation outright and has no clip at all.
-    std::optional<geom::Size> stretch_size;
-    if (data.data.stretch && !data.placement && clip_area)
-        stretch_size = data.data.stretch->size;
-
-    // The natural window rectangle: the window size the buffer being drawn corresponds to,
-    // derived exactly in render() from that buffer's own size and the margins miracle set.
-    // A stretch maps it onto the stretch size and carries the renderable along by the same
-    // map, so the content lands on the presentation rectangle deflated by the scaled
-    // margins - by construction, for any buffer size, caught up or not. That is the whole
-    // of what keeps the content registered with the border draw_border sizes from the same
-    // clip: neither a CSD shadow margin nor miracle's own decoration inset can move it.
-    std::optional<geom::Rectangle> source_rect;
-    if (stretch_size && data.surface)
-        source_rect = data.group_natural;
-
-    // Retain the frame that was on screen when the resize started, so the live surface can
-    // be cross-faded in over it. The stretch keeps the geometry continuous, but the client
-    // commits a buffer at its new size some unbounded number of frames in, and at that
-    // instant the same rectangle fills with different, re-laid-out content - a swap no
-    // amount of geometric continuity can smooth over.
-    //
-    // The controller sets the stretch *before* modify_window(), so the first compositor
-    // pass that sees a stretch is still holding the pre-resize buffer. If no pass happens
-    // to land in that window, the capture takes the new buffer instead and the cross-fade
-    // degenerates to a no-op - never worse than drawing the live surface alone.
-    Ghost const* ghost = nullptr;
-    if (stretch_size && data.data.stretch->fade > 0.f && data.surface)
-    {
-        auto& entry = ghosts[data.data.id];
-
-        // Recapture whenever the animation was retargeted mid-flight: `from` is the size
-        // the replacement started at, so a changed `from` means the frame being held is no
-        // longer the one the user was looking at when the fade restarted.
-        if (!entry.buffer || entry.from != data.data.stretch->from)
-        {
-            entry = Ghost {
-                renderable.buffer(), data.data.stretch->from,
-                renderable.screen_position(), renderable.src_bounds(),
-                data.group_natural, renderable.shaped()
-            };
-        }
-        ghost = &entry;
-    }
+    // resized. Stretching it maps the natural window rectangle onto the animated size and
+    // carries the renderable along, then crops as usual. Doing it in the quad rather than
+    // through the transform matters: the content then occupies exactly the rectangle
+    // draw_border is sized from, so the two cannot drift apart. An override owns the
+    // window's presentation outright and has no clip at all.
+    std::optional<mgl::Stretch> stretch;
+    if (data.data.stretch && !data.placement && clip_area && data.surface)
+        stretch = mgl::Stretch { data.data.stretch->size, data.group_natural };
 
     using namespace miracle::geometry_helpers::gl;
 
@@ -1097,14 +1019,12 @@ void Renderer::draw(
     // full size.
     glm::vec2 surface_size = miracle::geometry_helpers::to_glm(renderable.screen_position().size);
 
-    // A stretch scales that whole rectangle, and the texcoords stay a fraction of the same
-    // source, so the size the SDF is measured against has to be scaled by exactly the same
-    // amount - not replaced by the clip, which is only the part of it that survives the crop.
-    // The scale comes from the same helper tessellate() uses, so the two cannot disagree.
-    if (stretch_size)
+    // A stretch scales that whole rectangle, so the size the SDF measures against is
+    // scaled by the same amount - not replaced by the clip, which is only the part of it
+    // that survives the crop. Same helper tessellate() uses, so the two cannot disagree.
+    if (stretch)
     {
-        auto const [scale_x, scale_y] = mgl::stretch_scale(
-            source_rect ? source_rect->size : renderable.screen_position().size, *stretch_size);
+        auto const [scale_x, scale_y] = mgl::stretch_scale(stretch->source.size, stretch->target);
         surface_size.x *= scale_x;
         surface_size.y *= scale_y;
     }
@@ -1125,6 +1045,32 @@ void Renderer::draw(
         ? program_factory->pass_count(*data.data.shader_id)
         : 1;
     bool const is_multipass = num_passes > 1;
+
+    // Retain the frame that was on screen when the resize started, so the live surface can
+    // be cross-faded in over it; see Ghost. The controller sets the stretch *before*
+    // modify_window(), so the first compositor pass that sees one is still holding the
+    // pre-resize buffer. If no pass lands in that window the capture takes the new buffer
+    // instead and the fade degenerates to a no-op - never worse than the live surface
+    // alone. A multi-pass shader gets no ghost: the off-screen chain runs on the live
+    // texture into a single pair of ping-pong targets, so there is no pass output for a
+    // second layer. Such a window keeps the stretch and loses only the cross-fade.
+    Ghost const* ghost = nullptr;
+    if (stretch && data.data.stretch->fade > 0.f && !is_multipass)
+    {
+        auto& entry = ghosts[renderable.id()];
+
+        // Recapture whenever the animation was retargeted mid-flight: the frame being held
+        // is then no longer the one the user was looking at when the fade restarted.
+        if (!entry.buffer || entry.generation != data.data.stretch->generation)
+        {
+            entry = Ghost {
+                renderable.buffer(), data.data.id, data.data.stretch->generation,
+                renderable.screen_position(), renderable.src_bounds(),
+                data.group_natural, renderable.shaped()
+            };
+        }
+        ghost = &entry;
+    }
 
     // For multi-pass shaders, run intermediate off-screen passes first.
     int offscreen_result_target = -1;
@@ -1217,38 +1163,32 @@ void Renderer::draw(
     glEnableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
     glEnableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
 
-    // The retained pre-resize frame goes down first, still opaque, and the live surface is
-    // faded in on top of it. Doing it in that order - rather than fading the ghost out over
-    // a live layer - is what lets both draws reuse the existing blend paths with nothing
-    // changed but their alpha.
-    //
-    // A multi-pass shader is the one case that gets no ghost: the off-screen chain is run
-    // on the live texture into a single pair of ping-pong targets, so there is no matching
-    // pass output for a second layer. Such a window keeps the stretch and loses only the
-    // cross-fade.
+    // The retained frame goes down first, still opaque, and the live surface is faded in on
+    // top of it. That order - rather than fading the ghost out over a live layer - lets both
+    // draws reuse the existing blend paths with nothing changed but their alpha.
     float const fade = ghost ? std::clamp(data.data.stretch->fade, 0.f, 1.f) : 0.f;
-    if (fade > 0.f && !is_multipass)
+    if (fade > 0.f)
     {
         // Re-derived each frame rather than cached: the texture is only a view onto the
         // retained buffer, and the buffer is the thing we own.
         auto const ghost_texture = gl_interface->as_texture(ghost->buffer);
 
-        // The ghost is mapped by the very same rule the live layer is, from a natural
-        // rectangle captured alongside its buffer rather than read off the live surface.
-        // Its natural rectangle and its screen position both come from capture time, so
-        // their delta is the right shadow margin or decoration inset, while the map
-        // anchors at the live clip and therefore tracks the animation. Same rule, same
+        // Mapped by the very same rule the live layer is, from a natural rectangle captured
+        // alongside its buffer rather than read off the live surface: its delta from the
+        // captured screen position is the right shadow margin or decoration inset, while
+        // the map anchors at the live clip and so tracks the animation. Same rule, same
         // rectangle: the two layers cannot slide against each other mid-fade.
+        mgl::Stretch const ghost_stretch { stretch->target, ghost->natural };
         auto const ghost_quad = mgl::tessellate_into_rectangle(
             ghost->screen_position, ghost->buffer->size(), ghost->src_bounds,
             geom::Displacement { 0, 0 },
             ghost_texture->layout() == mg::gl::Texture::Layout::TopRowFirst,
-            clip_area, stretch_size, ghost->natural);
+            clip_area, ghost_stretch);
 
         // Scaled by the same rule the live layer's surface size is, so the rounded-corner
         // SDF measures both layers against the same stretched rectangle.
         auto ghost_size = miracle::geometry_helpers::to_glm(ghost->screen_position.size);
-        auto const [ghost_scale_x, ghost_scale_y] = mgl::stretch_scale(ghost->natural.size, *stretch_size);
+        auto const [ghost_scale_x, ghost_scale_y] = mgl::stretch_scale(ghost->natural.size, ghost_stretch.target);
         ghost_size.x *= ghost_scale_x;
         ghost_size.y *= ghost_scale_y;
 
@@ -1258,7 +1198,7 @@ void Renderer::draw(
     primitives.clear();
     // For multi-pass shaders, the intermediate texture is in GL convention (y=0 at bottom),
     // so tessellate with is_flipped=false regardless of the original Mir texture layout.
-    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst), clip_area, stretch_size, source_rect);
+    tessellate(primitives, renderable, is_multipass ? false : (texture->layout() == mg::gl::Texture::Layout::TopRowFirst), clip_area, stretch);
 
     // The pass_targets use a grow-only allocation: a previously large window may have left
     // the textures bigger than the current buf_size. Scale the UV coords so the final pass
@@ -1293,6 +1233,28 @@ void Renderer::draw(
 
     glDisableVertexAttribArray(static_cast<GLuint>(prog->texcoord_attr));
     glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
+}
+
+void Renderer::prune_retained_state() const
+{
+    if (ghosts.empty() && shadow_bands.empty())
+        return;
+
+    // One pass over the tracked windows: present means still alive, true means still
+    // cross-fading. Ids are handed out monotonically and never reused, so an entry that
+    // outlives its window can only waste a little memory, never be mistaken for another's.
+    std::unordered_map<RenderDataManagerId, bool> live;
+    live.reserve(render_data_cache.size());
+    for (auto const& data : render_data_cache)
+        live[data.id] = data.stretch && data.stretch->fade > 0.f;
+
+    std::erase_if(ghosts, [&](auto const& entry)
+    {
+        auto const it = live.find(entry.second.owner);
+        return it == live.end() || !it->second;
+    });
+    std::erase_if(shadow_bands, [&](auto const& entry)
+    { return !live.contains(entry.first); });
 }
 
 void Renderer::draw_layer(

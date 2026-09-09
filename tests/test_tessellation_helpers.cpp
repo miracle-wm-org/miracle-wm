@@ -113,7 +113,7 @@ TEST(TessellationHelpersTest, StretchingMakesTheQuadTheClipAndSamplesTheWholeSou
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 0, 0 }, { 700, 600 } }, geom::Size { 700, 600 });
+        false, geom::Rectangle { { 0, 0 }, { 700, 600 } }, mgl::Stretch { geom::Size { 700, 600 }, renderable.screen_position() });
 
     auto const b = bounds_of(quad);
     EXPECT_FLOAT_EQ(b.left, 0.f);
@@ -140,7 +140,7 @@ TEST(TessellationHelpersTest, AStretchedQuadTracksTheClipWhereverItSits)
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 100, 50 }, { 300, 200 } }, geom::Size { 300, 200 });
+        false, geom::Rectangle { { 100, 50 }, { 300, 200 } }, mgl::Stretch { geom::Size { 300, 200 }, renderable.screen_position() });
 
     auto const b = bounds_of(quad);
     EXPECT_FLOAT_EQ(b.left, 100.f);
@@ -158,7 +158,10 @@ TEST(TessellationHelpersTest, StretchingWithoutAClipFallsBackToTheWholeWindow)
         { 800, 600 });
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, std::nullopt, geom::Size { 300, 200 });
+        renderable, geom::Displacement {
+                        0, 0
+    },
+        false, std::nullopt, mgl::Stretch { geom::Size { 300, 200 }, renderable.screen_position() });
 
     auto const b = bounds_of(quad);
     EXPECT_FLOAT_EQ(b.right, 800.f);
@@ -216,7 +219,7 @@ TEST(TessellationHelpersTest, AStretchedShadowedClientPutsItsContentOnTheClip)
     };
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, clip.size, window);
+        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, window });
 
     // The window maps onto the clip at 0.5, so the renderable maps to a 440x340 rectangle
     // starting 20px up and left of the clip - and the shadow band outside the clip is then
@@ -250,7 +253,7 @@ TEST(TessellationHelpersTest, AStretchedMarginKeepsItsInsetInsteadOfFillingTheCl
     };
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, clip.size, window);
+        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, window });
 
     auto const inset = static_cast<GLfloat>(border_size) * 2.f;
     expect_quad(quad, 100.f + inset, 100.f + inset, 1700.f - inset, 1300.f - inset);
@@ -273,40 +276,10 @@ TEST(TessellationHelpersTest, AStretchedUndecoratedClientStillFillsTheClipExactl
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 0, 0 }, { 700, 600 } }, geom::Size { 700, 600 }, window);
+        false, geom::Rectangle { { 0, 0 }, { 700, 600 } }, mgl::Stretch { geom::Size { 700, 600 }, window });
 
     expect_quad(quad, 0.f, 0.f, 700.f, 600.f);
     expect_tex(quad, 0.f, 0.f, 1.f, 1.f);
-}
-
-TEST(TessellationHelpersTest, ASourceRectChangesNothingWhenNotStretching)
-{
-    geom::Rectangle const window {
-        { 100, 100 },
-        { 800, 600 }
-    };
-    StubRenderable renderable({
-                                  { 60,  60  },
-                                  { 880, 680 }
-    },
-        { 880, 680 });
-    geom::Rectangle const clip {
-        { 100, 100 },
-        { 400, 300 }
-    };
-
-    auto const without = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, std::nullopt);
-    auto const with = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, std::nullopt, window);
-
-    for (int i = 0; i < without.nvertices; ++i)
-    {
-        EXPECT_FLOAT_EQ(with.vertices[i].position[0], without.vertices[i].position[0]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(with.vertices[i].position[1], without.vertices[i].position[1]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(with.vertices[i].texcoord[0], without.vertices[i].texcoord[0]) << "vertex " << i;
-        EXPECT_FLOAT_EQ(with.vertices[i].texcoord[1], without.vertices[i].texcoord[1]) << "vertex " << i;
-    }
 }
 
 TEST(TessellationHelpersTest, AStretchedSubRegionSamplesOnlyThatRegion)
@@ -327,7 +300,7 @@ TEST(TessellationHelpersTest, AStretchedSubRegionSamplesOnlyThatRegion)
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 0, 0 }, { 800, 800 } }, geom::Size { 800, 800 }, window);
+        false, geom::Rectangle { { 0, 0 }, { 800, 800 } }, mgl::Stretch { geom::Size { 800, 800 }, window });
 
     expect_quad(quad, 0.f, 0.f, 800.f, 800.f);
     // src_bounds is the top-left quarter of the buffer, so the whole of it is 0..0.5.
@@ -351,7 +324,10 @@ TEST(TessellationHelpersTest, AStretchFrozenAtTheClientMinimumMatchesTheUnstretc
     };
 
     auto const stretched = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, geom::Size { 300, 600 }, window);
+        renderable, geom::Displacement {
+                        0, 0
+    },
+        false, clip, mgl::Stretch { geom::Size { 300, 600 }, window });
     auto const settled = mgl::tessellate_renderable_into_rectangle(
         renderable, geom::Displacement { 0, 0 }, false, clip, std::nullopt);
 
@@ -385,7 +361,10 @@ TEST(TessellationHelpersTest, AShadowedClientFrozenAtItsMinimumStillMatchesTheUn
     };
 
     auto const stretched = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, geom::Size { 300, 600 }, window);
+        renderable, geom::Displacement {
+                        0, 0
+    },
+        false, clip, mgl::Stretch { geom::Size { 300, 600 }, window });
     auto const settled = mgl::tessellate_renderable_into_rectangle(
         renderable, geom::Displacement { 0, 0 }, false, clip, std::nullopt);
 
@@ -412,7 +391,7 @@ TEST(TessellationHelpersTest, AStretchWiderThanTheClipIsCroppedNotSquashed)
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 600, 0 }, { 200, 600 } }, geom::Size { 300, 600 }, window);
+        false, geom::Rectangle { { 600, 0 }, { 200, 600 } }, mgl::Stretch { geom::Size { 300, 600 }, window });
 
     expect_quad(quad, 600.f, 0.f, 800.f, 600.f);
     expect_tex(quad, 0.f, 0.f, 2.f / 3.f, 1.f);
@@ -439,7 +418,7 @@ TEST(TessellationHelpersTest, AClientThatCannotShrinkStaysInsideItsTileForTheWho
             { clip_width, 600 }
         };
         auto const quad = mgl::tessellate_renderable_into_rectangle(
-            renderable, geom::Displacement { 0, 0 }, false, clip, frozen, window);
+            renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { frozen, window });
 
         auto const b = bounds_of(quad);
         EXPECT_FLOAT_EQ(b.left, 600.f) << "clip width " << clip_width;
@@ -453,7 +432,7 @@ TEST(TessellationHelpersTest, AClientThatCannotShrinkStaysInsideItsTileForTheWho
         { 150, 600 }
     };
     auto const last_animated = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, end, frozen, window);
+        renderable, geom::Displacement { 0, 0 }, false, end, mgl::Stretch { frozen, window });
     auto const settled = mgl::tessellate_renderable_into_rectangle(
         renderable, geom::Displacement { 0, 0 }, false, end, std::nullopt);
 
@@ -480,7 +459,7 @@ TEST(TessellationHelpersTest, AStretchNarrowerThanTheClipLeavesTheRestOfTheClipE
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 0, 0 }, { 800, 600 } }, geom::Size { 400, 600 }, window);
+        false, geom::Rectangle { { 0, 0 }, { 800, 600 } }, mgl::Stretch { geom::Size { 400, 600 }, window });
 
     expect_quad(quad, 0.f, 0.f, 400.f, 600.f);
     expect_tex(quad, 0.f, 0.f, 1.f, 1.f);
@@ -501,12 +480,12 @@ TEST(TessellationHelpersTest, AFrozenStretchStaysAnchoredToAClipWhoseLeftEdgeIsM
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 600, 0 }, { 250, 600 } }, frozen, window);
+        false, geom::Rectangle { { 600, 0 }, { 250, 600 } }, mgl::Stretch { frozen, window });
     auto const late = mgl::tessellate_renderable_into_rectangle(
         renderable, geom::Displacement {
                         0, 0
     },
-        false, geom::Rectangle { { 700, 0 }, { 150, 600 } }, frozen, window);
+        false, geom::Rectangle { { 700, 0 }, { 150, 600 } }, mgl::Stretch { frozen, window });
 
     expect_quad(early, 600.f, 0.f, 850.f, 600.f);
     expect_quad(late, 700.f, 0.f, 850.f, 600.f);
@@ -642,7 +621,7 @@ TEST(TessellationHelpersTest, AMarginedContentLandsOnTheDeflatedClipWhetherOrNot
             frame.content);
 
         auto const quad = mgl::tessellate_renderable_into_rectangle(
-            renderable, geom::Displacement { 0, 0 }, false, clip, clip.size, natural);
+            renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, natural });
 
         GLfloat const scale = 600.f / static_cast<GLfloat>(natural.size.width.as_int());
         GLfloat const inset = static_cast<GLfloat>(margin) * scale;
@@ -699,7 +678,7 @@ TEST(TessellationHelpersTest, AShadowedClientIsDrawnAtItsWindowSizeForTheWholeRe
     EXPECT_EQ(natural, geom::Rectangle(top_left, { 800, 800 }));
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, clip.size, natural);
+        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, natural });
 
     // At scale 0.75 the shadow spills past the clip on every side and is cropped away, so
     // the quad is the clip exactly...
@@ -735,8 +714,7 @@ TEST(TessellationHelpersTest, AnExactNaturalSizeKeepsAStaleBufferFillingTheClip)
     };
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, clip.size,
-        natural_of(old_window.top_left, old_window.size, old_window.size, 0));
+        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, natural_of(old_window.top_left, old_window.size, old_window.size, 0) });
 
     expect_quad(quad, 0.f, 0.f, 780.f, 600.f);
     expect_tex(quad, 0.f, 0.f, 1.f, 1.f);
@@ -760,25 +738,24 @@ TEST(TessellationHelpersTest, TheRawOverloadReproducesTheRenderableOverload)
     struct Case
     {
         std::optional<geom::Rectangle> clip;
-        std::optional<geom::Size> stretch;
-        std::optional<geom::Rectangle> source;
+        std::optional<mgl::Stretch> stretch;
         bool flipped;
     };
 
     std::vector<Case> const cases {
-        { std::nullopt,                                 std::nullopt,            std::nullopt, false },
-        { geom::Rectangle { { 10, 20 }, { 400, 600 } }, std::nullopt,            std::nullopt, true  },
-        { geom::Rectangle { { 60, 20 }, { 300, 200 } }, geom::Size { 300, 200 }, std::nullopt, false },
-        { geom::Rectangle { { 60, 20 }, { 900, 700 } }, geom::Size { 900, 700 }, window,       true  },
+        { std::nullopt,                                 std::nullopt,                                     false },
+        { geom::Rectangle { { 10, 20 }, { 400, 600 } }, std::nullopt,                                     true  },
+        { geom::Rectangle { { 60, 20 }, { 300, 200 } }, mgl::Stretch { geom::Size { 300, 200 }, window }, false },
+        { geom::Rectangle { { 60, 20 }, { 900, 700 } }, mgl::Stretch { geom::Size { 900, 700 }, window }, true  },
     };
 
     for (auto const& c : cases)
     {
         auto const from_renderable = mgl::tessellate_renderable_into_rectangle(
-            renderable, geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch, c.source);
+            renderable, geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch);
         auto const raw = mgl::tessellate_into_rectangle(
             window, geom::Size { 1024, 1024 }, src,
-            geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch, c.source);
+            geom::Displacement { 0, 0 }, c.flipped, c.clip, c.stretch);
 
         for (int i = 0; i < from_renderable.nvertices; ++i)
         {
@@ -820,19 +797,19 @@ TEST(TessellationHelpersTest, AGhostQuadRegistersWithTheLiveQuadOnBothSidesOfThe
                                  { 0,   0   },
                                  { 800, 600 }
     },
-        geom::Displacement { 0, 0 }, false, clip, stretch, before);
+        geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, before });
 
     // While the client still has not committed at its new size, the live layer is drawing
     // the very same buffer measured the very same way, so the two are identical.
     StubRenderable stale(before, before.size);
     auto const live_stale = mgl::tessellate_renderable_into_rectangle(
-        stale, geom::Displacement { 0, 0 }, false, clip, stretch, before);
+        stale, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, before });
 
     // Once it has caught up, the live layer is a smaller buffer scaled up by more, which
     // has to land on exactly the same rectangle - that is the frame the ghost is hiding.
     StubRenderable caught_up(after, after.size);
     auto const live_caught_up = mgl::tessellate_renderable_into_rectangle(
-        caught_up, geom::Displacement { 0, 0 }, false, clip, stretch, after);
+        caught_up, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { stretch, after });
 
     for (int i = 0; i < ghost.nvertices; ++i)
     {
