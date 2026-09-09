@@ -43,7 +43,8 @@ TEST_F(RenderDataManagerTest, ValuesArePopulatedWhenContainerAdded)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     auto result = get();
     ASSERT_EQ(result.size(), 1);
@@ -62,7 +63,8 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     render_data_manager.transform_change(id, glm::mat4(2.f));
 
@@ -75,6 +77,73 @@ TEST_F(RenderDataManagerTest, CanChangeTransform)
     ASSERT_EQ(result[0].output_area, mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }));
 }
 
+TEST_F(RenderDataManagerTest, CanChangeStretch)
+{
+    auto id = render_data_manager.add({ .window = {},
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f),
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
+        .stretch = std::nullopt });
+
+    render_data_manager.stretch_change(id, ContentStretch {
+                                               { 300, 600 },
+                                               { 800, 600 }
+    });
+
+    auto result = get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_TRUE(result[0].stretch.has_value());
+    ASSERT_EQ(result[0].stretch->size, mir::geometry::Size(300, 600));
+    ASSERT_EQ(result[0].stretch->from, mir::geometry::Size(800, 600));
+
+    render_data_manager.stretch_change(id, std::nullopt);
+
+    result = get();
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_FALSE(result[0].stretch.has_value());
+}
+
+TEST_F(RenderDataManagerTest, RestatingTheStretchDoesNotAdvanceTheGeneration)
+{
+    // Once the stretch freezes at the client's minimum every remaining animated
+    // frame asks for the same size, and each bump would cost the renderer a copy
+    // of the whole vector.
+    auto id = render_data_manager.add({ .window = {},
+        .needs_outline = true,
+        .is_focused = true,
+        .transform = glm::mat4(1.f),
+        .workspace_transform = glm::mat4(1.f),
+        .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
+        .stretch = std::nullopt });
+
+    render_data_manager.stretch_change(id, ContentStretch {
+                                               { 300, 600 },
+                                               { 800, 600 }
+    });
+    ASSERT_EQ(get().size(), 1);
+
+    // Nothing changed, so nothing is copied out.
+    render_data_manager.stretch_change(id, ContentStretch {
+                                               { 300, 600 },
+                                               { 800, 600 }
+    });
+    copied.clear();
+    ASSERT_TRUE(get().empty());
+
+    // A change to either half is still a change.
+    render_data_manager.stretch_change(id, ContentStretch {
+                                               { 300, 600 },
+                                               { 700, 600 }
+    });
+    ASSERT_EQ(get().size(), 1);
+
+    copied.clear();
+    render_data_manager.stretch_change(id, std::nullopt);
+    ASSERT_EQ(get().size(), 1);
+}
+
 TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
 {
     auto id = render_data_manager.add({ .window = {},
@@ -83,7 +152,8 @@ TEST_F(RenderDataManagerTest, CanChangeWorkspaceTransform)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     render_data_manager.workspace_transform_change(id, glm::mat4(2.f));
 
@@ -104,7 +174,8 @@ TEST_F(RenderDataManagerTest, CanChangeFocus)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     render_data_manager.focus_change(id, false);
 
@@ -125,7 +196,8 @@ TEST_F(RenderDataManagerTest, CanChangeOutputArea)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     render_data_manager.output_area_change(id, mir::geometry::Rectangle({ 10, 10 }, { 600, 600 }));
 
@@ -153,7 +225,8 @@ TEST_P(RenderDataManagerParameterizedTest, can_add_many_containers)
             .transform = glm::mat4(1.f),
             .workspace_transform = glm::mat4(1.f),
             .output_area = mir::geometry::Rectangle(),
-            .shader_id = std::nullopt });
+            .shader_id = std::nullopt,
+            .stretch = std::nullopt });
     }
 
     auto const result = get();
@@ -173,7 +246,8 @@ TEST_F(RenderDataManagerTest, CanChangeNeedsOutline)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     render_data_manager.needs_outline_change(id, false);
 
@@ -194,7 +268,8 @@ TEST_F(RenderDataManagerTest, CopyIsSkippedWhenNothingChanged)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = std::nullopt,
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
     render_data_manager.copy_if_changed(seen_generation, copied);
     ASSERT_EQ(copied.size(), 1);
 
@@ -213,7 +288,8 @@ TEST_F(RenderDataManagerTest, CopyHappensAfterMutation)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = std::nullopt,
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
     render_data_manager.copy_if_changed(seen_generation, copied);
 
     render_data_manager.transform_change(id, glm::mat4(2.f));
@@ -230,7 +306,8 @@ TEST_F(RenderDataManagerTest, MutationOfUnknownIdDoesNotTriggerCopy)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = std::nullopt,
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
     render_data_manager.copy_if_changed(seen_generation, copied);
 
     render_data_manager.transform_change(id + 1, glm::mat4(2.f));
@@ -247,7 +324,8 @@ TEST_F(RenderDataManagerTest, ConcurrentCallersEachObserveChanges)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = std::nullopt,
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
 
     uint64_t other_generation = 0;
     std::vector<RenderData> other_copy;
@@ -272,7 +350,8 @@ TEST_F(RenderDataManagerTest, RemoveTriggersCopy)
         .transform = glm::mat4(1.f),
         .workspace_transform = glm::mat4(1.f),
         .output_area = std::nullopt,
-        .shader_id = std::nullopt });
+        .shader_id = std::nullopt,
+        .stretch = std::nullopt });
     render_data_manager.copy_if_changed(seen_generation, copied);
     ASSERT_EQ(copied.size(), 1);
 

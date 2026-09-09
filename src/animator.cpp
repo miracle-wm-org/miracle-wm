@@ -35,7 +35,10 @@ AnimationFrameResult AnimationFrameResult::merge(AnimationFrameResult const& oth
         .rectangle = rectangle ? *rectangle : other.rectangle,
         .transform = transform ? *transform : other.transform,
         .opacity = opacity ? *opacity : other.opacity,
-        .clip_area = clip_area ? *clip_area : other.clip_area
+        .clip_area = clip_area ? *clip_area : other.clip_area,
+        .fit_target = fit_target ? *fit_target : other.fit_target,
+        .fit_from = fit_from ? *fit_from : other.fit_from,
+        .content_fade = content_fade ? *content_fade : other.content_fade
     };
 }
 
@@ -86,13 +89,44 @@ void Animator::tick(float dt)
         }
         pending_remove.clear();
 
-        for (auto const& pending : pending_active)
+        // An animation replacing one that is still in flight blends with it rather
+        // than cancelling it outright: the outgoing animation never reaches
+        // finish(), so restarting from the caller's `from` would visibly jump
+        // back and drop everything the outgoing animation had already applied.
+        for (auto& pending : pending_active)
         {
             for (auto& other : active)
             {
-                if (other.handle() == pending.handle())
-                    other.mark_for_removal();
+                if (other.handle() != pending.handle() || other.is_being_removed())
+                    continue;
+
+                if (auto const area = other.current_area())
+                    pending.retarget_from(area.value(), other.current_opacity());
+                other.mark_for_removal();
             }
+        }
+
+        // Two append()s for one handle can land between a pair of ticks. Promoting
+        // both would leave them fighting frame by frame, so only the last survives,
+        // inheriting the start state chained through the ones it supersedes.
+        for (auto it = pending_active.begin(); it != pending_active.end();)
+        {
+            auto const successor = std::find_if(
+                std::next(it), pending_active.end(), [&](Animation const& other)
+            {
+                return other.handle() == it->handle();
+            });
+
+            if (successor == pending_active.end())
+            {
+                ++it;
+                continue;
+            }
+
+            if (auto const area = it->current_area())
+                successor->retarget_from(area.value(), it->current_opacity());
+            it = pending_active.erase(it);
+            animation_count.fetch_sub(1, std::memory_order_release);
         }
 
         for (auto const& pending : pending_active)

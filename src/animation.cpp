@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animation.h"
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
+#include <algorithm>
 #include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -256,6 +257,47 @@ bool Animation::is_being_removed() const
     return is_being_removed_;
 }
 
+std::optional<geom::Rectangle> Animation::current_area() const
+{
+    float const t = std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f);
+    for (auto const& builtin_def : definition_.data)
+    {
+        if (builtin_def.type != BultInAnimationType::slide)
+            continue;
+
+        auto const p = ease(builtin_def, t);
+        auto const [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
+        return geom::Rectangle {
+            geom::Point { position.x,       position.y       },
+            geom::Size { clip_area_size.x, clip_area_size.y }
+        };
+    }
+
+    return std::nullopt;
+}
+
+float Animation::current_opacity() const
+{
+    float const t = std::clamp(runtime_seconds / definition_.duration_seconds, 0.f, 1.f);
+    for (auto const& builtin_def : definition_.data)
+    {
+        if (builtin_def.type != BultInAnimationType::fade)
+            continue;
+
+        float const opacity_diff = data_.opacity_end - data_.opacity_start;
+        return data_.opacity_start + opacity_diff * ease(builtin_def, t);
+    }
+
+    return data_.opacity_start;
+}
+
+void Animation::retarget_from(geom::Rectangle const& area, float opacity)
+{
+    data_.area_start = area;
+    data_.opacity_start = opacity;
+    runtime_seconds = 0.f;
+}
+
 bool Animation::tick(float dt)
 {
     runtime_seconds += dt;
@@ -330,31 +372,51 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
     {
         auto const p = ease(builtin_def, t);
         const auto [position, clip_area_size] = slide(p, data_.area_start, data_.area_end);
-        // For growing axes: set the final size immediately so the client can start
-        // rendering at the correct dimensions right away (avoids blank space).
-        // For shrinking axes: keep the starting size so the clip can hide the excess;
-        // the actual resize happens at animation end via finish().
-        auto const window_w = (data_.area_end.size.width >= data_.area_start.size.width)
-            ? data_.area_end.size.width
-            : data_.area_start.size.width;
-        auto const window_h = (data_.area_end.size.height >= data_.area_start.size.height)
-            ? data_.area_end.size.height
-            : data_.area_start.size.height;
+        // The final size is requested on the very first frame, whether the axis is
+        // growing or shrinking, so that the logical geometry is up to date for
+        // whatever command comes next. Without this, a shrink only reached the
+        // window on completion and repeated resize commands recomputed the same
+        // target from a stale size.
         auto const window_rect = geom::Rectangle {
             geom::Point { position.x, position.y },
-            geom::Size { window_w,   window_h   }
+            data_.area_end.size
         };
         // clip_area carries the animated scissor size to reveal/conceal content gradually.
+        // It is still what bounds a client that lags behind, or refuses, the request above,
+        // and it is also the per-frame size the content is stretched to once it has been
+        // clamped to the client's own constraints. fit_target below only says that a
+        // stretch is in flight at all.
         auto const clip_rect = geom::Rectangle {
             geom::Point { position.x,       position.y       },
             geom::Size { clip_area_size.x, clip_area_size.y }
         };
+        // How much of the frame that was on screen when the resize started the renderer
+        // should still be showing. The client takes an unbounded number of frames to
+        // commit a buffer at its new size, and the instant it does, the same rectangle is
+        // suddenly filled with different, re-laid-out content: a swap no amount of
+        // geometric continuity can smooth over. Holding the old frame underneath and
+        // dissolving it turns that cut into a fade.
+        //
+        // Driven by the raw t rather than the eased p, so the fade is the same length
+        // whatever easing curve the animation is configured with. Smoothstep is chosen
+        // for its flat ends: it holds near 1 through the client round trip, where the pop
+        // lives, and lands on 0 without a visible cutoff. Only a resize gets one - a pure
+        // move shows the very same pixels throughout, so there is nothing to hide.
+        std::optional<float> content_fade;
+        if (data_.area_start.size != data_.area_end.size)
+        {
+            float const u = std::clamp(t / kGhostFraction, 0.f, 1.f);
+            content_fade = 1.f - u * u * (3.f - 2.f * u);
+        }
         return {
             .is_complete = false,
             .rectangle = window_rect,
             .transform = std::nullopt,
             .opacity = 1.f,
-            .clip_area = clip_rect
+            .clip_area = clip_rect,
+            .fit_target = data_.area_end.size,
+            .fit_from = data_.area_start.size,
+            .content_fade = content_fade
         };
     }
     case BultInAnimationType::grow:

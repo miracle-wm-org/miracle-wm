@@ -51,23 +51,116 @@ auto tex_coords_from_rect(geom::Size buffer_size, geom::RectangleD sample_rect) 
 }
 }
 
+auto mgl::stretch_scale(geom::Size const& source_size, geom::Size const& target_size) -> mgl::StretchScale
+{
+    using namespace miracle::geometry_helpers::gl;
+    if (width(source_size) <= 0.f || height(source_size) <= 0.f)
+        return { 1.f, 1.f };
+
+    return { width(target_size) / width(source_size), height(target_size) / height(source_size) };
+}
+
+auto mgl::shadow_band(
+    geom::Size const& presented_size,
+    geom::Size const& content_size) -> geom::Displacement
+{
+    // Never negative: a buffer smaller than the content size it was given is a client
+    // that has not caught up, not a negative shadow, and inflating the window rectangle
+    // to compensate would be the very magnification this is here to avoid.
+    return {
+        std::max(presented_size.width.as_int() - content_size.width.as_int(), 0),
+        std::max(presented_size.height.as_int() - content_size.height.as_int(), 0)
+    };
+}
+
+auto mgl::natural_window_rect(
+    geom::Point const& window_top_left,
+    geom::Size const& presented_size,
+    geom::Size const& window_size,
+    geom::Size const& content_size,
+    geom::Displacement const& shadow) -> geom::Rectangle
+{
+    auto const margin_x = window_size.width - content_size.width;
+    auto const margin_y = window_size.height - content_size.height;
+
+    // Floored at 1: a stale shadow band - a client that changed its shadow while a resize
+    // was in flight - must not produce an empty or inverted rectangle for stretch_scale to
+    // divide by.
+    return {
+        window_top_left,
+        geom::Size {
+                    std::max((presented_size.width - shadow.dx + margin_x).as_int(), 1),
+                    std::max((presented_size.height - shadow.dy + margin_y).as_int(), 1) }
+    };
+}
+
 mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     mg::Renderable const& renderable,
     geom::Displacement const& offset,
     bool const is_flipped,
-    std::optional<geom::Rectangle> const& clip_area)
+    std::optional<geom::Rectangle> const& clip_area,
+    std::optional<geom::Size> const& stretch_size,
+    std::optional<geom::Rectangle> const& source_rect)
+{
+    return tessellate_into_rectangle(
+        renderable.screen_position(), renderable.buffer()->size(), renderable.src_bounds(),
+        offset, is_flipped, clip_area, stretch_size, source_rect);
+}
+
+mgl::Primitive mgl::tessellate_into_rectangle(
+    geom::Rectangle const& screen_position,
+    geom::Size const& buffer_size,
+    geom::RectangleD const& src_bounds,
+    geom::Displacement const& offset,
+    bool const is_flipped,
+    std::optional<geom::Rectangle> const& clip_area,
+    std::optional<geom::Size> const& stretch_size,
+    std::optional<geom::Rectangle> const& source_rect)
 {
     using namespace miracle::geometry_helpers::gl;
-    auto rect = renderable.screen_position();
-    rect.top_left = rect.top_left - offset;
+    auto const& rect = screen_position;
 
-    GLfloat const window_left = x(rect.top_left);
-    GLfloat const window_top = y(rect.top_left);
-    GLfloat const window_width = width(rect.size);
-    GLfloat const window_height = height(rect.size);
+    GLfloat window_left = x(rect.top_left) - static_cast<GLfloat>(offset.dx.as_int());
+    GLfloat window_top = y(rect.top_left) - static_cast<GLfloat>(offset.dy.as_int());
+    GLfloat window_width = width(rect.size);
+    GLfloat window_height = height(rect.size);
 
-    /* The clip area is a sub-rectangle of the window. Rather than clipping in framebuffer
-     * space, we express it as the fraction of the window that survives, then shrink both the
+    GLfloat const clip_left = clip_area
+        ? x(clip_area->top_left) - static_cast<GLfloat>(offset.dx.as_int())
+        : 0.f;
+    GLfloat const clip_top = clip_area
+        ? y(clip_area->top_left) - static_cast<GLfloat>(offset.dy.as_int())
+        : 0.f;
+
+    if (stretch_size && clip_area)
+    {
+        /* A resize animation asks for the content at a size the client is not drawing at
+         * yet, so the natural window rectangle - the same one the border is sized from - is
+         * scaled to that size at the clip's top-left and the renderable is carried along by
+         * that map. Keeping the renderable's own offset and size means a buffer that is
+         * bigger than the window (a CSD shadow margin) or smaller (a decoration inset) stays
+         * in proportion instead of being smeared across the whole clip; the crop below then
+         * trims whatever ends up outside it. When the client can reach the clip's size the
+         * two are equal, the map takes an undecorated window exactly onto the clip, and the
+         * crop is a no-op; once the clip passes what the client can reach the stretch freezes
+         * and the crop takes over.
+         */
+        auto const& natural = source_rect ? *source_rect : rect;
+        auto const [scale_x, scale_y] = stretch_scale(natural.size, *stretch_size);
+
+        window_left = clip_left + (x(rect.top_left) - x(natural.top_left)) * scale_x;
+        window_top = clip_top + (y(rect.top_left) - y(natural.top_left)) * scale_y;
+        window_width *= scale_x;
+        window_height *= scale_y;
+    }
+
+    mgl::Primitive rectangle;
+    rectangle.type = GL_TRIANGLE_STRIP;
+
+    auto const [src_top, src_bottom, src_left, src_right] = tex_coords_from_rect(buffer_size, src_bounds);
+
+    /* The clip area is a sub-rectangle of the quad. Rather than clipping in framebuffer
+     * space, we express it as the fraction of the quad that survives, then shrink both the
      * quad and the sampled texture range to that fraction. The clipped geometry then goes
      * through the vertex shader's usual transform chain, so output rotation, surface layout
      * and the workspace transform all apply to it for free.
@@ -75,8 +168,6 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     GLfloat fx0 = 0.f, fx1 = 1.f, fy0 = 0.f, fy1 = 1.f;
     if (clip_area && window_width > 0.f && window_height > 0.f)
     {
-        GLfloat const clip_left = x(clip_area->top_left) - static_cast<GLfloat>(offset.dx.as_int());
-        GLfloat const clip_top = y(clip_area->top_left) - static_cast<GLfloat>(offset.dy.as_int());
         fx0 = std::clamp((clip_left - window_left) / window_width, 0.f, 1.f);
         fx1 = std::clamp((clip_left + width(clip_area->size) - window_left) / window_width, 0.f, 1.f);
         fy0 = std::clamp((clip_top - window_top) / window_height, 0.f, 1.f);
@@ -87,11 +178,6 @@ mgl::Primitive mgl::tessellate_renderable_into_rectangle(
     GLfloat const right = window_left + fx1 * window_width;
     GLfloat const top = window_top + fy0 * window_height;
     GLfloat const bottom = window_top + fy1 * window_height;
-
-    mgl::Primitive rectangle;
-    rectangle.type = GL_TRIANGLE_STRIP;
-
-    auto const [src_top, src_bottom, src_left, src_right] = tex_coords_from_rect(renderable.buffer()->size(), renderable.src_bounds());
 
     // Narrow the source range to the same fraction the quad was cut down to. This happens
     // before the vertical flip below so that a flipped texture still clips at the edge the

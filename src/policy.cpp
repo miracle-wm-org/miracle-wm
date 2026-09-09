@@ -624,6 +624,7 @@ auto Policy::place_new_window(
     // 3. If it meets the criteria of a shell component, call it one
     // 4. If it is a regular window, allocate it as such on the current workspace
     AllocationHint hint;
+
     auto new_spec = requested_specification;
 
     // All windows in Miracle are NOT server side decorated.

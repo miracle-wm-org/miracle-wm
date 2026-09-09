@@ -112,6 +112,23 @@ void RenderDataManager::shader_id_change(RenderDataManagerId id, std::optional<u
     }
 }
 
+void RenderDataManager::stretch_change(RenderDataManagerId id, std::optional<ContentStretch> stretch)
+{
+    std::lock_guard lock(mutex);
+    if (auto* const data = find_by_id(render_data, id))
+    {
+        // This fires once per animated frame per window, and every generation bump
+        // costs the renderer a full copy of the vector. Most of those frames ask for
+        // the size that is already stored - the stretch has frozen at the client's
+        // limit - so say nothing when nothing changed.
+        if (data->stretch == stretch)
+            return;
+
+        data->stretch = stretch;
+        ++generation;
+    }
+}
+
 void RenderDataManager::reset_shaders(std::vector<uint8_t> const& ids)
 {
     std::lock_guard lock(mutex);

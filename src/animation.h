@@ -37,6 +37,12 @@ typedef uint32_t AnimationHandle;
 /// Evaluates \p definition's easing function at normalized time \p t in [0, 1].
 float ease(BuiltInAnimationDefinition const& definition, float t);
 
+/// The fraction of a resize animation that the pre-resize frame is cross-faded out over.
+/// The fade has to be finished well before the animation is, so that the last animated
+/// frames are pure live content and the hand-off to the un-animated frame after them
+/// changes nothing on screen.
+constexpr float kGhostFraction = 0.55f;
+
 struct AnimationData
 {
     AnimateableEvent event;
@@ -80,6 +86,26 @@ struct AnimationFrameResult
     /// When set, process_animation() uses this for clip() instead of rectangle,
     /// so rectangle can carry the final target size for modify_window().
     std::optional<mir::geometry::Rectangle> clip_area;
+
+    /// The size we asked the client to adopt. This only *gates* the stretch; the
+    /// size the content is actually drawn at each frame comes from `clip_area`,
+    /// clamped downstream to what the client can reach. Left unset by `finish()`,
+    /// which is what stops the stretch on the final frame - by then the clamped
+    /// clip has landed on the client's own size, so the scale is already 1.0 and
+    /// switching it off is invisible.
+    std::optional<mir::geometry::Size> fit_target;
+
+    /// The window size the animation started from. The renderer draws whichever buffer
+    /// the client has actually committed, and for the first frames of a resize that is
+    /// still the pre-resize one - so this is the size that buffer has to be measured
+    /// against until the client catches up. Unset by `finish()` along with `fit_target`.
+    std::optional<mir::geometry::Size> fit_from;
+
+    /// How much of the pre-resize frame is still showing. 1 on the first frame, easing to
+    /// exactly 0 well before the animation ends so the last animated frames are pure live
+    /// content. Unset for animations that do not change the window's size - there is
+    /// nothing for a ghost to hide - and unset by finish() along with the fit sizes.
+    std::optional<float> content_fade;
 
     AnimationFrameResult merge(AnimationFrameResult const& other) const;
 };
@@ -129,6 +155,24 @@ public:
     virtual void mark_for_removal();
     [[nodiscard]] virtual bool is_being_removed() const;
     bool tick(float dt);
+
+    /// The interpolated rectangle this animation is currently displaying.
+    ///
+    /// This is the clip rectangle, not the requested window rectangle, since
+    /// the clip is what the user actually sees.
+    ///
+    /// \returns the current area, or nothing for definitions with no positional part
+    [[nodiscard]] std::optional<mir::geometry::Rectangle> current_area() const;
+
+    /// The interpolated opacity this animation is currently displaying.
+    [[nodiscard]] float current_opacity() const;
+
+    /// Restart this animation from the given visual state instead of its configured start.
+    ///
+    /// Used when a new animation replaces one that is still in flight, so the
+    /// replacement continues from what is on screen rather than snapping back
+    /// to the caller's starting rectangle.
+    void retarget_from(mir::geometry::Rectangle const& area, float opacity);
 
 private:
     AnimationFrameResult tick_built_in(BuiltInAnimationDefinition const& builtin_def, float t);
