@@ -130,6 +130,20 @@ public:
     /// Check if animations are turned on for this type of window.
     virtual bool can_animate();
 
+    /// Keep this container's window in the render list even when something
+    /// else completely covers it.
+    ///
+    /// TODO: This is largely a hack for the wffects system.
+    ///
+    /// \param bypass whether to keep the window out of the occlusion cull
+    void set_occlusion_bypass(bool bypass);
+
+    /// Whether this container's window is opted out of occlusion culling.
+    [[nodiscard]] bool occlusion_bypass() const { return occlusion_bypass_; }
+
+    /// The visually inert matrix that [set_occlusion_bypass] composes in.
+    [[nodiscard]] static glm::mat4 occlusion_bypass_transform();
+
     /// Change the urgency of the window.
     ///
     /// \param urgent new urgency
@@ -160,6 +174,7 @@ protected:
 private:
     bool enable_render_data_ = true;
     bool urgent_ = false;
+    bool occlusion_bypass_ = false;
 };
 
 } // namespace miracle

@@ -206,6 +206,7 @@ add_library(miracle-wm-implementation STATIC
         src/overview_scene_override.cpp src/overview_scene_override.h
         src/overview_scene_override_delegate.h
         src/workspace_preview.cpp src/workspace_preview.h
+        src/occlusion_bypass.cpp src/occlusion_bypass.h
 )
 
 target_compile_definitions(miracle-wm-implementation PRIVATE

@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "animator.h"
 #include "compositor_state.h"
 #include "config.h"
+#include "occlusion_bypass.h"
 #include "output_manager.h"
 #include "overview_scene_override_delegate.h"
 #include "shell_component_container.h"
@@ -353,6 +354,7 @@ OverviewSceneOverride::OverviewSceneOverride(
     window_controller { window_controller },
     compositor_state { compositor_state },
     preview { std::make_shared<WorkspacePreview>() },
+    bypass { std::make_shared<OcclusionBypass>() },
     delegate { &delegate },
     animation_handle { animator->register_animateable() },
     primary_modifier { config->get_input_event_modifier() }
@@ -428,15 +430,23 @@ OverviewSceneOverride::OverviewSceneOverride(
                 entry.from[i] = entry.current[i] = entry.target[i];
         }
     }
+
+    // Nothing else can see the state yet, so no lock is needed. This happens
+    // before any [WorkspacePreview::acquire], and the reveal's recomposition of
+    // each window's transform carries the bypass along rather than clobbering it.
+    std::vector<miral::Window> to_bypass;
+    to_bypass.reserve(state->entries.size() + state->shell_entries.size());
+    for (auto const& [key, entry] : state->entries)
+        to_bypass.push_back(entry.window);
+    for (auto const& [key, entry] : state->shell_entries)
+        to_bypass.push_back(entry.window);
+
+    bypass_occlusion(to_bypass);
 }
 
 OverviewSceneOverride::~OverviewSceneOverride()
 {
     animator->remove_by_animation_handle(animation_handle);
-
-    // The preview is deliberately not released here: this destructor may run on
-    // the animator thread, and concealing a workspace is window management. Every
-    // exit path releases it on the window management thread before getting here.
 }
 
 std::vector<mir::scene::Surface const*> OverviewSceneOverride::window_strip_keys(size_t group) const
@@ -751,6 +761,10 @@ void OverviewSceneOverride::enter_workspaces()
         preview->acquire(to_reveal);
     }
 
+    // The windows the reveal brought with it, to be kept out of the occlusion
+    // cull once the state lock is released.
+    std::vector<miral::Window> joined;
+
     {
         std::lock_guard lock(state->mutex);
         state->level = Level::workspaces;
@@ -800,12 +814,16 @@ void OverviewSceneOverride::enter_workspaces()
 
                 state->order.push_back(key);
                 state->entries.emplace(key, Entry { .window = window, .real = real, .from = placement, .target = placement, .current = placement, .group = group, .workspace = workspace });
+                joined.push_back(window);
             }
         }
 
         for (size_t group = 0; group < groups.size(); ++group)
             retarget(group);
     }
+
+    // Window management, so it waits until the state lock is out of the way.
+    bypass_occlusion(joined);
 
     settle();
 }
@@ -825,6 +843,19 @@ void OverviewSceneOverride::return_to_windows()
     }
 
     settle();
+}
+
+void OverviewSceneOverride::bypass_occlusion(std::vector<miral::Window> const& windows)
+{
+    std::vector<std::shared_ptr<WindowContainer>> containers;
+    containers.reserve(windows.size());
+    for (auto const& window : windows)
+    {
+        if (auto const container = window_controller->get_window_container(window))
+            containers.push_back(container);
+    }
+
+    bypass->acquire(containers);
 }
 
 void OverviewSceneOverride::commit_and_exit()
@@ -920,11 +951,12 @@ void OverviewSceneOverride::begin_exit()
     auto const s = state;
     auto* const d = delegate;
     auto const held_preview = preview;
+    auto const held_bypass = bypass;
     auto const controller = window_controller;
     auto const selected = selected_workspace;
-    animate([s, d, held_preview, controller, selected]
+    animate([s, d, held_preview, held_bypass, controller, selected]
     {
-        controller->invoke_under_lock([s, d, held_preview, selected]
+        controller->invoke_under_lock([s, d, held_preview, held_bypass, selected]
         {
             {
                 std::lock_guard lock(s->mutex);
@@ -936,6 +968,10 @@ void OverviewSceneOverride::begin_exit()
                 d->on_workspace_selected(*selected);
 
             held_preview->release();
+
+            // Last, so that the workspace switch above - which recomposes the
+            // transforms of everything it touches - cannot put the bypass back.
+            held_bypass->release();
 
             std::lock_guard lock(s->mutex);
             s->phase = Phase::done;
@@ -1146,6 +1182,10 @@ void OverviewSceneOverride::place(
 
 void OverviewSceneOverride::handle_window_added(miral::Window const& window)
 {
+    // Resolved under the lock, but kept until after it so that the occlusion
+    // bypass - window management - happens outside it.
+    std::shared_ptr<WindowContainer> joined;
+
     {
         std::lock_guard lock(state->mutex);
         if (state->phase == Phase::outro || state->phase == Phase::done)
@@ -1157,7 +1197,8 @@ void OverviewSceneOverride::handle_window_added(miral::Window const& window)
 
         geom::Rectangle const real { window.top_left(), window.size() };
 
-        auto const location = locate(window_controller->get_window_container(window));
+        joined = window_controller->get_window_container(window);
+        auto const location = locate(joined);
         if (!location)
             return;
 
@@ -1200,6 +1241,8 @@ void OverviewSceneOverride::handle_window_added(miral::Window const& window)
         retarget(group);
     }
 
+    bypass->acquire({ joined });
+
     auto const s = state;
     animate([s]
     {
@@ -1229,6 +1272,7 @@ void OverviewSceneOverride::cancel()
     // There is no outro to hand the workspaces back at the end of, so put them
     // away now. Cancellation always reaches us on the window management thread.
     conceal_workspaces();
+    bypass->release();
 
     // [begin_exit] has already announced the exit if the outro was running.
     if (!was_exiting)
@@ -1248,6 +1292,10 @@ void OverviewSceneOverride::handle_window_closed(miral::Window const& window)
             return;
 
         auto const* key = surface_key(window);
+
+        // Dropped rather than cleared: the surface is dying, and its transform
+        // belongs to whoever is animating it out from here on.
+        bypass->forget(key);
 
         // The group comes from whichever kind of entry the surface was, so that
         // losing a panel retargets the output it belonged to rather than the first.

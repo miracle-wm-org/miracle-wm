@@ -21,6 +21,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "render_data_manager.h"
 #include "window_controller.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
+namespace
+{
+/// A transform that Mir's occlusion test refuses to cull through, but that no
+/// shader can tell apart from the identity.
+///
+/// Every vertex miracle hands the GPU has `z == 0`, and the transform is
+/// applied to the position before it becomes `gl_Position`, so scaling z scales
+/// nothing at all. A translation in z would move the vertex within the clip
+/// test, and anything touching the bottom-right element would introduce a
+/// perspective divide that shrinks the surface - a z-scale is the only choice
+/// that is inert for every transform it is composed with.
+glm::mat4 const OCCLUSION_BYPASS = glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, 1.0001f));
+}
+
 miracle::WindowContainer::WindowContainer(
     uint64_t id,
     std::shared_ptr<RenderDataManager> const& rdm,
@@ -204,14 +220,31 @@ void miracle::WindowContainer::on_focus_lost()
             rdm_locked->focus_change(render_id_.value(), false);
 }
 
+void miracle::WindowContainer::set_occlusion_bypass(bool bypass)
+{
+    if (occlusion_bypass_ == bypass)
+        return;
+
+    occlusion_bypass_ = bypass;
+    rerender();
+}
+
+glm::mat4 miracle::WindowContainer::occlusion_bypass_transform()
+{
+    return OCCLUSION_BYPASS;
+}
+
 void miracle::WindowContainer::rerender()
 {
     // A hack to trigger a rerender on the surface by re-applying its transformation.
     auto const w = window().value();
     if (auto const surface = w.operator std::shared_ptr<mir::scene::Surface>())
     {
+        // Composed on the right so that it only changes how the input z - which
+        // is always zero - contributes, whatever the composed transform is.
         auto const combined = workspace_effect.blend(window_effect.blend(animation_effect));
-        surface->set_transformation(combined.transform);
+        surface->set_transformation(
+            occlusion_bypass_ ? combined.transform * OCCLUSION_BYPASS : combined.transform);
         surface->set_alpha(combined.alpha);
     }
 }
