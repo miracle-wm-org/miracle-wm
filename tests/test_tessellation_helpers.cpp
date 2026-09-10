@@ -493,84 +493,98 @@ TEST(TessellationHelpersTest, AFrozenStretchStaysAnchoredToAClipWhoseLeftEdgeIsM
 
 namespace
 {
-/// The window rectangle a committed buffer corresponds to, derived the way the renderer
-/// derives it. \p content is the live content size, which during a resize has already
-/// moved to the target while \p buffer_size is still whatever the client last committed.
-geom::Rectangle natural_of(
-    geom::Point const& window_top_left,
-    geom::Size const& buffer_size,
-    geom::Size const& content,
-    int margin,
-    geom::Displacement const& shadow = {})
+/// A client's fixed buffer inset, learned once the way the renderer learns it - from a
+/// settled pairing of a committed buffer with the window size it was drawn for - and then
+/// applied to whatever buffer happens to be on screen. Positive for a CSD drop shadow drawn
+/// past the client's xdg window geometry, negative for a window whose buffer is only the
+/// content inside a border.
+struct Client
 {
-    geom::Size const window { content.width.as_int() + 2 * margin, content.height.as_int() + 2 * margin };
-    return mgl::natural_window_rect(window_top_left, buffer_size, window, content, shadow);
-}
+    geom::Displacement inset;
+
+    static Client settled_at(geom::Size const& buffer, geom::Size const& window)
+    {
+        return {
+            geom::Displacement {
+                                buffer.width.as_int() - window.width.as_int(),
+                                buffer.height.as_int() - window.height.as_int() }
+        };
+    }
+
+    [[nodiscard]] geom::Rectangle showing(geom::Point const& top_left, geom::Size const& buffer) const
+    {
+        return mgl::committed_window_rect(top_left, buffer, inset);
+    }
+};
 }
 
-TEST(TessellationHelpersTest, ASettledUndecoratedClientHasNoShadowBand)
+TEST(TessellationHelpersTest, ASettledUndecoratedClientHasNoInset)
 {
-    // Everything server-side decorated: the buffer is the content it was given.
-    EXPECT_EQ(mgl::shadow_band(geom::Size { 780, 580 }, geom::Size { 780, 580 }), geom::Displacement(0, 0));
-}
-
-TEST(TessellationHelpersTest, ASettledCsdClientsShadowBandIsTheBufferOvershoot)
-{
-    // GTK draws its shadow into the buffer and declares the inner rectangle its window
-    // via xdg window geometry, so mir hands the compositor a buffer bigger than the
-    // content size it asked for - here 26px of shadow each side and 40 below.
+    // Nothing decorated on either side: the buffer is the window it was given.
     EXPECT_EQ(
-        mgl::shadow_band(geom::Size { 832, 846 }, geom::Size { 780, 780 }),
-        geom::Displacement(52, 66));
+        Client::settled_at({ 780, 580 }, { 780, 580 }).inset,
+        geom::Displacement(0, 0));
 }
 
-TEST(TessellationHelpersTest, AClientThatHasNotCaughtUpNeverYieldsANegativeShadowBand)
+TEST(TessellationHelpersTest, ASettledCsdClientsInsetIsItsBufferOvershoot)
 {
-    // Mid-grow: the content size has already jumped to the target and the buffer has not.
-    // That is not a negative shadow, and treating it as one would inflate the window
-    // rectangle - the magnification this whole path exists to avoid.
-    EXPECT_EQ(mgl::shadow_band(geom::Size { 400, 300 }, geom::Size { 800, 600 }), geom::Displacement(0, 0));
-}
-
-TEST(TessellationHelpersTest, ACsdClientsNaturalSizeIsItsWindowSizeNotItsBuffer)
-{
-    // The regression gnome-clocks showed. Settled at a 780x780 content size inside an
-    // 800x800 window (10px border), with a 52x66 shadow band making the buffer 832x846.
-    // The natural rectangle has to come out as the window, 800x800 - not the buffer plus
-    // margins, 852x866, which would scale the whole window down by 800/852 for the length
-    // of every resize and snap back at the end.
-    auto const natural = natural_of({ 100, 100 }, { 832, 846 }, { 780, 780 }, 10, geom::Displacement { 52, 66 });
-    EXPECT_EQ(natural, geom::Rectangle({ 100, 100 }, { 800, 800 }));
-
-    // And the shadow band it was built from is the one a settled frame measures, so the
-    // renderer's remembered value and this are the same number.
-    EXPECT_EQ(mgl::shadow_band(geom::Size { 832, 846 }, geom::Size { 780, 780 }), geom::Displacement(52, 66));
-}
-
-TEST(TessellationHelpersTest, ACsdClientsNaturalSizeTracksItsBufferNotItsLiveContentSize)
-{
-    // Mid-resize, the same client: the live content size has jumped to the 380x380 target
-    // while the client still holds its pre-resize 832x846 buffer. The natural rectangle
-    // has to stay the *old* 800x800 window, because that is what is on screen. The shadow
-    // band is the one remembered from before the resize.
-    geom::Displacement const shadow { 52, 66 };
+    // GTK draws its shadow into the buffer and declares the inner rectangle its window via
+    // xdg window geometry, so mir hands the compositor a buffer bigger than the window -
+    // here 26px of shadow each side and 40 below, on an 800x800 window.
     EXPECT_EQ(
-        natural_of({ 100, 100 }, { 832, 846 }, { 380, 380 }, 10, shadow),
+        Client::settled_at({ 832, 846 }, { 800, 800 }).inset,
+        geom::Displacement(32, 46));
+}
+
+TEST(TessellationHelpersTest, ASettledBorderedClientsInsetIsNegative)
+{
+    // The other direction, which the old measured band could not express at all: miracle
+    // insets the content by border_size on every side, so the buffer is *smaller* than the
+    // window it belongs to.
+    EXPECT_EQ(
+        Client::settled_at({ 780, 580 }, { 800, 600 }).inset,
+        geom::Displacement(-20, -20));
+}
+
+TEST(TessellationHelpersTest, ACsdClientsWindowRectIsItsWindowSizeNotItsBuffer)
+{
+    // The regression gnome-clocks showed. Settled at an 800x800 window with a 832x846
+    // buffer. The window rectangle has to come out as the window, 800x800 - not the buffer,
+    // which would scale the whole window down by 800/832 for the length of every resize and
+    // snap back at the end, with the shadow stretched over the tile in its place.
+    auto const client = Client::settled_at({ 832, 846 }, { 800, 800 });
+    EXPECT_EQ(
+        client.showing({ 100, 100 }, { 832, 846 }),
+        geom::Rectangle({ 100, 100 }, { 800, 800 }));
+}
+
+TEST(TessellationHelpersTest, ACsdClientsWindowRectTracksItsBufferNotItsLiveSize)
+{
+    // The same client mid-resize. The surface's live size has already jumped to the 400x400
+    // target while the client still holds its pre-resize 832x846 buffer, so the window
+    // rectangle has to stay the *old* 800x800 - that is what is on screen. Nothing here
+    // consults the live size at all, which is exactly why it cannot be fooled by it.
+    auto const client = Client::settled_at({ 832, 846 }, { 800, 800 });
+
+    EXPECT_EQ(
+        client.showing({ 100, 100 }, { 832, 846 }),
         geom::Rectangle({ 100, 100 }, { 800, 800 }));
 
     // And once it commits at the new size, the very same expression follows it there.
     EXPECT_EQ(
-        natural_of({ 100, 100 }, { 432, 446 }, { 380, 380 }, 10, shadow),
+        client.showing({ 100, 100 }, { 432, 446 }),
         geom::Rectangle({ 100, 100 }, { 400, 400 }));
 }
 
-TEST(TessellationHelpersTest, AStaleShadowBandCannotProduceADegenerateNaturalRect)
+TEST(TessellationHelpersTest, AStaleInsetCannotProduceADegenerateWindowRect)
 {
-    // A client that dropped its shadow mid-animation leaves a band wider than the buffer
-    // that follows it. stretch_scale divides by this, so it is floored rather than
-    // allowed to go to zero or invert.
-    auto const natural = natural_of({ 0, 0 }, { 40, 40 }, { 40, 40 }, 0, geom::Displacement { 400, 400 });
-    EXPECT_EQ(natural.size, geom::Size(1, 1));
+    // A client that dropped its shadow mid-animation leaves an inset wider than the buffer
+    // that follows it. stretch_scale divides by this, so it is floored rather than allowed
+    // to go to zero or invert.
+    Client const client {
+        geom::Displacement { 400, 400 }
+    };
+    EXPECT_EQ(client.showing({ 0, 0 }, { 40, 40 }).size, geom::Size(1, 1));
 }
 
 TEST(TessellationHelpersTest, AMarginedContentLandsOnTheDeflatedClipWhetherOrNotTheClientHasCaughtUp)
@@ -604,7 +618,9 @@ TEST(TessellationHelpersTest, AMarginedContentLandsOnTheDeflatedClipWhetherOrNot
     // written against the buffer size rather than against either end.
     // The live content size jumped to the 380x280 target on the animation's first frame
     // and stays there; only the committed buffer moves.
-    geom::Size const live_content { 380, 280 };
+    // The client is bordered, so its buffer is the content inside the window: settled, it was
+    // a 780x580 buffer in an 800x600 window.
+    auto const client = Client::settled_at({ 780, 580 }, { 800, 600 });
 
     for (auto const& frame : {
              Frame { "stale",        { 780, 580 } },
@@ -612,7 +628,7 @@ TEST(TessellationHelpersTest, AMarginedContentLandsOnTheDeflatedClipWhetherOrNot
              Frame { "caught up",    { 380, 280 } }
     })
     {
-        auto const natural = natural_of(top_left, frame.content, live_content, margin);
+        auto const natural = client.showing(top_left, frame.content);
         StubRenderable renderable(
             {
                 { top_left.x.as_int() + margin, top_left.y.as_int() + margin },
@@ -670,7 +686,7 @@ TEST(TessellationHelpersTest, AShadowedClientIsDrawnAtItsWindowSizeForTheWholeRe
                                   { 832, 846 }
     },
         { 832, 846 });
-    auto const natural = natural_of(top_left, { 832, 846 }, { 380, 380 }, margin, shadow);
+    auto const natural = Client::settled_at({ 832, 846 }, { 800, 800 }).showing(top_left, { 832, 846 });
 
     // The buffer is measured as the 800x800 window it was drawn for, not as the 852x866
     // that buffer-plus-margins would make it. Getting that wrong scaled the whole window
@@ -696,6 +712,83 @@ TEST(TessellationHelpersTest, AShadowedClientIsDrawnAtItsWindowSizeForTheWholeRe
     expect_tex(quad, 12.f / w, 12.f / h, 612.f / w, 612.f / h);
 }
 
+TEST(TessellationHelpersTest, AShadowedClientsShadowIsNeverStretchedOverItsTile)
+{
+    // The reported artifact, isolated. A CSD client with a 40px shadow on every side grows
+    // 800 -> 1200 and the clip is a quarter of the way, at 900.
+    geom::Point const top_left { 100, 100 };
+    geom::Rectangle const clip {
+        top_left, { 900, 600 }
+    };
+
+    // The buffer sits 40px up and left of the window and overshoots it by 80 on each axis.
+    StubRenderable renderable({
+                                  { 60,  60  },
+                                  { 880, 680 }
+    },
+        { 880, 680 });
+
+    auto const client = Client::settled_at({ 880, 680 }, { 800, 600 });
+    auto const quad = mgl::tessellate_renderable_into_rectangle(
+        renderable, geom::Displacement { 0, 0 }, false, clip,
+        mgl::Stretch { clip.size, client.showing(top_left, { 880, 680 }) });
+
+    // At scale 900/800 the shadow spills past the clip on every side and is cropped away, so
+    // the quad is the clip exactly - no band anywhere, least of all on the right.
+    expect_quad(quad, 100.f, 100.f, 1000.f, 700.f);
+
+    // The same frame with the inset unaccounted for, which is what the old measured band
+    // gave until some settled frame happened to land first. The buffer then measures 880
+    // rather than the 800 window it belongs to, so the whole thing is scaled by 900/880
+    // instead of 900/800 - and the shadow, rather than the content, is what ends up filling
+    // the tile.
+    auto const unlearned = mgl::tessellate_renderable_into_rectangle(
+        renderable, geom::Displacement { 0, 0 }, false, clip,
+        mgl::Stretch { clip.size, mgl::committed_window_rect(top_left, { 880, 680 }, {}) });
+
+    // Nothing reaches the clip's right edge: the quad stops ~41px short of it and the tile
+    // background shows through the rest. That gap is the artifact.
+    auto const b = bounds_of(unlearned);
+    EXPECT_LT(b.right, 1000.f);
+    EXPECT_NEAR(1000.f - b.right, 40.9f, 0.5f);
+
+    // And it is a gap rather than a crop: the source is sampled all the way to its right
+    // edge, so there is simply no more quad to draw there.
+    EXPECT_FLOAT_EQ(tex_of(unlearned).right, 1.f);
+}
+
+TEST(TessellationHelpersTest, AStretchIsAtRestOnTheFrameTheAnimationStarts)
+{
+    // t=0: the clip is still the window the client is settled at, so the stretch must be the
+    // identity - the same pixels in the same place as the un-animated frame before it.
+    geom::Point const top_left { 100, 100 };
+    geom::Rectangle const window {
+        top_left, { 800, 600 }
+    };
+
+    StubRenderable renderable({
+                                  { 60,  60  },
+                                  { 880, 680 }
+    },
+        { 880, 680 });
+
+    auto const client = Client::settled_at({ 880, 680 }, { 800, 600 });
+    auto const stretched = mgl::tessellate_renderable_into_rectangle(
+        renderable, geom::Displacement { 0, 0 }, false, window,
+        mgl::Stretch { window.size, client.showing(top_left, { 880, 680 }) });
+
+    auto const unstretched = mgl::tessellate_renderable_into_rectangle(
+        renderable, geom::Displacement { 0, 0 }, false, window);
+
+    for (int i = 0; i < stretched.nvertices; ++i)
+    {
+        EXPECT_FLOAT_EQ(stretched.vertices[i].position[0], unstretched.vertices[i].position[0]) << "vertex " << i;
+        EXPECT_FLOAT_EQ(stretched.vertices[i].position[1], unstretched.vertices[i].position[1]) << "vertex " << i;
+        EXPECT_FLOAT_EQ(stretched.vertices[i].texcoord[0], unstretched.vertices[i].texcoord[0]) << "vertex " << i;
+        EXPECT_FLOAT_EQ(stretched.vertices[i].texcoord[1], unstretched.vertices[i].texcoord[1]) << "vertex " << i;
+    }
+}
+
 TEST(TessellationHelpersTest, AnExactNaturalSizeKeepsAStaleBufferFillingTheClip)
 {
     // The frame that used to flash, now with the natural size derived rather than guessed:
@@ -714,7 +807,7 @@ TEST(TessellationHelpersTest, AnExactNaturalSizeKeepsAStaleBufferFillingTheClip)
     };
 
     auto const quad = mgl::tessellate_renderable_into_rectangle(
-        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, natural_of(old_window.top_left, old_window.size, old_window.size, 0) });
+        renderable, geom::Displacement { 0, 0 }, false, clip, mgl::Stretch { clip.size, Client::settled_at(old_window.size, old_window.size).showing(old_window.top_left, old_window.size) });
 
     expect_quad(quad, 0.f, 0.f, 780.f, 600.f);
     expect_tex(quad, 0.f, 0.f, 1.f, 1.f);

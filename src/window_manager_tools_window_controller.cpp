@@ -262,7 +262,7 @@ void WindowManagerToolsWindowController::process_animation(
             auto pos = window.top_left();
             auto size = result.clip_area->size;
             tools.info_for(window).constrain_resize(pos, size);
-            stretch = ContentStretch { size };
+            stretch = ContentStretch { size, result.resize->source };
         }
         container->set_animation_stretch_target(stretch);
 

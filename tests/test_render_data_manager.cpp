@@ -87,7 +87,7 @@ TEST_F(RenderDataManagerTest, CanChangeStretch)
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
         .stretch = std::nullopt });
 
-    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 }, { 400, 600 } });
 
     auto result = get();
     ASSERT_EQ(result.size(), 1);
@@ -114,16 +114,16 @@ TEST_F(RenderDataManagerTest, RestatingTheStretchDoesNotAdvanceTheGeneration)
         .output_area = mir::geometry::Rectangle({ 0, 0 }, { 400, 300 }),
         .stretch = std::nullopt });
 
-    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 }, { 400, 600 } });
     ASSERT_EQ(get().size(), 1);
 
     // Nothing changed, so nothing is copied out.
-    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 } });
+    render_data_manager.stretch_change(id, ContentStretch { { 300, 600 }, { 400, 600 } });
     copied.clear();
     ASSERT_TRUE(get().empty());
 
     // A different size is still a change.
-    render_data_manager.stretch_change(id, ContentStretch { { 301, 600 } });
+    render_data_manager.stretch_change(id, ContentStretch { { 301, 600 }, { 400, 600 } });
     ASSERT_EQ(get().size(), 1);
 
     copied.clear();

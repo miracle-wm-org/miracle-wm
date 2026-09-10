@@ -95,7 +95,7 @@ private:
         /// The surface the renderable belongs to, if any.
         mir::scene::Surface const* surface = nullptr;
         /// The window rectangle the surface group's committed buffer corresponds to; see
-        /// natural_window_rect. A stretch maps this onto the animated size, which is what
+        /// committed_window_rect. A stretch maps this onto the animated size, which is what
         /// lands the content on the rectangle draw_border is sized from by construction.
         /// Shared across the group so a subsurface is scaled by its parent window's factor
         /// rather than by its own size. Only meaningful when [surface] is set.
@@ -208,6 +208,14 @@ private:
     /// [render_data_cache] rather than a per-frame list of what was drawn, so a window
     /// culled for a frame keeps what has already been measured for it.
     void prune_retained_state() const;
+
+    /// How far \p presented overshoots the window it belongs to, for the window \p data
+    /// tracks; see [Inset]. Updates the retained value as a side effect, which is why it is
+    /// called exactly once per surface group per frame.
+    auto learn_inset(
+        RenderData const& data,
+        mir::geometry::Size const& presented,
+        mir::geometry::Size const& window_size) const -> mir::geometry::Displacement;
     void update_gl_viewport();
 
     /// Runs intermediate off-screen passes 0 .. pass_count-2 for a multi-pass
@@ -252,9 +260,29 @@ private:
     /// Scratch buffer that [SceneOverride::place] fills, reused between frames
     /// so that asking for placements costs no allocation in the steady state.
     mutable std::vector<SceneOverridePlacement> group_placements;
-    /// The remembered shadow_band of each CSD window, measured on every settled frame
-    /// because it is not derivable during a resize.
-    mutable std::unordered_map<RenderDataManagerId, mir::geometry::Displacement> shadow_bands;
+    /// How far a client's committed buffer overshoots the window rectangle it was drawn
+    /// for: positive for a CSD client that draws its own drop shadow past its xdg window
+    /// geometry, negative for a server-decorated one whose buffer is only the content inside
+    /// its frame, zero for everything else.
+    ///
+    /// This is a property of the client, not of any animation, so it is learned once and
+    /// kept. It cannot be read off a frame during a resize - the surface's size is what the
+    /// compositor asked for and the buffer is what the client last drew, so their difference
+    /// is the animation delta rather than the shadow - and the frame immediately after an
+    /// animation ends is still such a frame. Hence [last_presented]: a measurement is only
+    /// taken once the buffer has held still for two frames.
+    struct Inset
+    {
+        mir::geometry::Displacement value;
+        /// The buffer size seen on the previous frame, or nothing on the first.
+        std::optional<mir::geometry::Size> last_presented;
+        /// Whether [value] has ever been established. Until it has, an animation seeds it
+        /// from the pre-resize size it carries rather than leaving the shadow unaccounted
+        /// for - which would stretch the shadow across the whole tile.
+        bool known = false;
+    };
+
+    mutable std::unordered_map<RenderDataManagerId, Inset> insets;
 };
 
 }

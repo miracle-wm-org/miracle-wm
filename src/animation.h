@@ -38,6 +38,11 @@ typedef uint32_t AnimationHandle;
 /// Evaluates \p definition's easing function at normalized time \p t in [0, 1].
 float ease(BuiltInAnimationDefinition const& definition, float t);
 
+/// The largest size change, on either axis, that is not worth animating. A change of a few
+/// pixels reads as jitter rather than motion, and still costs a full stretch and crop cycle
+/// for every frame of it. Matches niri's RESIZE_ANIMATION_THRESHOLD.
+constexpr int kResizeThreshold = 10;
+
 /// What an in-flight resize wants drawn this frame. Present only while a resize animation
 /// is running and only when it actually changes the window's size.
 struct ResizeFrame
@@ -46,6 +51,11 @@ struct ResizeFrame
     /// content is drawn at comes from `clip_area`, clamped downstream to what the client
     /// can reach.
     mir::geometry::Size target;
+
+    /// The window size the client was settled at when this animation began. The renderer
+    /// uses it to learn, once, how far a client's buffer overshoots its window - see
+    /// ContentStretch::source.
+    mir::geometry::Size source;
 };
 
 struct AnimationData

@@ -40,6 +40,13 @@ struct ContentStretch
     /// after it does, so switching the stretch off is invisible.
     mir::geometry::Size size;
 
+    /// The window size the client was settled at when the animation began. The renderer
+    /// needs one known-good pairing of a committed buffer with the window size it was drawn
+    /// for in order to learn that client's fixed buffer overshoot (a CSD drop shadow); this
+    /// is that pairing, taken at the only moment it is free of the client's ack latency -
+    /// before the compositor has asked for anything new.
+    mir::geometry::Size source;
+
     friend bool operator==(ContentStretch const&, ContentStretch const&) = default;
 };
 

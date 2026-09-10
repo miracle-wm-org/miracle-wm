@@ -770,8 +770,8 @@ Renderer::DrawData Renderer::get_draw_data(
     if (tracked)
         result.data = *tracked;
 
-    // Kept so draw() can reach the surface's natural rectangle, which is what a
-    // stretch maps onto the clip.
+    // Kept so draw() can reach the rectangle the surface's committed buffer belongs to,
+    // which is what a stretch maps onto the clip.
     if (auto const s = renderable.surface_if_any())
         result.surface = s.value();
     result.group_natural = group_natural;
@@ -884,38 +884,25 @@ auto Renderer::render(mg::RenderableList const& renderables) const -> std::uniqu
             group_placements.clear();
 
             // The window rectangle the buffer this group has actually committed belongs
-            // to; see natural_window_rect. Taken from the group's first renderable and
+            // to; see committed_window_rect. Taken from the group's first renderable and
             // reused for the rest, so a subsurface is scaled by its parent window's factor
             // rather than by its own size.
             if (surface)
             {
                 auto const presented = r->screen_position().size;
-                auto const content = surface->content_size();
 
                 // A CSD client's drop shadow has to come off the buffer before it can be
                 // read as a window size, or the window measures larger than it is and the
-                // stretch scales it down by that ratio for the whole animation. The band
-                // is only measurable while the client is caught up (see shadow_band), so
-                // it is taken on every settled frame and remembered for the animated ones.
-                // Only CSD clients have one, so only those get an entry - and one that
-                // changes its shadow is picked up a frame after the change settles.
-                geom::Displacement shadow;
-                if (group_data && group_data->stretch)
-                {
-                    if (auto const it = shadow_bands.find(group_data->id); it != shadow_bands.end())
-                        shadow = it->second;
-                }
-                else if (group_data)
-                {
-                    shadow = mgl::shadow_band(presented, content);
-                    if (shadow == geom::Displacement {})
-                        shadow_bands.erase(group_data->id);
-                    else
-                        shadow_bands[group_data->id] = shadow;
-                }
+                // stretch scales the shadow up to fill the tile with the real content
+                // inset inside it. The overshoot cannot be read off a single frame during
+                // a resize - the surface's live size is what we asked for, the buffer is
+                // what the client last drew, and the gap between them is the animation
+                // rather than the shadow - so it is learned once and kept.
+                geom::Displacement inset;
+                if (group_data)
+                    inset = learn_inset(*group_data, presented, surface->window_size());
 
-                group_natural = mgl::natural_window_rect(
-                    surface->top_left(), presented, surface->window_size(), content, shadow);
+                group_natural = mgl::committed_window_rect(surface->top_left(), presented, inset);
             }
             else
                 group_natural = {};
@@ -1173,9 +1160,63 @@ void Renderer::draw(
     glDisableVertexAttribArray(static_cast<GLuint>(prog->position_attr));
 }
 
+auto Renderer::learn_inset(
+    RenderData const& data,
+    geom::Size const& presented,
+    geom::Size const& window_size) const -> geom::Displacement
+{
+    auto const overshoot = [](geom::Size const& buffer, geom::Size const& window)
+    {
+        return geom::Displacement {
+            buffer.width.as_int() - window.width.as_int(),
+            buffer.height.as_int() - window.height.as_int()
+        };
+    };
+
+    auto& entry = insets[data.id];
+
+    if (data.stretch)
+    {
+        // Mid-animation there is nothing to measure - the window size is what the compositor
+        // asked for and the buffer is what the client last drew, so their difference is the
+        // animation delta rather than the inset. But the stretch carries the window size the
+        // client was settled at when the animation began, which is the one moment free of
+        // ack latency: the compositor had not yet asked for anything. Paired with the buffer
+        // still on screen, the inset falls out exactly.
+        //
+        // Taken only once, and only when nothing is known yet: on a later frame that buffer
+        // may already be the new one, and a chained animation's start size is an interpolated
+        // rectangle the client was never settled at.
+        if (!entry.known)
+        {
+            entry.value = overshoot(presented, data.stretch->source);
+            entry.known = true;
+        }
+
+        // The buffer swapping mid-animation must not look, on the frame after the animation
+        // ends, like a client that has been holding still.
+        entry.last_presented = presented;
+        return entry.value;
+    }
+
+    // Settled, so the surface's live size is what the buffer was drawn for - but only once
+    // the client has actually caught up. The frame right after an animation completes still
+    // holds the pre-resize buffer against a size that is already the new one, and measuring
+    // there is what poisons the value for the next animation. Requiring the buffer to have
+    // held still for a frame excludes exactly that case.
+    if (entry.last_presented == presented)
+    {
+        entry.value = overshoot(presented, window_size);
+        entry.known = true;
+    }
+
+    entry.last_presented = presented;
+    return entry.value;
+}
+
 void Renderer::prune_retained_state() const
 {
-    if (shadow_bands.empty())
+    if (insets.empty())
         return;
 
     // One pass over the tracked windows. Ids are handed out monotonically and never reused,
@@ -1186,7 +1227,7 @@ void Renderer::prune_retained_state() const
     for (auto const& data : render_data_cache)
         live.insert(data.id);
 
-    std::erase_if(shadow_bands, [&](auto const& entry)
+    std::erase_if(insets, [&](auto const& entry)
     { return !live.contains(entry.first); });
 }
 

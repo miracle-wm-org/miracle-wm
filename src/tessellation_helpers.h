@@ -43,12 +43,12 @@ namespace gl
 
     auto stretch_scale(geometry::Size const& source_size, geometry::Size const& target_size) -> StretchScale;
 
-    /// What a resize animation asks be done to a quad: [source] - the natural window
-    /// rectangle, the one the border is sized from - is scaled onto [target] at the clip's
-    /// top-left, and the renderable is carried along by that same affine map. Keeping the
-    /// renderable's own rectangle is what lands a buffer bigger than its window (a CSD
-    /// shadow margin) or smaller (a decoration inset) proportionally inside the clip
-    /// rather than smeared across all of it.
+    /// What a resize animation asks be done to a quad: [source] - the window rectangle the
+    /// committed buffer corresponds to, the one the border is sized from - is scaled onto
+    /// [target] at the clip's top-left, and the renderable is carried along by that same
+    /// affine map. Keeping the renderable's own rectangle is what lands a buffer bigger
+    /// than its window (a CSD shadow margin) or smaller (a decoration inset)
+    /// proportionally inside the clip rather than smeared across all of it.
     ///
     /// [target] is not the clip: it is the size the client can actually be drawn at, which
     /// a resize freezes at the client's limit once the clip passes it. A quad wider than
@@ -59,32 +59,27 @@ namespace gl
         geometry::Rectangle source;
     };
 
-    /// How far a client's committed buffer overshoots the content size it was given: a CSD
-    /// client draws its own drop shadow into the buffer and declares, via xdg window
-    /// geometry, that only the inner rectangle is the window. Zero for everything else.
-    ///
-    /// Only meaningful on a frame where the client is caught up: during a resize the two
-    /// sizes sit on opposite sides of the client's ack latency, so their difference is the
-    /// animation delta rather than the shadow.
-    auto shadow_band(
-        geometry::Size const& presented_size,
-        geometry::Size const& content_size) -> geometry::Displacement;
-
     /// The window rectangle the buffer a client has actually committed corresponds to.
     ///
-    /// A resize asks the client for its final size on the first frame, but the renderable
-    /// is a snapshot of the last buffer it committed, which for a frame or more is still
-    /// the pre-resize one - so \p window_size, which is live, is not what that buffer was
-    /// drawn for. Their difference is: \p window_size minus \p content_size is the margin
-    /// the compositor itself set, which does not change across a resize. Taking \p shadow
-    /// off the committed buffer's size gives the content size it was drawn for, and adding
-    /// that margin back turns it into a window size - exactly, with no guessing.
-    auto natural_window_rect(
+    /// A resize asks the client for its final size on the first frame, but the renderable is
+    /// a snapshot of the last buffer it committed, which for a frame or more is still the
+    /// pre-resize one - so the surface's live window size is not what that buffer was drawn
+    /// for. \p presented_size is, once \p inset is taken off it.
+    ///
+    /// \p inset is how far the buffer overshoots the window it belongs to: positive for a
+    /// CSD client that draws its own drop shadow past its xdg window geometry, negative for
+    /// a server-decorated one whose buffer is only the content inside its frame. Either way
+    /// it is a property of the client rather than of the animation, so it holds across a
+    /// resize - which is what makes this exact rather than a guess.
+    ///
+    /// \p window_top_left is live, and deliberately so: the buffer is drawn relative to
+    /// wherever the compositor has since moved the window. The renderable's own top-left is
+    /// that same point displaced by the buffer's decoration inset and xdg geometry offset,
+    /// and their difference is what carries both proportionally through the stretch.
+    auto committed_window_rect(
         geometry::Point const& window_top_left,
         geometry::Size const& presented_size,
-        geometry::Size const& window_size,
-        geometry::Size const& content_size,
-        geometry::Displacement const& shadow) -> geometry::Rectangle;
+        geometry::Displacement const& inset) -> geometry::Rectangle;
 
     /// Builds the quad for \p renderable. \p clip_area is always a crop: the quad is cut
     /// down to that rectangle and the texture coordinates are narrowed to the matching

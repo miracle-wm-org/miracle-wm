@@ -60,37 +60,19 @@ auto mgl::stretch_scale(geom::Size const& source_size, geom::Size const& target_
     return { width(target_size) / width(source_size), height(target_size) / height(source_size) };
 }
 
-auto mgl::shadow_band(
-    geom::Size const& presented_size,
-    geom::Size const& content_size) -> geom::Displacement
-{
-    // Never negative: a buffer smaller than the content size it was given is a client
-    // that has not caught up, not a negative shadow, and inflating the window rectangle
-    // to compensate would be the very magnification this is here to avoid.
-    return {
-        std::max(presented_size.width.as_int() - content_size.width.as_int(), 0),
-        std::max(presented_size.height.as_int() - content_size.height.as_int(), 0)
-    };
-}
-
-auto mgl::natural_window_rect(
+auto mgl::committed_window_rect(
     geom::Point const& window_top_left,
     geom::Size const& presented_size,
-    geom::Size const& window_size,
-    geom::Size const& content_size,
-    geom::Displacement const& shadow) -> geom::Rectangle
+    geom::Displacement const& inset) -> geom::Rectangle
 {
-    auto const margin_x = window_size.width - content_size.width;
-    auto const margin_y = window_size.height - content_size.height;
-
-    // Floored at 1: a stale shadow band - a client that changed its shadow while a resize
-    // was in flight - must not produce an empty or inverted rectangle for stretch_scale to
-    // divide by.
+    // Floored at 1: an inset larger than the buffer - a client that shrank its shadow while
+    // a resize was in flight - must not produce an empty or inverted rectangle for
+    // stretch_scale to divide by.
     return {
         window_top_left,
         geom::Size {
-                    std::max((presented_size.width - shadow.dx + margin_x).as_int(), 1),
-                    std::max((presented_size.height - shadow.dy + margin_y).as_int(), 1) }
+                    std::max((presented_size.width - inset.dx).as_int(), 1),
+                    std::max((presented_size.height - inset.dy).as_int(), 1) }
     };
 }
 
@@ -125,7 +107,7 @@ mgl::Primitive tessellate_into_rectangle(
     if (stretch && clip_area)
     {
         /* A resize animation asks for the content at a size the client is not drawing at
-         * yet, so the natural window rectangle - the same one the border is sized from -
+         * yet, so the committed window rectangle - the same one the border is sized from -
          * is scaled to that size at the clip's top-left and the renderable is carried
          * along by that map. See Stretch for why the renderable keeps its own offset and
          * size; the crop below trims whatever ends up outside the clip.

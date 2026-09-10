@@ -232,6 +232,93 @@ TEST_F(AnimatorTest, CompletionClearsTheResizeFrame)
     EXPECT_EQ(last_frame->rectangle.value(), mir::geometry::Rectangle({ 0, 0 }, { 400, 600 }));
 }
 
+TEST_F(AnimatorTest, AResizeFrameCarriesThePreResizeSize)
+{
+    // The renderer has no way to measure how far a client's buffer overshoots its window
+    // during a resize - the surface's size is what we asked for and the buffer is what the
+    // client last drew. The pre-resize size is the one pairing that is free of that
+    // latency, because at the moment the animation starts we have not asked for anything.
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    std::optional<AnimationFrameResult> first_frame;
+    animator.append(Animation(
+        handle,
+        linear_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
+            mir::geometry::Rectangle({ 0, 0 }, { 400, 600 })),
+        [&](AnimationFrameResult const& result)
+    {
+        if (!first_frame)
+            first_frame = result;
+    },
+        std::shared_ptr<PluginManager>()));
+
+    animator.tick(0.25f);
+
+    ASSERT_TRUE(first_frame.has_value());
+    ASSERT_TRUE(first_frame->resize.has_value());
+    EXPECT_EQ(first_frame->resize->source, mir::geometry::Size(800, 600));
+}
+
+TEST_F(AnimatorTest, ASizeChangeTooSmallToSeeIsNotAnimated)
+{
+    // A handful of pixels cannot read as motion, but it still costs a stretch and a crop on
+    // every frame of the animation, and lands as jitter. The move still animates; only the
+    // size snaps.
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    std::optional<AnimationFrameResult> first_frame;
+    animator.append(Animation(
+        handle,
+        linear_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
+            mir::geometry::Rectangle({ 400, 0 }, { 808, 604 })),
+        [&](AnimationFrameResult const& result)
+    {
+        if (!first_frame)
+            first_frame = result;
+    },
+        std::shared_ptr<PluginManager>()));
+
+    animator.tick(0.25f);
+
+    ASSERT_TRUE(first_frame.has_value());
+    EXPECT_FALSE(first_frame->resize.has_value());
+
+    // The clip takes the final size straight away rather than crawling towards it.
+    ASSERT_TRUE(first_frame->clip_area.has_value());
+    EXPECT_EQ(first_frame->clip_area->size, mir::geometry::Size(808, 604));
+    EXPECT_EQ(first_frame->clip_area->top_left, mir::geometry::Point(100, 0));
+}
+
+TEST_F(AnimatorTest, ASizeChangeJustPastTheThresholdIsStillAnimated)
+{
+    Animator animator;
+    auto const handle = animator.register_animateable();
+    std::optional<AnimationFrameResult> first_frame;
+    animator.append(Animation(
+        handle,
+        linear_slide,
+        slide_data(
+            mir::geometry::Rectangle({ 0, 0 }, { 800, 600 }),
+            mir::geometry::Rectangle({ 0, 0 }, { 811, 600 })),
+        [&](AnimationFrameResult const& result)
+    {
+        if (!first_frame)
+            first_frame = result;
+    },
+        std::shared_ptr<PluginManager>()));
+
+    animator.tick(0.25f);
+
+    ASSERT_TRUE(first_frame.has_value());
+    ASSERT_TRUE(first_frame->resize.has_value());
+    ASSERT_TRUE(first_frame->clip_area.has_value());
+    EXPECT_LT(first_frame->clip_area->size.width.as_int(), 811);
+}
+
 TEST_F(AnimatorTest, APureMoveGetsNoResizeFrame)
 {
     // Nothing about the content changes when a window only moves, so there is nothing to

@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "geometry_helpers.h"
 #include "plugin_manager.h"
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <glm/gtx/transform.hpp>
 #include <mir/log.h>
@@ -374,19 +375,31 @@ AnimationFrameResult Animation::tick_built_in(BuiltInAnimationDefinition const& 
             geom::Point { position.x, position.y },
             data_.area_end.size
         };
+        // A pure move shows the very same pixels from the first frame to the last, so it
+        // needs no stretch at all. Only an animation that changes the window's size does -
+        // and only by enough to be worth one: a handful of pixels costs a full stretch and
+        // crop cycle to show a change too small to read as motion, and lands as jitter.
+        auto const dw = std::abs(
+            data_.area_end.size.width.as_int() - data_.area_start.size.width.as_int());
+        auto const dh = std::abs(
+            data_.area_end.size.height.as_int() - data_.area_start.size.height.as_int());
+        bool const is_resize = std::max(dw, dh) > kResizeThreshold;
+
         // clip_area carries the animated scissor size to reveal/conceal content gradually.
         // It bounds a client that lags behind, or refuses, the request above, and - once
         // clamped to the client's own constraints - it is also the size the content is
         // stretched to each frame. `resize` below only says a stretch is in flight at all.
+        // A size change too small to animate takes the final size from the first frame, so
+        // the clip is a plain moving window rather than a scale of one pixel per frame.
         auto const clip_rect = geom::Rectangle {
             geom::Point { position.x,       position.y       },
-            geom::Size { clip_area_size.x, clip_area_size.y }
+            is_resize
+                ? geom::Size { clip_area_size.x, clip_area_size.y }
+                : data_.area_end.size
         };
-        // A pure move shows the very same pixels from the first frame to the last, so it
-        // needs no stretch at all. Only an animation that changes the window's size does.
         std::optional<ResizeFrame> resize;
-        if (data_.area_start.size != data_.area_end.size)
-            resize = ResizeFrame { .target = data_.area_end.size };
+        if (is_resize)
+            resize = ResizeFrame { .target = data_.area_end.size, .source = data_.area_start.size };
         return {
             .is_complete = false,
             .rectangle = window_rect,
